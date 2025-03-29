@@ -364,9 +364,7 @@ final class ComposePollScreenComponent: Component {
                     isGeneralThreadClosed: nil,
                     replyMessage: nil,
                     accountPeerColor: nil,
-                    businessIntro: nil,
-                    starGiftsAvailable: false,
-                    alwaysShowGiftButton: false
+                    businessIntro: nil
                 )
                 
                 self.inputMediaNodeBackground.backgroundColor = presentationData.theme.rootController.navigationBar.opaqueBackgroundColor.cgColor

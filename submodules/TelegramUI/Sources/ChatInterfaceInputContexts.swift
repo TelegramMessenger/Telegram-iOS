@@ -196,7 +196,7 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                 } else {
                     let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
                     var showPremiumGift = false
-                    if !premiumConfiguration.isPremiumDisabled {
+                    if !premiumConfiguration.isPremiumDisabled && chatPresentationInterfaceState.disallowedGifts != TelegramDisallowedGifts.All {
                         if chatPresentationInterfaceState.alwaysShowGiftButton {
                             showPremiumGift = true
                         } else if chatPresentationInterfaceState.hasBirthdayToday {

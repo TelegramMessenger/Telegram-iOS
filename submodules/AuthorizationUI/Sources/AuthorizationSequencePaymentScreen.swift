@@ -198,7 +198,7 @@ final class AuthorizationSequencePaymentScreenComponent: Component {
             let titleSize = self.title.update(
                 transition: transition,
                 component: AnyComponent(
-                    MultilineTextComponent(text: .plain(NSAttributedString(string: "SMS Fee", font: Font.bold(28.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)))
+                    MultilineTextComponent(text: .plain(NSAttributedString(string: environment.strings.Login_Fee_Title, font: Font.bold(28.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)))
                 ),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
@@ -218,9 +218,9 @@ final class AuthorizationSequencePaymentScreenComponent: Component {
                 AnyComponentWithIdentity(
                     id: "cost",
                     component: AnyComponent(ParagraphComponent(
-                        title: "High SMS Costs",
+                        title: environment.strings.Login_Fee_SmsCost_Title,
                         titleColor: textColor,
-                        text: "Telecom providers in your country (\(countryName)) charge Telegram very high prices for SMS.",
+                        text: environment.strings.Login_Fee_SmsCost_Text(countryName).string,
                         textColor: secondaryTextColor,
                         iconName: "Premium/Authorization/Cost",
                         iconColor: linkColor
@@ -231,9 +231,9 @@ final class AuthorizationSequencePaymentScreenComponent: Component {
                 AnyComponentWithIdentity(
                     id: "verification",
                     component: AnyComponent(ParagraphComponent(
-                        title: "Verification Required",
+                        title: environment.strings.Login_Fee_Verification_Title,
                         titleColor: textColor,
-                        text: "Telegram needs to send you an SMS with a verification code to confirm your phone number.",
+                        text: environment.strings.Login_Fee_Verification_Text,
                         textColor: secondaryTextColor,
                         iconName: "Premium/Authorization/Verification",
                         iconColor: linkColor
@@ -242,11 +242,11 @@ final class AuthorizationSequencePaymentScreenComponent: Component {
             )
             items.append(
                 AnyComponentWithIdentity(
-                    id: "withdrawal",
+                    id: "support",
                     component: AnyComponent(ParagraphComponent(
-                        title: "Support via [Telegram Premium >]()",
+                        title: environment.strings.Login_Fee_Support_Title,
                         titleColor: textColor,
-                        text: "Sign up for a 1-week Telegram Premium subscription to help cover the SMS costs.",
+                        text: environment.strings.Login_Fee_Support_Text,
                         textColor: secondaryTextColor,
                         iconName: "Premium/Authorization/Support",
                         iconColor: linkColor,
@@ -315,7 +315,8 @@ final class AuthorizationSequencePaymentScreenComponent: Component {
             } else {
                 priceString = "–"
             }
-            let buttonString = "Sign up for \(priceString)"
+            
+            let buttonString = environment.strings.Login_Fee_SignUp(priceString).string
             let buttonAttributedString = NSMutableAttributedString(string: buttonString, font: Font.semibold(17.0), textColor: environment.theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
             let buttonSize = self.button.update(
                 transition: transition,
@@ -331,7 +332,7 @@ final class AuthorizationSequencePaymentScreenComponent: Component {
                         component: AnyComponent(
                             VStack([
                                 AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(text: .plain(buttonAttributedString)))),
-                                AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: "Get Telegram Premium for 1 week", font: Font.medium(11.0), textColor: environment.theme.list.itemCheckColors.foregroundColor.withAlphaComponent(0.7), paragraphAlignment: .center)))))
+                                AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: environment.strings.Login_Fee_GetPremiumForAWeek, font: Font.medium(11.0), textColor: environment.theme.list.itemCheckColors.foregroundColor.withAlphaComponent(0.7), paragraphAlignment: .center)))))
                             ], spacing: 1.0)
                         )
                     ),

@@ -416,6 +416,118 @@ func _internal_invokeBotCustomMethod(postbox: Postbox, network: Network, botId: 
     |> switchToLatest
 }
 
+public struct TelegramSecureBotStorageState: Codable, Equatable {
+    public let uuid: String
+   
+    public init(uuid: String) {
+        self.uuid = uuid
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+        
+        self.uuid = try container.decode(String.self, forKey: "uuid")
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+        
+        try container.encode(self.uuid, forKey: "uuid")
+    }
+}
+
+func _internal_secureBotStorageUuid(account: Account) -> Signal<String, NoError> {
+    return account.postbox.transaction { transaction -> String in
+        if let current = transaction.getPreferencesEntry(key: PreferencesKeys.secureBotStorageState())?.get(TelegramSecureBotStorageState.self) {
+            return current.uuid
+        }
+        
+        let uuid = "\(Int64.random(in: 0 ..< .max))"
+        transaction.setPreferencesEntry(key: PreferencesKeys.secureBotStorageState(), value: PreferencesEntry(TelegramSecureBotStorageState(uuid: uuid)))
+        return uuid
+    }
+}
+
+private let maxBotStorageSize = 5 * 1024 * 1024
+public struct TelegramBotStorageState: Codable, Equatable {
+    public struct KeyValue: Codable, Equatable {
+        var key: String
+        var value: String
+    }
+    
+    public var data: [String: String]
+   
+    public init(
+        data: [String: String]
+    ) {
+        self.data = data
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+        
+        let values = try container.decode([KeyValue].self, forKey: "data")
+        var data: [String: String] = [:]
+        for pair in values {
+            data[pair.key] = pair.value
+        }
+        self.data = data
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+        
+        var values: [KeyValue] = []
+        for (key, value) in self.data {
+            values.append(KeyValue(key: key, value: value))
+        }
+        try container.encode(values, forKey: "data")
+    }
+}
+
+private func _internal_updateBotStorageState(account: Account, peerId: EnginePeer.Id, update: @escaping (TelegramBotStorageState?) -> TelegramBotStorageState) -> Signal<Never, BotStorageError> {
+    return account.postbox.transaction { transaction -> Signal<Never, BotStorageError> in
+        let previousState = transaction.getPreferencesEntry(key: PreferencesKeys.botStorageState(peerId: peerId))?.get(TelegramBotStorageState.self)
+        let updatedState = update(previousState)
+        
+        var totalSize = 0
+        for (_, value) in updatedState.data {
+            totalSize += value.utf8.count
+        }
+        guard totalSize <= maxBotStorageSize else {
+            return .fail(.quotaExceeded)
+        }
+        
+        transaction.setPreferencesEntry(key: PreferencesKeys.botStorageState(peerId: peerId), value: PreferencesEntry(updatedState))
+        return .never()
+    }
+    |> castError(BotStorageError.self)
+    |> switchToLatest
+    |> ignoreValues
+}
+
+public enum BotStorageError {
+    case quotaExceeded
+}
+
+func _internal_setBotStorageValue(account: Account, peerId: EnginePeer.Id, key: String, value: String?) -> Signal<Never, BotStorageError> {
+    return _internal_updateBotStorageState(account: account, peerId: peerId, update: { current in
+        var data = current?.data ?? [:]
+        if let value {
+            data[key] = value
+        } else {
+            data.removeValue(forKey: key)
+        }
+        return TelegramBotStorageState(data: data)
+    })
+}
+
+func _internal_clearBotStorage(account: Account, peerId: EnginePeer.Id) -> Signal<Never, BotStorageError> {
+    return _internal_updateBotStorageState(account: account, peerId: peerId, update: { _ in
+        return TelegramBotStorageState(data: [:])
+    })
+}
+
 public struct TelegramBotBiometricsState: Codable, Equatable {
     public struct OpaqueToken: Codable, Equatable {
         public let publicKey: Data

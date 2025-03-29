@@ -1520,6 +1520,10 @@ public extension TelegramEngine {
             _internal_markAdAction(account: self.account, opaqueId: opaqueId, media: media, fullscreen: fullscreen)
         }
         
+        public func markAdAsSeen(opaqueId: Data) {
+            _internal_markAdAsSeen(account: self.account, opaqueId: opaqueId)
+        }
+        
         public func getAllLocalChannels(count: Int) -> Signal<[EnginePeer.Id], NoError> {
             return self.account.postbox.transaction { transaction -> [EnginePeer.Id] in
                 var result: [EnginePeer.Id] = []

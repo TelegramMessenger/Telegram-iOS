@@ -490,9 +490,9 @@ public struct ComponentTransition {
         self.setScaleWithSpring(layer: view.layer, scale: scale, delay: delay, completion: completion)
     }
     
-    public func setScale(layer: CALayer, scale: CGFloat, delay: Double = 0.0, completion: ((Bool) -> Void)? = nil) {
+    public func setScale(layer: CALayer, scale: CGFloat, delay: Double = 0.0, beginWithCurrentState: Bool = false, completion: ((Bool) -> Void)? = nil) {
         let currentTransform: CATransform3D
-        if layer.animation(forKey: "transform") != nil || layer.animation(forKey: "transform.scale") != nil {
+        if beginWithCurrentState, layer.animation(forKey: "transform") != nil || layer.animation(forKey: "transform.scale") != nil {
             currentTransform = layer.presentation()?.transform ?? layer.transform
         } else {
             currentTransform = layer.transform

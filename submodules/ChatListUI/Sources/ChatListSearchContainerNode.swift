@@ -570,6 +570,12 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         self.selectionPanelNode?.selectedMessages = self.stateValue.selectedMessageIds ?? []
     }
 
+    public func removeAds() {
+        for pane in self.paneContainerNode.currentPanes.values {
+            pane.node.removeAds()
+        }
+    }
+    
     private var currentSearchOptions: ChatListSearchOptions {
         return self.searchOptionsValue ?? ChatListSearchOptions(peer: nil, date: nil)
     }

@@ -183,6 +183,28 @@ public final class PeerInfoGiftsCoverComponent: Component {
                 index += 1
             }
         }
+        
+        public func willAnimateIn() {
+            for (_, layer) in self.iconLayers {
+                layer.opacity = 0.0
+            }
+        }
+        
+        public func animateIn() {
+            guard let _ = self.currentSize, let component = self.component else {
+                return
+            }
+            
+            for (_, layer) in self.iconLayers {
+                layer.opacity = 1.0
+                layer.animatePosition(
+                    from: component.avatarCenter,
+                    to: layer.position,
+                    duration: 0.4,
+                    timingFunction: kCAMediaTimingFunctionSpring
+                )
+            }
+        }
     
         func update(component: PeerInfoGiftsCoverComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true

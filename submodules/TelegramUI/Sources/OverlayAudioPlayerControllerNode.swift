@@ -192,6 +192,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
         }, attemptedNavigationToPrivateQuote: { _ in
         }, forceUpdateWarpContents: {
         }, playShakeAnimation: {
+        }, displayQuickShare: { _ ,_ in
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(), presentationContext: ChatPresentationContext(context: context, backgroundNode: nil))
         
         self.dimNode = ASDisplayNode()

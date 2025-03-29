@@ -762,7 +762,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.stickerSettings = ChatInterfaceStickerSettings()
         
-        self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: context.account.peerId, mode: mode, chatLocation: chatLocation, subject: subject, peerNearbyData: peerNearbyData, greetingData: context.prefetchManager?.preloadedGreetingSticker, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil, threadData: nil, isGeneralThreadClosed: nil, replyMessage: nil, accountPeerColor: nil, businessIntro: nil, starGiftsAvailable: false, alwaysShowGiftButton: false)
+        self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: context.account.peerId, mode: mode, chatLocation: chatLocation, subject: subject, peerNearbyData: peerNearbyData, greetingData: context.prefetchManager?.preloadedGreetingSticker, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil, threadData: nil, isGeneralThreadClosed: nil, replyMessage: nil, accountPeerColor: nil, businessIntro: nil)
         
         if case let .customChatContents(customChatContents) = subject {
             switch customChatContents.kind {
@@ -1551,6 +1551,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.openMessageReactionContextMenu(message: message, sourceView: sourceView, gesture: gesture, value: value)
         }, updateMessageReaction: { [weak self] initialMessage, reaction, force, sourceView in
             guard let strongSelf = self else {
+                return
+            }
+            guard !strongSelf.presentAccountFrozenInfoIfNeeded() else {
                 return
             }
             guard let messages = strongSelf.chatDisplayNode.historyNode.messageGroupInCurrentHistoryView(initialMessage.id) else {
@@ -4847,6 +4850,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             self.playShakeAnimation()
+        }, displayQuickShare: { [weak self] node, gesture in
+            guard let self else {
+                return
+            }
+            self.displayQuickShare(node: node, gesture: gesture)
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: self.stickerSettings, presentationContext: ChatPresentationContext(context: context, backgroundNode: self.chatBackgroundNode))
         controllerInteraction.enableFullTranslucency = context.sharedContext.energyUsageSettings.fullTranslucency
         
@@ -6415,6 +6423,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     isPremiumRequiredForMessaging = .single(false)
                 }
                 
+                let globalPrivacySettings = context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.GlobalPrivacy())
+                
                 self.titleDisposable.set(nil)
                 self.peerDisposable.set((combineLatest(queue: Queue.mainQueue(),
                     peerView,
@@ -6425,9 +6435,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     hasSearchTags,
                     hasSavedChats,
                     isPremiumRequiredForMessaging,
-                    managingBot
+                    managingBot,
+                    globalPrivacySettings
                 )
-                |> deliverOnMainQueue).startStrict(next: { [weak self] peerView, messageAndTopic, savedMessagesPeer, onlineMemberCount, hasScheduledMessages, hasSearchTags, hasSavedChats, isPremiumRequiredForMessaging, managingBot in
+                |> deliverOnMainQueue).startStrict(next: { [weak self] peerView, messageAndTopic, savedMessagesPeer, onlineMemberCount, hasScheduledMessages, hasSearchTags, hasSavedChats, isPremiumRequiredForMessaging, managingBot, globalPrivacySettings in
                     if let strongSelf = self {
                         strongSelf.hasScheduledMessages = hasScheduledMessages
                         
@@ -6437,6 +6448,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         var businessIntro: TelegramBusinessIntro?
                         var sendPaidMessageStars: StarsAmount?
                         var alwaysShowGiftButton = false
+                        var disallowedGifts: TelegramDisallowedGifts?
                         if let peer = peerView.peers[peerView.peerId] {
                             copyProtectionEnabled = peer.isCopyProtectionEnabled
                             if let cachedData = peerView.cachedData as? CachedUserData {
@@ -6445,8 +6457,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     businessIntro = value
                                 }
                                 if cachedData.disallowedGifts != .All {
-                                    alwaysShowGiftButton = cachedData.flags.contains(.displayGiftButton)
+                                    alwaysShowGiftButton = globalPrivacySettings.displayGiftButton || cachedData.flags.contains(.displayGiftButton)
                                 }
+                                disallowedGifts = cachedData.disallowedGifts
                             } else if let cachedData = peerView.cachedData as? CachedGroupData {
                                 var invitedBy: Peer?
                                 if let invitedByPeerId = cachedData.invitedBy {
@@ -6743,6 +6756,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     .updatedBusinessIntro(businessIntro)
                                     .updatedSendPaidMessageStars(sendPaidMessageStars)
                                     .updatedAlwaysShowGiftButton(alwaysShowGiftButton)
+                                    .updatedDisallowedGifts(disallowedGifts)
                                     .updatedInterfaceState { interfaceState in
                                         var interfaceState = interfaceState
                                         

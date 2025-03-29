@@ -1005,7 +1005,7 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
         entries.append(.showGiftButton(presentationData.theme, presentationData.strings.Privacy_Gifts_ShowGiftButton, !isPremium, state.showGiftButton == true, true))
         entries.append(.showGiftButtonInfo(presentationData.theme, presentationData.strings.Privacy_Gifts_ShowGiftButtonInfo.replacingOccurrences(of: "#", with: " # ")))
         
-        if state.disallowedGifts == TelegramDisallowedGifts.All {
+        if let disallowedGifts = state.disallowedGifts, disallowedGifts.contains(.limited) && disallowedGifts.contains(.unlimited) && disallowedGifts.contains(.unique) {
             permisisonsEnabled = false
         }
     }

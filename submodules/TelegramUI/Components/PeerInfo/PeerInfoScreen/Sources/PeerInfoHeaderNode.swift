@@ -2336,13 +2336,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     Queue.mainQueue().after(0.2) {
                         backgroundCoverView.animateIn()
                     }
-                    Queue.mainQueue().after(0.5) {
-                        self.invokeDisplayGiftInfo()
-                    }
-                } else {
-                    Queue.mainQueue().after(0.5) {
-                        self.invokeDisplayGiftInfo()
-                    }
+                }
+                Queue.mainQueue().after(0.5) {
+                    self.invokeDisplayGiftInfo()
                 }
             }
         }
@@ -2384,6 +2380,14 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     transition.updateFrame(view: giftsCoverView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: giftsCoverSize))
                 }
                 navigationTransition.updateAlpha(layer: giftsCoverView.layer, alpha: backgroundBannerAlpha)
+                if backgroundCoverAnimateIn {
+                    if !self.isAvatarExpanded {
+                        giftsCoverView.willAnimateIn()
+                        Queue.mainQueue().after(0.2) {
+                            giftsCoverView.animateIn()
+                        }
+                    }
+                }
             }
         }
         

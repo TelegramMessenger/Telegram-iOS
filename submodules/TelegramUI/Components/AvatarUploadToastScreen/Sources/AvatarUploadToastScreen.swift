@@ -20,7 +20,13 @@ private final class AvatarUploadToastScreenComponent: Component {
     let arrowTarget: () -> (UIView, CGRect)?
     let viewUploadedAvatar: () -> Void
     
-    init(context: AccountContext, image: UIImage, uploadStatus: Signal<PeerInfoAvatarUploadStatus, NoError>, arrowTarget: @escaping () -> (UIView, CGRect)?, viewUploadedAvatar: @escaping () -> Void) {
+    init(
+        context: AccountContext,
+        image: UIImage,
+        uploadStatus: Signal<PeerInfoAvatarUploadStatus, NoError>,
+        arrowTarget: @escaping () -> (UIView, CGRect)?,
+        viewUploadedAvatar: @escaping () -> Void
+    ) {
         self.context = context
         self.image = image
         self.uploadStatus = uploadStatus

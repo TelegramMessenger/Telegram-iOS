@@ -623,7 +623,7 @@ public class BrowserScreen: ViewController, MinimizableController {
                             self.controller?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] action in
                                 if savedMessages, let self, action == .info {
                                     let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
-                                             |> deliverOnMainQueue).start(next: { [weak self] peer in
+                                    |> deliverOnMainQueue).start(next: { [weak self] peer in
                                         guard let self, let peer else {
                                             return
                                         }

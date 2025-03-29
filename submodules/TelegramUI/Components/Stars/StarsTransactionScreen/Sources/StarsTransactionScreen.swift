@@ -423,8 +423,12 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     if transaction.flags.contains(.isPaidMessage) {
                         isPaidMessage = true
                         titleText = strings.Stars_Transaction_PaidMessage(transaction.paidMessageCount ?? 1)
-                        countOnTop = true
-                        descriptionText = strings.Stars_Transaction_PaidMessage_Text(formatPermille(1000 - starrefCommissionPermille)).string
+                        if !transaction.flags.contains(.isRefund) {
+                            countOnTop = true
+                            descriptionText = strings.Stars_Transaction_PaidMessage_Text(formatPermille(1000 - starrefCommissionPermille)).string
+                        } else {
+                            descriptionText = ""
+                        }
                     } else if transaction.starrefPeerId == nil {
                         titleText = strings.StarsTransaction_TitleCommission(formatPermille(starrefCommissionPermille)).string
                         countOnTop = false
@@ -1864,15 +1868,15 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
             guard let self, let navigationController = self.navigationController as? NavigationController else {
                 return
             }
+            self.dismissAnimated()
+            
             let _ = (context.engine.privacy.requestAccountPrivacySettings()
-            |> deliverOnMainQueue).start(next: { [weak self, weak navigationController] privacySettings in
+            |> deliverOnMainQueue).start(next: { [weak navigationController] privacySettings in
                 let controller = context.sharedContext.makeIncomingMessagePrivacyScreen(context: context, value: privacySettings.globalSettings.nonContactChatsPrivacy, exceptions: privacySettings.noPaidMessages, update: { settingValue in
                     let _ = context.engine.privacy.updateNonContactChatsPrivacy(value: settingValue).start()
                 })
-                navigationController?.pushViewController(controller)
-                
-                Queue.mainQueue().after(0.6) {
-                    self?.dismissAnimated()
+                Queue.mainQueue().after(0.4) {
+                    navigationController?.pushViewController(controller)
                 }
             })
         }

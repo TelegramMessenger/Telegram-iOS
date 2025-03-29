@@ -974,8 +974,8 @@ private final class ProfileGiftsContextImpl {
     private let cacheDisposable = MetaDisposable()
     private let actionDisposable = MetaDisposable()
     
-    private var sorting: ProfileGiftsContext.Sorting = .date
-    private var filter: ProfileGiftsContext.Filters = ProfileGiftsContext.Filters.All
+    private var sorting: ProfileGiftsContext.Sorting
+    private var filter: ProfileGiftsContext.Filters
     
     private var gifts: [ProfileGiftsContext.State.StarGift] = []
     private var count: Int32?
@@ -993,10 +993,18 @@ private final class ProfileGiftsContextImpl {
         return self.stateValue.get()
     }
     
-    init(queue: Queue, account: Account, peerId: EnginePeer.Id) {
+    init(
+        queue: Queue,
+        account: Account,
+        peerId: EnginePeer.Id,
+        sorting: ProfileGiftsContext.Sorting,
+        filter: ProfileGiftsContext.Filters
+    ) {
         self.queue = queue
         self.account = account
         self.peerId = peerId
+        self.sorting = sorting
+        self.filter = filter
         
         self.loadMore()
     }
@@ -1664,10 +1672,15 @@ public final class ProfileGiftsContext {
         }
     }
     
-    public init(account: Account, peerId: EnginePeer.Id) {
+    public init(
+        account: Account,
+        peerId: EnginePeer.Id,
+        sorting: ProfileGiftsContext.Sorting = .date,
+        filter: ProfileGiftsContext.Filters = .All
+    ) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return ProfileGiftsContextImpl(queue: queue, account: account, peerId: peerId)
+            return ProfileGiftsContextImpl(queue: queue, account: account, peerId: peerId, sorting: sorting, filter: filter)
         })
     }
     

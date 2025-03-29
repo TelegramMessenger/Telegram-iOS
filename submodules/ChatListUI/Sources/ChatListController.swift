@@ -6219,7 +6219,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 title: title,
                                 options: options,
                                 completed: {
-                                    //removeAd?(adAttribute.opaqueId)
                                 }
                             )
                         )
@@ -6236,9 +6235,20 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             guard let navigationController = self?.navigationController as? NavigationController else {
                 return
             }
-            c?.dismiss(completion: {
-                if context.isPremium && !"".isEmpty {
-                    //removeAd?(adAttribute.opaqueId)
+            c?.dismiss(completion: { [weak self] in
+                guard let self else {
+                    return
+                }
+                if context.isPremium {
+                    self.present(UndoOverlayController(presentationData: self.presentationData, content: .actionSucceeded(title: nil, text: self.presentationData.strings.ReportAd_Hidden, cancel: nil, destructive: false), elevatedLayout: false, action: { _ in
+                        return true
+                    }), in: .current)
+                    
+                    let _ = self.context.engine.accountData.updateAdMessagesEnabled(enabled: false).start()
+                    
+                    if let searchContentNode = self.chatListDisplayNode.searchDisplayController?.contentNode as? ChatListSearchContainerNode {
+                        searchContentNode.removeAds()
+                    }
                 } else {
                     var replaceImpl: ((ViewController) -> Void)?
                     let demoController = context.sharedContext.makePremiumDemoController(context: context, subject: .noAds, forceDark: false, action: {

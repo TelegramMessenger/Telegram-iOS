@@ -7,35 +7,33 @@ import TelegramCore
 import Markdown
 import TextFormat
 import TelegramPresentationData
+import TelegramStringFormatting
 import ViewControllerComponent
 import SheetComponent
 import BundleIconComponent
 import BalancedTextComponent
 import MultilineTextComponent
 import ButtonComponent
-import PlainButtonComponent
-import GiftItemComponent
+import ListSectionComponent
+import ListActionItemComponent
 import AccountContext
 
 private final class SheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
-    let gift: ProfileGiftsContext.State.StarGift
-    let pinnedGifts: [ProfileGiftsContext.State.StarGift]
-    let completion: (StarGiftReference) -> Void
+    let existingKeys: [WebAppSecureStorage.ExistingKey]
+    let completion: (String) -> Void
     let dismiss: () -> Void
     
     init(
         context: AccountContext,
-        gift: ProfileGiftsContext.State.StarGift,
-        pinnedGifts: [ProfileGiftsContext.State.StarGift],
-        completion: @escaping (StarGiftReference) -> Void,
+        existingKeys: [WebAppSecureStorage.ExistingKey],
+        completion: @escaping (String) -> Void,
         dismiss: @escaping () -> Void
     ) {
         self.context = context
-        self.gift = gift
-        self.pinnedGifts = pinnedGifts
+        self.existingKeys = existingKeys
         self.completion = completion
         self.dismiss = dismiss
     }
@@ -44,17 +42,14 @@ private final class SheetContent: CombinedComponent {
         if lhs.context !== rhs.context {
             return false
         }
-        if lhs.gift != rhs.gift {
-            return false
-        }
-        if lhs.pinnedGifts != rhs.pinnedGifts {
+        if lhs.existingKeys != rhs.existingKeys {
             return false
         }
         return true
     }
     
     final class State: ComponentState {
-        var selectedGift: StarGiftReference?
+        var selectedUuid: String?
     }
     
     func makeState() -> State {
@@ -66,17 +61,15 @@ private final class SheetContent: CombinedComponent {
         
         let title = Child(BalancedTextComponent.self)
         let text = Child(BalancedTextComponent.self)
-        let gifts = ChildMap(environment: Empty.self, keyedBy: AnyHashable.self)
+        let keys = Child(ListSectionComponent.self)
         let button = Child(ButtonComponent.self)
-        
-        var appliedSelectedGift: StarGiftReference?
-                
+                        
         return { context in
             let environment = context.environment[EnvironmentType.self]
             let component = context.component
             let state = context.state
             
-            let theme = environment.theme
+            let theme = environment.theme.withModalBlocksBackground()
             let strings = environment.strings
             
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
@@ -103,9 +96,10 @@ private final class SheetContent: CombinedComponent {
                 .position(CGPoint(x: environment.safeInsets.left + 16.0 + closeButton.size.width / 2.0, y: 28.0))
             )
             
+            //TODO:localize
             let title = title.update(
                 component: BalancedTextComponent(
-                    text: .plain(NSAttributedString(string: strings.Gift_Unpin_Title, font: titleFont, textColor: textColor)),
+                    text: .plain(NSAttributedString(string: "Data Transfer Requested", font: titleFont, textColor: textColor)),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 1,
                     lineSpacing: 0.1
@@ -120,7 +114,7 @@ private final class SheetContent: CombinedComponent {
             
             let text = text.update(
                 component: BalancedTextComponent(
-                    text: .plain(NSAttributedString(string: strings.Gift_Unpin_Subtitle, font: subtitleFont, textColor: secondaryTextColor)),
+                    text: .plain(NSAttributedString(string: "Choose account to transfer data from:", font: subtitleFont, textColor: secondaryTextColor)),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 1,
                     lineSpacing: 0.2
@@ -134,103 +128,62 @@ private final class SheetContent: CombinedComponent {
             contentSize.height += text.size.height
             contentSize.height += 17.0
             
-            let itemsSideInset = environment.safeInsets.left + 16.0
-            let spacing: CGFloat = 10.0
-            let itemsInRow = 3
-            let width = (context.availableSize.width - itemsSideInset * 2.0 - spacing * CGFloat(itemsInRow - 1)) / CGFloat(itemsInRow)
+            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             
-            var updatedGifts: [_UpdatedChildComponent] = []
-            var index = 0
-            var nextOriginX = itemsSideInset
-            for gift in component.pinnedGifts {
-                guard case let .unique(uniqueGift) = gift.gift else {
-                    continue
-                }
-                var alpha: CGFloat = 1.0
-                var displayGift = uniqueGift
-                if let selectedGift = state.selectedGift {
-                    alpha = selectedGift == gift.reference ? 1.0 : 0.5
-                    if selectedGift == gift.reference {
-                        if case let .unique(uniqueGift) = component.gift.gift {
-                            displayGift = uniqueGift
+            var items: [AnyComponentWithIdentity<Empty>] = []
+            for key in component.existingKeys {
+                var titleComponents: [AnyComponentWithIdentity<Empty>] = []
+                titleComponents.append(
+                    AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: key.accountName,
+                            font: Font.semibold(presentationData.listsFontSize.itemListBaseFontSize),
+                            textColor: environment.theme.list.itemPrimaryTextColor
+                        )),
+                        maximumNumberOfLines: 1
+                    )))
+                )
+                titleComponents.append(
+                    AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: "Created on \(stringForMediumCompactDate(timestamp: key.timestamp, strings: strings, dateTimeFormat: environment.dateTimeFormat))",
+                            font: Font.regular(floor(presentationData.listsFontSize.itemListBaseFontSize * 14.0 / 17.0)),
+                            textColor: environment.theme.list.itemSecondaryTextColor
+                        )),
+                        maximumNumberOfLines: 1
+                    )))
+                )
+                items.append(AnyComponentWithIdentity(id: key.uuid, component: AnyComponent(ListActionItemComponent(
+                    theme: theme,
+                    title: AnyComponent(VStack(titleComponents, alignment: .left, spacing: 2.0)),
+                    leftIcon: .check(ListActionItemComponent.LeftIcon.Check(isSelected: key.uuid == state.selectedUuid, isEnabled: true, toggle: nil)),
+                    accessory: nil,
+                    action: { [weak state] _ in
+                        if let state {
+                            state.selectedUuid = key.uuid
+                            state.updated(transition: .spring(duration: 0.3))
                         }
                     }
-                }
-                
-                var ribbonColor: GiftItemComponent.Ribbon.Color = .blue
-                for attribute in displayGift.attributes {
-                    if case let .backdrop(_, innerColor, outerColor, _, _, _) = attribute {
-                        ribbonColor = .custom(outerColor, innerColor)
-                        break
-                    }
-                }
-                
-                let inset: CGFloat = 2.0
-                updatedGifts.append(
-                    gifts[index].update(
-                        component: AnyComponent(
-                            PlainButtonComponent(
-                                content: AnyComponent(
-                                    GiftItemComponent(
-                                        context: component.context,
-                                        theme: theme,
-                                        strings: strings,
-                                        subject: .uniqueGift(gift: displayGift),
-                                        ribbon: GiftItemComponent.Ribbon(text: "#\(displayGift.number)", font: .monospaced, color: ribbonColor),
-                                        mode: .grid
-                                    )
-                                ),
-                                effectAlignment: .center,
-                                action: { [weak state] in
-                                    guard let state else {
-                                        return
-                                    }
-                                    if state.selectedGift == gift.reference {
-                                        state.selectedGift = nil
-                                    } else {
-                                        state.selectedGift = gift.reference
-                                    }
-                                    state.updated(transition: .spring(duration: 0.3))
-                                },
-                                animateAlpha: false
-                            )
-                        ),
-                        availableSize: CGSize(width: width + inset * 2.0, height: width + inset * 2.0),
-                        transition: context.transition
-                    )
-                )
-                
-                var updatedGift = updatedGifts[index]
-                    .position(CGPoint(x: nextOriginX + updatedGifts[index].size.width / 2.0 - inset, y: contentSize.height + updatedGifts[index].size.height / 2.0 - inset))
-                    .allowsGroupOpacity(true)
-                    .opacity(alpha)
-                
-                if gift.reference == state.selectedGift && appliedSelectedGift != gift.reference {
-                    updatedGift = updatedGift.update(ComponentTransition.Update({ _, view, transition in
-                        UIView.transition(with: view, duration: 0.3, options: [.transitionFlipFromLeft, .curveEaseOut], animations: {
-                            view.alpha = alpha
-                        })
-                    }))
-                } else if let appliedSelectedGift, appliedSelectedGift == gift.reference && gift.reference != state.selectedGift {
-                    updatedGift = updatedGift.update(ComponentTransition.Update({ _, view, transition in
-                        UIView.transition(with: view, duration: 0.3, options: [.transitionFlipFromRight, .curveEaseOut], animations: {
-                            view.alpha = alpha
-                        })
-                    }))
-                }
-                
-                context.add(updatedGift)
-                
-                nextOriginX += updatedGifts[index].size.width - inset * 2.0 + spacing
-                if nextOriginX > context.availableSize.width - itemsSideInset {
-                    contentSize.height += updatedGifts[index].size.height - inset * 2.0 + spacing
-                    nextOriginX = itemsSideInset
-                }
-            
-                index += 1
+                ))))
             }
-            contentSize.height += 14.0
             
+            let keys = keys.update(
+                component: ListSectionComponent(
+                    theme: environment.theme,
+                    header: nil,
+                    footer: nil,
+                    items: items
+                ),
+                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 1000.0),
+                transition: context.transition
+            )
+            context.add(keys
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + keys.size.height / 2.0))
+            )
+            contentSize.height += keys.size.height
+            contentSize.height += 17.0
+            
+            //TODO:localize
             let button = button.update(
                 component: ButtonComponent(
                     background: ButtonComponent.Background(
@@ -239,19 +192,19 @@ private final class SheetContent: CombinedComponent {
                         pressedColor: theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9)
                     ),
                     content: AnyComponentWithIdentity(
-                        id: AnyHashable("unpin"),
+                        id: AnyHashable("transfer"),
                         component: AnyComponent(
-                            MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Gift_Unpin_Replace, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)))
+                            MultilineTextComponent(text: .plain(NSAttributedString(string: "Transfer", font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)))
                         )
                     ),
-                    isEnabled: state.selectedGift != nil,
+                    isEnabled: state.selectedUuid != nil,
                     displaysProgress: false,
                     action: { [weak state] in
                         guard let state else {
                             return
                         }
-                        if let selectedGift = state.selectedGift {
-                            component.completion(selectedGift)
+                        if let selectedUuid = state.selectedUuid {
+                            component.completion(selectedUuid)
                             component.dismiss()
                         }
                     }
@@ -268,9 +221,7 @@ private final class SheetContent: CombinedComponent {
                                       
             let effectiveBottomInset: CGFloat = environment.metrics.isTablet ? 0.0 : environment.safeInsets.bottom
             contentSize.height += 5.0 + effectiveBottomInset
-            
-            appliedSelectedGift = state.selectedGift
-                        
+                                    
             return contentSize
         }
     }
@@ -280,19 +231,16 @@ private final class SheetContainerComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
-    let gift: ProfileGiftsContext.State.StarGift
-    let pinnedGifts: [ProfileGiftsContext.State.StarGift]
-    let completion: (StarGiftReference) -> Void
+    let existingKeys: [WebAppSecureStorage.ExistingKey]
+    let completion: (String) -> Void
     
     init(
         context: AccountContext,
-        gift: ProfileGiftsContext.State.StarGift,
-        pinnedGifts: [ProfileGiftsContext.State.StarGift],
-        completion: @escaping (StarGiftReference) -> Void
+        existingKeys: [WebAppSecureStorage.ExistingKey],
+        completion: @escaping (String) -> Void
     ) {
         self.context = context
-        self.gift = gift
-        self.pinnedGifts = pinnedGifts
+        self.existingKeys = existingKeys
         self.completion = completion
     }
     
@@ -300,10 +248,7 @@ private final class SheetContainerComponent: CombinedComponent {
         if lhs.context !== rhs.context {
             return false
         }
-        if lhs.gift != rhs.gift {
-            return false
-        }
-        if lhs.pinnedGifts != rhs.pinnedGifts {
+        if lhs.existingKeys != rhs.existingKeys {
             return false
         }
         return true
@@ -317,6 +262,7 @@ private final class SheetContainerComponent: CombinedComponent {
         
         return { context in
             let environment = context.environment[EnvironmentType.self]
+            let theme = environment.theme.withModalBlocksBackground()
             
             let controller = environment.controller
             
@@ -324,8 +270,7 @@ private final class SheetContainerComponent: CombinedComponent {
                 component: SheetComponent<EnvironmentType>(
                     content: AnyComponent<EnvironmentType>(SheetContent(
                         context: context.component.context,
-                        gift: context.component.gift,
-                        pinnedGifts: context.component.pinnedGifts,
+                        existingKeys: context.component.existingKeys,
                         completion: context.component.completion,
                         dismiss: {
                             animateOut.invoke(Action { _ in
@@ -335,7 +280,7 @@ private final class SheetContainerComponent: CombinedComponent {
                             })
                         }
                     )),
-                    backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
+                    backgroundColor: .color(theme.list.blocksBackgroundColor),
                     followContentSizeChanges: true,
                     externalState: sheetExternalState,
                     animateOut: animateOut
@@ -392,19 +337,17 @@ private final class SheetContainerComponent: CombinedComponent {
 }
 
 
-public class GiftUnpinScreen: ViewControllerComponentContainer {
-    public init(
+final class WebAppSecureStorageTransferScreen: ViewControllerComponentContainer {
+    init(
         context: AccountContext,
-        gift: ProfileGiftsContext.State.StarGift,
-        pinnedGifts: [ProfileGiftsContext.State.StarGift],
-        completion: @escaping (StarGiftReference) -> Void
+        existingKeys: [WebAppSecureStorage.ExistingKey],
+        completion: @escaping (String?) -> Void
     ) {
         super.init(
             context: context,
             component: SheetContainerComponent(
                 context: context,
-                gift: gift,
-                pinnedGifts: pinnedGifts,
+                existingKeys: existingKeys,
                 completion: completion
             ),
             navigationBarAppearance: .none,
@@ -415,11 +358,11 @@ public class GiftUnpinScreen: ViewControllerComponentContainer {
         self.navigationPresentation = .flatModal
     }
     
-    required public init(coder aDecoder: NSCoder) {
+    required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    public func dismissAnimated() {
+    func dismissAnimated() {
         if let view = self.node.hostView.findTaggedView(tag: SheetComponent<ViewControllerComponentContainer.Environment>.View.Tag()) as? SheetComponent<ViewControllerComponentContainer.Environment>.View {
             view.dismissAnimated()
         }

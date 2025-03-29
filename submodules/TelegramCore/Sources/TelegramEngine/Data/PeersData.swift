@@ -2093,6 +2093,37 @@ public extension TelegramEngine.EngineData.Item {
             }
         }
         
+        public struct BotStorageValue: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
+            public typealias Result = String?
+
+            fileprivate var id: EnginePeer.Id
+            fileprivate var storageKey: String
+            
+            public var mapKey: EnginePeer.Id {
+                return self.id
+            }
+
+            public init(id: EnginePeer.Id, key: String) {
+                self.id = id
+                self.storageKey = key
+            }
+
+            var key: PostboxViewKey {
+                return .preferences(keys: Set([PreferencesKeys.botStorageState(peerId: self.id)]))
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? PreferencesView else {
+                    preconditionFailure()
+                }
+                if let state = view.values[PreferencesKeys.botStorageState(peerId: self.id)]?.get(TelegramBotStorageState.self) {
+                    return state.data[self.storageKey]
+                } else {
+                    return nil
+                }
+            }
+        }
+        
         public struct BusinessChatLinks: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
             public typealias Result = TelegramBusinessChatLinks?
 

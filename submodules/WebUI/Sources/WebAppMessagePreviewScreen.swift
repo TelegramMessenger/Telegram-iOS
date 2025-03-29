@@ -129,11 +129,12 @@ private final class SheetContent: CombinedComponent {
             var text: String = ""
             var entities: TextEntitiesMessageAttribute?
             var media: [Media] = []
+            var replyMarkup: ReplyMarkupMessageAttribute?
             
             switch component.preparedMessage.result {
             case let .internalReference(reference):
                 switch reference.message {
-                case let .auto(textValue, entitiesValue, _):
+                case let .auto(textValue, entitiesValue, replyMarkupValue):
                     text = textValue
                     entities = entitiesValue
                     if let file = reference.file {
@@ -141,39 +142,49 @@ private final class SheetContent: CombinedComponent {
                     } else if let image = reference.image {
                         media = [image]
                     }
-                case let .text(textValue, entitiesValue, disableUrlPreview, previewParameters, _):
+                    replyMarkup = replyMarkupValue
+                case let .text(textValue, entitiesValue, disableUrlPreview, previewParameters, replyMarkupValue):
                     text = textValue
                     entities = entitiesValue
                     let _ = disableUrlPreview
                     let _ = previewParameters
-                case let .contact(contact, _):
+                    replyMarkup = replyMarkupValue
+                case let .contact(contact, replyMarkupValue):
                     media = [contact]
-                case let .mapLocation(map, _):
+                    replyMarkup = replyMarkupValue
+                case let .mapLocation(map, replyMarkupValue):
                     media = [map]
-                case let .invoice(invoice, _):
+                    replyMarkup = replyMarkupValue
+                case let .invoice(invoice, replyMarkupValue):
                     media = [invoice]
+                    replyMarkup = replyMarkupValue
                 default:
                     break
                 }
             case let .externalReference(reference):
                 switch reference.message {
-                case let .auto(textValue, entitiesValue, _):
+                case let .auto(textValue, entitiesValue, replyMarkupValue):
                     text = textValue
                     entities = entitiesValue
                     if let content = reference.content {
                         media = [content]
                     }
-                case let .text(textValue, entitiesValue, disableUrlPreview, previewParameters, _):
+                    replyMarkup = replyMarkupValue
+                case let .text(textValue, entitiesValue, disableUrlPreview, previewParameters, replyMarkupValue):
                     text = textValue
                     entities = entitiesValue
                     let _ = disableUrlPreview
                     let _ = previewParameters
-                case let .contact(contact, _):
+                    replyMarkup = replyMarkupValue
+                case let .contact(contact, replyMarkupValue):
                     media = [contact]
-                case let .mapLocation(map, _):
+                    replyMarkup = replyMarkupValue
+                case let .mapLocation(map, replyMarkupValue):
                     media = [map]
-                case let .invoice(invoice, _):
+                    replyMarkup = replyMarkupValue
+                case let .invoice(invoice, replyMarkupValue):
                     media = [invoice]
+                    replyMarkup = replyMarkupValue
                 default:
                     break
                 }
@@ -183,6 +194,7 @@ private final class SheetContent: CombinedComponent {
                 text: text,
                 entities: entities,
                 media: media,
+                replyMarkup: replyMarkup,
                 botAddress: component.botAddress
             )
                      

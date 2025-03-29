@@ -300,6 +300,8 @@ private final class ScrollContent: CombinedComponent {
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.2,
+                    highlightColor: linkColor.withAlphaComponent(0.1),
+                    highlightInset: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: -8.0),
                     highlightAction: { attributes in
                         if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
                             return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
@@ -598,6 +600,7 @@ private final class ParagraphComponent: CombinedComponent {
                     horizontalAlignment: .natural,
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.2,
+                    highlightColor: accentColor.withAlphaComponent(0.1),
                     highlightAction: { attributes in
                         if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
                             return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
@@ -949,6 +952,7 @@ public class AdsInfoScreen: ViewController {
                         context: controller.context,
                         theme: self.presentationData.theme,
                         title: self.presentationData.strings.AdsInfo_Understood,
+                        showBackground: controller.mode != .search,
                         action: { [weak self] in
                             guard let self else {
                                 return
@@ -992,7 +996,7 @@ public class AdsInfoScreen: ViewController {
         }
         
         private var defaultTopInset: CGFloat {
-            guard let layout = self.currentLayout else {
+            guard let layout = self.currentLayout, let controller = self.controller else {
                 return 210.0
             }
             if case .compact = layout.metrics.widthClass {
@@ -1006,9 +1010,13 @@ public class AdsInfoScreen: ViewController {
                 let contentHeight = self.containerExternalState.contentHeight
                 let footerHeight = self.footerHeight
                 if contentHeight > 0.0 {
-                    let delta = (layout.size.height - defaultTopInset - containerTopInset) - contentHeight - footerHeight - 16.0
-                    if delta > 0.0 {
-                        defaultTopInset += delta
+                    if case .search = controller.mode {
+                        return (layout.size.height - containerTopInset) - contentHeight
+                    } else {
+                        let delta = (layout.size.height - defaultTopInset - containerTopInset) - contentHeight - footerHeight - 16.0
+                        if delta > 0.0 {
+                            defaultTopInset += delta
+                        }
                     }
                 }
                 return defaultTopInset
@@ -1029,7 +1037,7 @@ public class AdsInfoScreen: ViewController {
         }
         
         @objc func panGesture(_ recognizer: UIPanGestureRecognizer) {
-            guard let layout = self.currentLayout else {
+            guard let layout = self.currentLayout, let controller = self.controller else {
                 return
             }
             
@@ -1064,6 +1072,9 @@ public class AdsInfoScreen: ViewController {
                     let contentOffset = scrollView?.contentOffset.y ?? 0.0
                     
                     var translation = recognizer.translation(in: self.view).y
+                    if case .search = controller.mode {
+                        translation = max(0.0, translation)
+                    }
 
                     var currentOffset = topInset + translation
                 
@@ -1111,9 +1122,13 @@ public class AdsInfoScreen: ViewController {
                 
                     let contentOffset = scrollView?.contentOffset.y ?? 0.0
                 
-                    let translation = recognizer.translation(in: self.view).y
+                    var translation = recognizer.translation(in: self.view).y
                     var velocity = recognizer.velocity(in: self.view)
-                    
+                    if case .search = controller.mode {
+                        translation = max(0.0, translation)
+                        velocity.y = max(0.0, velocity.y)
+                    }
+                
                     if self.isExpanded {
                         if contentOffset > 0.1 {
                             velocity = CGPoint()
@@ -1435,12 +1450,14 @@ private final class FooterComponent: Component {
     let context: AccountContext
     let theme: PresentationTheme
     let title: String
+    let showBackground: Bool
     let action: () -> Void
 
-    init(context: AccountContext, theme: PresentationTheme, title: String, action: @escaping () -> Void) {
+    init(context: AccountContext, theme: PresentationTheme, title: String, showBackground: Bool, action: @escaping () -> Void) {
         self.context = context
         self.theme = theme
         self.title = title
+        self.showBackground = showBackground
         self.action = action
     }
 
@@ -1452,6 +1469,9 @@ private final class FooterComponent: Component {
             return false
         }
         if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.showBackground != rhs.showBackground {
             return false
         }
         return true
@@ -1493,6 +1513,9 @@ private final class FooterComponent: Component {
             
             self.separator.backgroundColor = component.theme.rootController.tabBar.separatorColor.cgColor
             transition.setFrame(layer: self.separator, frame: CGRect(origin: .zero, size: CGSize(width: availableSize.width, height: UIScreenPixel)))
+            
+            self.backgroundView.isHidden = !component.showBackground
+            self.separator.isHidden = !component.showBackground
             
             let buttonSize = self.button.update(
                 transition: .immediate,
