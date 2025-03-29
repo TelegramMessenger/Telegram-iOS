@@ -71,3 +71,4 @@ submodules/OpenSSLEncryptionProvider/SharedHeaders/*
 submodules/TelegramCore/FlatSerialization/Sources/*
 buildServer.json
 .build/**
+Telegram.LSP.json

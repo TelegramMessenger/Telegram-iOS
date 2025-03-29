@@ -51,8 +51,8 @@ def generate_xcodeproj(build_environment: BuildEnvironment, disable_extensions, 
     call_executable(bazel_generate_arguments)
 
     xcodeproj_path = '{}.xcodeproj'.format(app_target_spec.replace(':', '/'))
-    call_executable(['open', xcodeproj_path])
+    return xcodeproj_path
 
 
-def generate(build_environment: BuildEnvironment, disable_extensions, disable_provisioning_profiles, include_release, generate_dsym, configuration_path, bazel_app_arguments, target_name):
-    generate_xcodeproj(build_environment, disable_extensions, disable_provisioning_profiles, include_release, generate_dsym, configuration_path, bazel_app_arguments, target_name)
+def generate(build_environment: BuildEnvironment, disable_extensions, disable_provisioning_profiles, include_release, generate_dsym, configuration_path, bazel_app_arguments, target_name) -> str:
+    return generate_xcodeproj(build_environment, disable_extensions, disable_provisioning_profiles, include_release, generate_dsym, configuration_path, bazel_app_arguments, target_name)
