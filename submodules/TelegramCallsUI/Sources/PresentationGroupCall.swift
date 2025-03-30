@@ -683,12 +683,20 @@ private final class ConferenceCallE2EContextStateImpl: ConferenceCallE2EContextS
         return self.call.emojiState()
     }
 
+    func getParticipantIds() -> [Int64] {
+        return self.call.participantIds().compactMap { $0.int64Value }
+    }
+
     func applyBlock(block: Data) {
         self.call.applyBlock(block)
     }
 
     func applyBroadcastBlock(block: Data) {
         self.call.applyBroadcastBlock(block)
+    }
+
+    func generateRemoveParticipantsBlock(participantIds: [Int64]) -> Data? {
+        return self.call.generateRemoveParticipantsBlock(participantIds.map { $0 as NSNumber })
     }
 
     func takeOutgoingBroadcastBlocks() -> [Data] {
@@ -1336,6 +1344,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                         if case let .established(_, _, _, ssrc, _) = self.internalState, ssrc == participantUpdate.ssrc {
                                             self.markAsCanBeRemoved()
                                         }
+                                    } else {
+                                        self.e2eContext?.synchronizeRemovedParticipants()
                                     }
                                 } else if participantUpdate.peerId == self.joinAsPeerId {
                                     if case let .established(_, connectionMode, _, ssrc, _) = self.internalState {

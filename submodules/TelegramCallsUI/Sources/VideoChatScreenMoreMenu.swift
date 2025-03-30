@@ -356,7 +356,7 @@ extension VideoChatScreenComponent.View {
             })))
         }
         
-        if callState.isVideoEnabled && (callState.muteState?.canUnmute ?? true) {
+        if case let .group(groupCall) = currentCall, !groupCall.isConference, callState.isVideoEnabled && (callState.muteState?.canUnmute ?? true) {
             if currentCall.hasScreencast {
                 items.append(.action(ContextMenuActionItem(text: environment.strings.VoiceChat_StopScreenSharing, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/ShareScreen"), color: theme.actionSheet.primaryTextColor)

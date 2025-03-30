@@ -109,8 +109,8 @@ public extension TelegramEngine {
             return _internal_inviteConferenceCallParticipant(account: self.account, callId: callId, accessHash: accessHash, peerId: peerId)
         }
         
-        public func removeGroupCallBlockchainParticipant(callId: Int64, accessHash: Int64, block: @escaping ([EnginePeer.Id]) -> Data?) -> Signal<Never, RemoveGroupCallBlockchainParticipantError> {
-            return _internal_removeGroupCallBlockchainParticipants(account: self.account, callId: callId, accessHash: accessHash, block: block)
+        public func removeGroupCallBlockchainParticipants(callId: Int64, accessHash: Int64, participantIds: [Int64], block: Data) -> Signal<RemoveGroupCallBlockchainParticipantsResult, NoError> {
+            return _internal_removeGroupCallBlockchainParticipants(account: self.account, callId: callId, accessHash: accessHash, participantIds: participantIds, block: block)
         }
 
         public func clearCachedGroupCallDisplayAsAvailablePeers(peerId: PeerId) -> Signal<Never, NoError> {

@@ -854,54 +854,32 @@ func _internal_inviteConferenceCallParticipant(account: Account, callId: Int64, 
     }
 }
 
-public enum RemoveGroupCallBlockchainParticipantError {
-    case generic
+public enum RemoveGroupCallBlockchainParticipantsResult {
+    case success
     case pollBlocksAndRetry
 }
 
-func _internal_removeGroupCallBlockchainParticipants(account: Account, callId: Int64, accessHash: Int64, block: @escaping ([EnginePeer.Id]) -> Data?) -> Signal<Never, RemoveGroupCallBlockchainParticipantError> {
-    /*let blockSignal = _internal_getGroupCallParticipants(account: account, callId: callId, accessHash: accessHash, offset: "", ssrcs: [], limit: 1000, sortAscending: nil)
-    |> mapError { _ -> RemoveGroupCallBlockchainParticipantError in
-        return .generic
-    }
-    |> map { result -> Data? in
-        return block(result.participants.map(\.peer.id))
-    }
-    
-    let signal: Signal<Never, RemoveGroupCallBlockchainParticipantError> = blockSignal
-    |> mapToSignal { block -> Signal<Never, RemoveGroupCallBlockchainParticipantError> in
-        guard let block else {
-            return .complete()
-        }
-        return
-    }
-    
-    account.postbox.transaction { transaction -> Api.InputPeer? in
-        return transaction.getPeer(participantId).flatMap(apiInputPeer)
-    }
-    |> castError(RemoveGroupCallBlockchainParticipantError.self)
-    |> mapToSignal { inputPeer -> Signal<Never, RemoveGroupCallBlockchainParticipantError> in
-        guard let inputPeer else {
-            return .fail(.generic)
-        }
-        return account.network.request(Api.functions.phone.deleteConferenceCallParticipant(call: .inputGroupCall(id: callId, accessHash: accessHash), peer: inputPeer, block: Buffer(data: block)))
-        |> mapError { error -> RemoveGroupCallBlockchainParticipantError in
-            if error.errorDescription.hasPrefix("CONF_WRITE_CHAIN_INVALID") {
-                return .pollBlocksAndRetry
+func _internal_removeGroupCallBlockchainParticipants(account: Account, callId: Int64, accessHash: Int64, participantIds: [Int64], block: Data) -> Signal<RemoveGroupCallBlockchainParticipantsResult, NoError> {
+    return account.postbox.transaction { transaction -> [Api.InputPeer] in
+        return participantIds.map { participantId in
+            let participantPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(participantId))
+            if let peer = transaction.getPeer(participantPeerId).flatMap(apiInputPeer) {
+                return peer
             } else {
-                return .generic
+                return .inputPeerUser(userId: participantId, accessHash: 0)
             }
         }
-        |> mapToSignal { result -> Signal<Never, RemoveGroupCallBlockchainParticipantError> in
-            account.stateManager.addUpdates(result)
-            
-            return .complete()
+    }
+    |> mapToSignal { inputUsers -> Signal<RemoveGroupCallBlockchainParticipantsResult, NoError> in
+        return account.network.request(Api.functions.phone.deleteConferenceCallParticipants(call: .inputGroupCall(id: callId, accessHash: accessHash), ids: inputUsers, block: Buffer(data: block)))
+        |> map { updates -> RemoveGroupCallBlockchainParticipantsResult in
+            account.stateManager.addUpdates(updates)
+            return .success
+        }
+        |> `catch` { _ -> Signal<RemoveGroupCallBlockchainParticipantsResult, NoError> in
+            return .single(.pollBlocksAndRetry)
         }
     }
-    
-    return signal*/
-    //TODO:release
-    return .complete()
 }
 
 public struct JoinGroupCallAsScreencastResult {

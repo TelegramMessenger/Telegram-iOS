@@ -159,6 +159,19 @@ static NSString *hexStringFromData(NSData *data) {
     return outEmojiHash;
 }
 
+- (NSArray<NSNumber *> *)participantIds {
+    auto result = tde2e_api::call_get_state(_callId);
+    if (!result.is_ok()) {
+        return @[];
+    }
+    auto state = result.value();
+    NSMutableArray<NSNumber *> *participantIds = [[NSMutableArray alloc] init];
+    for (const auto &it : state.participants) {
+        [participantIds addObject:[NSNumber numberWithLongLong:it.user_id]];
+    }
+    return participantIds;
+}
+
 - (void)applyBlock:(NSData *)block {
     std::string mappedBlock((uint8_t *)block.bytes, ((uint8_t *)block.bytes) + block.length);
     
@@ -193,6 +206,28 @@ static NSString *hexStringFromData(NSData *data) {
     if (!result.is_ok()) {
         return;
     }
+}
+
+- (nullable NSData *)generateRemoveParticipantsBlock:(NSArray<NSNumber *> *)participantIds {
+    auto stateResult = tde2e_api::call_get_state(_callId);
+    if (!stateResult.is_ok()) {
+        return nil;
+    }
+    auto state = stateResult.value();
+    for (NSNumber *participantId in participantIds) {
+        auto it = std::find_if(state.participants.begin(), state.participants.end(), [participantId](const tde2e_api::CallParticipant &participant) {
+            return participant.user_id == [participantId longLongValue];
+        });
+        if (it != state.participants.end()) {
+            state.participants.erase(it);
+        }
+    }
+    
+    auto result = tde2e_api::call_create_change_state_block(_callId, state);
+    if (!result.is_ok()) {
+        return nil;
+    }
+    return [[NSData alloc] initWithBytes:result.value().data() length:result.value().size()];
 }
 
 - (nullable NSData *)encrypt:(NSData *)message {

@@ -3,9 +3,12 @@ import SwiftSignalKit
 
 public protocol ConferenceCallE2EContextState: AnyObject {
     func getEmojiState() -> Data?
+    func getParticipantIds() -> [Int64]
 
     func applyBlock(block: Data)
     func applyBroadcastBlock(block: Data)
+    
+    func generateRemoveParticipantsBlock(participantIds: [Int64]) -> Data?
 
     func takeOutgoingBroadcastBlocks() -> [Data]
 
@@ -43,6 +46,12 @@ public final class ConferenceCallE2EContext {
         private var e2ePoll1Timer: Foundation.Timer?
         private var e2ePoll1Disposable: Disposable?
 
+        private var isSynchronizingRemovedParticipants: Bool = false
+        private var scheduledSynchronizeRemovedParticipants: Bool = false
+        private var scheduledSynchronizeRemovedParticipantsAfterPoll: Bool = false
+        private var synchronizeRemovedParticipantsDisposable: Disposable?
+        private var synchronizeRemovedParticipantsTimer: Foundation.Timer?
+
         init(queue: Queue, engine: TelegramEngine, callId: Int64, accessHash: Int64, reference: InternalGroupCallReference, state: Atomic<ContextStateHolder>, initializeState: @escaping (TelegramKeyPair, Data) -> ConferenceCallE2EContextState?, keyPair: TelegramKeyPair) {
             precondition(queue.isCurrent())
             precondition(Queue.mainQueue().isCurrent())
@@ -62,9 +71,19 @@ public final class ConferenceCallE2EContext {
             self.e2ePoll0Disposable?.dispose()
             self.e2ePoll1Timer?.invalidate()
             self.e2ePoll1Disposable?.dispose()
+            self.synchronizeRemovedParticipantsDisposable?.dispose()
+            self.synchronizeRemovedParticipantsTimer?.invalidate()
         }
 
         func begin() {
+            self.scheduledSynchronizeRemovedParticipantsAfterPoll = true
+            self.synchronizeRemovedParticipantsTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 10.0, repeats: true, block: { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                self.synchronizeRemovedParticipants()
+            })
+            
             self.e2ePoll(subChainId: 0)
             self.e2ePoll(subChainId: 1)
         }
@@ -189,6 +208,11 @@ public final class ConferenceCallE2EContext {
                         }
                         self.e2ePoll(subChainId: 0)
                     })
+
+                    if self.scheduledSynchronizeRemovedParticipantsAfterPoll {
+                        self.scheduledSynchronizeRemovedParticipantsAfterPoll = false
+                        self.synchronizeRemovedParticipants()
+                    }
                 } else if subChainId == 1 {
                     self.e2ePoll1Timer?.invalidate()
                     self.e2ePoll1Timer = Foundation.Timer.scheduledTimer(withTimeInterval: delayPoll ? 1.0 : 0.0, repeats: false, block: { [weak self] _ in
@@ -208,7 +232,83 @@ public final class ConferenceCallE2EContext {
         }
 
         func synchronizeRemovedParticipants() {
+            if self.isSynchronizingRemovedParticipants {
+                self.scheduledSynchronizeRemovedParticipants = true
+                return
+            }
+
+            self.isSynchronizingRemovedParticipants = true
+
+            let engine = self.engine
+            let state = self.state
+            let callId = self.callId
+            let accessHash = self.accessHash
             
+            self.synchronizeRemovedParticipantsDisposable?.dispose()
+            self.synchronizeRemovedParticipantsDisposable = (_internal_getGroupCallParticipants(
+                account: self.engine.account,
+                reference: self.reference,
+                offset: "",
+                ssrcs: [],
+                limit: 100,
+                sortAscending: true
+            )
+            |> map(Optional.init)
+            |> `catch` { _ -> Signal<GroupCallParticipantsContext.State?, NoError> in
+                return .single(nil)
+            }
+            |> mapToSignal { result -> Signal<Bool, NoError> in
+                guard let result else {
+                    return .single(false)
+                }
+
+                let blockchainPeerIds = state.with { state -> [Int64] in
+                    guard let state = state.state else {
+                        return []
+                    }
+                    return state.getParticipantIds()
+                }
+
+                // Peer ids that are in the blockchain but not in the server list
+                let removedPeerIds = blockchainPeerIds.filter { blockchainPeerId in
+                    return !result.participants.contains(where: { $0.peer.id.id._internalGetInt64Value() == blockchainPeerId })
+                }
+                
+                if removedPeerIds.isEmpty {
+                    return .single(false)
+                }
+                guard let removeBlock = state.with({ state -> Data? in
+                    guard let state = state.state else {
+                        return nil
+                    }
+                    return state.generateRemoveParticipantsBlock(participantIds: removedPeerIds)
+                }) else {
+                    return .single(false)
+                }
+
+                return engine.calls.removeGroupCallBlockchainParticipants(callId: callId, accessHash: accessHash, participantIds: removedPeerIds, block: removeBlock)
+                |> map { result -> Bool in
+                    switch result {
+                    case .success:
+                        return true
+                    case .pollBlocksAndRetry:
+                        return false
+                    }
+                }
+            }
+            |> deliverOn(self.queue)).startStrict(next: { [weak self] shouldRetry in
+                guard let self else {
+                    return
+                }
+                self.isSynchronizingRemovedParticipants = false
+                if self.scheduledSynchronizeRemovedParticipants {
+                    self.scheduledSynchronizeRemovedParticipants = false
+                    self.synchronizeRemovedParticipants()
+                } else if shouldRetry && !self.scheduledSynchronizeRemovedParticipantsAfterPoll {
+                    self.scheduledSynchronizeRemovedParticipantsAfterPoll = true
+                    self.e2ePoll(subChainId: 0)
+                }
+            })
         }
     }
 

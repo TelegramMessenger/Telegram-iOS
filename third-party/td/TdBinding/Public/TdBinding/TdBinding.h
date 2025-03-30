@@ -35,9 +35,12 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (NSArray<NSData *> *)takeOutgoingBroadcastBlocks;
 - (NSData *)emojiState;
+- (NSArray<NSNumber *> *)participantIds;
 
 - (void)applyBlock:(NSData *)block;
 - (void)applyBroadcastBlock:(NSData *)block;
+
+- (nullable NSData *)generateRemoveParticipantsBlock:(NSArray<NSNumber *> *)participantIds;
 
 - (nullable NSData *)encrypt:(NSData *)message;
 - (nullable NSData *)decrypt:(NSData *)message;
