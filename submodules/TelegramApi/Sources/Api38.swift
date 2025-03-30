@@ -9904,14 +9904,14 @@ public extension Api.functions.phone {
                 }
 }
 public extension Api.functions.phone {
-                static func deleteConferenceCallParticipants(call: Api.InputGroupCall, ids: [Api.InputPeer], block: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func deleteConferenceCallParticipants(call: Api.InputGroupCall, ids: [Int64], block: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(585451463)
+                    buffer.appendInt32(-115142380)
                     call.serialize(buffer, true)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(ids.count))
                     for item in ids {
-                        item.serialize(buffer, true)
+                        serializeInt64(item, buffer: buffer, boxed: false)
                     }
                     serializeBytes(block, buffer: buffer, boxed: false)
                     return (FunctionDescription(name: "phone.deleteConferenceCallParticipants", parameters: [("call", String(describing: call)), ("ids", String(describing: ids)), ("block", String(describing: block))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
