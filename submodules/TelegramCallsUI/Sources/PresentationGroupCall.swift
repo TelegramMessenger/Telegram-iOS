@@ -672,6 +672,38 @@ private final class PendingConferenceInvitationContext {
     }
 }
 
+private final class ConferenceCallE2EContextStateImpl: ConferenceCallE2EContextState {
+    private let call: TdCall
+
+    init(call: TdCall) {
+        self.call = call
+    }
+
+    func getEmojiState() -> Data? {
+        return self.call.emojiState()
+    }
+
+    func applyBlock(block: Data) {
+        self.call.applyBlock(block)
+    }
+
+    func applyBroadcastBlock(block: Data) {
+        self.call.applyBroadcastBlock(block)
+    }
+
+    func takeOutgoingBroadcastBlocks() -> [Data] {
+        return self.call.takeOutgoingBroadcastBlocks()
+    }
+
+    func encrypt(message: Data) -> Data? {
+        return self.call.encrypt(message)
+    }
+
+    func decrypt(message: Data) -> Data? {
+        return self.call.decrypt(message)
+    }
+}
+
 public final class PresentationGroupCallImpl: PresentationGroupCall {
     private enum InternalState {
         case requesting
@@ -820,20 +852,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     
     private let keyPair: TelegramKeyPair?
     
-    private final class E2ECallState {
-        var call: TdCall?
-        var pendingIncomingBroadcastBlocks: [Data] = []
-    }
-    private let e2eCall = Atomic<E2ECallState>(value: E2ECallState())
-    
-    private var e2ePoll0Offset: Int?
-    private var e2ePoll0Timer: Foundation.Timer?
-    private var e2ePoll0Disposable: Disposable?
-    
-    private var e2ePoll1Offset: Int?
-    private var e2ePoll1Timer: Foundation.Timer?
-    private var e2ePoll1Disposable: Disposable?
-    
     private var temporaryJoinTimestamp: Int32
     private var temporaryActivityTimestamp: Double?
     private var temporaryActivityRank: Int?
@@ -900,9 +918,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
     private let isNoiseSuppressionEnabledDisposable = MetaDisposable()
     
-    private let e2eEncryptionKeyHashValue = ValuePromise<Data?>(nil)
     public var e2eEncryptionKeyHash: Signal<Data?, NoError> {
-        return self.e2eEncryptionKeyHashValue.get()
+        return self.e2eContext?.e2eEncryptionKeyHash ?? .single(nil)
     }
 
     private var isVideoMuted: Bool = false
@@ -1110,6 +1127,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     public var pendingDisconnedUpgradedConferenceCall: PresentationCallImpl?
     private var pendingDisconnedUpgradedConferenceCallTimer: Foundation.Timer?
     private var conferenceInvitationContexts: [PeerId: PendingConferenceInvitationContext] = [:]
+
+    private let e2eContext: ConferenceCallE2EContext?
     
     init(
         accountContext: AccountContext,
@@ -1157,6 +1176,27 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.conferenceSourceId = conferenceSourceId
         self.isConference = isConference
         self.keyPair = keyPair
+
+        if let keyPair, let initialCall {
+            self.e2eContext = ConferenceCallE2EContext(
+                engine: accountContext.engine,
+                callId: initialCall.description.id,
+                accessHash: initialCall.description.accessHash,
+                reference: initialCall.reference,
+                keyPair: keyPair,
+                initializeState: { keyPair, block in
+                    guard let keyPair = TdKeyPair(keyId: keyPair.id, publicKey: keyPair.publicKey.data) else {
+                        return nil
+                    }
+                    guard let call = TdCall.make(with: keyPair, latestBlock: block) else {
+                        return nil
+                    }
+                    return ConferenceCallE2EContextStateImpl(call: call)
+                }
+            )
+        } else {
+            self.e2eContext = nil
+        }
         
         var sharedAudioContext = sharedAudioContext
         if sharedAudioContext == nil {
@@ -1321,39 +1361,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 self.markAsCanBeRemoved()
                             }
                         case let .conferenceChainBlocks(subChainId, blocks, nextOffset):
-                            if let _ = self.keyPair {
-                                var processBlock = true
-                                let updateBaseOffset = nextOffset - blocks.count
-                                if subChainId == 0 {
-                                    if let e2ePoll0Offset = self.e2ePoll0Offset {
-                                        if e2ePoll0Offset == updateBaseOffset {
-                                            self.e2ePoll0Offset = nextOffset
-                                        } else if e2ePoll0Offset < updateBaseOffset {
-                                            self.e2ePoll(subChainId: subChainId)
-                                        } else {
-                                            processBlock = false
-                                        }
-                                    } else {
-                                        processBlock = false
-                                    }
-                                } else if subChainId == 1 {
-                                    if let e2ePoll1Offset = self.e2ePoll1Offset {
-                                        if e2ePoll1Offset == updateBaseOffset {
-                                            self.e2ePoll1Offset = nextOffset
-                                        } else if e2ePoll1Offset < updateBaseOffset {
-                                            self.e2ePoll(subChainId: subChainId)
-                                        } else {
-                                            processBlock = false
-                                        }
-                                    } else {
-                                        processBlock = false
-                                    }
-                                } else {
-                                    processBlock = false
-                                }
-                                if processBlock {
-                                    self.addE2EBlocks(blocks: blocks, subChainId: subChainId)
-                                }
+                            if let e2eContext = self.e2eContext {
+                                e2eContext.addChainBlocksUpdate(subChainId: subChainId, blocks: blocks, nextOffset: nextOffset)
                             }
                         }
                     }
@@ -1511,10 +1520,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.peerUpdatesSubscription?.dispose()
         self.screencastStateDisposable?.dispose()
         self.pendingDisconnedUpgradedConferenceCallTimer?.invalidate()
-        self.e2ePoll0Timer?.invalidate()
-        self.e2ePoll0Disposable?.dispose()
-        self.e2ePoll1Timer?.invalidate()
-        self.e2ePoll1Disposable?.dispose()
     }
     
     private func switchToTemporaryParticipantsContext(sourceContext: GroupCallParticipantsContext?, oldMyPeerId: PeerId) {
@@ -2021,24 +2026,28 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         audioIsActiveByDefault = false
                     }
                     
-                    var encryptionContext: OngoingGroupCallEncryptionContext?
-                    if self.isConference {
-                        class OngoingGroupCallEncryptionContextImpl: OngoingGroupCallEncryptionContext {
-                            private let e2eCall: Atomic<E2ECallState>
-                            
-                            init(e2eCall: Atomic<E2ECallState>) {
-                                self.e2eCall = e2eCall
-                            }
-                            
-                            func encrypt(message: Data) -> Data? {
-                                return self.e2eCall.with({ $0.call?.encrypt(message) })
-                            }
-                            
-                            func decrypt(message: Data) -> Data? {
-                                return self.e2eCall.with({ $0.call?.decrypt(message) })
-                            }
+                    class OngoingGroupCallEncryptionContextImpl: OngoingGroupCallEncryptionContext {
+                        private let e2eCall: Atomic<ConferenceCallE2EContext.ContextStateHolder>
+                        
+                        init(e2eCall: Atomic<ConferenceCallE2EContext.ContextStateHolder>) {
+                            self.e2eCall = e2eCall
                         }
-                        encryptionContext = OngoingGroupCallEncryptionContextImpl(e2eCall: self.e2eCall)
+                        
+                        func encrypt(message: Data) -> Data? {
+                            return self.e2eCall.with({ $0.state?.encrypt(message: message) })
+                        }
+                        
+                        func decrypt(message: Data) -> Data? {
+                            return self.e2eCall.with({ $0.state?.decrypt(message: message) })
+                        }
+                    }
+                    
+                    var encryptionContext: OngoingGroupCallEncryptionContext?
+                    if let e2eContext = self.e2eContext {
+                        encryptionContext = OngoingGroupCallEncryptionContextImpl(e2eCall: e2eContext.state)
+                    } else if self.isConference {
+                        // Prevent non-encrypted conference calls
+                        encryptionContext = OngoingGroupCallEncryptionContextImpl(e2eCall: Atomic(value: ConferenceCallE2EContext.ContextStateHolder()))
                     }
 
                     genericCallContext = .call(OngoingGroupCallContext(audioSessionActive: contextAudioSessionActive, video: self.videoCapturer, requestMediaChannelDescriptions: { [weak self] ssrcs, completion in
@@ -2284,8 +2293,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
 
                     self.updateSessionState(internalState: .established(info: joinCallResult.callInfo, connectionMode: joinCallResult.connectionMode, clientParams: clientParams, localSsrc: ssrc, initialState: joinCallResult.state), audioSessionControl: self.audioSessionControl)
                     
-                    self.e2ePoll(subChainId: 0)
-                    self.e2ePoll(subChainId: 1)
+                    self.e2eContext?.begin()
                 }, error: { [weak self] error in
                     guard let self else {
                         return
@@ -2895,117 +2903,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             } else if case let .active(callInfo) = internalState, callInfo.scheduleTimestamp != nil {
                 self.switchToTemporaryScheduledParticipantsContext()
             }
-        }
-    }
-    
-    private func addE2EBlocks(blocks: [Data], subChainId: Int) {
-        guard let initialCall = self.initialCall, let keyPair = self.keyPair else {
-            return
-        }
-        let (outBlocks, outEmoji) = self.e2eCall.with({ callState -> ([Data], Data) in
-            if let call = callState.call {
-                for block in blocks {
-                    if subChainId == 0 {
-                        call.applyBlock(block)
-                    } else if subChainId == 1 {
-                        call.applyBroadcastBlock(block)
-                    }
-                }
-                return (call.takeOutgoingBroadcastBlocks(), call.emojiState())
-            } else {
-                if subChainId == 0 {
-                    guard let block = blocks.last else {
-                        return ([], Data())
-                    }
-                    guard let keyPair = TdKeyPair(keyId: keyPair.id, publicKey: keyPair.publicKey.data) else {
-                        return ([], Data())
-                    }
-                    guard let call = TdCall.make(with: keyPair, latestBlock: block) else {
-                        return ([], Data())
-                    }
-                    callState.call = call
-                    for block in callState.pendingIncomingBroadcastBlocks {
-                        call.applyBroadcastBlock(block)
-                    }
-                    callState.pendingIncomingBroadcastBlocks.removeAll()
-                    return (call.takeOutgoingBroadcastBlocks(), call.emojiState())
-                } else if subChainId == 1 {
-                    callState.pendingIncomingBroadcastBlocks.append(contentsOf: blocks)
-                    return ([], Data())
-                } else {
-                    return ([], Data())
-                }
-            }
-        })
-        self.e2eEncryptionKeyHashValue.set(outEmoji.isEmpty ? nil : outEmoji)
-        
-        //TODO:release queue
-        for outBlock in outBlocks {
-            let _ = self.accountContext.engine.calls.sendConferenceCallBroadcast(callId: initialCall.description.id, accessHash: initialCall.description.accessHash, block: outBlock).startStandalone()
-        }
-    }
-    
-    private func e2ePoll(subChainId: Int) {
-        guard let initialCall = self.initialCall else {
-            return
-        }
-
-        let offset: Int?
-        if subChainId == 0 {
-            offset = self.e2ePoll0Offset
-            self.e2ePoll0Disposable?.dispose()
-        } else if subChainId == 1 {
-            offset = self.e2ePoll1Offset
-            self.e2ePoll1Disposable?.dispose()
-        } else {
-            return
-        }
-        
-        let disposable = (self.accountContext.engine.calls.pollConferenceCallBlockchain(reference: initialCall.reference, subChainId: subChainId, offset: offset ?? 0, limit: 10)
-        |> deliverOnMainQueue).startStrict(next: { [weak self] result in
-            guard let self else {
-                return
-            }
-            
-            var delayPoll = true
-            if let result {
-                if subChainId == 0 {
-                    if self.e2ePoll0Offset != result.nextOffset {
-                        self.e2ePoll0Offset = result.nextOffset
-                        delayPoll = false
-                    }
-                } else if subChainId == 1 {
-                    if self.e2ePoll1Offset != result.nextOffset {
-                        self.e2ePoll1Offset = result.nextOffset
-                        delayPoll = false
-                    }
-                }
-                self.addE2EBlocks(blocks: result.blocks, subChainId: subChainId)
-            }
-            
-            if subChainId == 0 {
-                self.e2ePoll0Timer?.invalidate()
-                self.e2ePoll0Timer = Foundation.Timer.scheduledTimer(withTimeInterval: delayPoll ? 1.0 : 0.0, repeats: false, block: { [weak self] _ in
-                    guard let self else {
-                        return
-                    }
-                    self.e2ePoll(subChainId: 0)
-                })
-            } else if subChainId == 1 {
-                self.e2ePoll1Timer?.invalidate()
-                self.e2ePoll1Timer = Foundation.Timer.scheduledTimer(withTimeInterval: delayPoll ? 1.0 : 0.0, repeats: false, block: { [weak self] _ in
-                    guard let self else {
-                        return
-                    }
-                    self.e2ePoll(subChainId: 1)
-                })
-            }
-        })
-
-        if subChainId == 0 {
-            self.e2ePoll0Disposable = disposable
-        } else if subChainId == 1 {
-            self.e2ePoll1Disposable = disposable
         }
     }
     
