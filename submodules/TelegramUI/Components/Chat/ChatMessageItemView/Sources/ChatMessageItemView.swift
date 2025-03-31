@@ -590,6 +590,7 @@ public final class ChatMessageAccessibilityData {
                 }
                 else if let media = media as? TelegramMediaAction {
                     if case .phoneCall = media.action {
+                    } else if case .conferenceCall = media.action {
                     } else {
                         canReply = false
                     }

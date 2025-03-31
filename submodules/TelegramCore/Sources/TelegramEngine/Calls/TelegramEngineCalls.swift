@@ -33,8 +33,8 @@ public extension TelegramEngine {
             return _internal_saveCompleteCallDebugLog(account: self.account, callId: callId, logPath: logPath)
         }
 
-        public func getCurrentGroupCall(callId: Int64, accessHash: Int64, peerId: PeerId? = nil) -> Signal<GroupCallSummary?, GetCurrentGroupCallError> {
-            return _internal_getCurrentGroupCall(account: self.account, callId: callId, accessHash: accessHash, peerId: peerId)
+        public func getCurrentGroupCall(reference: InternalGroupCallReference, peerId: PeerId? = nil) -> Signal<GroupCallSummary?, GetCurrentGroupCallError> {
+            return _internal_getCurrentGroupCall(account: self.account, reference: reference, peerId: peerId)
         }
 
         public func createGroupCall(peerId: PeerId, title: String?, scheduleDate: Int32?, isExternalStream: Bool) -> Signal<GroupCallInfo, CreateGroupCallError> {
@@ -45,20 +45,20 @@ public extension TelegramEngine {
             return _internal_startScheduledGroupCall(account: self.account, peerId: peerId, callId: callId, accessHash: accessHash)
         }
 
-        public func toggleScheduledGroupCallSubscription(peerId: PeerId, callId: Int64, accessHash: Int64, subscribe: Bool) -> Signal<Void, ToggleScheduledGroupCallSubscriptionError> {
-            return _internal_toggleScheduledGroupCallSubscription(account: self.account, peerId: peerId, callId: callId, accessHash: accessHash, subscribe: subscribe)
+        public func toggleScheduledGroupCallSubscription(peerId: PeerId, reference: InternalGroupCallReference, subscribe: Bool) -> Signal<Void, ToggleScheduledGroupCallSubscriptionError> {
+            return _internal_toggleScheduledGroupCallSubscription(account: self.account, peerId: peerId, reference: reference, subscribe: subscribe)
         }
 
         public func updateGroupCallJoinAsPeer(peerId: PeerId, joinAs: PeerId) -> Signal<Never, UpdateGroupCallJoinAsPeerError> {
             return _internal_updateGroupCallJoinAsPeer(account: self.account, peerId: peerId, joinAs: joinAs)
         }
 
-        public func getGroupCallParticipants(callId: Int64, accessHash: Int64, offset: String, ssrcs: [UInt32], limit: Int32, sortAscending: Bool?) -> Signal<GroupCallParticipantsContext.State, GetGroupCallParticipantsError> {
-            return _internal_getGroupCallParticipants(account: self.account, callId: callId, accessHash: accessHash, offset: offset, ssrcs: ssrcs, limit: limit, sortAscending: sortAscending)
+        public func getGroupCallParticipants(reference: InternalGroupCallReference, offset: String, ssrcs: [UInt32], limit: Int32, sortAscending: Bool?) -> Signal<GroupCallParticipantsContext.State, GetGroupCallParticipantsError> {
+            return _internal_getGroupCallParticipants(account: self.account, reference: reference, offset: offset, ssrcs: ssrcs, limit: limit, sortAscending: sortAscending)
         }
 
-        public func joinGroupCall(peerId: PeerId?, joinAs: PeerId?, callId: Int64, accessHash: Int64, preferMuted: Bool, joinPayload: String, peerAdminIds: Signal<[PeerId], NoError>, inviteHash: String? = nil, keyFingerprint: Int64?) -> Signal<JoinGroupCallResult, JoinGroupCallError> {
-            return _internal_joinGroupCall(account: self.account, peerId: peerId, joinAs: joinAs, callId: callId, accessHash: accessHash, preferMuted: preferMuted, joinPayload: joinPayload, peerAdminIds: peerAdminIds, inviteHash: inviteHash, keyFingerprint: keyFingerprint)
+        public func joinGroupCall(peerId: PeerId?, joinAs: PeerId?, callId: Int64, reference: InternalGroupCallReference, preferMuted: Bool, joinPayload: String, peerAdminIds: Signal<[PeerId], NoError>, inviteHash: String? = nil, generateE2E: ((Data?) -> JoinGroupCallE2E?)?) -> Signal<JoinGroupCallResult, JoinGroupCallError> {
+            return _internal_joinGroupCall(account: self.account, peerId: peerId, joinAs: joinAs, callId: callId, reference: reference, preferMuted: preferMuted, joinPayload: joinPayload, peerAdminIds: peerAdminIds, inviteHash: inviteHash, generateE2E: generateE2E)
         }
 
         public func joinGroupCallAsScreencast(callId: Int64, accessHash: Int64, joinPayload: String) -> Signal<JoinGroupCallAsScreencastResult, JoinGroupCallError> {
@@ -85,17 +85,33 @@ public extension TelegramEngine {
             return _internal_inviteToGroupCall(account: self.account, callId: callId, accessHash: accessHash, peerId: peerId)
         }
 
-        public func groupCallInviteLinks(callId: Int64, accessHash: Int64) -> Signal<GroupCallInviteLinks?, NoError> {
-            return _internal_groupCallInviteLinks(account: self.account, callId: callId, accessHash: accessHash)
+        public func groupCallInviteLinks(reference: InternalGroupCallReference, isConference: Bool) -> Signal<GroupCallInviteLinks?, NoError> {
+            return _internal_groupCallInviteLinks(account: self.account, reference: reference, isConference: isConference)
         }
 
         public func editGroupCallTitle(callId: Int64, accessHash: Int64, title: String) -> Signal<Never, EditGroupCallTitleError> {
             return _internal_editGroupCallTitle(account: self.account, callId: callId, accessHash: accessHash, title: title)
         }
 
-        /*public func groupCallDisplayAsAvailablePeers(peerId: PeerId) -> Signal<[FoundPeer], NoError> {
-            return _internal_groupCallDisplayAsAvailablePeers(network: self.account.network, postbox: self.account.postbox, peerId: peerId)
-        }*/
+        public func createConferenceCall() -> Signal<EngineCreatedGroupCall, CreateConferenceCallError> {
+            return _internal_createConferenceCall(postbox: self.account.postbox, network: self.account.network, accountPeerId: self.account.peerId)
+        }
+        
+        public func pollConferenceCallBlockchain(reference: InternalGroupCallReference, subChainId: Int, offset: Int, limit: Int) -> Signal<(blocks: [Data], nextOffset: Int)?, NoError> {
+            return _internal_pollConferenceCallBlockchain(network: self.account.network, reference: reference, subChainId: subChainId, offset: offset, limit: limit)
+        }
+        
+        public func sendConferenceCallBroadcast(callId: Int64, accessHash: Int64, block: Data) -> Signal<Never, NoError> {
+            return _internal_sendConferenceCallBroadcast(account: self.account, callId: callId, accessHash: accessHash, block: block)
+        }
+        
+        public func inviteConferenceCallParticipant(callId: Int64, accessHash: Int64, peerId: EnginePeer.Id) -> Signal<Never, NoError> {
+            return _internal_inviteConferenceCallParticipant(account: self.account, callId: callId, accessHash: accessHash, peerId: peerId)
+        }
+        
+        public func removeGroupCallBlockchainParticipants(callId: Int64, accessHash: Int64, participantIds: [Int64], block: Data) -> Signal<RemoveGroupCallBlockchainParticipantsResult, NoError> {
+            return _internal_removeGroupCallBlockchainParticipants(account: self.account, callId: callId, accessHash: accessHash, participantIds: participantIds, block: block)
+        }
 
         public func clearCachedGroupCallDisplayAsAvailablePeers(peerId: PeerId) -> Signal<Never, NoError> {
             return _internal_clearCachedGroupCallDisplayAsAvailablePeers(account: self.account, peerId: peerId)
@@ -124,8 +140,8 @@ public extension TelegramEngine {
             return _internal_getVideoBroadcastPart(dataSource: dataSource, callId: callId, accessHash: accessHash, timestampIdMilliseconds: timestampIdMilliseconds, durationMilliseconds: durationMilliseconds, channelId: channelId, quality: quality)
         }
 
-        public func groupCall(peerId: PeerId?, myPeerId: PeerId, id: Int64, accessHash: Int64, state: GroupCallParticipantsContext.State, previousServiceState: GroupCallParticipantsContext.ServiceState?) -> GroupCallParticipantsContext {
-            return GroupCallParticipantsContext(account: self.account, peerId: peerId, myPeerId: myPeerId, id: id, accessHash: accessHash, state: state, previousServiceState: previousServiceState)
+        public func groupCall(peerId: PeerId?, myPeerId: PeerId, id: Int64, reference: InternalGroupCallReference, state: GroupCallParticipantsContext.State, previousServiceState: GroupCallParticipantsContext.ServiceState?) -> GroupCallParticipantsContext {
+            return GroupCallParticipantsContext(account: self.account, peerId: peerId, myPeerId: myPeerId, id: id, reference: reference, state: state, previousServiceState: previousServiceState)
         }
 
         public func serverTime() -> Signal<Int64, NoError> {

@@ -99,6 +99,7 @@ public final class BrowserBookmarksScreen: ViewController {
                 return nil
             }, presentGlobalOverlayController: { _, _ in
             }, callPeer: { _, _ in
+            }, openConferenceCall: { _ in                
             }, longTap: { _, _ in
             }, openCheckoutOrReceipt: { _, _ in
             }, openSearch: {

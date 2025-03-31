@@ -394,7 +394,20 @@ private final class JoinSubjectScreenComponent: Component {
                     self.environment?.controller()?.dismiss()
                 })
             case let .groupCall(groupCall):
-                let _ = groupCall
+                component.context.sharedContext.callManager?.joinConferenceCall(
+                    accountContext: component.context,
+                    initialCall: EngineGroupCallDescription(
+                        id: groupCall.id,
+                        accessHash: groupCall.accessHash,
+                        title: nil,
+                        scheduleTimestamp: nil,
+                        subscribedToScheduled: false,
+                        isStream: false
+                    ),
+                    reference: .link(slug: groupCall.slug),
+                    mode: .joining
+                )
+                
                 self.environment?.controller()?.dismiss()
             }
         }

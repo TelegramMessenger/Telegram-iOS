@@ -372,9 +372,9 @@ public final class TelegramMediaImage: Media, Equatable, Codable {
             return try TelegramMediaImage.VideoRepresentation(flatBuffersObject: flatBuffersObject.videoRepresentations(at: i)!)
         }
         self.immediateThumbnailData = flatBuffersObject.immediateThumbnailData.isEmpty ? nil : Data(flatBuffersObject.immediateThumbnailData)
-        self.emojiMarkup = try flatBuffersObject.emojiMarkup.map { try EmojiMarkup(flatBuffersObject: $0) }
-        self.reference = try flatBuffersObject.reference.map { try TelegramMediaImageReference(flatBuffersObject: $0) }
-        self.partialReference = try flatBuffersObject.partialReference.map { try PartialMediaReference(flatBuffersObject: $0) }
+        self.emojiMarkup = try flatBuffersObject.emojiMarkup.flatMap { try EmojiMarkup(flatBuffersObject: $0) }
+        self.reference = try flatBuffersObject.reference.flatMap { try TelegramMediaImageReference(flatBuffersObject: $0) }
+        self.partialReference = try flatBuffersObject.partialReference.flatMap { try PartialMediaReference(flatBuffersObject: $0) }
         self.flags = TelegramMediaImageFlags(rawValue: flatBuffersObject.flags)
     }
     

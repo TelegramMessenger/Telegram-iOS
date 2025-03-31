@@ -16,7 +16,7 @@ extension VideoChatScreenComponent.View {
             return
         }
         
-        if groupCall.accountContext.sharedContext.immediateExperimentalUISettings.conferenceDebug {
+        /*if groupCall.accountContext.sharedContext.immediateExperimentalUISettings.conferenceDebug {
             guard let navigationController = self.environment?.controller()?.navigationController as? NavigationController else {
                 return
             }
@@ -39,7 +39,7 @@ extension VideoChatScreenComponent.View {
             })
             self.environment?.controller()?.present(controller, in: .window(.root), with: nil)
             return
-        }
+        }*/
         
         if groupCall.isConference {
             var disablePeerIds: [EnginePeer.Id] = []

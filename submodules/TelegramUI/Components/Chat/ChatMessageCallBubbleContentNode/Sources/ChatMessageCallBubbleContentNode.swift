@@ -123,6 +123,12 @@ public class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                         }
                         break
+                    } else if let action = media as? TelegramMediaAction, case let .conferenceCall(_, duration, _) = action.action {
+                        isVideo = false
+                        callDuration = duration
+                        //TODO:localize
+                        titleString = "Group Call"
+                        break
                     }
                 }
                 
@@ -254,6 +260,9 @@ public class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
             for media in item.message.media {
                 if let action = media as? TelegramMediaAction, case let .phoneCall(_, _, _, isVideoValue) = action.action {
                     isVideo = isVideoValue
+                } else if let action = media as? TelegramMediaAction, case .conferenceCall = action.action {
+                    item.controllerInteraction.openConferenceCall(item.message)
+                    return
                 }
             }
             item.controllerInteraction.callPeer(item.message.id.peerId, isVideo)
@@ -268,6 +277,8 @@ public class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
             for media in item.message.media {
                 if let action = media as? TelegramMediaAction, case let .phoneCall(_, _, _, isVideoValue) = action.action {
                     isVideo = isVideoValue
+                } else if let action = media as? TelegramMediaAction, case .conferenceCall = action.action {
+                    return ChatMessageBubbleContentTapAction(content: .conferenceCall(message: item.message))
                 }
             }
             return ChatMessageBubbleContentTapAction(content: .call(peerId: item.message.id.peerId, isVideo: isVideo))

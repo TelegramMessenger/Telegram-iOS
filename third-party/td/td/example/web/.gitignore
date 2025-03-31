@@ -1,0 +1,5 @@
+/OpenSSL_*.tar.gz
+/openssl-OpenSSL_*/
+/tdweb/dist/
+/tdweb/node_modules/
+/tdweb/src/prebuilt/

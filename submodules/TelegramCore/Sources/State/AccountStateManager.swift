@@ -1145,6 +1145,9 @@ public final class AccountStateManager {
                             if !events.reportMessageDelivery.isEmpty {
                                 strongSelf.reportMessageDeliveryDisposable.add(_internal_reportMessageDelivery(postbox: strongSelf.postbox, network: strongSelf.network, messageIds: Array(events.reportMessageDelivery), fromPushNotification: false).start())
                             }
+                            if !events.addedConferenceInvitationMessagesIds.isEmpty {
+                                strongSelf.callSessionManager?.addConferenceInvitationMessages(ids: events.addedConferenceInvitationMessagesIds)
+                            }
                             if !events.isContactUpdates.isEmpty {
                                 strongSelf.addIsContactUpdates(events.isContactUpdates)
                             }
@@ -2203,7 +2206,7 @@ public final class AccountStateManager {
                 switch update {
                 case let .updatePhoneCall(phoneCall):
                     switch phoneCall {
-                    case let .phoneCallRequested(flags, id, accessHash, date, adminId, _, _, _, conferenceCall):
+                    case let .phoneCallRequested(flags, id, accessHash, date, adminId, _, _, _):
                         guard let peer = peers.first(where: { $0.id == PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(adminId)) }) else {
                             return nil
                         }
@@ -2213,7 +2216,7 @@ public final class AccountStateManager {
                             timestamp: date,
                             peer: EnginePeer(peer),
                             isVideo: (flags & (1 << 6)) != 0,
-                            isConference: conferenceCall != nil
+                            isConference: false
                         )
                     default:
                         break

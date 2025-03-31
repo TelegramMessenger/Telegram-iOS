@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="winmd" ContentType="application/octet-stream" />
+  <Default Extension="pri" ContentType="application/octet-stream" />
+  <Default Extension="dll" ContentType="application/octet-stream" />
+  <Default Extension="h" ContentType="application/octet-stream" />
+  <Default Extension="lib" ContentType="application/octet-stream" />
+  <Default Extension="pdb" ContentType="application/octet-stream" />
+  <Default Extension="png" ContentType="application/octet-stream" />
+  <Default Extension="props" ContentType="application/octet-stream" />
+  <Default Extension="txt" ContentType="text/plain" />
+  <Default Extension="vsixmanifest" ContentType="text/xml" />
+  <Default Extension="xml" ContentType="text/xml" />
+</Types>

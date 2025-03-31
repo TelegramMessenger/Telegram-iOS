@@ -360,7 +360,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                     }
                 )
                 //TODO:localize
-                let justCreatedCallTextAttributedString = parseMarkdownIntoAttributedString("Be the first to join the call and add people from there. [Open Call >]()", attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
+                let justCreatedCallTextAttributedString = parseMarkdownIntoAttributedString("Be the first to join the call and add people from there. [Open Call >](open_call)", attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
                 if let range = justCreatedCallTextAttributedString.string.range(of: ">"), let chevronImage {
                     justCreatedCallTextAttributedString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: justCreatedCallTextAttributedString.string))
                 }
@@ -575,6 +575,9 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                             if strongSelf.justCreatedCallTextNode !== justCreatedCallTextNode {
                                 strongSelf.justCreatedCallTextNode?.removeFromSupernode()
                                 strongSelf.justCreatedCallTextNode = justCreatedCallTextNode
+                                
+                                //justCreatedCallTextNode.highlig
+                                
                                 strongSelf.addSubnode(justCreatedCallTextNode)
                             }
                             let justCreatedCallTextNodeFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((params.width - justCreatedCallTextNodeLayout.0.size.width) / 2.0), y: shareButtonNode.frame.maxY + justCreatedCallTextSpacing), size: CGSize(width: justCreatedCallTextNodeLayout.0.size.width, height: justCreatedCallTextNodeLayout.0.size.height))

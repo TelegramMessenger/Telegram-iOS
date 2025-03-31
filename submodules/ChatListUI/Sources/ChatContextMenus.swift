@@ -117,13 +117,6 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                         switch search {
                         case .recentPeers:
                             break
-                            /*items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_RemoveFromRecents, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.contextMenu.destructiveColor) }, action: { _, f in
-                                let _ = (context.engine.peers.removeRecentPeer(peerId: peerId)
-                                |> deliverOnMainQueue).startStandalone(completed: {
-                                    f(.default)
-                                })
-                            })))
-                            items.append(.separator)*/
                         case .recentSearch:
                             items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_RemoveFromRecents, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.contextMenu.destructiveColor) }, action: { _, f in
                                 let _ = (context.engine.peers.removeRecentlySearchedPeer(peerId: peerId)
@@ -539,9 +532,30 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                         } else if case let .search(search) = source {
                             switch search {
                             case .recentPeers, .search:
+                                var addedSeparator = false
+                                if case let .recentPeers(isTopPeer) = search {
+                                    if isTopPeer {
+                                        if !items.isEmpty {
+                                            if !addedSeparator {
+                                                items.append(.separator)
+                                                addedSeparator = true
+                                            }
+                                        }
+                                        items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_RemoveFromRecents, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.contextMenu.destructiveColor) }, action: { _, f in
+                                            let _ = (context.engine.peers.removeRecentPeer(peerId: peerId)
+                                            |> deliverOnMainQueue).startStandalone(completed: {
+                                                f(.default)
+                                            })
+                                        })))
+                                    }
+                                }
+                                
                                 if peerGroup != nil {
                                     if !items.isEmpty {
-                                        items.append(.separator)
+                                        if !addedSeparator {
+                                            items.append(.separator)
+                                            addedSeparator = true
+                                        }
                                     }
                                     items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_Delete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { _, f in
                                         if let chatListController = chatListController {

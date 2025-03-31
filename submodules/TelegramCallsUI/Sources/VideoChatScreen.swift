@@ -24,6 +24,7 @@ import TelegramAudio
 import LegacyComponents
 import TooltipUI
 import BlurredBackgroundComponent
+import CallsEmoji
 
 extension VideoChatCall {    
     var myAudioLevelAndSpeaking: Signal<(Float, Bool), NoError> {
@@ -262,6 +263,9 @@ final class VideoChatScreenComponent: Component {
         var speakingParticipantPeers: [EnginePeer] = []
         var visibleParticipants: Set<EnginePeer.Id> = Set()
         
+        var encryptionKeyEmoji: [String]?
+        var encryptionKeyEmojiDisposable: Disposable?
+        
         let isPresentedValue = ValuePromise<Bool>(false, ignoreRepeated: true)
         var applicationStateDisposable: Disposable?
         
@@ -313,6 +317,7 @@ final class VideoChatScreenComponent: Component {
             self.updateAvatarDisposable.dispose()
             self.inviteDisposable.dispose()
             self.conferenceCallStateDisposable?.dispose()
+            self.encryptionKeyEmojiDisposable?.dispose()
         }
         
         func animateIn() {
@@ -647,9 +652,6 @@ final class VideoChatScreenComponent: Component {
             guard case let .group(groupCall) = self.currentCall else {
                 return
             }
-            guard let peerId = groupCall.peerId else {
-                return
-            }
             
             let formatSendTitle: (String) -> String = { string in
                 var string = string
@@ -663,36 +665,89 @@ final class VideoChatScreenComponent: Component {
                 return string
             }
             
-            let _ = (groupCall.accountContext.account.postbox.loadedPeerWithId(peerId)
-            |> deliverOnMainQueue).start(next: { [weak self] peer in
-                guard let self, let environment = self.environment, case let .group(groupCall) = self.currentCall else {
-                    return
-                }
-                guard let peer = self.peer else {
-                    return
-                }
-                guard let callState = self.callState else {
-                    return
-                }
-                var inviteLinks = inviteLinks
-                
-                if case let .channel(peer) = peer, case .group = peer.info, !peer.flags.contains(.isGigagroup), !(peer.addressName ?? "").isEmpty, let defaultParticipantMuteState = callState.defaultParticipantMuteState {
-                    let isMuted = defaultParticipantMuteState == .muted
-                    
-                    if !isMuted {
-                        inviteLinks = GroupCallInviteLinks(listenerLink: inviteLinks.listenerLink, speakerLink: nil)
+            if let peerId = groupCall.peerId {
+                let _ = (groupCall.accountContext.account.postbox.loadedPeerWithId(peerId)
+                |> deliverOnMainQueue).start(next: { [weak self] peer in
+                    guard let self, let environment = self.environment, case let .group(groupCall) = self.currentCall else {
+                        return
                     }
+                    guard let peer = self.peer else {
+                        return
+                    }
+                    guard let callState = self.callState else {
+                        return
+                    }
+                    var inviteLinks = inviteLinks
+                    
+                    if case let .channel(peer) = peer, case .group = peer.info, !peer.flags.contains(.isGigagroup), !(peer.addressName ?? "").isEmpty, let defaultParticipantMuteState = callState.defaultParticipantMuteState {
+                        let isMuted = defaultParticipantMuteState == .muted
+                        
+                        if !isMuted {
+                            inviteLinks = GroupCallInviteLinks(listenerLink: inviteLinks.listenerLink, speakerLink: nil)
+                        }
+                    }
+                    
+                    var segmentedValues: [ShareControllerSegmentedValue]?
+                    if let speakerLink = inviteLinks.speakerLink {
+                        segmentedValues = [ShareControllerSegmentedValue(title: environment.strings.VoiceChat_InviteLink_Speaker, subject: .url(speakerLink), actionTitle: environment.strings.VoiceChat_InviteLink_CopySpeakerLink, formatSendTitle: { count in
+                            return formatSendTitle(environment.strings.VoiceChat_InviteLink_InviteSpeakers(Int32(count)))
+                        }), ShareControllerSegmentedValue(title: environment.strings.VoiceChat_InviteLink_Listener, subject: .url(inviteLinks.listenerLink), actionTitle: environment.strings.VoiceChat_InviteLink_CopyListenerLink, formatSendTitle: { count in
+                            return formatSendTitle(environment.strings.VoiceChat_InviteLink_InviteListeners(Int32(count)))
+                        })]
+                    }
+                    let shareController = ShareController(context: groupCall.accountContext, subject: .url(inviteLinks.listenerLink), segmentedValues: segmentedValues, forceTheme: environment.theme, forcedActionTitle: environment.strings.VoiceChat_CopyInviteLink)
+                    shareController.completed = { [weak self] peerIds in
+                        guard let self, case let .group(groupCall) = self.currentCall else {
+                            return
+                        }
+                        let _ = (groupCall.accountContext.engine.data.get(
+                            EngineDataList(
+                                peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
+                            )
+                        )
+                                 |> deliverOnMainQueue).start(next: { [weak self] peerList in
+                            guard let self, let environment = self.environment, case let .group(groupCall) = self.currentCall else {
+                                return
+                            }
+                            
+                            let peers = peerList.compactMap { $0 }
+                            let presentationData = groupCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
+                            
+                            let text: String
+                            var isSavedMessages = false
+                            if peers.count == 1, let peer = peers.first {
+                                isSavedMessages = peer.id == groupCall.accountContext.account.peerId
+                                let peerName = peer.id == groupCall.accountContext.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                text = presentationData.strings.VoiceChat_ForwardTooltip_Chat(peerName).string
+                            } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
+                                let firstPeerName = firstPeer.id == groupCall.accountContext.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                let secondPeerName = secondPeer.id == groupCall.accountContext.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                text = presentationData.strings.VoiceChat_ForwardTooltip_TwoChats(firstPeerName, secondPeerName).string
+                            } else if let peer = peers.first {
+                                let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                text = presentationData.strings.VoiceChat_ForwardTooltip_ManyChats(peerName, "\(peers.count - 1)").string
+                            } else {
+                                text = ""
+                            }
+                            
+                            environment.controller()?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: isSavedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                        })
+                    }
+                    shareController.actionCompleted = { [weak self] in
+                        guard let self, let environment = self.environment, case let .group(groupCall) = self.currentCall else {
+                            return
+                        }
+                        let presentationData = groupCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
+                        environment.controller()?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.VoiceChat_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                    }
+                    environment.controller()?.present(shareController, in: .window(.root))
+                })
+            } else if groupCall.isConference {
+                guard let environment = self.environment else {
+                    return
                 }
                 
-                var segmentedValues: [ShareControllerSegmentedValue]?
-                if let speakerLink = inviteLinks.speakerLink {
-                    segmentedValues = [ShareControllerSegmentedValue(title: environment.strings.VoiceChat_InviteLink_Speaker, subject: .url(speakerLink), actionTitle: environment.strings.VoiceChat_InviteLink_CopySpeakerLink, formatSendTitle: { count in
-                        return formatSendTitle(environment.strings.VoiceChat_InviteLink_InviteSpeakers(Int32(count)))
-                    }), ShareControllerSegmentedValue(title: environment.strings.VoiceChat_InviteLink_Listener, subject: .url(inviteLinks.listenerLink), actionTitle: environment.strings.VoiceChat_InviteLink_CopyListenerLink, formatSendTitle: { count in
-                        return formatSendTitle(environment.strings.VoiceChat_InviteLink_InviteListeners(Int32(count)))
-                    })]
-                }
-                let shareController = ShareController(context: groupCall.accountContext, subject: .url(inviteLinks.listenerLink), segmentedValues: segmentedValues, forceTheme: environment.theme, forcedActionTitle: environment.strings.VoiceChat_CopyInviteLink)
+                let shareController = ShareController(context: groupCall.accountContext, subject: .url(inviteLinks.listenerLink), forceTheme: environment.theme, forcedActionTitle: environment.strings.VoiceChat_CopyInviteLink)
                 shareController.completed = { [weak self] peerIds in
                     guard let self, case let .group(groupCall) = self.currentCall else {
                         return
@@ -738,7 +793,7 @@ final class VideoChatScreenComponent: Component {
                     environment.controller()?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.VoiceChat_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                 }
                 environment.controller()?.present(shareController, in: .window(.root))
-            })
+            }
         }
         
         private func onCameraPressed() {
@@ -1319,6 +1374,28 @@ final class VideoChatScreenComponent: Component {
                         if self.callState != callState {
                             self.callState = callState
                             
+                            if !self.isUpdating {
+                                self.state?.updated(transition: .spring(duration: 0.4))
+                            }
+                        }
+                    })
+                    
+                    self.encryptionKeyEmojiDisposable?.dispose()
+                    self.encryptionKeyEmojiDisposable = (groupCall.e2eEncryptionKeyHash
+                    |> deliverOnMainQueue).startStrict(next: { [weak self] e2eEncryptionKeyHash in
+                        guard let self else {
+                            return
+                        }
+                        var encryptionKeyEmoji: [String]?
+                        if let e2eEncryptionKeyHash, e2eEncryptionKeyHash.count >= 32 {
+                            if let value = stringForEmojiHashOfData(e2eEncryptionKeyHash.prefix(32), 4) {
+                                if !value.isEmpty {
+                                    encryptionKeyEmoji = value
+                                }
+                            }
+                        }
+                        if self.encryptionKeyEmoji != encryptionKeyEmoji {
+                            self.encryptionKeyEmoji = encryptionKeyEmoji
                             if !self.isUpdating {
                                 self.state?.updated(transition: .spring(duration: 0.4))
                             }
@@ -1961,7 +2038,7 @@ final class VideoChatScreenComponent: Component {
             }
             
             var encryptionKeyFrame: CGRect?
-            if component.initialCall.accountContext.sharedContext.immediateExperimentalUISettings.conferenceDebug {
+            if let encryptionKeyEmoji = self.encryptionKeyEmoji {
                 navigationHeight -= 2.0
                 let encryptionKey: ComponentView<Empty>
                 var encryptionKeyTransition = transition
@@ -1978,7 +2055,7 @@ final class VideoChatScreenComponent: Component {
                     component: AnyComponent(VideoChatEncryptionKeyComponent(
                         theme: environment.theme,
                         strings: environment.strings,
-                        emoji: ["👌", "🧡", "🌹", "🤷"],
+                        emoji: encryptionKeyEmoji,
                         isExpanded: self.isEncryptionKeyExpanded,
                         tapAction: { [weak self] in
                             guard let self else {
@@ -2283,10 +2360,17 @@ final class VideoChatScreenComponent: Component {
             }
             
             if let encryptionKeyView = self.encryptionKey?.view, let encryptionKeyFrame {
+                var encryptionKeyTransition = transition
                 if encryptionKeyView.superview == nil {
+                    encryptionKeyTransition = encryptionKeyTransition.withAnimation(.none)
                     self.containerView.addSubview(encryptionKeyView)
+                    
+                    ComponentTransition.immediate.setScale(view: encryptionKeyView, scale: 0.001)
+                    encryptionKeyView.alpha = 0.0
                 }
-                transition.setFrame(view: encryptionKeyView, frame: encryptionKeyFrame)
+                encryptionKeyTransition.setPosition(view: encryptionKeyView, position: encryptionKeyFrame.center)
+                encryptionKeyTransition.setBounds(view: encryptionKeyView, bounds: CGRect(origin: CGPoint(), size: encryptionKeyFrame.size))
+                transition.setScale(view: encryptionKeyView, scale: 1.0)
                 alphaTransition.setAlpha(view: encryptionKeyView, alpha: self.isAnimatedOutFromPrivateCall ? 0.0 : 1.0)
                 
                 if self.isEncryptionKeyExpanded {

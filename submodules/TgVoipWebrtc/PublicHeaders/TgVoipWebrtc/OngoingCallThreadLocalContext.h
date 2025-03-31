@@ -452,9 +452,9 @@ typedef NS_ENUM(int32_t, OngoingGroupCallRequestedVideoQuality) {
 statsLogPath:(NSString * _Nonnull)statsLogPath
 onMutedSpeechActivityDetected:(void (^ _Nullable)(bool))onMutedSpeechActivityDetected
 audioDevice:(SharedCallAudioDevice * _Nullable)audioDevice
-encryptionKey:(NSData * _Nullable)encryptionKey
 isConference:(bool)isConference
-isActiveByDefault:(bool)isActiveByDefault;
+isActiveByDefault:(bool)isActiveByDefault
+encryptDecrypt:(NSData * _Nullable (^ _Nullable)(NSData * _Nonnull, bool))encryptDecrypt;
 
 - (void)stop:(void (^ _Nullable)())completion;
 

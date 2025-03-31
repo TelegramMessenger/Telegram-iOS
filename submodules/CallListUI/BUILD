@@ -33,6 +33,7 @@ swift_library(
         "//submodules/ItemListPeerActionItem",
         "//submodules/InviteLinksUI",
         "//submodules/UndoUI",
+        "//submodules/TelegramCallsUI",
     ],
     visibility = [
         "//visibility:public",

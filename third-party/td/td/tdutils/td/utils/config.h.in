@@ -1,0 +1,8 @@
+#pragma once
+
+#cmakedefine01 TD_HAVE_OPENSSL
+#cmakedefine01 TD_HAVE_ZLIB
+#cmakedefine01 TD_HAVE_CRC32C
+#cmakedefine01 TD_HAVE_COROUTINES
+#cmakedefine01 TD_HAVE_ABSL
+#cmakedefine01 TD_FD_DEBUG

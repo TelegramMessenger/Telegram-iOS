@@ -39,6 +39,7 @@ private func presentLiveLocationController(context: AccountContext, peerId: Peer
             }, openUrl: { _ in
             }, openPeer: { peer, navigation in
             }, callPeer: { _, _ in
+            }, openConferenceCall: { _ in
             }, enqueueMessage: { message in
                 let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
             }, sendSticker: nil, sendEmoji: nil, setupTemporaryHiddenMedia: { _, _, _ in
@@ -469,7 +470,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                         return
                     }
                     if groupCallPanelData.info.scheduleTimestamp != nil && !groupCallPanelData.info.subscribedToScheduled {
-                        let _ = self.context.engine.calls.toggleScheduledGroupCallSubscription(peerId: groupCallPanelData.peerId, callId: groupCallPanelData.info.id, accessHash: groupCallPanelData.info.accessHash, subscribe: true).startStandalone()
+                        let _ = self.context.engine.calls.toggleScheduledGroupCallSubscription(peerId: groupCallPanelData.peerId, reference: .id(id: groupCallPanelData.info.id, accessHash: groupCallPanelData.info.accessHash), subscribe: true).startStandalone()
                         
                         let controller = UndoOverlayController(
                             presentationData: presentationData,

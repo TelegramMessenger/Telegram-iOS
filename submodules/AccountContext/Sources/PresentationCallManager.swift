@@ -422,6 +422,7 @@ public protocol PresentationGroupCall: AnyObject {
     var accountContext: AccountContext { get }
     var internalId: CallSessionInternalId { get }
     var peerId: EnginePeer.Id? { get }
+    var callId: Int64? { get }
     
     var hasVideo: Bool { get }
     var hasScreencast: Bool { get }
@@ -431,7 +432,6 @@ public protocol PresentationGroupCall: AnyObject {
     var isStream: Bool { get }
     var isConference: Bool { get }
     var conferenceSource: CallSessionInternalId? { get }
-    var encryptionKeyValue: Data? { get }
     
     var audioOutputState: Signal<([AudioSessionOutput], AudioSessionOutput?), NoError> { get }
     
@@ -446,6 +446,8 @@ public protocol PresentationGroupCall: AnyObject {
     var myAudioLevelAndSpeaking: Signal<(Float, Bool), NoError> { get }
     var isMuted: Signal<Bool, NoError> { get }
     var isNoiseSuppressionEnabled: Signal<Bool, NoError> { get }
+    
+    var e2eEncryptionKeyHash: Signal<Data?, NoError> { get }
     
     var memberEvents: Signal<PresentationGroupCallMemberEvent, NoError> { get }
     var reconnectedAsEvents: Signal<EnginePeer, NoError> { get }
@@ -548,6 +550,10 @@ public enum PresentationCurrentCall: Equatable {
     }
 }
 
+public enum JoinConferenceCallMode {
+    case joining
+}
+
 public protocol PresentationCallManager: AnyObject {
     var currentCallSignal: Signal<PresentationCall?, NoError> { get }
     var currentGroupCallSignal: Signal<VideoChatCall?, NoError> { get }
@@ -557,4 +563,11 @@ public protocol PresentationCallManager: AnyObject {
     func requestCall(context: AccountContext, peerId: EnginePeer.Id, isVideo: Bool, endCurrentIfAny: Bool) -> RequestCallResult
     func joinGroupCall(context: AccountContext, peerId: EnginePeer.Id, invite: String?, requestJoinAsPeerId: ((@escaping (EnginePeer.Id?) -> Void) -> Void)?, initialCall: EngineGroupCallDescription, endCurrentIfAny: Bool) -> JoinGroupCallManagerResult
     func scheduleGroupCall(context: AccountContext, peerId: EnginePeer.Id, endCurrentIfAny: Bool, parentController: ViewController) -> RequestScheduleGroupCallResult
+    
+    func joinConferenceCall(
+        accountContext: AccountContext,
+        initialCall: EngineGroupCallDescription,
+        reference: InternalGroupCallReference,
+        mode: JoinConferenceCallMode
+    )
 }

@@ -534,6 +534,8 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                         switch inputCall {
                                         case let .inputGroupCall(id, accessHash):
                                             updatedActiveCall = CachedChannelData.ActiveCall(id: id, accessHash: accessHash, title: previous.activeCall?.title, scheduleTimestamp: previous.activeCall?.scheduleTimestamp, subscribedToScheduled: previous.activeCall?.subscribedToScheduled ?? false, isStream: previous.activeCall?.isStream)
+                                        case .inputGroupCallSlug, .inputGroupCallInviteMessage:
+                                            break
                                         }
                                     }
                                     
@@ -787,6 +789,8 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                                     switch inputCall {
                                                     case let .inputGroupCall(id, accessHash):
                                                         updatedActiveCall = CachedChannelData.ActiveCall(id: id, accessHash: accessHash, title: previous.activeCall?.title, scheduleTimestamp: previous.activeCall?.scheduleTimestamp, subscribedToScheduled: previous.activeCall?.subscribedToScheduled ?? false, isStream: previous.activeCall?.isStream)
+                                                    case .inputGroupCallSlug, .inputGroupCallInviteMessage:
+                                                        break
                                                     }
                                                 }
                                                 

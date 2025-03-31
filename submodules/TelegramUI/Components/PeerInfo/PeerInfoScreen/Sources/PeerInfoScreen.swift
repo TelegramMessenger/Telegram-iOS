@@ -3617,6 +3617,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }, chatControllerNode: {
             return nil
         }, presentGlobalOverlayController: { _, _ in }, callPeer: { _, _ in
+        }, openConferenceCall: { _ in
         }, longTap: { [weak self] content, _ in
             guard let strongSelf = self else {
                 return
@@ -5431,7 +5432,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }, openPeer: { [weak self] peer, navigation in
             self?.openPeer(peerId: peer.id, navigation: navigation)
         }, callPeer: { peerId, isVideo in
-            //self?.controllerInteraction?.callPeer(peerId)
+        }, openConferenceCall: { _ in
         }, enqueueMessage: { _ in
         }, sendSticker: nil, sendEmoji: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }, actionInteraction: GalleryControllerActionInteraction(openUrl: { [weak self] url, concealed in
             if let strongSelf = self {

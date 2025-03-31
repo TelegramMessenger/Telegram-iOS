@@ -133,7 +133,7 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                     peerSelected(peer, nil, false, .generic)
                 }, peerContextAction: { peer, node, gesture, location in
                     if let peerContextAction = peerContextAction {
-                        peerContextAction(peer, .recentPeers, node, gesture, location)
+                        peerContextAction(peer, .recentPeers(isTopPeer: true), node, gesture, location)
                     } else {
                         gesture?.cancel()
                     }
@@ -1402,7 +1402,7 @@ private struct ChatListSearchMessagesContext {
 }
 
 public enum ChatListSearchContextActionSource {
-    case recentPeers
+    case recentPeers(isTopPeer: Bool)
     case recentSearch
     case recentApps
     case popularApps
@@ -3217,6 +3217,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 interaction.openUrl(url)
             }, openPeer: { _, _ in
             }, callPeer: { _, _ in
+            }, openConferenceCall: { _ in
             }, enqueueMessage: { _ in
             }, sendSticker: nil, sendEmoji: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }, gallerySource: .custom(messages: foundMessages |> map { message, a, b in
                 return (message.map { $0._asMessage() }, a, b)
@@ -3411,6 +3412,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 interaction.openUrl(url)
             }, openPeer: { peer, navigation in
             }, callPeer: { _, _ in
+            }, openConferenceCall: { _ in
             }, enqueueMessage: { _ in
             }, sendSticker: nil, sendEmoji: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }, playlistLocation: playlistLocation, gallerySource: gallerySource))
         }, openMessageContextMenu: { [weak self] message, _, node, rect, gesture in

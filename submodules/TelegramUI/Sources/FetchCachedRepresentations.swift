@@ -20,6 +20,7 @@ import TelegramUniversalVideoContent
 import GradientBackground
 import Svg
 import UniversalMediaPlayer
+import RangeSet
 
 public func fetchCachedResourceRepresentation(account: Account, resource: MediaResource, representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     if let representation = representation as? CachedStickerAJpegRepresentation {
@@ -66,19 +67,49 @@ public func fetchCachedResourceRepresentation(account: Account, resource: MediaR
                 return EmptyDisposable
             }
         }
-        /*return account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
-        |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
-            if data.complete {
-                return fetchCachedVideoFirstFrameRepresentation(account: account, resource: resource, resourceData: data)
-                |> `catch` { _ -> Signal<CachedMediaResourceRepresentationResult, NoError> in
-                    return .complete()
+    } else if let _ = representation as? CachedVideoPrefixFirstFrameRepresentation {
+        return Signal { subscriber in
+            if let size = resource.size {
+                let videoSource = UniversalSoftwareVideoSource(mediaBox: account.postbox.mediaBox, source: .direct(resource: resource, size: size), automaticallyFetchHeader: false, hintVP9: false)
+                let disposable = videoSource.takeFrame(at: 0.0).start(next: { value in
+                    switch value {
+                    case let .image(image):
+                        if let image {
+                            if let imageData = image.jpegData(compressionQuality: 0.6) {
+                                subscriber.putNext(.data(imageData))
+                                subscriber.putNext(.done)
+                                subscriber.putCompletion()
+                            }
+                        }
+                    case .waitingForData:
+                        break
+                    }
+                })
+                
+                subscriber.keepAlive(videoSource)
+                
+                /*let reader = FFMpegFileReader(source: .resource(mediaBox: account.postbox.mediaBox, resource: resource, resourceSize: size, mappedRanges: [0 ..< size]), useHardwareAcceleration: false, selectedStream: .mediaType(.video), seek: nil, maxReadablePts: nil)
+                reader?.readFrame()
+                
+                print("ready to fetch \(representation.prefixLength)")*/
+                
+                return ActionDisposable {
+                    disposable.dispose()
                 }
-            } else if let size = resource.size {
-                return videoFirstFrameData(account: account, resource: resource, chunkSize: min(size, 192 * 1024))
-            } else {
-                return .complete()
             }
-        }*/
+            
+            /*let disposable = (account.postbox.mediaBox.resourceRangesStatus(resource)
+            |> filter { ranges in
+                return ranges.isSuperset(of: RangeSet(0 ..< Int64(representation.prefixLength)))
+            }
+            |> take(1)).start(next: { _ in
+            })
+            
+            return ActionDisposable {
+                disposable.dispose()
+            }*/
+            return EmptyDisposable
+        }
     } else if let representation = representation as? CachedScaledVideoFirstFrameRepresentation {
         return account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
         |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in

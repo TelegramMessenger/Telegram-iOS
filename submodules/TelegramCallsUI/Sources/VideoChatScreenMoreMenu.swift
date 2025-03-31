@@ -175,7 +175,7 @@ extension VideoChatScreenComponent.View {
             }
         }
         
-        if case let .group(groupCall) = currentCall, let encryptionKey = groupCall.encryptionKeyValue {
+        /*if case let .group(groupCall) = currentCall, let encryptionKey = groupCall.encryptionKeyValue {
             //TODO:localize
             let emojiKey = resolvedEmojiKey(data: encryptionKey)
             items.append(.action(ContextMenuActionItem(text: "Encryption Key", textLayout: .secondLineWithValue(emojiKey.joined(separator: "")), icon: { theme in
@@ -202,7 +202,7 @@ extension VideoChatScreenComponent.View {
                 environment.controller()?.present(alertController, in: .window(.root))
             })))
             items.append(.separator)
-        }
+        }*/
         
         if let (availableOutputs, currentOutput) = self.audioOutputState, availableOutputs.count > 1 {
             var currentOutputTitle = ""
@@ -356,7 +356,7 @@ extension VideoChatScreenComponent.View {
             })))
         }
         
-        if callState.isVideoEnabled && (callState.muteState?.canUnmute ?? true) {
+        if case let .group(groupCall) = currentCall, !groupCall.isConference, callState.isVideoEnabled && (callState.muteState?.canUnmute ?? true) {
             if currentCall.hasScreencast {
                 items.append(.action(ContextMenuActionItem(text: environment.strings.VoiceChat_StopScreenSharing, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/ShareScreen"), color: theme.actionSheet.primaryTextColor)

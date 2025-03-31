@@ -298,6 +298,9 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                         messageText = invoice.title
                     case let action as TelegramMediaAction:
                         switch action.action {
+                            case .conferenceCall:
+                                //TODO:localize
+                                messageText = "Group call"
                             case let .phoneCall(_, discardReason, _, isVideo):
                                 hideAuthor = !isPeerGroup
                                 let incoming = message.flags.contains(.Incoming)

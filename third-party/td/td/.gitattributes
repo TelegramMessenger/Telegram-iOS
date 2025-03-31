@@ -1,0 +1,39 @@
+* text=auto
+
+*.cpp text whitespace=blank-at-eol,space-before-tab,blank-at-eof,tab-in-indent
+*.hpp text whitespace=blank-at-eol,space-before-tab,blank-at-eof,tab-in-indent
+*.h text whitespace=blank-at-eol,space-before-tab,blank-at-eof,tab-in-indent
+*.c text whitespace=blank-at-eol,space-before-tab,blank-at-eof,tab-in-indent
+*.tl text whitespace=blank-at-eol,space-before-tab,blank-at-eof,tab-in-indent
+*.mm text whitespace=blank-at-eol,space-before-tab,blank-at-eof,tab-in-indent
+*.txt text whitespace=blank-at-eol,space-before-tab,blank-at-eof,tab-in-indent
+*.sh text whitespace=blank-at-eol,space-before-tab,blank-at-eof,tab-in-indent eol=lf
+*.php text whitespace=blank-at-eol,space-before-tab,blank-at-eof,tab-in-indent
+*.ps1 text whitespace=blank-at-eol,space-before-tab,blank-at-eof,tab-in-indent eol=crlf
+*.cmake text whitespace=blank-at-eol,space-before-tab,blank-at-eof,tab-in-indent
+*.md text whitespace=blank-at-eol,space-before-tab,blank-at-eof,tab-in-indent
+*.in text whitespace=blank-at-eol,space-before-tab,blank-at-eof,tab-in-indent
+*.html text whitespace=blank-at-eol,space-before-tab,blank-at-eof,tab-in-indent
+
+*.java text whitespace=blank-at-eol,space-before-tab,blank-at-eof,tab-in-indent
+*.py text whitespace=blank-at-eol,space-before-tab,blank-at-eof,tab-in-indent
+*.js text whitespace=blank-at-eol,space-before-tab,blank-at-eof,tab-in-indent
+*.patch text whitespace=blank-at-eol,space-before-tab,blank-at-eof,tab-in-indent
+*.swift text whitespace=blank-at-eol,space-before-tab,blank-at-eof,tab-in-indent
+*.pbxproj text whitespace=blank-at-eol,space-before-tab,blank-at-eof,tab-in-indent
+*.cs text whitespace=blank-at-eol,space-before-tab,blank-at-eof,tab-in-indent
+*.xaml text whitespace=blank-at-eol,space-before-tab,blank-at-eof,tab-in-indent
+*.appxmanifest text whitespace=blank-at-eol,space-before-tab,blank-at-eof,tab-in-indent
+*.vsixmanifest text whitespace=blank-at-eol,space-before-tab,blank-at-eof,tab-in-indent
+*.nuspec text whitespace=blank-at-eol,space-before-tab,blank-at-eof,tab-in-indent
+*.targets text whitespace=blank-at-eol,space-before-tab,blank-at-eof,tab-in-indent
+*.json text whitespace=blank-at-eol,space-before-tab,blank-at-eof,tab-in-indent
+*.csproj text whitespace=blank-at-eol,space-before-tab,blank-at-eof,tab-in-indent
+*.sln text whitespace=blank-at-eol,space-before-tab,blank-at-eof,tab-in-indent
+*.xml text whitespace=blank-at-eol,space-before-tab,blank-at-eof,tab-in-indent
+*.config text whitespace=blank-at-eol,space-before-tab,blank-at-eof,tab-in-indent
+
+sqlite/sqlite/* linguist-vendored
+
+*.pfx binary
+*.png binary

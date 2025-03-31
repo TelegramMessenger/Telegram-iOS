@@ -264,6 +264,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                     self?.openPeer(peer: EnginePeer(peer))
                 }, callPeer: { peerId, isVideo in
                     self?.controllerInteraction?.callPeer(peerId, isVideo)
+                }, openConferenceCall: { message in
+                    self?.controllerInteraction?.openConferenceCall(message)
                 }, enqueueMessage: { _ in
                 }, sendSticker: nil, sendEmoji: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: {  signal, media in
                     if let strongSelf = self {
@@ -372,7 +374,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             return self?.getNavigationController()
         }, chatControllerNode: { [weak self] in
             return self
-        }, presentGlobalOverlayController: { _, _ in }, callPeer: { _, _ in }, longTap: { [weak self] action, params in
+        }, presentGlobalOverlayController: { _, _ in }, callPeer: { _, _ in }, openConferenceCall: { _ in
+        }, longTap: { [weak self] action, params in
             if let strongSelf = self {
                 switch action {
                     case let .url(url):
@@ -1384,7 +1387,12 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         let _ = (signal
                         |> deliverOnMainQueue).startStandalone(next: { [weak navigationController] resolvedCallLink in
                             navigationController?.pushViewController(context.sharedContext.makeJoinSubjectScreen(context: context, mode: JoinSubjectScreenMode.groupCall(JoinSubjectScreenMode.GroupCall(
-                                inviter: resolvedCallLink.inviter, members: resolvedCallLink.members, totalMemberCount: resolvedCallLink.totalMemberCount
+                                id: resolvedCallLink.id,
+                                accessHash: resolvedCallLink.accessHash,
+                                slug: link,
+                                inviter: resolvedCallLink.inviter,
+                                members: resolvedCallLink.members,
+                                totalMemberCount: resolvedCallLink.totalMemberCount
                             ))))
                         })
                     case let .localization(identifier):

@@ -616,6 +616,10 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     }
                 }
                 attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
+            case .conferenceCall:
+                //TODO:localize
+                let titleString = "Group call"
+                attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
             case let .groupPhoneCall(_, _, scheduleDate, duration):
                 if let scheduleDate = scheduleDate {
                     if message.author?.id.namespace == Namespaces.Peer.CloudChannel {

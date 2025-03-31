@@ -216,6 +216,11 @@ final class OngoingGroupCallBroadcastPartTaskImpl: NSObject, OngoingGroupCallBro
     }
 }
 
+public protocol OngoingGroupCallEncryptionContext: AnyObject {
+    func encrypt(message: Data) -> Data?
+    func decrypt(message: Data) -> Data?
+}
+
 public final class OngoingGroupCallContext {
     public struct AudioStreamData {
         public var engine: TelegramEngine
@@ -495,11 +500,11 @@ public final class OngoingGroupCallContext {
             preferX264: Bool,
             logPath: String,
             onMutedSpeechActivityDetected: @escaping (Bool) -> Void,
-            encryptionKey: Data?,
             isConference: Bool,
             audioIsActiveByDefault: Bool,
             isStream: Bool,
-            sharedAudioDevice: OngoingCallContext.AudioDevice?
+            sharedAudioDevice: OngoingCallContext.AudioDevice?,
+            encryptionContext: OngoingGroupCallEncryptionContext?
         ) {
             self.queue = queue
             
@@ -632,9 +637,17 @@ public final class OngoingGroupCallContext {
                     onMutedSpeechActivityDetected(value)
                 },
                 audioDevice: audioDevice?.impl,
-                encryptionKey: encryptionKey,
                 isConference: isConference,
-                isActiveByDefault: audioIsActiveByDefault
+                isActiveByDefault: audioIsActiveByDefault,
+                encryptDecrypt: encryptionContext.flatMap { encryptionContext in
+                    return { data, isEncrypt in
+                        if isEncrypt {
+                            return encryptionContext.encrypt(message: data)
+                        } else {
+                            return encryptionContext.decrypt(message: data)
+                        }
+                    }
+                }
             )
 #else
             self.context = GroupCallThreadLocalContext(
@@ -733,9 +746,17 @@ public final class OngoingGroupCallContext {
                 logPath: logPath,
                 statsLogPath: tempStatsLogPath,
                 audioDevice: nil,
-                encryptionKey: encryptionKey,
                 isConference: isConference,
-                isActiveByDefault: true
+                isActiveByDefault: true,
+                encryptDecrypt: encryptionContext.flatMap { encryptionContext in
+                    return { data, isEncrypt in
+                        if isEncrypt {
+                            return encryptionContext.encrypt(data)
+                        } else {
+                            return encryptionContext.decrypt(data)
+                        }
+                    }
+                }
             )
 #endif
             
@@ -1184,10 +1205,10 @@ public final class OngoingGroupCallContext {
         }
     }
     
-    public init(inputDeviceId: String = "", outputDeviceId: String = "", audioSessionActive: Signal<Bool, NoError>, video: OngoingCallVideoCapturer?, requestMediaChannelDescriptions: @escaping (Set<UInt32>, @escaping ([MediaChannelDescription]) -> Void) -> Disposable, rejoinNeeded: @escaping () -> Void, outgoingAudioBitrateKbit: Int32?, videoContentType: VideoContentType, enableNoiseSuppression: Bool, disableAudioInput: Bool, enableSystemMute: Bool, preferX264: Bool, logPath: String, onMutedSpeechActivityDetected: @escaping (Bool) -> Void, encryptionKey: Data?, isConference: Bool, audioIsActiveByDefault: Bool, isStream: Bool, sharedAudioDevice: OngoingCallContext.AudioDevice?) {
+    public init(inputDeviceId: String = "", outputDeviceId: String = "", audioSessionActive: Signal<Bool, NoError>, video: OngoingCallVideoCapturer?, requestMediaChannelDescriptions: @escaping (Set<UInt32>, @escaping ([MediaChannelDescription]) -> Void) -> Disposable, rejoinNeeded: @escaping () -> Void, outgoingAudioBitrateKbit: Int32?, videoContentType: VideoContentType, enableNoiseSuppression: Bool, disableAudioInput: Bool, enableSystemMute: Bool, preferX264: Bool, logPath: String, onMutedSpeechActivityDetected: @escaping (Bool) -> Void, isConference: Bool, audioIsActiveByDefault: Bool, isStream: Bool, sharedAudioDevice: OngoingCallContext.AudioDevice?, encryptionContext: OngoingGroupCallEncryptionContext?) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return Impl(queue: queue, inputDeviceId: inputDeviceId, outputDeviceId: outputDeviceId, audioSessionActive: audioSessionActive, video: video, requestMediaChannelDescriptions: requestMediaChannelDescriptions, rejoinNeeded: rejoinNeeded, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, videoContentType: videoContentType, enableNoiseSuppression: enableNoiseSuppression, disableAudioInput: disableAudioInput, enableSystemMute: enableSystemMute, preferX264: preferX264, logPath: logPath, onMutedSpeechActivityDetected: onMutedSpeechActivityDetected, encryptionKey: encryptionKey, isConference: isConference, audioIsActiveByDefault: audioIsActiveByDefault, isStream: isStream, sharedAudioDevice: sharedAudioDevice)
+            return Impl(queue: queue, inputDeviceId: inputDeviceId, outputDeviceId: outputDeviceId, audioSessionActive: audioSessionActive, video: video, requestMediaChannelDescriptions: requestMediaChannelDescriptions, rejoinNeeded: rejoinNeeded, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, videoContentType: videoContentType, enableNoiseSuppression: enableNoiseSuppression, disableAudioInput: disableAudioInput, enableSystemMute: enableSystemMute, preferX264: preferX264, logPath: logPath, onMutedSpeechActivityDetected: onMutedSpeechActivityDetected, isConference: isConference, audioIsActiveByDefault: audioIsActiveByDefault, isStream: isStream, sharedAudioDevice: sharedAudioDevice, encryptionContext: encryptionContext)
         })
     }
     

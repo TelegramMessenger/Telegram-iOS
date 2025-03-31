@@ -208,6 +208,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let chatControllerNode: () -> ASDisplayNode?
     public let presentGlobalOverlayController: (ViewController, Any?) -> Void
     public let callPeer: (PeerId, Bool) -> Void
+    public let openConferenceCall: (Message) -> Void
     public let longTap: (ChatControllerInteractionLongTapAction, LongTapParams?) -> Void
     public let openCheckoutOrReceipt: (MessageId, OpenMessageParams?) -> Void
     public let openSearch: () -> Void
@@ -368,6 +369,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         chatControllerNode: @escaping () -> ASDisplayNode?,
         presentGlobalOverlayController: @escaping (ViewController, Any?) -> Void,
         callPeer: @escaping (PeerId, Bool) -> Void,
+        openConferenceCall: @escaping (Message) -> Void,
         longTap: @escaping (ChatControllerInteractionLongTapAction, LongTapParams?) -> Void,
         openCheckoutOrReceipt: @escaping (MessageId, OpenMessageParams?) -> Void,
         openSearch: @escaping () -> Void,
@@ -484,6 +486,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         self.chatControllerNode = chatControllerNode
         self.presentGlobalOverlayController = presentGlobalOverlayController
         self.callPeer = callPeer
+        self.openConferenceCall = openConferenceCall
         self.longTap = longTap
         self.openCheckoutOrReceipt = openCheckoutOrReceipt
         self.openSearch = openSearch

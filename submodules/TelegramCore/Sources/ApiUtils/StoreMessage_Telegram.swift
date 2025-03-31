@@ -262,6 +262,10 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
                     result.append(boostPeer.peerId)
                 case let .messageActionPaymentRefunded(_, peer, _, _, _, _):
                     result.append(peer.peerId)
+                case let .messageActionConferenceCall(_, _, _, otherParticipants):
+                    if let otherParticipants {
+                        result.append(contentsOf: otherParticipants.map(\.peerId))
+                    }
             }
         
             return result

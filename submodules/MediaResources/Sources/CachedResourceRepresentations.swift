@@ -76,6 +76,31 @@ public final class CachedVideoFirstFrameRepresentation: CachedMediaResourceRepre
     }
 }
 
+public final class CachedVideoPrefixFirstFrameRepresentation: CachedMediaResourceRepresentation {
+    public let keepDuration: CachedMediaRepresentationKeepDuration = .general
+    
+    public var uniqueId: String {
+        return "prefix-first-frame"
+    }
+    
+    public let prefixLength: Int32
+    
+    public init(prefixLength: Int32) {
+        self.prefixLength = prefixLength
+    }
+    
+    public func isEqual(to: CachedMediaResourceRepresentation) -> Bool {
+        if let to = to as? CachedVideoPrefixFirstFrameRepresentation {
+            if self.prefixLength != to.prefixLength {
+                return false
+            }
+            return true
+        } else {
+            return false
+        }
+    }
+}
+
 public final class CachedScaledVideoFirstFrameRepresentation: CachedMediaResourceRepresentation {
     public let keepDuration: CachedMediaRepresentationKeepDuration = .general
     

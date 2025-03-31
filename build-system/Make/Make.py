@@ -547,7 +547,7 @@ def generate_project(bazel, arguments):
     
     call_executable(['killall', 'Xcode'], check_result=False)
 
-    generate(
+    xcodeproj_path = generate(
         build_environment=bazel_command_line.build_environment,
         disable_extensions=disable_extensions,
         disable_provisioning_profiles=disable_provisioning_profiles,
@@ -557,6 +557,22 @@ def generate_project(bazel, arguments):
         bazel_app_arguments=bazel_command_line.get_project_generation_arguments(),
         target_name=target_name
     )
+
+    if target_name == "Telegram":
+        run_executable_with_output('swift', arguments=[
+            'run',
+            '-c',
+            'release',
+            '--package-path',
+            'build-system/XcodeParse',
+            'XcodeParse',
+            '--project-path',
+            xcodeproj_path,
+            '--output-path',
+            'Telegram/Telegram.LSP.json'
+        ], check_result=True)
+
+    call_executable(['open', xcodeproj_path])
 
 
 def build(bazel, arguments):

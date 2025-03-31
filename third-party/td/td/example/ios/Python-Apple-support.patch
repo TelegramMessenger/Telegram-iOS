@@ -1,0 +1,118 @@
+diff --git a/Makefile b/Makefile
+index a1d13e9..8efcf20 100644
+--- a/Makefile
++++ b/Makefile
+@@ -18,8 +18,13 @@
+ # - OpenSSL         - build OpenSSL for all platforms
+ # - OpenSSL-macOS   - build OpenSSL for macOS
+ # - OpenSSL-iOS     - build OpenSSL for iOS
++# - OpenSSL-iOS-simulator     - build OpenSSL for iOS-simulator
+ # - OpenSSL-tvOS    - build OpenSSL for tvOS
++# - OpenSSL-tvOS-simulator    - build OpenSSL for tvOS-simulator
+ # - OpenSSL-watchOS - build OpenSSL for watchOS
++# - OpenSSL-watchOS-simulator - build OpenSSL for watchOS-simulator
++# - OpenSSL-visionOS - build OpenSSL for visionOS
++# - OpenSSL-visionOS-simulator - build OpenSSL for visionOS-simulator
+ # - libFFI          - build libFFI for all platforms (except macOS)
+ # - libFFI-iOS      - build libFFI for iOS
+ # - libFFI-tvOS     - build libFFI for tvOS
+@@ -50,7 +55,7 @@ XZ_VERSION=5.4.2
+ # Preference is to use OpenSSL 3; however, Cryptography 3.4.8 (and
+ # probably some other packages as well) only works with 1.1.1, so
+ # we need to preserve the ability to build the older OpenSSL (for now...)
+-OPENSSL_VERSION=3.1.0
++OPENSSL_VERSION=3.1.5
+ # OPENSSL_VERSION_NUMBER=1.1.1
+ # OPENSSL_REVISION=q
+ # OPENSSL_VERSION=$(OPENSSL_VERSION_NUMBER)$(OPENSSL_REVISION)
+@@ -59,7 +64,7 @@ LIBFFI_VERSION=3.4.2
+ 
+ # Supported OS and dependencies
+ DEPENDENCIES=BZip2 XZ OpenSSL libFFI
+-OS_LIST=macOS iOS tvOS watchOS
++OS_LIST=macOS iOS iOS-simulator tvOS tvOS-simulator watchOS watchOS-simulator visionOS visionOS-simulator
+ 
+ CURL_FLAGS=--disable --fail --location --create-dirs --progress-bar
+ 
+@@ -69,22 +74,41 @@ VERSION_MIN-macOS=10.15
+ CFLAGS-macOS=-mmacosx-version-min=$(VERSION_MIN-macOS)
+ 
+ # iOS targets
+-TARGETS-iOS=iphonesimulator.x86_64 iphonesimulator.arm64 iphoneos.arm64
++TARGETS-iOS=iphoneos.arm64
+ VERSION_MIN-iOS=12.0
+ CFLAGS-iOS=-mios-version-min=$(VERSION_MIN-iOS)
+ 
++# iOS-simulator targets
++TARGETS-iOS-simulator=iphonesimulator.x86_64 iphonesimulator.arm64
++CFLAGS-iOS-simulator=-mios-simulator-version-min=$(VERSION_MIN-iOS)
++
+ # tvOS targets
+-TARGETS-tvOS=appletvsimulator.x86_64 appletvsimulator.arm64 appletvos.arm64
++TARGETS-tvOS=appletvos.arm64
+ VERSION_MIN-tvOS=9.0
+ CFLAGS-tvOS=-mtvos-version-min=$(VERSION_MIN-tvOS)
+ PYTHON_CONFIGURE-tvOS=ac_cv_func_sigaltstack=no
+ 
++# tvOS-simulator targets
++TARGETS-tvOS-simulator=appletvsimulator.x86_64 appletvsimulator.arm64
++CFLAGS-tvOS-simulator=-mtvos-simulator-version-min=$(VERSION_MIN-tvOS)
++
+ # watchOS targets
+-TARGETS-watchOS=watchsimulator.x86_64 watchsimulator.arm64 watchos.arm64_32
++TARGETS-watchOS=watchos.armv7k watchos.arm64_32 watchos.arm64
+ VERSION_MIN-watchOS=4.0
+ CFLAGS-watchOS=-mwatchos-version-min=$(VERSION_MIN-watchOS)
+ PYTHON_CONFIGURE-watchOS=ac_cv_func_sigaltstack=no
+ 
++# watchOS-simulator targets
++TARGETS-watchOS-simulator=watchsimulator.i386 watchsimulator.x86_64 watchsimulator.arm64
++CFLAGS-watchOS-simulator=-mwatchos-simulator-version-min=$(VERSION_MIN-watchOS)
++
++# visionOS targets
++TARGETS-visionOS=xros.arm64
++PYTHON_CONFIGURE-visionOS=ac_cv_func_sigaltstack=no
++
++# visionOS-simulator targets
++TARGETS-visionOS-simulator=xrsimulator.x86_64 xrsimulator.arm64
++
+ # The architecture of the machine doing the build
+ HOST_ARCH=$(shell uname -m)
+ HOST_PYTHON=install/macOS/macosx/python-$(PYTHON_VERSION)
+@@ -212,6 +236,10 @@ ARCH-$(target)=$$(subst .,,$$(suffix $(target)))
+ 
+ ifeq ($(os),macOS)
+ TARGET_TRIPLE-$(target)=$$(ARCH-$(target))-apple-darwin
++else ifeq ($(os),visionOS)
++TARGET_TRIPLE-$(target)=$$(ARCH-$(target))-apple-xros
++else ifeq ($(os),visionOS-simulator)
++TARGET_TRIPLE-$(target)=$$(ARCH-$(target))-apple-xros-simulator
+ else
+ 	ifeq ($$(findstring simulator,$$(SDK-$(target))),)
+ TARGET_TRIPLE-$(target)=$$(ARCH-$(target))-apple-$$(OS_LOWER-$(target))
+@@ -662,7 +690,7 @@ BZIP2_FATLIB-$(sdk)=$$(BZIP2_MERGE-$(sdk))/lib/libbz2.a
+ XZ_MERGE-$(sdk)=$(PROJECT_DIR)/merge/$(os)/$(sdk)/xz-$(XZ_VERSION)
+ XZ_FATLIB-$(sdk)=$$(XZ_MERGE-$(sdk))/lib/liblzma.a
+ 
+-OPENSSL_MERGE-$(sdk)=$(PROJECT_DIR)/merge/$(os)/$(sdk)/openssl-$(OPENSSL_VERSION)
++OPENSSL_MERGE-$(sdk)=$(PROJECT_DIR)/merge/$(os)/openssl
+ OPENSSL_FATINCLUDE-$(sdk)=$$(OPENSSL_MERGE-$(sdk))/include
+ OPENSSL_SSL_FATLIB-$(sdk)=$$(OPENSSL_MERGE-$(sdk))/lib/libssl.a
+ OPENSSL_CRYPTO_FATLIB-$(sdk)=$$(OPENSSL_MERGE-$(sdk))/lib/libcrypto.a
+@@ -716,14 +744,14 @@ $$(OPENSSL_SSL_FATLIB-$(sdk)): $$(foreach target,$$(SDK_TARGETS-$(sdk)),$$(OPENS
+ 	mkdir -p $$(OPENSSL_MERGE-$(sdk))/lib
+ 	lipo -create -output $$@ \
+ 		$$(foreach target,$$(SDK_TARGETS-$(sdk)),$$(OPENSSL_SSL_LIB-$$(target))) \
+-		2>&1 | tee -a merge/$(os)/$(sdk)/openssl-$(OPENSSL_VERSION).ssl.lipo.log
++		2>&1 | tee -a merge/$(os)/openssl-$(OPENSSL_VERSION).ssl.lipo.log
+ 
+ $$(OPENSSL_CRYPTO_FATLIB-$(sdk)): $$(foreach target,$$(SDK_TARGETS-$(sdk)),$$(OPENSSL_CRYPTO_LIB-$$(target)))
+ 	@echo ">>> Build OpenSSL crypto fat library for $(sdk)"
+ 	mkdir -p $$(OPENSSL_MERGE-$(sdk))/lib
+ 	lipo -create -output $$@ \
+ 		$$(foreach target,$$(SDK_TARGETS-$(sdk)),$$(OPENSSL_CRYPTO_LIB-$$(target))) \
+-		2>&1 | tee -a merge/$(os)/$(sdk)/openssl-$(OPENSSL_VERSION).crypto.lipo.log
++		2>&1 | tee -a merge/$(os)/openssl-$(OPENSSL_VERSION).crypto.lipo.log
+ 
+ ###########################################################################
+ # SDK: libFFI

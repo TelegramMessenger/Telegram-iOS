@@ -29,7 +29,9 @@ load(
 
 licenses(["notice"])
 
-exports_files(["LICENSE"])
+exports_files(
+    ["LICENSE"] + crypto_headers + ssl_headers,
+)
 
 # By default, the C files will expect assembly files, if any, to be linked in
 # with the build. This default can be flipped with -DOPENSSL_NO_ASM. If building
