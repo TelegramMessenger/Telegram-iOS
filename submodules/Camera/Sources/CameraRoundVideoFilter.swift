@@ -7,6 +7,9 @@ import CoreVideo
 import Metal
 import Display
 import TelegramCore
+import RLottieBinding
+import GZip
+import AppBundle
 
 let videoMessageDimensions = PixelDimensions(width: 400, height: 400)
 
@@ -98,7 +101,17 @@ final class CameraRoundVideoFilter {
     private var resizeFilter: CIFilter?
     private var overlayFilter: CIFilter?
     private var compositeFilter: CIFilter?
-    private var borderFilter: CIFilter?
+    private var maskFilter: CIFilter?
+    private var blurFilter: CIFilter?
+    private var darkenFilter: CIFilter?
+    
+    private var logoImageFilter: CIFilter?
+    private var logoImage: CIImage?
+    
+    private var animationImageFilter: CIFilter?
+    private var animationImage: CIImage?
+    private var animation: LottieInstance?
+    private var animationFrameIndex: Int32 = 0
     
     private var outputColorSpace: CGColorSpace?
     private var outputPixelBufferPool: CVPixelBufferPool?
@@ -122,21 +135,45 @@ final class CameraRoundVideoFilter {
         }
         self.inputFormatDescription = formatDescription
         
-        let circleImage = generateImage(videoMessageDimensions.cgSize, opaque: false, scale: 1.0, rotatedContext: { size, context in
+        if let logoImage = UIImage(bundleImageName: "Components/RoundVideoCorner") {
+            self.logoImage = CIImage(image: logoImage)
+        }
+        
+        if let path = getAppBundle().path(forResource: "PlaneLogoPlain", ofType: "tgs"), var data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
+            if let unpackedData = TGGUnzipData(data, 5 * 1024 * 1024) {
+                data = unpackedData
+                self.animation = LottieInstance(data: data, fitzModifier: .none, colorReplacements: [:], cacheKey: "")
+            }
+        }
+        
+        let circleMaskImage = generateImage(videoMessageDimensions.cgSize, opaque: false, scale: 1.0, rotatedContext: { size, context in
             let bounds = CGRect(origin: .zero, size: size)
             context.clear(bounds)
-            context.setFillColor(UIColor.white.cgColor)
+            context.setFillColor(UIColor.black.cgColor)
             context.fill(bounds)
-            context.setBlendMode(.clear)
+            context.setBlendMode(.normal)
+            context.setFillColor(UIColor.white.cgColor)
             context.fillEllipse(in: bounds.insetBy(dx: -2.0, dy: -2.0))
         })!
-                
+        
         self.resizeFilter = CIFilter(name: "CILanczosScaleTransform")
         self.overlayFilter = CIFilter(name: "CIColorMatrix")
         self.compositeFilter = CIFilter(name: "CISourceOverCompositing")
         
-        self.borderFilter = CIFilter(name: "CISourceOverCompositing")
-        self.borderFilter?.setValue(CIImage(image: circleImage), forKey: kCIInputImageKey)
+        self.maskFilter = CIFilter(name: "CIBlendWithMask")
+        self.maskFilter?.setValue(CIImage(image: circleMaskImage), forKey: kCIInputMaskImageKey)
+        
+        self.blurFilter = CIFilter(name: "CIGaussianBlur")
+        self.blurFilter?.setValue(30.0, forKey: kCIInputRadiusKey)
+        
+        self.darkenFilter = CIFilter(name: "CIColorMatrix")
+        let darkenVector = CIVector(x: 0.25, y: 0, z: 0, w: 0)
+        self.darkenFilter?.setValue(darkenVector, forKey: "inputRVector")
+        self.darkenFilter?.setValue(darkenVector, forKey: "inputGVector")
+        self.darkenFilter?.setValue(darkenVector, forKey: "inputBVector")
+
+        self.logoImageFilter = CIFilter(name: "CISourceOverCompositing")
+        self.animationImageFilter = CIFilter(name: "CISourceOverCompositing")
         
         self.isPrepared = true
     }
@@ -145,7 +182,11 @@ final class CameraRoundVideoFilter {
         self.resizeFilter = nil
         self.overlayFilter = nil
         self.compositeFilter = nil
-        self.borderFilter = nil
+        self.maskFilter = nil
+        self.blurFilter = nil
+        self.darkenFilter = nil
+        self.logoImageFilter = nil
+        self.animationImageFilter = nil
         self.outputColorSpace = nil
         self.outputPixelBufferPool = nil
         self.outputFormatDescription = nil
@@ -159,7 +200,15 @@ final class CameraRoundVideoFilter {
     private var lastAdditionalSourceImage: CIImage?
     
     func render(pixelBuffer: CVPixelBuffer, additional: Bool, captureOrientation: AVCaptureVideoOrientation, transitionFactor: CGFloat) -> CVPixelBuffer? {
-        guard let resizeFilter = self.resizeFilter, let overlayFilter = self.overlayFilter, let compositeFilter = self.compositeFilter, let borderFilter = self.borderFilter, self.isPrepared else {
+        guard let resizeFilter = self.resizeFilter,
+              let overlayFilter = self.overlayFilter,
+              let compositeFilter = self.compositeFilter,
+              let maskFilter = self.maskFilter,
+              let blurFilter = self.blurFilter,
+              let darkenFilter = self.darkenFilter,
+              let logoImageFilter = self.logoImageFilter,
+              let animationImageFilter = self.animationImageFilter,
+              self.isPrepared else {
             return nil
         }
         
@@ -230,9 +279,62 @@ final class CameraRoundVideoFilter {
             }
         }
         
-        borderFilter.setValue(effectiveSourceImage, forKey: kCIInputBackgroundImageKey)
+        let extendedImage = effectiveSourceImage.clampedToExtent()
         
-        let finalImage = borderFilter.outputImage
+        blurFilter.setValue(extendedImage, forKey: kCIInputImageKey)
+        let blurredImage = blurFilter.outputImage ?? effectiveSourceImage
+        
+        let blurredAndCropped = blurredImage.cropped(to: effectiveSourceImage.extent)
+        
+        darkenFilter.setValue(blurredAndCropped, forKey: kCIInputImageKey)
+        let darkenedBlurredBackground = darkenFilter.outputImage ?? blurredAndCropped
+        
+        maskFilter.setValue(effectiveSourceImage, forKey: kCIInputImageKey)
+        maskFilter.setValue(darkenedBlurredBackground, forKey: kCIInputBackgroundImageKey)
+        
+        var finalImage = maskFilter.outputImage
+        guard let maskedImage = finalImage else {
+            return nil
+        }
+        
+        if let logoImage = self.logoImage {
+            let overlayWidth: CGFloat = 100.0
+            let xPosition = maskedImage.extent.width - overlayWidth
+            let yPosition = 0.0
+            
+            let transformedOverlay = logoImage.transformed(by: CGAffineTransform(translationX: xPosition, y: yPosition))
+            logoImageFilter.setValue(transformedOverlay, forKey: kCIInputImageKey)
+            logoImageFilter.setValue(maskedImage, forKey: kCIInputBackgroundImageKey)
+            
+            finalImage = logoImageFilter.outputImage ?? maskedImage
+        } else {
+            finalImage = maskedImage
+        }
+        
+        if let animation = self.animation, let renderContext = DrawingContext(size: CGSize(width: 68.0, height: 68.0), scale: 1.0, clear: true) {
+            animation.renderFrame(with: self.animationFrameIndex, into: renderContext.bytes.assumingMemoryBound(to: UInt8.self), width: Int32(renderContext.size.width * renderContext.scale), height: Int32(renderContext.size.height * renderContext.scale), bytesPerRow: Int32(renderContext.bytesPerRow))
+            
+            self.animationFrameIndex += 2
+            if self.animationFrameIndex >= animation.frameCount {
+                self.animationFrameIndex = 0
+            }
+            
+            if let image = renderContext.generateImage(), let animationImage = CIImage(image: image) {
+                let xPosition = 0.0
+                let yPosition = 0.0
+                
+                let transformedOverlay = animationImage.transformed(by: CGAffineTransform(translationX: xPosition, y: yPosition))
+                animationImageFilter.setValue(transformedOverlay, forKey: kCIInputImageKey)
+                animationImageFilter.setValue(finalImage, forKey: kCIInputBackgroundImageKey)
+                
+                finalImage = animationImageFilter.outputImage ?? maskedImage
+            } else {
+                finalImage = maskedImage
+            }
+        } else {
+            finalImage = maskedImage
+        }
+        
         guard let finalImage else {
             return nil
         }

@@ -11,28 +11,31 @@ import TelegramStringFormatting
 import ViewControllerComponent
 import SheetComponent
 import BundleIconComponent
-import BalancedTextComponent
 import MultilineTextComponent
 import ButtonComponent
 import ListSectionComponent
 import ListActionItemComponent
 import AccountContext
+import AvatarNode
 
 private final class SheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let peer: EnginePeer
     let existingKeys: [WebAppSecureStorage.ExistingKey]
     let completion: (String) -> Void
     let dismiss: () -> Void
     
     init(
         context: AccountContext,
+        peer: EnginePeer,
         existingKeys: [WebAppSecureStorage.ExistingKey],
         completion: @escaping (String) -> Void,
         dismiss: @escaping () -> Void
     ) {
         self.context = context
+        self.peer = peer
         self.existingKeys = existingKeys
         self.completion = completion
         self.dismiss = dismiss
@@ -40,6 +43,9 @@ private final class SheetContent: CombinedComponent {
     
     static func ==(lhs: SheetContent, rhs: SheetContent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.peer != rhs.peer {
             return false
         }
         if lhs.existingKeys != rhs.existingKeys {
@@ -59,8 +65,9 @@ private final class SheetContent: CombinedComponent {
     static var body: Body {
         let closeButton = Child(Button.self)
         
-        let title = Child(BalancedTextComponent.self)
-        let text = Child(BalancedTextComponent.self)
+        let title = Child(MultilineTextComponent.self)
+        let avatar = Child(AvatarComponent.self)
+        let text = Child(MultilineTextComponent.self)
         let keys = Child(ListSectionComponent.self)
         let button = Child(ButtonComponent.self)
                         
@@ -76,11 +83,11 @@ private final class SheetContent: CombinedComponent {
             let textSideInset: CGFloat = 32.0 + environment.safeInsets.left
             
             let titleFont = Font.semibold(17.0)
-            let subtitleFont = Font.regular(12.0)
+            let textFont = Font.regular(13.0)
+            let boldTextFont = Font.semibold(13.0)
             let textColor = theme.actionSheet.primaryTextColor
-            let secondaryTextColor = theme.actionSheet.secondaryTextColor
         
-            var contentSize = CGSize(width: context.availableSize.width, height: 10.0)
+            var contentSize = CGSize(width: context.availableSize.width, height: 18.0)
         
             let closeButton = closeButton.update(
                 component: Button(
@@ -98,8 +105,8 @@ private final class SheetContent: CombinedComponent {
             
             //TODO:localize
             let title = title.update(
-                component: BalancedTextComponent(
-                    text: .plain(NSAttributedString(string: "Data Transfer Requested", font: titleFont, textColor: textColor)),
+                component: MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: strings.WebApp_ImportData_Title, font: titleFont, textColor: textColor)),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 1,
                     lineSpacing: 0.1
@@ -111,12 +118,36 @@ private final class SheetContent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + title.size.height / 2.0))
             )
             contentSize.height += title.size.height
+            contentSize.height += 24.0
+            
+            let avatar = avatar.update(
+                component: AvatarComponent(
+                    context: component.context,
+                    peer: component.peer,
+                    size: CGSize(width: 80.0, height: 80.0)
+                ),
+                availableSize: CGSize(width: 80.0, height: 80.0),
+                transition: .immediate
+            )
+            context.add(avatar
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + avatar.size.height / 2.0))
+            )
+            contentSize.height += avatar.size.height
+            contentSize.height += 22.0
             
             let text = text.update(
-                component: BalancedTextComponent(
-                    text: .plain(NSAttributedString(string: "Choose account to transfer data from:", font: subtitleFont, textColor: secondaryTextColor)),
+                component: MultilineTextComponent(
+                    text: .markdown(
+                        text: strings.WebApp_ImportData_Description(component.peer.compactDisplayTitle).string,
+                        attributes: MarkdownAttributes(
+                            body: MarkdownAttributeSet(font: textFont, textColor: textColor),
+                            bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor),
+                            link: MarkdownAttributeSet(font: textFont, textColor: textColor),
+                            linkAttribute: { _ in return nil }
+                        )
+                    ),
                     horizontalAlignment: .center,
-                    maximumNumberOfLines: 1,
+                    maximumNumberOfLines: 0,
                     lineSpacing: 0.2
                 ),
                 availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),
@@ -126,7 +157,7 @@ private final class SheetContent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + text.size.height / 2.0))
             )
             contentSize.height += text.size.height
-            contentSize.height += 17.0
+            contentSize.height += 29.0
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             
@@ -146,8 +177,8 @@ private final class SheetContent: CombinedComponent {
                 titleComponents.append(
                     AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Created on \(stringForMediumCompactDate(timestamp: key.timestamp, strings: strings, dateTimeFormat: environment.dateTimeFormat))",
-                            font: Font.regular(floor(presentationData.listsFontSize.itemListBaseFontSize * 14.0 / 17.0)),
+                            string: strings.WebApp_ImportData_CreatedOn(stringForMediumCompactDate(timestamp: key.timestamp, strings: strings, dateTimeFormat: environment.dateTimeFormat)).string,
+                            font: Font.regular(floor(presentationData.listsFontSize.itemListBaseFontSize * 15.0 / 17.0)),
                             textColor: environment.theme.list.itemSecondaryTextColor
                         )),
                         maximumNumberOfLines: 1
@@ -155,7 +186,8 @@ private final class SheetContent: CombinedComponent {
                 )
                 items.append(AnyComponentWithIdentity(id: key.uuid, component: AnyComponent(ListActionItemComponent(
                     theme: theme,
-                    title: AnyComponent(VStack(titleComponents, alignment: .left, spacing: 2.0)),
+                    title: AnyComponent(VStack(titleComponents, alignment: .left, spacing: 3.0)),
+                    contentInsets: UIEdgeInsets(top: 10.0, left: 0.0, bottom: 10.0, right: 0.0),
                     leftIcon: .check(ListActionItemComponent.LeftIcon.Check(isSelected: key.uuid == state.selectedUuid, isEnabled: true, toggle: nil)),
                     accessory: nil,
                     action: { [weak state] _ in
@@ -170,7 +202,14 @@ private final class SheetContent: CombinedComponent {
             let keys = keys.update(
                 component: ListSectionComponent(
                     theme: environment.theme,
-                    header: nil,
+                    header: AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: strings.WebApp_ImportData_AccountHeader.uppercased(),
+                            font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
+                            textColor: environment.theme.list.freeTextColor
+                        )),
+                        maximumNumberOfLines: 0
+                    )),
                     footer: nil,
                     items: items
                 ),
@@ -181,9 +220,8 @@ private final class SheetContent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + keys.size.height / 2.0))
             )
             contentSize.height += keys.size.height
-            contentSize.height += 17.0
+            contentSize.height += 24.0
             
-            //TODO:localize
             let button = button.update(
                 component: ButtonComponent(
                     background: ButtonComponent.Background(
@@ -192,12 +230,13 @@ private final class SheetContent: CombinedComponent {
                         pressedColor: theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9)
                     ),
                     content: AnyComponentWithIdentity(
-                        id: AnyHashable("transfer"),
+                        id: AnyHashable("import"),
                         component: AnyComponent(
-                            MultilineTextComponent(text: .plain(NSAttributedString(string: "Transfer", font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)))
+                            MultilineTextComponent(text: .plain(NSAttributedString(string: strings.WebApp_ImportData_Import, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)))
                         )
                     ),
                     isEnabled: state.selectedUuid != nil,
+                    allowActionWhenDisabled: true,
                     displaysProgress: false,
                     action: { [weak state] in
                         guard let state else {
@@ -231,21 +270,27 @@ private final class SheetContainerComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let peer: EnginePeer
     let existingKeys: [WebAppSecureStorage.ExistingKey]
     let completion: (String) -> Void
     
     init(
         context: AccountContext,
+        peer: EnginePeer,
         existingKeys: [WebAppSecureStorage.ExistingKey],
         completion: @escaping (String) -> Void
     ) {
         self.context = context
+        self.peer = peer
         self.existingKeys = existingKeys
         self.completion = completion
     }
     
     static func ==(lhs: SheetContainerComponent, rhs: SheetContainerComponent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.peer != rhs.peer {
             return false
         }
         if lhs.existingKeys != rhs.existingKeys {
@@ -270,6 +315,7 @@ private final class SheetContainerComponent: CombinedComponent {
                 component: SheetComponent<EnvironmentType>(
                     content: AnyComponent<EnvironmentType>(SheetContent(
                         context: context.component.context,
+                        peer: context.component.peer,
                         existingKeys: context.component.existingKeys,
                         completion: context.component.completion,
                         dismiss: {
@@ -340,6 +386,7 @@ private final class SheetContainerComponent: CombinedComponent {
 final class WebAppSecureStorageTransferScreen: ViewControllerComponentContainer {
     init(
         context: AccountContext,
+        peer: EnginePeer,
         existingKeys: [WebAppSecureStorage.ExistingKey],
         completion: @escaping (String?) -> Void
     ) {
@@ -347,6 +394,7 @@ final class WebAppSecureStorageTransferScreen: ViewControllerComponentContainer 
             context: context,
             component: SheetContainerComponent(
                 context: context,
+                peer: peer,
                 existingKeys: existingKeys,
                 completion: completion
             ),
@@ -366,5 +414,81 @@ final class WebAppSecureStorageTransferScreen: ViewControllerComponentContainer 
         if let view = self.node.hostView.findTaggedView(tag: SheetComponent<ViewControllerComponentContainer.Environment>.View.Tag()) as? SheetComponent<ViewControllerComponentContainer.Environment>.View {
             view.dismissAnimated()
         }
+    }
+}
+
+private final class AvatarComponent: Component {
+    let context: AccountContext
+    let peer: EnginePeer
+    let size: CGSize?
+
+    init(context: AccountContext, peer: EnginePeer, size: CGSize? = nil) {
+        self.context = context
+        self.peer = peer
+        self.size = size
+    }
+
+    static func ==(lhs: AvatarComponent, rhs: AvatarComponent) -> Bool {
+        if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.peer != rhs.peer {
+            return false
+        }
+        if lhs.size != rhs.size {
+            return false
+        }
+        return true
+    }
+
+    final class View: UIView {
+        private var avatarNode: AvatarNode?
+        
+        private var component: AvatarComponent?
+        private weak var state: EmptyComponentState?
+        
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        func update(component: AvatarComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+            self.component = component
+            self.state = state
+            
+            let size = component.size ?? availableSize
+
+            let avatarNode: AvatarNode
+            if let current = self.avatarNode {
+                avatarNode = current
+            } else {
+                avatarNode = AvatarNode(font: avatarPlaceholderFont(size: floor(size.width * 0.5)))
+                avatarNode.displaysAsynchronously = false
+                self.avatarNode = avatarNode
+                self.addSubview(avatarNode.view)
+            }
+            avatarNode.frame = CGRect(origin: CGPoint(), size: size)
+            avatarNode.setPeer(
+                context: component.context,
+                theme: component.context.sharedContext.currentPresentationData.with({ $0 }).theme,
+                peer: component.peer,
+                synchronousLoad: true,
+                displayDimensions: size
+            )
+            avatarNode.updateSize(size: size)
+            
+            return size
+        }
+    }
+
+    func makeView() -> View {
+        return View(frame: CGRect())
+    }
+
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
