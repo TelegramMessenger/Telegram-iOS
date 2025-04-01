@@ -364,7 +364,7 @@ public final class TextNodeLayout: NSObject {
     fileprivate let backgroundColor: UIColor?
     fileprivate let constrainedSize: CGSize
     fileprivate let explicitAlignment: NSTextAlignment
-    fileprivate let resolvedAlignment: NSTextAlignment
+    public let resolvedAlignment: NSTextAlignment
     fileprivate let verticalAlignment: TextVerticalAlignment
     fileprivate let lineSpacing: CGFloat
     fileprivate let cutout: TextNodeCutout?

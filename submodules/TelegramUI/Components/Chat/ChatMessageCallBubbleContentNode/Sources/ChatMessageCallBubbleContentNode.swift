@@ -123,9 +123,9 @@ public class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                         }
                         break
-                    } else if let action = media as? TelegramMediaAction, case let .conferenceCall(_, duration, _) = action.action {
+                    } else if let action = media as? TelegramMediaAction, case let .conferenceCall(conferenceCall) = action.action {
                         isVideo = false
-                        callDuration = duration
+                        callDuration = conferenceCall.duration
                         //TODO:localize
                         titleString = "Group Call"
                         break

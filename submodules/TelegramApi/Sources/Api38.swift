@@ -10136,12 +10136,13 @@ public extension Api.functions.phone {
                 }
 }
 public extension Api.functions.phone {
-                static func inviteConferenceCallParticipant(call: Api.InputGroupCall, userId: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func inviteConferenceCallParticipant(flags: Int32, call: Api.InputGroupCall, userId: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1050474478)
+                    buffer.appendInt32(-1124981115)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     call.serialize(buffer, true)
                     userId.serialize(buffer, true)
-                    return (FunctionDescription(name: "phone.inviteConferenceCallParticipant", parameters: [("call", String(describing: call)), ("userId", String(describing: userId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    return (FunctionDescription(name: "phone.inviteConferenceCallParticipant", parameters: [("flags", String(describing: flags)), ("call", String(describing: call)), ("userId", String(describing: userId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {

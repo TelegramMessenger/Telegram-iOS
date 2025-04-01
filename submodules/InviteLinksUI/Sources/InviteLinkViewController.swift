@@ -271,6 +271,7 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
                 }, contextAction: invite.link?.hasSuffix("...") == true ? nil : { node, gesture in
                     interaction.contextAction(invite, node, gesture)
                 }, viewAction: {
+                }, openCallAction: {
                 })
             case let .subscriptionHeader(_, title):
                 return SectionHeaderItem(presentationData: ItemListPresentationData(presentationData), title: title)

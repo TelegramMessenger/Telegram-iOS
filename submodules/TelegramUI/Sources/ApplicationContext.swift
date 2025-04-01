@@ -398,6 +398,8 @@ final class AuthorizedApplicationContext {
                                 if let action = media as? TelegramMediaAction {
                                     if case .messageAutoremoveTimeoutUpdated = action.action {
                                         return
+                                    } else if case .conferenceCall = action.action {
+                                        return
                                     }
                                 }
                             }

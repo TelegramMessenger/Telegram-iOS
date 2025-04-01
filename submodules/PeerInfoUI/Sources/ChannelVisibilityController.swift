@@ -655,6 +655,7 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                     if let invite = invite {
                         arguments.openLink(invite)
                     }
+                }, openCallAction: {
                 })
             case let .editablePublicLink(theme, _, placeholder, currentText):
                 return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: "t.me/", textColor: theme.list.itemPrimaryTextColor), text: currentText, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: false), clearType: .always, tag: ChannelVisibilityEntryTag.publicLink, sectionId: self.section, textUpdated: { updatedText in

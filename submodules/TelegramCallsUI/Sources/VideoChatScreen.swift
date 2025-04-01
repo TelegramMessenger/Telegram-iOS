@@ -1051,7 +1051,7 @@ final class VideoChatScreenComponent: Component {
         
         static func groupCallStateForConferenceSource(conferenceSource: PresentationCall) -> Signal<(state: PresentationGroupCallState, invitedPeers: [InvitedPeer]), NoError> {
             let invitedPeers = conferenceSource.context.engine.data.subscribe(
-                EngineDataList((conferenceSource as! PresentationCallImpl).pendingInviteToConferencePeerIds.map { TelegramEngine.EngineData.Item.Peer.Peer(id: $0) })
+                EngineDataList((conferenceSource as! PresentationCallImpl).pendingInviteToConferencePeerIds.map { TelegramEngine.EngineData.Item.Peer.Peer(id: $0.id) })
             )
             
             let accountPeerId = conferenceSource.context.account.peerId

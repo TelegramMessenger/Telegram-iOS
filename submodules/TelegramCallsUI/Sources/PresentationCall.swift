@@ -234,6 +234,7 @@ public final class PresentationCallImpl: PresentationCall {
     public let peerId: EnginePeer.Id
     public let isOutgoing: Bool
     private let incomingConferenceSource: EngineMessage.Id?
+    private let conferenceStableId: Int64?
     public var isVideo: Bool
     public var isVideoPossible: Bool
     private let enableStunMarking: Bool
@@ -368,7 +369,7 @@ public final class PresentationCallImpl: PresentationCall {
         return self.conferenceStatePromise.get()
     }
     
-    public private(set) var pendingInviteToConferencePeerIds: [EnginePeer.Id] = []
+    public private(set) var pendingInviteToConferencePeerIds: [(id: EnginePeer.Id, isVideo: Bool)] = []
     
     private var localVideoEndpointId: String?
     private var remoteVideoEndpointId: String?
@@ -423,6 +424,11 @@ public final class PresentationCallImpl: PresentationCall {
         self.peerId = peerId
         self.isOutgoing = isOutgoing
         self.incomingConferenceSource = incomingConferenceSource
+        if let _ = incomingConferenceSource {
+            self.conferenceStableId = Int64.random(in: Int64.min ..< Int64.max)
+        } else {
+            self.conferenceStableId = nil
+        }
         self.isVideo = initialState?.type == .video
         self.isVideoPossible = isVideoPossible
         self.enableStunMarking = enableStunMarking
@@ -445,19 +451,67 @@ public final class PresentationCallImpl: PresentationCall {
         
         var didReceiveAudioOutputs = false
         
-        var callSessionState: Signal<CallSession, NoError> = .complete()
-        if let initialState = initialState {
-            callSessionState = .single(initialState)
-        }
-        callSessionState = callSessionState
-        |> then(callSessionManager.callState(internalId: internalId))
-        
-        self.sessionStateDisposable = (callSessionState
-        |> deliverOnMainQueue).start(next: { [weak self] sessionState in
-            if let strongSelf = self {
-                strongSelf.updateSessionState(sessionState: sessionState, callContextState: strongSelf.callContextState, reception: strongSelf.reception, audioSessionControl: strongSelf.audioSessionControl)
+        if let incomingConferenceSource = incomingConferenceSource {
+            self.sessionStateDisposable = (context.engine.data.subscribe(
+                TelegramEngine.EngineData.Item.Messages.Message(id: incomingConferenceSource)
+            )
+            |> deliverOnMainQueue).startStrict(next: { [weak self] message in
+                guard let self else {
+                    return
+                }
+
+                let state: CallSessionState
+                if let message = message {
+                    var foundAction: TelegramMediaAction?
+                    for media in message.media {
+                        if let action = media as? TelegramMediaAction {
+                            foundAction = action
+                            break
+                        }
+                    }
+
+                    if let action = foundAction, case let .conferenceCall(conferenceCall) = action.action {
+                        if conferenceCall.flags.contains(.isMissed) || conferenceCall.duration != nil {
+                            state = .terminated(id: nil, reason: .ended(.hungUp), options: CallTerminationOptions())
+                        } else {
+                            state = .ringing
+                        }
+                    } else {
+                        state = .terminated(id: nil, reason: .ended(.hungUp), options: CallTerminationOptions())
+                    }
+                } else {
+                    state = .terminated(id: nil, reason: .ended(.hungUp), options: CallTerminationOptions())
+                }
+                
+                self.updateSessionState(
+                    sessionState: CallSession(
+                        id: self.internalId,
+                        stableId: self.conferenceStableId,
+                        isOutgoing: false,
+                        type: self.isVideo ? .video : .audio,
+                        state: state,
+                        isVideoPossible: true
+                    ),
+                    callContextState: nil,
+                    reception: nil,
+                    audioSessionControl: self.audioSessionControl
+                )
+            })
+        } else {
+            var callSessionState: Signal<CallSession, NoError> = .complete()
+            if let initialState = initialState {
+                callSessionState = .single(initialState)
             }
-        })
+            callSessionState = callSessionState
+            |> then(callSessionManager.callState(internalId: internalId))
+            
+            self.sessionStateDisposable = (callSessionState
+            |> deliverOnMainQueue).start(next: { [weak self] sessionState in
+                if let strongSelf = self {
+                    strongSelf.updateSessionState(sessionState: sessionState, callContextState: strongSelf.callContextState, reception: strongSelf.reception, audioSessionControl: strongSelf.audioSessionControl)
+                }
+            })
+        }
         
         if let data = context.currentAppConfiguration.with({ $0 }).data, let _ = data["ios_killswitch_disable_call_device"] {
             self.sharedAudioContext = nil
@@ -933,15 +987,20 @@ public final class PresentationCallImpl: PresentationCall {
                     }
                     let keyPair: TelegramKeyPair? = TelegramE2EEncryptionProviderImpl.shared.generateKeyPair()
                     guard let keyPair, let groupCall else {
-                        self.updateSessionState(sessionState: CallSession(
-                            id: self.internalId,
-                            stableId: nil,
-                            isOutgoing: false,
-                            type: .audio,
-                            state: .terminated(id: nil, reason: .error(.generic), options: CallTerminationOptions()),
-                            isVideoPossible: true
-                        ),
-                        callContextState: nil, reception: nil, audioSessionControl: self.audioSessionControl)
+                        self.sessionStateDisposable?.dispose()
+                        self.updateSessionState(
+                            sessionState: CallSession(
+                                id: self.internalId,
+                                stableId: self.conferenceStableId,
+                                isOutgoing: false,
+                                type: self.isVideo ? .video : .audio,
+                                state: .terminated(id: nil, reason: .error(.generic), options: CallTerminationOptions()),
+                                isVideoPossible: true
+                            ),
+                            callContextState: nil,
+                            reception: nil,
+                            audioSessionControl: self.audioSessionControl
+                        )
                         return
                     }
                     
@@ -973,8 +1032,8 @@ public final class PresentationCallImpl: PresentationCall {
                     conferenceCall.upgradedConferenceCall = self
                     
                     conferenceCall.setConferenceInvitedPeers(self.pendingInviteToConferencePeerIds)
-                    for peerId in self.pendingInviteToConferencePeerIds {
-                        let _ = conferenceCall.invitePeer(peerId)
+                    for (peerId, isVideo) in self.pendingInviteToConferencePeerIds {
+                        let _ = conferenceCall.invitePeer(peerId, isVideo: isVideo)
                     }
                     
                     conferenceCall.setIsMuted(action: self.isMutedValue ? .muted(isPushToTalkActive: false) : .unmuted)
@@ -1067,9 +1126,10 @@ public final class PresentationCallImpl: PresentationCall {
                     guard let self else {
                         return
                     }
+                    self.sessionStateDisposable?.dispose()
                     self.updateSessionState(sessionState: CallSession(
                         id: self.internalId,
-                        stableId: nil,
+                        stableId: self.conferenceStableId,
                         isOutgoing: false,
                         type: .audio,
                         state: .terminated(id: nil, reason: .error(.generic), options: CallTerminationOptions()),
@@ -1341,11 +1401,12 @@ public final class PresentationCallImpl: PresentationCall {
                             if strongSelf.incomingConferenceSource != nil {
                                 strongSelf.conferenceStateValue = .preparing
                                 strongSelf.isAcceptingIncomingConference = true
+                                strongSelf.sessionStateDisposable?.dispose()
                                 strongSelf.updateSessionState(sessionState: CallSession(
                                     id: strongSelf.internalId,
-                                    stableId: nil,
+                                    stableId: strongSelf.conferenceStableId,
                                     isOutgoing: false,
-                                    type: .audio,
+                                    type: strongSelf.isVideo ? .video : .audio,
                                     state: .ringing,
                                     isVideoPossible: true
                                 ),
@@ -1365,9 +1426,10 @@ public final class PresentationCallImpl: PresentationCall {
                     if strongSelf.incomingConferenceSource != nil {
                         strongSelf.conferenceStateValue = .preparing
                         strongSelf.isAcceptingIncomingConference = true
+                        strongSelf.sessionStateDisposable?.dispose()
                         strongSelf.updateSessionState(sessionState: CallSession(
                             id: strongSelf.internalId,
-                            stableId: nil,
+                            stableId: strongSelf.conferenceStableId,
                             isOutgoing: false,
                             type: .audio,
                             state: .ringing,
@@ -1552,7 +1614,7 @@ public final class PresentationCallImpl: PresentationCall {
         self.videoCapturer?.setIsVideoEnabled(!isPaused)
     }
     
-    public func upgradeToConference(invitePeerIds: [EnginePeer.Id], completion: @escaping (PresentationGroupCall) -> Void) -> Disposable {
+    public func upgradeToConference(invitePeers: [(id: EnginePeer.Id, isVideo: Bool)], completion: @escaping (PresentationGroupCall) -> Void) -> Disposable {
         if self.isMovedToConference {
             return EmptyDisposable
         }
@@ -1561,7 +1623,7 @@ public final class PresentationCallImpl: PresentationCall {
             return EmptyDisposable
         }
         
-        self.pendingInviteToConferencePeerIds = invitePeerIds
+        self.pendingInviteToConferencePeerIds = invitePeers
         let index = self.upgradedToConferenceCompletions.add({ call in
             completion(call)
         })

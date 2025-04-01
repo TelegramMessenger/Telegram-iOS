@@ -382,7 +382,7 @@ private final class CallSessionContext {
 private final class IncomingConferenceInvitationContext {
     enum State: Equatable {
         case pending
-        case ringing(callId: Int64, otherParticipants: [EnginePeer])
+        case ringing(callId: Int64, isVideo: Bool, otherParticipants: [EnginePeer])
         case stopped
     }
 
@@ -420,11 +420,11 @@ private final class IncomingConferenceInvitationContext {
                     }
                 }
 
-                if let action = foundAction, case let .conferenceCall(callId, duration, otherParticipants) = action.action {
-                    if duration != nil {
+                if let action = foundAction, case let .conferenceCall(conferenceCall) = action.action {
+                    if conferenceCall.flags.contains(.isMissed) || conferenceCall.duration != nil {
                         state = .stopped
                     } else {
-                        state = .ringing(callId: callId, otherParticipants: otherParticipants.compactMap { id -> EnginePeer? in
+                        state = .ringing(callId: conferenceCall.callId, isVideo: conferenceCall.flags.contains(.isVideo), otherParticipants: conferenceCall.otherParticipants.compactMap { id -> EnginePeer? in
                             return message.peers[id].flatMap(EnginePeer.init)
                         })
                     }
@@ -639,11 +639,11 @@ private final class CallSessionManagerContext {
             }
         }
         for (id, context) in self.incomingConferenceInvitationContexts {
-            if case let .ringing(_, otherParticipants) = context.state {
+            if case let .ringing(_, isVideo, otherParticipants) = context.state {
                 ringingContexts.append(CallSessionRingingState(
                     id: context.internalId,
                     peerId: id.peerId,
-                    isVideo: false,
+                    isVideo: isVideo,
                     isVideoPossible: true,
                     conferenceSource: id,
                     otherParticipants: otherParticipants

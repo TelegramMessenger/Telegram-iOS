@@ -136,6 +136,20 @@ public final class TextNodeWithEntities {
         }
     }
     
+    private var tapRecognizer: TapLongTapOrDoubleTapGestureRecognizer?
+    private var linkHighlightingNode: LinkHighlightingNode?
+    
+    public var linkHighlightColor: UIColor?
+    public var linkHighlightInset: UIEdgeInsets = .zero
+    
+    public var tapAttributeAction: (([NSAttributedString.Key: Any], Int) -> Void)?
+    public var longTapAttributeAction: (([NSAttributedString.Key: Any], Int) -> Void)?
+    public var highlightAttributeAction: (([NSAttributedString.Key: Any]) -> NSAttributedString.Key?)? {
+        didSet {
+            self.updateInteractiveActions()
+        }
+    }
+    
     public init() {
         self.textNode = TextNode()
     }
@@ -299,6 +313,83 @@ public final class TextNodeWithEntities {
         }
         for key in removeKeys {
             self.inlineStickerItemLayers.removeValue(forKey: key)
+        }
+    }
+    
+    private func updateInteractiveActions() {
+        if self.highlightAttributeAction != nil {
+            if self.tapRecognizer == nil {
+                let tapRecognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapAction(_:)))
+                tapRecognizer.highlight = { [weak self] point in
+                    if let strongSelf = self, let cachedLayout = strongSelf.textNode.cachedLayout {
+                        var rects: [CGRect]?
+                        if let point = point {
+                            if let (index, attributes) = strongSelf.textNode.attributesAtPoint(CGPoint(x: point.x, y: point.y)) {
+                                if let selectedAttribute = strongSelf.highlightAttributeAction?(attributes) {
+                                    let initialRects = strongSelf.textNode.lineAndAttributeRects(name: selectedAttribute.rawValue, at: index)
+                                    if let initialRects = initialRects, case .center = cachedLayout.resolvedAlignment {
+                                        var mappedRects: [CGRect] = []
+                                        for i in 0 ..< initialRects.count {
+                                            let lineRect = initialRects[i].0
+                                            var itemRect = initialRects[i].1
+                                            itemRect.origin.x = floor((strongSelf.textNode.bounds.size.width - lineRect.width) / 2.0) + itemRect.origin.x
+                                            mappedRects.append(itemRect)
+                                        }
+                                        rects = mappedRects
+                                    } else {
+                                        rects = strongSelf.textNode.attributeRects(name: selectedAttribute.rawValue, at: index)
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if var rects, !rects.isEmpty {
+                            let linkHighlightingNode: LinkHighlightingNode
+                            if let current = strongSelf.linkHighlightingNode {
+                                linkHighlightingNode = current
+                            } else {
+                                linkHighlightingNode = LinkHighlightingNode(color: strongSelf.linkHighlightColor ?? .clear)
+                                strongSelf.linkHighlightingNode = linkHighlightingNode
+                                strongSelf.textNode.addSubnode(linkHighlightingNode)
+                            }
+                            linkHighlightingNode.frame = strongSelf.textNode.bounds
+                            rects[rects.count - 1] = rects[rects.count - 1].inset(by: strongSelf.linkHighlightInset)
+                            linkHighlightingNode.updateRects(rects.map { $0.offsetBy(dx: 0.0, dy: 0.0) })
+                        } else if let linkHighlightingNode = strongSelf.linkHighlightingNode {
+                            strongSelf.linkHighlightingNode = nil
+                            linkHighlightingNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.18, removeOnCompletion: false, completion: { [weak linkHighlightingNode] _ in
+                                linkHighlightingNode?.removeFromSupernode()
+                            })
+                        }
+                    }
+                }
+                self.textNode.view.addGestureRecognizer(tapRecognizer)
+            }
+        } else if let tapRecognizer = self.tapRecognizer {
+            self.tapRecognizer = nil
+            self.textNode.view.removeGestureRecognizer(tapRecognizer)
+        }
+    }
+    
+    @objc private func tapAction(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+        switch recognizer.state {
+            case .ended:
+                if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
+                    switch gesture {
+                        case .tap:
+                            if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: location.x, y: location.y)) {
+                                self.tapAttributeAction?(attributes, index)
+                            }
+                        case .longTap:
+                            if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: location.x, y: location.y)) {
+                                self.longTapAttributeAction?(attributes, index)
+                            }
+                        default:
+                            break
+                    }
+                }
+            default:
+                break
         }
     }
 }

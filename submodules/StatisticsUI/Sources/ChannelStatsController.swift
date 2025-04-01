@@ -1050,7 +1050,7 @@ private enum StatsEntry: ItemListNodeEntry {
                     arguments.copyBoostLink(link)
                 }, shareAction: {
                     arguments.shareBoostLink(link)
-                }, contextAction: nil, viewAction: nil, tag: nil)
+                }, contextAction: nil, viewAction: nil, openCallAction: nil, tag: nil)
             case let .boostersPlaceholder(_, text):
                 return ItemListPlaceholderItem(theme: presentationData.theme, text: text, sectionId: self.section, style: .blocks)
             case let .boostGifts(theme, title):

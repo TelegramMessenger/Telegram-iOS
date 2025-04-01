@@ -57,7 +57,7 @@ extension VideoChatScreenComponent.View {
                 }
                 
                 for peerId in peerIds {
-                    let _ = groupCall.invitePeer(peerId)
+                    let _ = groupCall.invitePeer(peerId.id, isVideo: peerId.isVideo)
                 }
             })
             self.environment?.controller()?.push(controller)
@@ -146,7 +146,8 @@ extension VideoChatScreenComponent.View {
                         if let participant {
                             dismissController?()
                             
-                            if groupCall.invitePeer(participant.peer.id) {
+                            //TODO:release
+                            if groupCall.invitePeer(participant.peer.id, isVideo: false) {
                                 let text: String
                                 if case let .channel(channel) = self.peer, case .broadcast = channel.info {
                                     text = environment.strings.LiveStream_InvitedPeerText(peer.displayTitle(strings: environment.strings, displayOrder: groupCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).nameDisplayOrder)).string
@@ -258,7 +259,8 @@ extension VideoChatScreenComponent.View {
                                             }
                                             dismissController?()
                                             
-                                            if groupCall.invitePeer(peer.id) {
+                                            //TODO:release
+                                            if groupCall.invitePeer(peer.id, isVideo: false) {
                                                 let text: String
                                                 if case let .channel(channel) = self.peer, case .broadcast = channel.info {
                                                     text = environment.strings.LiveStream_InvitedPeerText(peer.displayTitle(strings: environment.strings, displayOrder: presentationData.nameDisplayOrder)).string
@@ -330,7 +332,8 @@ extension VideoChatScreenComponent.View {
                                             }
                                             dismissController?()
                                             
-                                            if groupCall.invitePeer(peer.id) {
+                                            //TODO:release
+                                            if groupCall.invitePeer(peer.id, isVideo: false) {
                                                 let text: String
                                                 if case let .channel(channel) = self.peer, case .broadcast = channel.info {
                                                     text = environment.strings.LiveStream_InvitedPeerText(peer.displayTitle(strings: environment.strings, displayOrder: presentationData.nameDisplayOrder)).string

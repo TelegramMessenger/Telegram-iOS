@@ -2670,7 +2670,7 @@ encryptDecrypt:(NSData * _Nullable (^ _Nullable)(NSData * _Nonnull, bool))encryp
             },
             .createWrappedAudioDeviceModule = [audioDeviceModule, isActiveByDefault](webrtc::TaskQueueFactory *taskQueueFactory) -> rtc::scoped_refptr<tgcalls::WrappedAudioDeviceModule> {
                 if (audioDeviceModule) {
-                    auto result = audioDeviceModule->getSyncAssumingSameThread()->makeChildAudioDeviceModule(isActiveByDefault);
+                    auto result = audioDeviceModule->getSyncAssumingSameThread()->makeChildAudioDeviceModule(isActiveByDefault || true);
                     return result;
                 } else {
                     return nullptr;

@@ -831,7 +831,7 @@ func _internal_joinGroupCall(account: Account, peerId: PeerId?, joinAs: PeerId?,
     }
 }
 
-func _internal_inviteConferenceCallParticipant(account: Account, callId: Int64, accessHash: Int64, peerId: EnginePeer.Id) -> Signal<Never, NoError> {
+func _internal_inviteConferenceCallParticipant(account: Account, callId: Int64, accessHash: Int64, peerId: EnginePeer.Id, isVideo: Bool) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Api.InputUser? in
         return transaction.getPeer(peerId).flatMap(apiInputUser)
     }
@@ -840,7 +840,11 @@ func _internal_inviteConferenceCallParticipant(account: Account, callId: Int64, 
             return .complete()
         }
         
-        return account.network.request(Api.functions.phone.inviteConferenceCallParticipant(call: .inputGroupCall(id: callId, accessHash: accessHash), userId: inputPeer))
+        var flags: Int32 = 0
+        if isVideo {
+            flags |= 1 << 0
+        }
+        return account.network.request(Api.functions.phone.inviteConferenceCallParticipant(flags: flags, call: .inputGroupCall(id: callId, accessHash: accessHash), userId: inputPeer))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
             return .single(nil)

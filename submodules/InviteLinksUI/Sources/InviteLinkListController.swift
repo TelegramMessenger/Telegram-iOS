@@ -229,6 +229,7 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
                     if let invite = invite {
                         arguments.openLink(invite)
                     }
+                }, openCallAction: {
                 })
             case let .mainLinkOtherInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section, linkAction: nil, style: .blocks, tag: nil)
