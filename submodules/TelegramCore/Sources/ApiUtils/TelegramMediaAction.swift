@@ -201,12 +201,28 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         return TelegramMediaAction(action: .paidMessagesRefunded(count: count, stars: stars))
     case let .messageActionPaidMessagesPrice(stars):
         return TelegramMediaAction(action: .paidMessagesPriceEdited(stars: stars))
-    case let .messageActionConferenceCall(_, callId, duration, otherParticipants):
-        return TelegramMediaAction(action: .conferenceCall(
+    case let .messageActionConferenceCall(flags, callId, duration, otherParticipants):
+        let isMissed = (flags & (1 << 0)) != 0
+        let isActive = (flags & (1 << 1)) != 0
+        let isVideo = (flags & (1 << 4)) != 0
+
+        var mappedFlags = TelegramMediaActionType.ConferenceCall.Flags()
+        if isMissed {
+            mappedFlags.insert(.isMissed)
+        }
+        if isActive {
+            mappedFlags.insert(.isActive)
+        }
+        if isVideo {
+            mappedFlags.insert(.isVideo)
+        }
+
+        return TelegramMediaAction(action: .conferenceCall(TelegramMediaActionType.ConferenceCall(
             callId: callId,
             duration: duration,
+            flags: mappedFlags,
             otherParticipants: otherParticipants.flatMap({ return $0.map(\.peerId) }) ?? []
-        ))
+        )))
     }
 }
 

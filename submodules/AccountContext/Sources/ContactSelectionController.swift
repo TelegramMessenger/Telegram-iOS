@@ -114,7 +114,22 @@ public final class ContactSelectionControllerParams {
     public let openProfile: ((EnginePeer) -> Void)?
     public let sendMessage: ((EnginePeer) -> Void)?
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, mode: ContactSelectionControllerMode = .generic, autoDismiss: Bool = true, title: @escaping (PresentationStrings) -> String, options: Signal<[ContactListAdditionalOption], NoError> = .single([]), displayDeviceContacts: Bool = false, displayCallIcons: Bool = false, multipleSelection: Bool = false, requirePhoneNumbers: Bool = false, allowChannelsInSearch: Bool = false, confirmation: @escaping (ContactListPeer) -> Signal<Bool, NoError> = { _ in .single(true) }, openProfile: ((EnginePeer) -> Void)? = nil, sendMessage: ((EnginePeer) -> Void)? = nil) {
+    public init(
+        context: AccountContext,
+        updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
+        mode: ContactSelectionControllerMode = .generic,
+        autoDismiss: Bool = true,
+        title: @escaping (PresentationStrings) -> String,
+        options: Signal<[ContactListAdditionalOption], NoError> = .single([]),
+        displayDeviceContacts: Bool = false,
+        displayCallIcons: Bool = false,
+        multipleSelection: Bool = false,
+        requirePhoneNumbers: Bool = false,
+        allowChannelsInSearch: Bool = false,
+        confirmation: @escaping (ContactListPeer) -> Signal<Bool, NoError> = { _ in .single(true) },
+        openProfile: ((EnginePeer) -> Void)? = nil,
+        sendMessage: ((EnginePeer) -> Void)? = nil
+    ) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.mode = mode

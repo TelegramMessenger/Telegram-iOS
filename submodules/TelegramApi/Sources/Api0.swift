@@ -384,6 +384,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-659913713] = { return Api.InputGroupCall.parse_inputGroupCall($0) }
     dict[-1945083841] = { return Api.InputGroupCall.parse_inputGroupCallInviteMessage($0) }
     dict[-33127873] = { return Api.InputGroupCall.parse_inputGroupCallSlug($0) }
+    dict[-191267262] = { return Api.InputInvoice.parse_inputInvoiceBusinessBotTransferStars($0) }
     dict[887591921] = { return Api.InputInvoice.parse_inputInvoiceChatInviteSubscription($0) }
     dict[-977967015] = { return Api.InputInvoice.parse_inputInvoiceMessage($0) }
     dict[-1734841331] = { return Api.InputInvoice.parse_inputInvoicePremiumGiftCode($0) }

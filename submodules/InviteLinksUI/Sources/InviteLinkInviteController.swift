@@ -27,13 +27,15 @@ class InviteLinkInviteInteraction {
     let copyLink: (ExportedInvitation) -> Void
     let shareLink: (ExportedInvitation) -> Void
     let manageLinks: () -> Void
+    let openCallAction: () -> Void
     
-    init(context: AccountContext, mainLinkContextAction: @escaping (ExportedInvitation?, ASDisplayNode, ContextGesture?) -> Void, copyLink: @escaping (ExportedInvitation) -> Void, shareLink: @escaping (ExportedInvitation) -> Void, manageLinks: @escaping () -> Void) {
+    init(context: AccountContext, mainLinkContextAction: @escaping (ExportedInvitation?, ASDisplayNode, ContextGesture?) -> Void, copyLink: @escaping (ExportedInvitation) -> Void, shareLink: @escaping (ExportedInvitation) -> Void, manageLinks: @escaping () -> Void, openCallAction: @escaping () -> Void) {
         self.context = context
         self.mainLinkContextAction = mainLinkContextAction
         self.copyLink = copyLink
         self.shareLink = shareLink
         self.manageLinks = manageLinks
+        self.openCallAction = openCallAction
     }
 }
 
@@ -131,6 +133,8 @@ private enum InviteLinkInviteEntry: Comparable, Identifiable {
                 }, contextAction: { node, gesture in
                     interaction.mainLinkContextAction(invitation, node, gesture)
                 }, viewAction: {
+                }, openCallAction: {
+                    interaction.openCallAction()
                 })
             case let .manage(text, standalone):
                 return InviteLinkInviteManageItem(theme: presentationData.theme, text: text, standalone: standalone, action: {
@@ -546,6 +550,12 @@ public final class InviteLinkInviteController: ViewController {
                     strongSelf.controller?.parentNavigationController?.pushViewController(controller)
                     strongSelf.controller?.dismiss()
                 }
+            }, openCallAction: { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.controller?.completed?(.openCall)
+                self.controller?.dismiss()
             })
             
             let previousEntries = Atomic<[InviteLinkInviteEntry]?>(value: nil)

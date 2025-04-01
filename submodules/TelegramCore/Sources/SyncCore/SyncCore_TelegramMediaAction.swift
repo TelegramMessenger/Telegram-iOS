@@ -86,6 +86,31 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
         }
     }
     
+    public struct ConferenceCall: Equatable {
+        public struct Flags: OptionSet {
+            public var rawValue: Int32
+            public init(rawValue: Int32) {
+                self.rawValue = rawValue
+            }
+            
+            public static let isVideo = Flags(rawValue: 1 << 0)
+            public static let isActive = Flags(rawValue: 1 << 1)
+            public static let isMissed = Flags(rawValue: 1 << 2)
+        }
+
+        public let callId: Int64
+        public let duration: Int32?
+        public let flags: Flags
+        public let otherParticipants: [PeerId]
+
+        public init(callId: Int64, duration: Int32?, flags: Flags, otherParticipants: [PeerId]) {
+            self.callId = callId
+            self.duration = duration
+            self.flags = flags
+            self.otherParticipants = otherParticipants
+        }
+    }
+    
     case unknown
     case groupCreated(title: String)
     case addedMembers(peerIds: [PeerId])
@@ -134,7 +159,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case starGiftUnique(gift: StarGift, isUpgrade: Bool, isTransferred: Bool, savedToProfile: Bool, canExportDate: Int32?, transferStars: Int64?, isRefunded: Bool, peerId: EnginePeer.Id?, senderId: EnginePeer.Id?, savedId: Int64?)
     case paidMessagesRefunded(count: Int32, stars: Int64)
     case paidMessagesPriceEdited(stars: Int64)
-    case conferenceCall(callId: Int64, duration: Int32?, otherParticipants: [PeerId])
+    case conferenceCall(ConferenceCall)
     
     public init(decoder: PostboxDecoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
@@ -264,7 +289,12 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
         case 47:
             self = .paidMessagesPriceEdited(stars: decoder.decodeInt64ForKey("stars", orElse: 0))
         case 48:
-            self = .conferenceCall(callId: decoder.decodeInt64ForKey("cid", orElse: 0), duration: decoder.decodeOptionalInt32ForKey("dur"), otherParticipants: decoder.decodeInt64ArrayForKey("part").map(PeerId.init))
+            self = .conferenceCall(ConferenceCall(
+                callId: decoder.decodeInt64ForKey("cid", orElse: 0),
+                duration: decoder.decodeOptionalInt32ForKey("dur"),
+                flags: ConferenceCall.Flags(rawValue: decoder.decodeInt32ForKey("flags", orElse: 0)),
+                otherParticipants: decoder.decodeInt64ArrayForKey("part").map(PeerId.init)
+            ))
         default:
             self = .unknown
         }
@@ -642,15 +672,16 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
         case let .paidMessagesPriceEdited(stars):
             encoder.encodeInt32(47, forKey: "_rawValue")
             encoder.encodeInt64(stars, forKey: "stars")
-        case let .conferenceCall(callId, duration, otherParticipants):
+        case let .conferenceCall(conferenceCall):
             encoder.encodeInt32(48, forKey: "_rawValue")
-            encoder.encodeInt64(callId, forKey: "cid")
-            if let duration {
+            encoder.encodeInt64(conferenceCall.callId, forKey: "cid")
+            if let duration = conferenceCall.duration {
                 encoder.encodeInt32(duration, forKey: "dur")
             } else {
                 encoder.encodeNil(forKey: "dur")
             }
-            encoder.encodeInt64Array(otherParticipants.map({ $0.toInt64() }), forKey: "part")
+            encoder.encodeInt32(conferenceCall.flags.rawValue, forKey: "flags")
+            encoder.encodeInt64Array(conferenceCall.otherParticipants.map({ $0.toInt64() }), forKey: "part")
         }
     }
     

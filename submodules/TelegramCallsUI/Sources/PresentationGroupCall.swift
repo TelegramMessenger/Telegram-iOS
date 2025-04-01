@@ -3838,14 +3838,14 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }))
     }
     
-    public func invitePeer(_ peerId: PeerId) -> Bool {
+    public func invitePeer(_ peerId: PeerId, isVideo: Bool) -> Bool {
         if self.isConference {
             guard let initialCall = self.initialCall else {
                 return false
             }
             
             //TODO:release
-            let _ = self.accountContext.engine.calls.inviteConferenceCallParticipant(callId: initialCall.description.id, accessHash: initialCall.description.accessHash, peerId: peerId).start()
+            let _ = self.accountContext.engine.calls.inviteConferenceCallParticipant(callId: initialCall.description.id, accessHash: initialCall.description.accessHash, peerId: peerId, isVideo: isVideo).start()
             return false
             /*guard let initialCall = self.initialCall else {
                 return false
@@ -3922,7 +3922,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
     }
     
-    func setConferenceInvitedPeers(_ peerIds: [PeerId]) {
+    func setConferenceInvitedPeers(_ invitedPeers: [(id: PeerId, isVideo: Bool)]) {
         //TODO:release
         /*self.invitedPeersValue = peerIds.map {
             PresentationGroupCallInvitedPeer(id: $0, state: .requesting)

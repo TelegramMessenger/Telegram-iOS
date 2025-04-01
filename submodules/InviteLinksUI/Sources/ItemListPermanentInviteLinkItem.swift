@@ -14,6 +14,7 @@ import Markdown
 import TextFormat
 import ComponentFlow
 import MultilineTextComponent
+import TextNodeWithEntities
 
 private func actionButtonImage(color: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 24.0, height: 24.0), contextGenerator: { size, context in
@@ -46,6 +47,7 @@ public class ItemListPermanentInviteLinkItem: ListViewItem, ItemListItem {
     let shareAction: (() -> Void)?
     let contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
     let viewAction: (() -> Void)?
+    let openCallAction: (() -> Void)?
     public let tag: ItemListItemTag?
     
     public init(
@@ -65,6 +67,7 @@ public class ItemListPermanentInviteLinkItem: ListViewItem, ItemListItem {
         shareAction: (() -> Void)?,
         contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?,
         viewAction: (() -> Void)?,
+        openCallAction: (() -> Void)?,
         tag: ItemListItemTag? = nil
     ) {
         self.context = context
@@ -83,6 +86,7 @@ public class ItemListPermanentInviteLinkItem: ListViewItem, ItemListItem {
         self.shareAction = shareAction
         self.contextAction = contextAction
         self.viewAction = viewAction
+        self.openCallAction = openCallAction
         self.tag = tag
     }
     
@@ -147,7 +151,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
     private var shimmerNode: ShimmerEffectNode?
     private var absoluteLocation: (CGRect, CGSize)?
     
-    private var justCreatedCallTextNode: TextNode?
+    private var justCreatedCallTextNode: TextNodeWithEntities?
     private var justCreatedCallLeftSeparatorLayer: SimpleLayer?
     private var justCreatedCallRightSeparatorLayer: SimpleLayer?
     private var justCreatedCallSeparatorText: ComponentView<Empty>?
@@ -299,7 +303,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
     public func asyncLayout() -> (_ item: ItemListPermanentInviteLinkItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeAddressLayout = TextNode.asyncLayout(self.addressNode)
         let makeInvitedPeersLayout = TextNode.asyncLayout(self.invitedPeersNode)
-        let makeJustCreatedCallTextNodeLayout = TextNode.asyncLayout(self.justCreatedCallTextNode)
+        let makeJustCreatedCallTextNodeLayout = TextNodeWithEntities.asyncLayout(self.justCreatedCallTextNode)
         
         let currentItem = self.item
         let avatarsContext = self.avatarsContext
@@ -343,7 +347,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
             
             let (invitedPeersLayout, invitedPeersApply) = makeInvitedPeersLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: subtitle, font: titleFont, textColor: subtitleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - 20.0 - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            var justCreatedCallTextNodeLayout: (TextNodeLayout, () -> TextNode?)?
+            var justCreatedCallTextNodeLayout: (TextNodeLayout, (TextNodeWithEntities.Arguments?) -> TextNodeWithEntities?)?
             if item.isCall {
                 let chevronImage = generateTintedImage(image: UIImage(bundleImageName: "Contact List/SubtitleArrow"), color: item.presentationData.theme.list.itemAccentColor)
 
@@ -571,17 +575,39 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                     shareButtonNode.frame = CGRect(x: shareButtonOriginX, y: verticalInset + fieldHeight + fieldSpacing, width: buttonWidth, height: buttonHeight)
 
                     if let justCreatedCallTextNodeLayout {
-                        if let justCreatedCallTextNode = justCreatedCallTextNodeLayout.1() {
+                        if let justCreatedCallTextNode = justCreatedCallTextNodeLayout.1(TextNodeWithEntities.Arguments(
+                            context: item.context,
+                            cache: item.context.animationCache,
+                            renderer: item.context.animationRenderer,
+                            placeholderColor: .gray,
+                            attemptSynchronous: true
+                        )) {
                             if strongSelf.justCreatedCallTextNode !== justCreatedCallTextNode {
-                                strongSelf.justCreatedCallTextNode?.removeFromSupernode()
+                                strongSelf.justCreatedCallTextNode?.textNode.removeFromSupernode()
                                 strongSelf.justCreatedCallTextNode = justCreatedCallTextNode
                                 
-                                //justCreatedCallTextNode.highlig
-                                
-                                strongSelf.addSubnode(justCreatedCallTextNode)
+                                strongSelf.addSubnode(justCreatedCallTextNode.textNode)
                             }
+                            
+                            justCreatedCallTextNode.linkHighlightColor = item.presentationData.theme.actionSheet.controlAccentColor.withAlphaComponent(0.1)
+                            justCreatedCallTextNode.highlightAttributeAction = { attributes in
+                                if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                                    return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+                                } else {
+                                    return nil
+                                }
+                            }
+                            justCreatedCallTextNode.tapAttributeAction = { [weak strongSelf] attributes, _ in
+                                guard let strongSelf else {
+                                    return
+                                }
+                                if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
+                                    strongSelf.item?.openCallAction?()
+                                }
+                            }
+                            
                             let justCreatedCallTextNodeFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((params.width - justCreatedCallTextNodeLayout.0.size.width) / 2.0), y: shareButtonNode.frame.maxY + justCreatedCallTextSpacing), size: CGSize(width: justCreatedCallTextNodeLayout.0.size.width, height: justCreatedCallTextNodeLayout.0.size.height))
-                            justCreatedCallTextNode.frame = justCreatedCallTextNodeFrame
+                            justCreatedCallTextNode.textNode.frame = justCreatedCallTextNodeFrame
 
                             let justCreatedCallSeparatorText: ComponentView<Empty>
                             if let current = strongSelf.justCreatedCallSeparatorText {
@@ -636,7 +662,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                         }
                     } else if let justCreatedCallTextNode = strongSelf.justCreatedCallTextNode {
                         strongSelf.justCreatedCallTextNode = nil
-                        justCreatedCallTextNode.removeFromSupernode()
+                        justCreatedCallTextNode.textNode.removeFromSupernode()
 
                         strongSelf.justCreatedCallLeftSeparatorLayer?.removeFromSuperlayer()
                         strongSelf.justCreatedCallLeftSeparatorLayer = nil
