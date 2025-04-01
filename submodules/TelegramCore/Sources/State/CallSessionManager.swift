@@ -718,6 +718,23 @@ private final class CallSessionManagerContext {
         }
     }
     
+    func dropOutgoingConferenceRequest(messageId: MessageId) {
+        let addUpdates = self.addUpdates
+        let rejectSignal = self.network.request(Api.functions.phone.declineConferenceCallInvite(msgId: messageId.id))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { updates -> Signal<Never, NoError> in
+            if let updates {
+                addUpdates(updates)
+            }
+            return .complete()
+        }
+
+        self.rejectConferenceInvitationDisposables.add(rejectSignal.startStrict())
+    }
+    
     func drop(internalId: CallSessionInternalId, reason: DropCallReason, debugLog: Signal<String?, NoError>) {
         for (id, context) in self.incomingConferenceInvitationContexts {
             if context.internalId == internalId {
@@ -1380,6 +1397,12 @@ public final class CallSessionManager {
     public func drop(internalId: CallSessionInternalId, reason: DropCallReason, debugLog: Signal<String?, NoError>) {
         self.withContext { context in
             context.drop(internalId: internalId, reason: reason, debugLog: debugLog)
+        }
+    }
+    
+    public func dropOutgoingConferenceRequest(messageId: MessageId) {
+        self.withContext { context in
+            context.dropOutgoingConferenceRequest(messageId: messageId)
         }
     }
     

@@ -486,7 +486,7 @@ public final class CallController: ViewController {
         var disablePeerIds: [EnginePeer.Id] = []
         disablePeerIds.append(self.call.context.account.peerId)
         disablePeerIds.append(self.call.peerId)
-        let controller = CallController.openConferenceAddParticipant(context: self.call.context, disablePeerIds: disablePeerIds, completion: { [weak self] peers in
+        let controller = CallController.openConferenceAddParticipant(context: self.call.context, disablePeerIds: disablePeerIds, shareLink: nil, completion: { [weak self] peers in
             guard let self else {
                 return
             }
@@ -497,15 +497,18 @@ public final class CallController: ViewController {
         self.push(controller)
     }
     
-    static func openConferenceAddParticipant(context: AccountContext, disablePeerIds: [EnginePeer.Id], completion: @escaping ([(id: EnginePeer.Id, isVideo: Bool)]) -> Void) -> ViewController {
+    static func openConferenceAddParticipant(context: AccountContext, disablePeerIds: [EnginePeer.Id], shareLink: (() -> Void)?, completion: @escaping ([(id: EnginePeer.Id, isVideo: Bool)]) -> Void) -> ViewController {
         //TODO:localize
-        let presentationData = context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkPresentationTheme)
+        let presentationData = context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkColorPresentationTheme)
         
         var options: [ContactListAdditionalOption] = []
-        //TODO:localize
-        options.append(ContactListAdditionalOption(title: "Share Call Link", icon: .generic(UIImage(bundleImageName: "Contact List/LinkActionIcon")!), action: {
-            //TODO:release
-        }, clearHighlightAutomatically: false))
+        var openShareLinkImpl: (() -> Void)?
+        if shareLink != nil {
+            //TODO:localize
+            options.append(ContactListAdditionalOption(title: "Share Call Link", icon: .generic(UIImage(bundleImageName: "Contact List/LinkActionIcon")!), action: {
+                openShareLinkImpl?()
+            }, clearHighlightAutomatically: false))
+        }
         
         let controller = context.sharedContext.makeContactSelectionController(ContactSelectionControllerParams(
             context: context,
@@ -534,8 +537,31 @@ public final class CallController: ViewController {
                 default:
                     return .single(false)
                 }
+            },
+            isPeerEnabled: { peer in
+                switch peer {
+                case let .peer(peer, _, _):
+                    let peer = EnginePeer(peer)
+                    guard case let .user(user) = peer else {
+                        return false
+                    }
+                    if disablePeerIds.contains(user.id) {
+                        return false
+                    }
+                    if user.botInfo != nil {
+                        return false
+                    }
+                    return true
+                default:
+                    return false
+                }
             }
         ))
+        
+        openShareLinkImpl = { [weak controller] in
+            controller?.dismiss()
+            shareLink?()
+        }
         
         controller.navigationPresentation = .modal
         let _ = (controller.result |> take(1) |> deliverOnMainQueue).startStandalone(next: { [weak controller] result in

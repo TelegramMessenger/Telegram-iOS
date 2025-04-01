@@ -1026,6 +1026,7 @@ public final class PresentationCallImpl: PresentationCall {
                         keyPair: keyPair,
                         conferenceSourceId: self.internalId,
                         isConference: true,
+                        beginWithVideo: false,
                         sharedAudioContext: self.sharedAudioContext
                     )
                     self.conferenceCallImpl = conferenceCall

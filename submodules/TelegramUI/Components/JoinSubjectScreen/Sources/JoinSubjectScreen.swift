@@ -405,7 +405,7 @@ private final class JoinSubjectScreenComponent: Component {
                         isStream: false
                     ),
                     reference: .link(slug: groupCall.slug),
-                    mode: .joining
+                    beginWithVideo: false
                 )
                 
                 self.environment?.controller()?.dismiss()

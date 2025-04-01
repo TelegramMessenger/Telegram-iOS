@@ -850,6 +850,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                             keyPair: nil,
                             conferenceSourceId: nil,
                             isConference: false,
+                            beginWithVideo: false,
                             sharedAudioContext: nil
                         )
                         call.schedule(timestamp: timestamp)
@@ -1076,6 +1077,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
             keyPair: nil,
             conferenceSourceId: nil,
             isConference: false,
+            beginWithVideo: false,
             sharedAudioContext: nil
         )
         self.updateCurrentGroupCall(.group(call))
@@ -1085,16 +1087,13 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         accountContext: AccountContext,
         initialCall: EngineGroupCallDescription,
         reference: InternalGroupCallReference,
-        mode: JoinConferenceCallMode
+        beginWithVideo: Bool
     ) {
         let keyPair: TelegramKeyPair
-        switch mode {
-        case .joining:
-            guard let keyPairValue = TelegramE2EEncryptionProviderImpl.shared.generateKeyPair() else {
-                return
-            }
-            keyPair = keyPairValue
+        guard let keyPairValue = TelegramE2EEncryptionProviderImpl.shared.generateKeyPair() else {
+            return
         }
+        keyPair = keyPairValue
         
         let call = PresentationGroupCallImpl(
             accountContext: accountContext,
@@ -1111,6 +1110,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
             keyPair: keyPair,
             conferenceSourceId: nil,
             isConference: true,
+            beginWithVideo: beginWithVideo,
             sharedAudioContext: nil
         )
         self.updateCurrentGroupCall(.group(call))

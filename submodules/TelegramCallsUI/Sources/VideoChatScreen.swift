@@ -1759,12 +1759,19 @@ final class VideoChatScreenComponent: Component {
                         }
                     }
                 }
-                var inviteType: VideoChatParticipantsComponent.Participants.InviteType?
-                if canInvite {
-                    if inviteIsLink {
-                        inviteType = .shareLink
-                    } else {
-                        inviteType = .invite
+                var inviteOptions: [VideoChatParticipantsComponent.Participants.InviteOption] = []
+                if case let .group(groupCall) = self.currentCall, groupCall.isConference {
+                    inviteOptions.append(VideoChatParticipantsComponent.Participants.InviteOption(id: 0, type: .invite(isMultipleUsers: false)))
+                    inviteOptions.append(VideoChatParticipantsComponent.Participants.InviteOption(id: 1, type: .shareLink))
+                } else {
+                    if canInvite {
+                        let inviteType: VideoChatParticipantsComponent.Participants.InviteType
+                        if inviteIsLink {
+                            inviteType = .shareLink
+                        } else {
+                            inviteType = .invite(isMultipleUsers: false)
+                        }
+                        inviteOptions.append(VideoChatParticipantsComponent.Participants.InviteOption(id: 0, type: inviteType))
                     }
                 }
                 
@@ -1773,7 +1780,7 @@ final class VideoChatScreenComponent: Component {
                     participants: members.participants,
                     totalCount: members.totalCount,
                     loadMoreToken: members.loadMoreToken,
-                    inviteType: inviteType
+                    inviteOptions: inviteOptions
                 )
             }
             
@@ -2038,7 +2045,13 @@ final class VideoChatScreenComponent: Component {
             }
             
             var encryptionKeyFrame: CGRect?
-            if let encryptionKeyEmoji = self.encryptionKeyEmoji {
+            var isConference = false
+            if case let .group(groupCall) = self.currentCall {
+                isConference = groupCall.isConference
+            } else if case .conferenceSource = self.currentCall {
+                isConference = true
+            }
+            if isConference {
                 navigationHeight -= 2.0
                 let encryptionKey: ComponentView<Empty>
                 var encryptionKeyTransition = transition
@@ -2055,7 +2068,7 @@ final class VideoChatScreenComponent: Component {
                     component: AnyComponent(VideoChatEncryptionKeyComponent(
                         theme: environment.theme,
                         strings: environment.strings,
-                        emoji: encryptionKeyEmoji,
+                        emoji: self.encryptionKeyEmoji ?? [],
                         isExpanded: self.isEncryptionKeyExpanded,
                         tapAction: { [weak self] in
                             guard let self else {
@@ -2326,11 +2339,18 @@ final class VideoChatScreenComponent: Component {
                             self.state?.updated(transition: .spring(duration: 0.4))
                         }
                     },
-                    openInviteMembers: { [weak self] in
+                    openInviteMembers: { [weak self] type in
                         guard let self else {
                             return
                         }
-                        self.openInviteMembers()
+                        if case .shareLink = type {
+                            guard let inviteLinks = self.inviteLinks else {
+                                return
+                            }
+                            self.presentShare(inviteLinks)
+                        } else {
+                            self.openInviteMembers()
+                        }
                     },
                     visibleParticipantsUpdated: { [weak self] visibleParticipants in
                         guard let self else {
