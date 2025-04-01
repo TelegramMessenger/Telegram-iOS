@@ -60,6 +60,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
     }
     
     private let confirmation: (ContactListPeer) -> Signal<Bool, NoError>
+    private let isPeerEnabled: (ContactListPeer) -> Bool
     var dismissed: (() -> Void)?
     
     var presentScheduleTimePicker: (@escaping (Int32) -> Void) -> Void = { _ in }
@@ -107,6 +108,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
         self.displayDeviceContacts = params.displayDeviceContacts
         self.displayCallIcons = params.displayCallIcons
         self.confirmation = params.confirmation
+        self.isPeerEnabled = params.isPeerEnabled
         self.multipleSelection = params.multipleSelection
         self.requirePhoneNumbers = params.requirePhoneNumbers
         self.allowChannelsInSearch = params.allowChannelsInSearch
@@ -218,7 +220,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
     }
     
     override func loadDisplayNode() {
-        self.displayNode = ContactSelectionControllerNode(context: self.context, mode: self.mode, presentationData: self.presentationData, options: self.options, displayDeviceContacts: self.displayDeviceContacts, displayCallIcons: self.displayCallIcons, multipleSelection: self.multipleSelection, requirePhoneNumbers: self.requirePhoneNumbers, allowChannelsInSearch: self.allowChannelsInSearch)
+        self.displayNode = ContactSelectionControllerNode(context: self.context, mode: self.mode, presentationData: self.presentationData, options: self.options, displayDeviceContacts: self.displayDeviceContacts, displayCallIcons: self.displayCallIcons, multipleSelection: self.multipleSelection, requirePhoneNumbers: self.requirePhoneNumbers, allowChannelsInSearch: self.allowChannelsInSearch, isPeerEnabled: self.isPeerEnabled)
         self._ready.set(self.contactsNode.contactListNode.ready)
         
         self.contactsNode.navigationBar = self.navigationBar

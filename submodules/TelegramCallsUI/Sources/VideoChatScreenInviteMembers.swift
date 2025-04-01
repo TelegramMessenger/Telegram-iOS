@@ -51,7 +51,15 @@ extension VideoChatScreenComponent.View {
                     }
                 }
             }
-            let controller = CallController.openConferenceAddParticipant(context: groupCall.accountContext, disablePeerIds: disablePeerIds, completion: { [weak self] peerIds in
+            let controller = CallController.openConferenceAddParticipant(context: groupCall.accountContext, disablePeerIds: disablePeerIds, shareLink: { [weak self] in
+                guard let self else {
+                    return
+                }
+                guard let inviteLinks = self.inviteLinks else {
+                    return
+                }
+                self.presentShare(inviteLinks)
+            }, completion: { [weak self] peerIds in
                 guard let self, case let .group(groupCall) = self.currentCall else {
                     return
                 }
@@ -80,7 +88,7 @@ extension VideoChatScreenComponent.View {
                 if inviteIsLink {
                     inviteType = .shareLink
                 } else {
-                    inviteType = .invite
+                    inviteType = .invite(isMultipleUsers: true)
                 }
             }
             

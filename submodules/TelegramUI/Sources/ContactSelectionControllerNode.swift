@@ -44,6 +44,8 @@ final class ContactSelectionControllerNode: ASDisplayNode {
     var cancelSearch: (() -> Void)?
     var openPeerMore: ((ContactListPeer, ASDisplayNode?, ContextGesture?) -> Void)?
     
+    let isPeerEnabled: (ContactListPeer) -> Bool
+    
     var presentationData: PresentationData {
         didSet {
             self.presentationDataPromise.set(.single(self.presentationData))
@@ -57,12 +59,13 @@ final class ContactSelectionControllerNode: ASDisplayNode {
     
     var searchContainerNode: ContactsSearchContainerNode?
     
-    init(context: AccountContext, mode: ContactSelectionControllerMode, presentationData: PresentationData, options: Signal<[ContactListAdditionalOption], NoError>, displayDeviceContacts: Bool, displayCallIcons: Bool, multipleSelection: Bool, requirePhoneNumbers: Bool, allowChannelsInSearch: Bool) {
+    init(context: AccountContext, mode: ContactSelectionControllerMode, presentationData: PresentationData, options: Signal<[ContactListAdditionalOption], NoError>, displayDeviceContacts: Bool, displayCallIcons: Bool, multipleSelection: Bool, requirePhoneNumbers: Bool, allowChannelsInSearch: Bool, isPeerEnabled: @escaping (ContactListPeer) -> Bool) {
         self.context = context
         self.presentationData = presentationData
         self.displayDeviceContacts = displayDeviceContacts
         self.displayCallIcons = displayCallIcons
         self.allowChannelsInSearch = allowChannelsInSearch
+        self.isPeerEnabled = isPeerEnabled
         
         var excludeSelf = true
         
@@ -124,7 +127,9 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         }
         
         var contextActionImpl: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
-        self.contactListNode = ContactListNode(context: context, updatedPresentationData: (presentationData, self.presentationDataPromise.get()), presentation: presentation, filters: filters, onlyWriteable: false, isGroupInvitation: false, displayCallIcons: displayCallIcons, contextAction: multipleSelection ? { peer, node, gesture, _, _ in
+        self.contactListNode = ContactListNode(context: context, updatedPresentationData: (presentationData, self.presentationDataPromise.get()), presentation: presentation, filters: filters, onlyWriteable: false, isGroupInvitation: false, isPeerEnabled: { peer in
+            return isPeerEnabled(.peer(peer: peer._asPeer(), isGlobal: false, participantCount: nil))
+        }, displayCallIcons: displayCallIcons, contextAction: multipleSelection ? { peer, node, gesture, _, _ in
             contextActionImpl?(peer, node, gesture, nil)
         } : nil, multipleSelection: multipleSelection)
         

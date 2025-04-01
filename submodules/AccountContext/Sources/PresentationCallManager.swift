@@ -550,10 +550,6 @@ public enum PresentationCurrentCall: Equatable {
     }
 }
 
-public enum JoinConferenceCallMode {
-    case joining
-}
-
 public protocol PresentationCallManager: AnyObject {
     var currentCallSignal: Signal<PresentationCall?, NoError> { get }
     var currentGroupCallSignal: Signal<VideoChatCall?, NoError> { get }
@@ -568,6 +564,6 @@ public protocol PresentationCallManager: AnyObject {
         accountContext: AccountContext,
         initialCall: EngineGroupCallDescription,
         reference: InternalGroupCallReference,
-        mode: JoinConferenceCallMode
+        beginWithVideo: Bool
     )
 }

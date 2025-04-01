@@ -231,7 +231,7 @@ public final class CallListController: TelegramBaseController {
                         isStream: false
                     ),
                     reference: .id(id: call.callInfo.id, accessHash: call.callInfo.accessHash),
-                    mode: .joining
+                    beginWithVideo: false
                 )
             }
             

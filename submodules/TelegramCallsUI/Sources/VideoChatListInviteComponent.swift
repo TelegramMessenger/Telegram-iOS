@@ -7,22 +7,33 @@ import TelegramPresentationData
 import BundleIconComponent
 
 final class VideoChatListInviteComponent: Component {
+    enum Icon {
+        case addUser
+        case link
+    }
+
     let title: String
+    let icon: Icon
     let theme: PresentationTheme
     let action: () -> Void
 
     init(
         title: String,
+        icon: Icon,
         theme: PresentationTheme,
         action: @escaping () -> Void
     ) {
         self.title = title
+        self.icon = icon
         self.theme = theme
         self.action = action
     }
 
     static func ==(lhs: VideoChatListInviteComponent, rhs: VideoChatListInviteComponent) -> Bool {
         if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.icon != rhs.icon {
             return false
         }
         if lhs.theme !== rhs.theme {
@@ -116,10 +127,17 @@ final class VideoChatListInviteComponent: Component {
                 titleView.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
             }
             
+            let iconName: String
+            switch component.icon {
+            case .addUser:
+                iconName = "Chat/Context Menu/AddUser"
+            case .link:
+                iconName = "Chat/Context Menu/Link"
+            }
             let iconSize = self.icon.update(
                 transition: .immediate,
                 component: AnyComponent(BundleIconComponent(
-                    name: "Chat/Context Menu/AddUser",
+                    name: iconName,
                     tintColor: component.theme.list.itemAccentColor
                 )),
                 environment: {},

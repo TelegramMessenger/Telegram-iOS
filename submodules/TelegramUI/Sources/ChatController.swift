@@ -2908,7 +2908,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         isStream: false
                     ),
                     reference: .message(id: message.id),
-                    mode: .joining
+                    beginWithVideo: conferenceCall.flags.contains(.isVideo)
                 )
             })
         }, longTap: { [weak self] action, params in
