@@ -2992,39 +2992,46 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 return
             }
             
-            let transferController = WebAppSecureStorageTransferScreen(
-                context: self.context,
-                existingKeys: storedKeys,
-                completion: { [weak self] uuid in
-                    guard let self else {
-                        return
-                    }
-                    guard let uuid else {
-                        let data: JSON = [
-                            "req_id": requestId,
-                            "error": "RESTORE_CANCELLED"
-                        ]
-                        self.webView?.sendEvent(name: "secure_storage_failed", data: data.string)
-                        return
-                    }
-                    
-                    let _ = (WebAppSecureStorage.transferAllValues(context: self.context, fromUuid: uuid, botId: controller.botId)
-                    |> deliverOnMainQueue).start(completed: { [weak self] in
+            let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: controller.botId))
+            |> deliverOnMainQueue).start(next: { [weak self] botPeer in
+                guard let self, let botPeer, let controller = self.controller else {
+                    return
+                }
+                let transferController = WebAppSecureStorageTransferScreen(
+                    context: self.context,
+                    peer: botPeer,
+                    existingKeys: storedKeys,
+                    completion: { [weak self] uuid in
                         guard let self else {
                             return
                         }
-                        let _ = (WebAppSecureStorage.getValue(context: self.context, botId: controller.botId, key: key)
-                        |> deliverOnMainQueue).start(next: { [weak self] value in
+                        guard let uuid else {
                             let data: JSON = [
                                 "req_id": requestId,
-                                "value": value ?? NSNull()
+                                "error": "RESTORE_CANCELLED"
                             ]
-                            self?.webView?.sendEvent(name: "secure_storage_key_restored", data: data.string)
+                            self.webView?.sendEvent(name: "secure_storage_failed", data: data.string)
+                            return
+                        }
+                        
+                        let _ = (WebAppSecureStorage.transferAllValues(context: self.context, fromUuid: uuid, botId: controller.botId)
+                        |> deliverOnMainQueue).start(completed: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            let _ = (WebAppSecureStorage.getValue(context: self.context, botId: controller.botId, key: key)
+                            |> deliverOnMainQueue).start(next: { [weak self] value in
+                                let data: JSON = [
+                                    "req_id": requestId,
+                                    "value": value ?? NSNull()
+                                ]
+                                self?.webView?.sendEvent(name: "secure_storage_key_restored", data: data.string)
+                            })
                         })
-                    })
-                }
-            )
-            controller.parentController()?.push(transferController)
+                    }
+                )
+                controller.parentController()?.push(transferController)
+            })
         }
         
         fileprivate func openLocationSettings() {

@@ -14107,3 +14107,11 @@ Sorry for the inconvenience.";
 "Login.Fee.Support.Text" = "Sign up for a 1-week Telegram Premium subscription to help cover the SMS costs.";
 "Login.Fee.SignUp" = "Sign Up for %@";
 "Login.Fee.GetPremiumForAWeek" = "Get Telegram Premium for 1 week";
+
+"StoryFeed.AddStory" = "Add Story";
+
+"WebApp.ImportData.Title" = "Import Data";
+"WebApp.ImportData.Description" = "**%@** is requesting permission to import data from a previous Telegram account used on this device.";
+"WebApp.ImportData.AccountHeader" = "ACCOUNT TO IMPORT DATA FROM";
+"WebApp.ImportData.CreatedOn" = "created on %@";
+"WebApp.ImportData.Import" = "Import";

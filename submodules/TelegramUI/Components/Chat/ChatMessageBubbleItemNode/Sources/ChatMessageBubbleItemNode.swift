@@ -2294,7 +2294,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                             dateReplies = Int(attribute.count)
                         }
                     } else if let attribute = attribute as? PaidStarsMessageAttribute, item.message.id.peerId.namespace == Namespaces.Peer.CloudChannel {
-                        starsCount = attribute.stars.value
+                        var messageCount: Int = 1
+                        if case let .group(messages) = item.content {
+                            messageCount = messages.count
+                        }
+                        starsCount = attribute.stars.value * Int64(messageCount)
                     }
                 }
                 
