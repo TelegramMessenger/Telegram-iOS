@@ -751,9 +751,9 @@ public final class OngoingGroupCallContext {
                 encryptDecrypt: encryptionContext.flatMap { encryptionContext in
                     return { data, isEncrypt in
                         if isEncrypt {
-                            return encryptionContext.encrypt(data)
+                            return encryptionContext.encrypt(message: data)
                         } else {
-                            return encryptionContext.decrypt(data)
+                            return encryptionContext.decrypt(message: data)
                         }
                     }
                 }
