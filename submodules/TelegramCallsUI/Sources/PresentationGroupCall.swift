@@ -161,7 +161,8 @@ public final class AccountGroupCallContextImpl: AccountGroupCallContext {
                             defaultParticipantsAreMuted: state.defaultParticipantsAreMuted,
                             isVideoEnabled: state.isVideoEnabled,
                             unmutedVideoLimit: state.unmutedVideoLimit,
-                            isStream: state.isStream
+                            isStream: state.isStream,
+                            isCreator: state.isCreator
                         ),
                         topParticipants: topParticipants,
                         participantCount: state.totalCount,
@@ -888,6 +889,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private let getDeviceAccessData: () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void)
     
     private(set) var initialCall: (description: EngineGroupCallDescription, reference: InternalGroupCallReference)?
+    public var currentReference: InternalGroupCallReference?
     public let internalId: CallSessionInternalId
     public let peerId: EnginePeer.Id?
     private let isChannel: Bool
@@ -1208,6 +1210,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.getDeviceAccessData = getDeviceAccessData
         
         self.initialCall = initialCall
+        self.currentReference = initialCall?.reference
         self.callId = initialCall?.description.id
         
         self.internalId = internalId
@@ -1963,7 +1966,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     defaultParticipantsAreMuted: callInfo.defaultParticipantsAreMuted ?? state.defaultParticipantsAreMuted,
                     isVideoEnabled: callInfo.isVideoEnabled,
                     unmutedVideoLimit: callInfo.unmutedVideoLimit,
-                    isStream: callInfo.isStream
+                    isStream: callInfo.isStream,
+                    isCreator: callInfo.isCreator
                 )), audioSessionControl: self.audioSessionControl)
             } else {
                 self.summaryInfoState.set(.single(SummaryInfoState(info: GroupCallInfo(
@@ -1979,7 +1983,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     defaultParticipantsAreMuted: state.defaultParticipantsAreMuted,
                     isVideoEnabled: state.isVideoEnabled,
                     unmutedVideoLimit: state.unmutedVideoLimit,
-                    isStream: callInfo.isStream
+                    isStream: callInfo.isStream,
+                    isCreator: callInfo.isCreator
                 ))))
                 
                 self.summaryParticipantsState.set(.single(SummaryParticipantsState(
@@ -2301,6 +2306,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     guard let self else {
                         return
                     }
+                    
+                    self.currentReference = .id(id: joinCallResult.callInfo.id, accessHash: joinCallResult.callInfo.accessHash)
+                    
                     let clientParams = joinCallResult.jsonParams
                     if let data = clientParams.data(using: .utf8), let dict = (try? JSONSerialization.jsonObject(with: data, options: [])) as? [String: Any] {
                         if let video = dict["video"] as? [String: Any] {
@@ -2910,7 +2918,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         defaultParticipantsAreMuted: state.defaultParticipantsAreMuted,
                         isVideoEnabled: state.isVideoEnabled,
                         unmutedVideoLimit: state.unmutedVideoLimit,
-                        isStream: callInfo.isStream
+                        isStream: callInfo.isStream,
+                        isCreator: callInfo.isCreator
                     ))))
                     
                     self.summaryParticipantsState.set(.single(SummaryParticipantsState(

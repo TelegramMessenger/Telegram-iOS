@@ -530,7 +530,7 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
                 } else {
                     isGroup = true
                 }
-                presentControllerImpl?(QrCodeScreen(context: context, updatedPresentationData: updatedPresentationData, subject: .invite(invite: invite, isGroup: isGroup)), nil)
+                presentControllerImpl?(QrCodeScreen(context: context, updatedPresentationData: updatedPresentationData, subject: .invite(invite: invite, type: isGroup ? .group : .channel)), nil)
             })
         })))
         
@@ -719,7 +719,7 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
                             isGroup = true
                         }
                         Queue.mainQueue().after(0.2) {
-                            presentControllerImpl?(QrCodeScreen(context: context, updatedPresentationData: updatedPresentationData, subject: .invite(invite: invite, isGroup: isGroup)), nil)
+                            presentControllerImpl?(QrCodeScreen(context: context, updatedPresentationData: updatedPresentationData, subject: .invite(invite: invite, type: isGroup ? .group : .channel)), nil)
                         }
                     })
                 })))

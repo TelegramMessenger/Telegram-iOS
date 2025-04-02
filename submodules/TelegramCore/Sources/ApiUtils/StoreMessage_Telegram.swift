@@ -93,13 +93,18 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
             tags.insert(.webPage)
         } else if let action = attachment as? TelegramMediaAction {
             switch action.action {
-                case let .phoneCall(_, discardReason, _, _):
-                    globalTags.insert(.Calls)
-                    if incoming, let discardReason = discardReason, case .missed = discardReason {
-                        globalTags.insert(.MissedCalls)
-                    }
-                default:
-                    break
+            case let .phoneCall(_, discardReason, _, _):
+                globalTags.insert(.Calls)
+                if incoming, let discardReason = discardReason, case .missed = discardReason {
+                    globalTags.insert(.MissedCalls)
+                }
+            case let .conferenceCall(conferenceCall):
+                globalTags.insert(.Calls)
+                if incoming, conferenceCall.flags.contains(.isMissed) {
+                    globalTags.insert(.MissedCalls)
+                }
+            default:
+                break
             }
         } else if let location = attachment as? TelegramMediaMap, location.liveBroadcastingTimeout != nil {
             tags.insert(.liveLocation)
@@ -118,9 +123,6 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
         }
     }
     
-    if !incoming {
-        assert(true)
-    }
     return (tags, globalTags)
 }
 

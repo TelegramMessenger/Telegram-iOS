@@ -96,6 +96,10 @@ public extension TelegramEngine {
         public func createConferenceCall() -> Signal<EngineCreatedGroupCall, CreateConferenceCallError> {
             return _internal_createConferenceCall(postbox: self.account.postbox, network: self.account.network, accountPeerId: self.account.peerId)
         }
+
+        public func revokeConferenceInviteLink(reference: InternalGroupCallReference, link: String) -> Signal<GroupCallInviteLinks, RevokeConferenceInviteLinkError> {
+            return _internal_revokeConferenceInviteLink(account: self.account, reference: reference, link: link)
+        }
         
         public func pollConferenceCallBlockchain(reference: InternalGroupCallReference, subChainId: Int, offset: Int, limit: Int) -> Signal<(blocks: [Data], nextOffset: Int)?, NoError> {
             return _internal_pollConferenceCallBlockchain(network: self.account.network, reference: reference, subChainId: subChainId, offset: offset, limit: limit)

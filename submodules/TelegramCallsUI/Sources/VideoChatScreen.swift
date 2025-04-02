@@ -25,6 +25,7 @@ import LegacyComponents
 import TooltipUI
 import BlurredBackgroundComponent
 import CallsEmoji
+import InviteLinksUI
 
 extension VideoChatCall {    
     var myAudioLevelAndSpeaking: Signal<(Float, Bool), NoError> {
@@ -650,6 +651,51 @@ final class VideoChatScreenComponent: Component {
         
         func presentShare(_ inviteLinks: GroupCallInviteLinks) {
             guard case let .group(groupCall) = self.currentCall else {
+                return
+            }
+
+            if groupCall.isConference {
+                guard let navigationController = self.environment?.controller()?.navigationController as? NavigationController else {
+                    return
+                }
+                guard let currentReference = groupCall.currentReference, case let .id(callId, accessHash) = currentReference else {
+                    return
+                }
+                guard let callState = self.callState else {
+                    return
+                }
+                var presentationData = groupCall.accountContext.sharedContext.currentPresentationData.with { $0 }
+                presentationData = presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
+                let controller = InviteLinkInviteController(
+                    context: groupCall.accountContext,
+                    updatedPresentationData: (initial: presentationData, signal: .single(presentationData)),
+                    mode: .groupCall(InviteLinkInviteController.Mode.GroupCall(
+                        callId: callId,
+                        accessHash: accessHash,
+                        isRecentlyCreated: false,
+                        canRevoke: callState.canManageCall
+                    )),
+                    initialInvite: .link(link: inviteLinks.listenerLink, title: nil, isPermanent: true, requestApproval: false, isRevoked: false, adminId: groupCall.accountContext.account.peerId, date: 0, startDate: nil, expireDate: nil, usageLimit: nil, count: nil, requestedCount: nil, pricing: nil),
+                    parentNavigationController: navigationController,
+                    completed: { [weak self] result in
+                        guard let self, case let .group(groupCall) = self.currentCall else {
+                            return
+                        }
+                        if let result {
+                            switch result {
+                            case .linkCopied:
+                                //TODO:localize
+                                let presentationData = groupCall.accountContext.sharedContext.currentPresentationData.with { $0 }
+                                self.environment?.controller()?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_linkcopied", scale: 0.08, colors: ["info1.info1.stroke": UIColor.clear, "info2.info2.Fill": UIColor.clear], title: nil, text: "Call link copied.", customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
+                                    return false
+                                }), in: .current)
+                            case .openCall:
+                                break
+                            }
+                        }
+                    }
+                )
+                self.environment?.controller()?.present(controller, in: .window(.root), with: nil)
                 return
             }
             

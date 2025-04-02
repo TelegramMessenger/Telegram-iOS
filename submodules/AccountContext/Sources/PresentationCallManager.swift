@@ -423,6 +423,7 @@ public protocol PresentationGroupCall: AnyObject {
     var internalId: CallSessionInternalId { get }
     var peerId: EnginePeer.Id? { get }
     var callId: Int64? { get }
+    var currentReference: InternalGroupCallReference? { get }
     
     var hasVideo: Bool { get }
     var hasScreencast: Bool { get }
