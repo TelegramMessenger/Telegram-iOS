@@ -11,7 +11,7 @@ def is_apple_silicon():
         return False
 
 
-def get_clean_env(use_clean_env):
+def get_clean_env(use_clean_env=True):
     clean_env = os.environ.copy()
     if use_clean_env:
         clean_env['PATH'] = '/usr/bin:/bin:/usr/sbin:/sbin'
