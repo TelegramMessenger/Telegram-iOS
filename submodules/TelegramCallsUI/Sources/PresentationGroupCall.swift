@@ -2988,6 +2988,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
 
                     result.append(OngoingGroupCallContext.MediaChannelDescription(
                         kind: .audio,
+                        peerId: participant.peer.id.id._internalGetInt64Value(),
                         audioSsrc: audioSsrc,
                         videoDescription: nil
                     ))
@@ -2999,6 +3000,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
 
                         result.append(OngoingGroupCallContext.MediaChannelDescription(
                             kind: .audio,
+                            peerId: participant.peer.id.id._internalGetInt64Value(),
                             audioSsrc: screencastSsrc,
                             videoDescription: nil
                         ))
