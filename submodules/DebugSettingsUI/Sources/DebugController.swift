@@ -134,7 +134,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.web.rawValue
         case .keepChatNavigationStack, .skipReadHistory, .dustEffect, .crashOnSlowQueries, .crashOnMemoryPressure:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .resetNotifications, .crash, .fillLocalSavedMessageCache, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .conferenceDebug, .checkSerializedData, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .rippleEffect, .browserExperiment, .localTranscription, .enableReactionOverrides, .restorePurchases, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .playerV2, .devRequests, .fakeAds, .enableLocalTranslation:
+        case .clearTips, .resetNotifications, .crash, .fillLocalSavedMessageCache, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .checkSerializedData, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .rippleEffect, .browserExperiment, .localTranscription, .enableReactionOverrides, .restorePurchases, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .playerV2, .devRequests, .fakeAds, .enableLocalTranslation:
             return DebugControllerSection.experiments.rawValue
         case .logTranslationRecognition, .resetTranslationStates:
             return DebugControllerSection.translation.rawValue
@@ -243,8 +243,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 47
         case .disableReloginTokens:
             return 48
-        case .conferenceDebug:
-            return 49
         case .checkSerializedData:
             return 50
         case .enableQuickReactionSwitch:
@@ -1311,16 +1309,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
-        case let .conferenceDebug(value):
-            return ItemListSwitchItem(presentationData: presentationData, title: "Conference Debug", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
-                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
-                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
-                        settings.conferenceDebug = value
-                        return PreferencesEntry(settings)
-                    })
-                }).start()
-            })
         case let .checkSerializedData(value):
             return ItemListSwitchItem(presentationData: presentationData, title: "Check Serialized Data", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
@@ -1552,7 +1540,6 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         entries.append(.storiesJpegExperiment(experimentalSettings.storiesJpegExperiment))
         entries.append(.disableReloginTokens(experimentalSettings.disableReloginTokens))
         
-        entries.append(.conferenceDebug(experimentalSettings.conferenceDebug))
         entries.append(.checkSerializedData(experimentalSettings.checkSerializedData))
         entries.append(.enableQuickReactionSwitch(!experimentalSettings.disableQuickReaction))
         entries.append(.liveStreamV2(experimentalSettings.liveStreamV2))

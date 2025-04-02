@@ -167,10 +167,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             self.conferenceAddParticipant?()
         }
         
-        var isConferencePossible = false
-        if self.call.context.sharedContext.immediateExperimentalUISettings.conferenceDebug {
-            isConferencePossible = true
-        }
+        var isConferencePossible = true
         if let data = self.call.context.currentAppConfiguration.with({ $0 }).data, let value = data["ios_enable_conference"] as? Double {
             isConferencePossible = value != 0.0
         }

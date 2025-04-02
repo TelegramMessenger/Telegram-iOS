@@ -705,7 +705,7 @@ final class VideoChatScreenComponent: Component {
                                 peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
                             )
                         )
-                                 |> deliverOnMainQueue).start(next: { [weak self] peerList in
+                        |> deliverOnMainQueue).start(next: { [weak self] peerList in
                             guard let self, let environment = self.environment, case let .group(groupCall) = self.currentCall else {
                                 return
                             }

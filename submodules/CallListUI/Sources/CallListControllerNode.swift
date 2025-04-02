@@ -519,10 +519,7 @@ final class CallListControllerNode: ASDisplayNode {
 
         let canCreateGroupCall = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.App())
         |> map { configuration -> Bool in
-            var isConferencePossible = false
-            if context.sharedContext.immediateExperimentalUISettings.conferenceDebug {
-                isConferencePossible = true
-            }
+            var isConferencePossible = true
             if let data = configuration.data, let value = data["ios_enable_conference"] as? Double {
                 isConferencePossible = value != 0.0
             }
