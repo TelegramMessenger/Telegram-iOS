@@ -100,7 +100,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case enableReactionOverrides(Bool)
     case compressedEmojiCache(Bool)
     case storiesJpegExperiment(Bool)
-    case conferenceDebug(Bool)
     case checkSerializedData(Bool)
     case enableQuickReactionSwitch(Bool)
     case disableReloginTokens(Bool)
