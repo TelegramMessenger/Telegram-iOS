@@ -181,6 +181,9 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         
         func update(presentationData: PresentationData, parentLayout: ContainerViewLayout, size: CGSize, transition: ContainedViewLayoutTransition) {
             transition.updateFrame(node: self.controller.displayNode, frame: CGRect(origin: CGPoint(), size: size))
+            guard self.controller.navigationController == nil else {
+                return
+            }
             self.controller.containerLayoutUpdated(
                 ContainerViewLayout(
                     size: size,
@@ -376,7 +379,9 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 if let result = contentNode.containingItem.customHitTest?(contentPoint) {
                     return result
                 } else if let result = contentNode.containingItem.contentHitTest(contentPoint, with: event) {
-                    if result is TextSelectionNodeView {
+                    if source.keepDefaultContentTouches {
+                        return result
+                    } else if result is TextSelectionNodeView {
                         return result
                     } else if contentNode.containingItem.contentRect.contains(contentPoint) {
                         return contentNode.containingItem.contentView

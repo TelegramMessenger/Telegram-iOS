@@ -33,6 +33,7 @@ final class ChatMessageContextExtractedContentSource: ContextExtractedContentSou
     let ignoreContentTouches: Bool = false
     let blurBackground: Bool = true
     let centerVertically: Bool
+    let keepDefaultContentTouches: Bool
     
     private weak var chatController: ChatControllerImpl?
     private weak var chatNode: ChatControllerNode?
@@ -59,13 +60,14 @@ final class ChatMessageContextExtractedContentSource: ContextExtractedContentSou
         |> distinctUntilChanged
     }
     
-    init(chatController: ChatControllerImpl, chatNode: ChatControllerNode, engine: TelegramEngine, message: Message, selectAll: Bool, centerVertically: Bool = false) {
+    init(chatController: ChatControllerImpl, chatNode: ChatControllerNode, engine: TelegramEngine, message: Message, selectAll: Bool, centerVertically: Bool = false, keepDefaultContentTouches: Bool = false) {
         self.chatController = chatController
         self.chatNode = chatNode
         self.engine = engine
         self.message = message
         self.selectAll = selectAll
         self.centerVertically = centerVertically
+        self.keepDefaultContentTouches = keepDefaultContentTouches
     }
     
     func takeView() -> ContextControllerTakeViewInfo? {

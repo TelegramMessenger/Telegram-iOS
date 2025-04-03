@@ -3336,7 +3336,8 @@ public func stickerMediaPickerController(
                 transitionIn: CameraScreenImpl.TransitionIn(
                     sourceView: cameraHolder.parentView,
                     sourceRect: cameraHolder.parentView.bounds,
-                    sourceCornerRadius: 0.0
+                    sourceCornerRadius: 0.0,
+                    useFillAnimation: false
                 ),
                 transitionOut: { _ in
                     return CameraScreenImpl.TransitionOut(
@@ -3453,7 +3454,8 @@ public func avatarMediaPickerController(
                 transitionIn: CameraScreenImpl.TransitionIn(
                     sourceView: cameraHolder.parentView,
                     sourceRect: cameraHolder.parentView.bounds,
-                    sourceCornerRadius: 0.0
+                    sourceCornerRadius: 0.0,
+                    useFillAnimation: false
                 ),
                 transitionOut: { _ in
                     return CameraScreenImpl.TransitionOut(

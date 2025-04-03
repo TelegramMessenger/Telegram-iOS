@@ -3744,7 +3744,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }, attemptedNavigationToPrivateQuote: { _ in
         }, forceUpdateWarpContents: {
         }, playShakeAnimation: {
-        }, displayQuickShare: { _ ,_ in
+        }, displayQuickShare: { _, _ ,_ in
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
         pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(), presentationContext: ChatPresentationContext(context: context, backgroundNode: nil))
         self.hiddenMediaDisposable = context.sharedContext.mediaManager.galleryHiddenMediaManager.hiddenIds().startStrict(next: { [weak self] ids in
@@ -10068,7 +10068,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         cameraTransitionIn = StoryCameraTransitionIn(
                             sourceView: rightButton.view,
                             sourceRect: rightButton.view.bounds,
-                            sourceCornerRadius: rightButton.view.bounds.height * 0.5
+                            sourceCornerRadius: rightButton.view.bounds.height * 0.5,
+                            useFillAnimation: false
                         )
                     }
                     

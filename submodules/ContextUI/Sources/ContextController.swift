@@ -2184,6 +2184,7 @@ public protocol ContextExtractedContentSource: AnyObject {
     var adjustContentHorizontally: Bool { get }
     var adjustContentForSideInset: Bool { get }
     var ignoreContentTouches: Bool { get }
+    var keepDefaultContentTouches: Bool { get }
     var blurBackground: Bool { get }
     var shouldBeDismissed: Signal<Bool, NoError> { get }
     
@@ -2216,6 +2217,10 @@ public extension ContextExtractedContentSource {
 
     var shouldBeDismissed: Signal<Bool, NoError> {
         return .single(false)
+    }
+    
+    var keepDefaultContentTouches: Bool {
+        return false
     }
 }
 

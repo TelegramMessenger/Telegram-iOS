@@ -746,6 +746,7 @@ public final class ChatListHeaderComponent: Component {
         private var storyPeerList: ComponentView<Empty>?
         public var storyPeerAction: ((EnginePeer?) -> Void)?
         public var storyContextPeerAction: ((ContextExtractedContentContainingNode, ContextGesture, EnginePeer) -> Void)?
+        public var storyComposeAction: ((CGFloat) -> Void)?
         
         private var effectiveContentView: ContentView? {
             return self.secondaryContentView ?? self.primaryContentView
@@ -977,6 +978,12 @@ public final class ChatListHeaderComponent: Component {
                                 return
                             }
                             self.component?.toggleIsLocked()
+                        },
+                        composeAction: { [weak self] offset in
+                            guard let self else {
+                                return
+                            }
+                            self.storyComposeAction?(offset)
                         }
                     )),
                     environment: {},
