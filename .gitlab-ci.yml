@@ -22,6 +22,7 @@ internal:
     - export PATH=/opt/homebrew/opt/ruby/bin:$PATH                                  
     - export PATH=`gem environment gemdir`/bin:$PATH
     - python3 -u build-system/Make/Make.py remote-build --darwinContainers="$DARWIN_CONTAINERS" --darwinContainersHost="$DARWIN_CONTAINERS_HOST" --cacheHost="$TELEGRAM_BAZEL_CACHE_HOST" --configurationPath="build-system/appcenter-configuration.json" --gitCodesigningRepository="$TELEGRAM_GIT_CODESIGNING_REPOSITORY" --gitCodesigningType=adhoc --configuration=release_arm64
+    - python3 -u build-system/Make/DeployToFirebase.py --configuration="$TELEGRAM_PRIVATE_DATA_PATH/firebase-configurations/firebase-internal.json" --ipa="build/artifacts/Telegram.ipa" --dsyms="build/artifacts/Telegram.DSYMs.zip"
     - python3 -u build-system/Make/DeployToAppCenter.py --configuration="$TELEGRAM_PRIVATE_DATA_PATH/appcenter-configurations/appcenter-internal.json" --ipa="build/artifacts/Telegram.ipa" --dsyms="build/artifacts/Telegram.DSYMs.zip"
   environment:
     name: internal

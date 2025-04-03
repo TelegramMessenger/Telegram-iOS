@@ -1256,7 +1256,8 @@ final class VoiceChatControllerImpl: ViewController, VoiceChatController {
                         if let participant = participant {
                             dismissController?()
                             
-                            if strongSelf.call.invitePeer(participant.peer.id) {
+                            //TODO:release
+                            if strongSelf.call.invitePeer(participant.peer.id, isVideo: false) {
                                 let text: String
                                 if let channel = strongSelf.peer as? TelegramChannel, case .broadcast = channel.info {
                                     text = strongSelf.presentationData.strings.LiveStream_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
@@ -1364,7 +1365,8 @@ final class VoiceChatControllerImpl: ViewController, VoiceChatController {
                                             }
                                             dismissController?()
                                             
-                                            if strongSelf.call.invitePeer(peer.id) {
+                                            //TODO:release
+                                            if strongSelf.call.invitePeer(peer.id, isVideo: false) {
                                                 let text: String
                                                 if let channel = strongSelf.peer as? TelegramChannel, case .broadcast = channel.info {
                                                     text = strongSelf.presentationData.strings.LiveStream_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
@@ -1432,7 +1434,8 @@ final class VoiceChatControllerImpl: ViewController, VoiceChatController {
                                             }
                                             dismissController?()
                                             
-                                            if strongSelf.call.invitePeer(peer.id) {
+                                            //TODO:release
+                                            if strongSelf.call.invitePeer(peer.id, isVideo: false) {
                                                 let text: String
                                                 if let channel = strongSelf.peer as? TelegramChannel, case .broadcast = channel.info {
                                                     text = strongSelf.presentationData.strings.LiveStream_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string

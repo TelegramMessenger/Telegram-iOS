@@ -161,7 +161,8 @@ public final class AccountGroupCallContextImpl: AccountGroupCallContext {
                             defaultParticipantsAreMuted: state.defaultParticipantsAreMuted,
                             isVideoEnabled: state.isVideoEnabled,
                             unmutedVideoLimit: state.unmutedVideoLimit,
-                            isStream: state.isStream
+                            isStream: state.isStream,
+                            isCreator: state.isCreator
                         ),
                         topParticipants: topParticipants,
                         participantCount: state.totalCount,
@@ -621,54 +622,98 @@ private final class PendingConferenceInvitationContext {
         case ringing
     }
     
-    private let callSessionManager: CallSessionManager
+    private let engine: TelegramEngine
     private var requestDisposable: Disposable?
     private var stateDisposable: Disposable?
-    private var internalId: CallSessionInternalId?
+    private(set) var messageId: EngineMessage.Id?
     
+    private var hadMessage: Bool = false
     private var didNotifyEnded: Bool = false
     
-    init(callSessionManager: CallSessionManager, groupCall: GroupCallReference, peerId: PeerId, onStateUpdated: @escaping (State) -> Void, onEnded: @escaping (Bool) -> Void) {
-        self.callSessionManager = callSessionManager
-        
-        preconditionFailure()
-        
-        /*self.requestDisposable = (callSessionManager.request(peerId: peerId, isVideo: false, enableVideo: true, conferenceCall: (groupCall, encryptionKey))
-        |> deliverOnMainQueue).startStrict(next: { [weak self] internalId in
+    init(engine: TelegramEngine, reference: InternalGroupCallReference, peerId: PeerId, isVideo: Bool, onStateUpdated: @escaping (State) -> Void, onEnded: @escaping (Bool) -> Void) {
+        self.engine = engine
+        self.requestDisposable = (engine.calls.inviteConferenceCallParticipant(reference: reference, peerId: peerId, isVideo: isVideo).startStrict(next: { [weak self] messageId in
             guard let self else {
                 return
             }
-            self.internalId = internalId
+            guard let messageId else {
+                if !self.didNotifyEnded {
+                    self.didNotifyEnded = true
+                    onEnded(false)
+                }
+                return
+            }
+            self.messageId = messageId
             
-            self.stateDisposable = (self.callSessionManager.callState(internalId: internalId)
-            |> deliverOnMainQueue).startStrict(next: { [weak self] state in
+            onStateUpdated(.ringing)
+            
+            let timeout: Double = 30.0
+            let timerSignal = Signal<Void, NoError>.single(Void()) |> then(
+                Signal<Void, NoError>.single(Void())
+                |> delay(1.0, queue: .mainQueue())
+            ) |> restart
+            
+            let startTime = CFAbsoluteTimeGetCurrent()
+            self.stateDisposable = (combineLatest(queue: .mainQueue(),
+                engine.data.subscribe(
+                    TelegramEngine.EngineData.Item.Messages.Message(id: messageId)
+                ),
+                timerSignal
+            )
+            |> deliverOnMainQueue).startStrict(next: { [weak self] message, _ in
                 guard let self else {
                     return
                 }
-                switch state.state {
-                case let .requesting(ringing, _):
-                    if ringing {
-                        onStateUpdated(.ringing)
+                if let message {
+                    self.hadMessage = true
+                    if message.timestamp + Int32(timeout) <= Int32(Date().timeIntervalSince1970) {
+                        if !self.didNotifyEnded {
+                            self.didNotifyEnded = true
+                            onEnded(false)
+                        }
+                    } else {
+                        var isActive = false
+                        var isAccepted = false
+                        var foundAction: TelegramMediaAction?
+                        for media in message.media {
+                            if let action = media as? TelegramMediaAction {
+                                foundAction = action
+                                break
+                            }
+                        }
+                        
+                        if let action = foundAction, case let .conferenceCall(conferenceCall) = action.action {
+                            if conferenceCall.flags.contains(.isMissed) || conferenceCall.duration != nil {
+                            } else {
+                                if conferenceCall.flags.contains(.isActive) {
+                                    isAccepted = true
+                                } else {
+                                    isActive = true
+                                }
+                            }
+                        }
+                        if !isActive {
+                            if !self.didNotifyEnded {
+                                self.didNotifyEnded = true
+                                onEnded(isAccepted)
+                            }
+                        }
                     }
-                case let .dropping(reason), let .terminated(_, reason, _):
-                    if !self.didNotifyEnded {
-                        self.didNotifyEnded = true
-                        onEnded(reason == .ended(.switchedToConference))
+                } else {
+                    if self.hadMessage || CFAbsoluteTimeGetCurrent() > startTime + 1.0 {
+                        if !self.didNotifyEnded {
+                            self.didNotifyEnded = true
+                            onEnded(false)
+                        }
                     }
-                default:
-                    break
                 }
             })
-        })*/
+        }))
     }
     
     deinit {
         self.requestDisposable?.dispose()
         self.stateDisposable?.dispose()
-        
-        if let internalId = self.internalId {
-            self.callSessionManager.drop(internalId: internalId, reason: .hangUp, debugLog: .single(nil))
-        }
     }
 }
 
@@ -844,6 +889,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private let getDeviceAccessData: () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void)
     
     private(set) var initialCall: (description: EngineGroupCallDescription, reference: InternalGroupCallReference)?
+    public var currentReference: InternalGroupCallReference?
     public let internalId: CallSessionInternalId
     public let peerId: EnginePeer.Id?
     private let isChannel: Bool
@@ -1121,6 +1167,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private let sharedAudioContext: SharedCallAudioContext?
     
     public let isConference: Bool
+    private let beginWithVideo: Bool
     
     private let conferenceSourceId: CallSessionInternalId?
     public var conferenceSource: CallSessionInternalId? {
@@ -1153,6 +1200,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         keyPair: TelegramKeyPair?,
         conferenceSourceId: CallSessionInternalId?,
         isConference: Bool,
+        beginWithVideo: Bool,
         sharedAudioContext: SharedCallAudioContext?
     ) {
         self.account = accountContext.account
@@ -1162,6 +1210,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.getDeviceAccessData = getDeviceAccessData
         
         self.initialCall = initialCall
+        self.currentReference = initialCall?.reference
         self.callId = initialCall?.description.id
         
         self.internalId = internalId
@@ -1183,6 +1232,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.isStream = isStream
         self.conferenceSourceId = conferenceSourceId
         self.isConference = isConference
+        self.beginWithVideo = beginWithVideo
         self.keyPair = keyPair
 
         if let keyPair, let initialCall {
@@ -1490,6 +1540,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             }
             strongSelf.screencastBufferClientContext = IpcGroupCallBufferBroadcastContext(basePath: basePath)
         })*/
+        
+        if beginWithVideo {
+            self.requestVideo()
+        }
     }
     
     deinit {
@@ -1912,7 +1966,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     defaultParticipantsAreMuted: callInfo.defaultParticipantsAreMuted ?? state.defaultParticipantsAreMuted,
                     isVideoEnabled: callInfo.isVideoEnabled,
                     unmutedVideoLimit: callInfo.unmutedVideoLimit,
-                    isStream: callInfo.isStream
+                    isStream: callInfo.isStream,
+                    isCreator: callInfo.isCreator
                 )), audioSessionControl: self.audioSessionControl)
             } else {
                 self.summaryInfoState.set(.single(SummaryInfoState(info: GroupCallInfo(
@@ -1928,7 +1983,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     defaultParticipantsAreMuted: state.defaultParticipantsAreMuted,
                     isVideoEnabled: state.isVideoEnabled,
                     unmutedVideoLimit: state.unmutedVideoLimit,
-                    isStream: callInfo.isStream
+                    isStream: callInfo.isStream,
+                    isCreator: callInfo.isCreator
                 ))))
                 
                 self.summaryParticipantsState.set(.single(SummaryParticipantsState(
@@ -2250,6 +2306,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     guard let self else {
                         return
                     }
+                    
+                    self.currentReference = .id(id: joinCallResult.callInfo.id, accessHash: joinCallResult.callInfo.accessHash)
+                    
                     let clientParams = joinCallResult.jsonParams
                     if let data = clientParams.data(using: .utf8), let dict = (try? JSONSerialization.jsonObject(with: data, options: [])) as? [String: Any] {
                         if let video = dict["video"] as? [String: Any] {
@@ -2859,7 +2918,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         defaultParticipantsAreMuted: state.defaultParticipantsAreMuted,
                         isVideoEnabled: state.isVideoEnabled,
                         unmutedVideoLimit: state.unmutedVideoLimit,
-                        isStream: callInfo.isStream
+                        isStream: callInfo.isStream,
+                        isCreator: callInfo.isCreator
                     ))))
                     
                     self.summaryParticipantsState.set(.single(SummaryParticipantsState(
@@ -2937,6 +2997,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
 
                     result.append(OngoingGroupCallContext.MediaChannelDescription(
                         kind: .audio,
+                        peerId: participant.peer.id.id._internalGetInt64Value(),
                         audioSsrc: audioSsrc,
                         videoDescription: nil
                     ))
@@ -2948,6 +3009,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
 
                         result.append(OngoingGroupCallContext.MediaChannelDescription(
                             kind: .audio,
+                            peerId: participant.peer.id.id._internalGetInt64Value(),
                             audioSsrc: screencastSsrc,
                             videoDescription: nil
                         ))
@@ -3838,28 +3900,23 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }))
     }
     
-    public func invitePeer(_ peerId: PeerId) -> Bool {
+    public func invitePeer(_ peerId: PeerId, isVideo: Bool) -> Bool {
         if self.isConference {
             guard let initialCall = self.initialCall else {
                 return false
             }
             
-            //TODO:release
-            let _ = self.accountContext.engine.calls.inviteConferenceCallParticipant(callId: initialCall.description.id, accessHash: initialCall.description.accessHash, peerId: peerId).start()
-            return false
-            /*guard let initialCall = self.initialCall else {
-                return false
-            }
-            if conferenceInvitationContexts[peerId] != nil {
+            if self.conferenceInvitationContexts[peerId] != nil {
                 return false
             }
             var onStateUpdated: ((PendingConferenceInvitationContext.State) -> Void)?
             var onEnded: ((Bool) -> Void)?
             var didEndAlready = false
             let invitationContext = PendingConferenceInvitationContext(
-                callSessionManager: self.accountContext.account.callSessionManager,
-                groupCall: GroupCallReference(id: initialCall.id, accessHash: initialCall.accessHash),
+                engine: self.accountContext.engine,
+                reference: initialCall.reference,
                 peerId: peerId,
+                isVideo: isVideo,
                 onStateUpdated: { state in
                     onStateUpdated?(state)
                 },
@@ -3906,7 +3963,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 }
             }
             
-            return false*/
+            return false
         } else {
             guard let callInfo = self.internalState.callInfo, !self.invitedPeersValue.contains(where: { $0.id == peerId }) else {
                 return false
@@ -3922,7 +3979,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
     }
     
-    func setConferenceInvitedPeers(_ peerIds: [PeerId]) {
+    func setConferenceInvitedPeers(_ invitedPeers: [(id: PeerId, isVideo: Bool)]) {
         //TODO:release
         /*self.invitedPeersValue = peerIds.map {
             PresentationGroupCallInvitedPeer(id: $0, state: .requesting)
@@ -3933,6 +3990,13 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         var updatedInvitedPeers = self.invitedPeersValue
         updatedInvitedPeers.removeAll(where: { $0.id == peerId})
         self.invitedPeersValue = updatedInvitedPeers
+        
+        if let conferenceInvitationContext = self.conferenceInvitationContexts[peerId] {
+            self.conferenceInvitationContexts.removeValue(forKey: peerId)
+            if let messageId = conferenceInvitationContext.messageId {
+                self.accountContext.engine.account.callSessionManager.dropOutgoingConferenceRequest(messageId: messageId)
+            }
+        }
     }
     
     public func updateTitle(_ title: String) {

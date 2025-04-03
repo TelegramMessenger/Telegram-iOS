@@ -402,6 +402,15 @@ func openResolvedUrlImpl(
                     members: resolvedCallLink.members,
                     totalMemberCount: resolvedCallLink.totalMemberCount
                 ))))
+            }, error: { _ in
+                var elevatedLayout = true
+                if case .chat = urlContext {
+                    elevatedLayout = false
+                }
+                //TODO:localize
+                present(UndoOverlayController(presentationData: presentationData, content: .linkRevoked(text: "This link is no longer active"), elevatedLayout: elevatedLayout, animateInAsReplacement: false, action: { _ in
+                    return true
+                }), nil)
             })
         case let .localization(identifier):
             dismissInput()
@@ -788,6 +797,7 @@ func openResolvedUrlImpl(
                 }
                 if let currentState = starsContext.currentState, currentState.balance >= StarsAmount(value: amount, nanos: 0) {
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    //TODO:localize
                     let controller = UndoOverlayController(
                         presentationData: presentationData,
                         content: .universal(

@@ -173,7 +173,7 @@ public protocol PresentationCall: AnyObject {
     func setCurrentAudioOutput(_ output: AudioSessionOutput)
     func debugInfo() -> Signal<(String, String), NoError>
     
-    func upgradeToConference(invitePeerIds: [EnginePeer.Id], completion: @escaping (PresentationGroupCall) -> Void) -> Disposable
+    func upgradeToConference(invitePeers: [(id: EnginePeer.Id, isVideo: Bool)], completion: @escaping (PresentationGroupCall) -> Void) -> Disposable
     
     func makeOutgoingVideoView(completion: @escaping (PresentationCallVideoView?) -> Void)
 }
@@ -423,6 +423,7 @@ public protocol PresentationGroupCall: AnyObject {
     var internalId: CallSessionInternalId { get }
     var peerId: EnginePeer.Id? { get }
     var callId: Int64? { get }
+    var currentReference: InternalGroupCallReference? { get }
     
     var hasVideo: Bool { get }
     var hasScreencast: Bool { get }
@@ -484,7 +485,7 @@ public protocol PresentationGroupCall: AnyObject {
     
     func updateTitle(_ title: String)
     
-    func invitePeer(_ peerId: EnginePeer.Id) -> Bool
+    func invitePeer(_ peerId: EnginePeer.Id, isVideo: Bool) -> Bool
     func removedPeer(_ peerId: EnginePeer.Id)
     var invitedPeers: Signal<[PresentationGroupCallInvitedPeer], NoError> { get }
     
@@ -550,10 +551,6 @@ public enum PresentationCurrentCall: Equatable {
     }
 }
 
-public enum JoinConferenceCallMode {
-    case joining
-}
-
 public protocol PresentationCallManager: AnyObject {
     var currentCallSignal: Signal<PresentationCall?, NoError> { get }
     var currentGroupCallSignal: Signal<VideoChatCall?, NoError> { get }
@@ -568,6 +565,6 @@ public protocol PresentationCallManager: AnyObject {
         accountContext: AccountContext,
         initialCall: EngineGroupCallDescription,
         reference: InternalGroupCallReference,
-        mode: JoinConferenceCallMode
+        beginWithVideo: Bool
     )
 }

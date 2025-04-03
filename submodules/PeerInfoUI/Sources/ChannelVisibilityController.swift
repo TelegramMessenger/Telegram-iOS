@@ -655,6 +655,7 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                     if let invite = invite {
                         arguments.openLink(invite)
                     }
+                }, openCallAction: {
                 })
             case let .editablePublicLink(theme, _, placeholder, currentText):
                 return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: "t.me/", textColor: theme.list.itemPrimaryTextColor), text: currentText, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: false), clearType: .always, tag: ChannelVisibilityEntryTag.publicLink, sectionId: self.section, textUpdated: { updatedText in
@@ -1608,7 +1609,7 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
                         } else {
                             isGroup = true
                         }
-                        presentControllerImpl?(QrCodeScreen(context: context, updatedPresentationData: updatedPresentationData, subject: .invite(invite: invite, isGroup: isGroup)), nil)
+                        presentControllerImpl?(QrCodeScreen(context: context, updatedPresentationData: updatedPresentationData, subject: .invite(invite: invite, type: isGroup ? .group : .channel)), nil)
                     })
                 }
             })

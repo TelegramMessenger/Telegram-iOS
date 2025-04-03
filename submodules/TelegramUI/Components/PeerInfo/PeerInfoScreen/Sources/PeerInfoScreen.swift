@@ -14125,7 +14125,7 @@ public func presentAddMembersImpl(context: AccountContext, updatedPresentationDa
         
         createInviteLinkImpl = { [weak contactsController] in
             contactsController?.view.window?.endEditing(true)
-            contactsController?.present(InviteLinkInviteController(context: context, updatedPresentationData: updatedPresentationData, mode: .groupOrChannel(peerId: groupPeer.id), parentNavigationController: contactsController?.navigationController as? NavigationController), in: .window(.root))
+            contactsController?.present(InviteLinkInviteController(context: context, updatedPresentationData: updatedPresentationData, mode: .groupOrChannel(peerId: groupPeer.id), initialInvite: nil, parentNavigationController: contactsController?.navigationController as? NavigationController), in: .window(.root))
         }
 
         parentController?.push(contactsController)

@@ -2890,14 +2890,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     break
                 }
             }
-            guard case let .conferenceCall(callId, duration, _) = action?.action else {
+            guard case let .conferenceCall(conferenceCall) = action?.action else {
                 return
             }
-            if duration != nil {
+            if conferenceCall.duration != nil {
                 return
             }
             
-            if let currentGroupCallController = self.context.sharedContext as? VoiceChatController, case let .group(groupCall) = currentGroupCallController.call, let currentCallId = groupCall.callId, currentCallId == callId {
+            if let currentGroupCallController = self.context.sharedContext as? VoiceChatController, case let .group(groupCall) = currentGroupCallController.call, let currentCallId = groupCall.callId, currentCallId == conferenceCall.callId {
                 self.context.sharedContext.navigateToCurrentCall()
                 return
             }
@@ -2919,7 +2919,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         isStream: false
                     ),
                     reference: .message(id: message.id),
-                    mode: .joining
+                    beginWithVideo: conferenceCall.flags.contains(.isVideo)
                 )
             })
         }, longTap: { [weak self] action, params in

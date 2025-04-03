@@ -96,6 +96,10 @@ public extension TelegramEngine {
         public func createConferenceCall() -> Signal<EngineCreatedGroupCall, CreateConferenceCallError> {
             return _internal_createConferenceCall(postbox: self.account.postbox, network: self.account.network, accountPeerId: self.account.peerId)
         }
+
+        public func revokeConferenceInviteLink(reference: InternalGroupCallReference, link: String) -> Signal<GroupCallInviteLinks, RevokeConferenceInviteLinkError> {
+            return _internal_revokeConferenceInviteLink(account: self.account, reference: reference, link: link)
+        }
         
         public func pollConferenceCallBlockchain(reference: InternalGroupCallReference, subChainId: Int, offset: Int, limit: Int) -> Signal<(blocks: [Data], nextOffset: Int)?, NoError> {
             return _internal_pollConferenceCallBlockchain(network: self.account.network, reference: reference, subChainId: subChainId, offset: offset, limit: limit)
@@ -105,8 +109,8 @@ public extension TelegramEngine {
             return _internal_sendConferenceCallBroadcast(account: self.account, callId: callId, accessHash: accessHash, block: block)
         }
         
-        public func inviteConferenceCallParticipant(callId: Int64, accessHash: Int64, peerId: EnginePeer.Id) -> Signal<Never, NoError> {
-            return _internal_inviteConferenceCallParticipant(account: self.account, callId: callId, accessHash: accessHash, peerId: peerId)
+        public func inviteConferenceCallParticipant(reference: InternalGroupCallReference, peerId: EnginePeer.Id, isVideo: Bool) -> Signal<EngineMessage.Id?, NoError> {
+            return _internal_inviteConferenceCallParticipant(account: self.account, reference: reference, peerId: peerId, isVideo: isVideo)
         }
         
         public func removeGroupCallBlockchainParticipants(callId: Int64, accessHash: Int64, participantIds: [Int64], block: Data) -> Signal<RemoveGroupCallBlockchainParticipantsResult, NoError> {

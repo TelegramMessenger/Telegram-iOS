@@ -692,6 +692,9 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     
     public func updateIsHighlighted(transition: ContainedViewLayoutTransition) {
         var reallyHighlighted = self.isHighlighted
+        if let item = self.item, !item.enabled {
+            reallyHighlighted = false
+        }
         let highlightProgress: CGFloat = self.item?.itemHighlighting?.progress ?? 1.0
         if let item = self.item {
             switch item.peer {
@@ -1648,6 +1651,9 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                         }
                                         actionButtonNode.setImage(actionButton.image, for: .normal)
                                         transition.updateFrame(node: actionButtonNode, frame: CGRect(origin: CGPoint(x: revealOffset + params.width - params.rightInset - 12.0 - actionButtonImage.size.width - offset, y: floor((nodeLayout.contentSize.height - actionButtonImage.size.height) / 2.0)), size: actionButtonImage.size))
+                                        
+                                        actionButtonNode.isEnabled = item.enabled
+                                        actionButtonNode.alpha = item.enabled ? 1.0 : 0.4
                                         
                                         offset += actionButtonImage.size.width + 12.0
                                     }

@@ -16,31 +16,6 @@ extension VideoChatScreenComponent.View {
             return
         }
         
-        /*if groupCall.accountContext.sharedContext.immediateExperimentalUISettings.conferenceDebug {
-            guard let navigationController = self.environment?.controller()?.navigationController as? NavigationController else {
-                return
-            }
-            var presentationData = groupCall.accountContext.sharedContext.currentPresentationData.with { $0 }
-            presentationData = presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
-            let controller = InviteLinkInviteController(context: groupCall.accountContext, updatedPresentationData: (initial: presentationData, signal: .single(presentationData)), mode: .groupCall(link: "https://t.me/call/+abbfbffll123", isRecentlyCreated: false), parentNavigationController: navigationController, completed: { [weak self] result in
-                guard let self, case let .group(groupCall) = self.currentCall else {
-                    return
-                }
-                if let result {
-                    switch result {
-                    case .linkCopied:
-                        //TODO:localize
-                        let presentationData = groupCall.accountContext.sharedContext.currentPresentationData.with { $0 }
-                        self.environment?.controller()?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_linkcopied", scale: 0.08, colors: ["info1.info1.stroke": UIColor.clear, "info2.info2.Fill": UIColor.clear], title: nil, text: "Call link copied.", customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
-                            return false
-                        }), in: .current)
-                    }
-                }
-            })
-            self.environment?.controller()?.present(controller, in: .window(.root), with: nil)
-            return
-        }*/
-        
         if groupCall.isConference {
             var disablePeerIds: [EnginePeer.Id] = []
             disablePeerIds.append(groupCall.accountContext.account.peerId)
@@ -51,13 +26,21 @@ extension VideoChatScreenComponent.View {
                     }
                 }
             }
-            let controller = CallController.openConferenceAddParticipant(context: groupCall.accountContext, disablePeerIds: disablePeerIds, completion: { [weak self] peerIds in
+            let controller = CallController.openConferenceAddParticipant(context: groupCall.accountContext, disablePeerIds: disablePeerIds, shareLink: { [weak self] in
+                guard let self else {
+                    return
+                }
+                guard let inviteLinks = self.inviteLinks else {
+                    return
+                }
+                self.presentShare(inviteLinks)
+            }, completion: { [weak self] peerIds in
                 guard let self, case let .group(groupCall) = self.currentCall else {
                     return
                 }
                 
                 for peerId in peerIds {
-                    let _ = groupCall.invitePeer(peerId)
+                    let _ = groupCall.invitePeer(peerId.id, isVideo: peerId.isVideo)
                 }
             })
             self.environment?.controller()?.push(controller)
@@ -80,7 +63,7 @@ extension VideoChatScreenComponent.View {
                 if inviteIsLink {
                     inviteType = .shareLink
                 } else {
-                    inviteType = .invite
+                    inviteType = .invite(isMultipleUsers: true)
                 }
             }
             
@@ -146,7 +129,8 @@ extension VideoChatScreenComponent.View {
                         if let participant {
                             dismissController?()
                             
-                            if groupCall.invitePeer(participant.peer.id) {
+                            //TODO:release
+                            if groupCall.invitePeer(participant.peer.id, isVideo: false) {
                                 let text: String
                                 if case let .channel(channel) = self.peer, case .broadcast = channel.info {
                                     text = environment.strings.LiveStream_InvitedPeerText(peer.displayTitle(strings: environment.strings, displayOrder: groupCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).nameDisplayOrder)).string
@@ -258,7 +242,8 @@ extension VideoChatScreenComponent.View {
                                             }
                                             dismissController?()
                                             
-                                            if groupCall.invitePeer(peer.id) {
+                                            //TODO:release
+                                            if groupCall.invitePeer(peer.id, isVideo: false) {
                                                 let text: String
                                                 if case let .channel(channel) = self.peer, case .broadcast = channel.info {
                                                     text = environment.strings.LiveStream_InvitedPeerText(peer.displayTitle(strings: environment.strings, displayOrder: presentationData.nameDisplayOrder)).string
@@ -330,7 +315,8 @@ extension VideoChatScreenComponent.View {
                                             }
                                             dismissController?()
                                             
-                                            if groupCall.invitePeer(peer.id) {
+                                            //TODO:release
+                                            if groupCall.invitePeer(peer.id, isVideo: false) {
                                                 let text: String
                                                 if case let .channel(channel) = self.peer, case .broadcast = channel.info {
                                                     text = environment.strings.LiveStream_InvitedPeerText(peer.displayTitle(strings: environment.strings, displayOrder: presentationData.nameDisplayOrder)).string

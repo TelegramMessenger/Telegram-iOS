@@ -2670,7 +2670,7 @@ encryptDecrypt:(NSData * _Nullable (^ _Nullable)(NSData * _Nonnull, bool))encryp
             },
             .createWrappedAudioDeviceModule = [audioDeviceModule, isActiveByDefault](webrtc::TaskQueueFactory *taskQueueFactory) -> rtc::scoped_refptr<tgcalls::WrappedAudioDeviceModule> {
                 if (audioDeviceModule) {
-                    auto result = audioDeviceModule->getSyncAssumingSameThread()->makeChildAudioDeviceModule(isActiveByDefault);
+                    auto result = audioDeviceModule->getSyncAssumingSameThread()->makeChildAudioDeviceModule(isActiveByDefault || true);
                     return result;
                 } else {
                     return nullptr;
@@ -3029,11 +3029,13 @@ encryptDecrypt:(NSData * _Nullable (^ _Nullable)(NSData * _Nonnull, bool))encryp
 @implementation OngoingGroupCallMediaChannelDescription
 
 - (instancetype _Nonnull)initWithType:(OngoingGroupCallMediaChannelType)type
-    audioSsrc:(uint32_t)audioSsrc
-    videoDescription:(NSString * _Nullable)videoDescription {
+                               peerId:(int64_t)peerId
+                            audioSsrc:(uint32_t)audioSsrc
+                     videoDescription:(NSString * _Nullable)videoDescription {
     self = [super init];
     if (self != nil) {
         _type = type;
+        _peerId = peerId;
         _audioSsrc = audioSsrc;
         _videoDescription = videoDescription;
     }

@@ -229,6 +229,7 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
                     if let invite = invite {
                         arguments.openLink(invite)
                     }
+                }, openCallAction: {
                 })
             case let .mainLinkOtherInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section, linkAction: nil, style: .blocks, tag: nil)
@@ -529,7 +530,7 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
                 } else {
                     isGroup = true
                 }
-                presentControllerImpl?(QrCodeScreen(context: context, updatedPresentationData: updatedPresentationData, subject: .invite(invite: invite, isGroup: isGroup)), nil)
+                presentControllerImpl?(QrCodeScreen(context: context, updatedPresentationData: updatedPresentationData, subject: .invite(invite: invite, type: isGroup ? .group : .channel)), nil)
             })
         })))
         
@@ -718,7 +719,7 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
                             isGroup = true
                         }
                         Queue.mainQueue().after(0.2) {
-                            presentControllerImpl?(QrCodeScreen(context: context, updatedPresentationData: updatedPresentationData, subject: .invite(invite: invite, isGroup: isGroup)), nil)
+                            presentControllerImpl?(QrCodeScreen(context: context, updatedPresentationData: updatedPresentationData, subject: .invite(invite: invite, type: isGroup ? .group : .channel)), nil)
                         }
                     })
                 })))

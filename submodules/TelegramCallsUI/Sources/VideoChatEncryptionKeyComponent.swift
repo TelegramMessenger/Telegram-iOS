@@ -5,6 +5,179 @@ import ComponentFlow
 import MultilineTextComponent
 import BalancedTextComponent
 import TelegramPresentationData
+import CallsEmoji
+
+private final class EmojiItemComponent: Component {
+    let emoji: String?
+
+    init(emoji: String?) {
+        self.emoji = emoji
+    }
+
+    static func ==(lhs: EmojiItemComponent, rhs: EmojiItemComponent) -> Bool {
+        if lhs.emoji != rhs.emoji {
+            return false
+        }
+        return true
+    }
+
+    final class View: UIView {
+        private let measureEmojiView = ComponentView<Empty>()
+        private var pendingContainerView: UIView?
+        private var pendingEmojiViews: [ComponentView<Empty>] = []
+        private var emojiView: ComponentView<Empty>?
+
+        private var component: EmojiItemComponent?
+        private weak var state: EmptyComponentState?
+        
+        private var pendingEmojiValues: [String]?
+
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+        }
+
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+
+        deinit {
+        }
+
+        func update(component: EmojiItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+            self.component = component
+            self.state = state
+
+            let size = self.measureEmojiView.update(
+                transition: .immediate,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: "👍", font: Font.regular(40.0), textColor: .white))
+                )),
+                environment: {},
+                containerSize: CGSize(width: 200.0, height: 200.0)
+            )
+            
+            let borderEmoji = 2
+            let numEmoji = borderEmoji * 2 + 3
+
+            if let emoji = component.emoji {
+                let emojiView: ComponentView<Empty>
+                var emojiViewTransition = transition
+                if let current = self.emojiView {
+                    emojiView = current
+                } else {
+                    emojiViewTransition = .immediate
+                    emojiView = ComponentView()
+                    self.emojiView = emojiView
+                }
+                let emojiSize = emojiView.update(
+                    transition: .immediate,
+                    component: AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: emoji, font: Font.regular(40.0), textColor: .white))
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 200.0, height: 200.0)
+                )
+                let emojiFrame = CGRect(origin: CGPoint(x: floor((size.width - emojiSize.width) * 0.5), y: floor((size.height - emojiSize.height) * 0.5)), size: emojiSize)
+                if let emojiComponentView = emojiView.view {
+                    if emojiComponentView.superview == nil {
+                        self.addSubview(emojiComponentView)
+                    }
+                    emojiViewTransition.setFrame(view: emojiComponentView, frame: emojiFrame)
+                }
+                
+                self.pendingEmojiValues = nil
+            } else {
+                if let emojiView = self.emojiView {
+                    self.emojiView = nil
+                    emojiView.view?.removeFromSuperview()
+                }
+                
+                if self.pendingEmojiValues?.count != numEmoji {
+                    var pendingEmojiValuesValue: [String] = []
+                    for _ in 0 ..< numEmoji - borderEmoji - 1 {
+                        pendingEmojiValuesValue.append(randomCallsEmoji() ?? "👍")
+                    }
+                    for i in 0 ..< borderEmoji + 1 {
+                        pendingEmojiValuesValue.append(pendingEmojiValuesValue[i])
+                    }
+                    self.pendingEmojiValues = pendingEmojiValuesValue
+                }
+            }
+
+            if let pendingEmojiValues, pendingEmojiValues.count == numEmoji {
+                let pendingContainerView: UIView
+                if let current = self.pendingContainerView {
+                    pendingContainerView = current
+                } else {
+                    pendingContainerView = UIView()
+                    self.pendingContainerView = pendingContainerView
+                }
+
+                for i in 0 ..< numEmoji {
+                    let pendingEmojiView: ComponentView<Empty>
+                    if self.pendingEmojiViews.count > i {
+                        pendingEmojiView = self.pendingEmojiViews[i]
+                    } else {
+                        pendingEmojiView = ComponentView()
+                        self.pendingEmojiViews.append(pendingEmojiView)
+                    }
+                    let pendingEmojiViewSize = pendingEmojiView.update(
+                        transition: .immediate,
+                        component: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(string: pendingEmojiValues[i], font: Font.regular(40.0), textColor: .white))
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: 200.0, height: 200.0)
+                    )
+                    if let pendingEmojiComponentView = pendingEmojiView.view {
+                        if pendingEmojiComponentView.superview == nil {
+                            pendingContainerView.addSubview(pendingEmojiComponentView)
+                        }
+                        pendingEmojiComponentView.frame = CGRect(origin: CGPoint(x: 0.0, y: CGFloat(i) * size.height), size: pendingEmojiViewSize)
+                    }
+                }
+
+                pendingContainerView.frame = CGRect(origin: CGPoint(), size: size)
+
+                if pendingContainerView.superview == nil {
+                    self.addSubview(pendingContainerView)
+
+                    let animation = CABasicAnimation(keyPath: "sublayerTransform.translation.y")
+                    //animation.duration = 4.2
+                    animation.duration = 0.2
+                    animation.fromValue = -CGFloat(numEmoji - borderEmoji) * size.height
+                    animation.toValue = CGFloat(borderEmoji - 3) * size.height
+                    animation.timingFunction = CAMediaTimingFunction(name: .linear)
+                    animation.autoreverses = false
+                    animation.repeatCount = .infinity
+                    
+                    pendingContainerView.layer.add(animation, forKey: "offsetCycle")
+                }
+            } else if let pendingContainerView = self.pendingContainerView {
+                self.pendingContainerView = nil
+                pendingContainerView.removeFromSuperview()
+
+                for emojiView in self.pendingEmojiViews {
+                    emojiView.view?.removeFromSuperview()
+                }
+                self.pendingEmojiViews.removeAll()
+            }
+            
+            //self.layer.borderColor = UIColor.red.cgColor
+            //self.layer.borderWidth = 4.0
+
+            return size
+        }
+    }
+
+    func makeView() -> View {
+        return View(frame: CGRect())
+    }
+
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
 
 final class VideoChatEncryptionKeyComponent: Component {
     let theme: PresentationTheme
@@ -119,7 +292,7 @@ final class VideoChatEncryptionKeyComponent: Component {
             let expandedButtonTopInset: CGFloat = 12.0
             let expandedButtonBottomInset: CGFloat = 13.0
             
-            let emojiItemSizes = (0 ..< component.emoji.count).map { i -> CGSize in
+            let emojiItemSizes = (0 ..< 4).map { i -> CGSize in
                 let emojiItem: ComponentView<Empty>
                 if self.emojiItems.count > i {
                     emojiItem = self.emojiItems[i]
@@ -128,9 +301,9 @@ final class VideoChatEncryptionKeyComponent: Component {
                     self.emojiItems.append(emojiItem)
                 }
                 return emojiItem.update(
-                    transition: .immediate,
-                    component: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: component.emoji[i], font: Font.regular(40.0), textColor: .white))
+                    transition: transition,
+                    component: AnyComponent(EmojiItemComponent(
+                        emoji: i < component.emoji.count ? component.emoji[i] : nil
                     )),
                     environment: {},
                     containerSize: CGSize(width: 200.0, height: 200.0)

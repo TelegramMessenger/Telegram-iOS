@@ -382,7 +382,7 @@ private final class CallSessionContext {
 private final class IncomingConferenceInvitationContext {
     enum State: Equatable {
         case pending
-        case ringing(callId: Int64, otherParticipants: [EnginePeer])
+        case ringing(callId: Int64, isVideo: Bool, otherParticipants: [EnginePeer])
         case stopped
     }
 
@@ -420,11 +420,11 @@ private final class IncomingConferenceInvitationContext {
                     }
                 }
 
-                if let action = foundAction, case let .conferenceCall(callId, duration, otherParticipants) = action.action {
-                    if duration != nil {
+                if let action = foundAction, case let .conferenceCall(conferenceCall) = action.action {
+                    if conferenceCall.flags.contains(.isMissed) || conferenceCall.duration != nil {
                         state = .stopped
                     } else {
-                        state = .ringing(callId: callId, otherParticipants: otherParticipants.compactMap { id -> EnginePeer? in
+                        state = .ringing(callId: conferenceCall.callId, isVideo: conferenceCall.flags.contains(.isVideo), otherParticipants: conferenceCall.otherParticipants.compactMap { id -> EnginePeer? in
                             return message.peers[id].flatMap(EnginePeer.init)
                         })
                     }
@@ -639,11 +639,11 @@ private final class CallSessionManagerContext {
             }
         }
         for (id, context) in self.incomingConferenceInvitationContexts {
-            if case let .ringing(_, otherParticipants) = context.state {
+            if case let .ringing(_, isVideo, otherParticipants) = context.state {
                 ringingContexts.append(CallSessionRingingState(
                     id: context.internalId,
                     peerId: id.peerId,
-                    isVideo: false,
+                    isVideo: isVideo,
                     isVideoPossible: true,
                     conferenceSource: id,
                     otherParticipants: otherParticipants
@@ -716,6 +716,23 @@ private final class CallSessionManagerContext {
         } else {
             return nil
         }
+    }
+    
+    func dropOutgoingConferenceRequest(messageId: MessageId) {
+        let addUpdates = self.addUpdates
+        let rejectSignal = self.network.request(Api.functions.phone.declineConferenceCallInvite(msgId: messageId.id))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { updates -> Signal<Never, NoError> in
+            if let updates {
+                addUpdates(updates)
+            }
+            return .complete()
+        }
+
+        self.rejectConferenceInvitationDisposables.add(rejectSignal.startStrict())
     }
     
     func drop(internalId: CallSessionInternalId, reason: DropCallReason, debugLog: Signal<String?, NoError>) {
@@ -1380,6 +1397,12 @@ public final class CallSessionManager {
     public func drop(internalId: CallSessionInternalId, reason: DropCallReason, debugLog: Signal<String?, NoError>) {
         self.withContext { context in
             context.drop(internalId: internalId, reason: reason, debugLog: debugLog)
+        }
+    }
+    
+    public func dropOutgoingConferenceRequest(messageId: MessageId) {
+        self.withContext { context in
+            context.dropOutgoingConferenceRequest(messageId: messageId)
         }
     }
     

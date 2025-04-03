@@ -248,6 +248,7 @@ public extension Api {
 }
 public extension Api {
     indirect enum InputInvoice: TypeConstructorDescription {
+        case inputInvoiceBusinessBotTransferStars(bot: Api.InputUser, stars: Int64)
         case inputInvoiceChatInviteSubscription(hash: String)
         case inputInvoiceMessage(peer: Api.InputPeer, msgId: Int32)
         case inputInvoicePremiumGiftCode(purpose: Api.InputStorePaymentPurpose, option: Api.PremiumGiftCodeOption)
@@ -260,6 +261,13 @@ public extension Api {
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
+                case .inputInvoiceBusinessBotTransferStars(let bot, let stars):
+                    if boxed {
+                        buffer.appendInt32(-191267262)
+                    }
+                    bot.serialize(buffer, true)
+                    serializeInt64(stars, buffer: buffer, boxed: false)
+                    break
                 case .inputInvoiceChatInviteSubscription(let hash):
                     if boxed {
                         buffer.appendInt32(887591921)
@@ -329,6 +337,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
+                case .inputInvoiceBusinessBotTransferStars(let bot, let stars):
+                return ("inputInvoiceBusinessBotTransferStars", [("bot", bot as Any), ("stars", stars as Any)])
                 case .inputInvoiceChatInviteSubscription(let hash):
                 return ("inputInvoiceChatInviteSubscription", [("hash", hash as Any)])
                 case .inputInvoiceMessage(let peer, let msgId):
@@ -350,6 +360,22 @@ public extension Api {
     }
     }
     
+        public static func parse_inputInvoiceBusinessBotTransferStars(_ reader: BufferReader) -> InputInvoice? {
+            var _1: Api.InputUser?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputUser
+            }
+            var _2: Int64?
+            _2 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputInvoice.inputInvoiceBusinessBotTransferStars(bot: _1!, stars: _2!)
+            }
+            else {
+                return nil
+            }
+        }
         public static func parse_inputInvoiceChatInviteSubscription(_ reader: BufferReader) -> InputInvoice? {
             var _1: String?
             _1 = parseString(reader)
