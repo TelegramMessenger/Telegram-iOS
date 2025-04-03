@@ -755,7 +755,7 @@ public final class InviteLinkViewController: ViewController {
                                         isGroup = true
                                     }
                                     let updatedPresentationData = (strongSelf.presentationData, parentController.presentationDataPromise.get())
-                                    strongSelf.controller?.present(QrCodeScreen(context: context, updatedPresentationData: updatedPresentationData, subject: .invite(invite: invite, isGroup: isGroup)), in: .window(.root))
+                                    strongSelf.controller?.present(QrCodeScreen(context: context, updatedPresentationData: updatedPresentationData, subject: .invite(invite: invite, type: isGroup ? .group : .channel)), in: .window(.root))
                                 })
                             })))
                         }

@@ -2,8 +2,9 @@ import os
 import sys
 import argparse
 import json
+import re
 
-from BuildEnvironment import check_run_system
+from BuildEnvironment import run_executable_with_output
 
 def deploy_to_firebase(args):
     if not os.path.exists(args.configuration):
@@ -26,18 +27,26 @@ def deploy_to_firebase(args):
             if key not in configuration_dict:
                 print('Configuration at {} does not contain {}'.format(args.configuration, key))
                 sys.exit(1)
-
-        debug_flag = "--debug" if args.debug else ""
-        command = 'firebase appdistribution:distribute --app {app_id} --groups "{group}" {debug_flag}'.format(
-            app_id=configuration_dict['app_id'],
-            group=configuration_dict['group'],
-            debug_flag=debug_flag
-        )
-            
-        command += ' "{ipa_path}"'.format(ipa_path=args.ipa)
         
-        check_run_system(command)
-
+        firebase_arguments = [
+            'appdistribution:distribute',
+            '--app', configuration_dict['app_id'],
+            '--groups', configuration_dict['group'],
+            args.ipa
+        ]
+        
+        output = run_executable_with_output(
+            'firebase',
+            firebase_arguments,
+            use_clean_env=False,
+            check_result=True
+        )
+        
+        sharing_link_match = re.search(r'Share this release with testers who have access: (https://\S+)', output)
+        if sharing_link_match:
+            print(f"Sharing link: {sharing_link_match.group(1)}")
+        else:
+            print("No sharing link found in the output.")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='deploy-firebase')

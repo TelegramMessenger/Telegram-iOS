@@ -270,11 +270,13 @@ public final class OngoingGroupCallContext {
         }
 
         public var kind: Kind
+        public var peerId: Int64
         public var audioSsrc: UInt32
         public var videoDescription: String?
 
-        public init(kind: Kind, audioSsrc: UInt32, videoDescription: String?) {
+        public init(kind: Kind, peerId: Int64, audioSsrc: UInt32, videoDescription: String?) {
             self.kind = kind
+            self.peerId = peerId
             self.audioSsrc = audioSsrc
             self.videoDescription = videoDescription
         }
@@ -575,6 +577,7 @@ public final class OngoingGroupCallContext {
                             }
                             return OngoingGroupCallMediaChannelDescription(
                                 type: mappedType,
+                                peerId: channel.peerId,
                                 audioSsrc: channel.audioSsrc,
                                 videoDescription: channel.videoDescription
                             )
@@ -688,6 +691,7 @@ public final class OngoingGroupCallContext {
                             }
                             return OngoingGroupCallMediaChannelDescription(
                                 type: mappedType,
+                                peerId: channel.peerId,
                                 audioSsrc: channel.audioSsrc,
                                 videoDescription: channel.videoDescription
                             )

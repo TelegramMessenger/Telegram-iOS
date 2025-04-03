@@ -16,31 +16,6 @@ extension VideoChatScreenComponent.View {
             return
         }
         
-        /*if groupCall.accountContext.sharedContext.immediateExperimentalUISettings.conferenceDebug {
-            guard let navigationController = self.environment?.controller()?.navigationController as? NavigationController else {
-                return
-            }
-            var presentationData = groupCall.accountContext.sharedContext.currentPresentationData.with { $0 }
-            presentationData = presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
-            let controller = InviteLinkInviteController(context: groupCall.accountContext, updatedPresentationData: (initial: presentationData, signal: .single(presentationData)), mode: .groupCall(link: "https://t.me/call/+abbfbffll123", isRecentlyCreated: false), parentNavigationController: navigationController, completed: { [weak self] result in
-                guard let self, case let .group(groupCall) = self.currentCall else {
-                    return
-                }
-                if let result {
-                    switch result {
-                    case .linkCopied:
-                        //TODO:localize
-                        let presentationData = groupCall.accountContext.sharedContext.currentPresentationData.with { $0 }
-                        self.environment?.controller()?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_linkcopied", scale: 0.08, colors: ["info1.info1.stroke": UIColor.clear, "info2.info2.Fill": UIColor.clear], title: nil, text: "Call link copied.", customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
-                            return false
-                        }), in: .current)
-                    }
-                }
-            })
-            self.environment?.controller()?.present(controller, in: .window(.root), with: nil)
-            return
-        }*/
-        
         if groupCall.isConference {
             var disablePeerIds: [EnginePeer.Id] = []
             disablePeerIds.append(groupCall.accountContext.account.peerId)

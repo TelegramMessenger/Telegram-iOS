@@ -138,16 +138,7 @@ class CallListCallItem: ListViewItem {
     
     func selected(listView: ListView) {
         listView.clearHighlightAnimated(true)
-        var isVideo = false
-        for media in self.topMessage.media {
-            if let action = media as? TelegramMediaAction {
-                if case let .phoneCall(_, _, _, isVideoValue) = action.action {
-                    isVideo = isVideoValue
-                    break
-                }
-            }
-        }
-        self.interaction.call(self.topMessage.id.peerId, isVideo)
+        self.interaction.call(self.topMessage)
     }
     
     static func mergeType(item: CallListCallItem, previousItem: ListViewItem?, nextItem: ListViewItem?) -> (first: Bool, last: Bool, firstWithHeader: Bool) {
@@ -262,15 +253,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             guard let item = self?.layoutParams?.0 else {
                 return false
             }
-            var isVideo = false
-            for media in item.topMessage.media {
-                if let action = media as? TelegramMediaAction {
-                    if case let .phoneCall(_, _, _, isVideoValue) = action.action {
-                        isVideo = isVideoValue
-                    }
-                }
-            }
-            item.interaction.call(item.topMessage.id.peerId, isVideo)
+            item.interaction.call(item.topMessage)
             return true
         }
     }
@@ -390,6 +373,9 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             var hadDuration = false
             var callDuration: Int32?
             
+            var isConference = false
+            var conferenceIsDeclined = false
+            
             for message in item.messages {
                 inner: for media in message.media {
                     if let action = media as? TelegramMediaAction {
@@ -408,6 +394,36 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                             if callDuration == nil && !hadDuration {
                                 hadDuration = true
                                 callDuration = duration
+                            } else {
+                                callDuration = nil
+                            }
+                        } else if case let .conferenceCall(conferenceCall) = action.action {
+                            isConference = true
+                            
+                            isVideo = conferenceCall.flags.contains(.isVideo)
+                            if message.flags.contains(.Incoming) {
+                                hasIncoming = true
+                                //TODO:localize
+                                let missedTimeout: Int32
+                                #if DEBUG
+                                missedTimeout = 5
+                                #else
+                                missedTimeout = 30
+                                #endif
+                                let currentTime = Int32(Date().timeIntervalSince1970)
+                                if conferenceCall.flags.contains(.isMissed) {
+                                    titleColor = item.presentationData.theme.list.itemDestructiveColor
+                                    conferenceIsDeclined = true
+                                } else if message.timestamp < currentTime - missedTimeout {
+                                    titleColor = item.presentationData.theme.list.itemDestructiveColor
+                                    hasMissed = true
+                                }
+                            } else {
+                                hasOutgoing = true
+                            }
+                            if callDuration == nil && !hadDuration {
+                                hadDuration = true
+                                callDuration = conferenceCall.duration
                             } else {
                                 callDuration = nil
                             }
@@ -441,7 +457,18 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                     titleAttributedString = NSAttributedString(string: channel.title, font: titleFont, textColor: titleColor)
                 }
                 
-                if hasMissed {
+                if isConference {
+                    //TODO:localize
+                    if conferenceIsDeclined {
+                        statusAttributedString = NSAttributedString(string: "Declined Group Call", font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+                    } else if hasMissed {
+                        statusAttributedString = NSAttributedString(string: "Missed Group Call", font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+                    } else {
+                        statusAttributedString = NSAttributedString(string: "Group call", font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+                    }
+                    
+                    statusAccessibilityString = statusAttributedString?.string ?? ""
+                } else if hasMissed {
                     statusAttributedString = NSAttributedString(string: item.presentationData.strings.Notification_CallMissedShort, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
                     statusAccessibilityString = isVideo ? item.presentationData.strings.Call_VoiceOver_VideoCallMissed : item.presentationData.strings.Call_VoiceOver_VoiceCallMissed
                 } else if hasIncoming && hasOutgoing {

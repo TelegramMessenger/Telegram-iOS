@@ -1609,7 +1609,7 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
                         } else {
                             isGroup = true
                         }
-                        presentControllerImpl?(QrCodeScreen(context: context, updatedPresentationData: updatedPresentationData, subject: .invite(invite: invite, isGroup: isGroup)), nil)
+                        presentControllerImpl?(QrCodeScreen(context: context, updatedPresentationData: updatedPresentationData, subject: .invite(invite: invite, type: isGroup ? .group : .channel)), nil)
                     })
                 }
             })

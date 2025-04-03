@@ -92,6 +92,7 @@ public final class CallListController: TelegramBaseController {
     
     private let createActionDisposable = MetaDisposable()
     private let clearDisposable = MetaDisposable()
+    private var createConferenceCallDisposable: Disposable?
     
     public init(context: AccountContext, mode: CallListControllerMode) {
         self.context = context
@@ -163,6 +164,7 @@ public final class CallListController: TelegramBaseController {
         self.presentationDataDisposable?.dispose()
         self.peerViewDisposable.dispose()
         self.clearDisposable.dispose()
+        self.createConferenceCallDisposable?.dispose()
     }
     
     private func updateThemeAndStrings() {
@@ -210,11 +212,16 @@ public final class CallListController: TelegramBaseController {
         guard !self.presentAccountFrozenInfoIfNeeded() else {
             return
         }
-        let _ = (self.context.engine.calls.createConferenceCall()
-        |> deliverOnMainQueue).startStandalone(next: { [weak self] call in
+        if self.createConferenceCallDisposable != nil {
+            return
+        }
+        self.createConferenceCallDisposable = (self.context.engine.calls.createConferenceCall()
+        |> deliverOnMainQueue).startStrict(next: { [weak self] call in
             guard let self else {
                 return
             }
+            self.createConferenceCallDisposable?.dispose()
+            self.createConferenceCallDisposable = nil
             
             let openCall: () -> Void = { [weak self] in
                 guard let self else {
@@ -235,34 +242,51 @@ public final class CallListController: TelegramBaseController {
                 )
             }
             
-            let controller = InviteLinkInviteController(context: self.context, updatedPresentationData: nil, mode: .groupCall(link: call.link, isRecentlyCreated: true), parentNavigationController: self.navigationController as? NavigationController, completed: { [weak self] result in
-                guard let self else {
-                    return
-                }
-                if let result {
-                    switch result {
-                    case .linkCopied:
-                        //TODO:localize
-                        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-                        self.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_linkcopied", scale: 0.08, colors: ["info1.info1.stroke": UIColor.clear, "info2.info2.Fill": UIColor.clear], title: nil, text: "Call link copied.", customUndoText: "View Call", timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
-                            if case .undo = action {
-                                openCall()
-                            }
-                            return false
-                        }), in: .window(.root))
-                    case .openCall:
-                        openCall()
+            let controller = InviteLinkInviteController(
+                context: self.context,
+                updatedPresentationData: nil,
+                mode: .groupCall(InviteLinkInviteController.Mode.GroupCall(callId: call.callInfo.id, accessHash: call.callInfo.accessHash, isRecentlyCreated: true, canRevoke: true)),
+                initialInvite: .link(link: call.link, title: nil, isPermanent: true, requestApproval: false, isRevoked: false, adminId: self.context.account.peerId, date: 0, startDate: nil, expireDate: nil, usageLimit: nil, count: nil, requestedCount: nil, pricing: nil),
+                parentNavigationController: self.navigationController as? NavigationController,
+                completed: { [weak self] result in
+                    guard let self else {
+                        return
+                    }
+                    if let result {
+                        switch result {
+                        case .linkCopied:
+                            //TODO:localize
+                            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+                            self.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_linkcopied", scale: 0.08, colors: ["info1.info1.stroke": UIColor.clear, "info2.info2.Fill": UIColor.clear], title: nil, text: "Call link copied.", customUndoText: "View Call", timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
+                                if case .undo = action {
+                                    openCall()
+                                }
+                                return false
+                            }), in: .window(.root))
+                        case .openCall:
+                            openCall()
+                        }
                     }
                 }
-            })
+            )
             self.present(controller, in: .window(.root), with: nil)
         })
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = CallListControllerNode(controller: self, context: self.context, mode: self.mode, presentationData: self.presentationData, call: { [weak self] peerId, isVideo in
-            if let strongSelf = self {
-                strongSelf.call(peerId, isVideo: isVideo)
+        self.displayNode = CallListControllerNode(controller: self, context: self.context, mode: self.mode, presentationData: self.presentationData, call: { [weak self] message in
+            guard let self else {
+                return
+            }
+            
+            for media in message.media {
+                if let action = media as? TelegramMediaAction {
+                    if case let .phoneCall(_, _, _, isVideo) = action.action {
+                        self.call(message.id.peerId, isVideo: isVideo)
+                    } else if case .conferenceCall = action.action {
+                        self.openGroupCall(message: message)
+                    }
+                }
             }
         }, joinGroupCall: { [weak self] peerId, activeCall in
             if let self {
@@ -571,6 +595,48 @@ public final class CallListController: TelegramBaseController {
                 })
             }
         }))
+    }
+    
+    private func openGroupCall(message: EngineMessage) {
+        var action: TelegramMediaAction?
+        for media in message.media {
+            if let media = media as? TelegramMediaAction {
+                action = media
+                break
+            }
+        }
+        guard case let .conferenceCall(conferenceCall) = action?.action else {
+            return
+        }
+        if conferenceCall.duration != nil {
+            return
+        }
+        
+        if let currentGroupCallController = self.context.sharedContext as? VoiceChatController, case let .group(groupCall) = currentGroupCallController.call, let currentCallId = groupCall.callId, currentCallId == conferenceCall.callId {
+            self.context.sharedContext.navigateToCurrentCall()
+            return
+        }
+        
+        let signal = self.context.engine.peers.joinCallInvitationInformation(messageId: message.id)
+        let _ = (signal
+        |> deliverOnMainQueue).startStandalone(next: { [weak self] resolvedCallLink in
+            guard let self else {
+                return
+            }
+            self.context.sharedContext.callManager?.joinConferenceCall(
+                accountContext: self.context,
+                initialCall: EngineGroupCallDescription(
+                    id: resolvedCallLink.id,
+                    accessHash: resolvedCallLink.accessHash,
+                    title: nil,
+                    scheduleTimestamp: nil,
+                    subscribedToScheduled: false,
+                    isStream: false
+                ),
+                reference: .message(id: message.id),
+                beginWithVideo: conferenceCall.flags.contains(.isVideo)
+            )
+        })
     }
     
     override public func tabBarItemContextAction(sourceNode: ContextExtractedContentContainingNode, gesture: ContextGesture) {

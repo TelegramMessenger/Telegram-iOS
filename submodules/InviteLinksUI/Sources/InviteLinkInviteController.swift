@@ -154,14 +154,32 @@ private func preparedTransition(from fromEntries: [InviteLinkInviteEntry], to to
     return InviteLinkInviteTransaction(deletions: deletions, insertions: insertions, updates: updates, isLoading: isLoading)
 }
 
+private func getBackgroundColor(theme: PresentationTheme) -> UIColor {
+    return theme.actionSheet.opaqueItemBackgroundColor
+}
+
 public final class InviteLinkInviteController: ViewController {
     private var controllerNode: Node {
         return self.displayNode as! Node
     }
     
     public enum Mode {
+        public struct GroupCall {
+            public let callId: Int64
+            public let accessHash: Int64
+            public let isRecentlyCreated: Bool
+            public let canRevoke: Bool
+            
+            public init(callId: Int64, accessHash: Int64, isRecentlyCreated: Bool, canRevoke: Bool) {
+                self.callId = callId
+                self.accessHash = accessHash
+                self.isRecentlyCreated = isRecentlyCreated
+                self.canRevoke = canRevoke
+            }
+        }
+
         case groupOrChannel(peerId: EnginePeer.Id)
-        case groupCall(link: String, isRecentlyCreated: Bool)
+        case groupCall(GroupCall)
     }
     
     public enum CompletionResult {
@@ -173,6 +191,7 @@ public final class InviteLinkInviteController: ViewController {
     
     private let context: AccountContext
     private let mode: Mode
+    private let initialInvite: ExportedInvitation?
     private weak var parentNavigationController: NavigationController?
     
     private var presentationData: PresentationData
@@ -180,9 +199,10 @@ public final class InviteLinkInviteController: ViewController {
     
     fileprivate let completed: ((CompletionResult?) -> Void)?
             
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, mode: Mode, parentNavigationController: NavigationController?, completed: ((CompletionResult?) -> Void)? = nil) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, mode: Mode, initialInvite: ExportedInvitation?, parentNavigationController: NavigationController?, completed: ((CompletionResult?) -> Void)? = nil) {
         self.context = context
         self.mode = mode
+        self.initialInvite = initialInvite
         self.parentNavigationController = parentNavigationController
         self.completed = completed
                         
@@ -215,7 +235,7 @@ public final class InviteLinkInviteController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = Node(context: self.context, presentationData: self.presentationData, mode: self.mode, controller: self)
+        self.displayNode = Node(context: self.context, presentationData: self.presentationData, mode: self.mode, controller: self, initialInvite: self.initialInvite)
     }
 
     private var didAppearOnce: Bool = false
@@ -296,7 +316,7 @@ public final class InviteLinkInviteController: ViewController {
         
         private var revokeDisposable = MetaDisposable()
         
-        init(context: AccountContext, presentationData: PresentationData, mode: InviteLinkInviteController.Mode, controller: InviteLinkInviteController) {
+        init(context: AccountContext, presentationData: PresentationData, mode: InviteLinkInviteController.Mode, controller: InviteLinkInviteController, initialInvite: ExportedInvitation?) {
             self.context = context
             self.mode = mode
             
@@ -319,7 +339,7 @@ public final class InviteLinkInviteController: ViewController {
             self.headerNode.clipsToBounds = false
             
             self.headerBackgroundNode = ASDisplayNode()
-            self.headerBackgroundNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
+            self.headerBackgroundNode.backgroundColor = getBackgroundColor(theme: self.presentationData.theme)
             self.headerBackgroundNode.cornerRadius = 16.0
             self.headerBackgroundNode.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
             
@@ -338,7 +358,7 @@ public final class InviteLinkInviteController: ViewController {
             
             self.historyBackgroundContentNode = ASDisplayNode()
             self.historyBackgroundContentNode.isLayerBacked = true
-            self.historyBackgroundContentNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
+            self.historyBackgroundContentNode.backgroundColor = getBackgroundColor(theme: self.presentationData.theme)
             
             self.historyBackgroundNode.addSubnode(self.historyBackgroundContentNode)
             
@@ -354,7 +374,7 @@ public final class InviteLinkInviteController: ViewController {
             self.backgroundColor = nil
             self.isOpaque = false
         
-            let mainInvitePromise = ValuePromise<ExportedInvitation?>(nil)
+            let mainInvitePromise = ValuePromise<ExportedInvitation?>(initialInvite)
             
             self.interaction = InviteLinkInviteInteraction(context: context, mainLinkContextAction: { [weak self] invite, node, gesture in
                 guard let self else {
@@ -363,7 +383,6 @@ public final class InviteLinkInviteController: ViewController {
                 guard let node = node as? ContextReferenceContentNode else {
                     return
                 }
-                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 var items: [ContextMenuItem] = []
 
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextCopy, icon: { theme in
@@ -381,17 +400,17 @@ public final class InviteLinkInviteController: ViewController {
                     }
                 })))
                 
-                if case let .groupOrChannel(peerId) = self.mode {
-                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextGetQRCode, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Settings/QrIcon"), color: theme.contextMenu.primaryColor)
-                    }, action: { [weak self] _, f in
-                        f(.dismissWithoutContent)
-                        
-                        guard let self else {
-                            return
-                        }
-                        
-                        if let invite = invite {
+                items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextGetQRCode, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Settings/QrIcon"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak self] _, f in
+                    f(.dismissWithoutContent)
+                    
+                    guard let self else {
+                        return
+                    }
+                    
+                    if let invite {
+                        if case let .groupOrChannel(peerId) = self.mode {
                             let _ = (context.account.postbox.loadedPeerWithId(peerId)
                             |> deliverOnMainQueue).start(next: { [weak self] peer in
                                 guard let strongSelf = self else {
@@ -404,12 +423,17 @@ public final class InviteLinkInviteController: ViewController {
                                     isGroup = true
                                 }
                                 let updatedPresentationData = (strongSelf.presentationData, strongSelf.presentationDataPromise.get())
-                                let controller = QrCodeScreen(context: context, updatedPresentationData: updatedPresentationData, subject: .invite(invite: invite, isGroup: isGroup))
+                                let controller = QrCodeScreen(context: context, updatedPresentationData: updatedPresentationData, subject: .invite(invite: invite, type: isGroup ? .group : .channel))
                                 strongSelf.controller?.present(controller, in: .window(.root))
                             })
+                        } else if case .groupCall = self.mode {
+                            let controller = QrCodeScreen(context: context, updatedPresentationData: (self.presentationData, self.presentationDataPromise.get()), subject: .invite(invite: invite, type: .channel))
+                            self.controller?.present(controller, in: .window(.root))
                         }
-                    })))
-                    
+                    }
+                })))
+
+            if case let .groupOrChannel(peerId) = self.mode {
                     items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextRevoke, textColor: .destructive, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
                     }, action: { [ weak self] _, f in
@@ -454,7 +478,45 @@ public final class InviteLinkInviteController: ViewController {
                             self?.controller?.present(controller, in: .window(.root))
                         })
                     })))
+                } else if case let .groupCall(groupCall) = self.mode, groupCall.canRevoke {
+                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextRevoke, textColor: .destructive, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
+                    }, action: { [ weak self] _, f in
+                        f(.dismissWithoutContent)
+                    
+                        guard let self else {
+                            return
+                        }
+                        
+                        let controller = ActionSheetController(presentationData: presentationData)
+                        let dismissAction: () -> Void = { [weak controller] in
+                            controller?.dismissAnimated()
+                        }
+                        //TODO:localize
+                        controller.setItemGroups([
+                            ActionSheetItemGroup(items: [
+                                ActionSheetTextItem(title: "Revoke Link"),
+                                ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: { [weak self] in
+                                    dismissAction()
 
+                                    guard let self else {
+                                        return
+                                    }
+                                    
+                                    if let inviteLink = invite?.link {
+                                        let _ = (context.engine.calls.revokeConferenceInviteLink(reference: .id(id: groupCall.callId, accessHash: groupCall.accessHash), link: inviteLink) |> deliverOnMainQueue).start(next: { result in
+                                            mainInvitePromise.set(.link(link: result.listenerLink, title: nil, isPermanent: true, requestApproval: false, isRevoked: false, adminId: context.account.peerId, date: 0, startDate: nil, expireDate: nil, usageLimit: nil, count: nil, requestedCount: nil, pricing: nil))
+                                        })
+
+                                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                        self.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkRevoked(text: presentationData.strings.InviteLink_InviteLinkRevoked), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                                    }
+                                })
+                            ]),
+                            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                        ])
+                        self.controller?.present(controller, in: .window(.root))
+                    })))
                 }
                 
                 let contextController = ContextController(presentationData: presentationData, source: .reference(InviteLinkContextReferenceContentSource(controller: controller, sourceNode: node)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
@@ -597,15 +659,16 @@ public final class InviteLinkInviteController: ViewController {
                         strongSelf.enqueueTransition(transition)
                     }
                 })
-            case let .groupCall(link, isRecentlyCreated):
-                //TODO:release
-                let tempInfo: Signal<Void, NoError> = .single(Void()) |> delay(0.0, queue: .mainQueue())
-                
+            case let .groupCall(groupCall):
+                // A workaround to skip the first run of the event cycle
+                let delayOfZero = Signal<Void, NoError>.single(()) |> delay(0.0, queue: .mainQueue())
+
                 self.disposable = (combineLatest(queue: .mainQueue(),
                     self.presentationDataPromise.get(),
-                    tempInfo
+                    mainInvitePromise.get(),
+                    delayOfZero
                 )
-                |> deliverOnMainQueue).start(next: { [weak self] presentationData, _ in
+                |> deliverOnMainQueue).start(next: { [weak self] presentationData, mainInvite, _ in
                     guard let self else {
                         return
                     }
@@ -615,9 +678,9 @@ public final class InviteLinkInviteController: ViewController {
                     let helpText: String = "Anyone on Telegram can join your call by following the link below."
                     entries.append(.header(title: "Call Link", text: helpText))
                     
-                    let mainInvite: ExportedInvitation = .link(link: link, title: nil, isPermanent: true, requestApproval: false, isRevoked: false, adminId: self.context.account.peerId, date: 0, startDate: nil, expireDate: nil, usageLimit: nil, count: nil, requestedCount: nil, pricing: nil)
+                    let mainInvite: ExportedInvitation = .link(link: mainInvite?.link ?? "", title: nil, isPermanent: true, requestApproval: false, isRevoked: false, adminId: self.context.account.peerId, date: 0, startDate: nil, expireDate: nil, usageLimit: nil, count: nil, requestedCount: nil, pricing: nil)
                     
-                    entries.append(.mainLink(invitation: mainInvite, isCall: true, isRecentlyCreated: isRecentlyCreated))
+                    entries.append(.mainLink(invitation: mainInvite, isCall: true, isRecentlyCreated: groupCall.isRecentlyCreated))
                        
                     let previousEntries = previousEntries.swap(entries)
                     
@@ -675,8 +738,8 @@ public final class InviteLinkInviteController: ViewController {
             self.presentationData = presentationData
             self.presentationDataPromise.set(.single(presentationData))
             
-            self.historyBackgroundContentNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
-            self.headerBackgroundNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
+            self.historyBackgroundContentNode.backgroundColor = getBackgroundColor(theme: self.presentationData.theme)
+            self.headerBackgroundNode.backgroundColor = getBackgroundColor(theme: self.presentationData.theme)
             self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.InviteLink_InviteLink, font: Font.bold(17.0), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
             
             self.doneButtonIconNode.image = generateCloseButtonImage(backgroundColor: self.presentationData.theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.05), foregroundColor: self.presentationData.theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.4))!

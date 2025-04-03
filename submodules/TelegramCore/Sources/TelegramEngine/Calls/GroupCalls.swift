@@ -96,6 +96,7 @@ public struct GroupCallInfo: Equatable {
     public var isVideoEnabled: Bool
     public var unmutedVideoLimit: Int
     public var isStream: Bool
+    public var isCreator: Bool
     
     public init(
         id: Int64,
@@ -110,7 +111,8 @@ public struct GroupCallInfo: Equatable {
         defaultParticipantsAreMuted: GroupCallParticipantsContext.State.DefaultParticipantsAreMuted?,
         isVideoEnabled: Bool,
         unmutedVideoLimit: Int,
-        isStream: Bool
+        isStream: Bool,
+        isCreator: Bool
     ) {
         self.id = id
         self.accessHash = accessHash
@@ -125,6 +127,7 @@ public struct GroupCallInfo: Equatable {
         self.isVideoEnabled = isVideoEnabled
         self.unmutedVideoLimit = unmutedVideoLimit
         self.isStream = isStream
+        self.isCreator = isCreator
     }
 }
 
@@ -150,7 +153,8 @@ extension GroupCallInfo {
                 defaultParticipantsAreMuted: GroupCallParticipantsContext.State.DefaultParticipantsAreMuted(isMuted: (flags & (1 << 1)) != 0, canChange: (flags & (1 << 2)) != 0),
                 isVideoEnabled: (flags & (1 << 9)) != 0,
                 unmutedVideoLimit: Int(unmutedVideoLimit),
-                isStream: (flags & (1 << 12)) != 0
+                isStream: (flags & (1 << 12)) != 0,
+                isCreator: (flags & (1 << 15)) != 0
             )
         case .groupCallDiscarded:
             return nil
@@ -454,17 +458,17 @@ public enum GetGroupCallParticipantsError {
 func _internal_getGroupCallParticipants(account: Account, reference: InternalGroupCallReference, offset: String, ssrcs: [UInt32], limit: Int32, sortAscending: Bool?) -> Signal<GroupCallParticipantsContext.State, GetGroupCallParticipantsError> {
     let accountPeerId = account.peerId
     
-    let sortAscendingValue: Signal<(Bool, Int32?, Bool, GroupCallParticipantsContext.State.DefaultParticipantsAreMuted?, Bool, Int, Bool), GetGroupCallParticipantsError>
+    let sortAscendingValue: Signal<(Bool, Int32?, Bool, GroupCallParticipantsContext.State.DefaultParticipantsAreMuted?, Bool, Int, Bool, Bool), GetGroupCallParticipantsError>
     
     sortAscendingValue = _internal_getCurrentGroupCall(account: account, reference: reference)
     |> mapError { _ -> GetGroupCallParticipantsError in
         return .generic
     }
-    |> mapToSignal { result -> Signal<(Bool, Int32?, Bool, GroupCallParticipantsContext.State.DefaultParticipantsAreMuted?, Bool, Int, Bool), GetGroupCallParticipantsError> in
+    |> mapToSignal { result -> Signal<(Bool, Int32?, Bool, GroupCallParticipantsContext.State.DefaultParticipantsAreMuted?, Bool, Int, Bool, Bool), GetGroupCallParticipantsError> in
         guard let result = result else {
             return .fail(.generic)
         }
-        return .single((sortAscending ?? result.info.sortAscending, result.info.scheduleTimestamp, result.info.subscribedToScheduled, result.info.defaultParticipantsAreMuted, result.info.isVideoEnabled, result.info.unmutedVideoLimit, result.info.isStream))
+        return .single((sortAscending ?? result.info.sortAscending, result.info.scheduleTimestamp, result.info.subscribedToScheduled, result.info.defaultParticipantsAreMuted, result.info.isVideoEnabled, result.info.unmutedVideoLimit, result.info.isStream, result.info.isCreator))
     }
 
     return combineLatest(
@@ -481,7 +485,7 @@ func _internal_getGroupCallParticipants(account: Account, reference: InternalGro
             let version: Int32
             let nextParticipantsFetchOffset: String?
             
-            let (sortAscendingValue, scheduleTimestamp, subscribedToScheduled, defaultParticipantsAreMuted, isVideoEnabled, unmutedVideoLimit, isStream) = sortAscendingAndScheduleTimestamp
+            let (sortAscendingValue, scheduleTimestamp, subscribedToScheduled, defaultParticipantsAreMuted, isVideoEnabled, unmutedVideoLimit, isStream, isCreator) = sortAscendingAndScheduleTimestamp
             
             switch result {
             case let .groupParticipants(count, participants, nextOffset, chats, users, apiVersion):
@@ -506,7 +510,7 @@ func _internal_getGroupCallParticipants(account: Account, reference: InternalGro
                 participants: parsedParticipants,
                 nextParticipantsFetchOffset: nextParticipantsFetchOffset,
                 adminIds: Set(),
-                isCreator: false,
+                isCreator: isCreator,
                 defaultParticipantsAreMuted: defaultParticipantsAreMuted ?? GroupCallParticipantsContext.State.DefaultParticipantsAreMuted(isMuted: false, canChange: false),
                 sortAscending: sortAscendingValue,
                 recordingStartTimestamp: nil,
@@ -2955,6 +2959,29 @@ func _internal_createConferenceCall(postbox: Postbox, network: Network, accountP
             |> mapError { _ -> CreateConferenceCallError in
             }
             |> switchToLatest
+        }
+    }
+}
+
+public enum RevokeConferenceInviteLinkError {
+    case generic
+}
+
+func _internal_revokeConferenceInviteLink(account: Account, reference: InternalGroupCallReference, link: String) -> Signal<GroupCallInviteLinks, RevokeConferenceInviteLinkError> {
+    return account.network.request(Api.functions.phone.toggleGroupCallSettings(flags: 1 << 1, call: reference.apiInputGroupCall, joinMuted: .boolFalse))
+    |> mapError { _ -> RevokeConferenceInviteLinkError in
+        return .generic
+    }
+    |> mapToSignal { result -> Signal<GroupCallInviteLinks, RevokeConferenceInviteLinkError> in
+        account.stateManager.addUpdates(result)
+
+        return _internal_groupCallInviteLinks(account: account, reference: reference, isConference: true)
+        |> castError(RevokeConferenceInviteLinkError.self)
+        |> mapToSignal { result -> Signal<GroupCallInviteLinks, RevokeConferenceInviteLinkError> in
+            guard let result = result else {
+                return .fail(.generic)
+            }
+            return .single(result)
         }
     }
 }

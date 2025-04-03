@@ -62,14 +62,14 @@ private extension EngineCallList.Item {
 
 final class CallListNodeInteraction {
     let setMessageIdWithRevealedOptions: (EngineMessage.Id?, EngineMessage.Id?) -> Void
-    let call: (EnginePeer.Id, Bool) -> Void
+    let call: (EngineMessage) -> Void
     let openInfo: (EnginePeer.Id, [EngineMessage]) -> Void
     let delete: ([EngineMessage.Id]) -> Void
     let updateShowCallsTab: (Bool) -> Void
     let openGroupCall: (EnginePeer.Id) -> Void
     let createGroupCall: () -> Void
     
-    init(setMessageIdWithRevealedOptions: @escaping (EngineMessage.Id?, EngineMessage.Id?) -> Void, call: @escaping (EnginePeer.Id, Bool) -> Void, openInfo: @escaping (EnginePeer.Id, [EngineMessage]) -> Void, delete: @escaping ([EngineMessage.Id]) -> Void, updateShowCallsTab: @escaping (Bool) -> Void, openGroupCall: @escaping (EnginePeer.Id) -> Void, createGroupCall: @escaping () -> Void) {
+    init(setMessageIdWithRevealedOptions: @escaping (EngineMessage.Id?, EngineMessage.Id?) -> Void, call: @escaping (EngineMessage) -> Void, openInfo: @escaping (EnginePeer.Id, [EngineMessage]) -> Void, delete: @escaping ([EngineMessage.Id]) -> Void, updateShowCallsTab: @escaping (Bool) -> Void, openGroupCall: @escaping (EnginePeer.Id) -> Void, createGroupCall: @escaping () -> Void) {
         self.setMessageIdWithRevealedOptions = setMessageIdWithRevealedOptions
         self.call = call
         self.openInfo = openInfo
@@ -222,7 +222,7 @@ final class CallListControllerNode: ASDisplayNode {
     private let emptyButtonIconNode: ASImageNode
     private let emptyButtonTextNode: ImmediateTextNode
     
-    private let call: (EnginePeer.Id, Bool) -> Void
+    private let call: (EngineMessage) -> Void
     private let joinGroupCall: (EnginePeer.Id, EngineGroupCallDescription) -> Void
     private let createGroupCall: () -> Void
     private let openInfo: (EnginePeer.Id, [EngineMessage]) -> Void
@@ -234,7 +234,7 @@ final class CallListControllerNode: ASDisplayNode {
     
     private var previousContentOffset: ListViewVisibleContentOffset?
     
-    init(controller: CallListController, context: AccountContext, mode: CallListControllerMode, presentationData: PresentationData, call: @escaping (EnginePeer.Id, Bool) -> Void, joinGroupCall: @escaping (EnginePeer.Id, EngineGroupCallDescription) -> Void, openInfo: @escaping (EnginePeer.Id, [EngineMessage]) -> Void, emptyStateUpdated: @escaping (Bool) -> Void, createGroupCall: @escaping () -> Void) {
+    init(controller: CallListController, context: AccountContext, mode: CallListControllerMode, presentationData: PresentationData, call: @escaping (EngineMessage) -> Void, joinGroupCall: @escaping (EnginePeer.Id, EngineGroupCallDescription) -> Void, openInfo: @escaping (EnginePeer.Id, [EngineMessage]) -> Void, emptyStateUpdated: @escaping (Bool) -> Void, createGroupCall: @escaping () -> Void) {
         self.controller = controller
         self.context = context
         self.mode = mode
@@ -333,8 +333,8 @@ final class CallListControllerNode: ASDisplayNode {
                     }
                 }
             }
-        }, call: { [weak self] peerId, isVideo in
-            self?.call(peerId, isVideo)
+        }, call: { [weak self] message in
+            self?.call(message)
         }, openInfo: { [weak self] peerId, messages in
             self?.openInfo(peerId, messages)
         }, delete: { [weak self] messageIds in
@@ -519,10 +519,7 @@ final class CallListControllerNode: ASDisplayNode {
 
         let canCreateGroupCall = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.App())
         |> map { configuration -> Bool in
-            var isConferencePossible = false
-            if context.sharedContext.immediateExperimentalUISettings.conferenceDebug {
-                isConferencePossible = true
-            }
+            var isConferencePossible = true
             if let data = configuration.data, let value = data["ios_enable_conference"] as? Double {
                 isConferencePossible = value != 0.0
             }
