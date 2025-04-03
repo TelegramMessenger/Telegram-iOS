@@ -250,7 +250,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     var botStart: ChatControllerInitialBotStart?
     var attachBotStart: ChatControllerInitialAttachBotStart?
     var botAppStart: ChatControllerInitialBotAppStart?
-    let mode: ChatControllerPresentationMode
+    var mode: ChatControllerPresentationMode
     
     let peerDisposable = MetaDisposable()
     let titleDisposable = MetaDisposable()
@@ -575,7 +575,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     var scheduledScrollToMessageId: (MessageId, NavigateToMessageParams)?
     
     public var purposefulAction: (() -> Void)?
-    public var dismissPreviewing: (() -> Void)?
+    public var dismissPreviewing: ((Bool) -> (() -> Void))?
     
     var updatedClosedPinnedMessageId: ((MessageId) -> Void)?
     var requestedUnpinAllMessages: ((Int, MessageId) -> Void)?
@@ -891,6 +891,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         let controllerInteraction = ChatControllerInteraction(openMessage: { [weak self] message, params in
             guard let self, self.isNodeLoaded, let message = self.chatDisplayNode.historyNode.messageInCurrentHistoryView(message.id) else {
                 return false
+            }
+            
+            if let contextController = self.currentContextController {
+                self.present(contextController, in: .window(.root))
+                Queue.mainQueue().after(0.15) {
+                    contextController.dismiss(result: .dismissWithoutContent, completion: nil)
+                }
             }
             
             let mode = params.mode
@@ -1360,7 +1367,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 guard let self else {
                     return
                 }
-                self.chatDisplayNode.historyNode.view.superview?.insertSubview(view, aboveSubview: self.chatDisplayNode.historyNode.view)
+                if let contextController = self.currentContextController {
+                    contextController.view.addSubview(view)
+                } else {
+                    self.chatDisplayNode.historyNode.view.superview?.insertSubview(view, aboveSubview: self.chatDisplayNode.historyNode.view)
+                }
             }, openUrl: { [weak self] url in
                 self?.openUrl(url, concealed: false, skipConcealedAlert: isLocation, message: nil)
             }, openPeer: { [weak self] peer, navigation in
@@ -4850,11 +4861,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             self.playShakeAnimation()
-        }, displayQuickShare: { [weak self] node, gesture in
+        }, displayQuickShare: { [weak self] messageId, node, gesture in
             guard let self else {
                 return
             }
-            self.displayQuickShare(node: node, gesture: gesture)
+            self.displayQuickShare(id: messageId, node: node, gesture: gesture)
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: self.stickerSettings, presentationContext: ChatPresentationContext(context: context, backgroundNode: self.chatBackgroundNode))
         controllerInteraction.enableFullTranslucency = context.sharedContext.energyUsageSettings.fullTranslucency
         
@@ -7458,9 +7469,63 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     public func updatePresentationMode(_ mode: ChatControllerPresentationMode) {
+        self.mode = mode
         self.updateChatPresentationInterfaceState(animated: false, interactive: false, {
             return $0.updatedMode(mode)
         })
+    }
+    
+    func animateFromPreviewing(transition: ContainedViewLayoutTransition = .animated(duration: 0.4, curve: .spring)) {
+        guard let navigationController = self.effectiveNavigationController else {
+            return
+        }
+        self.mode = .standard(.default)
+        let completion = self.dismissPreviewing?(true)
+        
+        let initialLayout = self.validLayout
+        let initialFrame = self.view.convert(self.view.bounds, to: navigationController.view)
+                                                
+        navigationController.pushViewController(self, animated: false)
+        
+        let updatedLayout = self.validLayout
+        let updatedFrame = self.view.frame
+        
+        if let initialLayout, let updatedLayout, transition.isAnimated {
+            let initialView = self.view.superview
+            navigationController.view.addSubview(self.view)
+            
+            self.view.clipsToBounds = true
+            self.view.frame = initialFrame
+            self.containerLayoutUpdated(initialLayout, transition: .immediate)
+            self.containerLayoutUpdated(updatedLayout, transition: transition)
+            
+            self.view.layer.animate(from: 14.0, to: updatedLayout.deviceMetrics.screenCornerRadius, keyPath: "cornerRadius", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.4)
+            
+            transition.updateFrame(view: self.view, frame: updatedFrame, completion: { _ in
+                initialView?.addSubview(self.view)
+                self.view.clipsToBounds = false
+                
+                completion?()
+            })
+            transition.updateCornerRadius(layer: self.view.layer, cornerRadius: 0.0)
+        }
+        
+        if let navigationBar = self.navigationBar {
+            let nodes = [
+                navigationBar.backButtonNode,
+                navigationBar.backButtonArrow,
+                navigationBar.badgeNode
+            ]
+            for node in nodes {
+                node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            }
+        }
+        
+        self.canReadHistory.set(true)
+        
+        self.updateChatPresentationInterfaceState(transition: transition, interactive: false) { state in
+            return state.updatedMode(self.mode)
+        }
     }
     
     var chatDisplayNode: ChatControllerNode {

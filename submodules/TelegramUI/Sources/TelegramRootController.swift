@@ -327,7 +327,8 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                     return CameraScreenImpl.TransitionIn(
                         sourceView: sourceView,
                         sourceRect: $0.sourceRect,
-                        sourceCornerRadius: $0.sourceCornerRadius
+                        sourceCornerRadius: $0.sourceCornerRadius,
+                        useFillAnimation: $0.useFillAnimation
                     )
                 } else {
                     return nil
@@ -527,8 +528,12 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         return StoryCameraTransitionInCoordinator(
             animateIn: { [weak cameraController] in
                 if let cameraController {
-                    cameraController.updateTransitionProgress(0.0, transition: .immediate)
-                    cameraController.completeWithTransitionProgress(1.0, velocity: 0.0, dismissing: false)
+                    if transitionIn?.useFillAnimation == true {
+                        cameraController.animateIn()
+                    } else {
+                        cameraController.updateTransitionProgress(0.0, transition: .immediate)
+                        cameraController.completeWithTransitionProgress(1.0, velocity: 0.0, dismissing: false)
+                    }
                 }
             },
             updateTransitionProgress: { [weak cameraController] transitionFraction in

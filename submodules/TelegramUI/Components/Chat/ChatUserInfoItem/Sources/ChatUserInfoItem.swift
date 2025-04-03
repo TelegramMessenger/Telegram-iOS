@@ -289,7 +289,7 @@ public final class ChatUserInfoItemNode: ListViewItemNode, ASGestureRecognizerDe
             backgroundSize.height += verticalInset
             
             let constrainedWidth = params.width - (horizontalInset + horizontalContentInset) * 2.0
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.peer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder), font: Font.semibold(15.0), textColor: primaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: constrainedWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.peer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder) + item.peer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder) + item.peer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder), font: Font.semibold(15.0), textColor: primaryTextColor), backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: constrainedWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             backgroundSize.height += titleLayout.size.height
             backgroundSize.height += verticalSpacing
             
@@ -297,7 +297,7 @@ public final class ChatUserInfoItemNode: ListViewItemNode, ASGestureRecognizerDe
             backgroundSize.height += subtitleLayout.size.height
             backgroundSize.height += verticalSpacing + paragraphSpacing
             
-            let infoConstrainedSize = CGSize(width: constrainedWidth * 0.7, height: CGFloat.greatestFiniteMagnitude)
+            let infoConstrainedSize = CGSize(width: floor(constrainedWidth * 0.7), height: CGFloat.greatestFiniteMagnitude)
             
             var maxTitleWidth: CGFloat = 0.0
             var maxValueWidth: CGFloat = 0.0
@@ -389,7 +389,7 @@ public final class ChatUserInfoItemNode: ListViewItemNode, ASGestureRecognizerDe
                 groupsValueLayoutAndApply = nil
             }
 
-            backgroundSize.width = horizontalContentInset * 2.0 + maxTitleWidth + attributeSpacing + maxValueWidth
+            backgroundSize.width = horizontalContentInset * 2.0 + max(titleLayout.size.width, maxTitleWidth + attributeSpacing + maxValueWidth)
             
             let disclaimerText: NSMutableAttributedString
             if let verification = item.verification {

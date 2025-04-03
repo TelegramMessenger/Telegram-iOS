@@ -1022,7 +1022,7 @@ public protocol ChatController: ViewController {
     var parentController: ViewController? { get set }
     var customNavigationController: NavigationController? { get set }
     
-    var dismissPreviewing: (() -> Void)? { get set }
+    var dismissPreviewing: ((Bool) -> (() -> Void))? { get set }
     var purposefulAction: (() -> Void)? { get set }
     
     var stateUpdated: ((ContainedViewLayoutTransition) -> Void)? { get set }

@@ -645,7 +645,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, attemptedNavigationToPrivateQuote: { _ in
         }, forceUpdateWarpContents: {
         }, playShakeAnimation: {
-        }, displayQuickShare: { _ ,_ in
+        }, displayQuickShare: { _, _ ,_ in
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
         pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(), presentationContext: ChatPresentationContext(context: context, backgroundNode: self.backgroundNode))
         self.controllerInteraction = controllerInteraction

@@ -298,15 +298,17 @@ public final class AvatarNode: ASDisplayNode {
             let peerId: EnginePeer.Id?
             let resourceId: String?
             let clipStyle: AvatarNodeClipStyle
-            
+            let displayDimensions: CGSize
             init(
                 peerId: EnginePeer.Id?,
                 resourceId: String?,
-                clipStyle: AvatarNodeClipStyle
+                clipStyle: AvatarNodeClipStyle,
+                displayDimensions: CGSize
             ) {
                 self.peerId = peerId
                 self.resourceId = resourceId
                 self.clipStyle = clipStyle
+                self.displayDimensions = displayDimensions
             }
         }
         
@@ -661,7 +663,8 @@ public final class AvatarNode: ASDisplayNode {
             let params = Params(
                 peerId: peer?.id,
                 resourceId: smallProfileImage?.resource.id.stringRepresentation,
-                clipStyle: clipStyle
+                clipStyle: clipStyle,
+                displayDimensions: displayDimensions
             )
             if self.params == params {
                 return
