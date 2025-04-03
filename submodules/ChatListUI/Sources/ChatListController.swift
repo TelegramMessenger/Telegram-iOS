@@ -1502,7 +1502,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             strongSelf.presentInGlobalOverlay(contextController)
                         }
                     } else {
-                        var dismissPreviewingImpl: (() -> Void)?
+                        var dismissPreviewingImpl: ((Bool) -> (() -> Void))?
                         let source: ContextContentSource
                         if let location = location {
                             source = .location(ChatListContextLocationContentSource(controller: strongSelf, location: location))
@@ -1510,8 +1510,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peer.peerId), subject: nil, botStart: nil, mode: .standard(.previewing), params: nil)
                             chatController.customNavigationController = strongSelf.navigationController as? NavigationController
                             chatController.canReadHistory.set(false)
-                            chatController.dismissPreviewing = {
-                                dismissPreviewingImpl?()
+                            chatController.dismissPreviewing = { animateIn in
+                                return dismissPreviewingImpl?(animateIn) ?? {}
                             }
                             source = .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController))
                         }
@@ -1519,8 +1519,19 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         let contextController = ContextController(context: strongSelf.context, presentationData: strongSelf.presentationData, source: source, items: chatContextMenuItems(context: strongSelf.context, peerId: peer.peerId, promoInfo: promoInfo, source: .chatList(filter: strongSelf.chatListDisplayNode.mainContainerNode.currentItemNode.chatListFilter), chatListController: strongSelf, joined: joined) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
                         strongSelf.presentInGlobalOverlay(contextController)
                         
-                        dismissPreviewingImpl = { [weak contextController] in
-                            contextController?.dismiss()
+                        dismissPreviewingImpl = { [weak self, weak contextController] animateIn in
+                            if let self, let contextController {
+                                if animateIn {
+                                    contextController.statusBar.statusBarStyle = .Ignore
+                                    self.present(contextController, in: .window(.root))
+                                    return {
+                                        contextController.dismissNow()
+                                    }
+                                } else {
+                                    contextController.dismiss()
+                                }
+                            }
+                            return {}
                         }
                     }
                 case let .forum(pinnedIndex, _, threadId, _, _):
@@ -2794,7 +2805,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     private weak var storyCameraTooltip: TooltipScreen?
-    fileprivate func openStoryCamera(fromList: Bool) {
+    fileprivate func openStoryCamera(fromList: Bool, gesturePullOffset: CGFloat? = nil) {
         guard !self.context.isFrozen else {
             let controller = self.context.sharedContext.makeAccountFreezeInfoScreen(context: self.context)
             self.push(controller)
@@ -2920,8 +2931,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 if let (transitionView, _) = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
                     cameraTransitionIn = StoryCameraTransitionIn(
                         sourceView: transitionView,
-                        sourceRect: transitionView.bounds,
-                        sourceCornerRadius: transitionView.bounds.height * 0.5
+                        sourceRect: gesturePullOffset.flatMap({ transitionView.bounds.offsetBy(dx: -$0, dy: 0) }) ?? transitionView.bounds,
+                        sourceCornerRadius: transitionView.bounds.height * 0.5,
+                        useFillAnimation: gesturePullOffset != nil
                     )
                 }
             } else {
@@ -2929,7 +2941,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     cameraTransitionIn = StoryCameraTransitionIn(
                         sourceView: rightButtonView,
                         sourceRect: rightButtonView.bounds,
-                        sourceCornerRadius: rightButtonView.bounds.height * 0.5
+                        sourceCornerRadius: rightButtonView.bounds.height * 0.5,
+                        useFillAnimation: false
                     )
                 }
             }
@@ -2983,6 +2996,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
         
         if case .chatList = self.location, let componentView = self.chatListHeaderView() {
+            componentView.storyComposeAction = { [weak self] offset in
+                guard let self else {
+                    return
+                }
+                self.openStoryCamera(fromList: true, gesturePullOffset: offset)
+            }
+            
             componentView.storyPeerAction = { [weak self] peer in
                 guard let self else {
                     return

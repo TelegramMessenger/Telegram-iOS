@@ -380,6 +380,7 @@ public final class StoryPeerListItemComponent: Component {
     public let expandEffectFraction: CGFloat
     public let leftNeighborDistance: CGPoint?
     public let rightNeighborDistance: CGPoint?
+    public let composeContentOffset: CGFloat?
     public let action: (EnginePeer) -> Void
     public let contextGesture: (ContextExtractedContentContainingNode, ContextGesture, EnginePeer) -> Void
     
@@ -399,6 +400,7 @@ public final class StoryPeerListItemComponent: Component {
         expandEffectFraction: CGFloat,
         leftNeighborDistance: CGPoint?,
         rightNeighborDistance: CGPoint?,
+        composeContentOffset: CGFloat?,
         action: @escaping (EnginePeer) -> Void,
         contextGesture: @escaping (ContextExtractedContentContainingNode, ContextGesture, EnginePeer) -> Void
     ) {
@@ -417,6 +419,7 @@ public final class StoryPeerListItemComponent: Component {
         self.expandEffectFraction = expandEffectFraction
         self.leftNeighborDistance = leftNeighborDistance
         self.rightNeighborDistance = rightNeighborDistance
+        self.composeContentOffset = composeContentOffset
         self.action = action
         self.contextGesture = contextGesture
     }
@@ -467,6 +470,9 @@ public final class StoryPeerListItemComponent: Component {
         if lhs.rightNeighborDistance != rhs.rightNeighborDistance {
             return false
         }
+        if lhs.composeContentOffset != rhs.composeContentOffset {
+            return false
+        }
         return true
     }
     
@@ -479,6 +485,7 @@ public final class StoryPeerListItemComponent: Component {
         
         private let button: HighlightTrackingButton
         
+        fileprivate var composeLayer: StoryComposeLayer?
         fileprivate let avatarContent: PortalSourceView
         private let avatarContainer: UIView
         private let avatarBackgroundContainer: UIView
@@ -494,11 +501,10 @@ public final class StoryPeerListItemComponent: Component {
         private let indicatorShapeSeenLayer: SimpleShapeLayer
         private let indicatorShapeUnseenLayer: SimpleShapeLayer
         private let title = ComponentView<Empty>()
+        private let composeTitle = ComponentView<Empty>()
         
         private var component: StoryPeerListItemComponent?
         private weak var componentState: EmptyComponentState?
-        
-        private var demoLoading = false
         
         public override init(frame: CGRect) {
             self.backgroundContainer = UIView()
@@ -959,6 +965,32 @@ public final class StoryPeerListItemComponent: Component {
             self.extractedContainerNode.contentNode.frame = CGRect(origin: CGPoint(), size: size)
             self.extractedContainerNode.contentRect = CGRect(origin: CGPoint(x: self.extractedBackgroundView.frame.minX - 2.0, y: self.extractedBackgroundView.frame.minY), size: CGSize(width: self.extractedBackgroundView.frame.width + 4.0, height: self.extractedBackgroundView.frame.height))
             self.containerNode.frame = CGRect(origin: CGPoint(), size: size)
+            
+            var baseSize: CGFloat = 60.0
+            var effectiveColors = component.unseenCount > 0 ? unseenColors : seenColors
+            if self.avatarAddBadgeView != nil {
+                baseSize = 52.0
+                effectiveColors = [component.theme.list.itemCheckColors.fillColor.cgColor, component.theme.list.itemCheckColors.fillColor.cgColor]
+            }
+            if let composeContentOffset = component.composeContentOffset {
+                let composeLayer: StoryComposeLayer
+                if let current = self.composeLayer {
+                    composeLayer = current
+                } else {
+                    composeLayer = StoryComposeLayer(theme: component.theme, strings: component.strings)
+                    self.composeLayer = composeLayer
+                    self.layer.addSublayer(composeLayer)
+                }
+                                
+                composeLayer.frame = CGRect(origin: CGPoint(x: size.width - 195.0, y: 0.0), size: CGSize(width: 160.0, height: 60.0))
+                composeLayer.updateOffset(composeContentOffset, baseSize: baseSize, colors: effectiveColors, transition: transition)
+            } else if let composeLayer = self.composeLayer {
+                self.composeLayer = nil
+                composeLayer.updateOffset(0.0, baseSize: baseSize, colors: effectiveColors, transition: .easeInOut(duration: 0.2))
+                Queue.mainQueue().after(0.21, {
+                    composeLayer.removeFromSuperlayer()
+                })
+            }
             
             return availableSize
         }

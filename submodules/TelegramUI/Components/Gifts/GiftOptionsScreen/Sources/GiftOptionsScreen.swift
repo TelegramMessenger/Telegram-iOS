@@ -130,8 +130,6 @@ final class GiftOptionsScreenComponent: Component {
         private let premiumTitle = ComponentView<Empty>()
         private let premiumDescription = ComponentView<Empty>()
         private var premiumItems: [AnyHashable: ComponentView<Empty>] = [:]
-        private var inProgressPremiumGift: String?
-        private let purchaseDisposable = MetaDisposable()
         
         private let starsTitle = ComponentView<Empty>()
         private let starsDescription = ComponentView<Empty>()
@@ -251,7 +249,6 @@ final class GiftOptionsScreenComponent: Component {
         
         deinit {
             self.starsStateDisposable?.dispose()
-            self.purchaseDisposable.dispose()
         }
 
         func scrollToTop() {
@@ -262,21 +259,7 @@ final class GiftOptionsScreenComponent: Component {
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
             self.updateScrolling(interactive: true, transition: self.nextScrollTransition ?? .immediate)
         }
-        
-        private func dismissAllTooltips(controller: ViewController) {
-            controller.forEachController({ controller in
-                if let controller = controller as? UndoOverlayController {
-                    controller.dismissWithCommitAction()
-                }
-                return true
-            })
-            controller.window?.forEachController({ controller in
-                if let controller = controller as? UndoOverlayController {
-                    controller.dismissWithCommitAction()
-                }
-            })
-        }
-        
+                
         private func updateScrolling(interactive: Bool = false, transition: ComponentTransition) {
             guard let environment = self.environment, let component = self.component else {
                 return
@@ -725,12 +708,8 @@ final class GiftOptionsScreenComponent: Component {
             
             let bottomContentInset: CGFloat = 24.0
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
-            let sectionSpacing: CGFloat = 24.0
             let headerSideInset: CGFloat = 24.0 + environment.safeInsets.left
-            
-            let _ = bottomContentInset
-            let _ = sectionSpacing
-            
+                        
             let premiumConfiguration = PremiumConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
             
             let isPremiumDisabled = premiumConfiguration.isPremiumDisabled || state.disallowedGifts?.contains(.premium) == true
@@ -1056,7 +1035,7 @@ final class GiftOptionsScreenComponent: Component {
                                                     color: .purple
                                                 )
                                             },
-                                            isLoading: self.inProgressPremiumGift == product.id
+                                            isLoading: false
                                         )
                                     ),
                                     effectAlignment: .center,

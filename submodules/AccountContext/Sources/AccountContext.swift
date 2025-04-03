@@ -724,15 +724,18 @@ public struct StoryCameraTransitionIn {
     public weak var sourceView: UIView?
     public let sourceRect: CGRect
     public let sourceCornerRadius: CGFloat
+    public let useFillAnimation: Bool
     
     public init(
         sourceView: UIView,
         sourceRect: CGRect,
-        sourceCornerRadius: CGFloat
+        sourceCornerRadius: CGFloat,
+        useFillAnimation: Bool
     ) {
         self.sourceView = sourceView
         self.sourceRect = sourceRect
         self.sourceCornerRadius = sourceCornerRadius
+        self.useFillAnimation = useFillAnimation
     }
 }
 

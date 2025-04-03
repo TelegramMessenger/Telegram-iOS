@@ -1012,6 +1012,9 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                             updatedShareButtonNode.pressed = { [weak strongSelf] in
                                 strongSelf?.shareButtonPressed()
                             }
+                            updatedShareButtonNode.longPressAction = { [weak strongSelf] node, gesture in
+                                strongSelf?.openQuickShare(node: node, gesture: gesture)
+                            }
                         }
                         let buttonSize = updatedShareButtonNode.update(presentationData: item.presentationData, controllerInteraction: item.controllerInteraction, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account)
                         let shareButtonFrame = CGRect(origin: CGPoint(x: baseShareButtonFrame.minX, y: baseShareButtonFrame.maxY - buttonSize.height), size: buttonSize)
@@ -1543,6 +1546,12 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
             } else {
                 item.controllerInteraction.openMessageShareMenu(item.message.id)
             }
+        }
+    }
+    
+    private func openQuickShare(node: ASDisplayNode, gesture: ContextGesture) {
+        if let item = self.item {
+            item.controllerInteraction.displayQuickShare(item.message.id, node, gesture)
         }
     }
     

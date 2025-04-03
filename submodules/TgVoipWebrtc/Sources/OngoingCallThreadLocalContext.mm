@@ -2371,7 +2371,7 @@ private:
     enableNoiseSuppression:(bool)enableNoiseSuppression
     disableAudioInput:(bool)disableAudioInput
     enableSystemMute:(bool)enableSystemMute
-    preferX264:(bool)preferX264
+                         prioritizeVP8:(bool)prioritizeVP8
     logPath:(NSString * _Nonnull)logPath
 statsLogPath:(NSString * _Nonnull)statsLogPath
 onMutedSpeechActivityDetected:(void (^ _Nullable)(bool))onMutedSpeechActivityDetected
@@ -2382,8 +2382,6 @@ encryptDecrypt:(NSData * _Nullable (^ _Nullable)(NSData * _Nonnull, bool))encryp
     self = [super init];
     if (self != nil) {
         _queue = queue;
-        
-        tgcalls::PlatformInterface::SharedInstance()->preferX264 = preferX264;
 
         _sinks = [[NSMutableDictionary alloc] init];
         
@@ -2436,6 +2434,9 @@ encryptDecrypt:(NSData * _Nullable (^ _Nullable)(NSData * _Nonnull, bool))encryp
 #endif
         
         std::vector<tgcalls::VideoCodecName> videoCodecPreferences;
+        if (prioritizeVP8) {
+            videoCodecPreferences.push_back(tgcalls::VideoCodecName::VP8);
+        }
 
         int minOutgoingVideoBitrateKbit = 500;
         bool disableOutgoingAudioProcessing = false;

@@ -550,7 +550,7 @@ private final class ScreencastInProcessIPCContext: ScreencastIPCContext {
                     enableNoiseSuppression: false,
                     disableAudioInput: true,
                     enableSystemMute: false,
-                    preferX264: false,
+                    prioritizeVP8: false,
                     logPath: "",
                     onMutedSpeechActivityDetected: { _ in },
                     isConference: self.isConference,
@@ -2115,6 +2115,16 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         // Prevent non-encrypted conference calls
                         encryptionContext = OngoingGroupCallEncryptionContextImpl(e2eCall: Atomic(value: ConferenceCallE2EContext.ContextStateHolder()))
                     }
+                    
+                    var prioritizeVP8 = false
+                    #if DEBUG
+                    if "".isEmpty {
+                        prioritizeVP8 = true
+                    }
+                    #endif
+                    if let data = self.accountContext.currentAppConfiguration.with({ $0 }).data, let value = data["ios_calls_prioritize_vp8"] as? Double {
+                        prioritizeVP8 = value != 0.0
+                    }
 
                     genericCallContext = .call(OngoingGroupCallContext(audioSessionActive: contextAudioSessionActive, video: self.videoCapturer, requestMediaChannelDescriptions: { [weak self] ssrcs, completion in
                         let disposable = MetaDisposable()
@@ -2134,7 +2144,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 self.requestCall(movingFromBroadcastToRtc: false)
                             }
                         }
-                    }, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, videoContentType: self.isVideoEnabled ? .generic : .none, enableNoiseSuppression: false, disableAudioInput: self.isStream, enableSystemMute: self.accountContext.sharedContext.immediateExperimentalUISettings.experimentalCallMute, preferX264: self.accountContext.sharedContext.immediateExperimentalUISettings.preferredVideoCodec == "H264", logPath: allocateCallLogPath(account: self.account), onMutedSpeechActivityDetected: { [weak self] value in
+                    }, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, videoContentType: self.isVideoEnabled ? .generic : .none, enableNoiseSuppression: false, disableAudioInput: self.isStream, enableSystemMute: self.accountContext.sharedContext.immediateExperimentalUISettings.experimentalCallMute, prioritizeVP8: prioritizeVP8, logPath: allocateCallLogPath(account: self.account), onMutedSpeechActivityDetected: { [weak self] value in
                         Queue.mainQueue().async {
                             guard let self else {
                                 return
@@ -3977,13 +3987,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             
             return true
         }
-    }
-    
-    func setConferenceInvitedPeers(_ invitedPeers: [(id: PeerId, isVideo: Bool)]) {
-        //TODO:release
-        /*self.invitedPeersValue = peerIds.map {
-            PresentationGroupCallInvitedPeer(id: $0, state: .requesting)
-        }*/
     }
     
     public func removedPeer(_ peerId: PeerId) {

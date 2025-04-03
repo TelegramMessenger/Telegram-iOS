@@ -418,7 +418,7 @@ extension ChatControllerImpl {
                                 }
                             }
                             
-                            strongSelf.dismissPreviewing?()
+                            let _ = strongSelf.dismissPreviewing?(false)
                         }
                     }))
                 case .replyThread:

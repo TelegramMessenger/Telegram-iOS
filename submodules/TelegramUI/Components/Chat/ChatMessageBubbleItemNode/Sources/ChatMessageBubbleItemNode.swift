@@ -5804,7 +5804,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                                                
     private func openQuickShare(node: ASDisplayNode, gesture: ContextGesture) {
         if let item = self.item {
-            item.controllerInteraction.displayQuickShare(node, gesture)
+            item.controllerInteraction.displayQuickShare(item.message.id, node, gesture)
         }
     }
     
