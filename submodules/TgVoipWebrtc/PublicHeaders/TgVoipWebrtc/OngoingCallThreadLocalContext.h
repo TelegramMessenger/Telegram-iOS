@@ -449,7 +449,7 @@ typedef NS_ENUM(int32_t, OngoingGroupCallRequestedVideoQuality) {
     enableNoiseSuppression:(bool)enableNoiseSuppression
     disableAudioInput:(bool)disableAudioInput
     enableSystemMute:(bool)enableSystemMute
-    preferX264:(bool)preferX264
+    prioritizeVP8:(bool)prioritizeVP8
     logPath:(NSString * _Nonnull)logPath
 statsLogPath:(NSString * _Nonnull)statsLogPath
 onMutedSpeechActivityDetected:(void (^ _Nullable)(bool))onMutedSpeechActivityDetected

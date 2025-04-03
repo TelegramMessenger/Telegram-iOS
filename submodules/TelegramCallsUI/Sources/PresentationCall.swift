@@ -1032,7 +1032,6 @@ public final class PresentationCallImpl: PresentationCall {
                     self.conferenceCallImpl = conferenceCall
                     conferenceCall.upgradedConferenceCall = self
                     
-                    conferenceCall.setConferenceInvitedPeers(self.pendingInviteToConferencePeerIds)
                     for (peerId, isVideo) in self.pendingInviteToConferencePeerIds {
                         let _ = conferenceCall.invitePeer(peerId, isVideo: isVideo)
                     }
