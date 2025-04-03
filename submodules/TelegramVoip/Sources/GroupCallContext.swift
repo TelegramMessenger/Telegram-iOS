@@ -751,7 +751,7 @@ public final class OngoingGroupCallContext {
                 statsLogPath: tempStatsLogPath,
                 audioDevice: nil,
                 isConference: isConference,
-                isActiveByDefault: true,
+                isActiveByDefault: audioIsActiveByDefault,
                 encryptDecrypt: encryptionContext.flatMap { encryptionContext in
                     return { data, isEncrypt in
                         if isEncrypt {

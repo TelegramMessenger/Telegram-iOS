@@ -74,8 +74,9 @@ public final class OngoingCallContextPresentationCallVideoView {
 
 public final class OngoingCallVideoCapturer {
     public let impl: OngoingCallThreadLocalContextVideoCapturer
-    
+    public let deviceId: String
     public init(_ deviceId: String = "", keepLandscape: Bool = true) {
+        self.deviceId = deviceId
         self.impl = OngoingCallThreadLocalContextVideoCapturer(deviceId: deviceId, keepLandscape: keepLandscape)
     }
     
