@@ -2117,11 +2117,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     }
                     
                     var prioritizeVP8 = false
-                    #if DEBUG
-                    if "".isEmpty {
-                        prioritizeVP8 = true
-                    }
-                    #endif
                     if let data = self.accountContext.currentAppConfiguration.with({ $0 }).data, let value = data["ios_calls_prioritize_vp8"] as? Double {
                         prioritizeVP8 = value != 0.0
                     }
