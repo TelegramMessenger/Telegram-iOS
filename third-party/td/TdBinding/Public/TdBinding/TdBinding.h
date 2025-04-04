@@ -31,7 +31,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface TdCall : NSObject
 
-+ (nullable instancetype)makeWithKeyPair:(TdKeyPair *)keyPair latestBlock:(NSData *)latestBlock;
++ (nullable instancetype)makeWithKeyPair:(TdKeyPair *)keyPair userId:(int64_t)userId latestBlock:(NSData *)latestBlock;
 
 - (NSArray<NSData *> *)takeOutgoingBroadcastBlocks;
 - (NSData *)emojiState;
@@ -43,7 +43,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (nullable NSData *)generateRemoveParticipantsBlock:(NSArray<NSNumber *> *)participantIds;
 
 - (nullable NSData *)encrypt:(NSData *)message;
-- (nullable NSData *)decrypt:(NSData *)message;
+- (nullable NSData *)decrypt:(NSData *)message userId:(int64_t)userId;
 
 @end
 

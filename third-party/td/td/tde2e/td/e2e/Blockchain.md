@@ -2,7 +2,7 @@
 
 #TODO
 - version of supported encryption protocol in each participant (should use the lowest one)
-- broadcast packets should be applied only after corresponding key is applied
+- store hash of block in broadcast
 
 ## Overview
 
@@ -45,7 +45,7 @@ The blockchain supports four types of changes:
 
 2. **ChangeSetGroupState**: Updates the group of participants and their permissions
    ```
-   e2e.chain.groupParticipant user_id:long public_key:int256 flags:# add_users:flags.0?true remove_users:flags.1?true = e2e.chain.GroupParticipant;
+   e2e.chain.groupParticipant user_id:long public_key:int256 flags:# add_users:flags.0?true remove_users:flags.1?true version:int = e2e.chain.GroupParticipant;
    e2e.chain.groupState participants:vector<e2e.chain.GroupParticipant> = e2e.chain.GroupState;
    e2e.chain.changeSetGroupState group_state:e2e.chain.GroupState = e2e.chain.Change;
    ```
@@ -68,7 +68,7 @@ Participants in the blockchain have specific permissions:
 - **RemoveUsers**: Can remove existing participants from the blockchain
 
 ```
-e2e.chain.groupParticipant user_id:long public_key:int256 flags:# add_users:flags.0?true remove_users:flags.1?true = e2e.chain.GroupParticipant;
+e2e.chain.groupParticipant user_id:long public_key:int256 flags:# add_users:flags.0?true remove_users:flags.1?true version:int = e2e.chain.GroupParticipant;
 ```
 
 ### Implementation Details
@@ -185,5 +185,51 @@ The client library does not store the entire key-value state. To create a block,
 1. It should be impossible to create a new key if the user is not in the group, even if the key is automatically removed after a state change.
 2. It should be impossible to create a key if a participant has the Add or Remove permissions.
 3. Statement (1) implies that it is impossible to remove yourself from the group.
-# End of Selection
-```
+
+TODO:
++ handle short keys in SetValue
++ dest_user_id and dest_header must be the same size
++ check proto version in call encryption
++ Do I need some permissions to raise others flags -- NO, just Add AND Remove
++ validate group state from received block
++ validate keys
++ verify that generated block will indeed apply -- It is checked but, not explicitly
++ verify creator of network packet (pass user_id into decrypt method. Or even user_id and public key?)
++ sort nonces
++ what if we change nothing in block
++ fail if height overflows
++ CHECK(blockhain.get_height() > height_);
++ turn off the log by default
++ return specific error in get_status
++ optimize hmac
++ remove user_id from packet?
++ encrypt key (simple version)
++ channel_id in encryption
++ user_id instead of public_key in GroupBroadcast ?
++ received_messages_ in CallVerificationChain are not needed for clients
++ turn off signature verification on server
++ fix up magic of block on server
++ remove user_id from payload (we already got it externally)
+
+- ! VERIFY block signature during creation blockchain from block
+it is impossible to do currently using just current block, because we don't know who signe the block
+
+later:
+-+ fix tl constructor?
+- add magic in container's id
+- ttl of chain on server
+
+-------
+
+# Security guidance
+
+There are several we should be really careful about.
+   
+1. Client must apply only blocks received from server. It is especially important for blocks created by the client itself. Sever does extra work to ensure correctness of blocks and that the will be no forks. Forks per se are not a security problem, but they would lead to a broken call
+
+2. Blocks should be sent to the server till it some answer is received. Either it is success, or error. In case of error INVALID_BLOCK__HASH_MISMATCH, new block could be created, but one should be careful about how group state has been changed.
+
+3. Broadcast blocks should also be sent till accepted or declined. Probably it should be allowed to skip older packets.
+
+
+

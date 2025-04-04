@@ -91,7 +91,7 @@ static NSString *hexStringFromData(NSData *data) {
     tde2e_api::call_destroy(_callId);
 }
 
-+ (nullable instancetype)makeWithKeyPair:(TdKeyPair *)keyPair latestBlock:(NSData *)latestBlock {
++ (nullable instancetype)makeWithKeyPair:(TdKeyPair *)keyPair userId:(int64_t)userId latestBlock:(NSData *)latestBlock {
     std::string mappedLatestBlock((uint8_t *)latestBlock.bytes, ((uint8_t *)latestBlock.bytes) + latestBlock.length);
     #if DEBUG
     auto describeResult = tde2e_api::call_describe_block(mappedLatestBlock);
@@ -112,7 +112,7 @@ static NSString *hexStringFromData(NSData *data) {
     }
     #endif
     
-    auto call = tde2e_api::call_create(keyPair.keyId, mappedLatestBlock);
+    auto call = tde2e_api::call_create(userId, keyPair.keyId, mappedLatestBlock);
     if (!call.is_ok()) {
         return nil;
     }
@@ -232,16 +232,16 @@ static NSString *hexStringFromData(NSData *data) {
 
 - (nullable NSData *)encrypt:(NSData *)message {
     std::string mappedMessage((uint8_t *)message.bytes, ((uint8_t *)message.bytes) + message.length);
-    auto result = tde2e_api::call_encrypt(_callId, mappedMessage);
+    auto result = tde2e_api::call_encrypt(_callId, 0, mappedMessage);
     if (!result.is_ok()) {
         return nil;
     }
     return [[NSData alloc] initWithBytes:result.value().data() length:result.value().size()];
 }
 
-- (nullable NSData *)decrypt:(NSData *)message {
+- (nullable NSData *)decrypt:(NSData *)message userId:(int64_t)userId {
     std::string mappedMessage((uint8_t *)message.bytes, ((uint8_t *)message.bytes) + message.length);
-    auto result = tde2e_api::call_decrypt(_callId, mappedMessage);
+    auto result = tde2e_api::call_decrypt(_callId, userId, 0, mappedMessage);
     if (!result.is_ok()) {
         return nil;
     }

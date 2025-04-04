@@ -173,7 +173,7 @@ std::vector<std::string> Mnemonic::generate_verification_words(td::Slice data) {
   static auto bip_words = Mnemonic::normalize_and_split(td::SecureString(bip39_english()));
   CHECK(bip_words.size() == BIP_WORD_COUNT);
 
-  auto hash = MessageEncryption::combine_secrets("MnemonicVerificationWords", data);
+  auto hash = MessageEncryption::hmac_sha512("MnemonicVerificationWords", data);
   CHECK(hash.size() == HASH_SIZE);
 
   std::vector<std::string> verification_words;

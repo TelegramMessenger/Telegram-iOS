@@ -64,15 +64,10 @@ e2e.keyContactByPublicKey public_key:int256 = e2e.Key;
 // TODO: store string instead of e2e.personalOnClient to support forward compatibility
 e2e.valueContactByPublicKey entries:vector<e2e.personalOnClient> = e2e.Value;
 
-//
-//                  Blockchain
-//
+e2e.chain.groupBroadcastNonceCommit#d1512ae7 signature:int512 user_id:int64 chain_height:int32 chain_hash:int256 nonce_hash:int256 = e2e.chain.GroupBroadcast;
+e2e.chain.groupBroadcastNonceReveal#83f4f9d8 signature:int512 user_id:int64 chain_height:int32 chain_hash:int256 nonce:int256 = e2e.chain.GroupBroadcast;
 
-// TODO: this relies on fact that key is one time. It is critical
-e2e.chain.groupBroadcastNonceCommit signature:int512 public_key:int256 chain_height:int32 nonce_hash:int256 = e2e.chain.GroupBroadcast;
-e2e.chain.groupBroadcastNonceReveal signature:int512 public_key:int256 chain_height:int32 nonce:int256 = e2e.chain.GroupBroadcast;
-
-e2e.chain.groupParticipant user_id:long public_key:int256 flags:# add_users:flags.0?true remove_users:flags.1?true = e2e.chain.GroupParticipant;
+e2e.chain.groupParticipant user_id:long public_key:int256 flags:# add_users:flags.0?true remove_users:flags.1?true version:int = e2e.chain.GroupParticipant;
 e2e.chain.groupState participants:vector<e2e.chain.GroupParticipant> external_permissions:int = e2e.chain.GroupState;
 e2e.chain.sharedKey ek:int256 encrypted_shared_key:string dest_user_id:vector<long> dest_header:vector<bytes> = e2e.chain.SharedKey;
 
@@ -84,8 +79,7 @@ e2e.chain.changeSetSharedKey shared_key:e2e.chain.SharedKey = e2e.chain.Change;
 e2e.chain.stateProof flags:# kv_hash:int256 group_state:flags.0?e2e.chain.GroupState shared_key:flags.1?e2e.chain.SharedKey = e2e.chain.StateProof;
 
 // signature is for the same block, but with empty signature
-// TODO: change flags
-e2e.chain.block signature:int512 flags:# prev_block_hash:int256 changes:vector<e2e.chain.Change> height:int state_proof:e2e.chain.StateProof signature_public_key:flags.0?int256 = e2e.chain.Block;
+e2e.chain.block#639a3db6 signature:int512 flags:# prev_block_hash:int256 changes:vector<e2e.chain.Change> height:int state_proof:e2e.chain.StateProof signature_public_key:flags.0?int256 = e2e.chain.Block;
 
 --- functions ---
 

@@ -11,21 +11,33 @@
 namespace tde2e_api {
 
 enum class ErrorCode : int {
-  UnknownError = 1,
-  Any,
-  InvalidInput,
-  InvalidKeyId,
-  InvalidId,
-  InvalidBlock,
-  InvalidBlock_InvalidSignature,
-  InvalidBlock_HashMismatch,
-  InvalidBlock_HeightMismatch,
-  InvalidBlock_InvalidStateProof_Group,
-  InvalidBlock_InvalidStateProof_Secret,
-  InvalidBlock_NoPermissions,
-  InvalidBlock_InvalidGroupState,
-  Decrypt_UnknownEpoch,
-  Encrypt_UnknownEpoch,
+  UnknownError = 100,
+  Any = 101,
+  InvalidInput = 102,
+  InvalidKeyId = 103,
+  InvalidId = 104,
+  InvalidBlock = 200,
+  InvalidBlock_NoChanges = 201,
+  InvalidBlock_InvalidSignature = 202,
+  InvalidBlock_HashMismatch = 203,
+  InvalidBlock_HeightMismatch = 204,
+  InvalidBlock_InvalidStateProof_Group = 205,
+  InvalidBlock_InvalidStateProof_Secret = 206,
+  InvalidBlock_NoPermissions = 207,
+  InvalidBlock_InvalidGroupState = 208,
+  InvalidCallGroupState_NotParticipant = 300,
+  InvalidCallGroupState_WrongUserId = 301,
+  Decrypt_UnknownEpoch = 400,
+  Encrypt_UnknownEpoch = 401,
+  InvalidBroadcast_InFuture = 500,
+  InvalidBroadcast_NotInCommit = 501,
+  InvalidBroadcast_NotInReveal = 502,
+  InvalidBroadcast_UnknownUserId = 503,
+  InvalidBroadcast_AlreadyApplied = 504,
+  InvalidBroadcast_InvalidReveal = 505,
+  InvalidBroadcast_InvalidBlockHash = 506,
+  InvalidCallChannelId = 600,
+  CallFailed = 601
 };
 inline std::string_view error_string(ErrorCode error_code) {
   switch (error_code) {
@@ -41,6 +53,8 @@ inline std::string_view error_string(ErrorCode error_code) {
       return "INVALID_ID";
     case ErrorCode::InvalidBlock:
       return "INVALID_BLOCK";
+    case ErrorCode::InvalidBlock_NoChanges:
+      return "INVALID_BLOCK__NO_CHANGES";
     case ErrorCode::InvalidBlock_InvalidSignature:
       return "INVALID_BLOCK__INVALID_SIGNATURE";
     case ErrorCode::InvalidBlock_HashMismatch:
@@ -55,10 +69,32 @@ inline std::string_view error_string(ErrorCode error_code) {
       return "INVALID_BLOCK__INVALID_GROUP_STATE";
     case ErrorCode::InvalidBlock_NoPermissions:
       return "INVALID_BLOCK__NO_PERMISSIONS";
+    case ErrorCode::InvalidCallGroupState_NotParticipant:
+      return "INVALID_CALL_GROUP_STATE__NOT_PARTICIPANT";
+    case ErrorCode::InvalidCallGroupState_WrongUserId:
+      return "INVALID_CALL_GROUP_STATE__WRONG_USER_ID";
     case ErrorCode::Decrypt_UnknownEpoch:
       return "DECRYPT__UNKNOWN_EPOCH";
     case ErrorCode::Encrypt_UnknownEpoch:
       return "ENCRYPT__UNKNOWN_EPOCH";
+    case ErrorCode::InvalidBroadcast_InFuture:
+      return "INVALID_BROADCAST__IN_FUTURE";
+    case ErrorCode::InvalidBroadcast_NotInCommit:
+      return "INVALID_BROADCAST__NOT_IN_COMMIT";
+    case ErrorCode::InvalidBroadcast_NotInReveal:
+      return "INVALID_BROADCAST__NOT_IN_REVEAL";
+    case ErrorCode::InvalidBroadcast_UnknownUserId:
+      return "INVALID_BROADCAST__UNKNOWN_USER_ID";
+    case ErrorCode::InvalidBroadcast_AlreadyApplied:
+      return "INVALID_BROADCAST__ALREADY_APPLIED";
+    case ErrorCode::InvalidBroadcast_InvalidReveal:
+      return "INVALID_BROADCAST__INVALID_REVEAL";
+    case ErrorCode::InvalidBroadcast_InvalidBlockHash:
+      return "INVALID_BROADCAST__INVALID_BLOCK_HASH";
+    case ErrorCode::CallFailed:
+      return "CALL_FAILED";
+    case ErrorCode::InvalidCallChannelId:
+      return "INVALID_CALL_CHANNEL_ID";
   }
   return "UNKNOWN_ERROR";
 }

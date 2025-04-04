@@ -23,6 +23,31 @@
 
 #include <string>
 #include <utility>
+namespace tde2e_api {
+inline Error to_error(const td::Status &status) {
+  auto error_code = ErrorCode(status.code());
+  if (error_string(error_code) == "UNKNOWN_ERROR") {
+    return Error{ErrorCode::UnknownError, status.message().str()};
+  }
+  return Error{error_code, status.message().str()};
+}
+
+template <class T>
+Result<T> to_result(td::Result<T> &value) {
+  if (value.is_ok()) {
+    return Result<T>(value.move_as_ok());
+  }
+  return Result<T>(to_error(value.error()));
+}
+template <typename T>
+Result<T>::Result(td::Result<T> &&value) : Result(to_result(value)) {
+}
+
+template <typename T>
+Result<T>::Result(td::Status &&status) : Result(to_error(status)) {
+}
+
+}  // namespace tde2e_api
 
 namespace tde2e_core {
 using E = tde2e_api::ErrorCode;

@@ -24,6 +24,7 @@
 #include "td/utils/tl_parsers.h"
 #include "td/utils/tl_storers.h"
 
+#include <algorithm>
 #include <limits>
 #include <memory>
 #include <utility>
@@ -34,24 +35,38 @@ CallVerificationChain::State CallVerificationChain::get_state() const {
   return state_;
 }
 
+template <class F>
+struct LambdaStorer {
+  const F &store_;
+};
+
+template <class F, class StorerT>
+void store(const LambdaStorer<F> &lambda_storer, StorerT &storer) {
+  lambda_storer.store_(storer);
+}
+
+template <class F>
+std::string lambda_serialize(F &&f) {
+  return td::serialize(LambdaStorer<F>{std::forward<F>(f)});
+}
+
 void CallVerificationChain::on_new_main_block(const Blockchain &blockhain) {
   state_ = Commit;
-  CHECK(blockhain.get_height() >= height_);
+  CHECK(blockhain.get_height() > height_);
   height_ = td::narrow_cast<td::int32>(blockhain.get_height());
   last_block_hash_ = blockhain.last_block_hash_;
   verification_state_ = {};
   verification_state_.height = height_;
 
-  verification_words_ = CallVerificationWords{blockhain.last_block_.height_,
-                                              Mnemonic::generate_verification_words(last_block_hash_.as_slice())};
-  auto group_state = *blockhain.state_.group_state_;
+  verification_words_ =
+      CallVerificationWords{height_, Mnemonic::generate_verification_words(last_block_hash_.as_slice())};
+  auto &group_state = *blockhain.state_.group_state_;
   committed_ = {};
   revealed_ = {};
-  received_messages_ = {};
 
   participant_keys_ = {};
   for (auto &participant : group_state.participants) {
-    participant_keys_.emplace(participant.public_key, participant.user_id);
+    participant_keys_.emplace(participant.user_id, participant.public_key);
   }
   CHECK(participant_keys_.size() == group_state.participants.size());
 
@@ -69,20 +84,24 @@ td::Status CallVerificationChain::try_apply_block(td::Slice message) {
   auto kv_broadcast = e2e::e2e_chain_GroupBroadcast::fetch(parser);
   parser.fetch_end();
   TRY_STATUS(parser.get_status());
-  td::Status status;
 
-  td::int32 broadcast_height{-1};
-  downcast_call(*kv_broadcast, td::overloaded([&](auto &broadcast) { broadcast_height = broadcast.chain_height_; }));
+  td::int32 chain_height{-1};
+  downcast_call(*kv_broadcast, td::overloaded([&](auto &broadcast) { chain_height = broadcast.chain_height_; }));
 
-  if (broadcast_height < height_) {
+  if (chain_height < height_) {
     LOG(INFO) << "skip old broadcast " << to_short_string(kv_broadcast);
     // broadcast is too old
     return td::Status::OK();
   }
 
-  if (broadcast_height > height_) {
+  if (chain_height > height_) {
+    if (!delay_allowed_) {
+      return Error(E::InvalidBroadcast_InFuture, PSLICE()
+                                                     << "broadcast_height=" << chain_height << " height=" << height_);
+    }
+
     LOG(INFO) << "delay broadcast " << to_short_string(kv_broadcast);
-    delayed_broadcasts_[broadcast_height].emplace_back(message.str(), std::move(kv_broadcast));
+    delayed_broadcasts_[chain_height].emplace_back(message.str(), std::move(kv_broadcast));
     return td::Status::OK();
   }
 
@@ -90,18 +109,17 @@ td::Status CallVerificationChain::try_apply_block(td::Slice message) {
 }
 std::string CallVerificationChain::to_short_string(e2e::object_ptr<e2e::e2e_chain_GroupBroadcast> &broadcast) {
   td::StringBuilder sb;
-  downcast_call(*broadcast, td::overloaded([&](e2e::e2e_chain_groupBroadcastNonceCommit &commit) { sb << "CommitBroadcast"; },
-                                           [&](e2e::e2e_chain_groupBroadcastNonceReveal &reveal) { sb << "RevealBroadcast"; }));
+  downcast_call(*broadcast,
+                td::overloaded([&](e2e::e2e_chain_groupBroadcastNonceCommit &commit) { sb << "CommitBroadcast"; },
+                               [&](e2e::e2e_chain_groupBroadcastNonceReveal &reveal) { sb << "RevealBroadcast"; }));
   downcast_call(*broadcast, [&](auto &v) {
-    sb << "{height=" << v.chain_height_;
-    auto public_key = PublicKey::from_u256(v.public_key_);
-    auto it = participant_keys_.find(public_key);
+    sb << "{height=" << v.chain_height_ << " user_id=" << v.user_id_;
+    auto it = participant_keys_.find(v.user_id_);
     if (it != participant_keys_.end()) {
-      sb << " user_id=" << it->second;
+      sb << " pk=" << it->second;
     } else {
-      sb << " user_id=?";
+      sb << " pk=?";
     }
-    sb << " " << public_key;
     sb << "}";
   });
   return sb.as_cslice().str();
@@ -110,18 +128,22 @@ std::string CallVerificationChain::to_short_string(e2e::object_ptr<e2e::e2e_chai
 td::Status CallVerificationChain::process_broadcast(std::string message,
                                                     e2e::object_ptr<e2e::e2e_chain_GroupBroadcast> broadcast) {
   td::Status status;
-  downcast_call(
-      *broadcast,
-      td::overloaded([&](e2e::e2e_chain_groupBroadcastNonceCommit &commit) { status = process_broadcast(commit); },
-                     [&](e2e::e2e_chain_groupBroadcastNonceReveal &reveal) { status = process_broadcast(reveal); }));
+  td::UInt256 got_chain_hash{};
+  downcast_call(*broadcast, td::overloaded([&](auto &broadcast) { got_chain_hash = broadcast.chain_hash_; }));
+  if (got_chain_hash != last_block_hash_) {
+    status = Error(E::InvalidBroadcast_InvalidBlockHash);
+  }
   if (status.is_ok()) {
-    received_messages_.push_back(std::move(message));
+    downcast_call(
+        *broadcast,
+        td::overloaded([&](e2e::e2e_chain_groupBroadcastNonceCommit &commit) { status = process_broadcast(commit); },
+                       [&](e2e::e2e_chain_groupBroadcastNonceReveal &reveal) { status = process_broadcast(reveal); }));
   }
 
   if (status.is_error()) {
     LOG(ERROR) << "Failed broadcast\n" << to_short_string(broadcast) << "\n\t" << status;
   } else {
-    LOG(INFO) << "Applied broadcast\n\t" << to_short_string(broadcast) << "\n\t" << *this;
+    LOG(DEBUG) << "Applied broadcast\n\t" << to_short_string(broadcast) << "\n\t" << *this;
   }
   return status;
 }
@@ -132,28 +154,26 @@ CallVerificationState CallVerificationChain::get_verification_state() const {
 CallVerificationWords CallVerificationChain::get_verification_words() const {
   return verification_words_;
 }
-td::Span<std::string> CallVerificationChain::received_messages() const {
-  return received_messages_;
-}
 td::Status CallVerificationChain::process_broadcast(e2e::e2e_chain_groupBroadcastNonceCommit &nonce_commit) {
-  if (nonce_commit.chain_height_ != height_) {
-    return td::Status::Error(PSLICE() << "Invalid height expected=" << height_
-                                      << " received=" << nonce_commit.chain_height_);
-  }
+  CHECK(nonce_commit.chain_height_ == height_);
   if (state_ != Commit) {
-    return td::Status::Error("We are not in commit state");
+    return Error(E::InvalidBroadcast_NotInCommit);
   }
-  auto public_key = PublicKey::from_u256(nonce_commit.public_key_);
-  if (participant_keys_.count(public_key) == 0) {
-    return td::Status::Error("NonceCommit: unknown public key");
+  auto user_id = nonce_commit.user_id_;
+  auto it = participant_keys_.find(user_id);
+  if (it == participant_keys_.end()) {
+    return Error(E::InvalidBroadcast_UnknownUserId);
   }
-  TRY_STATUS(verify_signature(public_key, nonce_commit));
+  auto public_key = it->second;
+  if (!may_skip_signatures_validation_) {
+    TRY_STATUS(verify_signature(public_key, nonce_commit));
+  }
 
-  if (committed_.count(public_key) != 0) {
-    return td::Status::Error("NonceCommit: duplicate commit");
+  if (committed_.count(user_id) != 0) {
+    return Error(E::InvalidBroadcast_AlreadyApplied);
   }
 
-  committed_[public_key] = nonce_commit.nonce_hash_.as_slice().str();
+  committed_[user_id] = nonce_commit.nonce_hash_.as_slice().str();
 
   if (committed_.size() == participant_keys_.size()) {
     state_ = Reveal;
@@ -162,162 +182,237 @@ td::Status CallVerificationChain::process_broadcast(e2e::e2e_chain_groupBroadcas
   return td::Status::OK();
 }
 td::Status CallVerificationChain::process_broadcast(e2e::e2e_chain_groupBroadcastNonceReveal &nonce_reveal) {
-  if (nonce_reveal.chain_height_ != height_) {
-    return td::Status::Error("NonceReveal: Invalid height");
-  }
+  CHECK(nonce_reveal.chain_height_ == height_);
   if (state_ != Reveal) {
-    return td::Status::Error("We are not in reveal state");
+    return Error(E::InvalidBroadcast_NotInReveal);
   }
-  auto public_key = PublicKey::from_u256(nonce_reveal.public_key_);
-  if (participant_keys_.count(public_key) == 0) {
-    return td::Status::Error("NonceReveal: unknown public key");
+  auto user_id = nonce_reveal.user_id_;
+  auto user_id_it = participant_keys_.find(user_id);
+  if (user_id_it == participant_keys_.end()) {
+    return Error(E::InvalidBroadcast_UnknownUserId);
   }
-  TRY_STATUS(verify_signature(public_key, nonce_reveal));
+  auto public_key = user_id_it->second;
+  if (!may_skip_signatures_validation_) {
+    TRY_STATUS(verify_signature(public_key, nonce_reveal));
+  }
 
-  if (revealed_.count(public_key) != 0) {
-    return td::Status::Error("NonceReveal: duplicate reveal");
+  if (revealed_.count(user_id) != 0) {
+    return Error(E::InvalidBroadcast_AlreadyApplied);
   }
 
-  auto it = committed_.find(public_key);
+  auto it = committed_.find(user_id);
   CHECK(it != committed_.end());
   auto expected_nonce_hash = it->second;
   auto received_nonce_hash = td::sha256(nonce_reveal.nonce_.as_slice());
   if (expected_nonce_hash != received_nonce_hash) {
-    return td::Status::Error("NonceReveal: hash(nonce) != nonce_hash");
+    return Error(E::InvalidBroadcast_InvalidReveal);
   }
 
-  revealed_[public_key] = nonce_reveal.nonce_.as_slice().str();
+  revealed_[user_id] = nonce_reveal.nonce_.as_slice().str();
 
   CHECK(!verification_state_.emoji_hash);
   if (revealed_.size() == participant_keys_.size()) {
+    auto nonces = td::transform(revealed_, [](auto &p) { return p.second; });
+    std::sort(nonces.begin(), nonces.end());
+
     std::string full_nonce;
-    for (auto &[key, nonce] : revealed_) {
+    for (auto &nonce : nonces) {
       full_nonce += nonce;
     }
+
     verification_state_.emoji_hash =
-        MessageEncryption::combine_secrets(last_block_hash_.as_slice(), full_nonce).as_slice().str();
+        MessageEncryption::hmac_sha512(full_nonce, last_block_hash_.as_slice()).as_slice().str();
     state_ = End;
   }
   return td::Status::OK();
 }
-CallEncryption::CallEncryption(PrivateKey private_key) : private_key_(std::move(private_key)) {
+CallEncryption::CallEncryption(td::int64 user_id, PrivateKey private_key)
+    : user_id_(user_id), private_key_(std::move(private_key)) {
 }
 td::Status CallEncryption::add_shared_key(td::int32 epoch, td::SecureString key, GroupStateRef group_state) {
-  forget_old_epochs();
-  CHECK(!o_last_epoch_ || *o_last_epoch_ + 1 == epoch);
-  if (o_last_epoch_) {
-    epochs_to_forget_.emplace(td::Timestamp::in(10), *o_last_epoch_);
-  }
-  o_last_epoch_ = epoch;
+  sync();
 
   TRY_RESULT(self, group_state->get_participant(private_key_.to_public_key()));
+  if (self.user_id != user_id_) {
+    // should not happen
+    return td::Status::Error("Wrong user id in state");
+  }
 
-  auto added =
-      encryptor_by_epoch_
-          .emplace(epoch, EpochEncryptor(epoch, self.user_id, std::move(key), std::move(group_state), private_key_))
-          .second;
+  LOG(INFO) << "Add key from epoch: " << epoch;
+  auto added = epochs_.emplace(epoch, EpochInfo(epoch, self.user_id, std::move(key), std::move(group_state))).second;
   CHECK(added);
   return td::Status::OK();
 }
-td::Result<std::string> CallEncryption::decrypt(td::Slice encrypted_data) {
-  forget_old_epochs();
+void CallEncryption::forget_shared_key(td::int32 epoch) {
+  sync();
+  epochs_to_forget_.emplace(td::Timestamp::in(FORGET_EPOCH_DELAY), epoch);
+}
+
+td::Result<std::string> CallEncryption::decrypt(td::int64 user_id, td::int32 channel_id, td::Slice encrypted_data) {
+  sync();
+  if (user_id == user_id_) {
+    return td::Status::Error("Packet is encrypted by us");
+  }
   td::TlParser parser(encrypted_data);
-  auto epoch = parser.fetch_int();
-  TRY_STATUS(parser.get_status());
-  auto it = encryptor_by_epoch_.find(epoch);
-  if (it == encryptor_by_epoch_.end()) {
-    return Error(E::Decrypt_UnknownEpoch);
+  auto head = static_cast<td::uint32>(parser.fetch_int());
+  td::int32 epochs_n = head & 0xff;
+  auto version = (head >> 8) & 0xff;
+  auto reserved = head >> 16;
+
+  if (version != 0) {
+    return td::Status::Error("Unsupported protocol version");
   }
-  return it->second.decrypt(encrypted_data);
-}
-td::Result<std::string> CallEncryption::encrypt(td::Slice decrypted_data) {
-  CHECK(o_last_epoch_);
-  auto it = encryptor_by_epoch_.find(*o_last_epoch_);
-  if (it == encryptor_by_epoch_.end()) {
-    return Error(E::Encrypt_UnknownEpoch);
-  }
-  return it->second.encrypt(decrypted_data);
-}
-CallEncryption::EpochEncryptor::EpochEncryptor(td::int32 epoch, td::int64 user_id, td::SecureString secret,
-                                               GroupStateRef group_state, PrivateKey private_key)
-    : epoch_(epoch)
-    , user_id_(user_id)
-    , secret_(std::move(secret))
-    , group_state_(std::move(group_state))
-    , private_key_(std::move(private_key)) {
-}
-td::Result<std::string> CallEncryption::EpochEncryptor::decrypt(td::Slice encrypted_data) {
-  td::int32 epoch{};
-  using td::parse;
-  {
-    td::TlParser parser(encrypted_data);
-    parse(epoch, parser);
-    TRY_STATUS(parser.get_status());
+  if (reserved != 0) {
+    return td::Status::Error("reserved part of head is not zero");
   }
 
-  TRY_RESULT(payload, MessageEncryption::decrypt_data(encrypted_data.substr(4), secret_));
+  if (epochs_n > MAX_ACTIVE_EPOCHS) {
+    return td::Status::Error("Too many active epochs");
+  }
+
+  using td::parse;
+
+  std::vector<td::int32> epochs;
+  for (int i = 0; i < epochs_n; i++) {
+    epochs.push_back(parser.fetch_int());
+  }
+  auto unencrypted_header = encrypted_data.substr(0, encrypted_data.size() - parser.get_left_len());
+
+  std::vector<td::Slice> encrypted_headers;
+  for (int i = 0; i < epochs_n; i++) {
+    auto encrypted_header = parser.fetch_string_raw<td::Slice>(32);
+    encrypted_headers.emplace_back(encrypted_header);
+  }
+
+  auto encrypted_packet = parser.fetch_string_raw<td::Slice>(parser.get_left_len());
+  parser.fetch_end();
+  TRY_STATUS(parser.get_status());
+
+  for (td::int32 i = 0; i < epochs_n; i++) {
+    auto epoch = epochs[i];
+    auto encrypted_header = encrypted_headers[i];
+    if (auto it = epochs_.find(epoch); it != epochs_.end()) {
+      auto &epoch_info = it->second;
+      TRY_RESULT(one_time_secret,
+                 MessageEncryption::decrypt_header(encrypted_header, encrypted_packet, epoch_info.secret_));
+      return decrypt_packet_with_secret(user_id, channel_id, unencrypted_header, encrypted_packet, one_time_secret,
+                                        epoch_info.group_state_);
+    }
+  }
+  return Error(E::Decrypt_UnknownEpoch);
+}
+
+td::Result<std::string> CallEncryption::encrypt(td::int32 channel_id, td::Slice decrypted_data) {
+  sync();
+
+  // use all active epochs
+  if (epochs_.empty()) {
+    return Error(E::Encrypt_UnknownEpoch);
+  }
+  auto epochs_n = td::narrow_cast<td::int32>(epochs_.size());
+
+  using td::store;
+  std::string header_a = lambda_serialize([&](auto &storer) {
+    store(epochs_n, storer);
+    for (auto &[epoch_i, epoch] : epochs_) {
+      store(epoch_i, storer);
+    }
+  });
+
+  td::SecureString one_time_secret(32, 0);
+  td::Random::secure_bytes(one_time_secret.as_mutable_slice());
+  TRY_RESULT(encrypted_packet, encrypt_packet_with_secret(channel_id, header_a, decrypted_data, one_time_secret));
+
+  std::vector<td::SecureString> encrypted_headers;
+  for (auto &[epoch_i, epoch] : epochs_) {
+    TRY_RESULT(encrypted_header, MessageEncryption::encrypt_header(one_time_secret, encrypted_packet, epoch.secret_));
+    encrypted_headers.emplace_back(std::move(encrypted_header));
+  }
+
+  std::string header_b = lambda_serialize([&](auto &storer) {
+    for (auto &encrypted_header : encrypted_headers) {
+      CHECK(encrypted_header.size() == 32);
+      storer.store_slice(encrypted_header);
+    }
+  });
+
+  //LOG(ERROR) << decrypted_data.size() << " -> " << header_a.size() << " + " << header_b.size() << " + " << encrypted_packet.size();
+  return header_a + header_b + encrypted_packet;
+}
+
+td::Result<std::string> CallEncryption::encrypt_packet_with_secret(td::int32 channel_id, td::Slice unencrypted_part,
+                                                                   td::Slice packet, td::Slice one_time_secret) {
+  TRY_STATUS(validate_channel_id(channel_id));
+  auto &seqno = seqno_[channel_id];
+  if (seqno == std::numeric_limits<td::uint32>::max()) {
+    return td::Status::Error("Seqno overflow");
+  }
+  seqno++;
+
+  td::UInt512 zero_signature{};
+  auto payload = lambda_serialize([&](auto &storer) {
+    using td::store;
+    store(static_cast<td::int32>(channel_id), storer);
+    store(seqno, storer);
+    storer.store_slice(packet);
+    storer.store_slice(zero_signature.as_mutable_slice());
+  });
+  CHECK(payload.size() >= 64);
+  auto signature_offset = payload.size() - 64;
+  auto encrypted_part = td::Slice(payload.data(), signature_offset);
+  auto to_sign = MessageEncryption::hmac_sha512(unencrypted_part, encrypted_part);
+
+  TRY_RESULT(signature, private_key_.sign(to_sign));
+  td::MutableSlice(payload).substr(signature_offset).copy_from(signature.to_slice());
+
+  // TODO: there is too much copies happening here. Almost all of them could be avoided
+  return MessageEncryption::encrypt_data(payload, one_time_secret).as_slice().str();
+}
+
+td::Result<std::string> CallEncryption::decrypt_packet_with_secret(
+    td::int64 expected_user_id, td::int32 expected_channel_id, td::Slice unencrypted_header, td::Slice encrypted_packet,
+    td::Slice one_time_secret, const GroupStateRef &group_state) {
+  TRY_RESULT(participant, group_state->get_participant(expected_user_id));
+  TRY_RESULT(payload_str, MessageEncryption::decrypt_data(encrypted_packet, one_time_secret));
+  auto payload = td::Slice(payload_str);
+  if (payload.size() < 64) {
+    return td::Status::Error("Not enough encryption data");
+  }
+  auto signature_offset = payload.size() - 64;
+
+  auto encrypted_part = payload.substr(0, signature_offset);
+  auto to_verify = MessageEncryption::hmac_sha512(unencrypted_header, encrypted_part);
+
+  TRY_RESULT(signature, Signature::from_slice(payload.substr(signature_offset)));
+  TRY_STATUS(participant.public_key.verify(to_verify, signature));
+
+  // we know that this is packet create by some participant
   td::TlParser parser(payload);
-  td::int64 user_id;
+  td::int32 channel_id;
   td::uint32 seqno{};
-  td::UInt512 signature{};
-  parse(user_id, parser);
+  td::UInt512 signature_to_skip{};
+  parse(channel_id, parser);
+  TRY_STATUS(validate_channel_id(channel_id));
   parse(seqno, parser);
   if (parser.get_left_len() < 64) {
     return td::Status::Error("Message is too short");
   }
-  // TODO: check replay
   auto result = parser.template fetch_string_raw<std::string>(parser.get_left_len() - 64);
-  parse(signature, parser);
+  parse(signature_to_skip, parser);
   parser.fetch_end();
   TRY_STATUS(parser.get_status());
 
-  TRY_STATUS(check_not_seen(user_id, seqno));
-
-  // verify signature
-  TRY_RESULT(participant, group_state_->get_participant(user_id));
-  TRY_STATUS(
-      participant.public_key.verify(td::Slice(payload.data(), payload.size() - 64), Signature::from_u512(signature)));
-
-  mark_as_seen(user_id, seqno);
-
+  if (channel_id != expected_channel_id) {
+    // currently ignore expected_channel_id
+    // return td::Status::Error("Channel id mismatch");
+  }
+  TRY_STATUS(check_not_seen(participant.public_key, channel_id, seqno));
+  mark_as_seen(participant.public_key, channel_id, seqno);
   return result;
 }
-td::Result<std::string> CallEncryption::EpochEncryptor::encrypt(td::Slice decrypted_data) {
-  if (seqno_ == std::numeric_limits<td::uint32>::max()) {
-    return td::Status::Error("Seqno overflow");
-  }
-  seqno_++;
 
-  auto store = [&](auto &storer) {
-    using td::store;
-    store(user_id_, storer);
-    store(seqno_, storer);
-    storer.store_slice(decrypted_data);
-  };
-  td::TlStorerCalcLength calc_length;
-  store(calc_length);
-  auto length = calc_length.get_length();
-
-  std::string payload(length + 64, '\0');
-  td::TlStorerUnsafe storer(td::MutableSlice(payload).ubegin());
-  store(storer);
-
-  TRY_RESULT(signature, private_key_.sign(td::Slice(payload.data(), length)));
-  td::store(signature.to_u512(), storer);
-
-  // TODO: there is too much copies happening here. Almost all of them could be avoided
-  auto encrypted = MessageEncryption::encrypt_data(payload, secret_);
-  std::string res(4 + encrypted.size(), '\0');
-  td::TlStorerUnsafe res_storer(td::MutableSlice(res).ubegin());
-  td::store(epoch_, res_storer);
-  res_storer.store_slice(encrypted);
-
-  // LOG(ERROR) << decrypted_data.size() << " +info-> " << length << " +signature-> " << payload.size()
-  //            << " +padding&msg_id-> " << encrypted.size() << " +epoch-> " << res.size();
-  return res;
-}
-td::Status CallEncryption::EpochEncryptor::check_not_seen(td::int64 user_id, td::uint32 seqno) {
-  auto &s = seen_[user_id];
+td::Status CallEncryption::check_not_seen(const PublicKey &public_key, td::int32 channel_id, td::uint32 seqno) {
+  auto &s = seen_[std::make_pair(public_key, channel_id)];
   if (s.empty()) {
     return td::Status::OK();
   }
@@ -330,29 +425,40 @@ td::Status CallEncryption::EpochEncryptor::check_not_seen(td::int64 user_id, td:
   }
   return td::Status::OK();
 }
-void CallEncryption::EpochEncryptor::mark_as_seen(td::int64 user_id, td::uint32 seqno) {
+
+void CallEncryption::mark_as_seen(const PublicKey &public_key, td::int32 channel_id, td::uint32 seqno) {
   auto value = seqno;
-  auto &s = seen_[user_id];
+  auto &s = seen_[std::make_pair(public_key, channel_id)];
   CHECK(s.insert(value).second);
-  while (s.size() > 1024) {
+  while (s.size() > 1024 || (!s.empty() && *s.begin() + 1024 < seqno)) {
     s.erase(s.begin());
   }
 }
-void CallEncryption::forget_old_epochs() {
-  if (epochs_to_forget_.empty()) {
-    return;
-  }
+
+void CallEncryption::sync() {
   auto now = td::Timestamp::now();
-  while (!epochs_to_forget_.empty() && epochs_to_forget_.front().first.is_in_past(now)) {
-    encryptor_by_epoch_.erase(epochs_to_forget_.front().second);
+  while (!epochs_to_forget_.empty() &&
+         (epochs_to_forget_.front().first.is_in_past(now) || epochs_.size() > MAX_ACTIVE_EPOCHS)) {
+    auto epoch = epochs_to_forget_.front().second;
+    LOG(INFO) << "Forget key from epoch: " << epoch;
+    epochs_.erase(epoch);
     epochs_to_forget_.pop();
   }
 }
 
-CallVerification CallVerification::create(PrivateKey private_key, const Blockchain &blockchain) {
+td::Status CallEncryption::validate_channel_id(td::int32 channel_id) {
+  if (channel_id < 0 || channel_id > 1023) {
+    return Error(E::InvalidCallChannelId);
+  }
+  return td::Status::OK();
+}
+
+CallVerification CallVerification::create(td::int64 user_id, PrivateKey private_key, const Blockchain &blockchain) {
   CallVerification result;
+  result.user_id_ = user_id;
   result.private_key_ = std::move(private_key);
   result.on_new_main_block(blockchain);
+  result.chain_.allow_delay();
   return result;
 }
 
@@ -362,13 +468,13 @@ void CallVerification::on_new_main_block(const Blockchain &blockchain) {
   td::sha256(nonce.as_mutable_slice(), nonce_hash.as_mutable_slice());
 
   auto height = td::narrow_cast<td::int32>(blockchain.get_height());
-  auto nonce_commit_tl =
-      e2e::e2e_chain_groupBroadcastNonceCommit({}, private_key_.to_public_key().to_u256(), height, nonce_hash);
+  auto last_block_hash = blockchain.last_block_hash_;
+  auto nonce_commit_tl = e2e::e2e_chain_groupBroadcastNonceCommit({}, user_id_, height, last_block_hash, nonce_hash);
   nonce_commit_tl.signature_ = sign(private_key_, nonce_commit_tl).move_as_ok().to_u512();
   auto nonce_commit = serialize_boxed(nonce_commit_tl);
 
   height_ = height;
-  ;
+  last_block_hash_ = blockchain.last_block_hash_;
   nonce_ = nonce;
   sent_commit_ = true;
   sent_reveal_ = false;
@@ -394,21 +500,23 @@ td::Status CallVerification::receive_inbound_message(td::Slice message) {
 
   if (chain_.get_state() == CallVerificationChain::Reveal && !sent_reveal_) {
     sent_reveal_ = true;
-    auto nonce_reveal_tl =
-        e2e::e2e_chain_groupBroadcastNonceReveal({}, private_key_.to_public_key().to_u256(), height_, nonce_);
+    auto nonce_reveal_tl = e2e::e2e_chain_groupBroadcastNonceReveal({}, user_id_, height_, last_block_hash_, nonce_);
     nonce_reveal_tl.signature_ = sign(private_key_, nonce_reveal_tl).move_as_ok().to_u512();
     auto nonce_reveal = serialize_boxed(nonce_reveal_tl);
-    pending_outbound_messages_.clear();
+    CHECK(pending_outbound_messages_.empty());
     pending_outbound_messages_.push_back(nonce_reveal);
   }
   return td::Status::OK();
 }
 
-Call::Call(PrivateKey pk, ClientBlockchain blockchain)
-    : private_key_(std::move(pk)), blockchain_(std::move(blockchain)), call_encryption_(private_key_) {
+Call::Call(td::int64 user_id, PrivateKey pk, ClientBlockchain blockchain)
+    : user_id_(user_id)
+    , private_key_(std::move(pk))
+    , blockchain_(std::move(blockchain))
+    , call_encryption_(user_id, private_key_) {
   CHECK(private_key_);
   LOG(INFO) << "Create call \n" << *this;
-  call_verification_ = CallVerification::create(private_key_, blockchain_.get_inner_chain());
+  call_verification_ = CallVerification::create(user_id_, private_key_, blockchain_.get_inner_chain());
 }
 
 td::Result<std::string> Call::create_zero_block(const PrivateKey &private_key, GroupStateRef group_state) {
@@ -416,8 +524,9 @@ td::Result<std::string> Call::create_zero_block(const PrivateKey &private_key, G
   TRY_RESULT(changes, make_changes_for_new_state(std::move(group_state)));
   return blockchain.build_block(changes, private_key);
 }
-td::Result<std::string> Call::create_self_add_block(const PrivateKey &private_key, td::Slice previous_block,
+td::Result<std::string> Call::create_self_add_block(const PrivateKey &private_key, td::Slice previous_block_server,
                                                     const GroupParticipant &self) {
+  TRY_RESULT(previous_block, Blockchain::from_server_to_local(previous_block_server.str()));
   TRY_RESULT(blockchain, ClientBlockchain::create_from_block(previous_block, private_key.to_public_key()));
   auto old_state = *blockchain.get_group_state();
   td::remove_if(old_state.participants,
@@ -428,14 +537,16 @@ td::Result<std::string> Call::create_self_add_block(const PrivateKey &private_ke
   return blockchain.build_block(changes, private_key);
 }
 
-td::Result<Call> Call::create(PrivateKey private_key, td::Slice last_block) {
+td::Result<Call> Call::create(td::int64 user_id, PrivateKey private_key, td::Slice last_block_server) {
+  TRY_RESULT(last_block, Blockchain::from_server_to_local(last_block_server.str()));
   TRY_RESULT(blockchain, ClientBlockchain::create_from_block(last_block, private_key.to_public_key()));
-  auto call = Call(std::move(private_key), std::move(blockchain));
+  auto call = Call(user_id, std::move(private_key), std::move(blockchain));
   TRY_STATUS(call.update_group_shared_key());
   return call;
 }
 
 td::Result<std::string> Call::build_change_state(GroupStateRef new_group_state) const {
+  TRY_STATUS(get_status());
   TRY_RESULT(changes, make_changes_for_new_state(std::move(new_group_state)));
   return blockchain_.build_block(changes, private_key_);
 }
@@ -456,7 +567,7 @@ td::Result<std::vector<Change>> Call::make_changes_for_new_state(GroupStateRef g
     auto public_key = participant.public_key;
     TRY_RESULT(shared_key, e_private_key.compute_shared_secret(public_key));
     dst_user_id.push_back(participant.user_id);
-    auto header = MessageEncryption::encrypt_header(one_time_secret, encrypted_group_shared_key, shared_key);
+    TRY_RESULT(header, MessageEncryption::encrypt_header(one_time_secret, encrypted_group_shared_key, shared_key));
     dst_header.push_back(header.as_slice().str());
   }
   auto change_set_shared_key = Change{ChangeSetSharedKey{std::make_shared<GroupSharedKey>(
@@ -467,63 +578,75 @@ td::Result<std::vector<Change>> Call::make_changes_for_new_state(GroupStateRef g
   return std::vector<Change>{std::move(change_set_group_state), std::move(change_set_shared_key)};
 }
 
-td::int32 Call::get_height() const {
+td::Result<td::int32> Call::get_height() const {
+  TRY_STATUS(get_status());
   return td::narrow_cast<td::int32>(blockchain_.get_height());
 }
 
 td::Result<GroupStateRef> Call::get_group_state() const {
+  TRY_STATUS(get_status());
   return blockchain_.get_group_state();
 }
 
-td::Status Call::apply_block(td::Slice block) {
+td::Status Call::apply_block(td::Slice server_block) {
+  TRY_STATUS(get_status());
+  TRY_RESULT(block, Blockchain::from_server_to_local(server_block.str()));
   auto status = do_apply_block(block);
   if (status.is_error()) {
     LOG(ERROR) << "Failed to apply block: " << status << "\n" << Block::from_tl_serialized(block);
+    status_ = std::move(status);
   } else {
     LOG(INFO) << "Block has been applied\n" << *this;
   }
 
-  return status;
+  return get_status();
 }
 td::Status Call::do_apply_block(td::Slice block) {
   TRY_RESULT(changes, blockchain_.try_apply_block(block));
-  bool changed_shared_key = false;
-  for (auto &change : changes) {
-    if (std::holds_alternative<ChangeSetSharedKey>(change.value)) {
-      changed_shared_key = true;
-    }
-    if (std::holds_alternative<ChangeSetGroupState>(change.value)) {
-      changed_shared_key = true;
-    }
-  }
   call_verification_.on_new_main_block(blockchain_.get_inner_chain());
-  if (changed_shared_key) {
-    TRY_STATUS(update_group_shared_key());
-  }
+  TRY_STATUS(update_group_shared_key());
   return td::Status::OK();
 }
 
-td::Status Call::update_group_shared_key() {
+td::Result<td::SecureString> Call::decrypt_shared_key() {
   auto group_shared_key = blockchain_.get_group_shared_key();
-  auto group_state = blockchain_.get_group_state();
-  TRY_RESULT(participant, group_state->get_participant(private_key_.to_public_key()));
-
   for (size_t i = 0; i < group_shared_key->dest_user_id.size(); i++) {
-    if (group_shared_key->dest_user_id[i] == participant.user_id) {
+    if (group_shared_key->dest_user_id[i] == user_id_) {
       TRY_RESULT(shared_key, private_key_.compute_shared_secret(group_shared_key->ek));
       TRY_RESULT(one_time_secret,
                  MessageEncryption::decrypt_header(group_shared_key->dest_header[i],
                                                    group_shared_key->encrypted_shared_key, shared_key));
-      TRY_RESULT(decrypted_group_shared_key,
+      TRY_RESULT(decrypted_shared_key,
                  MessageEncryption::decrypt_data(group_shared_key->encrypted_shared_key, one_time_secret));
-      group_shared_key_ = std::move(decrypted_group_shared_key);
-      return call_encryption_.add_shared_key(td::narrow_cast<td::int32>(blockchain_.get_height()),
-                                             group_shared_key_.copy(), group_state);
+      if (decrypted_shared_key.size() != 32) {
+        return td::Status::Error("Invalid shared key (size != 32)");
+      }
+      return decrypted_shared_key;
     }
   }
-  group_shared_key_ = td::SecureString();
-
   return td::Status::Error("Could not find user_id in group_shared_key");
+}
+
+td::Status Call::update_group_shared_key() {
+  // NB: we drop key immediately, we don't want old key to be active due to some errors later
+  group_shared_key_ = {};
+  call_encryption_.forget_shared_key(td::narrow_cast<td::int32>(blockchain_.get_height() - 1));
+
+  auto group_state = blockchain_.get_group_state();
+
+  auto r_participant = group_state->get_participant(private_key_.to_public_key());
+  if (r_participant.is_error()) {
+    return Error(E::InvalidCallGroupState_NotParticipant);
+  }
+  auto participant = r_participant.move_as_ok();
+  if (participant.user_id != user_id_) {
+    return Error(E::InvalidCallGroupState_WrongUserId);
+  }
+
+  TRY_RESULT_ASSIGN(group_shared_key_, decrypt_shared_key());
+
+  return call_encryption_.add_shared_key(td::narrow_cast<td::int32>(blockchain_.get_height()), group_shared_key_.copy(),
+                                         group_state);
 }
 
 td::StringBuilder &operator<<(td::StringBuilder &sb, const CallVerificationChain &chain) {
@@ -559,12 +682,15 @@ td::StringBuilder &operator<<(td::StringBuilder &sb, const CallVerification &ver
   return sb << verification.chain_;
 }
 td::StringBuilder &operator<<(td::StringBuilder &sb, const Call &call) {
-  sb << "Call{" << call.get_height() << ":" << call.private_key_.to_public_key() << "}";
-  auto group_state = call.get_group_state().move_as_ok();
+  auto status = call.get_status();
+  sb << "Call{" << call.blockchain_.get_height() << ":" << call.private_key_.to_public_key() << "}";
+  if (status.is_error()) {
+    sb << "\nCALL_FAILED: " << call.status_;
+  }
+  auto group_state = call.blockchain_.get_group_state();
   sb << "\n\tusers=" << td::transform(group_state->participants, [](auto &p) { return p.user_id; });
   sb << "\n\tpkeys=" << td::transform(group_state->participants, [](auto &p) { return p.public_key; });
   sb << "\n\t" << call.call_verification_;
-
   return sb;
 }
 }  // namespace tde2e_core

@@ -43,6 +43,42 @@
 
 using namespace tde2e_core;
 namespace api = tde2e_api;
+template <class T>
+td::Status expect_error(td::Result<T> got) {
+  if (got.is_ok()) {
+    return td::Status::Error("Got Ok, instead of Error");
+  }
+  return td::Status::OK();
+}
+S_TEST(MessageEncryption, simple) {
+  std::string secret = "secret";
+  {
+    std::string data = "some private data";
+    std::string wrong_secret = "wrong secret";
+    auto encrypted_data = MessageEncryption::encrypt_data(data, secret);
+    LOG(ERROR) << encrypted_data.size();
+    TEST_TRY_RESULT(decrypted_data, MessageEncryption::decrypt_data(encrypted_data, secret));
+    TEST_ASSERT_EQ(data, decrypted_data, "decryption");
+    TEST_TRY_STATUS(expect_error(MessageEncryption::decrypt_data(encrypted_data, wrong_secret)));
+    TEST_TRY_STATUS(expect_error(MessageEncryption::decrypt_data("", secret)));
+    TEST_TRY_STATUS(expect_error(MessageEncryption::decrypt_data(std::string(32, 'a'), secret)));
+    TEST_TRY_STATUS(expect_error(MessageEncryption::decrypt_data(std::string(33, 'a'), secret)));
+    TEST_TRY_STATUS(expect_error(MessageEncryption::decrypt_data(std::string(64, 'a'), secret)));
+    TEST_TRY_STATUS(expect_error(MessageEncryption::decrypt_data(std::string(128, 'a'), secret)));
+  }
+
+  td::Random::Xorshift128plus rnd(123);
+  for (size_t i = 0; i < 255; i++) {
+    std::string data;
+    for (size_t j = 0; j < i; j++) {
+      data += static_cast<char>(rnd.fast('a', 'z'));
+    }
+    auto encrypted_data = MessageEncryption::encrypt_data(data, secret);
+    TEST_TRY_RESULT(decrypted_data, MessageEncryption::decrypt_data(encrypted_data, secret));
+    TEST_ASSERT_EQ(data, decrypted_data, "decryption");
+  }
+  return td::Status::OK();
+}
 
 struct E2eHandshakeTest {
   td::Ed25519::PrivateKey alice;
@@ -141,12 +177,12 @@ TEST(MiniBlockchain, Basic) {
   Blockchain remote_blockchain = Blockchain::create_empty();
   Blockchain local_blockchain = Blockchain::create_empty();
 
-  auto block = local_blockchain.set_value("a", "b", private_key);
-  remote_blockchain.try_apply_block(block).ensure();
-  local_blockchain.try_apply_block(block).ensure();
-  block = local_blockchain.set_value("b", "c", private_key);
-  remote_blockchain.try_apply_block(block).ensure();
-  local_blockchain.try_apply_block(block).ensure();
+  auto block = local_blockchain.set_value(std::string(32, 'a'), "b", private_key);
+  remote_blockchain.try_apply_block(block, {}).ensure();
+  local_blockchain.try_apply_block(block, {}).ensure();
+  block = local_blockchain.set_value(std::string(32, 'b'), "c", private_key);
+  remote_blockchain.try_apply_block(block, {}).ensure();
+  local_blockchain.try_apply_block(block, {}).ensure();
 }
 
 // Example usage
@@ -674,6 +710,12 @@ S_TEST(E2E_Blockchain, Call) {
 
 TEST(Call, Basic_API) {
   using namespace tde2e_api;
+  auto F = [](Result<std::string> block) -> Result<std::string> {
+    if (block.is_ok()) {
+      return Blockchain::from_local_to_server(block.value());
+    }
+    return block;
+  };
 
   auto key0 = key_generate_temporary_private_key().value();
   auto pkey0 = key_from_public_key(key_to_public_key(key0).value()).value();
@@ -684,22 +726,22 @@ TEST(Call, Basic_API) {
   auto key3 = key_generate_temporary_private_key().value();
   auto pkey3 = key_from_public_key(key_to_public_key(key3).value()).value();
 
-  auto zero_block = call_create_zero_block(key0, CallState{0, {CallParticipant{1, pkey0, 3}}}).value();
+  auto zero_block = F(call_create_zero_block(key0, CallState{0, {CallParticipant{-1, pkey0, 3}}})).value();
 
-  auto call1 = call_create(key0, zero_block).value();
-  auto block0 = call_create_self_add_block(key1, zero_block, CallParticipant{1, pkey1, 3}).value();
-  call1 = call_create(key1, block0).value();
+  auto call1 = call_create(-1, key0, zero_block).value();
+  auto block0 = F(call_create_self_add_block(key1, zero_block, CallParticipant{1, pkey1, 3})).value();
+  call1 = call_create(1, key1, block0).value();
 
-  auto block1 = call_create_self_add_block(key2, block0, CallParticipant{2, pkey2, 3}).value();
+  auto block1 = F(call_create_self_add_block(key2, block0, CallParticipant{2, pkey2, 3})).value();
   call_apply_block(call1, block1).value();
-  auto call2 = call_create(key2, block1).value();
+  auto call2 = call_create(2, key2, block1).value();
   ASSERT_EQ(call_get_verification_words(call2).value().words, call_get_verification_words(call1).value().words);
 
   auto block2 =
-      call_create_change_state_block(call2, CallState{0, {CallParticipant{2, pkey2, 3}, CallParticipant{3, pkey3, 3}}})
+      F(call_create_change_state_block(call2, CallState{0, {CallParticipant{2, pkey2, 3}, CallParticipant{3, pkey3, 3}}}))
           .value();
   call_describe_block(block2).value();
-  auto call3 = call_create(key3, block2).value();
+  auto call3 = call_create(3, key3, block2).value();
 
   call_apply_block(call2, block2).value();
   CHECK(!call_apply_block(call1, block2).is_ok());
@@ -708,11 +750,11 @@ TEST(Call, Basic_API) {
   ASSERT_EQ(call_get_verification_words(call2).value().words, call_get_verification_words(call3).value().words);
 
   auto block31 =
-      call_create_change_state_block(call2, CallState{0, {CallParticipant{2, pkey2, 3}, CallParticipant{3, pkey3, 3}}})
+      F(call_create_change_state_block(call2, CallState{0, {CallParticipant{2, pkey2, 3}, CallParticipant{3, pkey3, 3}}}))
           .value();
 
   call_apply_block(call2, block31).value();
-  auto commit2 = call_pull_outbound_messages(call2).value().at(0);
+  auto commit2 = F(call_pull_outbound_messages(call2).value().at(0)).value();
 
   call_describe_message(commit2).value();
 
@@ -720,14 +762,14 @@ TEST(Call, Basic_API) {
   call_receive_inbound_message(call3, commit2).value();
 
   call_apply_block(call3, block31).value();
-  auto commit3 = call_pull_outbound_messages(call3).value().at(0);
+  auto commit3 = F(call_pull_outbound_messages(call3).value().at(0)).value();
 
   CHECK(commit2 != commit3);
   call_receive_inbound_message(call2, commit3).value();
   call_receive_inbound_message(call3, commit3).value();
 
-  auto reveal2 = call_pull_outbound_messages(call2).value().at(0);
-  auto reveal3 = call_pull_outbound_messages(call3).value().at(0);
+  auto reveal2 = F(call_pull_outbound_messages(call2).value().at(0)).value();
+  auto reveal3 = F(call_pull_outbound_messages(call3).value().at(0)).value();
   call_receive_inbound_message(call2, reveal2).value();
   call_receive_inbound_message(call2, reveal3).value();
   call_receive_inbound_message(call3, reveal2).value();
@@ -736,21 +778,26 @@ TEST(Call, Basic_API) {
   ASSERT_EQ(call_get_verification_state(call2).value().emoji_hash.value(),
             call_get_verification_state(call3).value().emoji_hash.value());
 
-  auto e = call_encrypt(call2, "hello").value();
-  auto e2 = call_encrypt(call2, "hello").value();
+  auto e = call_encrypt(call2, 1, "hello").value();
+  auto e2 = call_encrypt(call2, 1, "hello").value();
   CHECK(e != "hello");
   LOG(ERROR) << e.size();
-  ASSERT_EQ("hello", call_decrypt(call2, e).value());
-  // ASSERT_TRUE(!call_decrypt(call2, e).is_ok()); // uncomment when replay protection is written
-  ASSERT_EQ("hello", call_decrypt(call3, e).value());
+  ASSERT_TRUE(!call_decrypt(call2, 2, 1, e).is_ok());
+  // ASSERT_TRUE(!call_decrypt(call3, 2, 2, e).is_ok()); Uncomment if we will validate channel_id
+  ASSERT_TRUE(!call_decrypt(call3, 1, 1, e).is_ok());
+  ASSERT_EQ("hello", call_decrypt(call3, 2, 1, e).value());
+  ASSERT_TRUE(!call_decrypt(call3, 2, 1, e).is_ok());
 
   auto block3 =
-      call_create_change_state_block(call2, CallState{0, {CallParticipant{2, pkey2, 3}, CallParticipant{3, pkey3, 3}}})
+      F(call_create_change_state_block(call2, CallState{0, {CallParticipant{2, pkey2, 3}, CallParticipant{3, pkey3, 3}}}))
           .value();
   call_apply_block(call3, block3).value();
-  ASSERT_TRUE(!call_decrypt(call3, e).is_ok());
-  ASSERT_EQ("hello", call_decrypt(call3, e2).value());
-  ASSERT_TRUE(!call_decrypt(call2, call_encrypt(call3, "bye").value()).is_ok());
+  ASSERT_TRUE(!call_decrypt(call3, 2, 1, e).is_ok());
+  ASSERT_EQ("hello", call_decrypt(call3, 2, 1, e2).value());
+  ASSERT_TRUE(call_decrypt(call2, 3, 1, call_encrypt(call3, 1, "bye").value()).is_ok());
+
+  LOG(ERROR) << call_describe(call1).value();
+  LOG(ERROR) << call_describe(call2).value();
 
   key_destroy_all();
   call_destroy_all();

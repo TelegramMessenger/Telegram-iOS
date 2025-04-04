@@ -13,7 +13,7 @@ public protocol ConferenceCallE2EContextState: AnyObject {
     func takeOutgoingBroadcastBlocks() -> [Data]
 
     func encrypt(message: Data) -> Data?
-    func decrypt(message: Data) -> Data?
+    func decrypt(message: Data, userId: Int64) -> Data?
 }
 
 public final class ConferenceCallE2EContext {
@@ -31,9 +31,10 @@ public final class ConferenceCallE2EContext {
         private let engine: TelegramEngine
         private let callId: Int64
         private let accessHash: Int64
+        private let userId: Int64
         private let reference: InternalGroupCallReference
         private let state: Atomic<ContextStateHolder>
-        private let initializeState: (TelegramKeyPair, Data) -> ConferenceCallE2EContextState?
+        private let initializeState: (TelegramKeyPair, Int64, Data) -> ConferenceCallE2EContextState?
         private let keyPair: TelegramKeyPair
 
         let e2eEncryptionKeyHashValue = ValuePromise<Data?>(nil)
@@ -52,7 +53,7 @@ public final class ConferenceCallE2EContext {
         private var synchronizeRemovedParticipantsDisposable: Disposable?
         private var synchronizeRemovedParticipantsTimer: Foundation.Timer?
 
-        init(queue: Queue, engine: TelegramEngine, callId: Int64, accessHash: Int64, reference: InternalGroupCallReference, state: Atomic<ContextStateHolder>, initializeState: @escaping (TelegramKeyPair, Data) -> ConferenceCallE2EContextState?, keyPair: TelegramKeyPair) {
+        init(queue: Queue, engine: TelegramEngine, callId: Int64, accessHash: Int64, userId: Int64, reference: InternalGroupCallReference, state: Atomic<ContextStateHolder>, initializeState: @escaping (TelegramKeyPair, Int64, Data) -> ConferenceCallE2EContextState?, keyPair: TelegramKeyPair) {
             precondition(queue.isCurrent())
             precondition(Queue.mainQueue().isCurrent())
 
@@ -60,6 +61,7 @@ public final class ConferenceCallE2EContext {
             self.engine = engine
             self.callId = callId
             self.accessHash = accessHash
+            self.userId = userId
             self.reference = reference
             self.state = state
             self.initializeState = initializeState
@@ -125,6 +127,7 @@ public final class ConferenceCallE2EContext {
 
         private func addE2EBlocks(blocks: [Data], subChainId: Int) {
             let keyPair = self.keyPair
+            let userId = self.userId
             let initializeState = self.initializeState
             let (outBlocks, outEmoji) = self.state.with({ callState -> ([Data], Data) in
                 if let state = callState.state {
@@ -141,7 +144,7 @@ public final class ConferenceCallE2EContext {
                         guard let block = blocks.last else {
                             return ([], Data())
                         }
-                        guard let state = initializeState(keyPair, block) else {
+                        guard let state = initializeState(keyPair, userId, block) else {
                             return ([], Data())
                         }
                         callState.state = state
@@ -286,7 +289,7 @@ public final class ConferenceCallE2EContext {
                     return .single(false)
                 }
 
-                return engine.calls.removeGroupCallBlockchainParticipants(callId: callId, accessHash: accessHash, participantIds: removedPeerIds, block: removeBlock)
+                return engine.calls.removeGroupCallBlockchainParticipants(callId: callId, accessHash: accessHash, mode: .cleanup, participantIds: removedPeerIds, block: removeBlock)
                 |> map { result -> Bool in
                     switch result {
                     case .success:
@@ -321,11 +324,11 @@ public final class ConferenceCallE2EContext {
         }
     }
 
-    public init(engine: TelegramEngine, callId: Int64, accessHash: Int64, reference: InternalGroupCallReference, keyPair: TelegramKeyPair, initializeState: @escaping (TelegramKeyPair, Data) -> ConferenceCallE2EContextState?) {
+    public init(engine: TelegramEngine, callId: Int64, accessHash: Int64, userId: Int64, reference: InternalGroupCallReference, keyPair: TelegramKeyPair, initializeState: @escaping (TelegramKeyPair, Int64, Data) -> ConferenceCallE2EContextState?) {
         let queue = Queue.mainQueue()
         let state = self.state
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return Impl(queue: queue, engine: engine, callId: callId, accessHash: accessHash, reference: reference, state: state, initializeState: initializeState, keyPair: keyPair)
+            return Impl(queue: queue, engine: engine, callId: callId, accessHash: accessHash, userId: userId, reference: reference, state: state, initializeState: initializeState, keyPair: keyPair)
         })
     }
 

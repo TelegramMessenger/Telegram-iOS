@@ -20,6 +20,7 @@
 #include "td/utils/tl_helpers.h"
 #include "td/utils/tl_parsers.h"
 
+#include <algorithm>
 #include <map>
 #include <set>
 #include <tuple>
@@ -28,12 +29,23 @@
 namespace tde2e_core {
 
 GroupParticipant GroupParticipant::from_tl(const td::e2e_api::e2e_chain_groupParticipant &participant) {
-  return GroupParticipant{participant.user_id_, participant.flags_, PublicKey::from_u256(participant.public_key_)};
+  return GroupParticipant{participant.user_id_, participant.flags_, PublicKey::from_u256(participant.public_key_),
+                          participant.version_};
 }
 
 e2e::object_ptr<e2e::e2e_chain_groupParticipant> GroupParticipant::to_tl() const {
   return e2e::make_object<e2e::e2e_chain_groupParticipant>(user_id, public_key.to_u256(), flags, add_users(),
-                                                           remove_users());
+                                                           remove_users(), version);
+}
+td::int32 GroupState::version() const {
+  if (participants.empty()) {
+    return 0;
+  }
+  td::int32 version = participants.front().version;
+  for (auto &participant : participants) {
+    version = std::min(version, participant.version);
+  }
+  return std::clamp(version, 0, 255);
 }
 td::Result<GroupParticipant> GroupState::get_participant(td::int64 user_id) const {
   for (const auto &participant : participants) {
@@ -52,12 +64,13 @@ td::Result<GroupParticipant> GroupState::get_participant(const PublicKey &public
   }
   return td::Status::Error("Participant not found");
 };
-Permissions GroupState::get_permissions(const PublicKey &public_key) const {
+Permissions GroupState::get_permissions(const PublicKey &public_key, td::int32 limit_permissions) const {
+  limit_permissions &= GroupParticipantFlags::AllPermissions;
   auto r_participant = get_participant(public_key);
   if (r_participant.is_ok()) {
-    return Permissions{r_participant.ok().flags | GroupParticipantFlags::IsParticipant};
+    return Permissions{(r_participant.ok().flags & limit_permissions) | GroupParticipantFlags::IsParticipant};
   }
-  return Permissions{external_permissions};
+  return Permissions{(external_permissions & limit_permissions)};
 }
 
 GroupStateRef GroupState::from_tl(const td::e2e_api::e2e_chain_groupState &state) {
@@ -74,7 +87,7 @@ e2e::object_ptr<e2e::e2e_chain_groupState> GroupState::to_tl() const {
       external_permissions);
 }
 GroupStateRef GroupState::empty_state() {
-  static GroupStateRef state = std::make_shared<GroupState>(GroupState{});
+  static GroupStateRef state = std::make_shared<GroupState>();
   return state;
 }
 GroupSharedKeyRef GroupSharedKey::from_tl(const td::e2e_api::e2e_chain_sharedKey &shared_key) {
@@ -87,7 +100,7 @@ e2e::object_ptr<e2e::e2e_chain_sharedKey> GroupSharedKey::to_tl() const {
                                                     std::vector<td::int64>(dest_user_id), std::vector(dest_header));
 }
 GroupSharedKeyRef GroupSharedKey::empty_shared_key() {
-  static GroupSharedKeyRef shared_key = std::make_shared<GroupSharedKey>(GroupSharedKey{});
+  static GroupSharedKeyRef shared_key = std::make_shared<GroupSharedKey>();
   return shared_key;
 }
 ChangeSetValue ChangeSetValue::from_tl(const td::e2e_api::e2e_chain_changeSetValue &change) {
@@ -166,7 +179,7 @@ td::Result<Block> Block::from_tl_serialized(td::Slice new_block) {
   auto magic = parser.fetch_int();
   if (magic != td::e2e_api::e2e_chain_block::ID) {
     return td::Status::Error(PSLICE() << "Expected magic " << td::format::as_hex(td::e2e_api::e2e_chain_block::ID)
-                                      << td::format::as_hex(magic));
+                                      << ", got " << td::format::as_hex(magic));
   }
   auto block_tl = td::e2e_api::e2e_chain_block::fetch(parser);
   parser.fetch_end();
@@ -198,10 +211,18 @@ td::StringBuilder &operator<<(td::StringBuilder &sb, const Block &block) {
             << "\tchanges=" << block.changes_ << "\n"
             << "\tsignature_key=" << block.o_signature_public_key_ << ")";
 }
+td::Result<BitString> key_to_bitstring(td::Slice key) {
+  if (key.size() != 32) {
+    return td::Status::Error("Invalid key size");
+  }
+  return BitString(key);
+}
 td::Result<std::string> KeyValueState::get_value(td::Slice key) const {
-  return get(node_, BitString(key), snapshot_.value());
+  TRY_RESULT(bitstring, key_to_bitstring(key));
+  return get(node_, bitstring, snapshot_.value());
 }
 td::Result<std::string> KeyValueState::gen_proof(td::Span<td::Slice> keys) const {
+  // TODO: validate keys..
   TRY_RESULT(pruned_tree, generate_pruned_tree(node_, keys, snapshot_.value()));
   return TrieNode::serialize_for_network(pruned_tree);
 }
@@ -218,7 +239,8 @@ td::Result<std::string> KeyValueState::build_snapshot() const {
 }
 
 td::Status KeyValueState::set_value(td::Slice key, td::Slice value) {
-  TRY_RESULT_ASSIGN(node_, set(node_, BitString(key), value, snapshot_.value()));
+  TRY_RESULT(bitstring, key_to_bitstring(key));
+  TRY_RESULT_ASSIGN(node_, set(node_, bitstring, value, snapshot_.value()));
   return td::Status::OK();
 }
 
@@ -277,55 +299,75 @@ td::Status State::set_value(td::Slice key, td::Slice value, const Permissions &p
   return key_value_state_.set_value(key, value);
 }
 
-td::Status State::set_value_fast(KeyValueHash key_value_hash) {
+td::Status State::set_value_fast(const KeyValueHash &key_value_hash) {
   TRY_RESULT_ASSIGN(key_value_state_, KeyValueState::create_from_hash(key_value_hash));
   return td::Status::OK();
 }
 
-td::Status State::set_group_state(GroupStateRef group_state, const Permissions &permissions) {
-  std::map<td::int64, td::int32> old_participants;
-  std::set<td::int64> new_participants;
+td::Status State::validate_group_state(const GroupStateRef &group_state) {
+  std::set<td::int64> new_user_ids;
   std::set<PublicKey> new_keys;
-  for (const auto &p : group_state_->participants) {
-    old_participants[p.user_id] = p.flags;
-  }
   for (const auto &p : group_state->participants) {
-    new_participants.insert(p.user_id);
+    new_user_ids.insert(p.user_id);
     new_keys.insert(p.public_key);
+    if ((p.flags & ~GroupParticipantFlags::AllPermissions) != 0) {
+      return Error(E::InvalidBlock_InvalidGroupState, "invalid permissions");
+    }
   }
-  if (new_participants.size() != group_state->participants.size()) {
+  if ((group_state->external_permissions & ~GroupParticipantFlags::AllPermissions) != 0) {
+    return Error(E::InvalidBlock_InvalidGroupState, "invalid external permissions");
+  }
+  if (new_user_ids.size() != group_state->participants.size()) {
     return Error(E::InvalidBlock_InvalidGroupState, "duplicate user_id");
   }
   if (new_keys.size() != group_state->participants.size()) {
     return Error(E::InvalidBlock_InvalidGroupState, "duplicate public_key");
+  }
+  return td::Status::OK();
+}
+
+td::Status State::set_group_state(GroupStateRef group_state, const Permissions &permissions) {
+  TRY_STATUS(validate_group_state(group_state));
+
+  std::map<std::pair<td::int64, PublicKey>, td::int32> old_participants;
+  std::map<std::pair<td::int64, PublicKey>, td::int32> new_participants;
+
+  for (const auto &p : group_state_->participants) {
+    old_participants[std::make_pair(p.user_id, p.public_key)] = p.flags;
+  }
+  for (const auto &p : group_state->participants) {
+    new_participants[std::make_pair(p.user_id, p.public_key)] = p.flags;
   }
   if ((~group_state_->external_permissions & group_state->external_permissions) != 0) {
     return Error(E::InvalidBlock_NoPermissions, "Can't increase external permissions");
   }
 
   td::int32 needed_flags = 0;
-  for (const auto &p : group_state_->participants) {
-    if (!new_participants.count(p.user_id)) {
+  for (const auto &[p, flags] : old_participants) {
+    if (!new_participants.count(p)) {
       if (!permissions.may_remove_users()) {
         return Error(E::InvalidBlock_NoPermissions, "Can't remove users");
       }
     }
   }
-  for (const auto &p : group_state->participants) {
-    auto old_p = old_participants.find(p.user_id);
+  for (const auto &[p, flags] : new_participants) {
+    auto old_p = old_participants.find(p);
     if (old_p == old_participants.end()) {
       if (!permissions.may_add_users()) {
         return Error(E::InvalidBlock_NoPermissions, "Can't add users");
       }
-      needed_flags |= p.flags;
-    } else {
-      needed_flags |= p.flags & ~old_p->second;
+      needed_flags |= flags;
+    } else if (flags != old_p->second) {
+      if (!permissions.may_add_users() || !permissions.may_remove_users()) {
+        return Error(E::InvalidBlock_NoPermissions, "Can't add users");
+      }
+      needed_flags |= flags & ~old_p->second;
     }
   }
 
-  td::int32 missing_flags = needed_flags & ~permissions.flags;
+  td::int32 missing_flags = needed_flags & ~(permissions.flags & GroupParticipantFlags::AllPermissions);
   if (missing_flags != 0) {
-    return Error(E::InvalidBlock_NoPermissions, "Can't give more permissions that we have");
+    return Error(E::InvalidBlock_NoPermissions, "Can't give more permissions than we have");
   }
   group_state_ = std::move(group_state);
   return td::Status::OK();
@@ -339,6 +381,31 @@ td::Status State::clear_shared_key(const Permissions &permissions) {
   return td::Status::OK();
 }
 
+td::Status State::validate_shared_key(const GroupSharedKeyRef &shared_key, const GroupStateRef &group_state) {
+  if (shared_key->empty_shared_key()) {
+    return td::Status::OK();
+  }
+  if (shared_key->dest_user_id.size() != shared_key->dest_header.size()) {
+    return td::Status::Error("Shared key different number of users and headers");
+  }
+  if (shared_key->dest_user_id.size() != group_state->participants.size()) {
+    return td::Status::Error("Shared key has wrong number of users");
+  }
+  std::set<td::int64> participants;
+  for (const auto user_id : shared_key->dest_user_id) {
+    participants.insert(user_id);
+  }
+  if (participants.size() != shared_key->dest_user_id.size()) {
+    return td::Status::Error("Shared key has duplicated users");
+  }
+  for (auto &p : group_state->participants) {
+    if (!participants.count(p.user_id)) {
+      return td::Status::Error("Unknown user_id in SetSharedKey");
+    }
+  }
+  return td::Status::OK();
+}
+
 td::Status State::set_shared_key(GroupSharedKeyRef shared_key, const Permissions &permissions) {
   if (*shared_key_ != *GroupSharedKey::empty_shared_key()) {
     return td::Status::Error("Shared key is already set");
@@ -346,16 +413,8 @@ td::Status State::set_shared_key(GroupSharedKeyRef shared_key, const Permissions
   if (!permissions.may_change_shared_key()) {
     return Error(E::InvalidBlock_NoPermissions, "Can't set shared key");
   }
+  TRY_STATUS(validate_shared_key(shared_key, group_state_));
   shared_key_ = std::move(shared_key);
-  std::set<td::int64> participants;
-  for (const auto &p : group_state_->participants) {
-    participants.insert(p.user_id);
-  }
-  for (auto dest_user_id : shared_key_->dest_user_id) {
-    if (!participants.count(dest_user_id)) {
-      return td::Status::Error("Unknown user_id in SetSharedKey");
-    }
-  }
   return td::Status::OK();
 }
 
@@ -364,6 +423,9 @@ td::Status State::validate_state(const StateProof &state_proof) const {
     return td::Status::Error("State hash mismatch");
   }
 
+  if (!has_group_state_change_ && !has_set_value_) {
+    return Error(E::InvalidBlock_NoChanges, "There must be at least SetValue or SetGroupState changes");
+  }
   if (has_group_state_change_ && state_proof.o_group_state) {
     return Error(E::InvalidBlock_InvalidStateProof_Group,
                  "Group state must be omitted when there is a group state change");
@@ -387,30 +449,40 @@ td::Status State::validate_state(const StateProof &state_proof) const {
     return Error(E::InvalidBlock_InvalidStateProof_Secret, "shared key state differs");
   }
 
+  TRY_STATUS(validate_group_state(group_state_));
+  TRY_STATUS(validate_shared_key(shared_key_, group_state_));
+
   return td::Status::OK();
 }
 
-td::Status State::apply_change(const Change &change_outer, const PublicKey &public_key, bool full_apply) {
-  return std::visit(td::overloaded([](const ChangeNoop &change) { return td::Status::OK(); },
-                                   [this, full_apply, &public_key](const ChangeSetValue &change) {
-                                     if (full_apply) {
-                                       return set_value(change.key, change.value, group_state_->get_permissions(public_key));
-                                     }
-                                     return td::Status::OK();
-                                   },
-                                   [this, &public_key](const ChangeSetGroupState &change) {
-                                     has_group_state_change_ = true;
-                                     TRY_STATUS(set_group_state(change.group_state, group_state_->get_permissions(public_key)));
-                                     return clear_shared_key(group_state_->get_permissions(public_key));
-                                   },
-                                   [this, &public_key](const ChangeSetSharedKey &change) {
-                                     has_shared_key_change_ = true;
-                                     return set_shared_key(change.shared_key, group_state_->get_permissions(public_key));
-                                   }),
-                    change_outer.value);
+td::Status State::apply_change(const Change &change_outer, const PublicKey &public_key,
+                               const ValidateOptions &validate_options) {
+  bool full_apply = validate_options.validate_state_hash;
+  auto limit_permissions = validate_options.permissions;
+  return std::visit(
+      td::overloaded(
+          [](const ChangeNoop &change) { return td::Status::OK(); },
+          [this, full_apply, limit_permissions, &public_key](const ChangeSetValue &change) {
+            has_set_value_ = true;
+            if (full_apply) {
+              return set_value(change.key, change.value, group_state_->get_permissions(public_key, limit_permissions));
+            }
+            return td::Status::OK();
+          },
+          [this, limit_permissions, &public_key](const ChangeSetGroupState &change) {
+            has_group_state_change_ = true;
+            TRY_STATUS(
+                set_group_state(change.group_state, group_state_->get_permissions(public_key, limit_permissions)));
+            return clear_shared_key(group_state_->get_permissions(public_key, limit_permissions));
+          },
+          [this, limit_permissions, &public_key](const ChangeSetSharedKey &change) {
+            has_shared_key_change_ = true;
+            return set_shared_key(change.shared_key, group_state_->get_permissions(public_key, limit_permissions));
+          }),
+      change_outer.value);
 }
 
-td::Status State::apply(Block &block, bool validate_state_hash) {
+td::Status State::apply(Block &block, ValidateOptions validate_options) {
   // To apply the first block an ephemeral -1 block is used
   //   - It has only one participant - Participant(user_id = 0, public_key = signer_public_key, permissions = all)
   if (block.height_ == 0) {
@@ -426,22 +498,21 @@ td::Status State::apply(Block &block, bool validate_state_hash) {
     return td::Status::Error("Unknown public key");
   }
 
-  //  3. Would identify permissions of the participant who created the block, i.e. the one with `signer_public_key` public key.
-  //     - First we look for signer public key in the previous state. If found use its permissions
-  //     - Otherwise, we use external_permissions  GroupParticipant participant;
-
   // 5. Verifies the signature of the block.
-  TRY_STATUS(block.verify_signature(o_signature_public_key.value()));
+  if (validate_options.validate_signature) {
+    TRY_STATUS(block.verify_signature(o_signature_public_key.value()));
+  }
 
   // 6. Applies the changes to the state.
   //   - If `validate_state_hash` is true, the state hash is validated.
   //   - Otherwise, the state hash is set to the hash of the block.
+  has_set_value_ = false;
   has_shared_key_change_ = false;
   has_group_state_change_ = false;
   for (auto &change : block.changes_) {
-    TRY_STATUS(apply_change(change, o_signature_public_key.value(), validate_state_hash));
+    TRY_STATUS(apply_change(change, o_signature_public_key.value(), validate_options));
   }
-  if (!validate_state_hash) {
+  if (!validate_options.validate_state_hash) {
     TRY_STATUS(set_value_fast(block.state_proof_.kv_hash));
   }
 
@@ -466,14 +537,22 @@ td::Result<State> State::create_from_block(const Block &block, td::optional<td::
     group_state = std::make_shared<GroupState>(GroupState{{}, GroupParticipantFlags::AllPermissions});
   }
 
+  bool has_set_value = false;
+  bool has_group_state_change = false;
+  bool has_shared_key_change = false;
   for (const auto &change_v : block.changes_) {
-    std::visit(td::overloaded([](const ChangeNoop &change) {}, [](const ChangeSetValue &change) {},
-                              [&](const ChangeSetGroupState &change) {
-                                group_state = change.group_state;
-                                shared_key = GroupSharedKey::empty_shared_key();
-                              },
-                              [&](const ChangeSetSharedKey &change) { shared_key = change.shared_key; }),
-               change_v.value);
+    std::visit(
+        td::overloaded([](const ChangeNoop &change) {}, [&](const ChangeSetValue &change) { has_set_value = true; },
+                       [&](const ChangeSetGroupState &change) {
+                         group_state = change.group_state;
+                         shared_key = GroupSharedKey::empty_shared_key();
+                         has_group_state_change = true;
+                       },
+                       [&](const ChangeSetSharedKey &change) {
+                         shared_key = change.shared_key;
+                         has_shared_key_change = true;
+                       }),
+        change_v.value);
   }
 
   if (block.state_proof_.o_group_state) {
@@ -488,35 +567,57 @@ td::Result<State> State::create_from_block(const Block &block, td::optional<td::
   if (!shared_key) {
     return Error(E::InvalidBlock_InvalidStateProof_Secret, "no shared key");
   }
-  return State(key_value_state, group_state, shared_key);
+
+  auto state = State(key_value_state, group_state, shared_key);
+  state.has_set_value_ = has_set_value;
+  state.has_group_state_change_ = has_group_state_change;
+  state.has_shared_key_change_ = has_shared_key_change;
+  TRY_STATUS(state.validate_state(block.state_proof_));
+  return state;
 }
 
 td::Result<Block> Blockchain::build_block(std::vector<Change> changes, const PrivateKey &private_key) const {
   //TODO(now): check if we are allowed to sign this block
   auto public_key = private_key.to_public_key();
   auto state = state_;
+  if (last_block_.height_ == std::numeric_limits<td::int32>::max()) {
+    return td::Status::Error("Blockchain::build_block: last block height is too high");
+  }
   td::int32 height = last_block_.height_ + 1;
   if (height == 0) {
     state.group_state_ = std::make_shared<GroupState>(GroupState{{}, GroupParticipantFlags::AllPermissions});
   }
 
+  ValidateOptions validate_options;
+  validate_options.validate_state_hash = true;
+  validate_options.validate_signature = false;
+  validate_options.permissions = GroupParticipantFlags::AllPermissions;
   for (const auto &change : changes) {
-    TRY_STATUS(state.apply_change(change, public_key, true));
+    TRY_STATUS(state.apply_change(change, public_key, validate_options));
   }
 
   StateProof state_proof;
   state_proof.kv_hash = KeyValueHash{state.key_value_state_.get_hash()};
   state_proof.o_group_state = state.group_state_;
   state_proof.o_shared_key = state.shared_key_;
+  state.has_set_value_ = false;
+  state.has_group_state_change_ = false;
+  state.has_shared_key_change_ = false;
   for (const auto &change_v : changes) {
-    std::visit(td::overloaded([](const ChangeNoop &change) {}, [](const ChangeSetValue &change) {},
+    std::visit(td::overloaded([](const ChangeNoop &change) {},
+                              [&](const ChangeSetValue &change) { state.has_set_value_ = true; },
                               [&](const ChangeSetGroupState &change) {
                                 state_proof.o_group_state = {};
                                 state_proof.o_shared_key = {};
+                                state.has_group_state_change_ = true;
                               },
-                              [&](const ChangeSetSharedKey &change) { state_proof.o_shared_key = {}; }),
+                              [&](const ChangeSetSharedKey &change) {
+                                state_proof.o_shared_key = {};
+                                state.has_shared_key_change_ = true;
+                              }),
                change_v.value);
   }
+  TRY_STATUS(state.validate_state(state_proof));
 
   Block block;
   block.height_ = height;
@@ -528,13 +629,13 @@ td::Result<Block> Blockchain::build_block(std::vector<Change> changes, const Pri
   return block;
 }
 
-td::Status Blockchain::try_apply_block(Block block, bool validate_state_hash) {
+td::Status Blockchain::try_apply_block(Block block, ValidateOptions validate_options) {
   // To apply the first block an ephemeral -1 block is used
   //   - It has hash UInt256(0)
   //   - It has height -1
   //   - It has only one participant - Participant(user_id = 0, public_key = signer_public_key, permissions = all)
 
-  if (block.height_ != get_height() + 1) {
+  if (block.height_ != get_height() + 1 || get_height() == std::numeric_limits<td::int32>::max()) {
     return Error(E::InvalidBlock_HeightMismatch,
                  PSLICE() << "new_block.height=" << block.height_ << " != 1 + last_block.height=" << get_height());
   }
@@ -545,10 +646,7 @@ td::Status Blockchain::try_apply_block(Block block, bool validate_state_hash) {
 
   // TODO: validate total size of block
   auto state = state_;
-  // TODO: use hint (state from build_block)
-  TRY_STATUS(state.apply(block, validate_state_hash));
-
-  TRY_STATUS(state.validate_state(block.state_proof_));
+  TRY_STATUS(state.apply(block, validate_options));
 
   // NO errors after this point
   state_ = std::move(state);
@@ -567,14 +665,22 @@ td::int64 Blockchain::get_height() const {
   return last_block_.height_;
 }
 
-td::UInt256 as_key(td::Slice key) {
-  CHECK(key.size() == 32);
+td::Result<td::UInt256> as_key(td::Slice key) {
+  if (key.size() != 32) {
+    return td::Status::Error("Invalid key size");
+  }
   td::UInt256 key_int256;
   key_int256.as_mutable_slice().copy_from(key);
+  if (key_int256.is_zero()) {
+    return td::Status::Error("Invalid zero key");
+  }
   return key_int256;
 }
 
 td::Result<Blockchain> Blockchain::create_from_block(Block block, td::optional<td::Slice> o_snapshot) {
+  if (block.height_ < 0) {
+    return Error(E::InvalidBlock, "negative height");
+  }
   Blockchain res;
   res.last_block_hash_ = block.calc_hash();
   TRY_RESULT_ASSIGN(res.state_, State::create_from_block(block, std::move(o_snapshot)));
@@ -582,11 +688,51 @@ td::Result<Blockchain> Blockchain::create_from_block(Block block, td::optional<t
 
   return res;
 }
+namespace {
+bool is_good_magic(td::int32 magic) {
+  return magic == td::e2e_api::e2e_chain_block::ID || magic == td::e2e_api::e2e_chain_groupBroadcastNonceCommit::ID ||
+         magic == td::e2e_api::e2e_chain_groupBroadcastNonceReveal::ID;
+};
+}  // namespace
+
+bool Blockchain::is_from_server(td::Slice block) {
+  if (block.size() < 4) {
+    return false;
+  }
+  td::int32 server_magic = td::as<td::int32>(block.data());
+  return is_good_magic(server_magic - 1) && !is_good_magic(server_magic);
+}
+
+td::Result<std::string> Blockchain::from_any_to_local(std::string block) {
+  if (is_from_server(block)) {
+    return from_server_to_local(std::move(block));
+  }
+  return block;
+}
+td::Result<std::string> Blockchain::from_server_to_local(std::string block) {
+  if (block.size() < 4) {
+    return td::Status::Error("block is too short");
+  }
+  td::int32 server_magic = td::as<td::int32>(block.data());
+  if (is_good_magic(server_magic)) {
+    return td::Status::Error("Trying to apply local block, not from server");
+  }
+  td::int32 real_magic = server_magic - 1;
+  td::as<td::int32>(block.data()) = real_magic;
+  return block;
+}
+td::Result<std::string> Blockchain::from_local_to_server(std::string block) {
+  if (block.size() < 4) {
+    return td::Status::Error("block is too short");
+  }
+  td::int32 magic = td::as<td::int32>(block.data());
+  td::as<td::int32>(block.data()) = magic + 1;
+  return block;
+}
 
 td::Result<ClientBlockchain> ClientBlockchain::create_from_block(td::Slice block_slice, const PublicKey &public_key) {
   TRY_RESULT(block, Block::from_tl_serialized(block_slice));
   TRY_RESULT(blockchain, Blockchain::create_from_block(std::move(block)));
-  // TODO: check public key is in blockchain
   ClientBlockchain res;
   res.blockchain_ = std::move(blockchain);
   return res;
@@ -601,11 +747,15 @@ td::Result<ClientBlockchain> ClientBlockchain::create_empty() {
 td::Result<std::vector<Change>> ClientBlockchain::try_apply_block(td::Slice block_slice) {
   TRY_RESULT(block, Block::from_tl_serialized(block_slice));
 
-  TRY_STATUS(blockchain_.try_apply_block(block, false));
+  ValidateOptions validate_options;
+  validate_options.validate_signature = true;
+  validate_options.validate_state_hash = false;
+  TRY_STATUS(blockchain_.try_apply_block(block, validate_options));
   for (auto &change : block.changes_) {
     if (std::holds_alternative<ChangeSetValue>(change.value)) {
       auto &change_value = std::get<ChangeSetValue>(change.value);
-      map_[as_key(change_value.key)] = Entry{block.height_, change_value.value};
+      auto key = as_key(change_value.key).move_as_ok();  // already verified in try_apply_block
+      map_[key] = Entry{block.height_, change_value.value};
     }
   }
 
@@ -626,17 +776,16 @@ td::Status ClientBlockchain::add_proof(td::Slice proof) {
 td::Result<std::string> ClientBlockchain::build_block(const std::vector<Change> &changes,
                                                       const PrivateKey &private_key) const {
   TRY_RESULT(block, blockchain_.build_block(changes, private_key));
-  //return serialize(*block.to_tl());
   return block.to_tl_serialized();
-  ;
 }
 
-td::Result<std::string> ClientBlockchain::get_value(td::Slice key) const {
-  auto it = map_.find(as_key(key));
+td::Result<std::string> ClientBlockchain::get_value(td::Slice raw_key) const {
+  TRY_RESULT(key, as_key(raw_key));
+  auto it = map_.find(key);
   if (it != map_.end()) {
     return it->second.value;
   }
-  return blockchain_.state_.key_value_state_.get_value(key);
+  return blockchain_.state_.key_value_state_.get_value(raw_key);
 }
 
 }  // namespace tde2e_core

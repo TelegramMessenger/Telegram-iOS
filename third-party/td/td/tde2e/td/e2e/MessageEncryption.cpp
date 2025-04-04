@@ -28,25 +28,21 @@ td::AesCbcState MessageEncryption::calc_aes_cbc_state_from_hash(td::Slice hash) 
   return td::AesCbcState{key, iv};
 }
 
-td::AesCbcState MessageEncryption::calc_aes_cbc_state_from_secret(td::Slice seed) {
-  td::SecureString hash(64);
-  sha512(seed, hash.as_mutable_slice());
-  return calc_aes_cbc_state_from_hash(hash.as_slice().substr(0, 48));
-}
-
 td::SecureString MessageEncryption::gen_random_prefix(td::int64 data_size, td::int64 min_padding) {
-  td::SecureString buff(td::narrow_cast<size_t>(((min_padding + 15 + data_size) & -16) - data_size), 0);
+  td::SecureString buff(td::narrow_cast<size_t>(((min_padding + 15 + data_size) & ~static_cast<td::int64>(15)) - data_size), '\0');
   td::Random::secure_bytes(buff.as_mutable_slice());
-  buff.as_mutable_slice()[0] = td::narrow_cast<td::uint8>(buff.size());
+  buff.as_mutable_slice().ubegin()[0] = td::narrow_cast<td::uint8>(buff.size());
   CHECK((buff.size() + data_size) % 16 == 0);
   return buff;
 }
 
-td::SecureString MessageEncryption::combine_secrets(td::Slice a, td::Slice b) {
-  td::SecureString res(64, 0);
-  hmac_sha512(a, b, res.as_mutable_slice());
-  return res;
+td::SecureString MessageEncryption::gen_deterministic_prefix(td::int64 data_size, td::int64 min_padding) {
+  td::SecureString buff(td::narrow_cast<size_t>(((min_padding + 15 + data_size) & ~static_cast<td::int64>(15)) - data_size), '\0');
+  buff.as_mutable_slice().ubegin()[0] = td::narrow_cast<td::uint8>(buff.size());
+  CHECK((buff.size() + data_size) % 16 == 0);
+  return buff;
 }
+
 
 td::SecureString MessageEncryption::kdf(td::Slice secret, td::Slice password, int iterations) {
   td::SecureString new_secret(64);
@@ -56,16 +52,24 @@ td::SecureString MessageEncryption::kdf(td::Slice secret, td::Slice password, in
 
 td::SecureString MessageEncryption::encrypt_data_with_prefix(td::Slice data, td::Slice secret) {
   CHECK(data.size() % 16 == 0);
-  auto data_hash = sha256(data);
+  auto large_secret = kdf_expand(secret, "tde2e_encrypt_data");
+  auto encrypt_secret = large_secret.as_slice().substr(0, 32);
+  auto hmac_secret = large_secret.as_mutable_slice().substr(32, 32);
 
-  td::SecureString res_buf(data.size() + 32, 0);
+  auto large_msg_id = hmac_sha512(hmac_secret, data);
+  auto msg_id = large_msg_id.as_slice().substr(0, 16);
+
+  td::SecureString res_buf(data.size() + 16, '\0');
   auto res = res_buf.as_mutable_slice();
-  res.copy_from(data_hash);
+  res.copy_from(msg_id);
 
-  auto cbc_state = calc_aes_cbc_state_from_hash(combine_secrets(data_hash, secret));
-  cbc_state.encrypt(data, res.substr(32));
+  auto cbc_state = calc_aes_cbc_state_from_hash(hmac_sha512(encrypt_secret, msg_id));
+  cbc_state.encrypt(data, res.substr(16));
 
   return res_buf;
+}
+td::SecureString MessageEncryption::kdf_expand(td::Slice random_secret, td::Slice info) {
+  return hmac_sha512(random_secret, info);
 }
 
 td::SecureString MessageEncryption::encrypt_data(td::Slice data, td::Slice secret) {
@@ -77,22 +81,34 @@ td::SecureString MessageEncryption::encrypt_data(td::Slice data, td::Slice secre
 }
 
 td::Result<td::SecureString> MessageEncryption::decrypt_data(td::Slice encrypted_data, td::Slice secret) {
-  if (encrypted_data.size() < 33) {
-    return td::Status::Error("Failed to decrypt: data is too small");
+  if (encrypted_data.size() < 16) {
+    return td::Status::Error("Failed to decrypt: encrypted_data is less than 16 bytes");
   }
   if (encrypted_data.size() % 16 != 0) {
     return td::Status::Error("Failed to decrypt: data size is not divisible by 16");
   }
-  auto data_hash = encrypted_data.substr(0, 32);
-  encrypted_data = encrypted_data.substr(32);
 
-  auto cbc_state = calc_aes_cbc_state_from_hash(combine_secrets(data_hash, secret));
-  td::SecureString decrypted_data(encrypted_data.size(), 0);
+  auto large_secret = kdf_expand(secret, "tde2e_encrypt_data");
+  auto encrypt_secret = large_secret.as_slice().substr(0, 32);
+  auto hmac_secret = large_secret.as_mutable_slice().substr(32, 32);
+
+  auto msg_id = encrypted_data.substr(0, 16);
+  encrypted_data = encrypted_data.substr(16);
+
+  auto cbc_state = calc_aes_cbc_state_from_hash(hmac_sha512(encrypt_secret, msg_id));
+  td::SecureString decrypted_data(encrypted_data.size(), '\0');
   cbc_state.decrypt(encrypted_data, decrypted_data.as_mutable_slice());
 
+  auto got_large_msg_id = hmac_sha512(hmac_secret, decrypted_data);
+  auto got_msg_id = got_large_msg_id.as_slice().substr(0, 16);
+
   // check hash
-  if (data_hash != td::sha256(decrypted_data)) {
-    return td::Status::Error("Failed to decrypt: hash mismatch");
+  int is_mac_bad = 0;
+  for (size_t i = 0; i < 16; i++) {
+    is_mac_bad |= got_msg_id[i] ^ msg_id[i];
+  }
+  if (is_mac_bad != 0) {
+    return td::Status::Error("Failed to decrypt: msg_id mismatch");
   }
 
   auto prefix_size = static_cast<td::uint8>(decrypted_data[0]);
@@ -103,12 +119,25 @@ td::Result<td::SecureString> MessageEncryption::decrypt_data(td::Slice encrypted
   return td::SecureString(decrypted_data.as_slice().substr(prefix_size));
 }
 
-td::SecureString MessageEncryption::encrypt_header(td::Slice decrypted_header, td::Slice encrypted_message,
-                                                   td::Slice secret) {
-  CHECK(encrypted_message.size() >= 32);
-  CHECK(decrypted_header.size() == 32);
-  auto data_hash = encrypted_message.substr(0, 32);
-  auto cbc_state = calc_aes_cbc_state_from_hash(combine_secrets(data_hash, secret));
+td::SecureString MessageEncryption::hmac_sha512(td::Slice key, td::Slice message) {
+  td::SecureString res(64, 0);
+  td::hmac_sha512(key, message, res.as_mutable_slice());
+  return res;
+}
+
+td::Result<td::SecureString> MessageEncryption::encrypt_header(td::Slice decrypted_header, td::Slice encrypted_message,
+                                                               td::Slice secret) {
+  if (encrypted_message.size() < 16) {
+    return td::Status::Error("Failed to encrypt header: encrypted_message is too small");
+  }
+  if (decrypted_header.size() != 32) {
+    return td::Status::Error("Failed to encrypt header: header must be 32 bytes");
+  }
+  auto large_key = kdf_expand(secret, "tde2e_encrypt_header");
+  auto encryption_key = large_key.as_slice().substr(0, 32);
+
+  auto msg_id = encrypted_message.substr(0, 16);
+  auto cbc_state = calc_aes_cbc_state_from_hash(kdf_expand(encryption_key, msg_id));
 
   td::SecureString encrypted_header(32, 0);
   cbc_state.encrypt(decrypted_header, encrypted_header.as_mutable_slice());
@@ -117,15 +146,18 @@ td::SecureString MessageEncryption::encrypt_header(td::Slice decrypted_header, t
 
 td::Result<td::SecureString> MessageEncryption::decrypt_header(td::Slice encrypted_header, td::Slice encrypted_message,
                                                                td::Slice secret) {
+  if (encrypted_message.size() < 16) {
+    return td::Status::Error("Failed to decrypt: invalid message size");
+  }
   if (encrypted_header.size() != 32) {
     return td::Status::Error("Failed to decrypt: invalid header size");
   }
-  if (encrypted_message.size() < 32) {
-    return td::Status::Error("Failed to decrypt: invalid message size");
-  }
 
-  auto data_hash = encrypted_message.substr(0, 32);
-  auto cbc_state = calc_aes_cbc_state_from_hash(combine_secrets(data_hash, secret));
+  auto large_key = kdf_expand(secret, "tde2e_encrypt_header");
+  auto encryption_key = large_key.as_slice().substr(0, 32);
+
+  auto msg_id = encrypted_message.substr(0, 16);
+  auto cbc_state = calc_aes_cbc_state_from_hash(hmac_sha512(encryption_key, msg_id));
 
   td::SecureString decrypted_header(32, 0);
   cbc_state.decrypt(encrypted_header, decrypted_header.as_mutable_slice());

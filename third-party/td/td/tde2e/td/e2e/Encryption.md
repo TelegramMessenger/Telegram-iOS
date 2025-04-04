@@ -31,38 +31,54 @@ We use several encryption primitives similar to MTProto 2.0. Here are the key fu
 1) padding_size = ((16 + payload.size + 15) & -16) - payload.size
 2) padding = random_bytes(padding_size) with padding[0] = padding_size
 3) padded_data = padding || payload
-4) data_hash = SHA256(padded_data)
-5) (aes_key, aes_iv) = SHA512(data_hash || secret)[0:48]
-6) encrypted = aes_cbc(aes_key, aes_iv, padded_data)
-7) result = data_hash || encrypted
+4) large_secret = KDF(secret, "tde2e_encrypt_data")
+5) encrypt_secret = larges_secret[0:32]
+6) hmac_secret = large_secret[32:64]
+7) msg_id = HMAC-SHA512(hmac_secret, padded_data)[0:16]
+8) (aes_key, aes_iv) = HMAC-SHA512(encrypt_secret, msg_id)[0:48]
+9) encrypted = aes_cbc(aes_key, aes_iv, padded_data)
+10) result = msg_id || encrypted
 
 #### encrypt_header(header, encrypted_msg, secret) - encrypts 32-byte header
 
-1) msg_hash = encrypted_msg[0:32]  // First 32 bytes
-2) (aes_key, aes_iv) = SHA512(msg_hash || secret)[0:48]
-3) encrypted_header = aes_cbc(aes_key, aes_iv, header)
+1) msg_id = encrypted_msg[0:16]  // First 16 bytes
+2) encrypt_secret = KDF(secret, "tde2e_encrypt_header")[0:32]
+3) (aes_key, aes_iv) = HMAC-SHA512(encrypt_secret, msg_id)[0:48]
+4) encrypted_header = aes_cbc(aes_key, aes_iv, header)
 
-Decryption must verify `data_hash` before any further checks.
+KDF = HMAC-SHA512, also
+
+Decryption must verify that the message has a valid `msg_id` by computing HMAC over the decrypted data and comparing with the message's msg_id before accepting the payload.
 
 ### Packet encryption
 
 This is how we encrypt actual packets:
 
-#### encrypt_packet(payload, epoch_shared_key, user_id, seq_num, private_key) - encrypts a packet
+#### encrypt_packet(payload, active_epochs, user_id, channel_id, seq_num, private_key) - encrypts a packet
 
-1) packet_header = epoch (4 bytes)
-2) packet_payload = user_id (8 bytes) || seq_num (4 bytes) || payload
-3) signature = sign(packet_payload, private_key) // 64 bytes
-4) signed_payload = packet_payload || signature
-5) encrypted_payload = encrypt_data(signed_payload, epoch_shared_key)
-6) result = packet_header || encrypted_payload
+First, we generate header_a describing epochs (blockchain heights) used
+1) epoch_id[i] = active_epochs[i].epoch (4 bytes)
+2) header_a = active_epochs.size (4 bytes) || epoch_id[0]  || epoch_id[1] || ...
 
-Key properties:
-- Each packet includes 4-byte epoch to identify encryption key
-- Payload contains 8-byte user ID and 4-byte sequence number
-- Sequence numbers track last 1024 per user to prevent replays
-- Payload is signed with sender's private key (64-byte signature)
-- Full payload is encrypted using encrypt_data() with epoch's shared key
+Then, we encrypt payload with one_time_key. Signature in payload includes unencrypted header
+1) one_time_key = random(32)
+2) packet_payload = channel_id (4 bytes) || seq_num (4 bytes) || payload
+3) to_sign = HMAC-SHA512(header_a, packet_payload)
+4) signature = sign(to_sign, private_key) // 64 bytes
+5) signed_payload = packet_payload || signature
+6) encrypted_payload = encrypt_data(signed_payload, one_time_key)
+
+Finally, encrypt one_time_key with shared secret from each active epoch
+1) encrypted_key[i] = encrypt_header(one_time_key, encrypted_payload, active_epochs[i].shared_key) (32 bytes)
+2) header_b = encrypted_key[0] || encrypted_key[1] || ...
+
+
+result = header_a || header_b || encrypted_payload
+
+- seqno is unique for each pair (public key; channel_id), so it is used as protection from replay attacks
+- list of active epochs is also signed
+
+During decryption, we must take public key from blockchain's state. We also must verify user_id and channel_id. Expected user_id and channel_id are known externally
 
 ### Encryption of shared key
 
@@ -109,10 +125,10 @@ The emoji hash generation uses a two-phase commit-reveal protocol to prevent bru
    - Concatenate all revealed nonces in order
    - `emoji_hash = SHA512(blockchain_hash || concatenated_sorted_nonces)`
 
-Tl schema used for such broadcast is the following 
+Tl schema used for such broadcast is the following
 ```
-e2e.chain.groupBroadcastNonceCommit signature:int512 public_key:int256 chain_height:int32 nonce_hash:int256 = e2e.chain.GroupBroadcast;
-e2e.chain.groupBroadcastNonceReveal signature:int512 public_key:int256 chain_height:int32 nonce:int256 = e2e.chain.GroupBroadcast;
+e2e.chain.groupBroadcastNonceCommit signature:int512 public_key:int256 chain_height:int32 chain_hash:int256 nonce_hash:int256 = e2e.chain.GroupBroadcast;
+e2e.chain.groupBroadcastNonceReveal signature:int512 public_key:int256 chain_height:int32 chain_hash:int256 nonce:int256 = e2e.chain.GroupBroadcast;
 ```
 
-The signature is for the TL serialization of the same object with zeroed signature
+The signature is for the TL serialization of the same object with zeroed signature 

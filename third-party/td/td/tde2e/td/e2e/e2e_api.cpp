@@ -31,29 +31,6 @@
 #include <memory>
 
 namespace tde2e_api {
-ErrorCode to_error_code(td::int32) {
-  return ErrorCode::UnknownError;
-}
-template <class T>
-Result<T> to_result(const td::Status &status) {
-  return Result<T>(Error{to_error_code(status.code()), status.message().str()});
-}
-
-template <class T>
-Result<T> to_result(td::Result<T> &value) {
-  if (value.is_ok()) {
-    return Result<T>(value.move_as_ok());
-  }
-  return to_result<T>(value.error());
-}
-template <typename T>
-Result<T>::Result(td::Result<T> &&value) : Result(to_result(value)) {
-}
-
-template <typename T>
-Result<T>::Result(td::Status &&status) : Result(to_result<T>(status)) {
-}
-
 }  // namespace tde2e_api
 
 namespace tde2e_core {
@@ -66,7 +43,7 @@ using StorageRef = UniqueRef<EncryptedStorage>;
 using CallRef = UniqueRef<Call>;
 
 td::UInt256 to_hash(td::Slice tag, td::Slice serialization) {
-  auto res = MessageEncryption::combine_secrets(tag, serialization);
+  auto res = MessageEncryption::hmac_sha512(tag, serialization);
   td::UInt256 hash;
   hash.as_mutable_slice().copy_from(res.as_slice().substr(0, 32));
   return hash;
@@ -74,6 +51,17 @@ td::UInt256 to_hash(td::Slice tag, td::Slice serialization) {
 
 class KeyChain {
  public:
+  KeyChain() {
+    set_log_verbosity_level(1).ignore();
+  }
+
+  td::Result<api::Ok> set_log_verbosity_level(td::int32 new_verbosity_level) {
+    if (0 <= new_verbosity_level && new_verbosity_level <= VERBOSITY_NAME(NEVER)) {
+      SET_VERBOSITY_LEVEL(VERBOSITY_NAME(FATAL) + new_verbosity_level);
+      return api::Ok{};
+    }
+    return td::Status::Error("Wrong new verbosity level specified");
+  }
   td::Result<api::PrivateKeyId> generate_private_key() {
     TRY_RESULT(mnemonic, Mnemonic::create_new({}));
     return from_words(mnemonic.get_words_string());
@@ -94,11 +82,12 @@ class KeyChain {
   }
 
   td::Result<api::SymmetricKeyId> derive_secret(api::PrivateKeyId key_id, td::Slice tag) {
-    TRY_RESULT(pk, to_private_key_with_memonic(key_id));
+    TRY_RESULT(pk, to_private_key_with_mnemonic(key_id));
     auto hash = to_hash(PSLICE() << "derive secret with tag: " << td::base64_encode(tag),
                         pk.to_public_key().to_u256().as_slice());
     return container_.try_build<Key>(hash, [&]() -> td::Result<td::SecureString> {
-      return MessageEncryption::combine_secrets(tag, pk.to_private_key().to_secure_string());
+      // TODO: this is probably wrong and should be changed
+      return MessageEncryption::hmac_sha512(pk.to_private_key().to_secure_string(), tag);
     });
   }
 
@@ -112,7 +101,7 @@ class KeyChain {
   }
 
   td::Result<api::Bytes> to_encrypted_private_key(api::PrivateKeyId key_id, api::SymmetricKeyId secret_id) {
-    TRY_RESULT(pk, to_private_key_with_memonic(key_id));
+    TRY_RESULT(pk, to_private_key_with_mnemonic(key_id));
     TRY_RESULT(secret, to_secret_ref(secret_id));
     auto decrypted_key =
         DecryptedKey(td::transform(pk.words(), [](const auto &m) { return m.copy(); }), pk.to_private_key());
@@ -133,6 +122,23 @@ class KeyChain {
     });
   }
 
+  td::Result<api::Bytes> to_encrypted_private_key_internal(api::PrivateKeyId key_id, api::SymmetricKeyId secret_id) {
+    TRY_RESULT(pk, to_private_key_with_mnemonic(key_id));
+    TRY_RESULT(secret, to_secret_ref(secret_id));
+    return MessageEncryption::encrypt_data(pk.to_private_key().to_secure_string(), *secret).as_slice().str();
+  }
+
+  td::Result<api::PrivateKeyId> from_encrypted_private_key_internal(td::Slice encrypted_private_key,
+                                                                    api::SymmetricKeyId secret_id) {
+    TRY_RESULT(secret, to_secret_ref(secret_id));
+    auto hash = to_hash(PSLICE() << "encrypted private ed25519 key internal " << encrypted_private_key.str(), *secret);
+    return container_.try_build<Key>(hash, [&]() -> td::Result<PrivateKeyWithMnemonic> {
+      TRY_RESULT(raw_pk, MessageEncryption::decrypt_data(encrypted_private_key, *secret));
+      TRY_RESULT(pk, PrivateKey::from_slice(raw_pk));
+      return PrivateKeyWithMnemonic::from_private_key(pk, {});
+    });
+  }
+
   td::Result<api::PublicKeyId> from_public_key(td::Slice public_key) {
     TRY_RESULT(key, PublicKey::from_slice(public_key));
     auto hash = to_hash("public ed25519 key", public_key);
@@ -141,7 +147,7 @@ class KeyChain {
 
   td::Result<api::SymmetricKeyId> from_ecdh(api::PrivateKeyId private_key_id, api::PublicKeyId public_key_id) {
     TRY_RESULT(public_key, to_public_key(public_key_id));
-    TRY_RESULT(private_key, to_private_key_with_memonic(private_key_id));
+    TRY_RESULT(private_key, to_private_key_with_mnemonic(private_key_id));
     auto hash = to_hash("x25519 shared secret",
                         public_key.to_u256().as_slice().str() + private_key.to_public_key().to_u256().as_slice().str());
     return container_.try_build<Key>(hash, [&]() -> td::Result<td::SecureString> {
@@ -155,7 +161,7 @@ class KeyChain {
     return container_.try_build<Key>(hash, [&]() -> td::Result<td::SecureString> { return td::SecureString(secret); });
   }
   td::Result<api::SecureBytes> to_words(api::PrivateKeyId private_key_id) {
-    TRY_RESULT(private_key, to_private_key_with_memonic(private_key_id));
+    TRY_RESULT(private_key, to_private_key_with_mnemonic(private_key_id));
     api::SecureBytes res;
     auto words = private_key.words();
     for (size_t i = 0; i < words.size(); ++i) {
@@ -168,7 +174,7 @@ class KeyChain {
   }
 
   td::Result<api::Int512> sign(api::PrivateKeyId key, td::Slice data) {
-    TRY_RESULT(private_key_ref, to_private_key_with_memonic(key));
+    TRY_RESULT(private_key_ref, to_private_key_with_mnemonic(key));
     TRY_RESULT(signature, private_key_ref.sign(td::Slice(data.data(), data.size())));
     CHECK(signature.to_slice().size() == 64);
     api::Int512 result;
@@ -193,10 +199,9 @@ class KeyChain {
     api::EncryptedMessageForMany res;
     res.encrypted_message = MessageEncryption::encrypt_data(message, one_time_secret).as_slice().str();
     for (auto &secret : secrets) {
-      res.encrypted_headers.emplace_back(
-          MessageEncryption::encrypt_header(one_time_secret, res.encrypted_message, secret->as_slice())
-              .as_slice()
-              .str());
+      TRY_RESULT(encrypted_header,
+                 MessageEncryption::encrypt_header(one_time_secret, res.encrypted_message, secret->as_slice()));
+      res.encrypted_headers.emplace_back(encrypted_header.as_slice().str());
     }
     return res;
   }
@@ -214,8 +219,9 @@ class KeyChain {
 
     api::EncryptedMessageForMany res;
     for (auto &secret : secrets) {
-      res.encrypted_headers.emplace_back(
-          MessageEncryption::encrypt_header(header, secret->as_slice(), encrypted_message).as_slice().str());
+      TRY_RESULT(new_encrypted_header,
+                 MessageEncryption::encrypt_header(header, secret->as_slice(), encrypted_message));
+      res.encrypted_headers.emplace_back(new_encrypted_header.as_slice().str());
     }
     return res;
   }
@@ -241,7 +247,7 @@ class KeyChain {
   }
 
   td::Result<api::HandshakeId> handshake_create_for_bob(api::UserId bob_user_id, api::PrivateKeyId bob_private_key_id) {
-    TRY_RESULT(private_key_ref, to_private_key_with_memonic(bob_private_key_id));
+    TRY_RESULT(private_key_ref, to_private_key_with_mnemonic(bob_private_key_id));
     return container_.try_build<Handshake>({}, [&]() -> td::Result<QRHandshakeBob> {
       return QRHandshakeBob::create(bob_user_id, private_key_ref.to_private_key());
     });
@@ -254,7 +260,7 @@ class KeyChain {
                                                           api::PrivateKeyId alice_private_key_id,
                                                           api::UserId bob_user_id, td::Slice bob_public_key,
                                                           td::Slice start) {
-    TRY_RESULT(private_key_ref, to_private_key_with_memonic(alice_private_key_id));
+    TRY_RESULT(private_key_ref, to_private_key_with_mnemonic(alice_private_key_id));
     TRY_RESULT(bob_public_key_internal, PublicKey::from_slice(bob_public_key));
     return container_.try_build<Handshake>({}, [&] {
       return QRHandshakeAlice::create(alice_user_id, private_key_ref.to_private_key(), bob_user_id,
@@ -339,7 +345,7 @@ class KeyChain {
     return handshake_destroy({});
   }
   td::Result<api::StorageId> storage_create(api::PrivateKeyId key_id, td::Slice last_block) {
-    TRY_RESULT(private_key_ref, to_private_key_with_memonic(key_id));
+    TRY_RESULT(private_key_ref, to_private_key_with_mnemonic(key_id));
 
     TRY_RESULT(storage, EncryptedStorage::create(last_block, private_key_ref.to_private_key()));
     return container_.emplace<EncryptedStorage>(std::move(storage));
@@ -364,7 +370,7 @@ class KeyChain {
   }
   template <class T>
   td::Result<api::SignedEntry<T>> storage_sign_entry(api::PrivateKeyId key, api::Entry<T> entry) {
-    TRY_RESULT(private_key_ref, to_private_key_with_memonic(key));
+    TRY_RESULT(private_key_ref, to_private_key_with_mnemonic(key));
     return EncryptedStorage::sign_entry(private_key_ref.to_private_key(), std::move(entry));
   }
   td::Result<std::optional<api::Contact>> storage_get_contact(api::StorageId storage_id, api::PublicKeyId key) {
@@ -409,7 +415,7 @@ class KeyChain {
     for (auto &participant : call_state.participants) {
       TRY_RESULT(public_key, to_public_key(participant.public_key_id));
       group_state.participants.push_back(
-          GroupParticipant{participant.user_id, participant.permissions & 3, public_key});
+          GroupParticipant{participant.user_id, participant.permissions & 3, public_key, 0});
     }
     return std::make_shared<GroupState>(std::move(group_state));
   }
@@ -424,23 +430,29 @@ class KeyChain {
   }
 
   td::Result<api::Bytes> call_create_zero_block(api::PrivateKeyId private_key_id, const api::CallState &initial_state) {
-    TRY_RESULT(private_key_ref, to_private_key_with_memonic(private_key_id));
+    TRY_RESULT(private_key_ref, to_private_key_with_mnemonic(private_key_id));
     TRY_RESULT(group_state, to_group_state(initial_state));
     return Call::create_zero_block(private_key_ref.to_private_key(), group_state);
   }
   tde2e_api::Result<std::string> call_create_self_add_block(api::PrivateKeyId private_key_id, td::Slice previous_block,
                                                             const tde2e_api::CallParticipant &self) {
-    TRY_RESULT(private_key_ref, to_private_key_with_memonic(private_key_id));
+    TRY_RESULT(private_key_ref, to_private_key_with_mnemonic(private_key_id));
     TRY_RESULT(public_key, to_public_key(self.public_key_id));
     return Call::create_self_add_block(private_key_ref.to_private_key(), previous_block,
-                                       tde2e_core::GroupParticipant{self.user_id, 3, public_key});
+                                       tde2e_core::GroupParticipant{self.user_id, 3, public_key, 0});
   }
 
-  td::Result<api::CallId> call_create(api::PrivateKeyId private_key_id, td::Slice last_block) {
-    TRY_RESULT(private_key_ref, to_private_key_with_memonic(private_key_id));
+  td::Result<api::CallId> call_create(api::UserId user_id, api::PrivateKeyId private_key_id, td::Slice last_block) {
+    TRY_RESULT(private_key_ref, to_private_key_with_mnemonic(private_key_id));
 
-    TRY_RESULT(call, Call::create(private_key_ref.to_private_key(), last_block));
+    TRY_RESULT(call, Call::create(user_id, private_key_ref.to_private_key(), last_block));
     return container_.emplace<Call>(std::move(call));
+  }
+  td::Result<api::Bytes> call_describe(api::CallId call_id) {
+    TRY_RESULT(call_ref, to_call_ref(call_id));
+    td::StringBuilder sb;
+    sb << *call_ref;
+    return sb.as_cslice().str();
   }
 
   td::Result<api::Bytes> call_create_change_state_block(api::CallId call_id, const api::CallState &new_state) {
@@ -450,15 +462,16 @@ class KeyChain {
   }
   td::Result<api::SecureBytes> call_export_shared_key(api::CallId call_id) {
     TRY_RESULT(call_ref, to_call_ref(call_id));
-    return call_ref->shared_key().str();
+    TRY_RESULT(shared_key, call_ref->shared_key());
+    return shared_key.as_slice().str();
   }
-  td::Result<api::Bytes> call_encrypt(api::CallId call_id, td::Slice message) {
+  td::Result<api::Bytes> call_encrypt(api::CallId call_id, api::CallChannelId channel_id, td::Slice message) {
     TRY_RESULT(call_ref, to_call_ref(call_id));
-    return call_ref->encrypt(message);
+    return call_ref->encrypt(channel_id, message);
   }
-  td::Result<api::SecureBytes> call_decrypt(api::CallId call_id, td::Slice message) {
+  td::Result<api::SecureBytes> call_decrypt(api::CallId call_id, api::UserId user_id, api::CallChannelId channel_id, td::Slice message) {
     TRY_RESULT(call_ref, to_call_ref(call_id));
-    return call_ref->decrypt(message);
+    return call_ref->decrypt(user_id, channel_id, message);
   }
 
   td::Result<int> call_get_height(api::CallId call_id) {
@@ -525,7 +538,7 @@ class KeyChain {
         *key);
   }
 
-  td::Result<PrivateKeyWithMnemonic> to_private_key_with_memonic(api::AnyKeyId key_id) const {
+  td::Result<PrivateKeyWithMnemonic> to_private_key_with_mnemonic(api::AnyKeyId key_id) const {
     TRY_RESULT(key, container_.get_shared<Key>(key_id));
     TRY_RESULT(ref, convert<PrivateKeyWithMnemonic>(std::move(key)));
     return *ref;
@@ -564,6 +577,9 @@ td::Slice to_slice(std::string_view s) {
   }
   return td::Slice(s.data(), s.size());
 }
+Result<Ok> set_log_verbosity_level(int new_verbosity_level) {
+  return get_default_keychain().set_log_verbosity_level(new_verbosity_level);
+}
 Result<PrivateKeyId> key_generate_private_key() {
   return get_default_keychain().generate_private_key();
 }
@@ -576,12 +592,17 @@ Result<PrivateKeyId> key_derive_secret(PrivateKeyId key_id, Slice tag) {
 Result<Bytes> key_to_encrypted_private_key(PrivateKeyId key_id, SymmetricKeyId secret_id) {
   return get_default_keychain().to_encrypted_private_key(key_id, secret_id);
 }
+Result<PrivateKeyId> key_from_encrypted_private_key(Slice encrypted_key, SymmetricKeyId secret_id) {
+  return get_default_keychain().from_encrypted_private_key(to_slice(encrypted_key), secret_id);
+}
 Result<SymmetricKeyId> key_from_bytes(SecureSlice secret) {
   return get_default_keychain().from_bytes(to_slice(secret));
 }
-
-Result<PrivateKeyId> key_from_encrypted_private_key(Slice encrypted_key, SymmetricKeyId secret_id) {
-  return get_default_keychain().from_encrypted_private_key(to_slice(encrypted_key), secret_id);
+Result<Bytes> key_to_encrypted_private_key_internal(PrivateKeyId key_id, SymmetricKeyId secret_id) {
+  return get_default_keychain().to_encrypted_private_key_internal(key_id, secret_id);
+}
+Result<PrivateKeyId> key_from_encrypted_private_key_internal(Slice encrypted_key, SymmetricKeyId secret_id) {
+  return get_default_keychain().from_encrypted_private_key_internal(to_slice(encrypted_key), secret_id);
 }
 
 Result<PublicKeyId> key_from_public_key(Slice public_key) {
@@ -733,11 +754,16 @@ Result<Bytes> call_create_self_add_block(PrivateKeyId private_key_id, Slice prev
                                          const CallParticipant &self) {
   return get_default_keychain().call_create_self_add_block(private_key_id, to_slice(previous_block), self);
 }
-Result<CallId> call_create(PrivateKeyId private_key_id, Slice last_block) {
-  return get_default_keychain().call_create(private_key_id, to_slice(last_block));
+Result<CallId> call_create(UserId user_id, PrivateKeyId private_key_id, Slice last_block) {
+  return get_default_keychain().call_create(user_id, private_key_id, to_slice(last_block));
+}
+Result<std::string> call_describe(CallId call_id) {
+  return get_default_keychain().call_describe(call_id);
 }
 Result<std::string> call_describe_block(Slice block_slice) {
-  td::TlParser parser(to_slice(block_slice));
+  bool is_server = tde2e_core::Blockchain::is_from_server(to_slice(block_slice));
+  TRY_RESULT(block_str, tde2e_core::Blockchain::from_any_to_local(std::string(block_slice)));
+  td::TlParser parser(block_str);
   auto magic = parser.fetch_int();
   if (magic != td::e2e_api::e2e_chain_block::ID) {
     return td::Status::Error("wrong magic");
@@ -745,14 +771,17 @@ Result<std::string> call_describe_block(Slice block_slice) {
   auto block = td::e2e_api::e2e_chain_block::fetch(parser);
   parser.fetch_end();
   TRY_STATUS(parser.get_status());
-  return to_string(block);
+  return PSTRING() << (is_server ? "Server:" : "Local:") << to_string(block);
 }
 Result<std::string> call_describe_message(Slice broadcast_slice) {
-  td::TlParser parser(to_slice(broadcast_slice));
+  bool is_server = tde2e_core::Blockchain::is_from_server(to_slice(broadcast_slice));
+  TRY_RESULT(broadcast_str, tde2e_core::Blockchain::from_any_to_local(std::string(broadcast_slice)));
+
+  td::TlParser parser(broadcast_str);
   auto broadcast = td::e2e_api::e2e_chain_GroupBroadcast::fetch(parser);
   parser.fetch_end();
   TRY_STATUS(parser.get_status());
-  return to_string(broadcast);
+  return PSTRING() << (is_server ? "Server:" : "Local:") << to_string(broadcast);
 }
 Result<Bytes> call_create_change_state_block(CallId call_id, const CallState &new_state) {
   return get_default_keychain().call_create_change_state_block(call_id, new_state);
@@ -760,11 +789,11 @@ Result<Bytes> call_create_change_state_block(CallId call_id, const CallState &ne
 Result<SecureBytes> call_export_shared_key(CallId call_id) {
   return get_default_keychain().call_export_shared_key(call_id);
 }
-Result<Bytes> call_encrypt(CallId call_id, SecureSlice message) {
-  return get_default_keychain().call_encrypt(call_id, to_slice(message));
+Result<Bytes> call_encrypt(CallId call_id, CallChannelId channel_id, SecureSlice message) {
+  return get_default_keychain().call_encrypt(call_id, channel_id, to_slice(message));
 }
-Result<SecureBytes> call_decrypt(CallId call_id, Slice message) {
-  return get_default_keychain().call_decrypt(call_id, to_slice(message));
+Result<SecureBytes> call_decrypt(CallId call_id, UserId user_id, CallChannelId channel_id, Slice message) {
+  return get_default_keychain().call_decrypt(call_id, user_id, channel_id, to_slice(message));
 }
 Result<int> call_get_height(CallId call_id) {
   return get_default_keychain().call_get_height(call_id);

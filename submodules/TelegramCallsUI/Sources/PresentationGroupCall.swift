@@ -752,8 +752,8 @@ private final class ConferenceCallE2EContextStateImpl: ConferenceCallE2EContextS
         return self.call.encrypt(message)
     }
 
-    func decrypt(message: Data) -> Data? {
-        return self.call.decrypt(message)
+    func decrypt(message: Data, userId: Int64) -> Data? {
+        return self.call.decrypt(message, userId: userId)
     }
 }
 
@@ -1240,13 +1240,14 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 engine: accountContext.engine,
                 callId: initialCall.description.id,
                 accessHash: initialCall.description.accessHash,
+                userId: accountContext.account.peerId.id._internalGetInt64Value(),
                 reference: initialCall.reference,
                 keyPair: keyPair,
-                initializeState: { keyPair, block in
+                initializeState: { keyPair, userId, block in
                     guard let keyPair = TdKeyPair(keyId: keyPair.id, publicKey: keyPair.publicKey.data) else {
                         return nil
                     }
-                    guard let call = TdCall.make(with: keyPair, latestBlock: block) else {
+                    guard let call = TdCall.make(with: keyPair, userId: userId, latestBlock: block) else {
                         return nil
                     }
                     return ConferenceCallE2EContextStateImpl(call: call)
@@ -2103,8 +2104,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             return self.e2eCall.with({ $0.state?.encrypt(message: message) })
                         }
                         
-                        func decrypt(message: Data) -> Data? {
-                            return self.e2eCall.with({ $0.state?.decrypt(message: message) })
+                        func decrypt(message: Data, userId: Int64) -> Data? {
+                            return self.e2eCall.with({ $0.state?.decrypt(message: message, userId: userId) })
                         }
                     }
                     
@@ -3666,6 +3667,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             }
             return OngoingGroupCallContext.VideoChannel(
                 audioSsrc: item.audioSsrc,
+                peerId: item.peerId,
                 endpointId: item.endpointId,
                 ssrcGroups: item.ssrcGroups.map { group in
                     return OngoingGroupCallContext.VideoChannel.SsrcGroup(semantics: group.semantics, ssrcs: group.ssrcs)
