@@ -95,7 +95,7 @@ class StatusTest : public Test {
       LOG(INFO) << "Test " << get_test_name() << " PASSED";
     } else {
       // Include debug context in error message if available
-      LOG(ERROR) << "Test " << get_test_name() << " FAILED: " << status.message()
+      LOG(FATAL) << "Test " << get_test_name() << " FAILED: " << status.message()
                  << simple_test::DebugContext::instance();
     }
   }

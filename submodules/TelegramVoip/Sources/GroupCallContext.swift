@@ -755,11 +755,11 @@ public final class OngoingGroupCallContext {
                 isConference: isConference,
                 isActiveByDefault: audioIsActiveByDefault,
                 encryptDecrypt: encryptionContext.flatMap { encryptionContext in
-                    return { data, isEncrypt in
+                    return { data, userId, isEncrypt in
                         if isEncrypt {
                             return encryptionContext.encrypt(message: data)
                         } else {
-                            return encryptionContext.decrypt(message: data)
+                            return encryptionContext.decrypt(message: data, userId: userId)
                         }
                     }
                 }
@@ -899,7 +899,6 @@ public final class OngoingGroupCallContext {
                     }
                     return OngoingGroupCallRequestedVideoChannel(
                         audioSsrc: channel.audioSsrc,
-                        userId: channel.peerId,
                         endpointId: channel.endpointId,
                         ssrcGroups: channel.ssrcGroups.map { group in
                             return OngoingGroupCallSsrcGroup(

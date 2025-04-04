@@ -140,6 +140,8 @@ struct BlockBuilder {
   bool has_signature{false};
   tde2e_core::Block block;
 
+  KeyValueState kv_state_;
+
   void sign(const PrivateKey &private_key);
   void zero_sign();
   std::string hash_key(td::Slice key) const;
@@ -162,7 +164,7 @@ struct BlockchainTester {
   void reindex();
   td::Result<std::vector<std::string>> get_values(const std::vector<std::string> &keys);
 
-  td::Result<std::string> get_block(td::int64 height, int sub_chain = 0);
+  td::Result<std::string> get_block_from_server(td::int64 height, int sub_chain = 0);
 
   td::Result<std::string> get_value(td::Slice key);
 
