@@ -209,13 +209,49 @@ public final class CallListController: TelegramBaseController {
     }
 
     private func createGroupCall() {
+        self.view.endEditing(true)
+        
         guard !self.presentAccountFrozenInfoIfNeeded() else {
             return
         }
         if self.createConferenceCallDisposable != nil {
             return
         }
-        self.createConferenceCallDisposable = (self.context.engine.calls.createConferenceCall()
+        
+        var cancelImpl: (() -> Void)?
+        var signal = self.context.engine.calls.createConferenceCall()
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
+            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+                cancelImpl?()
+            }))
+            self?.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            return ActionDisposable { [weak controller] in
+                Queue.mainQueue().async() {
+                    controller?.dismiss()
+                }
+            }
+        }
+        |> runOn(Queue.mainQueue())
+        |> delay(0.3, queue: Queue.mainQueue())
+        let progressDisposable = progressSignal.start()
+        
+        signal = signal
+        |> afterDisposed {
+            Queue.mainQueue().async {
+                progressDisposable.dispose()
+            }
+        }
+        cancelImpl = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.createConferenceCallDisposable?.dispose()
+            self.createConferenceCallDisposable = nil
+        }
+        
+        self.createConferenceCallDisposable?.dispose()
+        self.createConferenceCallDisposable = (signal
         |> deliverOnMainQueue).startStrict(next: { [weak self] call in
             guard let self else {
                 return
