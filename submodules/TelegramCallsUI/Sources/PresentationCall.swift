@@ -658,6 +658,8 @@ public final class PresentationCallImpl: PresentationCall {
         self.sharedAudioContext = nil
         self.sessionState = nil
         self.callContextState = nil
+        let debugLogValue = Promise<String?>()
+        self.ongoingContext?.stop(sendDebugLogs: false, debugLogValue: debugLogValue)
         self.ongoingContext = nil
         self.ongoingContextStateDisposable?.dispose()
         self.ongoingContextStateDisposable = nil

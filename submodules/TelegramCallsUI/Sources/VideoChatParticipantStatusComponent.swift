@@ -5,6 +5,7 @@ import ComponentFlow
 import TelegramPresentationData
 import TelegramCore
 import LottieComponent
+import BundleIconComponent
 
 final class VideoChatParticipantStatusComponent: Component {
     let muteState: GroupCallParticipantsContext.Participant.MuteState?
@@ -208,6 +209,77 @@ final class VideoChatParticipantStatusComponent: Component {
                         raiseHandStatusView.removeFromSuperview()
                     }
                 }
+            }
+            
+            return size
+        }
+    }
+
+    func makeView() -> View {
+        return View()
+    }
+
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
+final class VideoChatParticipantInvitedStatusComponent: Component {
+    let theme: PresentationTheme
+
+    init(theme: PresentationTheme) {
+        self.theme = theme
+    }
+
+    static func ==(lhs: VideoChatParticipantInvitedStatusComponent, rhs: VideoChatParticipantInvitedStatusComponent) -> Bool {
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        return true
+    }
+
+    final class View: UIView {
+        private var icon = ComponentView<Empty>()
+        
+        private var component: VideoChatParticipantInvitedStatusComponent?
+        private var isUpdating: Bool = false
+        
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        deinit {
+        }
+        
+        func update(component: VideoChatParticipantInvitedStatusComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+            self.isUpdating = true
+            defer {
+                self.isUpdating = false
+            }
+            
+            let size = CGSize(width: 44.0, height: 44.0)
+            
+            let iconTintColor = UIColor(white: 1.0, alpha: 0.4)
+            let iconSize = self.icon.update(
+                transition: transition,
+                component: AnyComponent(BundleIconComponent(
+                    name: "Call/GroupPeerInvited",
+                    tintColor: iconTintColor
+                )),
+                environment: {},
+                containerSize: size
+            )
+            
+            let iconFrame = CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) * 0.5) - 2.0, y: floor((size.height - iconSize.height) * 0.5)), size: iconSize)
+            if let iconView = self.icon.view {
+                if iconView.superview == nil {
+                    self.addSubview(iconView)
+                }
+                transition.setFrame(view: iconView, frame: iconFrame)
             }
             
             return size

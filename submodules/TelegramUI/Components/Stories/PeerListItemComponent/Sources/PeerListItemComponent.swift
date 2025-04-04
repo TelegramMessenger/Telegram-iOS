@@ -235,7 +235,7 @@ public final class PeerListItemComponent: Component {
     let subtitleAccessory: SubtitleAccessory
     let presence: EnginePeer.Presence?
     let rightAccessory: RightAccessory
-    let rightAccessoryComponent: AnyComponent<Empty>?
+    let rightAccessoryComponent: AnyComponentWithIdentity<Empty>?
     let reaction: Reaction?
     let story: EngineStoryItem?
     let message: EngineMessage?
@@ -266,7 +266,7 @@ public final class PeerListItemComponent: Component {
         subtitleAccessory: SubtitleAccessory,
         presence: EnginePeer.Presence?,
         rightAccessory: RightAccessory = .none,
-        rightAccessoryComponent: AnyComponent<Empty>? = nil,
+        rightAccessoryComponent: AnyComponentWithIdentity<Empty>? = nil,
         reaction: Reaction? = nil,
         story: EngineStoryItem? = nil,
         message: EngineMessage? = nil,
@@ -763,9 +763,14 @@ public final class PeerListItemComponent: Component {
                     height = 40.0 + verticalInset * 2.0
                 }
             }
+
+            if let rightAccessoryComponentView = self.rightAccessoryComponentView, component.rightAccessoryComponent?.id != previousComponent?.rightAccessoryComponent?.id {
+                self.rightAccessoryComponentView = nil
+                rightAccessoryComponentView.view?.removeFromSuperview()
+            }
             
             var rightAccessoryComponentSize: CGSize?
-            if let rightAccessoryComponent = component.rightAccessoryComponent {
+            if let rightAccessoryComponent = component.rightAccessoryComponent?.component {
                 var rightAccessoryComponentTransition = transition
                 let rightAccessoryComponentView: ComponentView<Empty>
                 if let current = self.rightAccessoryComponentView {

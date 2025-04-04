@@ -1258,7 +1258,7 @@ final class VideoChatParticipantsComponent: Component {
                             subtitle: subtitle,
                             subtitleAccessory: .none,
                             presence: nil,
-                            rightAccessoryComponent: rightAccessoryComponent,
+                            rightAccessoryComponent: AnyComponentWithIdentity(id: 0, component: rightAccessoryComponent),
                             selectionState: .none,
                             hasNext: false,
                             extractedTheme: PeerListItemComponent.ExtractedTheme(
@@ -1295,6 +1295,10 @@ final class VideoChatParticipantsComponent: Component {
                             subtitle = PeerListItemComponent.Subtitle(text: "invited", color: .neutral)
                         }
                         
+                        let rightAccessoryComponent: AnyComponent<Empty> = AnyComponent(VideoChatParticipantInvitedStatusComponent(
+                            theme: component.theme
+                        ))
+                        
                         peerItemComponent = PeerListItemComponent(
                             context: component.call.accountContext,
                             theme: component.theme,
@@ -1313,7 +1317,7 @@ final class VideoChatParticipantsComponent: Component {
                             subtitle: subtitle,
                             subtitleAccessory: .none,
                             presence: nil,
-                            rightAccessoryComponent: nil,
+                            rightAccessoryComponent: AnyComponentWithIdentity(id: 1, component: rightAccessoryComponent),
                             selectionState: .none,
                             hasNext: false,
                             extractedTheme: PeerListItemComponent.ExtractedTheme(

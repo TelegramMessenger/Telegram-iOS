@@ -271,11 +271,17 @@ extension VideoChatScreenComponent.View {
                             guard let self, case let .group(groupCall) = self.currentCall else {
                                 return
                             }
-                            guard let peerId = groupCall.peerId else {
-                                return
+                            
+                            let chatPeer: Signal<EnginePeer?, NoError>
+                            if let peerId = groupCall.peerId {
+                                chatPeer = groupCall.accountContext.engine.data.get(
+                                    TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+                                )
+                            } else {
+                                chatPeer = .single(nil)
                             }
 
-                            let _ = (groupCall.accountContext.account.postbox.loadedPeerWithId(peerId)
+                            let _ = (chatPeer
                             |> deliverOnMainQueue).start(next: { [weak self] chatPeer in
                                 guard let self, let environment = self.environment, case let .group(groupCall) = self.currentCall else {
                                     return
@@ -286,7 +292,9 @@ extension VideoChatScreenComponent.View {
                                 var items: [ActionSheetItem] = []
                                 
                                 let nameDisplayOrder = presentationData.nameDisplayOrder
-                                items.append(DeleteChatPeerActionSheetItem(context: groupCall.accountContext, peer: EnginePeer(peer), chatPeer: EnginePeer(chatPeer), action: .removeFromGroup, strings: environment.strings, nameDisplayOrder: nameDisplayOrder))
+                                if let chatPeer {
+                                    items.append(DeleteChatPeerActionSheetItem(context: groupCall.accountContext, peer: EnginePeer(peer), chatPeer: chatPeer, action: .removeFromGroup, strings: environment.strings, nameDisplayOrder: nameDisplayOrder))
+                                }
 
                                 items.append(ActionSheetButtonItem(title: environment.strings.VoiceChat_RemovePeerRemove, color: .destructive, action: { [weak self, weak actionSheet] in
                                     actionSheet?.dismissAnimated()
@@ -294,15 +302,14 @@ extension VideoChatScreenComponent.View {
                                     guard let self, let environment = self.environment, case let .group(groupCall) = self.currentCall else {
                                         return
                                     }
-                                    guard let callPeerId = groupCall.peerId else {
-                                        return
-                                    }
                                     
-                                    let _ = groupCall.accountContext.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(engine: groupCall.accountContext.engine, peerId: callPeerId, memberId: peer.id, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: Int32.max)).start()
                                     if groupCall.isConference {
                                         groupCall.kickPeer(id: peer.id)
                                     } else {
-                                        groupCall.removedPeer(peer.id)
+                                        if let callPeerId = groupCall.peerId {
+                                            let _ = groupCall.accountContext.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(engine: groupCall.accountContext.engine, peerId: callPeerId, memberId: peer.id, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: Int32.max)).start()
+                                            groupCall.removedPeer(peer.id)
+                                        }
                                     }
                                     
                                     self.presentUndoOverlay(content: .banned(text: environment.strings.VoiceChat_RemovedPeerText(EnginePeer(peer).displayTitle(strings: environment.strings, displayOrder: nameDisplayOrder)).string), action: { _ in return false })
