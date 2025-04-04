@@ -149,6 +149,7 @@ final class VideoChatParticipantsComponent: Component {
     let safeInsets: UIEdgeInsets
     let interfaceOrientation: UIInterfaceOrientation
     let openParticipantContextMenu: (EnginePeer.Id, ContextExtractedContentContainingView, ContextGesture?) -> Void
+    let openInvitedParticipantContextMenu: (EnginePeer.Id, ContextExtractedContentContainingView, ContextGesture?) -> Void
     let updateMainParticipant: (VideoParticipantKey?, Bool?) -> Void
     let updateIsMainParticipantPinned: (Bool) -> Void
     let updateIsExpandedUIHidden: (Bool) -> Void
@@ -169,6 +170,7 @@ final class VideoChatParticipantsComponent: Component {
         safeInsets: UIEdgeInsets,
         interfaceOrientation: UIInterfaceOrientation,
         openParticipantContextMenu: @escaping (EnginePeer.Id, ContextExtractedContentContainingView, ContextGesture?) -> Void,
+        openInvitedParticipantContextMenu: @escaping (EnginePeer.Id, ContextExtractedContentContainingView, ContextGesture?) -> Void,
         updateMainParticipant: @escaping (VideoParticipantKey?, Bool?) -> Void,
         updateIsMainParticipantPinned: @escaping (Bool) -> Void,
         updateIsExpandedUIHidden: @escaping (Bool) -> Void,
@@ -188,6 +190,7 @@ final class VideoChatParticipantsComponent: Component {
         self.safeInsets = safeInsets
         self.interfaceOrientation = interfaceOrientation
         self.openParticipantContextMenu = openParticipantContextMenu
+        self.openInvitedParticipantContextMenu = openInvitedParticipantContextMenu
         self.updateMainParticipant = updateMainParticipant
         self.updateIsMainParticipantPinned = updateIsMainParticipantPinned
         self.updateIsExpandedUIHidden = updateIsExpandedUIHidden
@@ -1317,8 +1320,18 @@ final class VideoChatParticipantsComponent: Component {
                                 inset: 2.0,
                                 background: UIColor(white: 0.1, alpha: 1.0)
                             ),
-                            action: nil,
-                            contextAction: nil
+                            action: { [weak self] peer, _, itemView in
+                                guard let self, let component = self.component else {
+                                    return
+                                }
+                                component.openInvitedParticipantContextMenu(peer.id, itemView.extractedContainerView, nil)
+                            },
+                            contextAction: { [weak self] peer, sourceView, gesture in
+                                guard let self, let component = self.component else {
+                                    return
+                                }
+                                component.openInvitedParticipantContextMenu(peer.id, sourceView, gesture)
+                            }
                         )
                     }
                     

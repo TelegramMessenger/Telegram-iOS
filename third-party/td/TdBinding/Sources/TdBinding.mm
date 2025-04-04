@@ -83,6 +83,13 @@ static NSString *hexStringFromData(NSData *data) {
     if (self != nil) {
         _callId = callId;
         _keyPair = keyPair;
+        
+        static dispatch_once_t onceToken;
+        dispatch_once(&onceToken, ^{
+            #if DEBUG
+            tde2e_api::set_log_verbosity_level(4);
+            #endif
+        });
     }
     return self;
 }
@@ -130,7 +137,17 @@ static NSString *hexStringFromData(NSData *data) {
         #if DEBUG
         auto describeResult = tde2e_api::call_describe_message(it);
         if (describeResult.is_ok()) {
-            NSLog(@"TdCall.takeOutgoingBroadcastBlocks call_pull_outbound_messages: block %@", [[NSString alloc] initWithBytes:describeResult.value().data() length:describeResult.value().size() encoding:NSUTF8StringEncoding]);
+            NSString *utf8String = [[NSString alloc] initWithBytes:describeResult.value().data() length:describeResult.value().size() encoding:NSUTF8StringEncoding];
+            if (utf8String) {
+                NSLog(@"TdCall.call_pull_outbound_messages block: %@", utf8String);
+            } else {
+                NSString *lossyString = [[NSString alloc] initWithData:[NSData dataWithBytes:describeResult.value().data() length:describeResult.value().size()] encoding:NSASCIIStringEncoding];
+                if (lossyString) {
+                    NSLog(@"TdCall.call_pull_outbound_messages block (lossy conversion): %@", lossyString);
+                } else {
+                    NSLog(@"TdCall.call_pull_outbound_messages block: [binary data, length: %lu]", (unsigned long)describeResult.value().size());
+                }
+            }
         } else {
             NSLog(@"TdCall.takeOutgoingBroadcastBlocks call_pull_outbound_messages: describe block failed");
         }
@@ -178,7 +195,17 @@ static NSString *hexStringFromData(NSData *data) {
     #if DEBUG
     auto describeResult = tde2e_api::call_describe_block(mappedBlock);
     if (describeResult.is_ok()) {
-        NSLog(@"TdCall.applyBlock block: %@", [[NSString alloc] initWithBytes:describeResult.value().data() length:describeResult.value().size() encoding:NSUTF8StringEncoding]);
+        NSString *utf8String = [[NSString alloc] initWithBytes:describeResult.value().data() length:describeResult.value().size() encoding:NSUTF8StringEncoding];
+        if (utf8String) {
+            NSLog(@"TdCall.applyBlock block: %@", utf8String);
+        } else {
+            NSString *lossyString = [[NSString alloc] initWithData:[NSData dataWithBytes:describeResult.value().data() length:describeResult.value().size()] encoding:NSASCIIStringEncoding];
+            if (lossyString) {
+                NSLog(@"TdCall.applyBlock block (lossy conversion): %@", lossyString);
+            } else {
+                NSLog(@"TdCall.applyBlock block: [binary data, length: %lu]", (unsigned long)describeResult.value().size());
+            }
+        }
     } else {
         NSLog(@"TdCall.applyBlock block: describe block failed");
     }
@@ -196,7 +223,17 @@ static NSString *hexStringFromData(NSData *data) {
     #if DEBUG
     auto describeResult = tde2e_api::call_describe_message(mappedBlock);
     if (describeResult.is_ok()) {
-        NSLog(@"TdCall.applyBroadcastBlock block: %@", [[NSString alloc] initWithBytes:describeResult.value().data() length:describeResult.value().size() encoding:NSUTF8StringEncoding]);
+        NSString *utf8String = [[NSString alloc] initWithBytes:describeResult.value().data() length:describeResult.value().size() encoding:NSUTF8StringEncoding];
+        if (utf8String) {
+            NSLog(@"TdCall.applyBroadcastBlock block: %@", utf8String);
+        } else {
+            NSString *lossyString = [[NSString alloc] initWithData:[NSData dataWithBytes:describeResult.value().data() length:describeResult.value().size()] encoding:NSASCIIStringEncoding];
+            if (lossyString) {
+                NSLog(@"TdCall.applyBroadcastBlock block (lossy conversion): %@", lossyString);
+            } else {
+                NSLog(@"TdCall.applyBroadcastBlock block: [binary data, length: %lu]", (unsigned long)describeResult.value().size());
+            }
+        }
     } else {
         NSLog(@"TdCall.applyBroadcastBlock block: describe block failed");
     }
@@ -205,6 +242,23 @@ static NSString *hexStringFromData(NSData *data) {
     auto result = tde2e_api::call_receive_inbound_message(_callId, mappedBlock);
     if (!result.is_ok()) {
         return;
+    }
+    
+    describeResult = tde2e_api::call_describe(_callId);
+    if (describeResult.is_ok()) {
+        NSString *utf8String = [[NSString alloc] initWithBytes:describeResult.value().data() length:describeResult.value().size() encoding:NSUTF8StringEncoding];
+        if (utf8String) {
+            NSLog(@"TdCall.applyBroadcastBlock call after apply: %@", utf8String);
+        } else {
+            NSString *lossyString = [[NSString alloc] initWithData:[NSData dataWithBytes:describeResult.value().data() length:describeResult.value().size()] encoding:NSASCIIStringEncoding];
+            if (lossyString) {
+                NSLog(@"TdCall.applyBroadcastBlock call after apply (lossy conversion): %@", lossyString);
+            } else {
+                NSLog(@"TdCall.applyBroadcastBlock call after apply: [binary data, length: %lu]", (unsigned long)describeResult.value().size());
+            }
+        }
+    } else {
+        NSLog(@"TdCall.applyBroadcastBlock call after apply: describe block failed");
     }
 }
 

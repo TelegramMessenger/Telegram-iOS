@@ -961,7 +961,6 @@ private final class NotificationServiceHandler {
 
                     if let locKey = payloadJson["loc-key"] as? String, (locKey == "CONF_CALL_REQUEST" || locKey == "CONF_CALL_MISSED"), let callIdString = payloadJson["call_id"] as? String {
                         if let callId = Int64(callIdString) {
-                            
                             if let updates = payloadJson["updates"] as? String {
                                 var updateString = updates
                                 updateString = updateString.replacingOccurrences(of: "-", with: "+")

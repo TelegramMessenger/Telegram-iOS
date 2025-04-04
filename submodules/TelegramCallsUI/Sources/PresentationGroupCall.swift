@@ -3986,6 +3986,14 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
     }
     
+    public func kickPeer(id: EnginePeer.Id) {
+        if self.isConference {
+            self.removedPeer(id)
+            
+            self.e2eContext?.kickPeer(id: id)
+        }
+    }
+    
     public func removedPeer(_ peerId: PeerId) {
         var updatedInvitedPeers = self.invitedPeersValue
         updatedInvitedPeers.removeAll(where: { $0.id == peerId})

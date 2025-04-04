@@ -2329,6 +2329,12 @@ final class VideoChatScreenComponent: Component {
                         }
                         self.openParticipantContextMenu(id: id, sourceView: sourceView, gesture: gesture)
                     },
+                    openInvitedParticipantContextMenu: { [weak self] id, sourceView, gesture in
+                        guard let self else {
+                            return
+                        }
+                        self.openInvitedParticipantContextMenu(id: id, sourceView: sourceView, gesture: gesture)
+                    },
                     updateMainParticipant: { [weak self] key, alsoSetIsUIHidden in
                         guard let self else {
                             return
