@@ -14,7 +14,6 @@ options=""
 options="$options -DOPENSSL_FOUND=1"
 options="$options -DOPENSSL_CRYPTO_LIBRARY=${openssl_crypto_library}"
 options="$options -DOPENSSL_INCLUDE_DIR=${OPENSSL_DIR}/src/include"
-#options="$options -DOPENSSL_LIBRARIES=${openssl_crypto_library}"
 options="$options -DCMAKE_BUILD_TYPE=Release"
 
 cd "$BUILD_DIR"

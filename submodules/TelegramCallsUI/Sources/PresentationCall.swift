@@ -217,6 +217,12 @@ public final class SharedCallAudioContext {
             }
         }
     }
+    
+    public func switchToSpeakerIfBuiltin() {
+        if case .builtin = self.currentAudioOutputValue {
+            self.setCurrentAudioOutput(.speaker)
+        }
+    }
 }
 
 public final class PresentationCallImpl: PresentationCall {
@@ -1031,6 +1037,8 @@ public final class PresentationCallImpl: PresentationCall {
                     )
                     self.conferenceCallImpl = conferenceCall
                     conferenceCall.upgradedConferenceCall = self
+                    
+                    self.sharedAudioContext?.switchToSpeakerIfBuiltin()
                     
                     for (peerId, isVideo) in self.pendingInviteToConferencePeerIds {
                         let _ = conferenceCall.invitePeer(peerId, isVideo: isVideo)

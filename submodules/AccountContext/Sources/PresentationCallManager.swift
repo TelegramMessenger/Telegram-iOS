@@ -487,6 +487,7 @@ public protocol PresentationGroupCall: AnyObject {
     func updateTitle(_ title: String)
     
     func invitePeer(_ peerId: EnginePeer.Id, isVideo: Bool) -> Bool
+    func kickPeer(id: EnginePeer.Id)
     func removedPeer(_ peerId: EnginePeer.Id)
     var invitedPeers: Signal<[PresentationGroupCallInvitedPeer], NoError> { get }
     

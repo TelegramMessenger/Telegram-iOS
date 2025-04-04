@@ -299,7 +299,11 @@ extension VideoChatScreenComponent.View {
                                     }
                                     
                                     let _ = groupCall.accountContext.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(engine: groupCall.accountContext.engine, peerId: callPeerId, memberId: peer.id, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: Int32.max)).start()
-                                    groupCall.removedPeer(peer.id)
+                                    if groupCall.isConference {
+                                        groupCall.kickPeer(id: peer.id)
+                                    } else {
+                                        groupCall.removedPeer(peer.id)
+                                    }
                                     
                                     self.presentUndoOverlay(content: .banned(text: environment.strings.VoiceChat_RemovedPeerText(EnginePeer(peer).displayTitle(strings: environment.strings, displayOrder: nameDisplayOrder)).string), action: { _ in return false })
                                 }))
@@ -333,6 +337,62 @@ extension VideoChatScreenComponent.View {
             items: items |> map { items in
                 return ContextController.Items(content: .list(items))
             },
+            recognizer: nil,
+            gesture: gesture
+        )
+        
+        environment.controller()?.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                controller.dismiss()
+            }
+            return true
+        })
+        
+        environment.controller()?.presentInGlobalOverlay(contextController)
+    }
+    
+    func openInvitedParticipantContextMenu(id: EnginePeer.Id, sourceView: ContextExtractedContentContainingView, gesture: ContextGesture?) {
+        guard let environment = self.environment else {
+            return
+        }
+        guard let currentCall = self.currentCall else {
+            return
+        }
+        guard case .group = self.currentCall else {
+            return
+        }
+           
+        let itemsForEntry: () -> [ContextMenuItem] = { [weak self] in
+            guard let self, let environment = self.environment else {
+                return []
+            }
+            
+            var items: [ContextMenuItem] = []
+            
+            items.append(.action(ContextMenuActionItem(text: environment.strings.VoiceChat_RemovePeer, textColor: .destructive, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.actionSheet.destructiveActionTextColor)
+            }, action: { [weak self] c, _ in
+                c?.dismiss(result: .dismissWithoutContent, completion: nil)
+                
+                guard let self else {
+                    return
+                }
+                guard case let .group(groupCall) = self.currentCall else {
+                    return
+                }
+                
+                groupCall.kickPeer(id: id)
+            })))
+            return items
+        }
+        
+        let items = itemsForEntry()
+        
+        let presentationData = currentCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
+        let contextController = ContextController(
+            presentationData: presentationData,
+            source: .extracted(ParticipantExtractedContentSource(contentView: sourceView)),
+            items: .single(ContextController.Items(content: .list(items))),
             recognizer: nil,
             gesture: gesture
         )
