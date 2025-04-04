@@ -244,6 +244,7 @@ static NSString *hexStringFromData(NSData *data) {
         return;
     }
     
+    #if DEBUG
     describeResult = tde2e_api::call_describe(_callId);
     if (describeResult.is_ok()) {
         NSString *utf8String = [[NSString alloc] initWithBytes:describeResult.value().data() length:describeResult.value().size() encoding:NSUTF8StringEncoding];
@@ -260,6 +261,7 @@ static NSString *hexStringFromData(NSData *data) {
     } else {
         NSLog(@"TdCall.applyBroadcastBlock call after apply: describe block failed");
     }
+    #endif
 }
 
 - (nullable NSData *)generateRemoveParticipantsBlock:(NSArray<NSNumber *> *)participantIds {

@@ -753,13 +753,13 @@ public final class OngoingGroupCallContext {
                 statsLogPath: tempStatsLogPath,
                 audioDevice: nil,
                 isConference: isConference,
-                isActiveByDefault: true,
+                isActiveByDefault: audioIsActiveByDefault,
                 encryptDecrypt: encryptionContext.flatMap { encryptionContext in
-                    return { data, isEncrypt in
+                    return { data, userId, isEncrypt in
                         if isEncrypt {
-                            return encryptionContext.encrypt(data)
+                            return encryptionContext.encrypt(message: data)
                         } else {
-                            return encryptionContext.decrypt(data)
+                            return encryptionContext.decrypt(message: data, userId: userId)
                         }
                     }
                 }
@@ -899,7 +899,6 @@ public final class OngoingGroupCallContext {
                     }
                     return OngoingGroupCallRequestedVideoChannel(
                         audioSsrc: channel.audioSsrc,
-                        userId: channel.peerId,
                         endpointId: channel.endpointId,
                         ssrcGroups: channel.ssrcGroups.map { group in
                             return OngoingGroupCallSsrcGroup(
