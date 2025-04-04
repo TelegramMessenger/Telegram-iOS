@@ -865,13 +865,25 @@ func _internal_inviteConferenceCallParticipant(account: Account, reference: Inte
     }
 }
 
+public enum RemoveGroupCallBlockchainParticipantsMode {
+    case kick
+    case cleanup
+}
+
 public enum RemoveGroupCallBlockchainParticipantsResult {
     case success
     case pollBlocksAndRetry
 }
 
-func _internal_removeGroupCallBlockchainParticipants(account: Account, callId: Int64, accessHash: Int64, participantIds: [Int64], block: Data) -> Signal<RemoveGroupCallBlockchainParticipantsResult, NoError> {
-    return account.network.request(Api.functions.phone.deleteConferenceCallParticipants(call: .inputGroupCall(id: callId, accessHash: accessHash), ids: participantIds, block: Buffer(data: block)))
+func _internal_removeGroupCallBlockchainParticipants(account: Account, callId: Int64, accessHash: Int64, mode: RemoveGroupCallBlockchainParticipantsMode, participantIds: [Int64], block: Data) -> Signal<RemoveGroupCallBlockchainParticipantsResult, NoError> {
+    var flags: Int32 = 0
+    switch mode {
+    case .kick:
+        flags |= 1 << 1
+    case .cleanup:
+        flags |= 1 << 0
+    }
+    return account.network.request(Api.functions.phone.deleteConferenceCallParticipants(flags: flags, call: .inputGroupCall(id: callId, accessHash: accessHash), ids: participantIds, block: Buffer(data: block)))
     |> map { updates -> RemoveGroupCallBlockchainParticipantsResult in
         account.stateManager.addUpdates(updates)
         return .success

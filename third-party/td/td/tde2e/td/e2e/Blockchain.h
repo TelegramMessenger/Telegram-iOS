@@ -43,6 +43,7 @@ struct GroupParticipant {
   td::int64 user_id{0};
   td::int32 flags{0};
   PublicKey public_key{};
+  td::int32 version{0};
   bool add_users() const {
     return (flags & GroupParticipantFlags::AddUsers) != 0;
   }
@@ -50,7 +51,8 @@ struct GroupParticipant {
     return (flags & GroupParticipantFlags::RemoveUsers) != 0;
   }
   bool operator==(const GroupParticipant &other) const {
-    return user_id == other.user_id && flags == other.flags && public_key == other.public_key;
+    return user_id == other.user_id && flags == other.flags && public_key == other.public_key &&
+           version == other.version;
   }
   bool operator!=(const GroupParticipant &other) const {
     return !(other == *this);
@@ -61,7 +63,8 @@ struct GroupParticipant {
 };
 
 inline td::StringBuilder &operator<<(td::StringBuilder &sb, const GroupParticipant &part) {
-  return sb << "(uid=" << part.user_id << ", flags=" << part.flags << ", pk=" << part.public_key << ")";
+  return sb << "(uid=" << part.user_id << ", flags=" << part.flags << ", pk=" << part.public_key
+            << ", version=" << part.version << ")";
 }
 
 struct GroupState;
@@ -94,9 +97,10 @@ struct GroupState {
   bool empty() const {
     return participants.empty();
   }
+  td::int32 version() const;
   td::Result<GroupParticipant> get_participant(td::int64 user_id) const;
   td::Result<GroupParticipant> get_participant(const PublicKey &public_key) const;
-  Permissions get_permissions(const PublicKey &public_key) const;
+  Permissions get_permissions(const PublicKey &public_key, td::int32 limit_permissions) const;
   static GroupStateRef from_tl(const td::e2e_api::e2e_chain_groupState &state);
   e2e::object_ptr<e2e::e2e_chain_groupState> to_tl() const;
   static GroupStateRef empty_state();
@@ -119,6 +123,9 @@ struct GroupSharedKey {
   static GroupSharedKeyRef from_tl(const td::e2e_api::e2e_chain_sharedKey &shared_key);
   e2e::object_ptr<e2e::e2e_chain_sharedKey> to_tl() const;
   static GroupSharedKeyRef empty_shared_key();
+  bool empty() const {
+    return *this == *empty_shared_key();
+  }
   bool operator==(const GroupSharedKey &other) const {
     return ek == other.ek && encrypted_shared_key == other.encrypted_shared_key && dest_user_id == other.dest_user_id &&
            dest_header == other.dest_header;
@@ -201,13 +208,20 @@ struct StateProof {
   static StateProof from_tl(const td::e2e_api::e2e_chain_stateProof &proof);
   e2e::object_ptr<e2e::e2e_chain_stateProof> to_tl() const;
 };
+
 td::StringBuilder &operator<<(td::StringBuilder &sb, const StateProof &state);
+struct ValidateOptions {
+  bool validate_state_hash{true};
+  bool validate_signature{true};
+  td::int32 permissions{GroupParticipantFlags::AllPermissions};
+};
 
 struct Block;
 struct State {
   KeyValueState key_value_state_;
   GroupStateRef group_state_;
   GroupSharedKeyRef shared_key_;
+  bool has_set_value_{};
   bool has_shared_key_change_{};
   bool has_group_state_change_{};
 
@@ -223,18 +237,19 @@ struct State {
   static State create_empty();
   static td::Result<State> create_from_block(const Block &block, td::optional<td::Slice> o_snapshot = {});
 
-  // TODO snapshot..
-  // TODO apply
   td::Status set_value(td::Slice key, td::Slice value, const Permissions &permissions);
   td::Status set_group_state(GroupStateRef group_state, const Permissions &permissions);
   td::Status clear_shared_key(const Permissions &permissions);
   td::Status set_shared_key(GroupSharedKeyRef shared_key, const Permissions &permissions);
-  td::Status set_value_fast(KeyValueHash key_value_hash);
-  td::Status apply_change(const Change &change_outer, const PublicKey &public_key, bool full_apply);
+  td::Status set_value_fast(const KeyValueHash &key_value_hash);
+  td::Status apply_change(const Change &change_outer, const PublicKey &public_key, const ValidateOptions &options);
 
-  td::Status apply(Block &block, bool validate_state_hash = true);
+  td::Status apply(Block &block, ValidateOptions validate_options = {});
 
   td::Status validate_state(const StateProof &state_proof) const;
+
+  static td::Status validate_group_state(const GroupStateRef &group_state);
+  static td::Status validate_shared_key(const GroupSharedKeyRef &shared_key, const GroupStateRef &group_state);
 };
 
 struct Block {
@@ -270,8 +285,13 @@ struct Blockchain {
   }
   static td::Result<Blockchain> create_from_block(Block block, td::optional<td::Slice> o_snapshot = {});
 
+  static bool is_from_server(td::Slice block);
+  static td::Result<std::string> from_any_to_local(std::string block);
+  static td::Result<std::string> from_server_to_local(std::string block);
+  static td::Result<std::string> from_local_to_server(std::string block);
+
   td::Result<Block> build_block(std::vector<Change> changes, const PrivateKey &private_key) const;
-  td::Status try_apply_block(Block block, bool validate_state_hash = true);
+  td::Status try_apply_block(Block block, ValidateOptions validate_options);
   Block set_value(td::Slice key, td::Slice value, const PrivateKey &private_key) const;
   td::int64 get_height() const;
 

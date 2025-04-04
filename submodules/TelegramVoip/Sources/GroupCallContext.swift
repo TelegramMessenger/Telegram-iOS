@@ -218,7 +218,7 @@ final class OngoingGroupCallBroadcastPartTaskImpl: NSObject, OngoingGroupCallBro
 
 public protocol OngoingGroupCallEncryptionContext: AnyObject {
     func encrypt(message: Data) -> Data?
-    func decrypt(message: Data) -> Data?
+    func decrypt(message: Data, userId: Int64) -> Data?
 }
 
 public final class OngoingGroupCallContext {
@@ -300,13 +300,15 @@ public final class OngoingGroupCallContext {
         }
 
         public var audioSsrc: UInt32
+        public var peerId: Int64
         public var endpointId: String
         public var ssrcGroups: [SsrcGroup]
         public var minQuality: Quality
         public var maxQuality: Quality
 
-        public init(audioSsrc: UInt32, endpointId: String, ssrcGroups: [SsrcGroup], minQuality: Quality, maxQuality: Quality) {
+        public init(audioSsrc: UInt32, peerId: Int64, endpointId: String, ssrcGroups: [SsrcGroup], minQuality: Quality, maxQuality: Quality) {
             self.audioSsrc = audioSsrc
+            self.peerId = peerId
             self.endpointId = endpointId
             self.ssrcGroups = ssrcGroups
             self.minQuality = minQuality
@@ -643,11 +645,11 @@ public final class OngoingGroupCallContext {
                 isConference: isConference,
                 isActiveByDefault: audioIsActiveByDefault,
                 encryptDecrypt: encryptionContext.flatMap { encryptionContext in
-                    return { data, isEncrypt in
+                    return { data, userId, isEncrypt in
                         if isEncrypt {
                             return encryptionContext.encrypt(message: data)
                         } else {
-                            return encryptionContext.decrypt(message: data)
+                            return encryptionContext.decrypt(message: data, userId: userId)
                         }
                     }
                 }
@@ -897,6 +899,7 @@ public final class OngoingGroupCallContext {
                     }
                     return OngoingGroupCallRequestedVideoChannel(
                         audioSsrc: channel.audioSsrc,
+                        userId: channel.peerId,
                         endpointId: channel.endpointId,
                         ssrcGroups: channel.ssrcGroups.map { group in
                             return OngoingGroupCallSsrcGroup(

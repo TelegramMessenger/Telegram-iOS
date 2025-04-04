@@ -98,6 +98,8 @@ struct EncryptedMessageForMany {
   std::string encrypted_message;
 };
 
+Result<Ok> set_log_verbosity_level(int level);
+
 // Keys management
 // private keys will stay inside the library when it is possible
 // all keys are stored only in memory and should be created or imported before usage
@@ -115,6 +117,10 @@ Result<PrivateKeyId> key_from_words(SecureSlice words);
 Result<Int512> key_sign(PrivateKeyId key, Slice data);
 Result<Ok> key_destroy(AnyKeyId key_id);
 Result<Ok> key_destroy_all();
+
+// Used to encrypt key between processes, secret_id must be generated with key_from_ecdh
+Result<Bytes> key_to_encrypted_private_key_internal(PrivateKeyId key_id, SymmetricKeyId secret_id);
+Result<PrivateKeyId> key_from_encrypted_private_key_internal(Slice encrypted_key, SymmetricKeyId secret_id);
 
 Result<EncryptedMessageForMany> encrypt_message_for_many(const std::vector<SymmetricKeyId> &key_ids,
                                                          SecureSlice message);
@@ -167,6 +173,7 @@ Result<PrivateKeyId> login_finish_for_bob(LoginId bob_login_id, UserId alice_use
                                           Slice data);
 Result<Ok> login_destroy(LoginId login_id);
 Result<Ok> login_destroy_all();
+
 
 // Personal info
 // TODO: UserId
@@ -276,6 +283,7 @@ Result<Ok> storage_blockchain_add_proof(StorageId storage_id, Slice proof, const
 Result<StorageBlockchainState> storage_get_blockchain_state(StorageId);
 
 using CallId = std::int64_t;
+using CallChannelId = std::int32_t;
 struct CallParticipant {
   UserId user_id;
   PublicKeyId public_key_id;
@@ -289,15 +297,15 @@ struct CallState {
 
 Result<Bytes> call_create_zero_block(PrivateKeyId private_key_id, const CallState &initial_state);
 Result<Bytes> call_create_self_add_block(PrivateKeyId private_key_id, Slice previous_block, const CallParticipant &self);
-Result<CallId> call_create(PrivateKeyId private_key_id, Slice last_block);
+Result<CallId> call_create(UserId user_id, PrivateKeyId private_key_id, Slice last_block);
 
+Result<std::string> call_describe(CallId call);
 Result<std::string> call_describe_block(Slice block);
 Result<std::string> call_describe_message(Slice message);
 
 Result<Bytes> call_create_change_state_block(CallId call_id, const CallState &new_state);
-Result<SecureBytes> call_export_shared_key(CallId call_id);
-Result<Bytes> call_encrypt(CallId call_id, SecureSlice message);
-Result<SecureBytes> call_decrypt(CallId call_id, Slice message);
+Result<Bytes> call_encrypt(CallId call_id, CallChannelId channel_id, SecureSlice message);
+Result<SecureBytes> call_decrypt(CallId call_id, UserId user_id, CallChannelId channel_id, Slice message);
 
 Result<int> call_get_height(CallId call_id);
 Result<CallState> call_apply_block(CallId call_id, Slice block);
@@ -324,32 +332,4 @@ struct CallVerificationWords {
 Result<CallVerificationWords> call_get_verification_words(CallId call_id);
 Result<Ok> call_destroy(CallId call_id);
 Result<Ok> call_destroy_all();
-
-// TODO: pull values from blockchain state
-
-// 1. we have a lot of contacts with information about contacts
-// 2. PublicKey -> info
-// 3. UserId -> List<PublicKey>
-// 4. api should check all signatures before saving data
-// 5. it should also handle timestamp in signature to apply the latest info
-// 6. Changes will be synchronized with blockchain
-// 7. blockchain logic will be mostly hidden
-
-// 1. One must synchronize state of blockchain
-// 2. One may need to get proofs for keys from the server
-// 3. One must save changes and handle races
-
-// interesting moment - we may speculatively return new data if signature is checked
-// But it becomes complicated, when we are talking about public key itself.
-// one MUST NOT use public key in any way before it is saved into blockchain
-// It is more or less OK do decrypt.
-// It is NOT OK to encrypt.
-// Case I am worried about - sever may send public keys of user and then it may refuse to save it into blockchain.
-// What it means - we must persist public key before it is used
-// TODO: maybe we could forbid usage of unchecked public keys?
-//
-// TODO: backup OR recovery key?
-// Maybe we shouldn't keep the key on device AT ALL?
-//
-
 }  // namespace tde2e_api

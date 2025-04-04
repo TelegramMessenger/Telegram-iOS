@@ -49,7 +49,7 @@ td::Result<td::SecureString> QRHandshakeBob::receive_accept(td::int64 alice_user
 
   TRY_RESULT_ASSIGN(o_ephemeral_shared_secret_, bob_ephemeral_private_key_.compute_shared_secret(*o_alice_public_key_));
   TRY_RESULT(shared_secret_tmp, bob_private_key_.compute_shared_secret(*o_alice_public_key_));
-  o_shared_secret_ = MessageEncryption::combine_secrets(o_ephemeral_shared_secret_.value(), shared_secret_tmp);
+  o_shared_secret_ = MessageEncryption::hmac_sha512(o_ephemeral_shared_secret_.value(), shared_secret_tmp);
 
   TRY_RESULT(decrypted_accept, decrypt_ephemeral(encrypted_accept));
   td::TlParser parser(decrypted_accept);
@@ -136,7 +136,7 @@ td::Result<QRHandshakeAlice> QRHandshakeAlice::create(td::int64 alice_user_id, P
   auto bob_ephemeral_public_key = PublicKey::from_u256(qr->bob_ephemeral_PK_);
   TRY_RESULT(ephemeral_shared_secret, alice_private_key.compute_shared_secret(bob_ephemeral_public_key));
   TRY_RESULT(shared_secret_tmp, alice_private_key.compute_shared_secret(bob_public_key));
-  auto shared_secret = MessageEncryption::combine_secrets(ephemeral_shared_secret, shared_secret_tmp);
+  auto shared_secret = MessageEncryption::hmac_sha512(ephemeral_shared_secret, shared_secret_tmp);
   return QRHandshakeAlice{alice_user_id,
                           std::move(alice_private_key),
                           bob_user_id,

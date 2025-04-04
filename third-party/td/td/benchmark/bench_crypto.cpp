@@ -127,7 +127,7 @@ class HmacSha256ShortBench final : public td::Benchmark {
   void run(int n) final {
     unsigned char md[32];
     for (int i = 0; i < n; i++) {
-      td::hmac_sha256(td::Slice(data, SHORT_DATA_SIZE), td::Slice(data, SHORT_DATA_SIZE), td::MutableSlice(md, 32));
+      td::hmac_sha256(td::Slice(data, 32), td::Slice(data, SHORT_DATA_SIZE), td::MutableSlice(md, 32));
     }
   }
 };
@@ -145,9 +145,9 @@ class HmacSha512ShortBench final : public td::Benchmark {
   }
 
   void run(int n) final {
-    unsigned char md[32];
+    unsigned char md[64];
     for (int i = 0; i < n; i++) {
-      td::hmac_sha256(td::Slice(data, SHORT_DATA_SIZE), td::Slice(data, SHORT_DATA_SIZE), td::MutableSlice(md, 32));
+      td::hmac_sha512(td::Slice(data, 32), td::Slice(data, SHORT_DATA_SIZE), td::MutableSlice(md, 64));
     }
   }
 };
@@ -491,6 +491,11 @@ class Crc64Bench final : public td::Benchmark {
 
 int main() {
   td::init_openssl_threads();
+  td::bench(HmacSha256ShortBench());
+  td::bench(HmacSha512ShortBench());
+  td::bench(SHA1ShortBench());
+  td::bench(SHA256ShortBench());
+  td::bench(SHA512ShortBench());
   td::bench(AesCtrBench());
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
   td::bench(AesCtrOpenSSLBench());
@@ -516,11 +521,6 @@ int main() {
 #if OPENSSL_VERSION_NUMBER <= 0x10100000L
   td::bench(SHA1Bench());
 #endif
-  td::bench(SHA1ShortBench());
-  td::bench(SHA256ShortBench());
-  td::bench(SHA512ShortBench());
-  td::bench(HmacSha256ShortBench());
-  td::bench(HmacSha512ShortBench());
   td::bench(Crc32Bench());
   td::bench(Crc64Bench());
 }

@@ -18,6 +18,7 @@ namespace tde2e_core {
 struct DecryptedKey;
 struct EncryptedKey {
   static constexpr int PBKDF_ITERATIONS = 100000;
+  static constexpr int PBKDF_FAST_ITERATIONS = 1;
   td::SecureString encrypted_data;
   td::optional<PublicKey> o_public_key;
   td::SecureString secret;

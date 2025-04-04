@@ -19,7 +19,7 @@ td::Result<DecryptedKey> EncryptedKey::decrypt(td::Slice local_password, bool ch
     return td::Status::Error("Failed to decrypt key: invalid secret size");
   }
   */
-  auto decrypted_secret = MessageEncryption::combine_secrets(secret, local_password);
+  auto decrypted_secret = MessageEncryption::hmac_sha512(secret, local_password);
 
   td::SecureString encryption_secret =
       MessageEncryption::kdf(as_slice(decrypted_secret), "tde2e local key", EncryptedKey::PBKDF_ITERATIONS);

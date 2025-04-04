@@ -4,6 +4,7 @@
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
+#include "MessageEncryption.h"
 #include "td/e2e/Keys.h"
 
 #include "td/utils/Ed25519.h"
@@ -107,7 +108,9 @@ td::Result<PrivateKey> PrivateKey::from_slice(const td::Slice &slice) {
   return std::make_shared<PrivateKeyRaw>(PrivateKeyRaw{{std::move(public_key)}, std::move(private_key)});
 }
 td::Result<td::SecureString> PrivateKey::compute_shared_secret(const PublicKey &public_key) const {
-  return td::Ed25519::compute_shared_secret(public_key.raw().public_key, raw_->private_key);
+  TRY_RESULT(x25519_shared_secret, td::Ed25519::compute_shared_secret(public_key.raw().public_key, raw_->private_key));
+  return td::SecureString(
+      MessageEncryption::hmac_sha512("tde2e_shared_secret", x25519_shared_secret).as_slice().substr(0, 32));
 }
 td::Result<Signature> PrivateKey::sign(const td::Slice &data) const {
   CHECK(raw_);
