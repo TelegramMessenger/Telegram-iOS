@@ -142,6 +142,9 @@ public class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                         #else
                         missedTimeout = 30
                         #endif
+                        if conferenceCall.duration != nil {
+                            hasCallButton = false
+                        }
                         let currentTime = Int32(Date().timeIntervalSince1970)
                         if conferenceCall.flags.contains(.isMissed) {
                             titleString = "Declined Group Call"
@@ -149,7 +152,6 @@ public class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                             titleString = "Missed Group Call"
                         } else if conferenceCall.duration != nil {
                             titleString = "Cancelled Group Call"
-                            hasCallButton = true
                         } else {
                             if incoming {
                                 titleString = "Incoming Group Call"
