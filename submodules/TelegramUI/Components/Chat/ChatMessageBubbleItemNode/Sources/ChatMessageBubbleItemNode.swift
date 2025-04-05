@@ -264,8 +264,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
             } else if let _ = media as? TelegramMediaExpiredContent {
                 result.removeAll()
                 result.append((message, ChatMessageActionBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
-                needReactions = false
-                return (result, false, false)
+                break inner
             } else if let _ = media as? TelegramMediaPoll {
                 result.append((message, ChatMessagePollBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
                 needReactions = false
@@ -2735,6 +2734,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     default:
                         centerAligned = true
                     }
+                } else if let _ = media as? TelegramMediaExpiredContent {
+                    centerAligned = true
                 }
                 break
             }

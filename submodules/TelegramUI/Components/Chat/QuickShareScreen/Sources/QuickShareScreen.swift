@@ -22,22 +22,19 @@ private final class QuickShareScreenComponent: Component {
     let context: AccountContext
     let sourceNode: ASDisplayNode
     let gesture: ContextGesture
-    let openPeer: (EnginePeer.Id) -> Void
-    let completion: (EnginePeer.Id) -> Void
+    let completion: (EnginePeer, CGRect) -> Void
     let ready: Promise<Bool>
     
     init(
         context: AccountContext,
         sourceNode: ASDisplayNode,
         gesture: ContextGesture,
-        openPeer: @escaping (EnginePeer.Id) -> Void,
-        completion: @escaping (EnginePeer.Id) -> Void,
+        completion: @escaping (EnginePeer, CGRect) -> Void,
         ready: Promise<Bool>
     ) {
         self.context = context
         self.sourceNode = sourceNode
         self.gesture = gesture
-        self.openPeer = openPeer
         self.completion = completion
         self.ready = ready
     }
@@ -184,24 +181,9 @@ private final class QuickShareScreenComponent: Component {
         
         func highlightGestureFinished(performAction: Bool) {
             if let selectedPeerId = self.selectedPeerId, performAction {
-                if let component = self.component, let peer = self.peers?.first(where: { $0.id == selectedPeerId }), let view = self.items[selectedPeerId]?.view as? ItemComponent.View, let controller = self.environment?.controller() {
-                    controller.window?.forEachController({ controller in
-                        if let controller = controller as? QuickShareToastScreen {
-                            controller.dismiss()
-                        }
-                    })
-                    let toastScreen = QuickShareToastScreen(
-                        context: component.context,
-                        peer: peer,
-                        sourceFrame: view.convert(view.bounds, to: nil),
-                        action: {
-                            component.openPeer(peer.id)
-                        }
-                    )
-                    controller.present(toastScreen, in: .window(.root))
+                if let component = self.component, let peer = self.peers?.first(where: { $0.id == selectedPeerId }), let view = self.items[selectedPeerId]?.view as? ItemComponent.View {
+                    component.completion(peer, view.convert(view.bounds, to: nil))
                     view.avatarNode.isHidden = true
-                    
-                    component.completion(peer.id)
                 }
                 
                 self.animateOut {
@@ -296,7 +278,7 @@ private final class QuickShareScreenComponent: Component {
             
             if theme.overallDarkAppearance {
                 self.backgroundView.updateColor(color: theme.contextMenu.backgroundColor, forceKeepBlur: true, transition: .immediate)
-                self.backgroundTintView.backgroundColor = UIColor(white: 1.0, alpha: 0.5)
+                self.backgroundTintView.backgroundColor = .clear
             } else {
                 self.backgroundView.updateColor(color: .clear, forceKeepBlur: true, transition: .immediate)
                 self.backgroundTintView.backgroundColor = theme.contextMenu.backgroundColor
@@ -411,8 +393,7 @@ public class QuickShareScreen: ViewControllerComponentContainer {
         context: AccountContext,
         sourceNode: ASDisplayNode,
         gesture: ContextGesture,
-        openPeer: @escaping (EnginePeer.Id) -> Void,
-        completion: @escaping (EnginePeer.Id) -> Void
+        completion: @escaping (EnginePeer, CGRect) -> Void
     ) {
         let componentReady = Promise<Bool>()
         
@@ -422,7 +403,6 @@ public class QuickShareScreen: ViewControllerComponentContainer {
                 context: context,
                 sourceNode: sourceNode,
                 gesture: gesture,
-                openPeer: openPeer,
                 completion: completion,
                 ready: componentReady
             ),
@@ -528,7 +508,7 @@ private final class ItemComponent: Component {
         private weak var state: EmptyComponentState?
                         
         override init(frame: CGRect) {
-            self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 14.0))
+            self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 26.0))
             self.backgroundNode = NavigationBackgroundNode(color: .clear)
             
             super.init(frame: frame)

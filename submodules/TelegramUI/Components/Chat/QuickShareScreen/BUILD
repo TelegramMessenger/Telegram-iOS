@@ -24,6 +24,7 @@ swift_library(
         "//submodules/AppBundle",
         "//submodules/PresentationDataUtils",
         "//submodules/TelegramUI/Components/LottieComponent",
+        "//submodules/TelegramUI/Components/PlainButtonComponent",
         "//submodules/AvatarNode",
     ],
     visibility = [

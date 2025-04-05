@@ -15,9 +15,9 @@ public func peerMessageAllowedReactions(context: AccountContext, message: Messag
         return .single((.all, false))
     }
     
-    if message.containsSecretMedia {
-        return .single((AllowedReactions.set(Set()), false))
-    }
+//    if message.containsSecretMedia {
+//        return .single((AllowedReactions.set(Set()), false))
+//    }
     
     return combineLatest(
         context.engine.data.get(

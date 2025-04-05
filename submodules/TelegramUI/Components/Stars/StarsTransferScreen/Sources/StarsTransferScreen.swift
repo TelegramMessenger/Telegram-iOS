@@ -593,7 +593,6 @@ private final class SheetContent: CombinedComponent {
                                             return
                                         }
                                         starsContext.add(balance: StarsAmount(value: stars, nanos: 0))
-                                        
                                         let _ = (starsContext.onUpdate
                                         |> deliverOnMainQueue).start(next: {
                                             completion()

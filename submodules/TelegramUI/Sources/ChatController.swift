@@ -134,6 +134,7 @@ import AdsReportScreen
 import AdUI
 import ChatMessagePaymentAlertController
 import TelegramCallsUI
+import QuickShareScreen
 
 public enum ChatControllerPeekActions {
     case standard
@@ -10738,6 +10739,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.window?.forEachController({ controller in
             if let controller = controller as? UndoOverlayController {
+                controller.dismissWithCommitAction()
+            }
+            if let controller = controller as? QuickShareToastScreen {
                 controller.dismissWithCommitAction()
             }
         })
