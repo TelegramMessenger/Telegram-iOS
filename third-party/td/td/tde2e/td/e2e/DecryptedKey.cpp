@@ -24,7 +24,7 @@ DecryptedKey::DecryptedKey(RawDecryptedKey key)
 }
 
 EncryptedKey DecryptedKey::encrypt(td::Slice local_password, td::Slice secret) const {
-  td::SecureString decrypted_secret = MessageEncryption::combine_secrets(secret, local_password);
+  td::SecureString decrypted_secret = MessageEncryption::hmac_sha512(secret, local_password);
 
   td::SecureString encryption_secret =
       MessageEncryption::kdf(as_slice(decrypted_secret), "tde2e local key", EncryptedKey::PBKDF_ITERATIONS);

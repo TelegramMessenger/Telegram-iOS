@@ -30,6 +30,7 @@ S_TEST(BlockchainValidation, ZeroBlock) {
     TEST_DEBUG_VALUE(description, "Valid: zero block with group state only in proof");
     auto block = BB().with_height(0)
                      .with_block_hash({})
+                     .set_value("a", "b")  // need some changes
                      .with_group_state({}, false, true, 7)
                      .with_shared_key({}, false, true)
                      .build(alice_pk);
@@ -68,8 +69,12 @@ S_TEST(BlockchainValidation, ZeroBlock) {
   }
   {
     TEST_DEBUG_VALUE(description, "Invalid: zero block with skipped group state proof");
-    auto block =
-        BB().with_height(0).with_block_hash({}).skip_group_state_proof().skip_shared_key_proof().build(alice_pk);
+    auto block = BB().with_height(0)
+                     .set_value("a", "b")
+                     .with_block_hash({})
+                     .skip_group_state_proof()
+                     .skip_shared_key_proof()
+                     .build(alice_pk);
     TEST_DEBUG_VALUE(block, block);
     TEST_TRY_STATUS(BT().expect_error(E::InvalidBlock_InvalidStateProof_Group, block));
   }
@@ -77,6 +82,7 @@ S_TEST(BlockchainValidation, ZeroBlock) {
     TEST_DEBUG_VALUE(description, "Invalid: zero block with wrong user_id in group state proof");
     auto block = BB().with_height(0)
                      .with_block_hash({})
+                     .set_value("a", "b")
                      .with_group_state({{1, 3, alice_pk.to_public_key()}}, false, true)
                      .skip_shared_key_proof()
                      .build(alice_pk);

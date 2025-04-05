@@ -149,6 +149,7 @@ final class VideoChatParticipantsComponent: Component {
     let safeInsets: UIEdgeInsets
     let interfaceOrientation: UIInterfaceOrientation
     let openParticipantContextMenu: (EnginePeer.Id, ContextExtractedContentContainingView, ContextGesture?) -> Void
+    let openInvitedParticipantContextMenu: (EnginePeer.Id, ContextExtractedContentContainingView, ContextGesture?) -> Void
     let updateMainParticipant: (VideoParticipantKey?, Bool?) -> Void
     let updateIsMainParticipantPinned: (Bool) -> Void
     let updateIsExpandedUIHidden: (Bool) -> Void
@@ -169,6 +170,7 @@ final class VideoChatParticipantsComponent: Component {
         safeInsets: UIEdgeInsets,
         interfaceOrientation: UIInterfaceOrientation,
         openParticipantContextMenu: @escaping (EnginePeer.Id, ContextExtractedContentContainingView, ContextGesture?) -> Void,
+        openInvitedParticipantContextMenu: @escaping (EnginePeer.Id, ContextExtractedContentContainingView, ContextGesture?) -> Void,
         updateMainParticipant: @escaping (VideoParticipantKey?, Bool?) -> Void,
         updateIsMainParticipantPinned: @escaping (Bool) -> Void,
         updateIsExpandedUIHidden: @escaping (Bool) -> Void,
@@ -188,6 +190,7 @@ final class VideoChatParticipantsComponent: Component {
         self.safeInsets = safeInsets
         self.interfaceOrientation = interfaceOrientation
         self.openParticipantContextMenu = openParticipantContextMenu
+        self.openInvitedParticipantContextMenu = openInvitedParticipantContextMenu
         self.updateMainParticipant = updateMainParticipant
         self.updateIsMainParticipantPinned = updateIsMainParticipantPinned
         self.updateIsExpandedUIHidden = updateIsExpandedUIHidden
@@ -1255,7 +1258,7 @@ final class VideoChatParticipantsComponent: Component {
                             subtitle: subtitle,
                             subtitleAccessory: .none,
                             presence: nil,
-                            rightAccessoryComponent: rightAccessoryComponent,
+                            rightAccessoryComponent: AnyComponentWithIdentity(id: 0, component: rightAccessoryComponent),
                             selectionState: .none,
                             hasNext: false,
                             extractedTheme: PeerListItemComponent.ExtractedTheme(
@@ -1292,6 +1295,10 @@ final class VideoChatParticipantsComponent: Component {
                             subtitle = PeerListItemComponent.Subtitle(text: "invited", color: .neutral)
                         }
                         
+                        let rightAccessoryComponent: AnyComponent<Empty> = AnyComponent(VideoChatParticipantInvitedStatusComponent(
+                            theme: component.theme
+                        ))
+                        
                         peerItemComponent = PeerListItemComponent(
                             context: component.call.accountContext,
                             theme: component.theme,
@@ -1310,15 +1317,25 @@ final class VideoChatParticipantsComponent: Component {
                             subtitle: subtitle,
                             subtitleAccessory: .none,
                             presence: nil,
-                            rightAccessoryComponent: nil,
+                            rightAccessoryComponent: AnyComponentWithIdentity(id: 1, component: rightAccessoryComponent),
                             selectionState: .none,
                             hasNext: false,
                             extractedTheme: PeerListItemComponent.ExtractedTheme(
                                 inset: 2.0,
                                 background: UIColor(white: 0.1, alpha: 1.0)
                             ),
-                            action: nil,
-                            contextAction: nil
+                            action: { [weak self] peer, _, itemView in
+                                guard let self, let component = self.component else {
+                                    return
+                                }
+                                component.openInvitedParticipantContextMenu(peer.id, itemView.extractedContainerView, nil)
+                            },
+                            contextAction: { [weak self] peer, sourceView, gesture in
+                                guard let self, let component = self.component else {
+                                    return
+                                }
+                                component.openInvitedParticipantContextMenu(peer.id, sourceView, gesture)
+                            }
                         )
                     }
                     
@@ -1760,74 +1777,6 @@ final class VideoChatParticipantsComponent: Component {
                 }
             }
             
-            let measureListItemSize = self.measureListItemView.update(
-                transition: .immediate,
-                component: AnyComponent(PeerListItemComponent(
-                    context: component.call.accountContext,
-                    theme: component.theme,
-                    strings: component.strings,
-                    style: .generic,
-                    sideInset: 0.0,
-                    title: "AAA",
-                    peer: nil,
-                    subtitle: PeerListItemComponent.Subtitle(text: "bbb", color: .neutral),
-                    subtitleAccessory: .none,
-                    presence: nil,
-                    selectionState: .none,
-                    hasNext: true,
-                    action: { _, _, _ in
-                    }
-                )),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width, height: 1000.0)
-            )
-            
-            var inviteListItemSizes: [CGSize] = []
-            for (inviteOption) in component.participants?.inviteOptions ?? [] {
-                let inviteText: String
-                let iconType: VideoChatListInviteComponent.Icon
-                switch inviteOption.type {
-                case let .invite(isMultiple):
-                    //TODO:localize
-                    if isMultiple {
-                        inviteText = component.strings.VoiceChat_InviteMember
-                    } else {
-                        inviteText = "Add Member"
-                    }
-                    iconType = .addUser
-                case .shareLink:
-                    inviteText = component.strings.VoiceChat_Share
-                    iconType = .link
-                }
-
-                let inviteListItemView: ComponentView<Empty>
-                var inviteListItemTransition = transition
-                if let current = self.inviteListItemViews[inviteOption.id] {
-                    inviteListItemView = current
-                } else {
-                    inviteListItemView = ComponentView()
-                    self.inviteListItemViews[inviteOption.id] = inviteListItemView
-                    inviteListItemTransition = inviteListItemTransition.withAnimation(.none)
-                }
-                
-                inviteListItemSizes.append(inviteListItemView.update(
-                    transition: inviteListItemTransition,
-                    component: AnyComponent(VideoChatListInviteComponent(
-                        title: inviteText,
-                        icon: iconType,
-                        theme: component.theme,
-                        action: { [weak self] in
-                            guard let self, let component = self.component else {
-                                return
-                            }
-                            component.openInviteMembers(inviteOption.type)
-                        }
-                    )),
-                    environment: {},
-                    containerSize: CGSize(width: availableSize.width, height: 1000.0)
-                ))
-            }
-            
             var gridParticipants: [VideoParticipant] = []
             var listParticipants: [GroupCallParticipantsContext.Participant] = []
             if let participants = component.participants {
@@ -1867,6 +1816,90 @@ final class VideoChatParticipantsComponent: Component {
             }
             self.gridParticipants = gridParticipants
             self.listParticipants = listParticipants
+            
+            let measureListItemSize = self.measureListItemView.update(
+                transition: .immediate,
+                component: AnyComponent(PeerListItemComponent(
+                    context: component.call.accountContext,
+                    theme: component.theme,
+                    strings: component.strings,
+                    style: .generic,
+                    sideInset: 0.0,
+                    title: "AAA",
+                    peer: nil,
+                    subtitle: PeerListItemComponent.Subtitle(text: "bbb", color: .neutral),
+                    subtitleAccessory: .none,
+                    presence: nil,
+                    selectionState: .none,
+                    hasNext: true,
+                    action: { _, _, _ in
+                    }
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width, height: 1000.0)
+            )
+            
+            var inviteListItemSizes: [CGSize] = []
+            if let participants = component.participants {
+                let tempItemLayout = ItemLayout(
+                    containerSize: availableSize,
+                    layout: component.layout,
+                    isUIHidden: component.expandedVideoState?.isUIHidden ?? false,
+                    expandedInsets: component.expandedInsets,
+                    safeInsets: component.safeInsets,
+                    gridItemCount: gridParticipants.count,
+                    listItemCount: listParticipants.count + component.invitedPeers.count,
+                    listItemHeight: measureListItemSize.height,
+                    listTrailingItemHeights: []
+                )
+                
+                for i in 0 ..< participants.inviteOptions.count {
+                    let inviteOption = participants.inviteOptions[i]
+                    let inviteText: String
+                    let iconType: VideoChatListInviteComponent.Icon
+                    switch inviteOption.type {
+                    case let .invite(isMultiple):
+                        //TODO:localize
+                        if isMultiple {
+                            inviteText = component.strings.VoiceChat_InviteMember
+                        } else {
+                            inviteText = "Add Member"
+                        }
+                        iconType = .addUser
+                    case .shareLink:
+                        inviteText = component.strings.VoiceChat_Share
+                        iconType = .link
+                    }
+                    
+                    let inviteListItemView: ComponentView<Empty>
+                    var inviteListItemTransition = transition
+                    if let current = self.inviteListItemViews[inviteOption.id] {
+                        inviteListItemView = current
+                    } else {
+                        inviteListItemView = ComponentView()
+                        self.inviteListItemViews[inviteOption.id] = inviteListItemView
+                        inviteListItemTransition = inviteListItemTransition.withAnimation(.none)
+                    }
+                    
+                    inviteListItemSizes.append(inviteListItemView.update(
+                        transition: inviteListItemTransition,
+                        component: AnyComponent(VideoChatListInviteComponent(
+                            title: inviteText,
+                            icon: iconType,
+                            theme: component.theme,
+                            hasNext: i != participants.inviteOptions.count - 1,
+                            action: { [weak self] in
+                                guard let self, let component = self.component else {
+                                    return
+                                }
+                                component.openInviteMembers(inviteOption.type)
+                            }
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: availableSize.width - tempItemLayout.list.sideInset * 2.0, height: 1000.0)
+                    ))
+                }
+            }
             
             let itemLayout = ItemLayout(
                 containerSize: availableSize,

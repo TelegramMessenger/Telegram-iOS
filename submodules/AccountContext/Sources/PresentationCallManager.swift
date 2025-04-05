@@ -359,6 +359,7 @@ public struct PresentationGroupCallRequestedVideo: Equatable {
     }
 
     public var audioSsrc: UInt32
+    public var peerId: Int64
     public var endpointId: String
     public var ssrcGroups: [SsrcGroup]
     public var minQuality: Quality
@@ -383,7 +384,7 @@ public extension GroupCallParticipantsContext.Participant {
         guard let videoDescription = self.videoDescription else {
             return nil
         }
-        return PresentationGroupCallRequestedVideo(audioSsrc: audioSsrc, endpointId: videoDescription.endpointId, ssrcGroups: videoDescription.ssrcGroups.map { group in
+        return PresentationGroupCallRequestedVideo(audioSsrc: audioSsrc, peerId: self.peer.id.id._internalGetInt64Value(), endpointId: videoDescription.endpointId, ssrcGroups: videoDescription.ssrcGroups.map { group in
             PresentationGroupCallRequestedVideo.SsrcGroup(semantics: group.semantics, ssrcs: group.ssrcs)
         }, minQuality: minQuality, maxQuality: maxQuality)
     }
@@ -395,7 +396,7 @@ public extension GroupCallParticipantsContext.Participant {
         guard let presentationDescription = self.presentationDescription else {
             return nil
         }
-        return PresentationGroupCallRequestedVideo(audioSsrc: audioSsrc, endpointId: presentationDescription.endpointId, ssrcGroups: presentationDescription.ssrcGroups.map { group in
+        return PresentationGroupCallRequestedVideo(audioSsrc: audioSsrc, peerId: self.peer.id.id._internalGetInt64Value(), endpointId: presentationDescription.endpointId, ssrcGroups: presentationDescription.ssrcGroups.map { group in
             PresentationGroupCallRequestedVideo.SsrcGroup(semantics: group.semantics, ssrcs: group.ssrcs)
         }, minQuality: minQuality, maxQuality: maxQuality)
     }
@@ -486,6 +487,7 @@ public protocol PresentationGroupCall: AnyObject {
     func updateTitle(_ title: String)
     
     func invitePeer(_ peerId: EnginePeer.Id, isVideo: Bool) -> Bool
+    func kickPeer(id: EnginePeer.Id)
     func removedPeer(_ peerId: EnginePeer.Id)
     var invitedPeers: Signal<[PresentationGroupCallInvitedPeer], NoError> { get }
     

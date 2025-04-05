@@ -217,6 +217,12 @@ public final class SharedCallAudioContext {
             }
         }
     }
+    
+    public func switchToSpeakerIfBuiltin() {
+        if case .builtin = self.currentAudioOutputValue {
+            self.setCurrentAudioOutput(.speaker)
+        }
+    }
 }
 
 public final class PresentationCallImpl: PresentationCall {
@@ -652,6 +658,8 @@ public final class PresentationCallImpl: PresentationCall {
         self.sharedAudioContext = nil
         self.sessionState = nil
         self.callContextState = nil
+        let debugLogValue = Promise<String?>()
+        self.ongoingContext?.stop(sendDebugLogs: false, debugLogValue: debugLogValue)
         self.ongoingContext = nil
         self.ongoingContextStateDisposable?.dispose()
         self.ongoingContextStateDisposable = nil
@@ -1032,7 +1040,8 @@ public final class PresentationCallImpl: PresentationCall {
                     self.conferenceCallImpl = conferenceCall
                     conferenceCall.upgradedConferenceCall = self
                     
-                    conferenceCall.setConferenceInvitedPeers(self.pendingInviteToConferencePeerIds)
+                    self.sharedAudioContext?.switchToSpeakerIfBuiltin()
+                    
                     for (peerId, isVideo) in self.pendingInviteToConferencePeerIds {
                         let _ = conferenceCall.invitePeer(peerId, isVideo: isVideo)
                     }

@@ -2371,19 +2371,17 @@ private:
     enableNoiseSuppression:(bool)enableNoiseSuppression
     disableAudioInput:(bool)disableAudioInput
     enableSystemMute:(bool)enableSystemMute
-    preferX264:(bool)preferX264
+prioritizeVP8:(bool)prioritizeVP8
     logPath:(NSString * _Nonnull)logPath
 statsLogPath:(NSString * _Nonnull)statsLogPath
 onMutedSpeechActivityDetected:(void (^ _Nullable)(bool))onMutedSpeechActivityDetected
 audioDevice:(SharedCallAudioDevice * _Nullable)audioDevice
 isConference:(bool)isConference
 isActiveByDefault:(bool)isActiveByDefault
-encryptDecrypt:(NSData * _Nullable (^ _Nullable)(NSData * _Nonnull, bool))encryptDecrypt {
+encryptDecrypt:(NSData * _Nullable (^ _Nullable)(NSData * _Nonnull, int64_t, bool))encryptDecrypt {
     self = [super init];
     if (self != nil) {
         _queue = queue;
-        
-        tgcalls::PlatformInterface::SharedInstance()->preferX264 = preferX264;
 
         _sinks = [[NSMutableDictionary alloc] init];
         
@@ -2436,6 +2434,9 @@ encryptDecrypt:(NSData * _Nullable (^ _Nullable)(NSData * _Nonnull, bool))encryp
 #endif
         
         std::vector<tgcalls::VideoCodecName> videoCodecPreferences;
+        if (prioritizeVP8) {
+            videoCodecPreferences.push_back(tgcalls::VideoCodecName::VP8);
+        }
 
         int minOutgoingVideoBitrateKbit = 500;
         bool disableOutgoingAudioProcessing = false;
@@ -2446,12 +2447,12 @@ encryptDecrypt:(NSData * _Nullable (^ _Nullable)(NSData * _Nonnull, bool))encryp
         
         std::string statsLogPathValue(statsLogPath.length == 0 ? "" : statsLogPath.UTF8String);
         
-        std::function<std::vector<uint8_t>(std::vector<uint8_t> const &, bool)> mappedEncryptDecrypt;
+        std::function<std::vector<uint8_t>(std::vector<uint8_t> const &, int64_t, bool)> mappedEncryptDecrypt;
         if (encryptDecrypt) {
-            NSData * _Nullable (^encryptDecryptBlock)(NSData * _Nonnull, bool) = [encryptDecrypt copy];
-            mappedEncryptDecrypt = [encryptDecryptBlock](std::vector<uint8_t> const &message, bool isEncrypt) -> std::vector<uint8_t> {
+            NSData * _Nullable (^encryptDecryptBlock)(NSData * _Nonnull, int64_t, bool) = [encryptDecrypt copy];
+            mappedEncryptDecrypt = [encryptDecryptBlock](std::vector<uint8_t> const &message, int64_t userId, bool isEncrypt) -> std::vector<uint8_t> {
                 NSData *mappedMessage = [[NSData alloc] initWithBytes:message.data() length:message.size()];
-                NSData *result = encryptDecryptBlock(mappedMessage, isEncrypt);
+                NSData *result = encryptDecryptBlock(mappedMessage, userId, isEncrypt);
                 if (!result) {
                     return std::vector<uint8_t>();
                 }
@@ -2634,6 +2635,7 @@ encryptDecrypt:(NSData * _Nullable (^ _Nullable)(NSData * _Nonnull, bool))encryp
                                 continue;
                             }
                         }
+                        mappedChannel.userId = channel.peerId;
                         mappedChannel.audioSsrc = channel.audioSsrc;
                         mappedChannel.videoInformation = channel.videoDescription.UTF8String ?: "";
                         mappedChannels.push_back(std::move(mappedChannel));
@@ -2836,6 +2838,7 @@ encryptDecrypt:(NSData * _Nullable (^ _Nullable)(NSData * _Nonnull, bool))encryp
         for (OngoingGroupCallRequestedVideoChannel *channel : requestedVideoChannels) {
             tgcalls::VideoChannelDescription description;
             description.audioSsrc = channel.audioSsrc;
+            description.userId = channel.userId;
             description.endpointId = channel.endpointId.UTF8String ?: "";
             for (OngoingGroupCallSsrcGroup *group in channel.ssrcGroups) {
                 tgcalls::MediaSsrcGroup parsedGroup;
@@ -3074,10 +3077,11 @@ encryptDecrypt:(NSData * _Nullable (^ _Nullable)(NSData * _Nonnull, bool))encryp
 
 @implementation OngoingGroupCallRequestedVideoChannel
 
-- (instancetype)initWithAudioSsrc:(uint32_t)audioSsrc endpointId:(NSString * _Nonnull)endpointId ssrcGroups:(NSArray<OngoingGroupCallSsrcGroup *> * _Nonnull)ssrcGroups minQuality:(OngoingGroupCallRequestedVideoQuality)minQuality maxQuality:(OngoingGroupCallRequestedVideoQuality)maxQuality {
+- (instancetype)initWithAudioSsrc:(uint32_t)audioSsrc userId:(int64_t)userId endpointId:(NSString * _Nonnull)endpointId ssrcGroups:(NSArray<OngoingGroupCallSsrcGroup *> * _Nonnull)ssrcGroups minQuality:(OngoingGroupCallRequestedVideoQuality)minQuality maxQuality:(OngoingGroupCallRequestedVideoQuality)maxQuality {
     self = [super init];
     if (self != nil) {
         _audioSsrc = audioSsrc;
+        _userId = userId;
         _endpointId = endpointId;
         _ssrcGroups = ssrcGroups;
         _minQuality = minQuality;

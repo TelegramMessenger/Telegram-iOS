@@ -752,6 +752,21 @@ static void init_thread_local_evp_md_ctx(const EVP_MD_CTX *&evp_md_ctx, const ch
     evp_md_ctx = nullptr;
   }));
 }
+static void init_thread_local_evp_mac_ctx(EVP_MAC_CTX *&evp_mac_ctx, const char *digest) {
+  EVP_MAC *hmac = EVP_MAC_fetch(nullptr, "HMAC", nullptr);
+  LOG_IF(FATAL, hmac == nullptr);
+  evp_mac_ctx = EVP_MAC_CTX_new(hmac);
+  LOG_IF(FATAL, evp_mac_ctx == nullptr);
+  OSSL_PARAM params[2];
+  params[0] = OSSL_PARAM_construct_utf8_string(OSSL_MAC_PARAM_DIGEST, const_cast<char *>(digest), 0);
+  params[1] = OSSL_PARAM_construct_end();
+  EVP_MAC_CTX_set_params(evp_mac_ctx, params);
+  EVP_MAC_free(hmac);
+  detail::add_thread_local_destructor(create_destructor([&evp_mac_ctx]() mutable {
+    EVP_MAC_CTX_free(const_cast<EVP_MAC_CTX *>(evp_mac_ctx));
+    evp_mac_ctx = nullptr;
+  }));
+}
 #endif
 
 void sha1(Slice data, unsigned char output[20]) {
@@ -967,26 +982,27 @@ void pbkdf2_sha512(Slice password, Slice salt, int iteration_count, MutableSlice
 }
 
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
-static void hmac_impl(const char *digest, Slice key, Slice message, MutableSlice dest) {
-  EVP_MAC *hmac = EVP_MAC_fetch(nullptr, "HMAC", nullptr);
-  LOG_IF(FATAL, hmac == nullptr);
-
-  EVP_MAC_CTX *ctx = EVP_MAC_CTX_new(hmac);
-  LOG_IF(FATAL, ctx == nullptr);
-
-  OSSL_PARAM params[2];
-  params[0] = OSSL_PARAM_construct_utf8_string(OSSL_MAC_PARAM_DIGEST, const_cast<char *>(digest), 0);
-  params[1] = OSSL_PARAM_construct_end();
-
-  int res = EVP_MAC_init(ctx, const_cast<unsigned char *>(key.ubegin()), key.size(), params);
+static void hmac_impl_finish(EVP_MAC_CTX *ctx, Slice key, Slice message, MutableSlice dest) {
+  int res = EVP_MAC_init(ctx, const_cast<unsigned char *>(key.ubegin()), key.size(), nullptr);
   LOG_IF(FATAL, res != 1);
   res = EVP_MAC_update(ctx, message.ubegin(), message.size());
   LOG_IF(FATAL, res != 1);
   res = EVP_MAC_final(ctx, dest.ubegin(), nullptr, dest.size());
   LOG_IF(FATAL, res != 1);
-
-  EVP_MAC_CTX_free(ctx);
-  EVP_MAC_free(hmac);
+}
+static void hmac_impl_sha256(Slice key, Slice message, MutableSlice dest) {
+  static TD_THREAD_LOCAL EVP_MAC_CTX *ctx = nullptr;
+  if (ctx == nullptr) {
+    init_thread_local_evp_mac_ctx(ctx, "SHA256");
+  }
+  hmac_impl_finish(ctx, key, message, dest);
+}
+static void hmac_impl_sha512(Slice key, Slice message, MutableSlice dest) {
+  static TD_THREAD_LOCAL EVP_MAC_CTX *ctx = nullptr;
+  if (ctx == nullptr) {
+    init_thread_local_evp_mac_ctx(ctx, "SHA512");
+  }
+  hmac_impl_finish(ctx, key, message, dest);
 }
 #else
 static void hmac_impl(const EVP_MD *evp_md, Slice key, Slice message, MutableSlice dest) {
@@ -1001,7 +1017,7 @@ static void hmac_impl(const EVP_MD *evp_md, Slice key, Slice message, MutableSli
 void hmac_sha256(Slice key, Slice message, MutableSlice dest) {
   CHECK(dest.size() == 256 / 8);
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
-  hmac_impl("SHA256", key, message, dest);
+  hmac_impl_sha256(key, message, dest);
 #else
   hmac_impl(EVP_sha256(), key, message, dest);
 #endif
@@ -1010,7 +1026,7 @@ void hmac_sha256(Slice key, Slice message, MutableSlice dest) {
 void hmac_sha512(Slice key, Slice message, MutableSlice dest) {
   CHECK(dest.size() == 512 / 8);
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
-  hmac_impl("SHA512", key, message, dest);
+  hmac_impl_sha512(key, message, dest);
 #else
   hmac_impl(EVP_sha512(), key, message, dest);
 #endif

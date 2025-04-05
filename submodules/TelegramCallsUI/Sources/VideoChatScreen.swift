@@ -2329,6 +2329,12 @@ final class VideoChatScreenComponent: Component {
                         }
                         self.openParticipantContextMenu(id: id, sourceView: sourceView, gesture: gesture)
                     },
+                    openInvitedParticipantContextMenu: { [weak self] id, sourceView, gesture in
+                        guard let self else {
+                            return
+                        }
+                        self.openInvitedParticipantContextMenu(id: id, sourceView: sourceView, gesture: gesture)
+                    },
                     updateMainParticipant: { [weak self] key, alsoSetIsUIHidden in
                         guard let self else {
                             return
@@ -2429,15 +2435,23 @@ final class VideoChatScreenComponent: Component {
                 var encryptionKeyTransition = transition
                 if encryptionKeyView.superview == nil {
                     encryptionKeyTransition = encryptionKeyTransition.withAnimation(.none)
-                    self.containerView.addSubview(encryptionKeyView)
+                    
+                    if let participantsView = self.participants.view as? VideoChatParticipantsComponent.View {
+                        self.containerView.insertSubview(encryptionKeyView, belowSubview: participantsView)
+                    } else {
+                        self.containerView.addSubview(encryptionKeyView)
+                    }
                     
                     ComponentTransition.immediate.setScale(view: encryptionKeyView, scale: 0.001)
                     encryptionKeyView.alpha = 0.0
                 }
+                
                 encryptionKeyTransition.setPosition(view: encryptionKeyView, position: encryptionKeyFrame.center)
                 encryptionKeyTransition.setBounds(view: encryptionKeyView, bounds: CGRect(origin: CGPoint(), size: encryptionKeyFrame.size))
                 transition.setScale(view: encryptionKeyView, scale: 1.0)
                 alphaTransition.setAlpha(view: encryptionKeyView, alpha: self.isAnimatedOutFromPrivateCall ? 0.0 : 1.0)
+                
+                transition.setZPosition(layer: encryptionKeyView.layer, zPosition: self.isEncryptionKeyExpanded ? 1.0 : 0.0)
                 
                 if self.isEncryptionKeyExpanded {
                     let encryptionKeyBackground: ComponentView<Empty>
@@ -2464,12 +2478,14 @@ final class VideoChatScreenComponent: Component {
                             self.containerView.insertSubview(encryptionKeyBackgroundView, belowSubview: encryptionKeyView)
                             encryptionKeyBackgroundView.alpha = 0.0
                         }
+                        encryptionKeyBackgroundView.layer.zPosition = 0.9
                         alphaTransition.setAlpha(view: encryptionKeyBackgroundView, alpha: 1.0)
                         encryptionKeyBackgroundTransition.setFrame(view: encryptionKeyBackgroundView, frame: CGRect(origin: CGPoint(), size: availableSize))
                     }
                 } else if let encryptionKeyBackground = self.encryptionKeyBackground {
                     self.encryptionKeyBackground = nil
                     if let encryptionKeyBackgroundView = encryptionKeyBackground.view {
+                        transition.setZPosition(layer: encryptionKeyBackgroundView.layer, zPosition: 0.0)
                         alphaTransition.setAlpha(view: encryptionKeyBackgroundView, alpha: 0.0, completion: { [weak encryptionKeyBackgroundView] _ in
                             encryptionKeyBackgroundView?.removeFromSuperview()
                         })

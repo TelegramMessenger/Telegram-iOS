@@ -550,7 +550,7 @@ private final class ScreencastInProcessIPCContext: ScreencastIPCContext {
                     enableNoiseSuppression: false,
                     disableAudioInput: true,
                     enableSystemMute: false,
-                    preferX264: false,
+                    prioritizeVP8: false,
                     logPath: "",
                     onMutedSpeechActivityDetected: { _ in },
                     isConference: self.isConference,
@@ -752,8 +752,8 @@ private final class ConferenceCallE2EContextStateImpl: ConferenceCallE2EContextS
         return self.call.encrypt(message)
     }
 
-    func decrypt(message: Data) -> Data? {
-        return self.call.decrypt(message)
+    func decrypt(message: Data, userId: Int64) -> Data? {
+        return self.call.decrypt(message, userId: userId)
     }
 }
 
@@ -1240,13 +1240,14 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 engine: accountContext.engine,
                 callId: initialCall.description.id,
                 accessHash: initialCall.description.accessHash,
+                userId: accountContext.account.peerId.id._internalGetInt64Value(),
                 reference: initialCall.reference,
                 keyPair: keyPair,
-                initializeState: { keyPair, block in
+                initializeState: { keyPair, userId, block in
                     guard let keyPair = TdKeyPair(keyId: keyPair.id, publicKey: keyPair.publicKey.data) else {
                         return nil
                     }
-                    guard let call = TdCall.make(with: keyPair, latestBlock: block) else {
+                    guard let call = TdCall.make(with: keyPair, userId: userId, latestBlock: block) else {
                         return nil
                     }
                     return ConferenceCallE2EContextStateImpl(call: call)
@@ -2103,8 +2104,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             return self.e2eCall.with({ $0.state?.encrypt(message: message) })
                         }
                         
-                        func decrypt(message: Data) -> Data? {
-                            return self.e2eCall.with({ $0.state?.decrypt(message: message) })
+                        func decrypt(message: Data, userId: Int64) -> Data? {
+                            return self.e2eCall.with({ $0.state?.decrypt(message: message, userId: userId) })
                         }
                     }
                     
@@ -2114,6 +2115,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     } else if self.isConference {
                         // Prevent non-encrypted conference calls
                         encryptionContext = OngoingGroupCallEncryptionContextImpl(e2eCall: Atomic(value: ConferenceCallE2EContext.ContextStateHolder()))
+                    }
+                    
+                    var prioritizeVP8 = false
+                    if let data = self.accountContext.currentAppConfiguration.with({ $0 }).data, let value = data["ios_calls_prioritize_vp8"] as? Double {
+                        prioritizeVP8 = value != 0.0
                     }
 
                     genericCallContext = .call(OngoingGroupCallContext(audioSessionActive: contextAudioSessionActive, video: self.videoCapturer, requestMediaChannelDescriptions: { [weak self] ssrcs, completion in
@@ -2134,7 +2140,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 self.requestCall(movingFromBroadcastToRtc: false)
                             }
                         }
-                    }, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, videoContentType: self.isVideoEnabled ? .generic : .none, enableNoiseSuppression: false, disableAudioInput: self.isStream, enableSystemMute: self.accountContext.sharedContext.immediateExperimentalUISettings.experimentalCallMute, preferX264: self.accountContext.sharedContext.immediateExperimentalUISettings.preferredVideoCodec == "H264", logPath: allocateCallLogPath(account: self.account), onMutedSpeechActivityDetected: { [weak self] value in
+                    }, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, videoContentType: self.isVideoEnabled ? .generic : .none, enableNoiseSuppression: false, disableAudioInput: self.isStream, enableSystemMute: self.accountContext.sharedContext.immediateExperimentalUISettings.experimentalCallMute, prioritizeVP8: prioritizeVP8, logPath: allocateCallLogPath(account: self.account), onMutedSpeechActivityDetected: { [weak self] value in
                         Queue.mainQueue().async {
                             guard let self else {
                                 return
@@ -3661,6 +3667,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             }
             return OngoingGroupCallContext.VideoChannel(
                 audioSsrc: item.audioSsrc,
+                peerId: item.peerId,
                 endpointId: item.endpointId,
                 ssrcGroups: item.ssrcGroups.map { group in
                     return OngoingGroupCallContext.VideoChannel.SsrcGroup(semantics: group.semantics, ssrcs: group.ssrcs)
@@ -3979,11 +3986,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
     }
     
-    func setConferenceInvitedPeers(_ invitedPeers: [(id: PeerId, isVideo: Bool)]) {
-        //TODO:release
-        /*self.invitedPeersValue = peerIds.map {
-            PresentationGroupCallInvitedPeer(id: $0, state: .requesting)
-        }*/
+    public func kickPeer(id: EnginePeer.Id) {
+        if self.isConference {
+            self.removedPeer(id)
+            
+            self.e2eContext?.kickPeer(id: id)
+        }
     }
     
     public func removedPeer(_ peerId: PeerId) {

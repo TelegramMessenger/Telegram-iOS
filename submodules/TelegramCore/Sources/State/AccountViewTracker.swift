@@ -1301,6 +1301,70 @@ public final class AccountViewTracker {
         }
     }
     
+    public func refreshInlineGroupCallsForMessageIds(messageIds: Set<MessageId>) {
+        self.queue.async {
+            var addedMessageIds: [MessageId] = []
+            let timestamp = Int32(CFAbsoluteTimeGetCurrent())
+            for messageId in messageIds {
+                let messageTimestamp = self.updatedUnsupportedMediaMessageIdsAndTimestamps[MessageAndThreadId(messageId: messageId, threadId: nil)]
+                var refresh = false
+                if let messageTimestamp = messageTimestamp {
+                    refresh = messageTimestamp < timestamp - 60
+                } else {
+                    refresh = true
+                }
+                
+                if refresh {
+                    self.updatedUnsupportedMediaMessageIdsAndTimestamps[MessageAndThreadId(messageId: messageId, threadId: nil)] = timestamp
+                    addedMessageIds.append(messageId)
+                }
+            }
+            if !addedMessageIds.isEmpty {
+                for (_, messageIds) in messagesIdsGroupedByPeerId(Set(addedMessageIds)) {
+                    let disposableId = self.nextUpdatedUnsupportedMediaDisposableId
+                    self.nextUpdatedUnsupportedMediaDisposableId += 1
+                    
+                    if let account = self.account {
+                        let signal = account.postbox.transaction { transaction -> [MessageId] in
+                            var result: [MessageId] = []
+                            for id in messageIds {
+                                if let message = transaction.getMessage(id) {
+                                    for media in message.media {
+                                        if let _ = media as? TelegramMediaAction {
+                                            result.append(id)
+                                            break
+                                        }
+                                    }
+                                }
+                            }
+                            return result
+                        }
+                        |> mapToSignal { ids -> Signal<Never, NoError> in
+                            guard !ids.isEmpty else {
+                                return .complete()
+                            }
+                            
+                            var requests: [Signal<Never, NoError>] = []
+                            
+                            for id in ids {
+                                requests.append(_internal_refreshInlineGroupCall(account: account, messageId: id))
+                            }
+                            
+                            return combineLatest(requests)
+                            |> ignoreValues
+                        }
+                        |> afterDisposed { [weak self] in
+                            self?.queue.async {
+                                self?.updatedUnsupportedMediaDisposables.set(nil, forKey: disposableId)
+                            }
+                        }
+                        self.updatedUnsupportedMediaDisposables.set(signal.start(), forKey: disposableId)
+                    }
+                }
+            }
+        }
+    }
+    
     public func refreshStoryStatsForPeerIds(peerIds: [PeerId]) {
         self.queue.async {
             self.pendingRefreshStoriesForPeerIds.append(contentsOf: peerIds)

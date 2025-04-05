@@ -23,6 +23,9 @@
 #include <utility>
 
 int VERBOSITY_NAME(blkch) = VERBOSITY_NAME(INFO);
+namespace tde2e_api {
+Result<SecureBytes> call_export_shared_key(CallId call_id);
+}  // namespace tde2e_api
 namespace tde2e_core {
 
 // BlockchainLogger implementation
@@ -64,6 +67,7 @@ void BlockchainLogger::log_try_apply_block(td::Slice block_slice, Height height,
 
   log_file_ << "TRY_APPLY_BLOCK\n";
   log_file_ << base64_encode(block_slice) << "\n";
+  log_file_ << base64_encode(Blockchain::from_local_to_server(block_slice.str()).move_as_ok()) << "\n";
   log_file_ << height.height << "\n";
   log_file_ << height.broadcast_height << "\n";
   if (result.is_ok()) {
@@ -80,6 +84,7 @@ void BlockchainLogger::log_try_apply_broadcast_block(td::Slice block_slice, Heig
 
   log_file_ << "TRY_APPLY_BROADCAST_BLOCK\n";
   log_file_ << base64_encode(block_slice) << "\n";
+  log_file_ << base64_encode(Blockchain::from_local_to_server(block_slice.str()).move_as_ok()) << "\n";
   log_file_ << height.height << "\n";
   log_file_ << height.broadcast_height << "\n";
   if (result.is_ok()) {
@@ -155,7 +160,11 @@ void BlockchainLogger::log_get_proof(td::int64 height, const std::vector<std::st
 // ServerBlockchain implementation with logging
 td::Status ServerBlockchain::try_apply_block(td::Slice block_slice) {
   TRY_RESULT(block, Block::from_tl_serialized(block_slice));
-  auto status = blockchain_.try_apply_block(block);
+  ValidateOptions validate_options;
+  validate_options.permissions = GroupParticipantFlags::AllPermissions;
+  validate_options.validate_signature = true;
+  validate_options.validate_state_hash = true;
+  auto status = blockchain_.try_apply_block(block, validate_options);
   if (status.is_ok()) {
     blocks_.push_back(block);
     broadcast_chain_.on_new_main_block(blockchain_);
@@ -192,13 +201,13 @@ td::Result<std::string> ServerBlockchain::get_block(size_t height, int sub_chain
       result = td::Status::Error(PSLICE() << "Invalid height " << height);
     } else {
       CHECK(blocks_[height].height_ == static_cast<td::int64>(height));
-      result = blocks_[height].to_tl_serialized();
+      result = Blockchain::from_local_to_server(blocks_[height].to_tl_serialized());
     }
   } else if (sub_chain == 1) {
     if (height >= broadcast_blocks_.size()) {
       result = td::Status::Error(PSLICE() << "Invalid height " << height);
     } else {
-      result = broadcast_blocks_[height];
+      result = Blockchain::from_local_to_server(broadcast_blocks_[height]);
     }
   }
 
@@ -362,7 +371,10 @@ BlockBuilder &BlockBuilder::skip_public_key() {
 }
 
 BlockBuilder &BlockBuilder::set_value_raw(td::Slice key, td::Slice value) {
-  block.changes_.push_back(Change{ChangeSetValue{key.str(), key.str()}});
+  kv_state_.set_value(key, value).ensure();
+  block.state_proof_.kv_hash = KeyValueHash{kv_state_.get_hash()};
+  block.changes_.push_back(Change{ChangeSetValue{key.str(), value.str()}});
+  has_hash_proof = true;
   return *this;
 }
 
@@ -509,7 +521,7 @@ td::Result<std::vector<std::string>> BlockchainTester::get_values(const std::vec
   return values;
 }
 
-td::Result<std::string> BlockchainTester::get_block(td::int64 height, int sub_chain) {
+td::Result<std::string> BlockchainTester::get_block_from_server(td::int64 height, int sub_chain) {
   return server_.get_block(static_cast<std::size_t>(height), sub_chain);
 }
 
@@ -548,7 +560,7 @@ td::Result<ApplyResult> BlockchainTester::apply(const Block &block, td::Slice bl
   auto server_status = server_.try_apply_block(block_str);
   auto client_status = client_.try_apply_block(block_str);
   if (server_status.is_error() != client_status.is_error()) {
-    return td::Status::Error(PSLICE() << "Server and client return different answers:\n\tsever:" << server_status
+    return td::Status::Error(PSLICE() << "Server and client return different answers:\n\tserver:" << server_status
                                       << "\n\tclient:" << client_status);
   }
   if (server_status.is_error()) {
@@ -718,8 +730,8 @@ td::Result<bool> CallTester::user_full_sync(User &user) {
 td::Status CallTester::user_init_call(User &user) {
   CHECK(user.call_id == 0);
   CHECK(user.in_call);
-  TEST_TRY_RESULT(block, bt.get_block(++user.height.height));
-  TRY_RESULT(call_id, to_td(tde2e_api::call_create(user.private_key_id, block)));
+  TEST_TRY_RESULT(block, bt.get_block_from_server(++user.height.height));
+  TRY_RESULT(call_id, to_td(tde2e_api::call_create(user.user_id, user.private_key_id, block)));
   user.call_id = call_id;
   return td::Status::OK();
 }
@@ -737,7 +749,7 @@ td::Result<bool> CallTester::user_sync_chain_step(User &user) {
   if (user.height.height == height.height) {
     return false;
   }
-  TEST_TRY_RESULT(block, bt.get_block(++user.height.height));
+  TEST_TRY_RESULT(block, bt.get_block_from_server(++user.height.height));
   TEST_TRY_STATUS(to_td(tde2e_api::call_apply_block(user.call_id, block)));
   return true;
 }
@@ -748,10 +760,10 @@ td::Result<bool> CallTester::user_sync_broadcast_step(User &user) {
   if (user.height.broadcast_height == height.broadcast_height) {
     return false;
   }
-  TEST_TRY_RESULT(block, bt.get_block(++user.height.broadcast_height, 1));
+  TEST_TRY_RESULT(block, bt.get_block_from_server(++user.height.broadcast_height, 1));
   auto r = tde2e_api::call_receive_inbound_message(user.call_id, block);
   if (!r.is_ok()) {
-    return td::Status::Error("Failed to call apply broadcast");
+    return td::Status::Error(PSLICE() << "Failed to call apply broadcast: " << r.error().message);
   }
   return true;
 }

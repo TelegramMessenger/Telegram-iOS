@@ -15,17 +15,20 @@ final class VideoChatListInviteComponent: Component {
     let title: String
     let icon: Icon
     let theme: PresentationTheme
+    let hasNext: Bool
     let action: () -> Void
 
     init(
         title: String,
         icon: Icon,
         theme: PresentationTheme,
+        hasNext: Bool,
         action: @escaping () -> Void
     ) {
         self.title = title
         self.icon = icon
         self.theme = theme
+        self.hasNext = hasNext
         self.action = action
     }
 
@@ -37,6 +40,9 @@ final class VideoChatListInviteComponent: Component {
             return false
         }
         if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.hasNext != rhs.hasNext {
             return false
         }
         return true
@@ -52,7 +58,11 @@ final class VideoChatListInviteComponent: Component {
         private var highlightBackgroundLayer: SimpleLayer?
         private var highlightBackgroundFrame: CGRect?
         
+        private let separatorLayer: SimpleLayer
+        
         override init(frame: CGRect) {
+            self.separatorLayer = SimpleLayer()
+            
             super.init(frame: frame)
             
             self.highligthedChanged = { [weak self] isHighlighted in
@@ -74,6 +84,15 @@ final class VideoChatListInviteComponent: Component {
                     }
                     highlightBackgroundLayer.frame = highlightBackgroundFrame
                     highlightBackgroundLayer.opacity = 1.0
+                    if component.hasNext {
+                        highlightBackgroundLayer.maskedCorners = []
+                        highlightBackgroundLayer.masksToBounds = false
+                        highlightBackgroundLayer.cornerRadius = 0.0
+                    } else {
+                        highlightBackgroundLayer.maskedCorners = [.layerMinXMaxYCorner, .layerMaxXMaxYCorner]
+                        highlightBackgroundLayer.masksToBounds = true
+                        highlightBackgroundLayer.cornerRadius = 10.0
+                    }
                 } else {
                     if let highlightBackgroundLayer = self.highlightBackgroundLayer {
                         self.highlightBackgroundLayer = nil
@@ -152,7 +171,14 @@ final class VideoChatListInviteComponent: Component {
                 transition.setFrame(view: iconView, frame: iconFrame)
             }
             
-            //self.highlightBackgroundFrame = CGRect(origin: CGPoint(), size: size)
+            self.highlightBackgroundFrame = CGRect(origin: CGPoint(), size: size)
+            
+            if self.separatorLayer.superlayer == nil {
+                self.layer.addSublayer(self.separatorLayer)
+            }
+            self.separatorLayer.backgroundColor = component.theme.list.itemBlocksSeparatorColor.cgColor
+            transition.setFrame(layer: self.separatorLayer, frame: CGRect(origin: CGPoint(x: 62.0, y: size.height), size: CGSize(width: size.width - 62.0, height: UIScreenPixel)))
+            self.separatorLayer.isHidden = !component.hasNext
             
             return size
         }
