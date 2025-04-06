@@ -1146,7 +1146,7 @@ public final class AccountStateManager {
                                 strongSelf.reportMessageDeliveryDisposable.add(_internal_reportMessageDelivery(postbox: strongSelf.postbox, network: strongSelf.network, messageIds: Array(events.reportMessageDelivery), fromPushNotification: false).start())
                             }
                             if !events.addedConferenceInvitationMessagesIds.isEmpty {
-                                strongSelf.callSessionManager?.addConferenceInvitationMessages(ids: events.addedConferenceInvitationMessagesIds)
+                                strongSelf.callSessionManager?.addConferenceInvitationMessages(ids: events.addedConferenceInvitationMessagesIds.map { ($0, nil) })
                             }
                             if !events.isContactUpdates.isEmpty {
                                 strongSelf.addIsContactUpdates(events.isContactUpdates)
