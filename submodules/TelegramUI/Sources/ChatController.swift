@@ -545,7 +545,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     let chatLocationContextHolder: Atomic<ChatLocationContextHolder?>
     
     weak var attachmentController: AttachmentController?
-    weak var currentWebAppController: ViewController?
     
     weak var currentImportMessageTooltip: UndoOverlayController?
     
