@@ -1062,9 +1062,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             case "web_app_open_tg_link":
                 if let json = json, let path = json["path_full"] as? String {
                     let forceRequest = json["force_request"] as? Bool ?? false
-                    controller.openUrl("https://t.me\(path)", false, forceRequest, { [weak controller] in
-                        let _ = controller
-//                            controller?.dismiss()
+                    controller.openUrl("https://t.me\(path)", false, forceRequest, {
                     })
                 }
             case "web_app_open_invoice":

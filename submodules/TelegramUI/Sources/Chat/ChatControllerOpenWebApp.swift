@@ -243,9 +243,6 @@ func openWebAppImpl(
                         return navigationController ?? (context.sharedContext.mainWindow?.viewController as? NavigationController)
                     })
                     controller.navigationPresentation = .flatModal
-                    if let parentController = parentController as? ChatControllerImpl {
-                        parentController.currentWebAppController = controller
-                    }
                     parentController.push(controller)
                     
                     presentImpl = { [weak controller] c, a in
@@ -297,9 +294,6 @@ func openWebAppImpl(
                         return navigationController ?? (context.sharedContext.mainWindow?.viewController as? NavigationController)
                     })
                     controller.navigationPresentation = .flatModal
-                    if let parentController = parentController as? ChatControllerImpl {
-                        parentController.currentWebAppController = controller
-                    }
                     parentController.push(controller)
                     
                     presentImpl = { [weak controller] c, a in
@@ -355,7 +349,7 @@ public extension ChatControllerImpl {
         self.context.sharedContext.openWebApp(context: self.context, parentController: self, updatedPresentationData: self.updatedPresentationData, botPeer: EnginePeer(peer), chatPeer: EnginePeer(peer), threadId: self.chatLocation.threadId, buttonText: buttonText, url: url, simple: simple, source: source, skipTermsOfService: false, payload: nil)
     }
     
-    static func botRequestSwitchInline(context: AccountContext, controller: ChatControllerImpl?, peerId: EnginePeer.Id, botAddress: String, query: String, chatTypes: [ReplyMarkupButtonRequestPeerType]?, completion:  @escaping () -> Void) -> Void {
+    fileprivate static func botRequestSwitchInline(context: AccountContext, controller: ChatControllerImpl?, peerId: EnginePeer.Id, botAddress: String, query: String, chatTypes: [ReplyMarkupButtonRequestPeerType]?, completion:  @escaping () -> Void) -> Void {
         let activateSwitchInline: (EnginePeer?) -> Void = { selectedPeer in
             var chatController: ChatControllerImpl?
             if let current = controller {
@@ -429,7 +423,7 @@ public extension ChatControllerImpl {
         })
     }
     
-    static func botOpenUrl(context: AccountContext, peerId: EnginePeer.Id, controller: ChatControllerImpl?, url: String, concealed: Bool, forceUpdate: Bool, present: @escaping (ViewController, Any?) -> Void, commit: @escaping () -> Void = {}) {
+    fileprivate static func botOpenUrl(context: AccountContext, peerId: EnginePeer.Id, controller: ChatControllerImpl?, url: String, concealed: Bool, forceUpdate: Bool, present: @escaping (ViewController, Any?) -> Void, commit: @escaping () -> Void = {}) {
         if let controller {
             controller.openUrl(url, concealed: concealed, forceExternal: true, commit: commit)
         } else {
@@ -437,41 +431,52 @@ public extension ChatControllerImpl {
                 present(c, nil)
             }, openResolved: { result in
                 var navigationController: NavigationController?
-                if let current = controller?.navigationController as? NavigationController {
-                    navigationController = current
-                } else if let main = context.sharedContext.mainWindow?.viewController as? NavigationController {
+                if let main = context.sharedContext.mainWindow?.viewController as? NavigationController {
                     navigationController = main
                 }
-                context.sharedContext.openResolvedUrl(result, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: false, forceUpdate: forceUpdate, openPeer: { peer, navigation in
-                    if let navigationController {
-                        ChatControllerImpl.botOpenPeer(context: context, peerId: peer.id, navigation: navigation, navigationController: navigationController)
-                    }
-                    commit()
-                }, sendFile: nil, sendSticker: nil, sendEmoji: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: { peerId, invite, call in
-                },
-                present: { c, a in
-                    present(c, a)
-                }, dismissInput: {
-                    context.sharedContext.mainWindow?.viewController?.view.endEditing(false)
-                }, contentContext: nil, progress: nil, completion: nil)
+                if case let .peer(peer, navigation) = result, case let .withBotApp(botApp) = navigation, let botPeer = peer.flatMap(EnginePeer.init), let parentController = navigationController?.viewControllers.last as? ViewController {
+                    self.presentBotApp(context: context, parentController: parentController, botApp: botApp.botApp, botPeer: botPeer, payload: botApp.payload, mode: botApp.mode)
+                } else {
+                    context.sharedContext.openResolvedUrl(result, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: false, forceUpdate: forceUpdate, openPeer: { peer, navigation in
+                        if let navigationController {
+                            ChatControllerImpl.botOpenPeer(context: context, peerId: peer.id, navigation: navigation, navigationController: navigationController)
+                        }
+                        commit()
+                    }, sendFile: nil, sendSticker: nil, sendEmoji: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: { peerId, invite, call in
+                    }, present: { c, a in
+                        present(c, a)
+                    }, dismissInput: {
+                        context.sharedContext.mainWindow?.viewController?.view.endEditing(false)
+                    }, contentContext: nil, progress: nil, completion: nil)
+                }
             })
         }
     }
     
     func presentBotApp(botApp: BotApp?, botPeer: EnginePeer, payload: String?, mode: ResolvedStartAppMode, concealed: Bool = false, commit: @escaping () -> Void = {}) {
-        guard let peerId = self.chatLocation.peerId else {
-            return
+        ChatControllerImpl.presentBotApp(context: self.context, parentController: self, botApp: botApp, botPeer: botPeer, payload: payload, mode: mode, concealed: concealed, commit: commit)
+    }
+    
+    fileprivate static func presentBotApp(context: AccountContext, parentController: ViewController, botApp: BotApp?, botPeer: EnginePeer, payload: String?, mode: ResolvedStartAppMode, concealed: Bool = false, commit: @escaping () -> Void = {}) {
+        let chatController = parentController as? ChatControllerImpl
+        let peerId: EnginePeer.Id
+        let threadId = chatController?.chatLocation.threadId
+        if let chatPeerId = chatController?.chatLocation.peerId {
+            peerId = chatPeerId
+        } else {
+            peerId = botPeer.id
         }
-        self.attachmentController?.dismiss(animated: true, completion: nil)
+
+        chatController?.attachmentController?.dismiss(animated: true, completion: nil)
+        
+        let updatedPresentationData = chatController?.updatedPresentationData
+        let presentationData = updatedPresentationData?.0 ?? context.sharedContext.currentPresentationData.with { $0 }
         
         if let botApp {
-            let openBotApp: (Bool, Bool, BotAppSettings?) -> Void = { [weak self] allowWrite, justInstalled, appSettings in
-                guard let strongSelf = self else {
-                    return
-                }
+            let openBotApp: (Bool, Bool, BotAppSettings?) -> Void = { [weak parentController, weak chatController] allowWrite, justInstalled, appSettings in
                 commit()
                 
-                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                chatController?.updateChatPresentationInterfaceState(animated: true, interactive: true, {
                     return $0.updatedTitlePanelContext {
                         if !$0.contains(where: {
                             switch $0 {
@@ -489,10 +494,10 @@ public extension ChatControllerImpl {
                     }
                 })
                 
-                let updateProgress = { [weak self] in
+                let updateProgress = { [weak chatController] in
                     Queue.mainQueue().async {
-                        if let strongSelf = self {
-                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                        if let chatController {
+                            chatController.updateChatPresentationInterfaceState(animated: true, interactive: true, {
                                 return $0.updatedTitlePanelContext {
                                     if let index = $0.firstIndex(where: {
                                         switch $0 {
@@ -514,63 +519,56 @@ public extension ChatControllerImpl {
                 }
                 
                 let botAddress = botPeer.addressName ?? ""
-                strongSelf.messageActionCallbackDisposable.set(((strongSelf.context.engine.messages.requestAppWebView(peerId: peerId, appReference: .id(id: botApp.id, accessHash: botApp.accessHash), payload: payload, themeParams: generateWebAppThemeParams(strongSelf.presentationData.theme), compact: mode == .compact, fullscreen: mode == .fullscreen, allowWrite: allowWrite)
+                let _ = ((context.engine.messages.requestAppWebView(peerId: peerId, appReference: .id(id: botApp.id, accessHash: botApp.accessHash), payload: payload, themeParams: generateWebAppThemeParams(presentationData.theme), compact: mode == .compact, fullscreen: mode == .fullscreen, allowWrite: allowWrite)
                 |> afterDisposed {
                     updateProgress()
                 })
-                |> deliverOnMainQueue).startStrict(next: { [weak self] result in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    let context = strongSelf.context
+                |> deliverOnMainQueue).startStandalone(next: { [weak parentController, weak chatController] result in
                     let params = WebAppParameters(source: .generic, peerId: peerId, botId: botPeer.id, botName: botApp.title, botVerified: botPeer.isVerified, botAddress: botPeer.addressName ?? "", appName: botApp.shortName, url: result.url, queryId: 0, payload: payload, buttonText: "", keepAliveSignal: nil, forceHasSettings: botApp.flags.contains(.hasSettings), fullSize: result.flags.contains(.fullSize), isFullscreen: result.flags.contains(.fullScreen), appSettings: appSettings)
                     var presentImpl: ((ViewController, Any?) -> Void)?
-                    let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url, concealed, forceUpdate, commit in
-                        ChatControllerImpl.botOpenUrl(context: context, peerId: peerId, controller: self, url: url, concealed: concealed, forceUpdate: forceUpdate, present: { c, a in
+                    let controller = standaloneWebAppController(context: context, updatedPresentationData: updatedPresentationData, params: params, threadId: threadId, openUrl: { url, concealed, forceUpdate, commit in
+                        ChatControllerImpl.botOpenUrl(context: context, peerId: peerId, controller: chatController, url: url, concealed: concealed, forceUpdate: forceUpdate, present: { c, a in
                             presentImpl?(c, a)
                         }, commit: commit)
-                    }, requestSwitchInline: { [weak self] query, chatTypes, completion in
-                        ChatControllerImpl.botRequestSwitchInline(context: context, controller: self, peerId: peerId, botAddress: botAddress, query: query, chatTypes: chatTypes, completion: completion)
-                    }, completion: { [weak self] in
-                        self?.chatDisplayNode.historyNode.scrollToEndOfHistory()
-                    }, getNavigationController: { [weak self] in
-                        return self?.effectiveNavigationController ?? context.sharedContext.mainWindow?.viewController as? NavigationController
+                    }, requestSwitchInline: { query, chatTypes, completion in
+                        ChatControllerImpl.botRequestSwitchInline(context: context, controller: chatController, peerId: peerId, botAddress: botAddress, query: query, chatTypes: chatTypes, completion: completion)
+                    }, completion: {
+                        chatController?.chatDisplayNode.historyNode.scrollToEndOfHistory()
+                    }, getNavigationController: {
+                        if let navigationController = parentController?.navigationController as? NavigationController {
+                            return navigationController
+                        } else {
+                            return context.sharedContext.mainWindow?.viewController as? NavigationController
+                        }
                     })
                     controller.navigationPresentation = .flatModal
-                    strongSelf.currentWebAppController = controller
-                    strongSelf.push(controller)
-                    
+                    parentController?.push(controller)
+                        
                     presentImpl = { [weak controller] c, a in
                         controller?.present(c, in: .window(.root), with: a)
                     }
                     
                     if justInstalled {
-                        let content: UndoOverlayContent = .succeed(text: strongSelf.presentationData.strings.WebApp_ShortcutsSettingsAdded(botPeer.compactDisplayTitle).string, timeout: 5.0, customUndoText: nil)
-                        controller.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: content, elevatedLayout: false, position: .top, action: { _ in return false }), in: .current)
+                        let content: UndoOverlayContent = .succeed(text: presentationData.strings.WebApp_ShortcutsSettingsAdded(botPeer.compactDisplayTitle).string, timeout: 5.0, customUndoText: nil)
+                        controller.present(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, position: .top, action: { _ in return false }), in: .current)
                     }
-                }, error: { [weak self] error in
-                    if let strongSelf = self {
-                        strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: strongSelf.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                }, error: { [weak parentController] error in
+                    parentController?.present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
                         })]), in: .window(.root))
-                    }
-                }))
+                })
             }
             
             let _ = combineLatest(
                 queue: Queue.mainQueue(),
-                ApplicationSpecificNotice.getBotGameNotice(accountManager: self.context.sharedContext.accountManager, peerId: botPeer.id),
-                self.context.engine.messages.attachMenuBots(),
-                self.context.engine.messages.getAttachMenuBot(botId: botPeer.id, cached: true)
+                ApplicationSpecificNotice.getBotGameNotice(accountManager: context.sharedContext.accountManager, peerId: botPeer.id),
+                context.engine.messages.attachMenuBots(),
+                context.engine.messages.getAttachMenuBot(botId: botPeer.id, cached: true)
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<AttachMenuBot?, NoError> in
                     return .single(nil)
                 },
-                self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.BotAppSettings(id: botPeer.id))
-            ).startStandalone(next: { [weak self] noticed, attachMenuBots, attachMenuBot, appSettings in
-                guard let self else {
-                    return
-                }
-                
+                context.engine.data.get(TelegramEngine.EngineData.Item.Peer.BotAppSettings(id: botPeer.id))
+            ).startStandalone(next: { [weak parentController, weak chatController] noticed, attachMenuBots, attachMenuBot, appSettings in
                 var isAttachMenuBotInstalled: Bool?
                 if let _ = attachMenuBot {
                     if let _ = attachMenuBots.first(where: { $0.peer.id == botPeer.id && !$0.flags.contains(.notActivated) }) {
@@ -580,43 +578,40 @@ public extension ChatControllerImpl {
                     }
                 }
                 
-                let context = self.context
                 if !noticed || botApp.flags.contains(.notActivated) || isAttachMenuBotInstalled == false {
                     if let isAttachMenuBotInstalled, let attachMenuBot {
                         if !isAttachMenuBotInstalled {
-                            let controller = webAppTermsAlertController(context: context, updatedPresentationData: self.updatedPresentationData, bot: attachMenuBot, completion: { allowWrite in
+                            let controller = webAppTermsAlertController(context: context, updatedPresentationData: updatedPresentationData, bot: attachMenuBot, completion: { allowWrite in
                                 let _ = ApplicationSpecificNotice.setBotGameNotice(accountManager: context.sharedContext.accountManager, peerId: botPeer.id).startStandalone()
                                 let _ = (context.engine.messages.addBotToAttachMenu(botId: botPeer.id, allowWrite: allowWrite)
-                                         |> deliverOnMainQueue).startStandalone(error: { _ in
+                                |> deliverOnMainQueue).startStandalone(error: { _ in
                                 }, completed: {
                                     openBotApp(allowWrite, true, appSettings)
                                 })
                             })
-                            self.present(controller, in: .window(.root))
+                            parentController?.present(controller, in: .window(.root))
                         } else {
                             openBotApp(false, false, appSettings)
                         }
                     } else {
-                        let controller = webAppLaunchConfirmationController(context: context, updatedPresentationData: self.updatedPresentationData, peer: botPeer, requestWriteAccess: botApp.flags.contains(.notActivated) && botApp.flags.contains(.requiresWriteAccess), completion: { allowWrite in
+                        let controller = webAppLaunchConfirmationController(context: context, updatedPresentationData: updatedPresentationData, peer: botPeer, requestWriteAccess: botApp.flags.contains(.notActivated) && botApp.flags.contains(.requiresWriteAccess), completion: { allowWrite in
                             let _ = ApplicationSpecificNotice.setBotGameNotice(accountManager: context.sharedContext.accountManager, peerId: botPeer.id).startStandalone()
                             openBotApp(allowWrite, false, appSettings)
-                        }, showMore: { [weak self] in
-                            if let self {
-                                self.openResolved(result: .peer(botPeer._asPeer(), .info(nil)), sourceMessageId: nil)
+                        }, showMore: chatController == nil ? nil : { [weak chatController] in
+                            if let chatController {
+                                chatController.openResolved(result: .peer(botPeer._asPeer(), .info(nil)), sourceMessageId: nil)
                             }
-                        }, openTerms: { [weak self] in
-                            if let self {
-                                self.context.sharedContext.openExternalUrl(context: self.context, urlContext: .generic, url: self.presentationData.strings.WebApp_LaunchTermsConfirmation_URL, forceExternal: false, presentationData: self.presentationData, navigationController: self.effectiveNavigationController, dismissInput: {})
-                            }
+                        }, openTerms: {
+                            context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: presentationData.strings.WebApp_LaunchTermsConfirmation_URL, forceExternal: false, presentationData: presentationData, navigationController: parentController?.navigationController as? NavigationController, dismissInput: {})
                         })
-                        self.present(controller, in: .window(.root))
+                        parentController?.present(controller, in: .window(.root))
                     }
                 } else {
                     openBotApp(false, false, appSettings)
                 }
             })
         } else {
-            self.context.sharedContext.openWebApp(context: self.context, parentController: self, updatedPresentationData: self.updatedPresentationData, botPeer: botPeer, chatPeer: nil, threadId: nil, buttonText: "", url: "", simple: true, source: .generic, skipTermsOfService: false, payload: payload)
+            context.sharedContext.openWebApp(context: context, parentController: parentController, updatedPresentationData: updatedPresentationData, botPeer: botPeer, chatPeer: nil, threadId: nil, buttonText: "", url: "", simple: true, source: .generic, skipTermsOfService: false, payload: payload)
         }
     }
 }

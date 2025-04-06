@@ -14,18 +14,19 @@ import MultilineTextComponent
 import AvatarNode
 import Markdown
 import LottieComponent
+import PlainButtonComponent
 
 private final class QuickShareToastScreenComponent: Component {
     let context: AccountContext
     let peer: EnginePeer
     let sourceFrame: CGRect
-    let action: () -> Void
+    let action: (QuickShareToastScreen.Action) -> Void
     
     init(
         context: AccountContext,
         peer: EnginePeer,
         sourceFrame: CGRect,
-        action: @escaping () -> Void
+        action: @escaping (QuickShareToastScreen.Action) -> Void
     ) {
         self.context = context
         self.peer = peer
@@ -51,6 +52,7 @@ private final class QuickShareToastScreenComponent: Component {
         private let animation = ComponentView<Empty>()
         
         private let content = ComponentView<Empty>()
+        private let actionButton = ComponentView<Empty>()
         
         private var isUpdating: Bool = false
         private var component: QuickShareToastScreenComponent?
@@ -93,7 +95,8 @@ private final class QuickShareToastScreenComponent: Component {
             guard let component = self.component else {
                 return
             }
-            component.action()
+            component.action(.info)
+            self.doneTimer?.invalidate()
             self.environment?.controller()?.dismiss()
         }
         
@@ -187,10 +190,10 @@ private final class QuickShareToastScreenComponent: Component {
             
             if self.component == nil {
                 self.doneTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false, block: { [weak self] _ in
-                    guard let self else {
+                    guard let self, let controller = self.environment?.controller() as? QuickShareToastScreen else {
                         return
                     }
-                    self.environment?.controller()?.dismiss()
+                    controller.dismissWithCommitAction()
                 })
             }
             
@@ -229,6 +232,29 @@ private final class QuickShareToastScreenComponent: Component {
             } else {
                 tooltipText = environment.strings.Conversation_ForwardTooltip_Chat_One(component.peer.compactDisplayTitle).string
             }
+            
+            let actionButtonSize = self.actionButton.update(
+                transition: .immediate,
+                component: AnyComponent(PlainButtonComponent(
+                    content: AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: "Undo", font: Font.regular(17.0), textColor: environment.theme.list.itemAccentColor.withMultiplied(hue: 0.933, saturation: 0.61, brightness: 1.0)))
+                    )),
+                    effectAlignment: .center,
+                    contentInsets: UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0),
+                    action: { [weak self] in
+                        guard let self, let _ = self.component else {
+                            return
+                        }
+                        self.doneTimer?.invalidate()
+                        self.environment?.controller()?.dismiss()
+                    },
+                    animateAlpha: true,
+                    animateScale: false,
+                    animateContents: false
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableContentSize.width - contentInsets.left - contentInsets.right - spacing - iconSize.width, height: availableContentSize.height)
+            )
             
             let contentSize = self.content.update(
                 transition: transition,
@@ -279,6 +305,13 @@ private final class QuickShareToastScreenComponent: Component {
                 transition.setFrame(view: contentView, frame: CGRect(origin: CGPoint(x: contentInsets.left + iconSize.width + spacing, y: floor((contentHeight - contentSize.height) * 0.5)), size: contentSize))
             }
             
+            if let actionButtonView = self.actionButton.view {
+                if actionButtonView.superview == nil {
+                    self.backgroundView.addSubview(actionButtonView)
+                }
+                transition.setFrame(view: actionButtonView, frame: CGRect(origin: CGPoint(x: availableContentSize.width - contentInsets.right - 16.0 - actionButtonSize.width, y: floor((contentHeight - actionButtonSize.height) * 0.5)), size: actionButtonSize))
+            }
+            
             let size = CGSize(width: availableContentSize.width, height: contentHeight)
             let backgroundFrame = CGRect(origin: CGPoint(x: containerInsets.left, y: availableSize.height - containerInsets.bottom - size.height), size: size)
             
@@ -301,16 +334,24 @@ private final class QuickShareToastScreenComponent: Component {
     }
 }
 
-final class QuickShareToastScreen: ViewControllerComponentContainer {
+public final class QuickShareToastScreen: ViewControllerComponentContainer {
+    public enum Action {
+        case info
+        case commit
+    }
+    
     private var processedDidAppear: Bool = false
     private var processedDidDisappear: Bool = false
     
-    init(
+    private let action: (Action) -> Void
+    
+    public init(
         context: AccountContext,
         peer: EnginePeer,
         sourceFrame: CGRect,
-        action: @escaping () -> Void
+        action: @escaping (Action) -> Void
     ) {
+        self.action = action
         super.init(
             context: context,
             component: QuickShareToastScreenComponent(
@@ -334,11 +375,11 @@ final class QuickShareToastScreen: ViewControllerComponentContainer {
     deinit {
     }
     
-    override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    public override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
     }
     
-    override func viewDidAppear(_ animated: Bool) {
+    public override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
         if !self.processedDidAppear {
@@ -353,7 +394,12 @@ final class QuickShareToastScreen: ViewControllerComponentContainer {
         super.dismiss()
     }
     
-    override func dismiss(completion: (() -> Void)? = nil) {
+    public func dismissWithCommitAction() {
+        self.action(.commit)
+        self.dismiss()
+    }
+    
+    public override func dismiss(completion: (() -> Void)? = nil) {
         if !self.processedDidDisappear {
             self.processedDidDisappear = true
             
