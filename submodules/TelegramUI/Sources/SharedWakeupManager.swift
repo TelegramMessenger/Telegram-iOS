@@ -155,6 +155,12 @@ public final class SharedWakeupManager {
                 }
                 |> distinctUntilChanged
                 
+                let keepUpdatesForCalls = combineLatest(queue: .mainQueue(), hasActiveCalls, hasActiveGroupCalls)
+                |> map { hasActiveCalls, hasActiveGroupCalls -> Bool in
+                    return hasActiveCalls || hasActiveGroupCalls
+                }
+                |> distinctUntilChanged
+                
                 let isPlayingBackgroundActiveCall = combineLatest(queue: .mainQueue(), hasActiveCalls, hasActiveGroupCalls, hasActiveAudioSession)
                 |> map { hasActiveCalls, hasActiveGroupCalls, hasActiveAudioSession -> Bool in
                     return (hasActiveCalls || hasActiveGroupCalls) && hasActiveAudioSession
@@ -181,9 +187,9 @@ public final class SharedWakeupManager {
                 
                 let userInterfaceInUse = accountUserInterfaceInUse(account.id)
                 
-                return combineLatest(queue: .mainQueue(), account.importantTasksRunning, notificationManager?.isPollingState(accountId: account.id) ?? .single(false), hasActiveAudio, hasActiveCalls, hasActiveLiveLocationPolling, hasWatchTasks, userInterfaceInUse)
-                |> map { importantTasksRunning, isPollingState, hasActiveAudio, hasActiveCalls, hasActiveLiveLocationPolling, hasWatchTasks, userInterfaceInUse -> (Account, Bool, AccountTasks) in
-                    return (account, primary?.id == account.id, AccountTasks(stateSynchronization: isPollingState, importantTasks: importantTasksRunning, backgroundLocation: hasActiveLiveLocationPolling, backgroundDownloads: false, backgroundAudio: hasActiveAudio, activeCalls: hasActiveCalls, watchTasks: hasWatchTasks, userInterfaceInUse: userInterfaceInUse))
+                return combineLatest(queue: .mainQueue(), account.importantTasksRunning, notificationManager?.isPollingState(accountId: account.id) ?? .single(false), hasActiveAudio, keepUpdatesForCalls, hasActiveLiveLocationPolling, hasWatchTasks, userInterfaceInUse)
+                |> map { importantTasksRunning, isPollingState, hasActiveAudio, keepUpdatesForCalls, hasActiveLiveLocationPolling, hasWatchTasks, userInterfaceInUse -> (Account, Bool, AccountTasks) in
+                    return (account, primary?.id == account.id, AccountTasks(stateSynchronization: isPollingState, importantTasks: importantTasksRunning, backgroundLocation: hasActiveLiveLocationPolling, backgroundDownloads: false, backgroundAudio: hasActiveAudio, activeCalls: keepUpdatesForCalls, watchTasks: hasWatchTasks, userInterfaceInUse: userInterfaceInUse))
                 }
             }
             return combineLatest(signals)

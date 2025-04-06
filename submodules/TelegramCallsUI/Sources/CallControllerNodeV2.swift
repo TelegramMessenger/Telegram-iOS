@@ -167,11 +167,6 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             self.conferenceAddParticipant?()
         }
         
-        var isConferencePossible = true
-        if let data = self.call.context.currentAppConfiguration.with({ $0 }).data, let value = data["ios_enable_conference"] as? Double {
-            isConferencePossible = value != 0.0
-        }
-        
         self.callScreenState = PrivateCallScreen.State(
             strings: presentationData.strings,
             lifecycleState: .connecting,
@@ -185,7 +180,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             remoteVideo: nil,
             isRemoteBatteryLow: false,
             isEnergySavingEnabled: !self.sharedContext.energyUsageSettings.fullTranslucency,
-            isConferencePossible: isConferencePossible
+            isConferencePossible: false
         )
         
         self.isMicrophoneMutedDisposable = (call.isMuted
@@ -548,6 +543,8 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             case .active:
                 callScreenState.isRemoteAudioMuted = false
             }
+
+            callScreenState.isConferencePossible = callState.supportsConferenceCalls
             
             if self.callScreenState != callScreenState {
                 self.callScreenState = callScreenState
