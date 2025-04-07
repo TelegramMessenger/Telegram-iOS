@@ -54,9 +54,10 @@ set(TDE2E_SOURCE
 set(TDE2E_TEST_SOURCE
         ${CMAKE_CURRENT_SOURCE_DIR}/td/e2e/TestBlockchain.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/td/e2e/TestBlockchain.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/test/e2e.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test/blockchain.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/e2e.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test/encryption.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/EncryptionTestVectors.h
 )
 
 set(TDE2E_TEST_SOURCE "${TDE2E_TEST_SOURCE}" PARENT_SCOPE)

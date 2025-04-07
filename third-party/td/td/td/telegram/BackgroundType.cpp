@@ -422,13 +422,13 @@ BackgroundType::BackgroundType(bool has_no_file, bool is_pattern,
     type_ = Type::Pattern;
     if (settings != nullptr) {
       fill_ = BackgroundFill(settings.get());
-      is_moving_ = (settings->flags_ & telegram_api::wallPaperSettings::MOTION_MASK) != 0;
+      is_moving_ = settings->motion_;
     }
   } else {
     type_ = Type::Wallpaper;
     if (settings != nullptr) {
-      is_blurred_ = (settings->flags_ & telegram_api::wallPaperSettings::BLUR_MASK) != 0;
-      is_moving_ = (settings->flags_ & telegram_api::wallPaperSettings::MOTION_MASK) != 0;
+      is_blurred_ = settings->blur_;
+      is_moving_ = settings->motion_;
     }
   }
 }
@@ -471,12 +471,6 @@ td_api::object_ptr<td_api::BackgroundType> BackgroundType::get_background_type_o
 
 telegram_api::object_ptr<telegram_api::wallPaperSettings> BackgroundType::get_input_wallpaper_settings() const {
   int32 flags = 0;
-  if (is_blurred_) {
-    flags |= telegram_api::wallPaperSettings::BLUR_MASK;
-  }
-  if (is_moving_) {
-    flags |= telegram_api::wallPaperSettings::MOTION_MASK;
-  }
   switch (fill_.get_type()) {
     case BackgroundFill::Type::FreeformGradient:
       if (fill_.fourth_color_ != -1) {

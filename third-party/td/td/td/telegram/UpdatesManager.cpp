@@ -991,6 +991,8 @@ bool UpdatesManager::is_acceptable_message(const telegram_api::Message *message_
         case telegram_api::messageActionPrizeStars::ID:
         case telegram_api::messageActionStarGift::ID:
         case telegram_api::messageActionStarGiftUnique::ID:
+        case telegram_api::messageActionPaidMessagesRefunded::ID:
+        case telegram_api::messageActionPaidMessagesPrice::ID:
           break;
         case telegram_api::messageActionChatCreate::ID: {
           auto chat_create = static_cast<const telegram_api::messageActionChatCreate *>(action);
@@ -1508,6 +1510,25 @@ vector<InputGroupCallId> UpdatesManager::get_update_new_group_call_ids(const tel
   return input_group_call_ids;
 }
 
+void UpdatesManager::process_updates_users_and_chats(telegram_api::Updates *updates_ptr) {
+  switch (updates_ptr->get_id()) {
+    case telegram_api::updatesCombined::ID: {
+      auto updates = static_cast<telegram_api::updatesCombined *>(updates_ptr);
+      td_->user_manager_->on_get_users(std::move(updates->users_), "updatesCombined 2");
+      td_->chat_manager_->on_get_chats(std::move(updates->chats_), "updatesCombined 2");
+      break;
+    }
+    case telegram_api::updates::ID: {
+      auto updates = static_cast<telegram_api::updates *>(updates_ptr);
+      td_->user_manager_->on_get_users(std::move(updates->users_), "updates 2");
+      td_->chat_manager_->on_get_chats(std::move(updates->chats_), "updates 2");
+      break;
+    }
+    default:
+      break;
+  }
+}
+
 string UpdatesManager::extract_join_group_call_presentation_params(telegram_api::Updates *updates_ptr) {
   auto updates = get_updates(updates_ptr);
   for (auto it = updates->begin(); it != updates->end(); ++it) {
@@ -1520,6 +1541,24 @@ string UpdatesManager::extract_join_group_call_presentation_params(telegram_api:
     }
   }
   return string();
+}
+
+telegram_api::object_ptr<telegram_api::StoryItem> UpdatesManager::extract_story(telegram_api::Updates *updates_ptr,
+                                                                                DialogId owner_dialog_id) {
+  auto updates = get_updates(updates_ptr);
+  if (updates->size() != 1u) {
+    return nullptr;
+  }
+  for (auto it = updates->begin(); it != updates->end(); ++it) {
+    auto *update_ptr = it->get();
+    if (update_ptr->get_id() == telegram_api::updateStory::ID) {
+      auto update = static_cast<telegram_api::updateStory *>(update_ptr);
+      if (DialogId(update->peer_) == owner_dialog_id) {
+        return std::move(update->story_);
+      }
+    }
+  }
+  return nullptr;
 }
 
 vector<DialogId> UpdatesManager::get_update_notify_settings_dialog_ids(const telegram_api::Updates *updates_ptr) {
@@ -4008,8 +4047,9 @@ void UpdatesManager::on_update(tl_object_ptr<telegram_api::updateUserStatus> upd
 
 void UpdatesManager::on_update(tl_object_ptr<telegram_api::updateUserName> update, Promise<Unit> &&promise) {
   td_->user_manager_->on_update_user_name(UserId(update->user_id_), std::move(update->first_name_),
-                                          std::move(update->last_name_),
-                                          Usernames{string(), std::move(update->usernames_)});
+                                          std::move(update->last_name_));
+  td_->user_manager_->on_update_user_usernames(UserId(update->user_id_),
+                                               Usernames{string(), std::move(update->usernames_)});
   promise.set_value(Unit());
 }
 
@@ -4619,6 +4659,10 @@ void UpdatesManager::on_update(tl_object_ptr<telegram_api::updateStarsRevenueSta
 // unsupported updates
 
 void UpdatesManager::on_update(tl_object_ptr<telegram_api::updateNewStoryReaction> update, Promise<Unit> &&promise) {
+  promise.set_value(Unit());
+}
+
+void UpdatesManager::on_update(tl_object_ptr<telegram_api::updateSentPhoneCode> update, Promise<Unit> &&promise) {
   promise.set_value(Unit());
 }
 

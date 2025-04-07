@@ -57,15 +57,14 @@ unique_ptr<DialogFilter> DialogFilter::get_dialog_filter(
           InputDialogId::get_input_dialog_ids(filter->include_peers_, &added_dialog_ids);
       dialog_filter->excluded_dialog_ids_ =
           InputDialogId::get_input_dialog_ids(filter->exclude_peers_, &added_dialog_ids);
-      auto flags = filter->flags_;
-      dialog_filter->exclude_muted_ = (flags & telegram_api::dialogFilter::EXCLUDE_MUTED_MASK) != 0;
-      dialog_filter->exclude_read_ = (flags & telegram_api::dialogFilter::EXCLUDE_READ_MASK) != 0;
-      dialog_filter->exclude_archived_ = (flags & telegram_api::dialogFilter::EXCLUDE_ARCHIVED_MASK) != 0;
-      dialog_filter->include_contacts_ = (flags & telegram_api::dialogFilter::CONTACTS_MASK) != 0;
-      dialog_filter->include_non_contacts_ = (flags & telegram_api::dialogFilter::NON_CONTACTS_MASK) != 0;
-      dialog_filter->include_bots_ = (flags & telegram_api::dialogFilter::BOTS_MASK) != 0;
-      dialog_filter->include_groups_ = (flags & telegram_api::dialogFilter::GROUPS_MASK) != 0;
-      dialog_filter->include_channels_ = (flags & telegram_api::dialogFilter::BROADCASTS_MASK) != 0;
+      dialog_filter->exclude_muted_ = filter->exclude_muted_;
+      dialog_filter->exclude_read_ = filter->exclude_read_;
+      dialog_filter->exclude_archived_ = filter->exclude_archived_;
+      dialog_filter->include_contacts_ = filter->contacts_;
+      dialog_filter->include_non_contacts_ = filter->non_contacts_;
+      dialog_filter->include_bots_ = filter->bots_;
+      dialog_filter->include_groups_ = filter->groups_;
+      dialog_filter->include_channels_ = filter->broadcasts_;
       if (!is_valid_color_id(dialog_filter->color_id_)) {
         LOG(ERROR) << "Receive color " << dialog_filter->color_id_;
         dialog_filter->color_id_ = -1;
@@ -444,52 +443,18 @@ telegram_api::object_ptr<telegram_api::DialogFilter> DialogFilter::get_input_dia
     if (color_id_ != -1) {
       flags |= telegram_api::dialogFilterChatlist::COLOR_MASK;
     }
-    if (has_my_invites_) {
-      flags |= telegram_api::dialogFilterChatlist::HAS_MY_INVITES_MASK;
-    }
-    if (!animate_title_) {
-      flags |= telegram_api::dialogFilterChatlist::TITLE_NOANIMATE_MASK;
-    }
     return telegram_api::make_object<telegram_api::dialogFilterChatlist>(
-        flags, false /*ignored*/, false /*ignored*/, dialog_filter_id_.get(),
+        flags, has_my_invites_, !animate_title_, dialog_filter_id_.get(),
         get_input_text_with_entities(nullptr, title_, "dialogFilterChatlist"), emoji_, color_id_,
         InputDialogId::get_input_peers(pinned_dialog_ids_), InputDialogId::get_input_peers(included_dialog_ids_));
   }
   int32 flags = telegram_api::dialogFilter::EMOTICON_MASK;
-  if (!animate_title_) {
-    flags |= telegram_api::dialogFilter::TITLE_NOANIMATE_MASK;
-  }
   if (color_id_ != -1) {
     flags |= telegram_api::dialogFilter::COLOR_MASK;
   }
-  if (exclude_muted_) {
-    flags |= telegram_api::dialogFilter::EXCLUDE_MUTED_MASK;
-  }
-  if (exclude_read_) {
-    flags |= telegram_api::dialogFilter::EXCLUDE_READ_MASK;
-  }
-  if (exclude_archived_) {
-    flags |= telegram_api::dialogFilter::EXCLUDE_ARCHIVED_MASK;
-  }
-  if (include_contacts_) {
-    flags |= telegram_api::dialogFilter::CONTACTS_MASK;
-  }
-  if (include_non_contacts_) {
-    flags |= telegram_api::dialogFilter::NON_CONTACTS_MASK;
-  }
-  if (include_bots_) {
-    flags |= telegram_api::dialogFilter::BOTS_MASK;
-  }
-  if (include_groups_) {
-    flags |= telegram_api::dialogFilter::GROUPS_MASK;
-  }
-  if (include_channels_) {
-    flags |= telegram_api::dialogFilter::BROADCASTS_MASK;
-  }
-
   return telegram_api::make_object<telegram_api::dialogFilter>(
-      flags, false /*ignored*/, false /*ignored*/, false /*ignored*/, false /*ignored*/, false /*ignored*/,
-      false /*ignored*/, false /*ignored*/, false /*ignored*/, false /*ignored*/, dialog_filter_id_.get(),
+      flags, include_contacts_, include_non_contacts_, include_groups_, include_channels_, include_bots_,
+      exclude_muted_, exclude_read_, exclude_archived_, !animate_title_, dialog_filter_id_.get(),
       get_input_text_with_entities(nullptr, title_, "dialogFilter"), emoji_, color_id_,
       InputDialogId::get_input_peers(pinned_dialog_ids_), InputDialogId::get_input_peers(included_dialog_ids_),
       InputDialogId::get_input_peers(excluded_dialog_ids_));

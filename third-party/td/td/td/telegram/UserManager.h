@@ -12,6 +12,7 @@
 #include "td/telegram/BotCommand.h"
 #include "td/telegram/BotMenuButton.h"
 #include "td/telegram/BotVerifierSettings.h"
+#include "td/telegram/BusinessConnectionId.h"
 #include "td/telegram/ChannelId.h"
 #include "td/telegram/Contact.h"
 #include "td/telegram/CustomEmojiId.h"
@@ -29,6 +30,7 @@
 #include "td/telegram/ReferralProgramInfo.h"
 #include "td/telegram/RestrictionReason.h"
 #include "td/telegram/SecretChatId.h"
+#include "td/telegram/StarGiftSettings.h"
 #include "td/telegram/StoryId.h"
 #include "td/telegram/td_api.h"
 #include "td/telegram/telegram_api.h"
@@ -120,7 +122,9 @@ class UserManager final : public Actor {
 
   void on_binlog_secret_chat_event(BinlogEvent &&event);
 
-  void on_update_user_name(UserId user_id, string &&first_name, string &&last_name, Usernames &&usernames);
+  void on_update_user_name(UserId user_id, string &&first_name, string &&last_name);
+
+  void on_update_user_usernames(UserId user_id, Usernames &&usernames);
 
   void on_update_user_phone_number(UserId user_id, string &&phone_number);
 
@@ -148,6 +152,8 @@ class UserManager final : public Actor {
   void on_update_user_gift_count(UserId user_id, int32 gift_count);
 
   void on_update_my_gift_count(int32 added_gift_count);
+
+  void on_update_my_user_gift_settings(StarGiftSettings &&gift_settings, Promise<Unit> &&promise);
 
   void on_update_my_user_location(DialogLocation &&location);
 
@@ -188,6 +194,8 @@ class UserManager final : public Actor {
   void on_update_phone_number_privacy();
 
   void on_ignored_restriction_reasons_changed();
+
+  void on_update_freeze_state(int32 freeze_since_date, int32 freeze_until_date, string freeze_appeal_url);
 
   void invalidate_user_full(UserId user_id);
 
@@ -333,6 +341,10 @@ class UserManager final : public Actor {
 
   void set_bot_profile_photo(UserId bot_user_id, const td_api::object_ptr<td_api::InputChatPhoto> &input_photo,
                              Promise<Unit> &&promise);
+
+  void set_business_profile_photo(BusinessConnectionId business_connection_id,
+                                  const td_api::object_ptr<td_api::InputChatPhoto> &input_photo, bool is_fallback,
+                                  Promise<Unit> &&promise);
 
   void set_profile_photo(const td_api::object_ptr<td_api::InputChatPhoto> &input_photo, bool is_fallback,
                          Promise<Unit> &&promise);
@@ -637,6 +649,7 @@ class UserManager final : public Actor {
     int32 gift_count = 0;
     int32 common_chat_count = 0;
     Birthdate birthdate;
+    StarGiftSettings gift_settings;
 
     ChannelId personal_channel_id;
 
@@ -1055,6 +1068,8 @@ class UserManager final : public Actor {
   td_api::object_ptr<td_api::secretChat> get_secret_chat_object_const(SecretChatId secret_chat_id,
                                                                       const SecretChat *secret_chat) const;
 
+  td_api::object_ptr<td_api::updateFreezeState> get_update_freeze_state_object() const;
+
   Td *td_;
   ActorShared<> parent_;
   UserId my_id_;
@@ -1151,6 +1166,10 @@ class UserManager final : public Actor {
   FlatHashMap<UserId, int64, UserIdHash> user_full_contact_price_;  // -1 - premium required
 
   WaitFreeHashSet<UserId, UserIdHash> restricted_user_ids_;
+
+  int32 freeze_since_date_ = 0;
+  int32 freeze_until_date_ = 0;
+  string freeze_appeal_url_;
 
   struct ContactBirthdates {
     vector<std::pair<UserId, Birthdate>> users_;

@@ -116,22 +116,13 @@ class CreateChannelQuery final : public Td::ResultHandler {
   void send(const string &title, bool is_forum, bool is_megagroup, const string &about, const DialogLocation &location,
             bool for_import, MessageTtl message_ttl) {
     int32 flags = telegram_api::channels_createChannel::TTL_PERIOD_MASK;
-    if (is_forum) {
-      flags |= telegram_api::channels_createChannel::FORUM_MASK;
-    } else if (is_megagroup) {
-      flags |= telegram_api::channels_createChannel::MEGAGROUP_MASK;
-    } else {
-      flags |= telegram_api::channels_createChannel::BROADCAST_MASK;
-    }
     if (!location.empty()) {
       flags |= telegram_api::channels_createChannel::GEO_POINT_MASK;
     }
-    if (for_import) {
-      flags |= telegram_api::channels_createChannel::FOR_IMPORT_MASK;
-    }
 
+    auto is_broadcast = !is_forum && !is_megagroup;
     send_query(G()->net_query_creator().create(telegram_api::channels_createChannel(
-        flags, false /*ignored*/, false /*ignored*/, false /*ignored*/, false /*ignored*/, title, about,
+        flags, is_broadcast, is_megagroup && !is_forum, is_forum, for_import, title, about,
         location.get_input_geo_point(), location.get_address(), message_ttl.get_input_ttl_period())));
   }
 
@@ -340,9 +331,6 @@ class UpdateChannelColorQuery final : public Td::ResultHandler {
     auto input_channel = td_->chat_manager_->get_input_channel(channel_id);
     CHECK(input_channel != nullptr);
     int32 flags = 0;
-    if (for_profile) {
-      flags |= telegram_api::channels_updateColor::FOR_PROFILE_MASK;
-    }
     if (accent_color_id.is_valid()) {
       flags |= telegram_api::channels_updateColor::COLOR_MASK;
     }
@@ -350,7 +338,7 @@ class UpdateChannelColorQuery final : public Td::ResultHandler {
       flags |= telegram_api::channels_updateColor::BACKGROUND_EMOJI_ID_MASK;
     }
     send_query(G()->net_query_creator().create(
-        telegram_api::channels_updateColor(flags, false /*ignored*/, std::move(input_channel), accent_color_id.get(),
+        telegram_api::channels_updateColor(flags, for_profile, std::move(input_channel), accent_color_id.get(),
                                            background_custom_emoji_id.get()),
         {{channel_id}}));
   }
@@ -578,15 +566,8 @@ class ToggleChannelSignaturesQuery final : public Td::ResultHandler {
     channel_id_ = channel_id;
     auto input_channel = td_->chat_manager_->get_input_channel(channel_id);
     CHECK(input_channel != nullptr);
-    int32 flags = 0;
-    if (sign_messages) {
-      flags |= telegram_api::channels_toggleSignatures::SIGNATURES_ENABLED_MASK;
-    }
-    if (show_message_sender) {
-      flags |= telegram_api::channels_toggleSignatures::PROFILES_ENABLED_MASK;
-    }
     send_query(G()->net_query_creator().create(
-        telegram_api::channels_toggleSignatures(flags, false /*ignored*/, false /*ignored*/, std::move(input_channel)),
+        telegram_api::channels_toggleSignatures(0, sign_messages, show_message_sender, std::move(input_channel)),
         {{channel_id}}));
   }
 
@@ -1360,19 +1341,8 @@ class GetCreatedPublicChannelsQuery final : public Td::ResultHandler {
 
   void send(PublicDialogType type, bool check_limit) {
     type_ = type;
-    int32 flags = 0;
-    if (type_ == PublicDialogType::IsLocationBased) {
-      flags |= telegram_api::channels_getAdminedPublicChannels::BY_LOCATION_MASK;
-    }
-    if (type_ == PublicDialogType::ForPersonalDialog) {
-      CHECK(!check_limit);
-      flags |= telegram_api::channels_getAdminedPublicChannels::FOR_PERSONAL_MASK;
-    }
-    if (check_limit) {
-      flags |= telegram_api::channels_getAdminedPublicChannels::CHECK_LIMIT_MASK;
-    }
     send_query(G()->net_query_creator().create(telegram_api::channels_getAdminedPublicChannels(
-        flags, false /*ignored*/, false /*ignored*/, false /*ignored*/)));
+        0, type_ == PublicDialogType::IsLocationBased, check_limit, type_ == PublicDialogType::ForPersonalDialog)));
   }
 
   void on_result(BufferSlice packet) final {

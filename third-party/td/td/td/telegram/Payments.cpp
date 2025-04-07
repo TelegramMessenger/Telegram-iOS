@@ -295,14 +295,12 @@ static tl_object_ptr<td_api::invoice> convert_invoice(tl_object_ptr<telegram_api
   CHECK(invoice != nullptr);
 
   auto labeled_prices = transform(std::move(invoice->prices_), convert_labeled_price);
-  bool is_test = (invoice->flags_ & telegram_api::invoice::TEST_MASK) != 0;
-  bool need_name = (invoice->flags_ & telegram_api::invoice::NAME_REQUESTED_MASK) != 0;
-  bool need_phone_number = (invoice->flags_ & telegram_api::invoice::PHONE_REQUESTED_MASK) != 0;
-  bool need_email_address = (invoice->flags_ & telegram_api::invoice::EMAIL_REQUESTED_MASK) != 0;
-  bool need_shipping_address = (invoice->flags_ & telegram_api::invoice::SHIPPING_ADDRESS_REQUESTED_MASK) != 0;
-  bool send_phone_number_to_provider = (invoice->flags_ & telegram_api::invoice::PHONE_TO_PROVIDER_MASK) != 0;
-  bool send_email_address_to_provider = (invoice->flags_ & telegram_api::invoice::EMAIL_TO_PROVIDER_MASK) != 0;
-  bool is_flexible = (invoice->flags_ & telegram_api::invoice::FLEXIBLE_MASK) != 0;
+  bool need_phone_number = invoice->phone_requested_;
+  bool need_email_address = invoice->email_requested_;
+  bool need_shipping_address = invoice->shipping_address_requested_;
+  bool send_phone_number_to_provider = invoice->phone_to_provider_;
+  bool send_email_address_to_provider = invoice->email_to_provider_;
+  bool is_flexible = invoice->flexible_;
   if (send_phone_number_to_provider) {
     need_phone_number = true;
   }
@@ -332,9 +330,9 @@ static tl_object_ptr<td_api::invoice> convert_invoice(tl_object_ptr<telegram_api
   }
   return td_api::make_object<td_api::invoice>(
       std::move(invoice->currency_), std::move(labeled_prices), max(invoice->subscription_period_, 0),
-      invoice->max_tip_amount_, std::move(invoice->suggested_tip_amounts_), recurring_terms_url, terms_url, is_test,
-      need_name, need_phone_number, need_email_address, need_shipping_address, send_phone_number_to_provider,
-      send_email_address_to_provider, is_flexible);
+      invoice->max_tip_amount_, std::move(invoice->suggested_tip_amounts_), recurring_terms_url, terms_url,
+      invoice->test_, invoice->name_requested_, need_phone_number, need_email_address, need_shipping_address,
+      send_phone_number_to_provider, send_email_address_to_provider, is_flexible);
 }
 
 static tl_object_ptr<td_api::PaymentProvider> convert_payment_provider(
@@ -1150,13 +1148,8 @@ void send_payment_form(Td *td, td_api::object_ptr<td_api::InputInvoice> &&input_
     }
     case td_api::inputCredentialsNew::ID: {
       auto credentials_new = static_cast<const td_api::inputCredentialsNew *>(credentials.get());
-      int32 flags = 0;
-      if (credentials_new->allow_save_) {
-        flags |= telegram_api::inputPaymentCredentials::SAVE_MASK;
-      }
-
       input_credentials = make_tl_object<telegram_api::inputPaymentCredentials>(
-          flags, false /*ignored*/, make_tl_object<telegram_api::dataJSON>(credentials_new->data_));
+          0, credentials_new->allow_save_, make_tl_object<telegram_api::dataJSON>(credentials_new->data_));
       break;
     }
     case td_api::inputCredentialsGooglePay::ID: {

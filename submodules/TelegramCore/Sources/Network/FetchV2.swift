@@ -973,6 +973,7 @@ private final class FetchImpl {
             }
             
             let queue = self.queue
+            hashRange.disposable?.dispose()
             hashRange.disposable = (fetchRequest
             |> deliverOn(self.queue)).startStrict(next: { [weak self, weak state, weak hashRange] result in
                 queue.async {

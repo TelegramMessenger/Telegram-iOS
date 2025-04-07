@@ -752,6 +752,7 @@ static void init_thread_local_evp_md_ctx(const EVP_MD_CTX *&evp_md_ctx, const ch
     evp_md_ctx = nullptr;
   }));
 }
+
 static void init_thread_local_evp_mac_ctx(EVP_MAC_CTX *&evp_mac_ctx, const char *digest) {
   EVP_MAC *hmac = EVP_MAC_fetch(nullptr, "HMAC", nullptr);
   LOG_IF(FATAL, hmac == nullptr);
@@ -990,6 +991,7 @@ static void hmac_impl_finish(EVP_MAC_CTX *ctx, Slice key, Slice message, Mutable
   res = EVP_MAC_final(ctx, dest.ubegin(), nullptr, dest.size());
   LOG_IF(FATAL, res != 1);
 }
+
 static void hmac_impl_sha256(Slice key, Slice message, MutableSlice dest) {
   static TD_THREAD_LOCAL EVP_MAC_CTX *ctx = nullptr;
   if (ctx == nullptr) {
@@ -997,6 +999,7 @@ static void hmac_impl_sha256(Slice key, Slice message, MutableSlice dest) {
   }
   hmac_impl_finish(ctx, key, message, dest);
 }
+
 static void hmac_impl_sha512(Slice key, Slice message, MutableSlice dest) {
   static TD_THREAD_LOCAL EVP_MAC_CTX *ctx = nullptr;
   if (ctx == nullptr) {

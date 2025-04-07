@@ -387,13 +387,10 @@ class ChangeAuthorizationSettingsQuery final : public Td::ResultHandler {
     if (set_call_requests_disabled) {
       flags |= telegram_api::account_changeAuthorizationSettings::CALL_REQUESTS_DISABLED_MASK;
     }
-    if (confirm) {
-      flags |= telegram_api::account_changeAuthorizationSettings::CONFIRMED_MASK;
-    }
-    send_query(G()->net_query_creator().create(
-        telegram_api::account_changeAuthorizationSettings(flags, false /*ignored*/, hash, encrypted_requests_disabled,
-                                                          call_requests_disabled),
-        {{"me"}}));
+    send_query(
+        G()->net_query_creator().create(telegram_api::account_changeAuthorizationSettings(
+                                            flags, confirm, hash, encrypted_requests_disabled, call_requests_disabled),
+                                        {{"me"}}));
   }
 
   void on_result(BufferSlice packet) final {

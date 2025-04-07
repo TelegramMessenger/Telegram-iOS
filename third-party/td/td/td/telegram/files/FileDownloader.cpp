@@ -148,27 +148,26 @@ Result<NetQueryPtr> FileDownloader::start_part(Part part, int32 part_count, int6
   auto net_query_type = is_small_ ? NetQuery::Type::DownloadSmall : NetQuery::Type::Download;
   NetQueryPtr net_query;
   if (!use_cdn_) {
-    int32 flags = 0;
+    bool cdn_supported = false;
 #if !TD_EMSCRIPTEN
     // CDN is supported, unless we use domains instead of IPs from a browser
     if (streaming_offset == 0) {
-      flags |= telegram_api::upload_getFile::CDN_SUPPORTED_MASK;
+      cdn_supported = true;
     }
 #endif
     DcId dc_id = remote_.is_web() ? G()->get_webfile_dc_id() : remote_.get_dc_id();
     auto unique_id = UniqueId::next(UniqueId::Type::Default, static_cast<uint8>(QueryType::Default));
-    net_query =
-        remote_.is_web()
-            ? G()->net_query_creator().create(
-                  unique_id, nullptr,
-                  telegram_api::upload_getWebFile(remote_.as_input_web_file_location(), narrow_cast<int32>(part.offset),
-                                                  narrow_cast<int32>(size)),
-                  {}, dc_id, net_query_type, NetQuery::AuthFlag::On)
-            : G()->net_query_creator().create(
-                  unique_id, nullptr,
-                  telegram_api::upload_getFile(flags, false /*ignored*/, false /*ignored*/,
-                                               remote_.as_input_file_location(), part.offset, narrow_cast<int32>(size)),
-                  {}, dc_id, net_query_type, NetQuery::AuthFlag::On);
+    net_query = remote_.is_web()
+                    ? G()->net_query_creator().create(
+                          unique_id, nullptr,
+                          telegram_api::upload_getWebFile(remote_.as_input_web_file_location(),
+                                                          narrow_cast<int32>(part.offset), narrow_cast<int32>(size)),
+                          {}, dc_id, net_query_type, NetQuery::AuthFlag::On)
+                    : G()->net_query_creator().create(
+                          unique_id, nullptr,
+                          telegram_api::upload_getFile(0, false, cdn_supported, remote_.as_input_file_location(),
+                                                       part.offset, narrow_cast<int32>(size)),
+                          {}, dc_id, net_query_type, NetQuery::AuthFlag::On);
   } else {
     if (remote_.is_web()) {
       return Status::Error("Can't download web file from CDN");

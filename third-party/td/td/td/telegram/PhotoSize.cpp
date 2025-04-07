@@ -338,7 +338,7 @@ PhotoSize get_web_document_photo_size(FileManager *file_manager, FileType file_t
   }
 
   FileId file_id;
-  vector<tl_object_ptr<telegram_api::DocumentAttribute>> attributes;
+  vector<telegram_api::object_ptr<telegram_api::DocumentAttribute>> attributes;
   int32 size = 0;
   string mime_type;
   switch (web_document_ptr->get_id()) {
@@ -389,7 +389,7 @@ PhotoSize get_web_document_photo_size(FileManager *file_manager, FileType file_t
   for (auto &attribute : attributes) {
     switch (attribute->get_id()) {
       case telegram_api::documentAttributeImageSize::ID: {
-        auto image_size = move_tl_object_as<telegram_api::documentAttributeImageSize>(attribute);
+        auto image_size = telegram_api::move_object_as<telegram_api::documentAttributeImageSize>(attribute);
         dimensions = get_dimensions(image_size->w_, image_size->h_, "web documentAttributeImageSize");
         break;
       }

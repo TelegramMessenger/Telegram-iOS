@@ -3559,7 +3559,7 @@ vector<tl_object_ptr<secret_api::MessageEntity>> get_input_secret_message_entiti
         break;
       case MessageEntity::Type::BlockQuote:
         if (layer >= static_cast<int32>(SecretChatLayer::NewEntities)) {
-          // result.push_back(make_tl_object<secret_api::messageEntityBlockquote>(0, false /*ignored*/, entity.offset, entity.length));
+          // result.push_back(make_tl_object<secret_api::messageEntityBlockquote>(0, false, entity.offset, entity.length));
         }
         break;
       case MessageEntity::Type::Code:
@@ -3592,8 +3592,8 @@ vector<tl_object_ptr<secret_api::MessageEntity>> get_input_secret_message_entiti
         break;
       case MessageEntity::Type::ExpandableBlockQuote:
         if (layer >= static_cast<int32>(SecretChatLayer::NewEntities)) {
-          // result.push_back(make_tl_object<secret_api::messageEntityBlockquote>(
-          //     secret_api::messageEntityBlockquote::COLLAPSED_MASK, false /*ignored*/, entity.offset, entity.length));
+          // result.push_back(make_tl_object<secret_api::messageEntityBlockquote>(0, true, entity.offset,
+          //     entity.length));
         }
         break;
       default:
@@ -4684,8 +4684,7 @@ vector<tl_object_ptr<telegram_api::MessageEntity>> get_input_message_entities(co
     user_entity_count++;
     switch (entity.type) {
       case MessageEntity::Type::BlockQuote:
-        result.push_back(
-            make_tl_object<telegram_api::messageEntityBlockquote>(0, false /*ignored*/, entity.offset, entity.length));
+        result.push_back(make_tl_object<telegram_api::messageEntityBlockquote>(0, false, entity.offset, entity.length));
         break;
       case MessageEntity::Type::Code:
         result.push_back(make_tl_object<telegram_api::messageEntityCode>(entity.offset, entity.length));
@@ -4708,8 +4707,7 @@ vector<tl_object_ptr<telegram_api::MessageEntity>> get_input_message_entities(co
         break;
       }
       case MessageEntity::Type::ExpandableBlockQuote:
-        result.push_back(make_tl_object<telegram_api::messageEntityBlockquote>(
-            telegram_api::messageEntityBlockquote::COLLAPSED_MASK, false /*ignored*/, entity.offset, entity.length));
+        result.push_back(make_tl_object<telegram_api::messageEntityBlockquote>(0, true, entity.offset, entity.length));
         break;
       default:
         UNREACHABLE();

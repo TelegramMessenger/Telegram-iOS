@@ -6,6 +6,7 @@
 //
 #include "td/telegram/UserStarGift.h"
 
+#include "td/telegram/AuthManager.h"
 #include "td/telegram/DialogId.h"
 #include "td/telegram/DialogManager.h"
 #include "td/telegram/MessageSender.h"
@@ -54,7 +55,7 @@ UserStarGift::UserStarGift(Td *td, telegram_api::object_ptr<telegram_api::savedS
     LOG(ERROR) << "Receive " << sender_dialog_id_ << " as sender of a gift";
     sender_dialog_id_ = DialogId();
   }
-  if (!is_saved_ && is_user && !is_me) {
+  if (!is_saved_ && is_user && !is_me && !td->auth_manager_->is_bot()) {
     LOG(ERROR) << "Receive non-saved gift for another user";
     is_saved_ = true;
   }

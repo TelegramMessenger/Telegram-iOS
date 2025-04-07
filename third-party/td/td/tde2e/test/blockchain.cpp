@@ -226,7 +226,7 @@ S_TEST(BlockchainValidation, GroupStateChanges) {
     TEST_TRY_STATUS(bt.expect_ok(block));
   }
   {
-    TEST_DEBUG_VALUE(description, "Invalid: self join when there is no permissions");
+    TEST_DEBUG_VALUE(description, "Invalid: self join when there is no permission");
     BT bt;
     auto zero_block_without_external =
         BB().with_previous_block(minus_one_block)

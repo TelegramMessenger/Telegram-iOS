@@ -258,9 +258,8 @@ class ReorderPinnedForumTopicsQuery final : public Td::ResultHandler {
     auto input_channel = td_->chat_manager_->get_input_channel(channel_id);
     CHECK(input_channel != nullptr);
 
-    int32 flags = telegram_api::channels_reorderPinnedForumTopics::FORCE_MASK;
     send_query(G()->net_query_creator().create(
-        telegram_api::channels_reorderPinnedForumTopics(flags, true /*ignored*/, std::move(input_channel),
+        telegram_api::channels_reorderPinnedForumTopics(0, true, std::move(input_channel),
                                                         MessageId::get_server_message_ids(top_thread_message_ids)),
         {{channel_id}}));
   }

@@ -298,21 +298,21 @@ tl_object_ptr<telegram_api::InputMedia> AnimationsManager::get_input_media(
     const Animation *animation = get_animation(file_id);
     CHECK(animation != nullptr);
 
-    vector<tl_object_ptr<telegram_api::DocumentAttribute>> attributes;
+    vector<telegram_api::object_ptr<telegram_api::DocumentAttribute>> attributes;
     if (!animation->file_name.empty()) {
-      attributes.push_back(make_tl_object<telegram_api::documentAttributeFilename>(animation->file_name));
+      attributes.push_back(telegram_api::make_object<telegram_api::documentAttributeFilename>(animation->file_name));
     }
     string mime_type = animation->mime_type;
     if (mime_type == "video/mp4") {
-      attributes.push_back(make_tl_object<telegram_api::documentAttributeVideo>(
-          0, false /*ignored*/, false /*ignored*/, false /*ignored*/, animation->duration, animation->dimensions.width,
-          animation->dimensions.height, 0, 0.0, string()));
+      attributes.push_back(telegram_api::make_object<telegram_api::documentAttributeVideo>(
+          0, false, false, false, animation->duration, animation->dimensions.width, animation->dimensions.height, 0,
+          0.0, string()));
     } else if (animation->dimensions.width != 0 && animation->dimensions.height != 0) {
       if (!begins_with(mime_type, "image/")) {
         mime_type = "image/gif";
       }
-      attributes.push_back(make_tl_object<telegram_api::documentAttributeImageSize>(animation->dimensions.width,
-                                                                                    animation->dimensions.height));
+      attributes.push_back(telegram_api::make_object<telegram_api::documentAttributeImageSize>(
+          animation->dimensions.width, animation->dimensions.height));
     }
     int32 flags = 0;
     vector<tl_object_ptr<telegram_api::InputDocument>> added_stickers;
@@ -352,19 +352,19 @@ SecretInputMedia AnimationsManager::get_secret_input_media(
   if (animation->thumbnail.file_id.is_valid() && thumbnail.empty()) {
     return SecretInputMedia{};
   }
-  vector<tl_object_ptr<secret_api::DocumentAttribute>> attributes;
+  vector<secret_api::object_ptr<secret_api::DocumentAttribute>> attributes;
   if (!animation->file_name.empty()) {
-    attributes.push_back(make_tl_object<secret_api::documentAttributeFilename>(animation->file_name));
+    attributes.push_back(secret_api::make_object<secret_api::documentAttributeFilename>(animation->file_name));
   }
   if (animation->duration != 0 && animation->mime_type == "video/mp4") {
-    attributes.push_back(make_tl_object<secret_api::documentAttributeVideo>(
+    attributes.push_back(secret_api::make_object<secret_api::documentAttributeVideo>(
         0, false, animation->duration, animation->dimensions.width, animation->dimensions.height));
   }
   if (animation->dimensions.width != 0 && animation->dimensions.height != 0) {
-    attributes.push_back(make_tl_object<secret_api::documentAttributeImageSize>(animation->dimensions.width,
-                                                                                animation->dimensions.height));
+    attributes.push_back(secret_api::make_object<secret_api::documentAttributeImageSize>(animation->dimensions.width,
+                                                                                         animation->dimensions.height));
   }
-  attributes.push_back(make_tl_object<secret_api::documentAttributeAnimated>());
+  attributes.push_back(secret_api::make_object<secret_api::documentAttributeAnimated>());
 
   return {std::move(input_file),
           std::move(thumbnail),

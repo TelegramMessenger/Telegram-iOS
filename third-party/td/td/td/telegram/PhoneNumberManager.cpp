@@ -40,6 +40,7 @@ class SendCodeQuery final : public Td::ResultHandler {
     auto ptr = result_ptr.move_as_ok();
     switch (ptr->get_id()) {
       case telegram_api::auth_sentCodeSuccess::ID:
+      case telegram_api::auth_sentCodePaymentRequired::ID:
         return on_error(Status::Error(500, "Receive invalid response"));
       case telegram_api::auth_sentCode::ID:
         return promise_.set_value(telegram_api::move_object_as<telegram_api::auth_sentCode>(ptr));

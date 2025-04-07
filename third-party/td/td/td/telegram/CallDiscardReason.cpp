@@ -28,12 +28,14 @@ CallDiscardReason get_call_discard_reason(
       case telegram_api::phoneCallDiscardReasonBusy::ID:
         result.type_ = CallDiscardReason::Type::Declined;
         break;
+      /*
       case telegram_api::phoneCallDiscardReasonAllowGroupCall::ID:
         result.type_ = CallDiscardReason::Type::AllowGroupCall;
         result.encrypted_key_ = static_cast<const telegram_api::phoneCallDiscardReasonAllowGroupCall *>(reason.get())
                                     ->encrypted_key_.as_slice()
                                     .str();
         break;
+      */
       default:
         UNREACHABLE();
         break;
@@ -55,9 +57,11 @@ telegram_api::object_ptr<telegram_api::PhoneCallDiscardReason> get_input_phone_c
       return telegram_api::make_object<telegram_api::phoneCallDiscardReasonHangup>();
     case CallDiscardReason::Type::Declined:
       return telegram_api::make_object<telegram_api::phoneCallDiscardReasonBusy>();
+    /*
     case CallDiscardReason::Type::AllowGroupCall:
       return telegram_api::make_object<telegram_api::phoneCallDiscardReasonAllowGroupCall>(
           BufferSlice(reason.encrypted_key_));
+    */
     default:
       UNREACHABLE();
       return nullptr;
@@ -76,8 +80,10 @@ td_api::object_ptr<td_api::CallDiscardReason> get_call_discard_reason_object(Cal
       return td_api::make_object<td_api::callDiscardReasonHungUp>();
     case CallDiscardReason::Type::Declined:
       return td_api::make_object<td_api::callDiscardReasonDeclined>();
+    /*
     case CallDiscardReason::Type::AllowGroupCall:
       return td_api::make_object<td_api::callDiscardReasonAllowGroupCall>(reason.encrypted_key_);
+    */
     default:
       UNREACHABLE();
       return nullptr;

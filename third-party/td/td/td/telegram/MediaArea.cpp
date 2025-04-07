@@ -335,18 +335,10 @@ telegram_api::object_ptr<telegram_api::MediaArea> MediaArea::get_input_media_are
             coordinates_.get_input_media_area_coordinates(), input_query_id_, input_result_id_);
       }
       return venue_.get_input_media_area_venue(coordinates_.get_input_media_area_coordinates());
-    case Type::Reaction: {
-      int32 flags = 0;
-      if (is_dark_) {
-        flags |= telegram_api::mediaAreaSuggestedReaction::DARK_MASK;
-      }
-      if (is_flipped_) {
-        flags |= telegram_api::mediaAreaSuggestedReaction::FLIPPED_MASK;
-      }
+    case Type::Reaction:
       return telegram_api::make_object<telegram_api::mediaAreaSuggestedReaction>(
-          flags, false /*ignored*/, false /*ignored*/, coordinates_.get_input_media_area_coordinates(),
+          0, is_dark_, is_flipped_, coordinates_.get_input_media_area_coordinates(),
           reaction_type_.get_input_reaction());
-    }
     case Type::Message: {
       auto channel_id = message_full_id_.get_dialog_id().get_channel_id();
       auto server_message_id = message_full_id_.get_message_id().get_server_message_id();

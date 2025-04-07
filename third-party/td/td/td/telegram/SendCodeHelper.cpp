@@ -65,25 +65,21 @@ telegram_api::object_ptr<telegram_api::codeSettings> SendCodeHelper::get_input_c
   int32 flags = 0;
   vector<BufferSlice> logout_tokens;
   string device_token;
+  bool allow_flashcall = false;
+  bool current_number = false;
+  bool allow_app_hash = false;
+  bool allow_missed_call = false;
+  bool allow_firebase = false;
+  bool unknown_number = false;
   bool is_app_sandbox = false;
   if (settings != nullptr) {
-    if (settings->allow_flash_call_) {
-      flags |= telegram_api::codeSettings::ALLOW_FLASHCALL_MASK;
-    }
-    if (settings->allow_missed_call_) {
-      flags |= telegram_api::codeSettings::ALLOW_MISSED_CALL_MASK;
-    }
-    if (settings->is_current_phone_number_) {
-      flags |= telegram_api::codeSettings::CURRENT_NUMBER_MASK;
-    }
-    if (settings->has_unknown_phone_number_) {
-      flags |= telegram_api::codeSettings::UNKNOWN_NUMBER_MASK;
-    }
-    if (settings->allow_sms_retriever_api_) {
-      flags |= telegram_api::codeSettings::ALLOW_APP_HASH_MASK;
-    }
+    allow_flashcall = settings->allow_flash_call_;
+    current_number = settings->is_current_phone_number_;
+    allow_app_hash = settings->allow_sms_retriever_api_;
+    allow_missed_call = settings->allow_missed_call_;
+    unknown_number = settings->has_unknown_phone_number_;
     if (settings->firebase_authentication_settings_ != nullptr) {
-      flags |= telegram_api::codeSettings::ALLOW_FIREBASE_MASK;
+      allow_firebase = true;
       if (settings->firebase_authentication_settings_->get_id() == td_api::firebaseAuthenticationSettingsIos::ID) {
         flags |= telegram_api::codeSettings::TOKEN_MASK;
         auto ios_settings = static_cast<const td_api::firebaseAuthenticationSettingsIos *>(
@@ -106,9 +102,9 @@ telegram_api::object_ptr<telegram_api::codeSettings> SendCodeHelper::get_input_c
       flags |= telegram_api::codeSettings::LOGOUT_TOKENS_MASK;
     }
   }
-  return telegram_api::make_object<telegram_api::codeSettings>(
-      flags, false /*ignored*/, false /*ignored*/, false /*ignored*/, false /*ignored*/, false /*ignored*/,
-      false /*ignored*/, std::move(logout_tokens), device_token, is_app_sandbox);
+  return telegram_api::make_object<telegram_api::codeSettings>(flags, allow_flashcall, current_number, allow_app_hash,
+                                                               allow_missed_call, allow_firebase, unknown_number,
+                                                               std::move(logout_tokens), device_token, is_app_sandbox);
 }
 
 telegram_api::auth_sendCode SendCodeHelper::send_code(string phone_number, const Settings &settings, int32 api_id,

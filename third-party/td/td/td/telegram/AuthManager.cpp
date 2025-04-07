@@ -661,12 +661,8 @@ void AuthManager::register_user(uint64 query_id, string first_name, string last_
   }
 
   last_name = clean_name(last_name, MAX_NAME_LENGTH);
-  int32 flags = 0;
-  if (disable_notification) {
-    flags |= telegram_api::auth_signUp::NO_JOINED_NOTIFICATIONS_MASK;
-  }
   start_net_query(NetQueryType::SignUp, G()->net_query_creator().create_unauth(telegram_api::auth_signUp(
-                                            flags, false /*ignored*/, send_code_helper_.phone_number().str(),
+                                            0, disable_notification, send_code_helper_.phone_number().str(),
                                             send_code_helper_.phone_code_hash().str(), first_name, last_name)));
 }
 
@@ -849,6 +845,9 @@ void AuthManager::on_sent_code(telegram_api::object_ptr<telegram_api::auth_SentC
   LOG(INFO) << "Receive " << to_string(sent_code_ptr);
   auto sent_code_id = sent_code_ptr->get_id();
   if (sent_code_id != telegram_api::auth_sentCode::ID) {
+    if (sent_code_id == telegram_api::auth_sentCodePaymentRequired::ID) {
+      return on_current_query_error(Status::Error(500, "Receive unsupported response"));
+    }
     CHECK(sent_code_id == telegram_api::auth_sentCodeSuccess::ID);
     auto sent_code_success = move_tl_object_as<telegram_api::auth_sentCodeSuccess>(sent_code_ptr);
     return on_get_authorization(std::move(sent_code_success->authorization_));
@@ -874,8 +873,8 @@ void AuthManager::on_sent_code(telegram_api::object_ptr<telegram_api::auth_SentC
     reset_pending_date_ = -1;
     if (code_type->reset_pending_date_ > 0) {
       reset_pending_date_ = code_type->reset_pending_date_;
-    } else if ((code_type->flags_ & telegram_api::auth_sentCodeTypeEmailCode::RESET_AVAILABLE_PERIOD_MASK) != 0) {
-      reset_available_period_ = max(code_type->reset_available_period_, 0);
+    } else if (code_type->reset_available_period_ > 0) {
+      reset_available_period_ = code_type->reset_available_period_;
     }
     if (email_code_info_.is_empty()) {
       email_code_info_ = SentEmailCode("<unknown>", code_type->length_);

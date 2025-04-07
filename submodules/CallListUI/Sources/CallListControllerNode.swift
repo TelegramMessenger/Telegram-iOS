@@ -537,7 +537,7 @@ final class CallListControllerNode: ASDisplayNode {
         |> mapToQueue { (updateAndType, state, groupCalls, showCallsTab, currentGroupCallPeerId, canCreateGroupCall) -> Signal<CallListNodeListViewTransition, NoError> in
             let (update, type) = updateAndType
             
-            let processedView = CallListNodeView(originalView: update.view, filteredEntries: callListNodeEntriesForView(view: update.view, canCreateGroupCall: canCreateGroupCall, groupCalls: groupCalls, state: state, showSettings: showSettings, showCallsTab: showCallsTab, isRecentCalls: type == .all, currentGroupCallPeerId: currentGroupCallPeerId), presentationData: state.presentationData)
+            let processedView = CallListNodeView(originalView: update.view, filteredEntries: callListNodeEntriesForView(view: update.view, canCreateGroupCall: canCreateGroupCall && mode == .tab, groupCalls: groupCalls, state: state, showSettings: showSettings, showCallsTab: showCallsTab, isRecentCalls: type == .all, currentGroupCallPeerId: currentGroupCallPeerId), presentationData: state.presentationData)
             let previous = previousView.swap(processedView)
             let previousType = previousType.swap(type)
                         

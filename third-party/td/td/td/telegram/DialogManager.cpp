@@ -724,14 +724,8 @@ class GetBlockedDialogsQuery final : public Td::ResultHandler {
   void send(BlockListId block_list_id, int32 offset, int32 limit) {
     offset_ = offset;
     limit_ = limit;
-
-    int32 flags = 0;
-    if (block_list_id == BlockListId::stories()) {
-      flags |= telegram_api::contacts_getBlocked::MY_STORIES_FROM_MASK;
-    }
-
     send_query(G()->net_query_creator().create(
-        telegram_api::contacts_getBlocked(flags, false /*ignored*/, offset, limit), {{"me"}}));
+        telegram_api::contacts_getBlocked(0, block_list_id == BlockListId::stories(), offset, limit), {{"me"}}));
   }
 
   void on_result(BufferSlice packet) final {
@@ -1040,17 +1034,13 @@ class ToggleDialogIsBlockedQuery final : public Td::ResultHandler {
     auto input_peer = td_->dialog_manager_->get_input_peer(dialog_id, AccessRights::Know);
     CHECK(input_peer != nullptr && input_peer->get_id() != telegram_api::inputPeerEmpty::ID);
 
-    int32 flags = 0;
-    if (is_blocked_for_stories) {
-      flags |= telegram_api::contacts_block::MY_STORIES_FROM_MASK;
-    }
     vector<ChainId> chain_ids{{dialog_id, MessageContentType::Photo}, {dialog_id, MessageContentType::Text}, {"me"}};
     auto query =
         is_blocked || is_blocked_for_stories
             ? G()->net_query_creator().create(
-                  telegram_api::contacts_block(flags, false /*ignored*/, std::move(input_peer)), std::move(chain_ids))
+                  telegram_api::contacts_block(0, is_blocked_for_stories, std::move(input_peer)), std::move(chain_ids))
             : G()->net_query_creator().create(
-                  telegram_api::contacts_unblock(flags, false /*ignored*/, std::move(input_peer)),
+                  telegram_api::contacts_unblock(0, is_blocked_for_stories, std::move(input_peer)),
                   std::move(chain_ids));
     send_query(std::move(query));
   }

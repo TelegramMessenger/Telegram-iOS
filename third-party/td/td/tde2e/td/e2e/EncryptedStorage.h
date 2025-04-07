@@ -324,8 +324,7 @@ struct EncryptedStorage {
   static td::Result<EncryptedStorage> create(td::Slice last_block, PrivateKey pk) {
     auto public_key = pk.to_public_key();
     auto secret_for_key = MessageEncryption::hmac_sha512(pk.to_secure_string(), "EncryptedStorage::secret_for_key");
-    auto secret_for_value =
-        MessageEncryption::hmac_sha512(pk.to_secure_string(), "EncryptedStorage::secret_for_value");
+    auto secret_for_value = MessageEncryption::hmac_sha512(pk.to_secure_string(), "EncryptedStorage::secret_for_value");
     ClientBlockchain blockchain;
     if (last_block.empty()) {
       TRY_RESULT_ASSIGN(blockchain, ClientBlockchain::create_empty());

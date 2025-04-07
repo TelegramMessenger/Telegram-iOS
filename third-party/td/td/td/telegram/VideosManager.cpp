@@ -231,8 +231,8 @@ SecretInputMedia VideosManager::get_secret_input_media(
   if (video->thumbnail.file_id.is_valid() && thumbnail.empty()) {
     return {};
   }
-  vector<tl_object_ptr<secret_api::DocumentAttribute>> attributes;
-  attributes.emplace_back(make_tl_object<secret_api::documentAttributeVideo>(
+  vector<secret_api::object_ptr<secret_api::DocumentAttribute>> attributes;
+  attributes.emplace_back(secret_api::make_object<secret_api::documentAttributeVideo>(
       0, false, video->duration, video->dimensions.width, video->dimensions.height));
 
   return {std::move(input_file),
@@ -306,24 +306,18 @@ tl_object_ptr<telegram_api::InputMedia> VideosManager::get_input_media(
     const Video *video = get_video(file_id);
     CHECK(video != nullptr);
 
-    vector<tl_object_ptr<telegram_api::DocumentAttribute>> attributes;
+    vector<telegram_api::object_ptr<telegram_api::DocumentAttribute>> attributes;
     {
       int32 attribute_flags = 0;
-      if (video->supports_streaming) {
-        attribute_flags |= telegram_api::documentAttributeVideo::SUPPORTS_STREAMING_MASK;
-      }
-      if (video->is_animation) {
-        attribute_flags |= telegram_api::documentAttributeVideo::NOSOUND_MASK;
-      }
       if (video->start_ts > 0.0) {
         attribute_flags |= telegram_api::documentAttributeVideo::VIDEO_START_TS_MASK;
       }
-      attributes.push_back(make_tl_object<telegram_api::documentAttributeVideo>(
-          attribute_flags, false /*ignored*/, false /*ignored*/, false /*ignored*/, video->precise_duration,
+      attributes.push_back(telegram_api::make_object<telegram_api::documentAttributeVideo>(
+          attribute_flags, false, video->supports_streaming, video->is_animation, video->precise_duration,
           video->dimensions.width, video->dimensions.height, 0, video->start_ts, string()));
     }
     if (!video->file_name.empty()) {
-      attributes.push_back(make_tl_object<telegram_api::documentAttributeFilename>(video->file_name));
+      attributes.push_back(telegram_api::make_object<telegram_api::documentAttributeFilename>(video->file_name));
     }
     int32 flags = 0;
     vector<tl_object_ptr<telegram_api::InputDocument>> added_stickers;
@@ -374,21 +368,15 @@ telegram_api::object_ptr<telegram_api::InputMedia> VideosManager::get_story_docu
   vector<telegram_api::object_ptr<telegram_api::DocumentAttribute>> attributes;
   {
     int32 attribute_flags = 0;
-    if (video->supports_streaming) {
-      attribute_flags |= telegram_api::documentAttributeVideo::SUPPORTS_STREAMING_MASK;
-    }
-    if (video->is_animation) {
-      attribute_flags |= telegram_api::documentAttributeVideo::NOSOUND_MASK;
-    }
     if (main_frame_timestamp > 0.0) {
       attribute_flags |= telegram_api::documentAttributeVideo::VIDEO_START_TS_MASK;
     }
     attributes.push_back(telegram_api::make_object<telegram_api::documentAttributeVideo>(
-        attribute_flags, false /*ignored*/, false /*ignored*/, false /*ignored*/, video->precise_duration,
+        attribute_flags, false, video->supports_streaming, video->is_animation, video->precise_duration,
         video->dimensions.width, video->dimensions.height, 0, main_frame_timestamp, string()));
   }
   if (!video->file_name.empty()) {
-    attributes.push_back(make_tl_object<telegram_api::documentAttributeFilename>(video->file_name));
+    attributes.push_back(telegram_api::make_object<telegram_api::documentAttributeFilename>(video->file_name));
   }
   int32 flags = 0;
   vector<telegram_api::object_ptr<telegram_api::InputDocument>> added_stickers;

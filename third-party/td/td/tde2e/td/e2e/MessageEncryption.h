@@ -19,7 +19,8 @@ class MessageEncryption {
   static td::Result<td::SecureString> decrypt_data(td::Slice encrypted_data, td::Slice secret);
   static td::SecureString hmac_sha512(td::Slice key, td::Slice message);
   static td::SecureString kdf(td::Slice secret, td::Slice password, int iterations);
-  static td::Result<td::SecureString> encrypt_header(td::Slice decrypted_header, td::Slice encrypted_message, td::Slice secret);
+  static td::Result<td::SecureString> encrypt_header(td::Slice decrypted_header, td::Slice encrypted_message,
+                                                     td::Slice secret);
   static td::Result<td::SecureString> decrypt_header(td::Slice encrypted_header, td::Slice encrypted_message,
                                                      td::Slice secret);
 

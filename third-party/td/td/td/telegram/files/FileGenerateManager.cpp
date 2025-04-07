@@ -150,7 +150,7 @@ class WebFileDownloadGenerateActor final : public FileGenerateActor {
   };
   ActorOwn<NetQueryCallback> net_callback_;
 
-  Result<tl_object_ptr<telegram_api::InputWebFileLocation>> parse_conversion() {
+  Result<telegram_api::object_ptr<telegram_api::InputWebFileLocation>> parse_conversion() {
     auto parts = full_split(Slice(conversion_), '#');
     if (parts.size() <= 2 || !parts[0].empty() || !parts.back().empty()) {
       return Status::Error("Wrong conversion");
@@ -170,11 +170,8 @@ class WebFileDownloadGenerateActor final : public FileGenerateActor {
                              << parts[2] << ".jpg";
 
       int32 flags = telegram_api::inputWebFileAudioAlbumThumbLocation::TITLE_MASK;
-      if (is_small) {
-        flags |= telegram_api::inputWebFileAudioAlbumThumbLocation::SMALL_MASK;
-      }
-      return make_tl_object<telegram_api::inputWebFileAudioAlbumThumbLocation>(flags, false /*ignored*/, nullptr,
-                                                                               parts[2].str(), parts[3].str());
+      return telegram_api::make_object<telegram_api::inputWebFileAudioAlbumThumbLocation>(
+          flags, is_small, nullptr, parts[2].str(), parts[3].str());
     }
 
     if (parts.size() != 9 || parts[1] != "map") {
@@ -212,9 +209,9 @@ class WebFileDownloadGenerateActor final : public FileGenerateActor {
     double latitude = 90 - 360 * std::atan(std::exp(((y + 0.1) / size - 0.5) * 2 * PI)) / PI;
 
     int64 access_hash = G()->get_location_access_hash(latitude, longitude);
-    return make_tl_object<telegram_api::inputWebFileGeoPointLocation>(
-        make_tl_object<telegram_api::inputGeoPoint>(0, latitude, longitude, 0), access_hash, width, height, zoom,
-        scale);
+    return telegram_api::make_object<telegram_api::inputWebFileGeoPointLocation>(
+        telegram_api::make_object<telegram_api::inputGeoPoint>(0, latitude, longitude, 0), access_hash, width, height,
+        zoom, scale);
   }
 
   void start_up() final {

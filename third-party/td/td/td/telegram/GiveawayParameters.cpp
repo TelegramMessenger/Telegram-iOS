@@ -103,12 +103,6 @@ GiveawayParameters::get_input_store_payment_premium_giveaway(Td *td, const strin
   }
 
   int32 flags = 0;
-  if (only_new_subscribers_) {
-    flags |= telegram_api::inputStorePaymentPremiumGiveaway::ONLY_NEW_SUBSCRIBERS_MASK;
-  }
-  if (winners_are_visible_) {
-    flags |= telegram_api::inputStorePaymentPremiumGiveaway::WINNERS_ARE_VISIBLE_MASK;
-  }
   if (!additional_input_peers.empty()) {
     flags |= telegram_api::inputStorePaymentPremiumGiveaway::ADDITIONAL_PEERS_MASK;
   }
@@ -119,8 +113,9 @@ GiveawayParameters::get_input_store_payment_premium_giveaway(Td *td, const strin
     flags |= telegram_api::inputStorePaymentPremiumGiveaway::PRIZE_DESCRIPTION_MASK;
   }
   return telegram_api::make_object<telegram_api::inputStorePaymentPremiumGiveaway>(
-      flags, false /*ignored*/, false /*ignored*/, std::move(boost_input_peer), std::move(additional_input_peers),
-      vector<string>(country_codes_), prize_description_, random_id, date_, currency, amount);
+      flags, only_new_subscribers_, winners_are_visible_, std::move(boost_input_peer),
+      std::move(additional_input_peers), vector<string>(country_codes_), prize_description_, random_id, date_, currency,
+      amount);
 }
 
 telegram_api::object_ptr<telegram_api::inputStorePaymentStarsGiveaway>
@@ -142,12 +137,6 @@ GiveawayParameters::get_input_store_payment_stars_giveaway(Td *td, const string 
   }
 
   int32 flags = 0;
-  if (only_new_subscribers_) {
-    flags |= telegram_api::inputStorePaymentStarsGiveaway::ONLY_NEW_SUBSCRIBERS_MASK;
-  }
-  if (winners_are_visible_) {
-    flags |= telegram_api::inputStorePaymentStarsGiveaway::WINNERS_ARE_VISIBLE_MASK;
-  }
   if (!additional_input_peers.empty()) {
     flags |= telegram_api::inputStorePaymentStarsGiveaway::ADDITIONAL_PEERS_MASK;
   }
@@ -158,7 +147,7 @@ GiveawayParameters::get_input_store_payment_stars_giveaway(Td *td, const string 
     flags |= telegram_api::inputStorePaymentStarsGiveaway::PRIZE_DESCRIPTION_MASK;
   }
   return telegram_api::make_object<telegram_api::inputStorePaymentStarsGiveaway>(
-      flags, false /*ignored*/, false /*ignored*/, star_count, std::move(boost_input_peer),
+      flags, only_new_subscribers_, winners_are_visible_, star_count, std::move(boost_input_peer),
       std::move(additional_input_peers), vector<string>(country_codes_), prize_description_, random_id, date_, currency,
       amount, user_count);
 }

@@ -468,38 +468,22 @@ Result<tl_object_ptr<telegram_api::InputBotInlineMessage>> InlineQueriesManager:
       if (!entities.empty()) {
         flags |= telegram_api::inputBotInlineMessageMediaWebPage::ENTITIES_MASK;
       }
-      if (input_message_text.force_small_media) {
-        flags |= telegram_api::inputBotInlineMessageMediaWebPage::FORCE_SMALL_MEDIA_MASK;
-      }
-      if (input_message_text.force_large_media) {
-        flags |= telegram_api::inputBotInlineMessageMediaWebPage::FORCE_LARGE_MEDIA_MASK;
-      }
-      if (input_message_text.show_above_text) {
-        flags |= telegram_api::inputBotInlineMessageMediaWebPage::INVERT_MEDIA_MASK;
-      }
-      if (!input_message_text.text.text.empty()) {
-        flags |= telegram_api::inputBotInlineMessageMediaWebPage::OPTIONAL_MASK;
-      }
+      bool is_optional = !input_message_text.text.text.empty();
       return make_tl_object<telegram_api::inputBotInlineMessageMediaWebPage>(
-          flags, false /*ignored*/, false /*ignored*/, false /*ignored*/, false /*ignored*/,
-          std::move(input_message_text.text.text), std::move(entities), input_message_text.web_page_url,
-          std::move(input_reply_markup));
+          flags, input_message_text.show_above_text, input_message_text.force_large_media,
+          input_message_text.force_small_media, is_optional, std::move(input_message_text.text.text),
+          std::move(entities), input_message_text.web_page_url, std::move(input_reply_markup));
     }
     int32 flags = 0;
     if (input_reply_markup != nullptr) {
       flags |= telegram_api::inputBotInlineMessageText::REPLY_MARKUP_MASK;
     }
-    if (input_message_text.disable_web_page_preview) {
-      flags |= telegram_api::inputBotInlineMessageText::NO_WEBPAGE_MASK;
-    } else if (input_message_text.show_above_text) {
-      flags |= telegram_api::inputBotInlineMessageText::INVERT_MEDIA_MASK;
-    }
     if (!entities.empty()) {
       flags |= telegram_api::inputBotInlineMessageText::ENTITIES_MASK;
     }
-    return make_tl_object<telegram_api::inputBotInlineMessageText>(flags, false /*ignored*/, false /*ignored*/,
-                                                                   std::move(input_message_text.text.text),
-                                                                   std::move(entities), std::move(input_reply_markup));
+    return make_tl_object<telegram_api::inputBotInlineMessageText>(
+        flags, input_message_text.disable_web_page_preview, input_message_text.show_above_text,
+        std::move(input_message_text.text.text), std::move(entities), std::move(input_reply_markup));
   }
   if (constructor_id == td_api::inputMessageContact::ID) {
     TRY_RESULT(contact, process_input_message_contact(td_, std::move(input_message_content)));
@@ -542,11 +526,9 @@ Result<tl_object_ptr<telegram_api::InputBotInlineMessage>> InlineQueriesManager:
     if (!entities.empty()) {
       flags |= telegram_api::inputBotInlineMessageMediaAuto::ENTITIES_MASK;
     }
-    if (extract_input_invert_media(input_message_content)) {
-      flags |= telegram_api::inputBotInlineMessageMediaAuto::INVERT_MEDIA_MASK;
-    }
+    bool invert_media = extract_input_invert_media(input_message_content);
     return make_tl_object<telegram_api::inputBotInlineMessageMediaAuto>(
-        flags, false /*ignored*/, caption.text, std::move(entities), std::move(input_reply_markup));
+        flags, invert_media, caption.text, std::move(entities), std::move(input_reply_markup));
   }
   return Status::Error(400, "Unallowed inline message content type");
 }
@@ -1092,9 +1074,10 @@ Result<tl_object_ptr<telegram_api::InputBotInlineResult>> InlineQueriesManager::
     if (!clean_input_string(thumbnail_url)) {
       return Status::Error(400, "Strings must be encoded in UTF-8");
     }
-    vector<tl_object_ptr<telegram_api::DocumentAttribute>> attributes;
+    vector<telegram_api::object_ptr<telegram_api::DocumentAttribute>> attributes;
     if (thumbnail_width > 0 && thumbnail_height > 0) {
-      attributes.push_back(make_tl_object<telegram_api::documentAttributeImageSize>(thumbnail_width, thumbnail_height));
+      attributes.push_back(
+          telegram_api::make_object<telegram_api::documentAttributeImageSize>(thumbnail_width, thumbnail_height));
     }
     thumbnail = make_tl_object<telegram_api::inputWebDocument>(thumbnail_url, 0, thumbnail_type, std::move(attributes));
   }
@@ -1108,28 +1091,30 @@ Result<tl_object_ptr<telegram_api::InputBotInlineResult>> InlineQueriesManager::
       return Status::Error(400, "Strings must be encoded in UTF-8");
     }
 
-    vector<tl_object_ptr<telegram_api::DocumentAttribute>> attributes;
+    vector<telegram_api::object_ptr<telegram_api::DocumentAttribute>> attributes;
     if (width > 0 && height > 0) {
       if ((duration > 0 || type == "video" || content_type == "video/mp4") && !begins_with(content_type, "image/")) {
-        attributes.push_back(make_tl_object<telegram_api::documentAttributeVideo>(
-            0, false /*ignored*/, false /*ignored*/, false /*ignored*/, duration, width, height, 0, 0.0, string()));
+        attributes.push_back(telegram_api::make_object<telegram_api::documentAttributeVideo>(
+            0, false, false, false, duration, width, height, 0, 0.0, string()));
       } else {
-        attributes.push_back(make_tl_object<telegram_api::documentAttributeImageSize>(width, height));
+        attributes.push_back(telegram_api::make_object<telegram_api::documentAttributeImageSize>(width, height));
       }
     } else if (type == "audio") {
-      attributes.push_back(make_tl_object<telegram_api::documentAttributeAudio>(
+      attributes.push_back(telegram_api::make_object<telegram_api::documentAttributeAudio>(
           telegram_api::documentAttributeAudio::TITLE_MASK | telegram_api::documentAttributeAudio::PERFORMER_MASK,
-          false /*ignored*/, duration, title, description, BufferSlice()));
+          false, duration, title, description, BufferSlice()));
     } else if (type == "voice") {
-      attributes.push_back(make_tl_object<telegram_api::documentAttributeAudio>(
-          telegram_api::documentAttributeAudio::VOICE_MASK, false /*ignored*/, duration, "", "", BufferSlice()));
+      attributes.push_back(telegram_api::make_object<telegram_api::documentAttributeAudio>(0, true, duration, string(),
+                                                                                           string(), BufferSlice()));
     }
-    attributes.push_back(make_tl_object<telegram_api::documentAttributeFilename>(get_url_file_name(content_url)));
+    attributes.push_back(
+        telegram_api::make_object<telegram_api::documentAttributeFilename>(get_url_file_name(content_url)));
 
-    content = make_tl_object<telegram_api::inputWebDocument>(content_url, 0, content_type, std::move(attributes));
+    content =
+        telegram_api::make_object<telegram_api::inputWebDocument>(content_url, 0, content_type, std::move(attributes));
   }
 
-  return make_tl_object<telegram_api::inputBotInlineResult>(
+  return telegram_api::make_object<telegram_api::inputBotInlineResult>(
       flags, id, type, title, description, url, std::move(thumbnail), std::move(content), std::move(inline_message));
 }
 

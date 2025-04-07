@@ -598,14 +598,11 @@ class SetCustomVerificationQuery final : public Td::ResultHandler {
     if (input_user != nullptr) {
       flags |= telegram_api::bots_setCustomVerification::BOT_MASK;
     }
-    if (is_verified) {
-      flags |= telegram_api::bots_setCustomVerification::ENABLED_MASK;
-    }
     if (!custom_description.empty()) {
       flags |= telegram_api::bots_setCustomVerification::CUSTOM_DESCRIPTION_MASK;
     }
     send_query(G()->net_query_creator().create(
-        telegram_api::bots_setCustomVerification(flags, false /*ignored*/, std::move(input_user), std::move(input_peer),
+        telegram_api::bots_setCustomVerification(flags, is_verified, std::move(input_user), std::move(input_peer),
                                                  custom_description),
         {{dialog_id}}));
   }

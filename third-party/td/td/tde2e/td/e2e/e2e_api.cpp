@@ -20,18 +20,19 @@
 #include "td/utils/base64.h"
 #include "td/utils/common.h"
 #include "td/utils/int_types.h"
+#include "td/utils/logging.h"
 #include "td/utils/overloaded.h"
 #include "td/utils/Random.h"
 #include "td/utils/SharedSlice.h"
+#include "td/utils/Slice.h"
 #include "td/utils/SliceBuilder.h"
 #include "td/utils/Span.h"
 #include "td/utils/Status.h"
+#include "td/utils/StringBuilder.h"
+#include "td/utils/tl_parsers.h"
 #include "td/utils/UInt.h"
 
 #include <memory>
-
-namespace tde2e_api {
-}  // namespace tde2e_api
 
 namespace tde2e_core {
 namespace api = tde2e_api;
@@ -469,7 +470,8 @@ class KeyChain {
     TRY_RESULT(call_ref, to_call_ref(call_id));
     return call_ref->encrypt(channel_id, message);
   }
-  td::Result<api::SecureBytes> call_decrypt(api::CallId call_id, api::UserId user_id, api::CallChannelId channel_id, td::Slice message) {
+  td::Result<api::SecureBytes> call_decrypt(api::CallId call_id, api::UserId user_id, api::CallChannelId channel_id,
+                                            td::Slice message) {
     TRY_RESULT(call_ref, to_call_ref(call_id));
     return call_ref->decrypt(user_id, channel_id, message);
   }
@@ -766,7 +768,7 @@ Result<std::string> call_describe_block(Slice block_slice) {
   td::TlParser parser(block_str);
   auto magic = parser.fetch_int();
   if (magic != td::e2e_api::e2e_chain_block::ID) {
-    return td::Status::Error("wrong magic");
+    return td::Status::Error("Wrong magic");
   }
   auto block = td::e2e_api::e2e_chain_block::fetch(parser);
   parser.fetch_end();

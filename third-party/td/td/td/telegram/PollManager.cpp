@@ -205,8 +205,8 @@ class StopPollQuery final : public Td::ResultHandler {
 
     auto message_id = message_full_id.get_message_id().get_server_message_id().get();
     auto poll = telegram_api::make_object<telegram_api::poll>(
-        poll_id.get(), telegram_api::poll::CLOSED_MASK, false /*ignored*/, false /*ignored*/, false /*ignored*/,
-        false /*ignored*/, telegram_api::make_object<telegram_api::textWithEntities>(string(), Auto()), Auto(), 0, 0);
+        poll_id.get(), 0, true, false, false, false,
+        telegram_api::make_object<telegram_api::textWithEntities>(string(), Auto()), Auto(), 0, 0);
     auto input_media = telegram_api::make_object<telegram_api::inputMediaPoll>(0, std::move(poll),
                                                                                vector<BufferSlice>(), string(), Auto());
     send_query(G()->net_query_creator().create(
@@ -1532,23 +1532,11 @@ tl_object_ptr<telegram_api::InputMedia> PollManager::get_input_media(PollId poll
   CHECK(poll != nullptr);
 
   int32 poll_flags = 0;
-  if (!poll->is_anonymous_) {
-    poll_flags |= telegram_api::poll::PUBLIC_VOTERS_MASK;
-  }
-  if (poll->allow_multiple_answers_) {
-    poll_flags |= telegram_api::poll::MULTIPLE_CHOICE_MASK;
-  }
-  if (poll->is_quiz_) {
-    poll_flags |= telegram_api::poll::QUIZ_MASK;
-  }
   if (poll->open_period_ != 0) {
     poll_flags |= telegram_api::poll::CLOSE_PERIOD_MASK;
   }
   if (poll->close_date_ != 0) {
     poll_flags |= telegram_api::poll::CLOSE_DATE_MASK;
-  }
-  if (poll->is_closed_) {
-    poll_flags |= telegram_api::poll::CLOSED_MASK;
   }
 
   int32 flags = 0;
@@ -1566,7 +1554,7 @@ tl_object_ptr<telegram_api::InputMedia> PollManager::get_input_media(PollId poll
   return telegram_api::make_object<telegram_api::inputMediaPoll>(
       flags,
       telegram_api::make_object<telegram_api::poll>(
-          0, poll_flags, false /*ignored*/, false /*ignored*/, false /*ignored*/, false /*ignored*/,
+          0, poll_flags, poll->is_closed_, !poll->is_anonymous_, poll->allow_multiple_answers_, poll->is_quiz_,
           get_input_text_with_entities(nullptr, poll->question_, "get_input_media_poll"),
           transform(poll->options_, get_input_poll_option), poll->open_period_, poll->close_date_),
       std::move(correct_answers), poll->explanation_.text,
@@ -1694,7 +1682,7 @@ PollId PollManager::on_get_poll(PollId poll_id, tl_object_ptr<telegram_api::poll
       poll->question_ = std::move(question);
       is_changed = true;
     }
-    poll_server_is_closed = (poll_server->flags_ & telegram_api::poll::CLOSED_MASK) != 0;
+    poll_server_is_closed = poll_server->closed_;
     if (poll_server_is_closed && !poll->is_closed_) {
       poll->is_closed_ = poll_server_is_closed;
       is_changed = true;
@@ -1734,13 +1722,13 @@ PollId PollManager::on_get_poll(PollId poll_id, tl_object_ptr<telegram_api::poll
         need_save_to_database = true;
       }
     }
-    bool is_anonymous = (poll_server->flags_ & telegram_api::poll::PUBLIC_VOTERS_MASK) == 0;
+    bool is_anonymous = !poll_server->public_voters_;
     if (is_anonymous != poll->is_anonymous_) {
       poll->is_anonymous_ = is_anonymous;
       is_changed = true;
     }
-    bool allow_multiple_answers = (poll_server->flags_ & telegram_api::poll::MULTIPLE_CHOICE_MASK) != 0;
-    bool is_quiz = (poll_server->flags_ & telegram_api::poll::QUIZ_MASK) != 0;
+    bool allow_multiple_answers = poll_server->multiple_choice_;
+    bool is_quiz = poll_server->quiz_;
     if (is_quiz && allow_multiple_answers) {
       LOG(ERROR) << "Receive quiz " << poll_id << " from " << source << " allowing multiple answers";
       allow_multiple_answers = false;

@@ -233,16 +233,13 @@ class GetNotifySettingsExceptionsQuery final : public Td::ResultHandler {
 
   void send(NotificationSettingsScope scope, bool filter_scope, bool compare_sound) {
     int32 flags = 0;
-    tl_object_ptr<telegram_api::InputNotifyPeer> input_notify_peer;
+    telegram_api::object_ptr<telegram_api::InputNotifyPeer> input_notify_peer;
     if (filter_scope) {
       flags |= telegram_api::account_getNotifyExceptions::PEER_MASK;
       input_notify_peer = get_input_notify_peer(scope);
     }
-    if (compare_sound) {
-      flags |= telegram_api::account_getNotifyExceptions::COMPARE_SOUND_MASK;
-    }
-    send_query(G()->net_query_creator().create(telegram_api::account_getNotifyExceptions(
-        flags, false /*ignored*/, false /*ignored*/, std::move(input_notify_peer))));
+    send_query(G()->net_query_creator().create(
+        telegram_api::account_getNotifyExceptions(flags, compare_sound, false, std::move(input_notify_peer))));
   }
 
   void on_result(BufferSlice packet) final {
@@ -295,9 +292,7 @@ class GetStoryNotifySettingsExceptionsQuery final : public Td::ResultHandler {
   }
 
   void send() {
-    int32 flags = telegram_api::account_getNotifyExceptions::COMPARE_STORIES_MASK;
-    send_query(G()->net_query_creator().create(
-        telegram_api::account_getNotifyExceptions(flags, false /*ignored*/, false /*ignored*/, nullptr)));
+    send_query(G()->net_query_creator().create(telegram_api::account_getNotifyExceptions(0, false, true, nullptr)));
   }
 
   void on_result(BufferSlice packet) final {

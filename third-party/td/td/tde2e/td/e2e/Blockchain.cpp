@@ -11,16 +11,17 @@
 #include "td/telegram/e2e_api.hpp"
 
 #include "td/utils/algorithm.h"
+#include "td/utils/as.h"
 #include "td/utils/common.h"
 #include "td/utils/crypto.h"
 #include "td/utils/format.h"
 #include "td/utils/misc.h"
 #include "td/utils/overloaded.h"
 #include "td/utils/SliceBuilder.h"
-#include "td/utils/tl_helpers.h"
 #include "td/utils/tl_parsers.h"
 
 #include <algorithm>
+#include <limits>
 #include <map>
 #include <set>
 #include <tuple>
@@ -37,6 +38,7 @@ e2e::object_ptr<e2e::e2e_chain_groupParticipant> GroupParticipant::to_tl() const
   return e2e::make_object<e2e::e2e_chain_groupParticipant>(user_id, public_key.to_u256(), flags, add_users(),
                                                            remove_users(), version);
 }
+
 td::int32 GroupState::version() const {
   if (participants.empty()) {
     return 0;
@@ -47,6 +49,7 @@ td::int32 GroupState::version() const {
   }
   return std::clamp(version, 0, 255);
 }
+
 td::Result<GroupParticipant> GroupState::get_participant(td::int64 user_id) const {
   for (const auto &participant : participants) {
     if (participant.user_id == user_id) {
@@ -63,7 +66,8 @@ td::Result<GroupParticipant> GroupState::get_participant(const PublicKey &public
     }
   }
   return td::Status::Error("Participant not found");
-};
+}
+
 Permissions GroupState::get_permissions(const PublicKey &public_key, td::int32 limit_permissions) const {
   limit_permissions &= GroupParticipantFlags::AllPermissions;
   auto r_participant = get_participant(public_key);
@@ -81,46 +85,58 @@ GroupStateRef GroupState::from_tl(const td::e2e_api::e2e_chain_groupState &state
   return std::make_shared<GroupState>(
       GroupState{td::transform(state.participants_, participant_from_tl), state.external_permissions_});
 }
+
 e2e::object_ptr<e2e::e2e_chain_groupState> GroupState::to_tl() const {
   return e2e::make_object<e2e::e2e_chain_groupState>(
       td::transform(participants, [](const GroupParticipant &participant) { return participant.to_tl(); }),
       external_permissions);
 }
+
 GroupStateRef GroupState::empty_state() {
   static GroupStateRef state = std::make_shared<GroupState>();
   return state;
 }
+
 GroupSharedKeyRef GroupSharedKey::from_tl(const td::e2e_api::e2e_chain_sharedKey &shared_key) {
   return std::make_shared<GroupSharedKey>(GroupSharedKey{PublicKey::from_u256(shared_key.ek_),
                                                          shared_key.encrypted_shared_key_, shared_key.dest_user_id_,
                                                          shared_key.dest_header_});
 }
+
 e2e::object_ptr<e2e::e2e_chain_sharedKey> GroupSharedKey::to_tl() const {
   return e2e::make_object<e2e::e2e_chain_sharedKey>(ek.to_u256(), encrypted_shared_key,
                                                     std::vector<td::int64>(dest_user_id), std::vector(dest_header));
 }
+
 GroupSharedKeyRef GroupSharedKey::empty_shared_key() {
   static GroupSharedKeyRef shared_key = std::make_shared<GroupSharedKey>();
   return shared_key;
 }
+
 ChangeSetValue ChangeSetValue::from_tl(const td::e2e_api::e2e_chain_changeSetValue &change) {
   return ChangeSetValue{change.key_, change.value_};
 }
+
 e2e::object_ptr<e2e::e2e_chain_changeSetValue> ChangeSetValue::to_tl() const {
   return e2e::make_object<e2e::e2e_chain_changeSetValue>(key, value);
 }
+
 ChangeSetGroupState ChangeSetGroupState::from_tl(const td::e2e_api::e2e_chain_changeSetGroupState &change) {
   return ChangeSetGroupState{GroupState::from_tl(*change.group_state_)};
 }
+
 e2e::object_ptr<e2e::e2e_chain_changeSetGroupState> ChangeSetGroupState::to_tl() const {
   return e2e::make_object<e2e::e2e_chain_changeSetGroupState>(group_state->to_tl());
 }
+
 ChangeSetSharedKey ChangeSetSharedKey::from_tl(const td::e2e_api::e2e_chain_changeSetSharedKey &change) {
   return ChangeSetSharedKey{GroupSharedKey::from_tl(*change.shared_key_)};
 }
+
 e2e::object_ptr<e2e::e2e_chain_changeSetSharedKey> ChangeSetSharedKey::to_tl() const {
   return e2e::make_object<e2e::e2e_chain_changeSetSharedKey>(shared_key->to_tl());
 }
+
 Change Change::from_tl(const td::e2e_api::e2e_chain_Change &change) {
   Change res;
   downcast_call(
@@ -136,6 +152,7 @@ Change Change::from_tl(const td::e2e_api::e2e_chain_Change &change) {
           }));
   return res;
 }
+
 e2e::object_ptr<e2e::e2e_chain_Change> Change::to_tl() const {
   return std::visit(
       td::overloaded(
@@ -149,6 +166,7 @@ e2e::object_ptr<e2e::e2e_chain_Change> Change::to_tl() const {
           }),
       value);
 }
+
 td::UInt256 Block::calc_hash() const {
   if (height_ == -1) {
     return {};
@@ -158,6 +176,7 @@ td::UInt256 Block::calc_hash() const {
   td::sha256(serialized_block, hash.as_mutable_slice());
   return hash;
 }
+
 Block Block::from_tl(const e2e::e2e_chain_block &block) {
   Block result;
   result.state_proof_ = StateProof::from_tl(*block.state_proof_);
@@ -179,7 +198,7 @@ td::Result<Block> Block::from_tl_serialized(td::Slice new_block) {
   auto magic = parser.fetch_int();
   if (magic != td::e2e_api::e2e_chain_block::ID) {
     return td::Status::Error(PSLICE() << "Expected magic " << td::format::as_hex(td::e2e_api::e2e_chain_block::ID)
-                                      << ", got " << td::format::as_hex(magic));
+                                      << ", but received " << td::format::as_hex(magic));
   }
   auto block_tl = td::e2e_api::e2e_chain_block::fetch(parser);
   parser.fetch_end();
@@ -200,9 +219,11 @@ e2e::object_ptr<e2e::e2e_chain_block> Block::to_tl() const {
   return e2e::make_object<e2e::e2e_chain_block>(signature_.to_u512(), flags, prev_block_hash_, std::move(changes),
                                                 height_, std::move(state_proof), public_key);
 }
+
 std::string Block::to_tl_serialized() const {
   return serialize_boxed(*to_tl());
 }
+
 td::StringBuilder &operator<<(td::StringBuilder &sb, const Block &block) {
   return sb << "Block(sign=" << block.signature_
             << "..., prev_hash=" << hex_encode(block.prev_block_hash_.as_slice().substr(0, 8))
@@ -211,29 +232,35 @@ td::StringBuilder &operator<<(td::StringBuilder &sb, const Block &block) {
             << "\tchanges=" << block.changes_ << "\n"
             << "\tsignature_key=" << block.o_signature_public_key_ << ")";
 }
+
 td::Result<BitString> key_to_bitstring(td::Slice key) {
   if (key.size() != 32) {
     return td::Status::Error("Invalid key size");
   }
   return BitString(key);
 }
+
 td::Result<std::string> KeyValueState::get_value(td::Slice key) const {
   TRY_RESULT(bitstring, key_to_bitstring(key));
   return get(node_, bitstring, snapshot_.value());
 }
+
 td::Result<std::string> KeyValueState::gen_proof(td::Span<td::Slice> keys) const {
   // TODO: validate keys..
   TRY_RESULT(pruned_tree, generate_pruned_tree(node_, keys, snapshot_.value()));
   return TrieNode::serialize_for_network(pruned_tree);
 }
+
 td::Result<KeyValueState> KeyValueState::create_from_hash(KeyValueHash hash) {
   auto node = std::make_shared<TrieNode>(hash.hash);
   return KeyValueState{std::move(node), td::Slice()};
 }
+
 td::Result<KeyValueState> KeyValueState::create_from_snapshot(td::Slice snapshot) {
   TRY_RESULT(node, TrieNode::fetch_from_snapshot(snapshot));
   return KeyValueState{std::move(node), snapshot};
 }
+
 td::Result<std::string> KeyValueState::build_snapshot() const {
   return TrieNode::serialize_for_snapshot(node_, snapshot_.value());
 }
@@ -260,6 +287,7 @@ StateProof StateProof::from_tl(const td::e2e_api::e2e_chain_stateProof &proof) {
   }
   return res;
 }
+
 e2e::object_ptr<e2e::e2e_chain_stateProof> StateProof::to_tl() const {
   td::int32 flags{};
   e2e::object_ptr<e2e::e2e_chain_groupState> o_group_state_tl;
@@ -276,6 +304,7 @@ e2e::object_ptr<e2e::e2e_chain_stateProof> StateProof::to_tl() const {
   return e2e::make_object<e2e::e2e_chain_stateProof>(flags, kv_hash.hash, std::move(o_group_state_tl),
                                                      std::move(o_shared_key_tl));
 }
+
 td::StringBuilder &operator<<(td::StringBuilder &sb, const StateProof &state) {
   sb << "StateProof{";
   sb << "\n\tkv=" << td::format::as_hex_dump<0>(state.kv_hash.hash.as_slice().substr(0, 8));
@@ -396,7 +425,7 @@ td::Status State::validate_shared_key(const GroupSharedKeyRef &shared_key, const
     participants.insert(user_id);
   }
   if (participants.size() != shared_key->dest_user_id.size()) {
-    return td::Status::Error("Shared key has duplicated users");
+    return td::Status::Error("Shared key has duplicate users");
   }
   for (auto &p : group_state->participants) {
     if (!participants.count(p.user_id)) {
@@ -688,11 +717,12 @@ td::Result<Blockchain> Blockchain::create_from_block(Block block, td::optional<t
 
   return res;
 }
+
 namespace {
 bool is_good_magic(td::int32 magic) {
   return magic == td::e2e_api::e2e_chain_block::ID || magic == td::e2e_api::e2e_chain_groupBroadcastNonceCommit::ID ||
          magic == td::e2e_api::e2e_chain_groupBroadcastNonceReveal::ID;
-};
+}
 }  // namespace
 
 bool Blockchain::is_from_server(td::Slice block) {
@@ -709,9 +739,10 @@ td::Result<std::string> Blockchain::from_any_to_local(std::string block) {
   }
   return block;
 }
+
 td::Result<std::string> Blockchain::from_server_to_local(std::string block) {
   if (block.size() < 4) {
-    return td::Status::Error("block is too short");
+    return td::Status::Error("Block is too short");
   }
   td::int32 server_magic = td::as<td::int32>(block.data());
   if (is_good_magic(server_magic)) {
@@ -721,9 +752,10 @@ td::Result<std::string> Blockchain::from_server_to_local(std::string block) {
   td::as<td::int32>(block.data()) = real_magic;
   return block;
 }
+
 td::Result<std::string> Blockchain::from_local_to_server(std::string block) {
   if (block.size() < 4) {
-    return td::Status::Error("block is too short");
+    return td::Status::Error("Block is too short");
   }
   td::int32 magic = td::as<td::int32>(block.data());
   td::as<td::int32>(block.data()) = magic + 1;

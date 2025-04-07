@@ -593,60 +593,12 @@ static telegram_api::object_ptr<telegram_api::channelAdminLogEventsFilter> get_i
   if (filters == nullptr) {
     return nullptr;
   }
-
-  int32 flags = 0;
-  if (filters->message_edits_) {
-    flags |= telegram_api::channelAdminLogEventsFilter::EDIT_MASK;
-  }
-  if (filters->message_deletions_) {
-    flags |= telegram_api::channelAdminLogEventsFilter::DELETE_MASK;
-  }
-  if (filters->message_pins_) {
-    flags |= telegram_api::channelAdminLogEventsFilter::PINNED_MASK;
-  }
-  if (filters->member_joins_) {
-    flags |= telegram_api::channelAdminLogEventsFilter::JOIN_MASK;
-  }
-  if (filters->member_leaves_) {
-    flags |= telegram_api::channelAdminLogEventsFilter::LEAVE_MASK;
-  }
-  if (filters->member_invites_) {
-    flags |= telegram_api::channelAdminLogEventsFilter::INVITE_MASK;
-  }
-  if (filters->member_promotions_) {
-    flags |= telegram_api::channelAdminLogEventsFilter::PROMOTE_MASK;
-    flags |= telegram_api::channelAdminLogEventsFilter::DEMOTE_MASK;
-  }
-  if (filters->member_restrictions_) {
-    flags |= telegram_api::channelAdminLogEventsFilter::BAN_MASK;
-    flags |= telegram_api::channelAdminLogEventsFilter::UNBAN_MASK;
-    flags |= telegram_api::channelAdminLogEventsFilter::KICK_MASK;
-    flags |= telegram_api::channelAdminLogEventsFilter::UNKICK_MASK;
-  }
-  if (filters->info_changes_) {
-    flags |= telegram_api::channelAdminLogEventsFilter::INFO_MASK;
-  }
-  if (filters->setting_changes_) {
-    flags |= telegram_api::channelAdminLogEventsFilter::SETTINGS_MASK;
-  }
-  if (filters->invite_link_changes_) {
-    flags |= telegram_api::channelAdminLogEventsFilter::INVITES_MASK;
-  }
-  if (filters->video_chat_changes_) {
-    flags |= telegram_api::channelAdminLogEventsFilter::GROUP_CALL_MASK;
-  }
-  if (filters->forum_changes_) {
-    flags |= telegram_api::channelAdminLogEventsFilter::FORUMS_MASK;
-  }
-  if (filters->subscription_extensions_) {
-    flags |= telegram_api::channelAdminLogEventsFilter::SUB_EXTEND_MASK;
-  }
-
   return telegram_api::make_object<telegram_api::channelAdminLogEventsFilter>(
-      flags, false /*ignored*/, false /*ignored*/, false /*ignored*/, false /*ignored*/, false /*ignored*/,
-      false /*ignored*/, false /*ignored*/, false /*ignored*/, false /*ignored*/, false /*ignored*/, false /*ignored*/,
-      false /*ignored*/, false /*ignored*/, false /*ignored*/, false /*ignored*/, false /*ignored*/, false /*ignored*/,
-      false /*ignored*/, false /*ignored*/);
+      0, filters->member_joins_, filters->member_leaves_, filters->member_invites_, filters->member_restrictions_,
+      filters->member_restrictions_, filters->member_restrictions_, filters->member_restrictions_,
+      filters->member_promotions_, filters->member_promotions_, filters->info_changes_, filters->setting_changes_,
+      filters->message_pins_, filters->message_edits_, filters->message_deletions_, filters->video_chat_changes_,
+      filters->invite_link_changes_, false /*send*/, filters->forum_changes_, filters->subscription_extensions_);
 }
 
 void get_dialog_event_log(Td *td, DialogId dialog_id, const string &query, int64 from_event_id, int32 limit,

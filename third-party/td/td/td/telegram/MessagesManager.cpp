@@ -242,7 +242,7 @@ class GetChannelMessagesQuery final : public Td::ResultHandler {
   explicit GetChannelMessagesQuery(Promise<Unit> &&promise) : promise_(std::move(promise)) {
   }
 
-  void send(ChannelId channel_id, tl_object_ptr<telegram_api::InputChannel> &&input_channel,
+  void send(ChannelId channel_id, tl_object_ptr<telegram_api::InputChannel> input_channel,
             vector<tl_object_ptr<telegram_api::InputMessage>> &&message_ids, MessageId last_new_message_id) {
     channel_id_ = channel_id;
     last_new_message_id_ = last_new_message_id;
@@ -353,7 +353,9 @@ class UpdateDialogPinnedMessageQuery final : public Td::ResultHandler {
     business_connection_id_ = business_connection_id;
     dialog_id_ = dialog_id;
     message_id_ = message_id;
-    auto input_peer = td_->dialog_manager_->get_input_peer(dialog_id, AccessRights::Write);
+
+    auto input_peer = td_->dialog_manager_->get_input_peer(
+        dialog_id, business_connection_id_.is_valid() ? AccessRights::Know : AccessRights::Write);
     if (input_peer == nullptr) {
       LOG(INFO) << "Can't update pinned message in " << dialog_id;
       return on_error(Status::Error(400, "Can't update pinned message"));
@@ -392,7 +394,7 @@ class UpdateDialogPinnedMessageQuery final : public Td::ResultHandler {
   }
 
   void on_error(Status status) final {
-    if (!business_connection_id_.is_empty()) {
+    if (business_connection_id_.is_empty()) {
       td_->messages_manager_->on_get_message_error(dialog_id_, message_id_, status, "UpdateDialogPinnedMessageQuery");
     }
     promise_.set_error(std::move(status));
@@ -419,13 +421,9 @@ class ExportChannelMessageLinkQuery final : public Td::ResultHandler {
     if (input_channel == nullptr) {
       return on_error(Status::Error(400, "Can't access the chat"));
     }
-    int32 flags = 0;
-    if (for_group) {
-      flags |= telegram_api::channels_exportMessageLink::GROUPED_MASK;
-    }
-    send_query(G()->net_query_creator().create(
-        telegram_api::channels_exportMessageLink(flags, false /*ignored*/, false /*ignored*/, std::move(input_channel),
-                                                 message_id.get_server_message_id().get())));
+    bool for_thread = false;
+    send_query(G()->net_query_creator().create(telegram_api::channels_exportMessageLink(
+        0, for_group, for_thread, std::move(input_channel), message_id.get_server_message_id().get())));
   }
 
   void on_result(BufferSlice packet) final {
@@ -2230,14 +2228,8 @@ class GetChannelDifferenceQuery final : public Td::ResultHandler {
     pts_ = pts;
     limit_ = limit;
     CHECK(input_channel != nullptr);
-
-    int32 flags = 0;
-    if (force) {
-      flags |= telegram_api::updates_getChannelDifference::FORCE_MASK;
-    }
     send_query(G()->net_query_creator().create(telegram_api::updates_getChannelDifference(
-        flags, false /*ignored*/, std::move(input_channel), make_tl_object<telegram_api::channelMessagesFilterEmpty>(),
-        pts, limit)));
+        0, force, std::move(input_channel), make_tl_object<telegram_api::channelMessagesFilterEmpty>(), pts, limit)));
   }
 
   void on_result(BufferSlice packet) final {
@@ -4214,9 +4206,10 @@ void MessagesManager::on_update_service_notification(tl_object_ptr<telegram_api:
   if (update->popup_) {
     send_closure(G()->td(), &Td::send_update,
                  td_api::make_object<td_api::updateServiceNotification>(
-                     update->type_, get_message_content_object(
-                                        content.get(), td_, owner_dialog_id, MessageId(ServerMessageId(1)), false, date,
-                                        is_content_secret, true, -1, update->invert_media_, disable_web_page_preview)));
+                     update->type_,
+                     get_message_content_object(content.get(), td_, owner_dialog_id, MessageId(ServerMessageId(1)),
+                                                false, owner_dialog_id, date, is_content_secret, true, -1,
+                                                update->invert_media_, disable_web_page_preview)));
   }
   if (has_date && is_user) {
     Dialog *d = get_service_notifications_dialog();
@@ -14508,6 +14501,10 @@ void MessagesManager::get_messages_from_server(vector<MessageFullId> &&message_i
     }
     const auto *d = get_dialog_force(DialogId(it.first));
     for (auto &slice_message_ids : vector_split(std::move(it.second), MAX_SLICE_SIZE)) {
+      if (input_channel == nullptr) {
+        input_channel = td_->chat_manager_->get_input_channel(it.first);
+        CHECK(input_channel != nullptr);
+      }
       td_->create_handler<GetChannelMessagesQuery>(mpas.get_promise())
           ->send(it.first, std::move(input_channel), std::move(slice_message_ids),
                  d == nullptr ? MessageId() : d->last_new_message_id);
@@ -19513,9 +19510,11 @@ tl_object_ptr<td_api::MessageSchedulingState> MessagesManager::get_message_sched
 td_api::object_ptr<td_api::MessageContent> MessagesManager::get_message_message_content_object(DialogId dialog_id,
                                                                                                const Message *m) const {
   auto live_location_date = m->is_failed_to_send ? 0 : m->date;
-  return get_message_content_object(m->content.get(), td_, dialog_id, m->message_id, m->is_outgoing, live_location_date,
-                                    m->is_content_secret, need_skip_bot_commands(dialog_id, m),
-                                    get_message_max_media_timestamp(m), m->invert_media, m->disable_web_page_preview);
+  return get_message_content_object(
+      m->content.get(), td_, dialog_id, m->message_id, m->is_outgoing,
+      m->sender_dialog_id != DialogId() ? m->sender_dialog_id : DialogId(m->sender_user_id), live_location_date,
+      m->is_content_secret, need_skip_bot_commands(dialog_id, m), get_message_max_media_timestamp(m), m->invert_media,
+      m->disable_web_page_preview);
 }
 
 td_api::object_ptr<td_api::message> MessagesManager::get_dialog_event_log_message_object(
@@ -19541,9 +19540,10 @@ td_api::object_ptr<td_api::message> MessagesManager::get_dialog_event_log_messag
       td_->user_manager_->get_user_id_object(m->via_bot_user_id, "get_dialog_event_log_message_object via_bot_user_id");
   auto edit_date = m->hide_edit_date ? 0 : m->edit_date;
   auto reply_markup = get_reply_markup_object(td_->user_manager_.get(), m->reply_markup);
-  auto content =
-      get_message_content_object(m->content.get(), td_, dialog_id, m->message_id, m->is_outgoing, 0, false, true,
-                                 get_message_own_max_media_timestamp(m), m->invert_media, m->disable_web_page_preview);
+  auto content = get_message_content_object(
+      m->content.get(), td_, dialog_id, m->message_id, m->is_outgoing,
+      m->sender_dialog_id != DialogId() ? m->sender_dialog_id : DialogId(m->sender_user_id), 0, false, true,
+      get_message_own_max_media_timestamp(m), m->invert_media, m->disable_web_page_preview);
   return td_api::make_object<td_api::message>(
       m->message_id.get(), std::move(sender), get_chat_id_object(dialog_id, "get_dialog_event_log_message_object"),
       nullptr, nullptr, m->is_outgoing, m->is_pinned, m->is_from_offline, can_be_saved, true, m->is_channel_post,
@@ -19843,7 +19843,9 @@ unique_ptr<MessagesManager::Message> MessagesManager::create_message_to_send(
       } else {
         m->sender_dialog_id = send_as_dialog_id;
       }
-      m->has_explicit_sender = true;
+      if (dialog_type == DialogType::Channel) {
+        m->has_explicit_sender = true;
+      }
     } else if (d->default_send_message_as_dialog_id.is_valid()) {
       if (d->default_send_message_as_dialog_id.get_type() == DialogType::User) {
         m->sender_user_id = my_id;
@@ -26519,9 +26521,12 @@ MessageFullId MessagesManager::on_send_message_success(int64 random_id, MessageI
   // upload was canceled in delete_message
 
   const auto *input_reply_to = get_message_input_reply_to(sent_message.get());
-  if (input_reply_to != nullptr && input_reply_to->is_valid() &&
-      input_reply_to->get_reply_message_full_id(dialog_id).get_message_id().is_yet_unsent()) {
-    set_message_reply(d, sent_message.get(), MessageInputReplyTo(), false);
+  if (input_reply_to != nullptr) {
+    auto reply_message_full_id = input_reply_to->get_reply_message_full_id(dialog_id);
+    auto reply_message_id = reply_message_full_id.get_message_id();
+    if (reply_message_id.is_valid() && reply_message_id.is_yet_unsent()) {
+      set_message_reply(d, sent_message.get(), MessageInputReplyTo(), false);
+    }
   }
 
   sent_message->message_id = new_message_id;
@@ -27982,7 +27987,7 @@ void MessagesManager::on_create_new_dialog(telegram_api::object_ptr<telegram_api
                                            MissingInvitees &&missing_invitees,
                                            Promise<td_api::object_ptr<td_api::createdBasicGroupChat>> &&chat_promise,
                                            Promise<td_api::object_ptr<td_api::chat>> &&channel_promise) {
-  LOG(INFO) << "Receive result for creation of a chat: " << to_string(updates);
+  LOG(INFO) << "Receive result for creating of a chat: " << to_string(updates);
 
   auto fail = [&](Slice message) {
     chat_promise.set_error(Status::Error(500, message));

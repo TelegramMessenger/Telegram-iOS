@@ -300,6 +300,12 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
         }
     }
     
+    @objc private func justCreatedCallTextTap(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            self.item?.openCallAction?()
+        }
+    }
+    
     public func asyncLayout() -> (_ item: ItemListPermanentInviteLinkItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeAddressLayout = TextNode.asyncLayout(self.addressNode)
         let makeInvitedPeersLayout = TextNode.asyncLayout(self.invitedPeersNode)
@@ -587,23 +593,8 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                                 strongSelf.justCreatedCallTextNode = justCreatedCallTextNode
                                 
                                 strongSelf.addSubnode(justCreatedCallTextNode.textNode)
-                            }
-                            
-                            justCreatedCallTextNode.linkHighlightColor = item.presentationData.theme.actionSheet.controlAccentColor.withAlphaComponent(0.1)
-                            justCreatedCallTextNode.highlightAttributeAction = { attributes in
-                                if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
-                                    return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
-                                } else {
-                                    return nil
-                                }
-                            }
-                            justCreatedCallTextNode.tapAttributeAction = { [weak strongSelf] attributes, _ in
-                                guard let strongSelf else {
-                                    return
-                                }
-                                if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
-                                    strongSelf.item?.openCallAction?()
-                                }
+                                
+                                justCreatedCallTextNode.textNode.view.addGestureRecognizer(UITapGestureRecognizer(target: strongSelf, action: #selector(strongSelf.justCreatedCallTextTap(_:))))
                             }
                             
                             let justCreatedCallTextNodeFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((params.width - justCreatedCallTextNodeLayout.0.size.width) / 2.0), y: shareButtonNode.frame.maxY + justCreatedCallTextSpacing), size: CGSize(width: justCreatedCallTextNodeLayout.0.size.width, height: justCreatedCallTextNodeLayout.0.size.height))

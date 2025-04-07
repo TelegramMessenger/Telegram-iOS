@@ -8,6 +8,7 @@
 
 #include "td/telegram/AccessRights.h"
 #include "td/telegram/AuthManager.h"
+#include "td/telegram/BusinessBotRights.h"
 #include "td/telegram/ChatManager.h"
 #include "td/telegram/DialogManager.h"
 #include "td/telegram/files/FileManager.h"
@@ -24,10 +25,12 @@
 #include "td/telegram/MessageQuote.h"
 #include "td/telegram/MessageSelfDestructType.h"
 #include "td/telegram/MessagesManager.h"
+#include "td/telegram/misc.h"
 #include "td/telegram/OptionManager.h"
 #include "td/telegram/Photo.h"
 #include "td/telegram/ReplyMarkup.h"
 #include "td/telegram/ServerMessageId.h"
+#include "td/telegram/StarAmount.h"
 #include "td/telegram/Td.h"
 #include "td/telegram/td_api.h"
 #include "td/telegram/telegram_api.h"
@@ -75,7 +78,7 @@ struct BusinessConnectionManager::BusinessConnection {
   UserId user_id_;
   DcId dc_id_;
   int32 connection_date_ = 0;
-  bool can_reply_ = false;
+  BusinessBotRights rights_;
   bool is_disabled_ = false;
 
   explicit BusinessConnection(const telegram_api::object_ptr<telegram_api::botBusinessConnection> &connection)
@@ -83,7 +86,7 @@ struct BusinessConnectionManager::BusinessConnection {
       , user_id_(connection->user_id_)
       , dc_id_(DcId::create(connection->dc_id_))
       , connection_date_(connection->date_)
-      , can_reply_(connection->can_reply_)
+      , rights_(connection->rights_)
       , is_disabled_(connection->disabled_) {
   }
 
@@ -102,8 +105,8 @@ struct BusinessConnectionManager::BusinessConnection {
     td->dialog_manager_->force_create_dialog(user_dialog_id, "get_business_connection_object");
     return td_api::make_object<td_api::businessConnection>(
         connection_id_.get(), td->user_manager_->get_user_id_object(user_id_, "businessConnection"),
-        td->dialog_manager_->get_chat_id_object(user_dialog_id, "businessConnection"), connection_date_, can_reply_,
-        !is_disabled_);
+        td->dialog_manager_->get_chat_id_object(user_dialog_id, "businessConnection"), connection_date_,
+        is_disabled_ ? nullptr : rights_.get_business_bot_rights_object(), !is_disabled_);
   }
 };
 
@@ -514,8 +517,8 @@ class BusinessConnectionManager::StopBusinessPollQuery final : public Td::Result
     }
 
     auto poll = telegram_api::make_object<telegram_api::poll>(
-        0, telegram_api::poll::CLOSED_MASK, false /*ignored*/, false /*ignored*/, false /*ignored*/, false /*ignored*/,
-        telegram_api::make_object<telegram_api::textWithEntities>(string(), Auto()), Auto(), 0, 0);
+        0, 0, true, false, false, false, telegram_api::make_object<telegram_api::textWithEntities>(string(), Auto()),
+        Auto(), 0, 0);
     auto input_media = telegram_api::make_object<telegram_api::inputMediaPoll>(0, std::move(poll),
                                                                                vector<BufferSlice>(), string(), Auto());
     int32 server_message_id = message_id.get_server_message_id().get();
@@ -537,6 +540,382 @@ class BusinessConnectionManager::StopBusinessPollQuery final : public Td::Result
     auto ptr = result_ptr.move_as_ok();
     LOG(INFO) << "Receive result for StopBusinessPollQuery: " << to_string(ptr);
     td_->business_connection_manager_->process_sent_business_message(std::move(ptr), std::move(promise_));
+  }
+
+  void on_error(Status status) final {
+    promise_.set_error(std::move(status));
+  }
+};
+
+class ReadBusinessMessageQuery final : public Td::ResultHandler {
+  Promise<Unit> promise_;
+
+ public:
+  explicit ReadBusinessMessageQuery(Promise<Unit> &&promise) : promise_(std::move(promise)) {
+  }
+
+  void send(BusinessConnectionId business_connection_id, DialogId dialog_id, MessageId message_id) {
+    auto input_peer = td_->dialog_manager_->get_input_peer(dialog_id, AccessRights::Know);
+    CHECK(input_peer != nullptr);
+    send_query(G()->net_query_creator().create_with_prefix(
+        business_connection_id.get_invoke_prefix(),
+        telegram_api::messages_readHistory(std::move(input_peer), message_id.get_server_message_id().get()),
+        td_->business_connection_manager_->get_business_connection_dc_id(business_connection_id), {{dialog_id}}));
+  }
+
+  void on_result(BufferSlice packet) final {
+    auto result_ptr = fetch_result<telegram_api::messages_readHistory>(packet);
+    if (result_ptr.is_error()) {
+      return on_error(result_ptr.move_as_error());
+    }
+
+    auto ptr = result_ptr.move_as_ok();
+    LOG(INFO) << "Receive result for ReadBusinessMessageQuery: " << to_string(ptr);
+    promise_.set_value(Unit());
+  }
+
+  void on_error(Status status) final {
+    promise_.set_error(std::move(status));
+  }
+};
+
+class DeleteBusinessMessagesQuery final : public Td::ResultHandler {
+  Promise<Unit> promise_;
+
+ public:
+  explicit DeleteBusinessMessagesQuery(Promise<Unit> &&promise) : promise_(std::move(promise)) {
+  }
+
+  void send(BusinessConnectionId business_connection_id, const vector<MessageId> &message_ids) {
+    int32 flags = telegram_api::messages_deleteMessages::REVOKE_MASK;
+    send_query(G()->net_query_creator().create_with_prefix(
+        business_connection_id.get_invoke_prefix(),
+        telegram_api::messages_deleteMessages(flags, false /*ignored*/, MessageId::get_server_message_ids(message_ids)),
+        td_->business_connection_manager_->get_business_connection_dc_id(business_connection_id)));
+  }
+
+  void on_result(BufferSlice packet) final {
+    auto result_ptr = fetch_result<telegram_api::messages_deleteMessages>(packet);
+    if (result_ptr.is_error()) {
+      return on_error(result_ptr.move_as_error());
+    }
+
+    auto affected_messages = result_ptr.move_as_ok();
+    LOG(INFO) << "Receive result for DeleteBusinessMessagesQuery: " << to_string(affected_messages);
+    promise_.set_value(Unit());
+  }
+
+  void on_error(Status status) final {
+    promise_.set_error(std::move(status));
+  }
+};
+
+class DeleteBusinessStoriesQuery final : public Td::ResultHandler {
+  Promise<Unit> promise_;
+
+ public:
+  explicit DeleteBusinessStoriesQuery(Promise<Unit> &&promise) : promise_(std::move(promise)) {
+  }
+
+  void send(BusinessConnectionId business_connection_id, const vector<StoryId> &story_ids) {
+    auto user_id = td_->business_connection_manager_->get_business_connection_user_id(business_connection_id);
+    auto input_peer = td_->dialog_manager_->get_input_peer(DialogId(user_id), AccessRights::Read);
+    if (input_peer == nullptr) {
+      return on_error(Status::Error(400, "Can't access the chat"));
+    }
+    send_query(G()->net_query_creator().create_with_prefix(
+        business_connection_id.get_invoke_prefix(),
+        telegram_api::stories_deleteStories(std::move(input_peer), StoryId::get_input_story_ids(story_ids)),
+        td_->business_connection_manager_->get_business_connection_dc_id(business_connection_id)));
+  }
+
+  void on_result(BufferSlice packet) final {
+    auto result_ptr = fetch_result<telegram_api::stories_deleteStories>(packet);
+    if (result_ptr.is_error()) {
+      return on_error(result_ptr.move_as_error());
+    }
+
+    auto ptr = result_ptr.move_as_ok();
+    LOG(DEBUG) << "Receive result for DeleteBusinessStoriesQuery: " << ptr;
+    promise_.set_value(Unit());
+  }
+
+  void on_error(Status status) final {
+    promise_.set_error(std::move(status));
+  }
+};
+
+class UpdateBusinessProfileQuery final : public Td::ResultHandler {
+  Promise<Unit> promise_;
+  UserId user_id_;
+  bool set_name_ = false;
+  bool set_about_ = false;
+  string first_name_;
+  string last_name_;
+
+ public:
+  explicit UpdateBusinessProfileQuery(Promise<Unit> &&promise) : promise_(std::move(promise)) {
+  }
+
+  void send(const BusinessConnectionId &business_connection_id, UserId user_id, bool set_name, const string &first_name,
+            const string &last_name, bool set_about, const string &about) {
+    user_id_ = user_id;
+    int32 flags = 0;
+    if (set_name) {
+      flags |= telegram_api::account_updateProfile::FIRST_NAME_MASK;
+      flags |= telegram_api::account_updateProfile::LAST_NAME_MASK;
+      set_name_ = true;
+      first_name_ = first_name;
+      last_name_ = last_name;
+    }
+    if (set_about) {
+      set_about_ = true;
+      flags |= telegram_api::account_updateProfile::ABOUT_MASK;
+    }
+    send_query(G()->net_query_creator().create_with_prefix(
+        business_connection_id.get_invoke_prefix(),
+        telegram_api::account_updateProfile(flags, first_name, last_name, about),
+        td_->business_connection_manager_->get_business_connection_dc_id(business_connection_id)));
+  }
+
+  void on_result(BufferSlice packet) final {
+    auto result_ptr = fetch_result<telegram_api::account_updateProfile>(packet);
+    if (result_ptr.is_error()) {
+      return on_error(result_ptr.move_as_error());
+    }
+
+    LOG(DEBUG) << "Receive result for UpdateBusinessProfileQuery: " << to_string(result_ptr.ok());
+
+    if (set_name_ && user_id_.is_valid()) {
+      td_->user_manager_->on_update_user_name(user_id_, std::move(first_name_), std::move(last_name_));
+    }
+    if (set_about_ && user_id_.is_valid()) {
+      td_->user_manager_->invalidate_user_full(user_id_);
+    }
+
+    promise_.set_value(Unit());
+  }
+
+  void on_error(Status status) final {
+    promise_.set_error(std::move(status));
+  }
+};
+
+class UpdateBusinessUsernameQuery final : public Td::ResultHandler {
+  Promise<Unit> promise_;
+  UserId user_id_;
+
+ public:
+  explicit UpdateBusinessUsernameQuery(Promise<Unit> &&promise) : promise_(std::move(promise)) {
+  }
+
+  void send(const BusinessConnectionId &business_connection_id, UserId user_id, const string &username) {
+    user_id_ = user_id;
+    send_query(G()->net_query_creator().create_with_prefix(
+        business_connection_id.get_invoke_prefix(), telegram_api::account_updateUsername(username),
+        td_->business_connection_manager_->get_business_connection_dc_id(business_connection_id)));
+  }
+
+  void on_result(BufferSlice packet) final {
+    auto result_ptr = fetch_result<telegram_api::account_updateUsername>(packet);
+    if (result_ptr.is_error()) {
+      return on_error(result_ptr.move_as_error());
+    }
+
+    LOG(DEBUG) << "Receive result for UpdateBusinessUsernameQuery: " << to_string(result_ptr.ok());
+    td_->user_manager_->on_get_user(result_ptr.move_as_ok(), "UpdateBusinessUsernameQuery");
+
+    promise_.set_value(Unit());
+  }
+
+  void on_error(Status status) final {
+    promise_.set_error(std::move(status));
+  }
+};
+
+class UpdateBusinessGiftSettingsQuery final : public Td::ResultHandler {
+  Promise<Unit> promise_;
+  UserId user_id_;
+
+ public:
+  explicit UpdateBusinessGiftSettingsQuery(Promise<Unit> &&promise) : promise_(std::move(promise)) {
+  }
+
+  void send(const BusinessConnectionId &business_connection_id, UserId user_id, const StarGiftSettings &settings) {
+    user_id_ = user_id;
+
+    int32 flags = 0;
+    auto gifts_settings = settings.get_disallowed_gifts().get_input_disallowed_gifts_settings();
+    if (gifts_settings != nullptr) {
+      flags |= telegram_api::globalPrivacySettings::DISALLOWED_GIFTS_MASK;
+    }
+    send_query(G()->net_query_creator().create_with_prefix(
+        business_connection_id.get_invoke_prefix(),
+        telegram_api::account_setGlobalPrivacySettings(telegram_api::make_object<telegram_api::globalPrivacySettings>(
+            flags, false, false, false, false, false, settings.get_display_gifts_button(), 0,
+            std::move(gifts_settings))),
+        td_->business_connection_manager_->get_business_connection_dc_id(business_connection_id)));
+  }
+
+  void on_result(BufferSlice packet) final {
+    auto result_ptr = fetch_result<telegram_api::account_setGlobalPrivacySettings>(packet);
+    if (result_ptr.is_error()) {
+      return on_error(result_ptr.move_as_error());
+    }
+
+    LOG(DEBUG) << "Receive result for UpdateBusinessGiftSettingsQuery: " << to_string(result_ptr.ok());
+    td_->user_manager_->invalidate_user_full(user_id_);
+
+    promise_.set_value(Unit());
+  }
+
+  void on_error(Status status) final {
+    promise_.set_error(std::move(status));
+  }
+};
+
+class GetBusinessStarsStatusQuery final : public Td::ResultHandler {
+  Promise<td_api::object_ptr<td_api::starAmount>> promise_;
+
+ public:
+  explicit GetBusinessStarsStatusQuery(Promise<td_api::object_ptr<td_api::starAmount>> &&promise)
+      : promise_(std::move(promise)) {
+  }
+
+  void send(const BusinessConnectionId &business_connection_id) {
+    auto user_id = td_->business_connection_manager_->get_business_connection_user_id(business_connection_id);
+    auto input_peer = td_->dialog_manager_->get_input_peer(DialogId(user_id), AccessRights::Read);
+    if (input_peer == nullptr) {
+      return on_error(Status::Error(400, "Can't access the chat"));
+    }
+
+    send_query(G()->net_query_creator().create_with_prefix(
+        business_connection_id.get_invoke_prefix(), telegram_api::payments_getStarsStatus(std::move(input_peer)),
+        td_->business_connection_manager_->get_business_connection_dc_id(business_connection_id)));
+  }
+
+  void on_result(BufferSlice packet) final {
+    auto result_ptr = fetch_result<telegram_api::payments_getStarsStatus>(packet);
+    if (result_ptr.is_error()) {
+      return on_error(result_ptr.move_as_error());
+    }
+
+    auto result = result_ptr.move_as_ok();
+    LOG(DEBUG) << "Receive result for GetBusinessStarsStatusQuery: " << to_string(result);
+
+    auto star_amount = StarAmount(std::move(result->balance_), true);
+    promise_.set_value(star_amount.get_star_amount_object());
+  }
+
+  void on_error(Status status) final {
+    promise_.set_error(std::move(status));
+  }
+};
+
+class TransferBusinessStarsQuery final : public Td::ResultHandler {
+  Promise<Unit> promise_;
+
+ public:
+  explicit TransferBusinessStarsQuery(Promise<Unit> &&promise) : promise_(std::move(promise)) {
+  }
+
+  void send(BusinessConnectionId business_connection_id, int64 payment_form_id, int64 star_count) {
+    send_query(G()->net_query_creator().create_with_prefix(
+        business_connection_id.get_invoke_prefix(),
+        telegram_api::payments_sendStarsForm(
+            payment_form_id, telegram_api::make_object<telegram_api::inputInvoiceBusinessBotTransferStars>(
+                                 telegram_api::make_object<telegram_api::inputUserSelf>(), star_count)),
+        td_->business_connection_manager_->get_business_connection_dc_id(business_connection_id)));
+  }
+
+  void on_result(BufferSlice packet) final {
+    auto result_ptr = fetch_result<telegram_api::payments_sendStarsForm>(packet);
+    if (result_ptr.is_error()) {
+      return on_error(result_ptr.move_as_error());
+    }
+
+    auto payment_result = result_ptr.move_as_ok();
+    LOG(INFO) << "Receive result for TransferBusinessStarsQuery: " << to_string(payment_result);
+    switch (payment_result->get_id()) {
+      case telegram_api::payments_paymentResult::ID: {
+        auto result = telegram_api::move_object_as<telegram_api::payments_paymentResult>(payment_result);
+        promise_.set_value(Unit());
+        break;
+      }
+      case telegram_api::payments_paymentVerificationNeeded::ID:
+        LOG(ERROR) << "Receive " << to_string(payment_result);
+        break;
+      default:
+        UNREACHABLE();
+    }
+  }
+
+  void on_error(Status status) final {
+    if (status.message() == "FORM_SUBMIT_DUPLICATE") {
+      LOG(ERROR) << "Receive FORM_SUBMIT_DUPLICATE";
+    }
+    promise_.set_error(std::move(status));
+  }
+};
+
+class GetBusinessStarTransferPaymentFormQuery final : public Td::ResultHandler {
+  Promise<Unit> promise_;
+  BusinessConnectionId business_connection_id_;
+  int64 star_count_;
+
+ public:
+  explicit GetBusinessStarTransferPaymentFormQuery(Promise<Unit> &&promise) : promise_(std::move(promise)) {
+  }
+
+  void send(BusinessConnectionId business_connection_id, int64 star_count) {
+    business_connection_id_ = business_connection_id;
+    star_count_ = star_count;
+    send_query(G()->net_query_creator().create_with_prefix(
+        business_connection_id.get_invoke_prefix(),
+        telegram_api::payments_getPaymentForm(
+            0,
+            telegram_api::make_object<telegram_api::inputInvoiceBusinessBotTransferStars>(
+                telegram_api::make_object<telegram_api::inputUserSelf>(), star_count_),
+            nullptr),
+        td_->business_connection_manager_->get_business_connection_dc_id(business_connection_id)));
+  }
+
+  void on_result(BufferSlice packet) final {
+    auto result_ptr = fetch_result<telegram_api::payments_getPaymentForm>(packet);
+    if (result_ptr.is_error()) {
+      return on_error(result_ptr.move_as_error());
+    }
+
+    auto payment_form_ptr = result_ptr.move_as_ok();
+    LOG(INFO) << "Receive result for GetBusinessStarTransferPaymentFormQuery: " << to_string(payment_form_ptr);
+    switch (payment_form_ptr->get_id()) {
+      case telegram_api::payments_paymentForm::ID:
+        LOG(ERROR) << "Receive " << to_string(payment_form_ptr);
+        promise_.set_error(Status::Error(500, "Unsupported"));
+        break;
+      case telegram_api::payments_paymentFormStars::ID: {
+        auto payment_form = static_cast<const telegram_api::payments_paymentFormStars *>(payment_form_ptr.get());
+        if (payment_form->invoice_->prices_.size() != 1u ||
+            payment_form->invoice_->prices_[0]->amount_ != star_count_) {
+          return promise_.set_error(Status::Error(400, "Wrong transfer price specified"));
+        }
+        td_->create_handler<TransferBusinessStarsQuery>(std::move(promise_))
+            ->send(business_connection_id_, payment_form->form_id_, star_count_);
+        break;
+      }
+      case telegram_api::payments_paymentFormStarGift::ID: {
+        auto payment_form = static_cast<const telegram_api::payments_paymentFormStarGift *>(payment_form_ptr.get());
+        if (payment_form->invoice_->prices_.size() != 1u ||
+            payment_form->invoice_->prices_[0]->amount_ != star_count_) {
+          return promise_.set_error(Status::Error(400, "Wrong transfer price specified"));
+        }
+        td_->create_handler<TransferBusinessStarsQuery>(std::move(promise_))
+            ->send(business_connection_id_, payment_form->form_id_, star_count_);
+        break;
+      }
+      default:
+        UNREACHABLE();
+    }
   }
 
   void on_error(Status status) final {
@@ -584,6 +963,16 @@ void BusinessConnectionManager::tear_down() {
   parent_.reset();
 }
 
+Status BusinessConnectionManager::check_business_connection(const BusinessConnectionId &connection_id) const {
+  CHECK(td_->auth_manager_->is_bot());
+  auto connection = business_connections_.get_pointer(connection_id);
+  if (connection == nullptr) {
+    return Status::Error(400, "Business connection not found");
+  }
+  // no need to check connection->rights_ and connection->is_disabled_
+  return Status::OK();
+}
+
 Status BusinessConnectionManager::check_business_connection(const BusinessConnectionId &connection_id,
                                                             DialogId dialog_id) const {
   CHECK(td_->auth_manager_->is_bot());
@@ -597,7 +986,7 @@ Status BusinessConnectionManager::check_business_connection(const BusinessConnec
   if (dialog_id == DialogId(connection->user_id_)) {
     return Status::Error(400, "Messages must not be sent to self");
   }
-  // no need to check connection->can_reply_ and connection->is_disabled_
+  // no need to check connection->rights_ and connection->is_disabled_
   return Status::OK();
 }
 
@@ -609,6 +998,22 @@ Status BusinessConnectionManager::check_business_message_id(MessageId message_id
     return Status::Error(400, "Wrong message identifier specified");
   }
   return Status::OK();
+}
+
+Status BusinessConnectionManager::check_business_story_id(StoryId story_id) const {
+  if (!story_id.is_valid()) {
+    return Status::Error(400, "Invalid story identifier specified");
+  }
+  if (!story_id.is_server()) {
+    return Status::Error(400, "Wrong story identifier specified");
+  }
+  return Status::OK();
+}
+
+UserId BusinessConnectionManager::get_business_connection_user_id(const BusinessConnectionId &connection_id) const {
+  auto connection = business_connections_.get_pointer(connection_id);
+  CHECK(connection != nullptr);
+  return connection->user_id_;
 }
 
 DcId BusinessConnectionManager::get_business_connection_dc_id(const BusinessConnectionId &connection_id) const {
@@ -1511,6 +1916,92 @@ void BusinessConnectionManager::stop_poll(BusinessConnectionId business_connecti
 
   td_->create_handler<StopBusinessPollQuery>(std::move(promise))
       ->send(business_connection_id, dialog_id, message_id, std::move(new_reply_markup));
+}
+
+void BusinessConnectionManager::read_business_message(BusinessConnectionId business_connection_id, DialogId dialog_id,
+                                                      MessageId message_id, Promise<Unit> &&promise) {
+  TRY_STATUS_PROMISE(promise, check_business_connection(business_connection_id, dialog_id));
+  TRY_STATUS_PROMISE(promise, check_business_message_id(message_id));
+
+  td_->create_handler<ReadBusinessMessageQuery>(std::move(promise))
+      ->send(business_connection_id, dialog_id, message_id);
+}
+
+void BusinessConnectionManager::delete_business_messages(BusinessConnectionId business_connection_id,
+                                                         const vector<MessageId> &message_ids,
+                                                         Promise<Unit> &&promise) {
+  TRY_STATUS_PROMISE(promise, check_business_connection(business_connection_id));
+  for (auto message_id : message_ids) {
+    TRY_STATUS_PROMISE(promise, check_business_message_id(message_id));
+  }
+  if (message_ids.size() > 100u) {
+    return promise.set_error(Status::Error(400, "Too many messages identifiers specified"));
+  }
+
+  td_->create_handler<DeleteBusinessMessagesQuery>(std::move(promise))->send(business_connection_id, message_ids);
+}
+
+void BusinessConnectionManager::delete_business_story(BusinessConnectionId business_connection_id, StoryId story_id,
+                                                      Promise<Unit> &&promise) {
+  TRY_STATUS_PROMISE(promise, check_business_connection(business_connection_id));
+  TRY_STATUS_PROMISE(promise, check_business_story_id(story_id));
+  td_->create_handler<DeleteBusinessStoriesQuery>(std::move(promise))->send(business_connection_id, {story_id});
+}
+
+void BusinessConnectionManager::set_business_name(BusinessConnectionId business_connection_id, const string &first_name,
+                                                  const string &last_name, Promise<Unit> &&promise) {
+  TRY_STATUS_PROMISE(promise, check_business_connection(business_connection_id));
+  auto user_id = get_business_connection_user_id(business_connection_id);
+
+  td_->create_handler<UpdateBusinessProfileQuery>(std::move(promise))
+      ->send(business_connection_id, user_id, true, clean_name(first_name, MAX_NAME_LENGTH),
+             clean_name(last_name, MAX_NAME_LENGTH), false, string());
+}
+
+void BusinessConnectionManager::set_business_about(BusinessConnectionId business_connection_id, const string &about,
+                                                   Promise<Unit> &&promise) {
+  TRY_STATUS_PROMISE(promise, check_business_connection(business_connection_id));
+  auto user_id = get_business_connection_user_id(business_connection_id);
+
+  td_->create_handler<UpdateBusinessProfileQuery>(std::move(promise))
+      ->send(business_connection_id, user_id, false, string(), string(), true, about);
+}
+
+void BusinessConnectionManager::set_business_username(BusinessConnectionId business_connection_id,
+                                                      const string &username, Promise<Unit> &&promise) {
+  TRY_STATUS_PROMISE(promise, check_business_connection(business_connection_id));
+  if (!username.empty() && !is_allowed_username(username)) {
+    return promise.set_error(Status::Error(400, "Username is invalid"));
+  }
+  auto user_id = get_business_connection_user_id(business_connection_id);
+
+  td_->create_handler<UpdateBusinessUsernameQuery>(std::move(promise))->send(business_connection_id, user_id, username);
+}
+
+void BusinessConnectionManager::set_business_gift_settings(BusinessConnectionId business_connection_id,
+                                                           StarGiftSettings settings, Promise<Unit> &&promise) {
+  TRY_STATUS_PROMISE(promise, check_business_connection(business_connection_id));
+  auto user_id = get_business_connection_user_id(business_connection_id);
+
+  td_->create_handler<UpdateBusinessGiftSettingsQuery>(std::move(promise))
+      ->send(business_connection_id, user_id, settings);
+}
+
+void BusinessConnectionManager::get_business_star_status(BusinessConnectionId business_connection_id,
+                                                         Promise<td_api::object_ptr<td_api::starAmount>> &&promise) {
+  TRY_STATUS_PROMISE(promise, check_business_connection(business_connection_id));
+  td_->create_handler<GetBusinessStarsStatusQuery>(std::move(promise))->send(business_connection_id);
+}
+
+void BusinessConnectionManager::transfer_business_stars(BusinessConnectionId business_connection_id, int64 star_count,
+                                                        Promise<Unit> &&promise) {
+  TRY_STATUS_PROMISE(promise, check_business_connection(business_connection_id));
+  if (star_count <= 0 || star_count > 1000000000) {
+    return promise.set_error(Status::Error(400, "Invalid amount of Telegram Stars to transfer specified"));
+  }
+
+  td_->create_handler<GetBusinessStarTransferPaymentFormQuery>(std::move(promise))
+      ->send(business_connection_id, star_count);
 }
 
 td_api::object_ptr<td_api::updateBusinessConnection> BusinessConnectionManager::get_update_business_connection(

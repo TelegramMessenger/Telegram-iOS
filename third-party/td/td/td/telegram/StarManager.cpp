@@ -203,13 +203,9 @@ class GetStarsTransactionsQuery final : public Td::ResultHandler {
     if (input_peer == nullptr) {
       return on_error(Status::Error(400, "Have no access to the chat"));
     }
-    int32 flags = 0;
-    if (is_refund) {
-      flags |= telegram_api::inputStarsTransaction::REFUND_MASK;
-    }
     vector<telegram_api::object_ptr<telegram_api::inputStarsTransaction>> transaction_ids;
     transaction_ids.push_back(
-        telegram_api::make_object<telegram_api::inputStarsTransaction>(flags, false /*ignored*/, transaction_id));
+        telegram_api::make_object<telegram_api::inputStarsTransaction>(0, is_refund, transaction_id));
     send_query(G()->net_query_creator().create(
         telegram_api::payments_getStarsTransactionsByID(std::move(input_peer), std::move(transaction_ids))));
   }
@@ -403,6 +399,21 @@ class GetStarsTransactionsQuery final : public Td::ResultHandler {
             if (dialog_id.get_type() == DialogType::User) {
               auto user_id = dialog_id.get_user_id();
               auto user_id_object = td_->user_manager_->get_user_id_object(user_id, "starsTransactionPeer");
+              if (transaction->business_transfer_) {
+                transaction->business_transfer_ = false;
+                if (is_purchase) {
+                  if (for_user) {
+                    product_info = nullptr;
+                    return td_api::make_object<td_api::starTransactionTypeBusinessBotTransferSend>(user_id_object);
+                  }
+                } else {
+                  if (for_bot) {
+                    product_info = nullptr;
+                    return td_api::make_object<td_api::starTransactionTypeBusinessBotTransferReceive>(user_id_object);
+                  }
+                }
+                return nullptr;
+              }
               if (transaction->stargift_ != nullptr) {
                 auto gift = StarGift(td_, std::move(transaction->stargift_), true);
                 transaction->stargift_ = nullptr;
@@ -439,6 +450,7 @@ class GetStarsTransactionsQuery final : public Td::ResultHandler {
                     LOG(ERROR) << "Receive sale of an upgraded gift";
                   } else {
                     if (for_user || for_channel) {
+                      product_info = nullptr;
                       return td_api::make_object<td_api::starTransactionTypeGiftSale>(user_id_object,
                                                                                       gift.get_gift_object(td_));
                     }
@@ -502,22 +514,22 @@ class GetStarsTransactionsQuery final : public Td::ResultHandler {
               SCOPE_EXIT {
                 bot_payload.clear();
               };
+              if (transaction->premium_gift_months_ > 0 && is_purchase) {
+                SCOPE_EXIT {
+                  transaction->premium_gift_months_ = 0;
+                  product_info = nullptr;
+                };
+                if (for_user || for_bot) {
+                  return td_api::make_object<td_api::starTransactionTypePremiumPurchase>(
+                      user_id_object, transaction->premium_gift_months_,
+                      td_->stickers_manager_->get_premium_gift_sticker_object(transaction->premium_gift_months_, 0));
+                }
+              }
               if (product_info != nullptr) {
                 if (is_purchase) {
                   if (for_user) {
-                    if (transaction->premium_gift_months_ > 0) {
-                      SCOPE_EXIT {
-                        transaction->premium_gift_months_ = 0;
-                        product_info = nullptr;
-                      };
-                      return td_api::make_object<td_api::starTransactionTypePremiumPurchase>(
-                          user_id_object, transaction->premium_gift_months_,
-                          td_->stickers_manager_->get_premium_gift_sticker_object(transaction->premium_gift_months_,
-                                                                                  0));
-                    } else {
-                      return td_api::make_object<td_api::starTransactionTypeBotInvoicePurchase>(
-                          user_id_object, std::move(product_info));
-                    }
+                    return td_api::make_object<td_api::starTransactionTypeBotInvoicePurchase>(user_id_object,
+                                                                                              std::move(product_info));
                   }
                 } else {
                   if (for_bot) {
@@ -688,6 +700,9 @@ class GetStarsTransactionsQuery final : public Td::ResultHandler {
         }
         if (transaction->premium_gift_months_) {
           LOG(ERROR) << "Receive Telegram Premium purchase with " << to_string(star_transaction);
+        }
+        if (transaction->business_transfer_) {
+          LOG(ERROR) << "Receive business bot transfer with " << to_string(star_transaction);
         }
       }
       if (!file_ids.empty()) {

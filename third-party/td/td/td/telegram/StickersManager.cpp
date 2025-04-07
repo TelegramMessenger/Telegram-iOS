@@ -1122,23 +1122,13 @@ class CreateNewStickerSetQuery final : public Td::ResultHandler {
     CHECK(input_user != nullptr);
 
     int32 flags = 0;
-    if (sticker_type == StickerType::Mask) {
-      flags |= telegram_api::stickers_createStickerSet::MASKS_MASK;
-    }
-    if (sticker_type == StickerType::CustomEmoji) {
-      flags |= telegram_api::stickers_createStickerSet::EMOJIS_MASK;
-    }
-    if (has_text_color) {
-      flags |= telegram_api::stickers_createStickerSet::TEXT_COLOR_MASK;
-    }
     if (!software.empty()) {
       flags |= telegram_api::stickers_createStickerSet::SOFTWARE_MASK;
     }
-
     send_query(G()->net_query_creator().create(
-        telegram_api::stickers_createStickerSet(flags, false /*ignored*/, false /*ignored*/, false /*ignored*/,
-                                                std::move(input_user), title, short_name, nullptr,
-                                                std::move(input_stickers), software),
+        telegram_api::stickers_createStickerSet(
+            flags, sticker_type == StickerType::Mask, sticker_type == StickerType::CustomEmoji, has_text_color,
+            std::move(input_user), title, short_name, nullptr, std::move(input_stickers), software),
         {{short_name}}));
   }
 
@@ -2914,25 +2904,25 @@ std::pair<int64, FileId> StickersManager::on_get_sticker_document(tl_object_ptr<
   auto dc_id = DcId::internal(document->dc_id_);
 
   Dimensions dimensions;
-  tl_object_ptr<telegram_api::documentAttributeSticker> sticker;
-  tl_object_ptr<telegram_api::documentAttributeCustomEmoji> custom_emoji;
+  telegram_api::object_ptr<telegram_api::documentAttributeSticker> sticker;
+  telegram_api::object_ptr<telegram_api::documentAttributeCustomEmoji> custom_emoji;
   for (auto &attribute : document->attributes_) {
     switch (attribute->get_id()) {
       case telegram_api::documentAttributeVideo::ID: {
-        auto video = move_tl_object_as<telegram_api::documentAttributeVideo>(attribute);
+        auto video = telegram_api::move_object_as<telegram_api::documentAttributeVideo>(attribute);
         dimensions = get_dimensions(video->w_, video->h_, "sticker documentAttributeVideo");
         break;
       }
       case telegram_api::documentAttributeImageSize::ID: {
-        auto image_size = move_tl_object_as<telegram_api::documentAttributeImageSize>(attribute);
+        auto image_size = telegram_api::move_object_as<telegram_api::documentAttributeImageSize>(attribute);
         dimensions = get_dimensions(image_size->w_, image_size->h_, "sticker documentAttributeImageSize");
         break;
       }
       case telegram_api::documentAttributeSticker::ID:
-        sticker = move_tl_object_as<telegram_api::documentAttributeSticker>(attribute);
+        sticker = telegram_api::move_object_as<telegram_api::documentAttributeSticker>(attribute);
         break;
       case telegram_api::documentAttributeCustomEmoji::ID:
-        custom_emoji = move_tl_object_as<telegram_api::documentAttributeCustomEmoji>(attribute);
+        custom_emoji = telegram_api::move_object_as<telegram_api::documentAttributeCustomEmoji>(attribute);
         break;
       default:
         continue;
@@ -3297,8 +3287,8 @@ void StickersManager::add_sticker_thumbnail(Sticker *s, PhotoSize thumbnail) {
 
 void StickersManager::create_sticker(FileId file_id, FileId premium_animation_file_id, string minithumbnail,
                                      PhotoSize thumbnail, Dimensions dimensions,
-                                     tl_object_ptr<telegram_api::documentAttributeSticker> sticker,
-                                     tl_object_ptr<telegram_api::documentAttributeCustomEmoji> custom_emoji,
+                                     telegram_api::object_ptr<telegram_api::documentAttributeSticker> sticker,
+                                     telegram_api::object_ptr<telegram_api::documentAttributeCustomEmoji> custom_emoji,
                                      StickerFormat format, MultiPromiseActor *load_data_multipromise_ptr) {
   if (format == StickerFormat::Unknown && sticker == nullptr) {
     auto old_sticker = get_sticker(file_id);
@@ -3335,7 +3325,7 @@ void StickersManager::create_sticker(FileId file_id, FileId premium_animation_fi
     s->set_id_ = on_get_input_sticker_set(file_id, std::move(sticker->stickerset_), load_data_multipromise_ptr);
     s->alt_ = std::move(sticker->alt_);
 
-    if ((sticker->flags_ & telegram_api::documentAttributeSticker::MASK_MASK) != 0) {
+    if (sticker->mask_) {
       s->type_ = StickerType::Mask;
     }
     s->mask_position_ = StickerMaskPosition(sticker->mask_coords_);
@@ -3406,7 +3396,7 @@ SecretInputMedia StickersManager::get_secret_input_media(
     }
   }
 
-  vector<tl_object_ptr<secret_api::DocumentAttribute>> attributes;
+  vector<secret_api::object_ptr<secret_api::DocumentAttribute>> attributes;
   attributes.push_back(
       secret_api::make_object<secret_api::documentAttributeSticker>(sticker->alt_, std::move(input_sticker_set)));
   if (sticker->dimensions_.width != 0 && sticker->dimensions_.height != 0) {
@@ -3436,12 +3426,12 @@ SecretInputMedia StickersManager::get_secret_input_media(
       LOG(ERROR) << "Have a sticker of size " << file_view.size() << " in " << sticker->set_id_;
       return {};
     }
-    return SecretInputMedia{
-        nullptr, make_tl_object<secret_api::decryptedMessageMediaExternalDocument>(
-                     full_remote_location->get_id(), full_remote_location->get_access_hash(), 0 /*date*/,
-                     get_sticker_format_mime_type(sticker->format_), narrow_cast<int32>(file_view.size()),
-                     make_tl_object<secret_api::photoSizeEmpty>("t"), full_remote_location->get_dc_id().get_raw_id(),
-                     std::move(attributes))};
+    return SecretInputMedia{nullptr,
+                            secret_api::make_object<secret_api::decryptedMessageMediaExternalDocument>(
+                                full_remote_location->get_id(), full_remote_location->get_access_hash(), 0 /*date*/,
+                                get_sticker_format_mime_type(sticker->format_), narrow_cast<int32>(file_view.size()),
+                                secret_api::make_object<secret_api::photoSizeEmpty>("t"),
+                                full_remote_location->get_dc_id().get_raw_id(), std::move(attributes))};
   }
 }
 
@@ -3470,14 +3460,13 @@ tl_object_ptr<telegram_api::InputMedia> StickersManager::get_input_media(
     const Sticker *s = get_sticker(file_id);
     CHECK(s != nullptr);
 
-    vector<tl_object_ptr<telegram_api::DocumentAttribute>> attributes;
+    vector<telegram_api::object_ptr<telegram_api::DocumentAttribute>> attributes;
     if (s->dimensions_.width != 0 && s->dimensions_.height != 0) {
-      attributes.push_back(
-          make_tl_object<telegram_api::documentAttributeImageSize>(s->dimensions_.width, s->dimensions_.height));
+      attributes.push_back(telegram_api::make_object<telegram_api::documentAttributeImageSize>(s->dimensions_.width,
+                                                                                               s->dimensions_.height));
     }
-    attributes.push_back(make_tl_object<telegram_api::documentAttributeSticker>(
-        0, false /*ignored*/, emoji.empty() ? s->alt_ : emoji, make_tl_object<telegram_api::inputStickerSetEmpty>(),
-        nullptr));
+    attributes.push_back(telegram_api::make_object<telegram_api::documentAttributeSticker>(
+        0, false, emoji.empty() ? s->alt_ : emoji, make_tl_object<telegram_api::inputStickerSetEmpty>(), nullptr));
 
     int32 flags = 0;
     if (input_thumbnail != nullptr) {

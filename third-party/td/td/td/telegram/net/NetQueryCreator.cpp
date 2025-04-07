@@ -42,7 +42,7 @@ NetQueryPtr NetQueryCreator::create_with_prefix(const telegram_api::object_ptr<t
 NetQueryPtr NetQueryCreator::create(uint64 id, const telegram_api::object_ptr<telegram_api::Function> &prefix,
                                     const telegram_api::Function &function, vector<ChainId> &&chain_ids, DcId dc_id,
                                     NetQuery::Type type, NetQuery::AuthFlag auth_flag) {
-  LOG(INFO) << "Create query " << to_string(function);
+  LOG(INFO) << "Create query " << (prefix != nullptr ? "with a prefix " : "") << to_string(function);
   string prefix_str;
   if (prefix != nullptr) {
     auto storer = DefaultStorer<telegram_api::Function>(*prefix);

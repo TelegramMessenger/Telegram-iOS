@@ -130,14 +130,8 @@ telegram_api::object_ptr<telegram_api::RequestPeerType> RequestedDialogType::get
       if (restrict_is_forum_) {
         flags |= telegram_api::requestPeerTypeChat::FORUM_MASK;
       }
-      if (bot_is_participant_) {
-        flags |= telegram_api::requestPeerTypeChat::BOT_PARTICIPANT_MASK;
-      }
       if (restrict_has_username_) {
         flags |= telegram_api::requestPeerTypeChat::HAS_USERNAME_MASK;
-      }
-      if (is_created_) {
-        flags |= telegram_api::requestPeerTypeChat::CREATOR_MASK;
       }
       if (restrict_user_administrator_rights_) {
         flags |= telegram_api::requestPeerTypeChat::USER_ADMIN_RIGHTS_MASK;
@@ -150,16 +144,13 @@ telegram_api::object_ptr<telegram_api::RequestPeerType> RequestedDialogType::get
       auto bot_admin_rights =
           restrict_bot_administrator_rights_ ? bot_administrator_rights_.get_chat_admin_rights() : nullptr;
       return telegram_api::make_object<telegram_api::requestPeerTypeChat>(
-          flags, false /*ignored*/, false /*ignored*/, has_username_, is_forum_, std::move(user_admin_rights),
+          flags, is_created_, bot_is_participant_, has_username_, is_forum_, std::move(user_admin_rights),
           std::move(bot_admin_rights));
     }
     case Type::Channel: {
       int32 flags = 0;
       if (restrict_has_username_) {
         flags |= telegram_api::requestPeerTypeBroadcast::HAS_USERNAME_MASK;
-      }
-      if (is_created_) {
-        flags |= telegram_api::requestPeerTypeBroadcast::CREATOR_MASK;
       }
       if (restrict_user_administrator_rights_) {
         flags |= telegram_api::requestPeerTypeBroadcast::USER_ADMIN_RIGHTS_MASK;
@@ -172,7 +163,7 @@ telegram_api::object_ptr<telegram_api::RequestPeerType> RequestedDialogType::get
       auto bot_admin_rights =
           restrict_bot_administrator_rights_ ? bot_administrator_rights_.get_chat_admin_rights() : nullptr;
       return telegram_api::make_object<telegram_api::requestPeerTypeBroadcast>(
-          flags, false /*ignored*/, has_username_, std::move(user_admin_rights), std::move(bot_admin_rights));
+          flags, is_created_, has_username_, std::move(user_admin_rights), std::move(bot_admin_rights));
     }
     default:
       UNREACHABLE();
@@ -182,19 +173,9 @@ telegram_api::object_ptr<telegram_api::RequestPeerType> RequestedDialogType::get
 
 telegram_api::object_ptr<telegram_api::inputKeyboardButtonRequestPeer>
 RequestedDialogType::get_input_keyboard_button_request_peer(const string &text) const {
-  int32 flags = 0;
-  if (request_name_) {
-    flags |= telegram_api::inputKeyboardButtonRequestPeer::NAME_REQUESTED_MASK;
-  }
-  if (request_username_) {
-    flags |= telegram_api::inputKeyboardButtonRequestPeer::USERNAME_REQUESTED_MASK;
-  }
-  if (request_photo_) {
-    flags |= telegram_api::inputKeyboardButtonRequestPeer::PHOTO_REQUESTED_MASK;
-  }
   return telegram_api::make_object<telegram_api::inputKeyboardButtonRequestPeer>(
-      flags, false /*ignored*/, false /*ignored*/, false /*ignored*/, text, button_id_,
-      get_input_request_peer_type_object(), max_quantity_);
+      0, request_name_, request_username_, request_photo_, text, button_id_, get_input_request_peer_type_object(),
+      max_quantity_);
 }
 
 int32 RequestedDialogType::get_button_id() const {

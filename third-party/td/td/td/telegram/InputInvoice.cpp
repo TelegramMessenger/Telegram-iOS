@@ -267,39 +267,16 @@ td_api::object_ptr<td_api::messageInvoice> InputInvoice::get_message_invoice_obj
 
 tl_object_ptr<telegram_api::invoice> InputInvoice::Invoice::get_input_invoice() const {
   int32 flags = 0;
-  if (is_test_) {
-    flags |= telegram_api::invoice::TEST_MASK;
-  }
-  if (need_name_) {
-    flags |= telegram_api::invoice::NAME_REQUESTED_MASK;
-  }
-  if (need_phone_number_) {
-    flags |= telegram_api::invoice::PHONE_REQUESTED_MASK;
-  }
-  if (need_email_address_) {
-    flags |= telegram_api::invoice::EMAIL_REQUESTED_MASK;
-  }
-  if (need_shipping_address_) {
-    flags |= telegram_api::invoice::SHIPPING_ADDRESS_REQUESTED_MASK;
-  }
-  if (send_phone_number_to_provider_) {
-    flags |= telegram_api::invoice::PHONE_TO_PROVIDER_MASK;
-  }
-  if (send_email_address_to_provider_) {
-    flags |= telegram_api::invoice::EMAIL_TO_PROVIDER_MASK;
-  }
-  if (is_flexible_) {
-    flags |= telegram_api::invoice::FLEXIBLE_MASK;
-  }
   if (max_tip_amount_ != 0) {
     flags |= telegram_api::invoice::MAX_TIP_AMOUNT_MASK;
   }
   if (subscription_period_ != 0) {
     flags |= telegram_api::invoice::SUBSCRIPTION_PERIOD_MASK;
   }
+  bool is_recurring = false;
   string terms_of_service_url;
   if (!recurring_payment_terms_of_service_url_.empty()) {
-    flags |= telegram_api::invoice::RECURRING_MASK;
+    is_recurring = true;
     flags |= telegram_api::invoice::TERMS_URL_MASK;
     terms_of_service_url = recurring_payment_terms_of_service_url_;
   } else if (!terms_of_service_url_.empty()) {
@@ -310,9 +287,9 @@ tl_object_ptr<telegram_api::invoice> InputInvoice::Invoice::get_input_invoice() 
   auto prices = transform(price_parts_, [](const LabeledPricePart &price) {
     return telegram_api::make_object<telegram_api::labeledPrice>(price.label, price.amount);
   });
-  return make_tl_object<telegram_api::invoice>(
-      flags, false /*ignored*/, false /*ignored*/, false /*ignored*/, false /*ignored*/, false /*ignored*/,
-      false /*ignored*/, false /*ignored*/, false /*ignored*/, false /*ignored*/, currency_, std::move(prices),
+  return telegram_api::make_object<telegram_api::invoice>(
+      flags, is_test_, need_name_, need_phone_number_, need_email_address_, need_shipping_address_, is_flexible_,
+      send_phone_number_to_provider_, send_email_address_to_provider_, is_recurring, currency_, std::move(prices),
       max_tip_amount_, vector<int64>(suggested_tip_amounts_), terms_of_service_url, subscription_period_);
 }
 
@@ -326,10 +303,10 @@ static telegram_api::object_ptr<telegram_api::inputWebDocument> get_input_web_do
   const PhotoSize &size = photo.photos[0];
   CHECK(size.file_id.is_valid());
 
-  vector<tl_object_ptr<telegram_api::DocumentAttribute>> attributes;
+  vector<telegram_api::object_ptr<telegram_api::DocumentAttribute>> attributes;
   if (size.dimensions.width != 0 && size.dimensions.height != 0) {
-    attributes.push_back(
-        make_tl_object<telegram_api::documentAttributeImageSize>(size.dimensions.width, size.dimensions.height));
+    attributes.push_back(telegram_api::make_object<telegram_api::documentAttributeImageSize>(size.dimensions.width,
+                                                                                             size.dimensions.height));
   }
 
   auto file_view = file_manager->get_file_view(size.file_id);

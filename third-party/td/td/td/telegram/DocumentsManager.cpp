@@ -74,11 +74,11 @@ tl_object_ptr<td_api::document> DocumentsManager::get_document_object(FileId fil
 Document DocumentsManager::on_get_document(RemoteDocument remote_document, DialogId owner_dialog_id,
                                            bool is_self_destructing, MultiPromiseActor *load_data_multipromise_ptr,
                                            Document::Type default_document_type, Subtype document_subtype) {
-  tl_object_ptr<telegram_api::documentAttributeAnimated> animated;
-  tl_object_ptr<telegram_api::documentAttributeVideo> video;
-  tl_object_ptr<telegram_api::documentAttributeAudio> audio;
-  tl_object_ptr<telegram_api::documentAttributeSticker> sticker;
-  tl_object_ptr<telegram_api::documentAttributeCustomEmoji> custom_emoji;
+  telegram_api::object_ptr<telegram_api::documentAttributeAnimated> animated;
+  telegram_api::object_ptr<telegram_api::documentAttributeVideo> video;
+  telegram_api::object_ptr<telegram_api::documentAttributeAudio> audio;
+  telegram_api::object_ptr<telegram_api::documentAttributeSticker> sticker;
+  telegram_api::object_ptr<telegram_api::documentAttributeCustomEmoji> custom_emoji;
   Dimensions dimensions;
   string file_name;
   bool has_stickers = false;
@@ -86,25 +86,25 @@ Document DocumentsManager::on_get_document(RemoteDocument remote_document, Dialo
   for (auto &attribute : remote_document.attributes) {
     switch (attribute->get_id()) {
       case telegram_api::documentAttributeImageSize::ID: {
-        auto image_size = move_tl_object_as<telegram_api::documentAttributeImageSize>(attribute);
+        auto image_size = telegram_api::move_object_as<telegram_api::documentAttributeImageSize>(attribute);
         dimensions =
             get_dimensions(image_size->w_, image_size->h_, oneline(to_string(remote_document.document)).c_str());
         break;
       }
       case telegram_api::documentAttributeAnimated::ID:
-        animated = move_tl_object_as<telegram_api::documentAttributeAnimated>(attribute);
+        animated = telegram_api::move_object_as<telegram_api::documentAttributeAnimated>(attribute);
         type_attributes++;
         break;
       case telegram_api::documentAttributeSticker::ID:
-        sticker = move_tl_object_as<telegram_api::documentAttributeSticker>(attribute);
+        sticker = telegram_api::move_object_as<telegram_api::documentAttributeSticker>(attribute);
         type_attributes++;
         break;
       case telegram_api::documentAttributeVideo::ID:
-        video = move_tl_object_as<telegram_api::documentAttributeVideo>(attribute);
+        video = telegram_api::move_object_as<telegram_api::documentAttributeVideo>(attribute);
         type_attributes++;
         break;
       case telegram_api::documentAttributeAudio::ID:
-        audio = move_tl_object_as<telegram_api::documentAttributeAudio>(attribute);
+        audio = telegram_api::move_object_as<telegram_api::documentAttributeAudio>(attribute);
         type_attributes++;
         break;
       case telegram_api::documentAttributeFilename::ID:
@@ -114,7 +114,7 @@ Document DocumentsManager::on_get_document(RemoteDocument remote_document, Dialo
         has_stickers = true;
         break;
       case telegram_api::documentAttributeCustomEmoji::ID:
-        custom_emoji = move_tl_object_as<telegram_api::documentAttributeCustomEmoji>(attribute);
+        custom_emoji = telegram_api::move_object_as<telegram_api::documentAttributeCustomEmoji>(attribute);
         type_attributes++;
         break;
       default:
@@ -154,7 +154,7 @@ Document DocumentsManager::on_get_document(RemoteDocument remote_document, Dialo
 
     if (animated != nullptr) {
       type_attributes--;
-      if ((video->flags_ & telegram_api::documentAttributeVideo::ROUND_MESSAGE_MASK) != 0) {
+      if (video->round_message_) {
         // video note without sound
         animated = nullptr;
       } else if (sticker != nullptr || custom_emoji != nullptr) {
@@ -209,7 +209,7 @@ Document DocumentsManager::on_get_document(RemoteDocument remote_document, Dialo
                default_document_type == Document::Type::VoiceNote) {
       bool is_voice_note = default_document_type == Document::Type::VoiceNote;
       if (audio != nullptr) {
-        is_voice_note = (audio->flags_ & telegram_api::documentAttributeAudio::VOICE_MASK) != 0;
+        is_voice_note = audio->voice_;
       }
       if (is_voice_note) {
         document_type = Document::Type::VoiceNote;
@@ -232,9 +232,9 @@ Document DocumentsManager::on_get_document(RemoteDocument remote_document, Dialo
                default_document_type == Document::Type::VideoNote) {
       bool is_video_note = default_document_type == Document::Type::VideoNote;
       if (video != nullptr) {
-        is_video_note = (video->flags_ & telegram_api::documentAttributeVideo::ROUND_MESSAGE_MASK) != 0;
+        is_video_note = video->round_message_;
         if (!is_video_note) {
-          supports_streaming = (video->flags_ & telegram_api::documentAttributeVideo::SUPPORTS_STREAMING_MASK) != 0;
+          supports_streaming = video->supports_streaming_;
           video_codec = std::move(video->video_codec_);
         }
       }
@@ -638,9 +638,9 @@ SecretInputMedia DocumentsManager::get_secret_input_media(
   if (document->thumbnail.file_id.is_valid() && thumbnail.empty()) {
     return SecretInputMedia{};
   }
-  vector<tl_object_ptr<secret_api::DocumentAttribute>> attributes;
+  vector<secret_api::object_ptr<secret_api::DocumentAttribute>> attributes;
   if (!document->file_name.empty()) {
-    attributes.push_back(make_tl_object<secret_api::documentAttributeFilename>(document->file_name));
+    attributes.push_back(secret_api::make_object<secret_api::documentAttributeFilename>(document->file_name));
   }
   return {std::move(input_file),
           std::move(thumbnail),
@@ -673,9 +673,9 @@ tl_object_ptr<telegram_api::InputMedia> DocumentsManager::get_input_media(
     const GeneralDocument *document = get_document(file_id);
     CHECK(document != nullptr);
 
-    vector<tl_object_ptr<telegram_api::DocumentAttribute>> attributes;
+    vector<telegram_api::object_ptr<telegram_api::DocumentAttribute>> attributes;
     if (!document->file_name.empty()) {
-      attributes.push_back(make_tl_object<telegram_api::documentAttributeFilename>(document->file_name));
+      attributes.push_back(telegram_api::make_object<telegram_api::documentAttributeFilename>(document->file_name));
     }
     int32 flags = 0;
     if (input_thumbnail != nullptr) {

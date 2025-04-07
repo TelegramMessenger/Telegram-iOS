@@ -22,7 +22,6 @@
 #include "td/utils/SliceBuilder.h"
 #include "td/utils/tl_helpers.h"
 #include "td/utils/tl_parsers.h"
-#include "td/utils/tl_storers.h"
 
 #include <algorithm>
 #include <limits>
@@ -70,6 +69,14 @@ void CallVerificationChain::on_new_main_block(const Blockchain &blockhain) {
   }
   CHECK(participant_keys_.size() == group_state.participants.size());
 
+  commit_at_ = td::Timestamp::now();
+  reveal_at_ = {};
+  done_at_ = {};
+  users_ = {};
+  for (auto &participant : group_state.participants) {
+    users_[participant.user_id];
+  }
+
   if (auto it = delayed_broadcasts_.find(height_); it != delayed_broadcasts_.end()) {
     for (auto &[message, broadcast] : it->second) {
       auto status = process_broadcast(std::move(message), std::move(broadcast));
@@ -89,7 +96,7 @@ td::Status CallVerificationChain::try_apply_block(td::Slice message) {
   downcast_call(*kv_broadcast, td::overloaded([&](auto &broadcast) { chain_height = broadcast.chain_height_; }));
 
   if (chain_height < height_) {
-    LOG(INFO) << "skip old broadcast " << to_short_string(kv_broadcast);
+    LOG(INFO) << "Skip old broadcast " << to_short_string(kv_broadcast);
     // broadcast is too old
     return td::Status::OK();
   }
@@ -100,7 +107,7 @@ td::Status CallVerificationChain::try_apply_block(td::Slice message) {
                                                      << "broadcast_height=" << chain_height << " height=" << height_);
     }
 
-    LOG(INFO) << "delay broadcast " << to_short_string(kv_broadcast);
+    LOG(INFO) << "Delay broadcast " << to_short_string(kv_broadcast);
     delayed_broadcasts_[chain_height].emplace_back(message.str(), std::move(kv_broadcast));
     return td::Status::OK();
   }
@@ -128,9 +135,9 @@ std::string CallVerificationChain::to_short_string(e2e::object_ptr<e2e::e2e_chai
 td::Status CallVerificationChain::process_broadcast(std::string message,
                                                     e2e::object_ptr<e2e::e2e_chain_GroupBroadcast> broadcast) {
   td::Status status;
-  td::UInt256 got_chain_hash{};
-  downcast_call(*broadcast, td::overloaded([&](auto &broadcast) { got_chain_hash = broadcast.chain_hash_; }));
-  if (got_chain_hash != last_block_hash_) {
+  td::UInt256 broadcast_chain_hash{};
+  downcast_call(*broadcast, td::overloaded([&](auto &broadcast) { broadcast_chain_hash = broadcast.chain_hash_; }));
+  if (broadcast_chain_hash != last_block_hash_) {
     status = Error(E::InvalidBroadcast_InvalidBlockHash);
   }
   if (status.is_ok()) {
@@ -174,9 +181,11 @@ td::Status CallVerificationChain::process_broadcast(e2e::e2e_chain_groupBroadcas
   }
 
   committed_[user_id] = nonce_commit.nonce_hash_.as_slice().str();
+  users_[user_id].receive_commit_at_ = td::Timestamp::now();
 
   if (committed_.size() == participant_keys_.size()) {
     state_ = Reveal;
+    reveal_at_ = td::Timestamp::now();
   }
 
   return td::Status::OK();
@@ -209,6 +218,7 @@ td::Status CallVerificationChain::process_broadcast(e2e::e2e_chain_groupBroadcas
   }
 
   revealed_[user_id] = nonce_reveal.nonce_.as_slice().str();
+  users_[user_id].receive_reveal_at_ = td::Timestamp::now();
 
   CHECK(!verification_state_.emoji_hash);
   if (revealed_.size() == participant_keys_.size()) {
@@ -223,6 +233,7 @@ td::Status CallVerificationChain::process_broadcast(e2e::e2e_chain_groupBroadcas
     verification_state_.emoji_hash =
         MessageEncryption::hmac_sha512(full_nonce, last_block_hash_.as_slice()).as_slice().str();
     state_ = End;
+    done_at_ = td::Timestamp::now();
   }
   return td::Status::OK();
 }
@@ -235,7 +246,7 @@ td::Status CallEncryption::add_shared_key(td::int32 epoch, td::SecureString key,
   TRY_RESULT(self, group_state->get_participant(private_key_.to_public_key()));
   if (self.user_id != user_id_) {
     // should not happen
-    return td::Status::Error("Wrong user id in state");
+    return td::Status::Error("Wrong user identifier in state");
   }
 
   LOG(INFO) << "Add key from epoch: " << epoch;
@@ -263,7 +274,7 @@ td::Result<std::string> CallEncryption::decrypt(td::int64 user_id, td::int32 cha
     return td::Status::Error("Unsupported protocol version");
   }
   if (reserved != 0) {
-    return td::Status::Error("reserved part of head is not zero");
+    return td::Status::Error("Reserved part of head is not zero");
   }
 
   if (epochs_n > MAX_ACTIVE_EPOCHS) {
@@ -273,18 +284,18 @@ td::Result<std::string> CallEncryption::decrypt(td::int64 user_id, td::int32 cha
   using td::parse;
 
   std::vector<td::int32> epochs;
-  for (int i = 0; i < epochs_n; i++) {
+  for (td::int32 i = 0; i < epochs_n; i++) {
     epochs.push_back(parser.fetch_int());
   }
   auto unencrypted_header = encrypted_data.substr(0, encrypted_data.size() - parser.get_left_len());
 
   std::vector<td::Slice> encrypted_headers;
-  for (int i = 0; i < epochs_n; i++) {
-    auto encrypted_header = parser.fetch_string_raw<td::Slice>(32);
+  for (td::int32 i = 0; i < epochs_n; i++) {
+    auto encrypted_header = parser.template fetch_string_raw<td::Slice>(32);
     encrypted_headers.emplace_back(encrypted_header);
   }
 
-  auto encrypted_packet = parser.fetch_string_raw<td::Slice>(parser.get_left_len());
+  auto encrypted_packet = parser.template fetch_string_raw<td::Slice>(parser.get_left_len());
   parser.fetch_end();
   TRY_STATUS(parser.get_status());
 
@@ -404,7 +415,7 @@ td::Result<std::string> CallEncryption::decrypt_packet_with_secret(
 
   if (channel_id != expected_channel_id) {
     // currently ignore expected_channel_id
-    // return td::Status::Error("Channel id mismatch");
+    // return td::Status::Error("Channel identifier mismatch");
   }
   TRY_STATUS(check_not_seen(participant.public_key, channel_id, seqno));
   mark_as_seen(participant.public_key, channel_id, seqno);
@@ -457,8 +468,9 @@ CallVerification CallVerification::create(td::int64 user_id, PrivateKey private_
   CallVerification result;
   result.user_id_ = user_id;
   result.private_key_ = std::move(private_key);
-  result.on_new_main_block(blockchain);
   result.chain_.allow_delay();
+  result.chain_.set_user_id(user_id);
+  result.on_new_main_block(blockchain);
   return result;
 }
 
@@ -515,8 +527,8 @@ Call::Call(td::int64 user_id, PrivateKey pk, ClientBlockchain blockchain)
     , blockchain_(std::move(blockchain))
     , call_encryption_(user_id, private_key_) {
   CHECK(private_key_);
-  LOG(INFO) << "Create call \n" << *this;
   call_verification_ = CallVerification::create(user_id_, private_key_, blockchain_.get_inner_chain());
+  LOG(INFO) << "Create call \n" << *this;
 }
 
 td::Result<std::string> Call::create_zero_block(const PrivateKey &private_key, GroupStateRef group_state) {
@@ -663,18 +675,74 @@ td::StringBuilder &operator<<(td::StringBuilder &sb, const CallVerificationChain
       break;
   }
   sb << " commit_n=" << chain.committed_.size() << " reveal_n=" << chain.revealed_.size() << "}";
-  switch (chain.state_) {
-    case CallVerificationChain::State::Commit:
-      sb << "\n\t\tcommit="
-         << td::transform(chain.committed_, [&](auto &key) { return chain.participant_keys_.at(key.first); });
-      break;
-    case CallVerificationChain::State::Reveal:
-      sb << "\n\t\treveal="
-         << td::transform(chain.revealed_, [&](auto &key) { return chain.participant_keys_.at(key.first); });
-      break;
-    case CallVerificationChain::State::End:
-      break;
+  auto now = td::Timestamp::now();
+  sb << "\n\t\t";
+  sb << "commit->";
+  if (chain.state_ == CallVerificationChain::State::Commit) {
+    sb << (now.at() - chain.commit_at_.at()) << "s->...";
+  } else {
+    sb << (chain.reveal_at_.at() - chain.commit_at_.at()) << "s->reveal->";
+    if (chain.state_ == CallVerificationChain::State::Reveal) {
+      sb << (now.at() - chain.reveal_at_.at()) << "s->...";
+    } else {
+      sb << (chain.done_at_.at() - chain.reveal_at_.at()) << "s->done";
+    }
   }
+  auto it = chain.users_.find(chain.user_id_);
+  if (it != chain.users_.end()) {
+    const CallVerificationChain::UserState &self = it->second;
+    sb << "\n\t\tself:";
+    if (self.receive_commit_at_) {
+      sb << " commit=" << self.receive_commit_at_.at() - chain.commit_at_.at() << "s";
+    } else {
+      sb << " commit=" << now.at() - chain.commit_at_.at() << "s...";
+    }
+    if (chain.state_ != CallVerificationChain::State::Commit) {
+      if (self.receive_reveal_at_) {
+        sb << " reveal=" << self.receive_reveal_at_.at() - chain.reveal_at_.at() << "s";
+      } else {
+        sb << " reveal=" << now.at() - chain.reveal_at_.at() << "s...";
+      }
+    }
+  }
+
+  {
+    sb << "\n\t\t";
+    sb << "commit =";
+    auto users = td::transform(chain.users_, [&](auto &key) {
+      auto t = chain.users_.at(key.first).receive_commit_at_;
+      if (t) {
+        return std::make_tuple(-(t.at() - chain.commit_at_.at()), key.first, false);
+      }
+      return std::make_tuple(-(now.at() - chain.commit_at_.at()), key.first, true);
+    });
+    std::sort(users.begin(), users.end());
+    for (auto &user : users) {
+      sb << " " << std::get<1>(user) << ":" << -std::get<0>(user) << "s";
+      if (std::get<2>(user)) {
+        sb << "...";
+      }
+    }
+  }
+  if (chain.state_ != CallVerificationChain::State::Commit) {
+    sb << "\n\t\t";
+    sb << "reveal =";
+    auto users = td::transform(chain.users_, [&](auto &key) {
+      auto t = chain.users_.at(key.first).receive_reveal_at_;
+      if (t) {
+        return std::make_tuple(-(t.at() - chain.reveal_at_.at()), key.first, false);
+      }
+      return std::make_tuple(-(now.at() - chain.reveal_at_.at()), key.first, true);
+    });
+    std::sort(users.begin(), users.end());
+    for (auto &user : users) {
+      sb << " " << std::get<1>(user) << ":" << -std::get<0>(user) << "s";
+      if (std::get<2>(user)) {
+        sb << "...";
+      }
+    }
+  }
+
   return sb;
 }
 

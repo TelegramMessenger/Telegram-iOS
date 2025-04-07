@@ -68,17 +68,9 @@ class GetSponsoredMessagesQuery final : public Td::ResultHandler {
 };
 
 class ViewSponsoredMessageQuery final : public Td::ResultHandler {
-  DialogId dialog_id_;
-
  public:
-  void send(DialogId dialog_id, const string &message_id) {
-    dialog_id_ = dialog_id;
-    auto input_peer = td_->dialog_manager_->get_input_peer(dialog_id, AccessRights::Read);
-    if (input_peer == nullptr) {
-      return;
-    }
-    send_query(G()->net_query_creator().create(
-        telegram_api::messages_viewSponsoredMessage(std::move(input_peer), BufferSlice(message_id))));
+  void send(const string &message_id) {
+    send_query(G()->net_query_creator().create(telegram_api::messages_viewSponsoredMessage(BufferSlice(message_id))));
   }
 
   void on_result(BufferSlice packet) final {
@@ -89,24 +81,17 @@ class ViewSponsoredMessageQuery final : public Td::ResultHandler {
   }
 
   void on_error(Status status) final {
-    td_->dialog_manager_->on_get_dialog_error(dialog_id_, status, "ViewSponsoredMessageQuery");
   }
 };
 
 class ClickSponsoredMessageQuery final : public Td::ResultHandler {
   Promise<Unit> promise_;
-  DialogId dialog_id_;
 
  public:
   explicit ClickSponsoredMessageQuery(Promise<Unit> &&promise) : promise_(std::move(promise)) {
   }
 
-  void send(DialogId dialog_id, const string &message_id, bool is_media_click, bool from_fullscreen) {
-    dialog_id_ = dialog_id;
-    auto input_peer = td_->dialog_manager_->get_input_peer(dialog_id, AccessRights::Read);
-    if (input_peer == nullptr) {
-      return promise_.set_value(Unit());
-    }
+  void send(const string &message_id, bool is_media_click, bool from_fullscreen) {
     int32 flags = 0;
     if (is_media_click) {
       flags |= telegram_api::messages_clickSponsoredMessage::MEDIA_MASK;
@@ -115,7 +100,7 @@ class ClickSponsoredMessageQuery final : public Td::ResultHandler {
       flags |= telegram_api::messages_clickSponsoredMessage::FULLSCREEN_MASK;
     }
     send_query(G()->net_query_creator().create(telegram_api::messages_clickSponsoredMessage(
-        flags, false /*ignored*/, false /*ignored*/, std::move(input_peer), BufferSlice(message_id))));
+        flags, false /*ignored*/, false /*ignored*/, BufferSlice(message_id))));
   }
 
   void on_result(BufferSlice packet) final {
@@ -127,28 +112,21 @@ class ClickSponsoredMessageQuery final : public Td::ResultHandler {
   }
 
   void on_error(Status status) final {
-    td_->dialog_manager_->on_get_dialog_error(dialog_id_, status, "ClickSponsoredMessageQuery");
     promise_.set_error(std::move(status));
   }
 };
 
 class ReportSponsoredMessageQuery final : public Td::ResultHandler {
-  Promise<td_api::object_ptr<td_api::ReportChatSponsoredMessageResult>> promise_;
-  DialogId dialog_id_;
+  Promise<td_api::object_ptr<td_api::ReportSponsoredResult>> promise_;
 
  public:
-  explicit ReportSponsoredMessageQuery(Promise<td_api::object_ptr<td_api::ReportChatSponsoredMessageResult>> &&promise)
+  explicit ReportSponsoredMessageQuery(Promise<td_api::object_ptr<td_api::ReportSponsoredResult>> &&promise)
       : promise_(std::move(promise)) {
   }
 
-  void send(DialogId dialog_id, const string &message_id, const string &option_id) {
-    dialog_id_ = dialog_id;
-    auto input_peer = td_->dialog_manager_->get_input_peer(dialog_id, AccessRights::Read);
-    if (input_peer == nullptr) {
-      return promise_.set_value(td_api::make_object<td_api::reportChatSponsoredMessageResultFailed>());
-    }
-    send_query(G()->net_query_creator().create(telegram_api::messages_reportSponsoredMessage(
-        std::move(input_peer), BufferSlice(message_id), BufferSlice(option_id))));
+  void send(const string &message_id, const string &option_id) {
+    send_query(G()->net_query_creator().create(
+        telegram_api::messages_reportSponsoredMessage(BufferSlice(message_id), BufferSlice(option_id))));
   }
 
   void on_result(BufferSlice packet) final {
@@ -161,21 +139,21 @@ class ReportSponsoredMessageQuery final : public Td::ResultHandler {
     LOG(DEBUG) << "Receive result for ReportSponsoredMessageQuery: " << to_string(ptr);
     switch (ptr->get_id()) {
       case telegram_api::channels_sponsoredMessageReportResultReported::ID:
-        return promise_.set_value(td_api::make_object<td_api::reportChatSponsoredMessageResultOk>());
+        return promise_.set_value(td_api::make_object<td_api::reportSponsoredResultOk>());
       case telegram_api::channels_sponsoredMessageReportResultAdsHidden::ID:
-        return promise_.set_value(td_api::make_object<td_api::reportChatSponsoredMessageResultAdsHidden>());
+        return promise_.set_value(td_api::make_object<td_api::reportSponsoredResultAdsHidden>());
       case telegram_api::channels_sponsoredMessageReportResultChooseOption::ID: {
         auto options =
             telegram_api::move_object_as<telegram_api::channels_sponsoredMessageReportResultChooseOption>(ptr);
         if (options->options_.empty()) {
-          return promise_.set_value(td_api::make_object<td_api::reportChatSponsoredMessageResultFailed>());
+          return promise_.set_value(td_api::make_object<td_api::reportSponsoredResultFailed>());
         }
         vector<td_api::object_ptr<td_api::reportOption>> report_options;
         for (auto &option : options->options_) {
           report_options.push_back(
               td_api::make_object<td_api::reportOption>(option->option_.as_slice().str(), option->text_));
         }
-        return promise_.set_value(td_api::make_object<td_api::reportChatSponsoredMessageResultOptionRequired>(
+        return promise_.set_value(td_api::make_object<td_api::reportSponsoredResultOptionRequired>(
             options->title_, std::move(report_options)));
       }
       default:
@@ -185,14 +163,47 @@ class ReportSponsoredMessageQuery final : public Td::ResultHandler {
 
   void on_error(Status status) final {
     if (status.message() == "AD_EXPIRED") {
-      return promise_.set_value(td_api::make_object<td_api::reportChatSponsoredMessageResultFailed>());
+      return promise_.set_value(td_api::make_object<td_api::reportSponsoredResultFailed>());
     }
     if (status.message() == "PREMIUM_ACCOUNT_REQUIRED") {
-      return promise_.set_value(td_api::make_object<td_api::reportChatSponsoredMessageResultPremiumRequired>());
+      return promise_.set_value(td_api::make_object<td_api::reportSponsoredResultPremiumRequired>());
     }
-    td_->dialog_manager_->on_get_dialog_error(dialog_id_, status, "ReportSponsoredMessageQuery");
     promise_.set_error(std::move(status));
   }
+};
+
+class GetSponsoredPeersQuery final : public Td::ResultHandler {
+  Promise<telegram_api::object_ptr<telegram_api::contacts_SponsoredPeers>> promise_;
+
+ public:
+  explicit GetSponsoredPeersQuery(Promise<telegram_api::object_ptr<telegram_api::contacts_SponsoredPeers>> &&promise)
+      : promise_(std::move(promise)) {
+  }
+
+  void send(const string &query) {
+    send_query(G()->net_query_creator().create(telegram_api::contacts_getSponsoredPeers(query)));
+  }
+
+  void on_result(BufferSlice packet) final {
+    auto result_ptr = fetch_result<telegram_api::contacts_getSponsoredPeers>(packet);
+    if (result_ptr.is_error()) {
+      return on_error(result_ptr.move_as_error());
+    }
+
+    auto ptr = result_ptr.move_as_ok();
+    LOG(DEBUG) << "Receive result for GetSponsoredPeersQuery: " << to_string(ptr);
+    promise_.set_value(std::move(ptr));
+  }
+
+  void on_error(Status status) final {
+    promise_.set_error(std::move(status));
+  }
+};
+
+struct SponsoredMessageManager::SponsoredContentInfo {
+  string random_id_;
+  bool is_viewed_ = false;
+  bool is_clicked_ = false;
 };
 
 struct SponsoredMessageManager::SponsoredMessage {
@@ -225,17 +236,33 @@ struct SponsoredMessageManager::SponsoredMessage {
   }
 };
 
-struct SponsoredMessageManager::SponsoredMessageInfo {
-  string random_id_;
-  bool is_viewed_ = false;
-  bool is_clicked_ = false;
-};
-
 struct SponsoredMessageManager::DialogSponsoredMessages {
   vector<Promise<td_api::object_ptr<td_api::sponsoredMessages>>> promises;
   vector<SponsoredMessage> messages;
-  FlatHashMap<int64, SponsoredMessageInfo> message_infos;
+  FlatHashMap<int64, SponsoredContentInfo> message_infos;
   int32 messages_between = 0;
+  bool is_premium = false;
+  bool sponsored_enabled = false;
+};
+
+struct SponsoredMessageManager::SponsoredDialog {
+  int64 local_id = 0;
+  DialogId dialog_id;
+  string sponsor_info;
+  string additional_info;
+
+  SponsoredDialog(int64 local_id, DialogId dialog_id, string &&sponsor_info, string &&additional_info)
+      : local_id(local_id)
+      , dialog_id(dialog_id)
+      , sponsor_info(std::move(sponsor_info))
+      , additional_info(std::move(additional_info)) {
+  }
+};
+
+struct SponsoredMessageManager::SponsoredDialogs {
+  int64 local_id = 0;
+  vector<Promise<td_api::object_ptr<td_api::sponsoredChats>>> promises;
+  vector<SponsoredDialog> dialogs;
   bool is_premium = false;
   bool sponsored_enabled = false;
 };
@@ -243,6 +270,9 @@ struct SponsoredMessageManager::DialogSponsoredMessages {
 SponsoredMessageManager::SponsoredMessageManager(Td *td, ActorShared<> parent) : td_(td), parent_(std::move(parent)) {
   delete_cached_sponsored_messages_timeout_.set_callback(on_delete_cached_sponsored_messages_timeout_callback);
   delete_cached_sponsored_messages_timeout_.set_callback_data(static_cast<void *>(this));
+
+  delete_cached_sponsored_dialogs_timeout_.set_callback(on_delete_cached_sponsored_dialogs_timeout_callback);
+  delete_cached_sponsored_dialogs_timeout_.set_callback_data(static_cast<void *>(this));
 }
 
 SponsoredMessageManager::~SponsoredMessageManager() = default;
@@ -273,6 +303,38 @@ void SponsoredMessageManager::delete_cached_sponsored_messages(DialogId dialog_i
   }
 }
 
+void SponsoredMessageManager::on_delete_cached_sponsored_dialogs_timeout_callback(void *sponsored_message_manager_ptr,
+                                                                                  int64 local_id) {
+  if (G()->close_flag()) {
+    return;
+  }
+
+  auto sponsored_message_manager = static_cast<SponsoredMessageManager *>(sponsored_message_manager_ptr);
+  send_closure_later(sponsored_message_manager->actor_id(sponsored_message_manager),
+                     &SponsoredMessageManager::delete_cached_sponsored_dialogs, local_id);
+}
+
+void SponsoredMessageManager::delete_cached_sponsored_dialogs(int64 local_id) {
+  if (G()->close_flag()) {
+    return;
+  }
+
+  auto query_it = local_id_to_search_query_.find(local_id);
+  if (query_it == local_id_to_search_query_.end()) {
+    return;
+  }
+
+  auto it = search_sponsored_dialogs_.find(query_it->second);
+  CHECK(it != search_sponsored_dialogs_.end());
+  if (it->second->promises.empty()) {
+    for (auto &dialog : it->second->dialogs) {
+      dialog_infos_.erase(dialog.local_id);
+    }
+    search_sponsored_dialogs_.erase(it);
+    local_id_to_search_query_.erase(query_it);
+  }
+}
+
 td_api::object_ptr<td_api::messageSponsor> SponsoredMessageManager::get_message_sponsor_object(
     const SponsoredMessage &sponsored_message) const {
   return td_api::make_object<td_api::messageSponsor>(
@@ -289,7 +351,7 @@ td_api::object_ptr<td_api::sponsoredMessage> SponsoredMessageManager::get_sponso
   return td_api::make_object<td_api::sponsoredMessage>(
       sponsored_message.local_id, sponsored_message.is_recommended, sponsored_message.can_be_reported,
       get_message_content_object(sponsored_message.content.get(), td_, dialog_id, MessageId(ServerMessageId(1)), false,
-                                 0, false, true, -1, false, true),
+                                 dialog_id, 0, false, true, -1, false, true),
       std::move(sponsor), sponsored_message.title, sponsored_message.button_text,
       td_->theme_manager_->get_accent_color_id_object(sponsored_message.peer_color.accent_color_id_, AccentColorId()),
       sponsored_message.peer_color.background_custom_emoji_id_.get(), sponsored_message.additional_info);
@@ -302,6 +364,19 @@ td_api::object_ptr<td_api::sponsoredMessages> SponsoredMessageManager::get_spons
   });
   td::remove_if(messages, [](const auto &message) { return message == nullptr; });
   return td_api::make_object<td_api::sponsoredMessages>(std::move(messages), sponsored_messages.messages_between);
+}
+
+td_api::object_ptr<td_api::sponsoredChat> SponsoredMessageManager::get_sponsored_chat_object(
+    const SponsoredDialog &sponsored_dialog) const {
+  return td_api::make_object<td_api::sponsoredChat>(
+      sponsored_dialog.local_id, td_->dialog_manager_->get_chat_id_object(sponsored_dialog.dialog_id, "sponsoredChat"),
+      sponsored_dialog.sponsor_info, sponsored_dialog.additional_info);
+}
+
+td_api::object_ptr<td_api::sponsoredChats> SponsoredMessageManager::get_sponsored_chats_object(
+    const SponsoredDialogs &sponsored_dialogs) const {
+  return td_api::make_object<td_api::sponsoredChats>(transform(
+      sponsored_dialogs.dialogs, [this](const SponsoredDialog &dialog) { return get_sponsored_chat_object(dialog); }));
 }
 
 void SponsoredMessageManager::get_dialog_sponsored_messages(
@@ -329,7 +404,7 @@ void SponsoredMessageManager::get_dialog_sponsored_messages(
   if (messages->promises.size() == 1) {
     auto query_promise = PromiseCreator::lambda(
         [actor_id = actor_id(this),
-         dialog_id](Result<telegram_api::object_ptr<telegram_api::messages_SponsoredMessages>> &&result) mutable {
+         dialog_id](Result<telegram_api::object_ptr<telegram_api::messages_SponsoredMessages>> &&result) {
           send_closure(actor_id, &SponsoredMessageManager::on_get_dialog_sponsored_messages, dialog_id,
                        std::move(result));
         });
@@ -401,7 +476,7 @@ void SponsoredMessageManager::on_get_dialog_sponsored_messages(
         auto local_id = current_sponsored_message_id_.get();
         CHECK(!current_sponsored_message_id_.is_valid());
         CHECK(!current_sponsored_message_id_.is_scheduled());
-        SponsoredMessageInfo message_info;
+        SponsoredContentInfo message_info;
         message_info.random_id_ = sponsored_message->random_id_.as_slice().str();
         auto is_inserted = messages->message_infos.emplace(local_id, std::move(message_info)).second;
         CHECK(is_inserted);
@@ -439,7 +514,7 @@ void SponsoredMessageManager::view_sponsored_message(DialogId dialog_id, Message
   }
 
   random_id_it->second.is_viewed_ = true;
-  td_->create_handler<ViewSponsoredMessageQuery>()->send(dialog_id, random_id_it->second.random_id_);
+  td_->create_handler<ViewSponsoredMessageQuery>()->send(random_id_it->second.random_id_);
 }
 
 void SponsoredMessageManager::click_sponsored_message(DialogId dialog_id, MessageId sponsored_message_id,
@@ -459,26 +534,157 @@ void SponsoredMessageManager::click_sponsored_message(DialogId dialog_id, Messag
 
   random_id_it->second.is_clicked_ = true;
   td_->create_handler<ClickSponsoredMessageQuery>(std::move(promise))
-      ->send(dialog_id, random_id_it->second.random_id_, is_media_click, from_fullscreen);
+      ->send(random_id_it->second.random_id_, is_media_click, from_fullscreen);
 }
 
 void SponsoredMessageManager::report_sponsored_message(
     DialogId dialog_id, MessageId sponsored_message_id, const string &option_id,
-    Promise<td_api::object_ptr<td_api::ReportChatSponsoredMessageResult>> &&promise) {
+    Promise<td_api::object_ptr<td_api::ReportSponsoredResult>> &&promise) {
   if (!dialog_id.is_valid() || !sponsored_message_id.is_valid_sponsored()) {
     return promise.set_error(Status::Error(400, "Invalid message specified"));
   }
   auto it = dialog_sponsored_messages_.find(dialog_id);
   if (it == dialog_sponsored_messages_.end()) {
-    return promise.set_value(td_api::make_object<td_api::reportChatSponsoredMessageResultFailed>());
+    return promise.set_value(td_api::make_object<td_api::reportSponsoredResultFailed>());
   }
   auto random_id_it = it->second->message_infos.find(sponsored_message_id.get());
   if (random_id_it == it->second->message_infos.end()) {
-    return promise.set_value(td_api::make_object<td_api::reportChatSponsoredMessageResultFailed>());
+    return promise.set_value(td_api::make_object<td_api::reportSponsoredResultFailed>());
   }
 
   td_->create_handler<ReportSponsoredMessageQuery>(std::move(promise))
-      ->send(dialog_id, random_id_it->second.random_id_, option_id);
+      ->send(random_id_it->second.random_id_, option_id);
+}
+
+void SponsoredMessageManager::get_search_sponsored_dialogs(
+    const string &query, Promise<td_api::object_ptr<td_api::sponsoredChats>> &&promise) {
+  if (query.size() < 4u) {
+    return promise.set_value(td_api::make_object<td_api::sponsoredChats>());
+  }
+  auto &dialogs = search_sponsored_dialogs_[query];
+  if (dialogs != nullptr && dialogs->promises.empty()) {
+    if (dialogs->is_premium == td_->option_manager_->get_option_boolean("is_premium", false) &&
+        dialogs->sponsored_enabled == td_->user_manager_->get_my_sponsored_enabled()) {
+      // use cached value
+      return promise.set_value(get_sponsored_chats_object(*dialogs));
+    } else {
+      // drop cache
+      delete_cached_sponsored_dialogs_timeout_.cancel_timeout(dialogs->local_id);
+      local_id_to_search_query_.erase(dialogs->local_id);
+      for (auto &dialog : dialogs->dialogs) {
+        dialog_infos_.erase(dialog.local_id);
+      }
+      dialogs = nullptr;
+    }
+  }
+
+  if (dialogs == nullptr) {
+    dialogs = make_unique<SponsoredDialogs>();
+    dialogs->local_id = ++current_local_id_;
+    local_id_to_search_query_[dialogs->local_id] = query;
+  }
+  dialogs->promises.push_back(std::move(promise));
+  if (dialogs->promises.size() == 1) {
+    auto query_promise =
+        PromiseCreator::lambda([actor_id = actor_id(this), query](
+                                   Result<telegram_api::object_ptr<telegram_api::contacts_SponsoredPeers>> &&result) {
+          send_closure(actor_id, &SponsoredMessageManager::on_get_search_sponsored_dialogs, query, std::move(result));
+        });
+    td_->create_handler<GetSponsoredPeersQuery>(std::move(query_promise))->send(query);
+  }
+}
+
+void SponsoredMessageManager::on_get_search_sponsored_dialogs(
+    const string &query, Result<telegram_api::object_ptr<telegram_api::contacts_SponsoredPeers>> &&result) {
+  G()->ignore_result_if_closing(result);
+
+  auto &dialogs = search_sponsored_dialogs_[query];
+  CHECK(dialogs != nullptr);
+  auto promises = std::move(dialogs->promises);
+  reset_to_empty(dialogs->promises);
+  CHECK(dialogs->dialogs.empty());
+
+  auto local_id = dialogs->local_id;
+  if (result.is_error()) {
+    search_sponsored_dialogs_.erase(query);
+    local_id_to_search_query_.erase(local_id);
+    fail_promises(promises, result.move_as_error());
+    return;
+  }
+
+  auto sponsored_dialogs_ptr = result.move_as_ok();
+  switch (sponsored_dialogs_ptr->get_id()) {
+    case telegram_api::contacts_sponsoredPeers::ID: {
+      auto sponsored_dialogs =
+          telegram_api::move_object_as<telegram_api::contacts_sponsoredPeers>(sponsored_dialogs_ptr);
+
+      td_->user_manager_->on_get_users(std::move(sponsored_dialogs->users_), "on_get_search_sponsored_dialogs");
+      td_->chat_manager_->on_get_chats(std::move(sponsored_dialogs->chats_), "on_get_search_sponsored_dialogs");
+
+      for (auto &sponsored_dialog : sponsored_dialogs->peers_) {
+        auto dialog_id = DialogId(sponsored_dialog->peer_);
+        if (!dialog_id.is_valid() || !td_->dialog_manager_->have_dialog_info(dialog_id)) {
+          LOG(ERROR) << "Receive unknown " << dialog_id;
+          continue;
+        }
+        td_->dialog_manager_->force_create_dialog(dialog_id, "on_get_search_sponsored_dialogs");
+
+        auto dialog_local_id = ++current_local_id_;
+
+        auto dialog_info = make_unique<SponsoredContentInfo>();
+        dialog_info->random_id_ = sponsored_dialog->random_id_.as_slice().str();
+        auto is_inserted = dialog_infos_.emplace(dialog_local_id, std::move(dialog_info)).second;
+        CHECK(is_inserted);
+
+        dialogs->dialogs.emplace_back(dialog_local_id, dialog_id, std::move(sponsored_dialog->sponsor_info_),
+                                      std::move(sponsored_dialog->additional_info_));
+      }
+      break;
+    }
+    case telegram_api::contacts_sponsoredPeersEmpty::ID:
+      break;
+    default:
+      UNREACHABLE();
+  }
+  dialogs->is_premium = td_->option_manager_->get_option_boolean("is_premium", false);
+  dialogs->sponsored_enabled = td_->user_manager_->get_my_sponsored_enabled();
+
+  for (auto &promise : promises) {
+    promise.set_value(get_sponsored_chats_object(*dialogs));
+  }
+  delete_cached_sponsored_dialogs_timeout_.set_timeout_in(local_id, 300.0);
+}
+
+void SponsoredMessageManager::view_sponsored_dialog(int64 local_id, Promise<Unit> &&promise) {
+  promise.set_value(Unit());
+
+  auto it = dialog_infos_.find(local_id);
+  if (it == dialog_infos_.end() || it->second->is_viewed_) {
+    return;
+  }
+
+  it->second->is_viewed_ = true;
+  td_->create_handler<ViewSponsoredMessageQuery>()->send(it->second->random_id_);
+}
+
+void SponsoredMessageManager::open_sponsored_dialog(int64 local_id, Promise<Unit> &&promise) {
+  auto it = dialog_infos_.find(local_id);
+  if (it == dialog_infos_.end() || it->second->is_clicked_) {
+    return promise.set_value(Unit());
+  }
+
+  it->second->is_clicked_ = true;
+  td_->create_handler<ClickSponsoredMessageQuery>(std::move(promise))->send(it->second->random_id_, false, false);
+}
+
+void SponsoredMessageManager::report_sponsored_dialog(
+    int64 local_id, const string &option_id, Promise<td_api::object_ptr<td_api::ReportSponsoredResult>> &&promise) {
+  auto it = dialog_infos_.find(local_id);
+  if (it == dialog_infos_.end()) {
+    return promise.set_value(td_api::make_object<td_api::reportSponsoredResultFailed>());
+  }
+
+  td_->create_handler<ReportSponsoredMessageQuery>(std::move(promise))->send(it->second->random_id_, option_id);
 }
 
 }  // namespace td

@@ -400,9 +400,9 @@ void DeviceTokenManager::loop() {
       net_query = G()->net_query_creator().create(
           telegram_api::account_unregisterDevice(token_type, info.token, vector<int64>(info.other_user_ids)));
     } else {
-      int32 flags = telegram_api::account_registerDevice::NO_MUTED_MASK;
+      bool no_muted = true;
       net_query = G()->net_query_creator().create(
-          telegram_api::account_registerDevice(flags, false /*ignored*/, token_type, info.token, info.is_app_sandbox,
+          telegram_api::account_registerDevice(0, no_muted, token_type, info.token, info.is_app_sandbox,
                                                BufferSlice(info.encryption_key), vector<int64>(info.other_user_ids)));
     }
     info.net_query_id = net_query->id();

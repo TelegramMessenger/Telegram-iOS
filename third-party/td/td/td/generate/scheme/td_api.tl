@@ -680,11 +680,28 @@ businessAwayMessageSettings shortcut_id:int32 recipients:businessRecipients sche
 //@inactivity_days The number of days after which a chat will be considered as inactive; currently, must be on of 7, 14, 21, or 28
 businessGreetingMessageSettings shortcut_id:int32 recipients:businessRecipients inactivity_days:int32 = BusinessGreetingMessageSettings;
 
+//@description Describes rights of a business bot
+//@can_reply True, if the bot can send and edit messages in the private chats that had incoming messages in the last 24 hours
+//@can_read_messages True, if the bot can mark incoming private messages as read
+//@can_delete_sent_messages True, if the bot can delete sent messages
+//@can_delete_all_messages True, if the bot can delete any message
+//@can_edit_name True, if the bot can edit name of the business account
+//@can_edit_bio True, if the bot can edit bio of the business account
+//@can_edit_profile_photo True, if the bot can edit profile photo of the business account
+//@can_edit_username True, if the bot can edit username of the business account
+//@can_view_gifts_and_stars True, if the bot can view gifts and amount of Telegram Stars owned by the business account
+//@can_sell_gifts True, if the bot can sell regular gifts received by the business account
+//@can_change_gift_settings True, if the bot can change gift receiving settings of the business account
+//@can_transfer_and_upgrade_gifts True, if the bot can transfer and upgrade gifts received by the business account
+//@can_transfer_stars True, if the bot can transfer Telegram Stars received by the business account to account of the bot, or use them to upgrade and transfer gifts
+//@can_manage_stories True, if the bot can send, edit and delete stories
+businessBotRights can_reply:Bool can_read_messages:Bool can_delete_sent_messages:Bool can_delete_all_messages:Bool can_edit_name:Bool can_edit_bio:Bool can_edit_profile_photo:Bool can_edit_username:Bool can_view_gifts_and_stars:Bool can_sell_gifts:Bool can_change_gift_settings:Bool can_transfer_and_upgrade_gifts:Bool can_transfer_stars:Bool can_manage_stories:Bool = BusinessBotRights;
+
 //@description Describes a bot connected to a business account
 //@bot_user_id User identifier of the bot
 //@recipients Private chats that will be accessible to the bot
-//@can_reply True, if the bot can send messages to the private chats; false otherwise
-businessConnectedBot bot_user_id:int53 recipients:businessRecipients can_reply:Bool = BusinessConnectedBot;
+//@rights Rights of the bot
+businessConnectedBot bot_user_id:int53 recipients:businessRecipients rights:businessBotRights = BusinessConnectedBot;
 
 //@description Describes settings for a business account start page
 //@title Title text of the start page
@@ -1036,16 +1053,28 @@ starGiveawayPaymentOption currency:string amount:int53 star_count:int53 store_pr
 starGiveawayPaymentOptions options:vector<starGiveawayPaymentOption> = StarGiveawayPaymentOptions;
 
 
+//@description Describes gift types that are accepted by a user
+//@unlimited_gifts True, if unlimited regular gifts are accepted
+//@limited_gifts True, if limited regular gifts are accepted
+//@upgraded_gifts True, if upgraded gifts and regular gifts that can be upgraded for free are accepted
+//@premium_subscription True, if Telegram Premium subscription is accepted
+acceptedGiftTypes unlimited_gifts:Bool limited_gifts:Bool upgraded_gifts:Bool premium_subscription:Bool = AcceptedGiftTypes;
+
+//@description Contains settings for gift receiving for a user
+//@show_gift_button True, if a button for sending a gift to the user or by the user must always be shown in the input field
+//@accepted_gift_types Types of gifts accepted by the user; for Telegram Premium users only
+giftSettings show_gift_button:Bool accepted_gift_types:acceptedGiftTypes = GiftSettings;
+
 //@description Describes a model of an upgraded gift
 //@name Name of the model
 //@sticker The sticker representing the upgraded gift
-//@rarity_per_mille The number of upgraded gift that receive this model for each 1000 gifts upgraded
+//@rarity_per_mille The number of upgraded gifts that receive this model for each 1000 gifts upgraded
 upgradedGiftModel name:string sticker:sticker rarity_per_mille:int32 = UpgradedGiftModel;
 
 //@description Describes a symbol shown on the pattern of an upgraded gift
 //@name Name of the symbol
-//@sticker The sticker representing the upgraded gift
-//@rarity_per_mille The number of upgraded gift that receive this symbol for each 1000 gifts upgraded
+//@sticker The sticker representing the symbol
+//@rarity_per_mille The number of upgraded gifts that receive this symbol for each 1000 gifts upgraded
 upgradedGiftSymbol name:string sticker:sticker rarity_per_mille:int32 = UpgradedGiftSymbol;
 
 //@description Describes colors of a backdrop of an upgraded gift
@@ -1058,7 +1087,7 @@ upgradedGiftBackdropColors center_color:int32 edge_color:int32 symbol_color:int3
 //@description Describes a backdrop of an upgraded gift
 //@name Name of the backdrop
 //@colors Colors of the backdrop
-//@rarity_per_mille The number of upgraded gift that receive this backdrop for each 1000 gifts upgraded
+//@rarity_per_mille The number of upgraded gifts that receive this backdrop for each 1000 gifts upgraded
 upgradedGiftBackdrop name:string colors:upgradedGiftBackdropColors rarity_per_mille:int32 = UpgradedGiftBackdrop;
 
 //@description Describes the original details about the gift
@@ -1092,9 +1121,9 @@ gifts gifts:vector<gift> = Gifts;
 //@total_upgraded_count Total number of gifts that were upgraded from the same gift
 //@max_upgraded_count The maximum number of gifts that can be upgraded from the same gift
 //@owner_id Identifier of the user or the chat that owns the upgraded gift; may be null if none or unknown
-//@owner_address Address of the gift NFT owner in TON blockchain; may be empty if none
+//@owner_address Address of the gift NFT owner in TON blockchain; may be empty if none. Append the address to getOption("ton_blockchain_explorer_url") to get a link with information about the address
 //@owner_name Name of the owner for the case when owner identifier and address aren't known
-//@gift_address Address of the gift NFT in TON blockchain; may be empty if none
+//@gift_address Address of the gift NFT in TON blockchain; may be empty if none. Append the address to getOption("ton_blockchain_explorer_url") to get a link with information about the address
 //@model Model of the upgraded gift
 //@symbol Symbol of the upgraded gift
 //@backdrop Backdrop of the upgraded gift
@@ -1292,11 +1321,17 @@ starTransactionTypePaidMessageSend chat_id:int53 message_count:int32 = StarTrans
 //@commission_star_amount The amount of Telegram Stars that were received by Telegram; can be negative for refunds
 starTransactionTypePaidMessageReceive sender_id:MessageSender message_count:int32 commission_per_mille:int32 commission_star_amount:starAmount = StarTransactionType;
 
-//@description The transaction is a purchase of Telegram Premium subscription; for regular users only
+//@description The transaction is a purchase of Telegram Premium subscription; for regular users and bots only
 //@user_id Identifier of the user that received the Telegram Premium subscription
 //@month_count Number of months the Telegram Premium subscription will be active
 //@sticker A sticker to be shown in the transaction information; may be null if unknown
 starTransactionTypePremiumPurchase user_id:int53 month_count:int32 sticker:sticker = StarTransactionType;
+
+//@description The transaction is a transfer of Telegram Stars to a business bot; for regular users only @user_id Identifier of the bot that received Telegram Stars
+starTransactionTypeBusinessBotTransferSend user_id:int53 = StarTransactionType;
+
+//@description The transaction is a transfer of Telegram Stars from a business account; for bots only @user_id Identifier of the user that sent Telegram Stars
+starTransactionTypeBusinessBotTransferReceive user_id:int53 = StarTransactionType;
 
 //@description The transaction is a transaction of an unsupported type
 starTransactionTypeUnsupported = StarTransactionType;
@@ -1502,10 +1537,11 @@ botInfo short_description:string description:string photo:photo animation:animat
 //@group_in_common_count Number of group chats where both the other user and the current user are a member; 0 for the current user
 //@incoming_paid_message_star_count Number of Telegram Stars that must be paid by the user for each sent message to the current user
 //@outgoing_paid_message_star_count Number of Telegram Stars that must be paid by the current user for each sent message to the user
+//@gift_settings Settings for gift receiving for the user
 //@bot_verification Information about verification status of the user provided by a bot; may be null if none or unknown
 //@business_info Information about business settings for Telegram Business accounts; may be null if none
 //@bot_info For bots, information about the bot; may be null if the user isn't a bot
-userFullInfo personal_photo:chatPhoto photo:chatPhoto public_photo:chatPhoto block_list:BlockList can_be_called:Bool supports_video_calls:Bool has_private_calls:Bool has_private_forwards:Bool has_restricted_voice_and_video_note_messages:Bool has_posted_to_profile_stories:Bool has_sponsored_messages_enabled:Bool need_phone_number_privacy_exception:Bool set_chat_background:Bool bio:formattedText birthdate:birthdate personal_chat_id:int53 gift_count:int32 group_in_common_count:int32 incoming_paid_message_star_count:int53 outgoing_paid_message_star_count:int53 bot_verification:botVerification business_info:businessInfo bot_info:botInfo = UserFullInfo;
+userFullInfo personal_photo:chatPhoto photo:chatPhoto public_photo:chatPhoto block_list:BlockList can_be_called:Bool supports_video_calls:Bool has_private_calls:Bool has_private_forwards:Bool has_restricted_voice_and_video_note_messages:Bool has_posted_to_profile_stories:Bool has_sponsored_messages_enabled:Bool need_phone_number_privacy_exception:Bool set_chat_background:Bool bio:formattedText birthdate:birthdate personal_chat_id:int53 gift_count:int32 group_in_common_count:int32 incoming_paid_message_star_count:int53 outgoing_paid_message_star_count:int53 gift_settings:giftSettings bot_verification:botVerification business_info:businessInfo bot_info:botInfo = UserFullInfo;
 
 //@description Represents a list of users @total_count Approximate total number of users found @user_ids A list of user identifiers
 users total_count:int32 user_ids:vector<int53> = Users;
@@ -2187,27 +2223,37 @@ sponsoredMessage message_id:int53 is_recommended:Bool can_be_reported:Bool conte
 //@description Contains a list of sponsored messages @messages List of sponsored messages @messages_between The minimum number of messages between shown sponsored messages, or 0 if only one sponsored message must be shown after all ordinary messages
 sponsoredMessages messages:vector<sponsoredMessage> messages_between:int32 = SponsoredMessages;
 
+//@description Describes a sponsored chat
+//@unique_id Unique identifier of this result
+//@chat_id Chat identifier
+//@sponsor_info Additional optional information about the sponsor to be shown along with the chat
+//@additional_info If non-empty, additional information about the sponsored chat to be shown along with the chat
+sponsoredChat unique_id:int53 chat_id:int53 sponsor_info:string additional_info:string = SponsoredChat;
+
+//@description Contains a list of sponsored chats @chats List of sponsored chats
+sponsoredChats chats:vector<sponsoredChat> = SponsoredChats;
+
 
 //@description Describes an option to report an entity to Telegram @id Unique identifier of the option @text Text of the option
 reportOption id:bytes text:string = ReportOption;
 
 
-//@class ReportChatSponsoredMessageResult @description Describes result of sponsored message report
+//@class ReportSponsoredResult @description Describes result of sponsored message or chat report
 
 //@description The message was reported successfully
-reportChatSponsoredMessageResultOk = ReportChatSponsoredMessageResult;
+reportSponsoredResultOk = ReportSponsoredResult;
 
 //@description The sponsored message is too old or not found
-reportChatSponsoredMessageResultFailed = ReportChatSponsoredMessageResult;
+reportSponsoredResultFailed = ReportSponsoredResult;
 
 //@description The user must choose an option to report the message and repeat request with the chosen option @title Title for the option choice @options List of available options
-reportChatSponsoredMessageResultOptionRequired title:string options:vector<reportOption> = ReportChatSponsoredMessageResult;
+reportSponsoredResultOptionRequired title:string options:vector<reportOption> = ReportSponsoredResult;
 
 //@description Sponsored messages were hidden for the user in all chats
-reportChatSponsoredMessageResultAdsHidden = ReportChatSponsoredMessageResult;
+reportSponsoredResultAdsHidden = ReportSponsoredResult;
 
 //@description The user asked to hide sponsored messages, but Telegram Premium is required for this
-reportChatSponsoredMessageResultPremiumRequired = ReportChatSponsoredMessageResult;
+reportSponsoredResultPremiumRequired = ReportSponsoredResult;
 
 
 //@description Describes a file added to file download list
@@ -4132,6 +4178,12 @@ messageUpgradedGift gift:upgradedGift sender_id:MessageSender received_gift_id:s
 //@is_upgrade True, if the gift was obtained by upgrading of a previously received gift
 messageRefundedUpgradedGift gift:gift sender_id:MessageSender is_upgrade:Bool = MessageContent;
 
+//@description Paid messages were refunded @message_count The number of refunded messages @star_count The number of refunded Telegram Stars
+messagePaidMessagesRefunded message_count:int32 star_count:int53 = MessageContent;
+
+//@description A price for paid messages was changed in the supergroup chat @paid_message_star_count The new number of Telegram Stars that must be paid by non-administrator users of the supergroup chat for each sent message
+messagePaidMessagePriceChanged paid_message_star_count:int53 = MessageContent;
+
 //@description A contact has registered with Telegram
 messageContactRegistered = MessageContent;
 
@@ -5463,9 +5515,9 @@ speechRecognitionResultError error:error = SpeechRecognitionResult;
 //@user_id Identifier of the business user that created the connection
 //@user_chat_id Chat identifier of the private chat with the user
 //@date Point in time (Unix timestamp) when the connection was established
-//@can_reply True, if the bot can send messages to the connected user; false otherwise
+//@rights Rights of the bot; may be null if the connection was disabled
 //@is_enabled True, if the connection is enabled; false otherwise
-businessConnection id:string user_id:int53 user_chat_id:int53 date:int32 can_reply:Bool is_enabled:Bool = BusinessConnection;
+businessConnection id:string user_id:int53 user_chat_id:int53 date:int32 rights:businessBotRights is_enabled:Bool = BusinessConnection;
 
 
 //@description Describes a color to highlight a bot added to attachment menu @light_color Color in the RGB format for light themes @dark_color Color in the RGB format for dark themes
@@ -6347,7 +6399,7 @@ storePaymentPurposeGiftedStars user_id:int53 currency:string amount:int53 star_c
 //@class TelegramPaymentPurpose @description Describes a purpose of a payment toward Telegram
 
 //@description The user gifting Telegram Premium to another user
-//@currency ISO 4217 currency code of the payment currency
+//@currency ISO 4217 currency code of the payment currency, or "XTR" for payments in Telegram Stars
 //@amount Paid amount, in the smallest units of the currency
 //@user_id Identifier of the user which will receive Telegram Premium
 //@month_count Number of months the Telegram Premium subscription will be active for the user
@@ -6970,7 +7022,8 @@ readDatePrivacySettings show_read_date:Bool = ReadDatePrivacySettings;
 //@description Contains privacy settings for chats with non-contacts
 //@allow_new_chats_from_unknown_users True, if non-contacts users are able to write first to the current user. Telegram Premium subscribers are able to write first regardless of this setting
 //@incoming_paid_message_star_count Number of Telegram Stars that must be paid for every incoming private message by non-contacts; 0-getOption("paid_message_star_count_max").
-//-If positive, then allow_new_chats_from_unknown_users must be true. The current user will receive getOption("paid_message_earnings_per_mille") Telegram Stars for each 1000 Telegram Stars paid for message sending
+//-If positive, then allow_new_chats_from_unknown_users must be true. The current user will receive getOption("paid_message_earnings_per_mille") Telegram Stars for each 1000 Telegram Stars paid for message sending.
+//-Can be positive, only if getOption("can_enable_paid_messages") is true
 newChatPrivacySettings allow_new_chats_from_unknown_users:Bool incoming_paid_message_star_count:int53 = NewChatPrivacySettings;
 
 
@@ -8505,6 +8558,13 @@ updateLanguagePackStrings localization_target:string language_pack_id:string str
 //@description The connection state has changed. This update must be used only to show a human-readable description of the connection state @state The new connection state
 updateConnectionState state:ConnectionState = Update;
 
+//@description The freeze state of the current user's account has changed
+//@is_frozen True, if the account is frozen
+//@freezing_date Point in time (Unix timestamp) when the account was frozen; 0 if the account isn't frozen
+//@deletion_date Point in time (Unix timestamp) when the account will be deleted and can't be unfrozen; 0 if the account isn't frozen
+//@appeal_link The link to open to send an appeal to unfreeze the account
+updateFreezeState is_frozen:Bool freezing_date:int32 deletion_date:int32 appeal_link:string = Update;
+
 //@description New terms of service must be accepted by the user. If the terms of service are declined, then the deleteAccount method must be called with the reason "Decline ToS update" @terms_of_service_id Identifier of the terms of service @terms_of_service The new terms of service
 updateTermsOfService terms_of_service_id:string terms_of_service:termsOfService = Update;
 
@@ -9339,7 +9399,21 @@ clickChatSponsoredMessage chat_id:int53 message_id:int53 is_media_click:Bool fro
 //@chat_id Chat identifier of the sponsored message
 //@message_id Identifier of the sponsored message
 //@option_id Option identifier chosen by the user; leave empty for the initial request
-reportChatSponsoredMessage chat_id:int53 message_id:int53 option_id:bytes = ReportChatSponsoredMessageResult;
+reportChatSponsoredMessage chat_id:int53 message_id:int53 option_id:bytes = ReportSponsoredResult;
+
+//@description Returns sponsored chats to be shown in the search results @query Query the user searches for
+getSearchSponsoredChats query:string = SponsoredChats;
+
+//@description Informs TDLib that the user fully viewed a sponsored chat @sponsored_chat_unique_id Unique identifier of the sponsored chat
+viewSponsoredChat sponsored_chat_unique_id:int53 = Ok;
+
+//@description Informs TDLib that the user opened a sponsored chat @sponsored_chat_unique_id Unique identifier of the sponsored chat
+openSponsoredChat sponsored_chat_unique_id:int53 = Ok;
+
+//@description Reports a sponsored chat to Telegram moderators
+//@sponsored_chat_unique_id Unique identifier of the sponsored chat
+//@option_id Option identifier chosen by the user; leave empty for the initial request
+reportSponsoredChat sponsored_chat_unique_id:int53 option_id:bytes = ReportSponsoredResult;
 
 
 //@description Removes an active notification from notification list. Needs to be called only if the notification is removed by the current user @notification_group_id Identifier of notification group to which the notification belongs @notification_id Identifier of removed notification
@@ -9654,6 +9728,66 @@ stopBusinessPoll business_connection_id:string chat_id:int53 message_id:int53 re
 //@message_id Identifier of the message
 //@is_pinned Pass true to pin the message, pass false to unpin it
 setBusinessMessageIsPinned business_connection_id:string chat_id:int53 message_id:int53 is_pinned:Bool = Ok;
+
+//@description Reads a message on behalf of a business account; for bots only
+//@business_connection_id Unique identifier of business connection through which the message was received
+//@chat_id The chat the message belongs to
+//@message_id Identifier of the message
+readBusinessMessage business_connection_id:string chat_id:int53 message_id:int53 = Ok;
+
+//@description Deletes messages on behalf of a business account; for bots only
+//@business_connection_id Unique identifier of business connection through which the messages were received
+//@message_ids Identifier of the messages
+deleteBusinessMessages business_connection_id:string message_ids:vector<int53> = Ok;
+
+//@description Changes a story sent by the bot on behalf of a business account; for bots only
+//@story_sender_chat_id Identifier of the chat that posted the story
+//@story_id Identifier of the story to edit
+//@content New content of the story
+//@areas New clickable rectangle areas to be shown on the story media
+//@caption New story caption
+//@privacy_settings The new privacy settings for the story
+editBusinessStory story_sender_chat_id:int53 story_id:int32 content:InputStoryContent areas:inputStoryAreas caption:formattedText privacy_settings:StoryPrivacySettings = Story;
+
+//@description Deletes a story sent by the bot on behalf of a business account; for bots only
+//@business_connection_id Unique identifier of business connection
+//@story_id Identifier of the story to delete
+deleteBusinessStory business_connection_id:string story_id:int32 = Ok;
+
+//@description Changes the first and last name of a business account; for bots only
+//@business_connection_id Unique identifier of business connection
+//@first_name The new value of the first name for the business account; 1-64 characters
+//@last_name The new value of the optional last name for the business account; 0-64 characters
+setBusinessAccountName business_connection_id:string first_name:string last_name:string = Ok;
+
+//@description Changes the bio of a business account; for bots only
+//@business_connection_id Unique identifier of business connection
+//@bio The new value of the bio; 0-getOption("bio_length_max") characters without line feeds
+setBusinessAccountBio business_connection_id:string bio:string = Ok;
+
+//@description Changes a profile photo of a business account; for bots only
+//@business_connection_id Unique identifier of business connection
+//@photo Profile photo to set; pass null to remove the photo
+//@is_public Pass true to set the public photo, which will be visible even the main photo is hidden by privacy settings
+setBusinessAccountProfilePhoto business_connection_id:string photo:InputChatPhoto is_public:Bool = Ok;
+
+//@description Changes the editable username of a business account; for bots only
+//@business_connection_id Unique identifier of business connection
+//@username The new value of the username
+setBusinessAccountUsername business_connection_id:string username:string = Ok;
+
+//@description Changes settings for gift receiving of a business account; for bots only
+//@business_connection_id Unique identifier of business connection
+//@settings The new settings
+setBusinessAccountGiftSettings business_connection_id:string settings:giftSettings = Ok;
+
+//@description Returns the amount of Telegram Stars owned by a business account; for bots only @business_connection_id Unique identifier of business connection
+getBusinessAccountStarAmount business_connection_id:string = StarAmount;
+
+//@description Transfer Telegram Stars from the business account to the business bot; for bots only
+//@business_connection_id Unique identifier of business connection
+//@star_count Number of Telegram Stars to transfer
+transferBusinessAccountStars business_connection_id:string star_count:int53 = Ok;
 
 
 //@description Checks validness of a name for a quick reply shortcut. Can be called synchronously @name The name of the shortcut; 1-32 characters
@@ -11406,7 +11540,7 @@ getWebPageInstantView url:string only_local:Bool = WebPageInstantView;
 
 //@description Changes a profile photo for the current user
 //@photo Profile photo to set
-//@is_public Pass true to set a public photo, which will be visible even the main photo is hidden by privacy settings
+//@is_public Pass true to set the public photo, which will be visible even the main photo is hidden by privacy settings
 setProfilePhoto photo:InputChatPhoto is_public:Bool = Ok;
 
 //@description Deletes a profile photo @profile_photo_id Identifier of the profile photo to delete
@@ -11845,6 +11979,9 @@ deleteSavedOrderInfo = Ok;
 deleteSavedCredentials = Ok;
 
 
+//@description Changes settings for gift receiving for the current user @settings The new settings
+setGiftSettings settings:giftSettings = Ok;
+
 //@description Returns gifts that can be sent to other users and channel chats
 getAvailableGifts = Gifts;
 
@@ -11857,8 +11994,10 @@ getAvailableGifts = Gifts;
 //@pay_for_upgrade Pass true to additionally pay for the gift upgrade and allow the receiver to upgrade it for free
 sendGift gift_id:int64 owner_id:MessageSender text:formattedText is_private:Bool pay_for_upgrade:Bool = Ok;
 
-//@description Sells a gift for Telegram Stars @received_gift_id Identifier of the gift
-sellGift received_gift_id:string = Ok;
+//@description Sells a gift for Telegram Stars
+//@business_connection_id Unique identifier of business connection on behalf of which to send the request; for bots only
+//@received_gift_id Identifier of the gift
+sellGift business_connection_id:string received_gift_id:string = Ok;
 
 //@description Toggles whether a gift is shown on the current user's or the channel's profile page; requires can_post_messages administrator right in the channel chat
 //@received_gift_id Identifier of the gift
@@ -11879,18 +12018,21 @@ toggleChatGiftNotifications chat_id:int53 are_enabled:Bool = Ok;
 getGiftUpgradePreview gift_id:int64 = GiftUpgradePreview;
 
 //@description Upgrades a regular gift
+//@business_connection_id Unique identifier of business connection on behalf of which to send the request; for bots only
 //@received_gift_id Identifier of the gift
 //@keep_original_details Pass true to keep the original gift text, sender and receiver in the upgraded gift
 //@star_count The amount of Telegram Stars required to pay for the upgrade. It the gift has prepaid_upgrade_star_count > 0, then pass 0, otherwise, pass gift.upgrade_star_count
-upgradeGift received_gift_id:string keep_original_details:Bool star_count:int53 = UpgradeGiftResult;
+upgradeGift business_connection_id:string received_gift_id:string keep_original_details:Bool star_count:int53 = UpgradeGiftResult;
 
 //@description Sends an upgraded gift to another user or a channel chat
+//@business_connection_id Unique identifier of business connection on behalf of which to send the request; for bots only
 //@received_gift_id Identifier of the gift
 //@new_owner_id Identifier of the user or the channel chat that will receive the gift
 //@star_count The amount of Telegram Stars required to pay for the transfer
-transferGift received_gift_id:string new_owner_id:MessageSender star_count:int53 = Ok;
+transferGift business_connection_id:string received_gift_id:string new_owner_id:MessageSender star_count:int53 = Ok;
 
 //@description Returns gifts received by the given user or chat
+//@business_connection_id Unique identifier of business connection on behalf of which to send the request; for bots only
 //@owner_id Identifier of the gift receiver
 //@exclude_unsaved Pass true to exclude gifts that aren't saved to the chat's profile page. Always true for gifts received by other users and channel chats without can_post_messages administrator right
 //@exclude_saved Pass true to exclude gifts that are saved to the chat's profile page. Always false for gifts received by other users and channel chats without can_post_messages administrator right
@@ -11900,7 +12042,7 @@ transferGift received_gift_id:string new_owner_id:MessageSender star_count:int53
 //@sort_by_price Pass true to sort results by gift price instead of send date
 //@offset Offset of the first entry to return as received from the previous request; use empty string to get the first chunk of results
 //@limit The maximum number of gifts to be returned; must be positive and can't be greater than 100. For optimal performance, the number of returned objects is chosen by TDLib and can be smaller than the specified limit
-getReceivedGifts owner_id:MessageSender exclude_unsaved:Bool exclude_saved:Bool exclude_unlimited:Bool exclude_limited:Bool exclude_upgraded:Bool sort_by_price:Bool offset:string limit:int32 = ReceivedGifts;
+getReceivedGifts business_connection_id:string owner_id:MessageSender exclude_unsaved:Bool exclude_saved:Bool exclude_unlimited:Bool exclude_limited:Bool exclude_upgraded:Bool sort_by_price:Bool offset:string limit:int32 = ReceivedGifts;
 
 //@description Returns information about a received gift @received_gift_id Identifier of the gift
 getReceivedGift received_gift_id:string = ReceivedGift;
@@ -12392,6 +12534,13 @@ checkPremiumGiftCode code:string = PremiumGiftCodeInfo;
 
 //@description Applies a Telegram Premium gift code @code The code to apply
 applyPremiumGiftCode code:string = Ok;
+
+//@description Allows to buy a Telegram Premium subscription for another user with payment in Telegram Stars; for bots only
+//@user_id Identifier of the user which will receive Telegram Premium
+//@star_count The number of Telegram Stars to pay for subscription
+//@month_count Number of months the Telegram Premium subscription will be active for the user
+//@text Text to show to the user receiving Telegram Premium; 0-getOption("gift_text_length_max") characters. Only Bold, Italic, Underline, Strikethrough, Spoiler, and CustomEmoji entities are allowed
+giftPremiumWithStars user_id:int53 star_count:int53 month_count:int32 text:formattedText = Ok;
 
 //@description Launches a prepaid giveaway
 //@giveaway_id Unique identifier of the prepaid giveaway

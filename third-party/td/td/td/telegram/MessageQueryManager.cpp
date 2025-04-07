@@ -850,18 +850,8 @@ class BlockFromRepliesQuery final : public Td::ResultHandler {
   }
 
   void send(MessageId message_id, bool need_delete_message, bool need_delete_all_messages, bool report_spam) {
-    int32 flags = 0;
-    if (need_delete_message) {
-      flags |= telegram_api::contacts_blockFromReplies::DELETE_MESSAGE_MASK;
-    }
-    if (need_delete_all_messages) {
-      flags |= telegram_api::contacts_blockFromReplies::DELETE_HISTORY_MASK;
-    }
-    if (report_spam) {
-      flags |= telegram_api::contacts_blockFromReplies::REPORT_SPAM_MASK;
-    }
     send_query(G()->net_query_creator().create(telegram_api::contacts_blockFromReplies(
-        flags, false /*ignored*/, false /*ignored*/, false /*ignored*/, message_id.get_server_message_id().get())));
+        0, need_delete_message, need_delete_all_messages, report_spam, message_id.get_server_message_id().get())));
   }
 
   void on_result(BufferSlice packet) final {
@@ -1021,13 +1011,8 @@ class DeleteChannelHistoryQuery final : public Td::ResultHandler {
       return on_error(Status::Error(400, "Can't access the chat"));
     }
 
-    int32 flags = 0;
-    if (revoke) {
-      flags |= telegram_api::channels_deleteHistory::FOR_EVERYONE_MASK;
-    }
-
     send_query(G()->net_query_creator().create(telegram_api::channels_deleteHistory(
-        flags, false /*ignored*/, std::move(input_channel), max_message_id.get_server_message_id().get())));
+        0, revoke, std::move(input_channel), max_message_id.get_server_message_id().get())));
   }
 
   void on_result(BufferSlice packet) final {

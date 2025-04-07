@@ -6,6 +6,7 @@
 //
 #include "td/telegram/EmojiStatus.h"
 
+#include "td/telegram/AuthManager.h"
 #include "td/telegram/Global.h"
 #include "td/telegram/logevent/LogEvent.h"
 #include "td/telegram/StickersManager.h"
@@ -623,6 +624,10 @@ void clear_recent_emoji_statuses(Td *td, Promise<Unit> &&promise) {
 }
 
 void get_upgraded_gift_emoji_statuses(Td *td, Promise<td_api::object_ptr<td_api::emojiStatuses>> &&promise) {
+  if (td->auth_manager_->is_bot()) {
+    CHECK(!promise);
+    return;
+  }
   auto statuses = load_emoji_statuses(get_upgraded_gift_emoji_statuses_database_key());
   if (statuses.hash_ != -1 && promise) {
     promise.set_value(statuses.get_emoji_statuses_object());

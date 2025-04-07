@@ -42,14 +42,17 @@
 #include <utility>
 
 using namespace tde2e_core;
+
 namespace api = tde2e_api;
+
 template <class T>
-td::Status expect_error(td::Result<T> got) {
-  if (got.is_ok()) {
-    return td::Status::Error("Got Ok, instead of Error");
+static td::Status expect_error(td::Result<T> result) {
+  if (result.is_ok()) {
+    return td::Status::Error("Receive Ok instead of Error");
   }
   return td::Status::OK();
 }
+
 S_TEST(MessageEncryption, simple) {
   std::string secret = "secret";
   {
@@ -737,9 +740,9 @@ TEST(Call, Basic_API) {
   auto call2 = call_create(2, key2, block1).value();
   ASSERT_EQ(call_get_verification_words(call2).value().words, call_get_verification_words(call1).value().words);
 
-  auto block2 =
-      F(call_create_change_state_block(call2, CallState{0, {CallParticipant{2, pkey2, 3}, CallParticipant{3, pkey3, 3}}}))
-          .value();
+  auto block2 = F(call_create_change_state_block(
+                      call2, CallState{0, {CallParticipant{2, pkey2, 3}, CallParticipant{3, pkey3, 3}}}))
+                    .value();
   call_describe_block(block2).value();
   auto call3 = call_create(3, key3, block2).value();
 
@@ -749,9 +752,9 @@ TEST(Call, Basic_API) {
   // call2 and call3 verification
   ASSERT_EQ(call_get_verification_words(call2).value().words, call_get_verification_words(call3).value().words);
 
-  auto block31 =
-      F(call_create_change_state_block(call2, CallState{0, {CallParticipant{2, pkey2, 3}, CallParticipant{3, pkey3, 3}}}))
-          .value();
+  auto block31 = F(call_create_change_state_block(
+                       call2, CallState{0, {CallParticipant{2, pkey2, 3}, CallParticipant{3, pkey3, 3}}}))
+                     .value();
 
   call_apply_block(call2, block31).value();
   auto commit2 = F(call_pull_outbound_messages(call2).value().at(0)).value();
@@ -788,9 +791,9 @@ TEST(Call, Basic_API) {
   ASSERT_EQ("hello", call_decrypt(call3, 2, 1, e).value());
   ASSERT_TRUE(!call_decrypt(call3, 2, 1, e).is_ok());
 
-  auto block3 =
-      F(call_create_change_state_block(call2, CallState{0, {CallParticipant{2, pkey2, 3}, CallParticipant{3, pkey3, 3}}}))
-          .value();
+  auto block3 = F(call_create_change_state_block(
+                      call2, CallState{0, {CallParticipant{2, pkey2, 3}, CallParticipant{3, pkey3, 3}}}))
+                    .value();
   call_apply_block(call3, block3).value();
   ASSERT_TRUE(!call_decrypt(call3, 2, 1, e).is_ok());
   ASSERT_EQ("hello", call_decrypt(call3, 2, 1, e2).value());

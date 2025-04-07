@@ -4,8 +4,9 @@
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
-#include "MessageEncryption.h"
 #include "td/e2e/Keys.h"
+
+#include "td/e2e/MessageEncryption.h"
 
 #include "td/utils/Ed25519.h"
 #include "td/utils/misc.h"

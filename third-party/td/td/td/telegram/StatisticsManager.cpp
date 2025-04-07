@@ -189,12 +189,8 @@ class GetMegagroupStatsQuery final : public Td::ResultHandler {
     auto input_channel = td_->chat_manager_->get_input_channel(channel_id);
     CHECK(input_channel != nullptr);
 
-    int32 flags = 0;
-    if (is_dark) {
-      flags |= telegram_api::stats_getMegagroupStats::DARK_MASK;
-    }
     send_query(G()->net_query_creator().create(
-        telegram_api::stats_getMegagroupStats(flags, false /*ignored*/, std::move(input_channel)), {}, dc_id));
+        telegram_api::stats_getMegagroupStats(0, is_dark, std::move(input_channel)), {}, dc_id));
   }
 
   void on_result(BufferSlice packet) final {
@@ -227,12 +223,8 @@ class GetBroadcastStatsQuery final : public Td::ResultHandler {
     auto input_channel = td_->chat_manager_->get_input_channel(channel_id);
     CHECK(input_channel != nullptr);
 
-    int32 flags = 0;
-    if (is_dark) {
-      flags |= telegram_api::stats_getBroadcastStats::DARK_MASK;
-    }
     send_query(G()->net_query_creator().create(
-        telegram_api::stats_getBroadcastStats(flags, false /*ignored*/, std::move(input_channel)), {}, dc_id));
+        telegram_api::stats_getBroadcastStats(0, is_dark, std::move(input_channel)), {}, dc_id));
   }
 
   void on_result(BufferSlice packet) final {
@@ -306,12 +298,8 @@ class GetBroadcastRevenueStatsQuery final : public Td::ResultHandler {
     auto input_peer = td_->dialog_manager_->get_input_peer(dialog_id, AccessRights::Read);
     CHECK(input_peer != nullptr);
 
-    int32 flags = 0;
-    if (is_dark) {
-      flags |= telegram_api::stats_getBroadcastRevenueStats::DARK_MASK;
-    }
     send_query(G()->net_query_creator().create(
-        telegram_api::stats_getBroadcastRevenueStats(flags, false /*ignored*/, std::move(input_peer))));
+        telegram_api::stats_getBroadcastRevenueStats(0, is_dark, std::move(input_peer))));
   }
 
   void on_result(BufferSlice packet) final {
@@ -475,14 +463,10 @@ class GetMessageStatsQuery final : public Td::ResultHandler {
       return promise_.set_error(Status::Error(400, "Supergroup not found"));
     }
 
-    int32 flags = 0;
-    if (is_dark) {
-      flags |= telegram_api::stats_getMessageStats::DARK_MASK;
-    }
-    send_query(G()->net_query_creator().create(
-        telegram_api::stats_getMessageStats(flags, false /*ignored*/, std::move(input_channel),
-                                            message_id.get_server_message_id().get()),
-        {}, dc_id));
+    send_query(
+        G()->net_query_creator().create(telegram_api::stats_getMessageStats(0, is_dark, std::move(input_channel),
+                                                                            message_id.get_server_message_id().get()),
+                                        {}, dc_id));
   }
 
   void on_result(BufferSlice packet) final {
@@ -523,12 +507,8 @@ class GetStoryStatsQuery final : public Td::ResultHandler {
       return promise_.set_error(Status::Error(400, "Chat not found"));
     }
 
-    int32 flags = 0;
-    if (is_dark) {
-      flags |= telegram_api::stats_getStoryStats::DARK_MASK;
-    }
     send_query(G()->net_query_creator().create(
-        telegram_api::stats_getStoryStats(flags, false /*ignored*/, std::move(input_peer), story_id.get()), {}, dc_id));
+        telegram_api::stats_getStoryStats(0, is_dark, std::move(input_peer), story_id.get()), {}, dc_id));
   }
 
   void on_result(BufferSlice packet) final {

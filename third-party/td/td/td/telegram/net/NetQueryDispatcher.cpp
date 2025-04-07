@@ -92,10 +92,13 @@ void NetQueryDispatcher::dispatch(NetQueryPtr net_query) {
 
   if (net_query->is_ready() && net_query->is_error()) {
     auto code = net_query->error().code();
+    auto message = net_query->error().message();
     if (code == 303) {
       try_fix_migrate(net_query);
     } else if (code == NetQuery::Resend) {
       net_query->resend();
+    } else if (code == 420 && message == "FROZEN_METHOD_INVALID") {
+      net_query->set_error(Status::Error(406, message));
     } else if (code < 0 || code == 500 ||
                (code == 420 && !begins_with(net_query->error().message(), "STORY_SEND_FLOOD_") &&
                 !begins_with(net_query->error().message(), "PREMIUM_SUB_ACTIVE_UNTIL_"))) {

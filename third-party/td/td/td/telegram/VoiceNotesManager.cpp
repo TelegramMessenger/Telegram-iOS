@@ -156,10 +156,10 @@ SecretInputMedia VoiceNotesManager::get_secret_input_media(
 
   auto *voice_note = get_voice_note(voice_note_file_id);
   CHECK(voice_note != nullptr);
-  vector<tl_object_ptr<secret_api::DocumentAttribute>> attributes;
-  attributes.push_back(make_tl_object<secret_api::documentAttributeAudio>(
-      secret_api::documentAttributeAudio::VOICE_MASK | secret_api::documentAttributeAudio::WAVEFORM_MASK,
-      false /*ignored*/, voice_note->duration, "", "", BufferSlice(voice_note->waveform)));
+  vector<secret_api::object_ptr<secret_api::DocumentAttribute>> attributes;
+  attributes.push_back(secret_api::make_object<secret_api::documentAttributeAudio>(
+      secret_api::documentAttributeAudio::WAVEFORM_MASK, true, voice_note->duration, "", "",
+      BufferSlice(voice_note->waveform)));
 
   return {std::move(input_file), BufferSlice(), Dimensions(), voice_note->mime_type, file_view,
           std::move(attributes), caption,       layer};
@@ -193,14 +193,14 @@ tl_object_ptr<telegram_api::InputMedia> VoiceNotesManager::get_input_media(
     const VoiceNote *voice_note = get_voice_note(file_id);
     CHECK(voice_note != nullptr);
 
-    vector<tl_object_ptr<telegram_api::DocumentAttribute>> attributes;
+    vector<telegram_api::object_ptr<telegram_api::DocumentAttribute>> attributes;
     {
-      int32 flags = telegram_api::documentAttributeAudio::VOICE_MASK;
+      int32 flags = 0;
       if (!voice_note->waveform.empty()) {
         flags |= telegram_api::documentAttributeAudio::WAVEFORM_MASK;
       }
-      attributes.push_back(make_tl_object<telegram_api::documentAttributeAudio>(
-          flags, false /*ignored*/, voice_note->duration, "", "", BufferSlice(voice_note->waveform)));
+      attributes.push_back(telegram_api::make_object<telegram_api::documentAttributeAudio>(
+          flags, true, voice_note->duration, "", "", BufferSlice(voice_note->waveform)));
     }
     string mime_type = voice_note->mime_type;
     if (mime_type != "audio/ogg" && mime_type != "audio/mpeg" && mime_type != "audio/mp4") {

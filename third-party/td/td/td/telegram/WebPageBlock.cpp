@@ -2111,15 +2111,9 @@ unique_ptr<WebPageBlock> get_web_page_block(Td *td, tl_object_ptr<telegram_api::
       if (it != photos.end()) {
         photo = *it->second;
       }
-      string url;
-      WebPageId web_page_id;
-      if ((page_block->flags_ & telegram_api::pageBlockPhoto::URL_MASK) != 0) {
-        url = std::move(page_block->url_);
-        web_page_id = WebPageId(page_block->webpage_id_);
-      }
       return td::make_unique<WebPageBlockPhoto>(std::move(photo),
                                                 get_page_block_caption(std::move(page_block->caption_), documents),
-                                                std::move(url), web_page_id);
+                                                std::move(page_block->url_), WebPageId(page_block->webpage_id_));
     }
     case telegram_api::pageBlockVideo::ID: {
       auto page_block = move_tl_object_as<telegram_api::pageBlockVideo>(page_block_ptr);
@@ -2154,11 +2148,9 @@ unique_ptr<WebPageBlock> get_web_page_block(Td *td, tl_object_ptr<telegram_api::
       bool allow_scrolling = page_block->allow_scrolling_;
       bool has_dimensions = (page_block->flags_ & telegram_api::pageBlockEmbed::W_MASK) != 0;
       Photo poster_photo;
-      if ((page_block->flags_ & telegram_api::pageBlockEmbed::POSTER_PHOTO_ID_MASK) != 0) {
-        auto it = photos.find(page_block->poster_photo_id_);
-        if (it != photos.end()) {
-          poster_photo = *it->second;
-        }
+      auto it = photos.find(page_block->poster_photo_id_);
+      if (it != photos.end()) {
+        poster_photo = *it->second;
       }
       Dimensions dimensions;
       if (has_dimensions) {
@@ -2266,12 +2258,8 @@ unique_ptr<WebPageBlock> get_web_page_block(Td *td, tl_object_ptr<telegram_api::
           if (table_cell->text_ != nullptr) {
             cell.text = get_rich_text(std::move(table_cell->text_), documents);
           }
-          if ((table_cell->flags_ & telegram_api::pageTableCell::COLSPAN_MASK) != 0) {
-            cell.colspan = table_cell->colspan_;
-          }
-          if ((table_cell->flags_ & telegram_api::pageTableCell::ROWSPAN_MASK) != 0) {
-            cell.rowspan = table_cell->rowspan_;
-          }
+          cell.colspan = max(table_cell->colspan_, 1);
+          cell.rowspan = max(table_cell->rowspan_, 1);
           return cell;
         });
       });
@@ -2288,25 +2276,23 @@ unique_ptr<WebPageBlock> get_web_page_block(Td *td, tl_object_ptr<telegram_api::
     }
     case telegram_api::pageBlockRelatedArticles::ID: {
       auto page_block = move_tl_object_as<telegram_api::pageBlockRelatedArticles>(page_block_ptr);
-      auto articles = transform(
-          std::move(page_block->articles_), [&](tl_object_ptr<telegram_api::pageRelatedArticle> &&related_article) {
-            RelatedArticle article;
-            article.url = std::move(related_article->url_);
-            article.web_page_id = WebPageId(related_article->webpage_id_);
-            article.title = std::move(related_article->title_);
-            article.description = std::move(related_article->description_);
-            if ((related_article->flags_ & telegram_api::pageRelatedArticle::PHOTO_ID_MASK) != 0) {
-              auto it = photos.find(related_article->photo_id_);
-              if (it != photos.end()) {
-                article.photo = *it->second;
-              }
-            }
-            article.author = std::move(related_article->author_);
-            if ((related_article->flags_ & telegram_api::pageRelatedArticle::PUBLISHED_DATE_MASK) != 0) {
-              article.published_date = related_article->published_date_;
-            }
-            return article;
-          });
+      auto articles = transform(std::move(page_block->articles_),
+                                [&](tl_object_ptr<telegram_api::pageRelatedArticle> &&related_article) {
+                                  RelatedArticle article;
+                                  article.url = std::move(related_article->url_);
+                                  article.web_page_id = WebPageId(related_article->webpage_id_);
+                                  article.title = std::move(related_article->title_);
+                                  article.description = std::move(related_article->description_);
+                                  auto it = photos.find(related_article->photo_id_);
+                                  if (it != photos.end()) {
+                                    article.photo = *it->second;
+                                  }
+                                  article.author = std::move(related_article->author_);
+                                  if (related_article->published_date_ > 0) {
+                                    article.published_date = related_article->published_date_;
+                                  }
+                                  return article;
+                                });
       return td::make_unique<WebPageBlockRelatedArticles>(get_rich_text(std::move(page_block->title_), documents),
                                                           std::move(articles));
     }

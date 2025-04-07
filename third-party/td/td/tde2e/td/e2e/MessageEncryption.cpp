@@ -29,7 +29,8 @@ td::AesCbcState MessageEncryption::calc_aes_cbc_state_from_hash(td::Slice hash) 
 }
 
 td::SecureString MessageEncryption::gen_random_prefix(td::int64 data_size, td::int64 min_padding) {
-  td::SecureString buff(td::narrow_cast<size_t>(((min_padding + 15 + data_size) & ~static_cast<td::int64>(15)) - data_size), '\0');
+  td::SecureString buff(
+      td::narrow_cast<size_t>(((min_padding + 15 + data_size) & ~static_cast<td::int64>(15)) - data_size), '\0');
   td::Random::secure_bytes(buff.as_mutable_slice());
   buff.as_mutable_slice().ubegin()[0] = td::narrow_cast<td::uint8>(buff.size());
   CHECK((buff.size() + data_size) % 16 == 0);
@@ -37,12 +38,12 @@ td::SecureString MessageEncryption::gen_random_prefix(td::int64 data_size, td::i
 }
 
 td::SecureString MessageEncryption::gen_deterministic_prefix(td::int64 data_size, td::int64 min_padding) {
-  td::SecureString buff(td::narrow_cast<size_t>(((min_padding + 15 + data_size) & ~static_cast<td::int64>(15)) - data_size), '\0');
+  td::SecureString buff(
+      td::narrow_cast<size_t>(((min_padding + 15 + data_size) & ~static_cast<td::int64>(15)) - data_size), '\0');
   buff.as_mutable_slice().ubegin()[0] = td::narrow_cast<td::uint8>(buff.size());
   CHECK((buff.size() + data_size) % 16 == 0);
   return buff;
 }
-
 
 td::SecureString MessageEncryption::kdf(td::Slice secret, td::Slice password, int iterations) {
   td::SecureString new_secret(64);
@@ -99,13 +100,13 @@ td::Result<td::SecureString> MessageEncryption::decrypt_data(td::Slice encrypted
   td::SecureString decrypted_data(encrypted_data.size(), '\0');
   cbc_state.decrypt(encrypted_data, decrypted_data.as_mutable_slice());
 
-  auto got_large_msg_id = hmac_sha512(hmac_secret, decrypted_data);
-  auto got_msg_id = got_large_msg_id.as_slice().substr(0, 16);
+  auto expected_large_msg_id = hmac_sha512(hmac_secret, decrypted_data);
+  auto expected_msg_id = expected_large_msg_id.as_slice().substr(0, 16);
 
   // check hash
   int is_mac_bad = 0;
   for (size_t i = 0; i < 16; i++) {
-    is_mac_bad |= got_msg_id[i] ^ msg_id[i];
+    is_mac_bad |= expected_msg_id[i] ^ msg_id[i];
   }
   if (is_mac_bad != 0) {
     return td::Status::Error("Failed to decrypt: msg_id mismatch");

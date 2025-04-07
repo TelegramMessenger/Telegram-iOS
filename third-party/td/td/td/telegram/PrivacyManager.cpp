@@ -89,12 +89,8 @@ class AddNoPaidMessageExceptionQuery final : public Td::ResultHandler {
 
   void send(UserId user_id, telegram_api::object_ptr<telegram_api::InputUser> &&input_user, bool refund_charged) {
     user_id_ = user_id;
-    int32 flags = 0;
-    if (refund_charged) {
-      flags |= telegram_api::account_addNoPaidMessagesException::REFUND_CHARGED_MASK;
-    }
     send_query(G()->net_query_creator().create(
-        telegram_api::account_addNoPaidMessagesException(flags, false /*ignored*/, std::move(input_user))));
+        telegram_api::account_addNoPaidMessagesException(0, refund_charged, std::move(input_user))));
   }
 
   void on_result(BufferSlice packet) final {

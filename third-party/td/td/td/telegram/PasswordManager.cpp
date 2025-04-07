@@ -813,8 +813,8 @@ void PasswordManager::do_get_state(Promise<PasswordState> promise) {
         state.unconfirmed_recovery_email_code = {std::move(password->email_unconfirmed_pattern_), code_length};
         state.login_email_pattern = std::move(password->login_email_pattern_);
 
-        if (password->flags_ & telegram_api::account_password::PENDING_RESET_DATE_MASK) {
-          state.pending_reset_date = td::max(password->pending_reset_date_, 0);
+        if (password->pending_reset_date_ > 0) {
+          state.pending_reset_date = password->pending_reset_date_;
         }
 
         auto &new_state = state.new_state;
