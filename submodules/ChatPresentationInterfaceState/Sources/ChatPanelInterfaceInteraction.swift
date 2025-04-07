@@ -114,6 +114,7 @@ public final class ChatPanelInterfaceInteraction {
     public let setupMessageAutoremoveTimeout: () -> Void
     public let sendSticker: (FileMediaReference, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool
     public let unblockPeer: () -> Void
+    public let listenMessage: (MessageId, ContextControllerProtocol?) -> Void
     public let pinMessage: (MessageId, ContextControllerProtocol?) -> Void
     public let unpinMessage: (MessageId, Bool, ContextControllerProtocol?) -> Void
     public let unpinAllMessages: () -> Void
@@ -231,6 +232,7 @@ public final class ChatPanelInterfaceInteraction {
         setupMessageAutoremoveTimeout: @escaping () -> Void,
         sendSticker: @escaping (FileMediaReference, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool,
         unblockPeer: @escaping () -> Void,
+        listenMessage: @escaping (MessageId, ContextControllerProtocol?) -> Void,
         pinMessage: @escaping (MessageId, ContextControllerProtocol?) -> Void,
         unpinMessage: @escaping (MessageId, Bool, ContextControllerProtocol?) -> Void,
         unpinAllMessages: @escaping () -> Void,
@@ -347,6 +349,7 @@ public final class ChatPanelInterfaceInteraction {
         self.setupMessageAutoremoveTimeout = setupMessageAutoremoveTimeout
         self.sendSticker = sendSticker
         self.unblockPeer = unblockPeer
+        self.listenMessage = listenMessage
         self.pinMessage = pinMessage
         self.unpinMessage = unpinMessage
         self.unpinAllMessages = unpinAllMessages
@@ -471,6 +474,7 @@ public final class ChatPanelInterfaceInteraction {
         }, sendSticker: { _, _, _, _, _, _ in
             return false
         }, unblockPeer: {
+        }, listenMessage: { _, _ in
         }, pinMessage: { _, _ in
         }, unpinMessage: { _, _, _ in
         }, unpinAllMessages: {

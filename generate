@@ -1,0 +1,5 @@
+python3 build-system/Make/Make.py \
+    --cacheDir="$HOME/telegram-bazel-cache" \
+    generateProject \
+    --configurationPath=build-system/template_minimal_development_configuration.json \
+    --xcodeManagedCodesigning

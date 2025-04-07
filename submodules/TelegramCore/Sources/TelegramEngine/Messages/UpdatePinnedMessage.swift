@@ -14,6 +14,95 @@ public enum PinnedMessageUpdate {
     case clear(id: MessageId)
 }
 
+public enum ListenMessage {
+    case listen(id: MessageId, silent: Bool, forThisPeerOnlyIfPossible: Bool)
+}
+
+public enum ListenMessageError {
+    case generic
+}
+
+func _internal_requestListenMessage(account: Account, peerId: PeerId, update: ListenMessage) -> Signal<Void, ListenMessageError> {
+    return account.postbox.transaction { transaction -> (Peer?, CachedPeerData?) in
+        return (transaction.getPeer(peerId), transaction.getPeerCachedData(peerId: peerId))
+    }
+    |> mapError { _ -> ListenMessageError in
+    }
+    |> mapToSignal { peer, cachedPeerData -> Signal<Void, ListenMessageError> in
+        guard let peer = peer, let inputPeer = apiInputPeer(peer) else {
+            return .fail(.generic)
+        }
+        
+        if let channel = peer as? TelegramChannel {
+            let canManageListen = channel.hasPermission(.listenMessages)
+            if !canManageListen {
+                return .fail(.generic)
+            }
+        } else if let group = peer as? TelegramGroup {
+            switch group.role {
+            case .creator, .admin:
+                break
+            default:
+                if group.defaultBannedRights != nil {
+                    return .fail(.generic)
+                }
+            }
+        }
+            
+        var flags: Int32 = 0
+        let messageId: Int32
+        switch update {
+        case let .listen(id, silent, forThisPeerOnlyIfPossible):
+            messageId = id.id
+            if silent {
+                flags |= (1 << 0)
+            }
+            if forThisPeerOnlyIfPossible {
+                flags |= (1 << 2)
+            }
+        }
+        
+        let request = Api.functions.messages.updateListenMessage(flags: flags, peer: inputPeer, id: messageId)
+        
+        return account.network.request(request)
+        |> mapError { _ -> ListenMessageError in
+            return .generic
+        }
+        |> mapToSignal { updates -> Signal<Void, ListenMessageError> in
+            account.stateManager.addUpdates(updates)
+            return account.postbox.transaction { transaction in
+                switch updates {
+                case let .updates(updates, _, _, _, _):
+                    if updates.isEmpty {
+                        if peerId.namespace == Namespaces.Peer.CloudChannel {
+                            let messageId: MessageId
+                            switch update {
+                            case let .listen(id, _, _):
+                                messageId = id
+                                transaction.updateMessage(messageId, update: { currentMessage in
+                                    let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
+                                    var updatedTags = currentMessage.tags
+                                    switch update {
+                                    case .listen:
+                                        updatedTags.insert(.pinned)
+                                    }
+                                    if updatedTags == currentMessage.tags {
+                                        return .skip
+                                    }
+                                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: updatedTags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media))
+                                })
+                            }
+                        }
+                    }
+                default: break
+                }
+            }
+            |> mapError { _ -> ListenMessageError in
+            }
+        }
+    }
+}
+
 func _internal_requestUpdatePinnedMessage(account: Account, peerId: PeerId, update: PinnedMessageUpdate) -> Signal<Void, UpdatePinnedMessageError> {
     return account.postbox.transaction { transaction -> (Peer?, CachedPeerData?) in
         return (transaction.getPeer(peerId), transaction.getPeerCachedData(peerId: peerId))

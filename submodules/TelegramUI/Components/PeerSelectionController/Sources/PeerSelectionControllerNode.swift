@@ -614,6 +614,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }, sendSticker: { _, _, _, _, _, _ in
             return false
         }, unblockPeer: {
+        }, listenMessage: { _, _ in
         }, pinMessage: { _, _ in
         }, unpinMessage: { _, _, _ in
         }, unpinAllMessages: {

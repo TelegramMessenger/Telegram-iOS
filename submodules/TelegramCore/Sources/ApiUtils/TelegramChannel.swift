@@ -6,6 +6,7 @@ public enum TelegramChannelPermission {
     case sendPhoto
     case sendVideo
     case sendSomething
+    case listenMessages
     case pinMessages
     case manageTopics
     case createTopics
@@ -255,6 +256,8 @@ public extension TelegramChannel {
                 } else {
                     return false
                 }
+        case .listenMessages:
+            return true // TODO: add relevant logic
         }
     }
     

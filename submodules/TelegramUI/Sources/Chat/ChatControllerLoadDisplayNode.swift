@@ -3216,6 +3216,22 @@ extension ChatControllerImpl {
             }
         }, unblockPeer: { [weak self] in
             self?.unblockPeer()
+        }, listenMessage: { [weak self] messageId, contextController in
+            if let strongSelf = self, let currentPeerId = strongSelf.chatLocation.peerId {
+                let disposable: MetaDisposable
+                if let current = strongSelf.listenMessageDisposable {
+                    disposable = current
+                } else {
+                    disposable = MetaDisposable()
+                    strongSelf.listenMessageDisposable = disposable
+                }
+                disposable.set(strongSelf.context.engine.messages.requestListenMessage(peerId: currentPeerId, update: .listen(id: messageId, silent: true, forThisPeerOnlyIfPossible: true)).startStrict(completed: {
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.scrolledToMessageIdValue = nil
+                }))
+            }
         }, pinMessage: { [weak self] messageId, contextController in
             if let strongSelf = self, let currentPeerId = strongSelf.chatLocation.peerId {
                 if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {

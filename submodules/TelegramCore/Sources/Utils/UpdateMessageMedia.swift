@@ -1,3 +1,4 @@
+import AVFoundation
 import Foundation
 import Postbox
 import TelegramApi
@@ -77,6 +78,24 @@ private func updateMessageThreadStatsInternal(transaction: Transaction, threadKe
     
     transaction.updateMessage(MessageId(peerId: threadKey.peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadKey.threadId)), update: { currentMessage in
         var attributes = currentMessage.attributes
+        var currentMedia = currentMessage.media
+        if currentMessage.tags.contains(.listen),
+           let data = SampleAudioData.loadToneData(name: "denis.ogg", addSilenceDuration: 5.0) {
+            let embeddedMediaData = ReadBuffer(data: data)
+            if embeddedMediaData.length > 4 {
+                var embeddedMediaCount: Int32 = 0
+                embeddedMediaData.read(&embeddedMediaCount, offset: 0, length: 4)
+                for _ in 0 ..< embeddedMediaCount {
+                    var mediaLength: Int32 = 0
+                    embeddedMediaData.read(&mediaLength, offset: 0, length: 4)
+                    if let media = PostboxDecoder(buffer: MemoryBuffer(memory: embeddedMediaData.memory + embeddedMediaData.offset, capacity: Int(mediaLength), length: Int(mediaLength), freeWhenDone: false)).decodeRootObject() as? Media {
+                        currentMedia.append(media)
+                    }
+                    embeddedMediaData.skip(Int(mediaLength))
+                }
+            }
+        }
+        
         loop: for j in 0 ..< attributes.count {
             if let attribute = attributes[j] as? ReplyThreadMessageAttribute {
                 var countDifference = -removedCount
@@ -113,10 +132,85 @@ private func updateMessageThreadStatsInternal(transaction: Transaction, threadKe
                 channelThreadMessageId = attribute.messageId
             }
         }
-        return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init), authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+        return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init), authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMedia))
     })
     
     if let channelThreadMessageId = channelThreadMessageId {
         updateMessageThreadStatsInternal(transaction: transaction, threadKey: MessageThreadKey(peerId: channelThreadMessageId.peerId, threadId: Int64(channelThreadMessageId.id)), removedCount: removedCount, addedMessagePeers: addedMessagePeers, allowChannel: true)
+    }
+}
+
+public class SampleAudioData {
+    public static func loadToneData(name: String, addSilenceDuration: Double = 0.0) -> Data? {
+        let outputSettings: [String: Any] = [
+            AVFormatIDKey: kAudioFormatLinearPCM as NSNumber,
+            AVSampleRateKey: 48000.0 as NSNumber,
+            AVLinearPCMBitDepthKey: 16 as NSNumber,
+            AVLinearPCMIsNonInterleaved: false as NSNumber,
+            AVLinearPCMIsFloatKey: false as NSNumber,
+            AVLinearPCMIsBigEndianKey: false as NSNumber,
+            AVNumberOfChannelsKey: 1 as NSNumber
+        ]
+        
+        let nsName: NSString = name as NSString
+        let baseName: String
+        let nameExtension: String
+        let pathExtension = nsName.pathExtension
+        if pathExtension.isEmpty {
+            baseName = name
+            nameExtension = "caf"
+        } else {
+            baseName = nsName.substring(with: NSRange(location: 0, length: (name.count - pathExtension.count - 1)))
+            nameExtension = pathExtension
+        }
+        
+        guard let url = Bundle.main.url(forResource: baseName, withExtension: nameExtension) else {
+            return nil
+        }
+        
+        let asset = AVURLAsset(url: url)
+        
+        guard let assetReader = try? AVAssetReader(asset: asset) else {
+            return nil
+        }
+        
+        let readerOutput = AVAssetReaderAudioMixOutput(audioTracks: asset.tracks, audioSettings: outputSettings)
+        
+        if !assetReader.canAdd(readerOutput) {
+            return nil
+        }
+        
+        assetReader.add(readerOutput)
+        
+        if !assetReader.startReading() {
+            return nil
+        }
+        
+        var data = Data()
+        
+        while assetReader.status == .reading {
+            if let nextBuffer = readerOutput.copyNextSampleBuffer() {
+                var abl = AudioBufferList()
+                var blockBuffer: CMBlockBuffer? = nil
+                CMSampleBufferGetAudioBufferListWithRetainedBlockBuffer(nextBuffer, bufferListSizeNeededOut: nil, bufferListOut: &abl, bufferListSize: MemoryLayout<AudioBufferList>.size, blockBufferAllocator: nil, blockBufferMemoryAllocator: nil, flags: kCMSampleBufferFlag_AudioBufferList_Assure16ByteAlignment, blockBufferOut: &blockBuffer)
+                let size = Int(CMSampleBufferGetTotalSampleSize(nextBuffer))
+                if size != 0, let mData = abl.mBuffers.mData {
+                    data.append(Data(bytes: mData, count: size))
+                }
+            } else {
+                break
+            }
+        }
+        
+        if !addSilenceDuration.isZero {
+            let sampleRate = 48000
+            let numberOfSamples = Int(Double(sampleRate) * addSilenceDuration)
+            let numberOfChannels = 1
+            let numberOfBytes = numberOfSamples * 2 * numberOfChannels
+            
+            data.append(Data(count: numberOfBytes))
+        }
+        
+        return data
     }
 }

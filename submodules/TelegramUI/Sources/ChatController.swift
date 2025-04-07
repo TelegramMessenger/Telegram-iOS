@@ -390,7 +390,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     var recentlyUsedInlineBotsValue: [Peer] = []
     var recentlyUsedInlineBotsDisposable: Disposable?
-    
+
+    var listenMessageDisposable: MetaDisposable?
     var unpinMessageDisposable: MetaDisposable?
         
     let typingActivityPromise = Promise<Bool>(false)

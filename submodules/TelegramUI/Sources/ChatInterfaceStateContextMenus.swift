@@ -1513,7 +1513,14 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 })))
             }
         }
-        
+
+        actions.append(.action(ContextMenuActionItem(text: "Listen", icon: { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/SoundOn"), color: theme.actionSheet.primaryTextColor)
+        }, action: { c, _ in
+            interfaceInteraction.listenMessage(message.id, c)
+            c?.dismiss()
+        })))
+
         var canPin = data.canPin
         if case let .replyThread(message) = chatPresentationInterfaceState.chatLocation {
             if !message.isForumPost {
