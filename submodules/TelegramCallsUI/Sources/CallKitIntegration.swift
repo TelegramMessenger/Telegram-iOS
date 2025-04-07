@@ -95,8 +95,8 @@ public final class CallKitIntegration {
         sharedProviderDelegate?.applyVoiceChatOutputMode(outputMode: outputMode)
     }
     
-    public func updateCallIsConference(uuid: UUID) {
-        sharedProviderDelegate?.updateCallIsConference(uuid: uuid)
+    public func updateCallIsConference(uuid: UUID, title: String) {
+        sharedProviderDelegate?.updateCallIsConference(uuid: uuid, title: title)
     }
 }
 
@@ -280,12 +280,11 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
         self.provider.reportOutgoingCall(with: uuid, connectedAt: date)
     }
     
-    func updateCallIsConference(uuid: UUID) {
+    func updateCallIsConference(uuid: UUID, title: String) {
         let update = CXCallUpdate()
         let handle = CXHandle(type: .generic, value: "\(uuid)")
         update.remoteHandle = handle
-        //TODO:localize
-        update.localizedCallerName = "Group Call"
+        update.localizedCallerName = title
         update.supportsHolding = false
         update.supportsGrouping = false
         update.supportsUngrouping = false

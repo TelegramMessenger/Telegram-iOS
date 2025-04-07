@@ -286,9 +286,9 @@ static NSString *hexStringFromData(NSData *data) {
     return [[NSData alloc] initWithBytes:result.value().data() length:result.value().size()];
 }
 
-- (nullable NSData *)encrypt:(NSData *)message {
+- (nullable NSData *)encrypt:(NSData *)message channelId:(int32_t)channelId {
     std::string mappedMessage((uint8_t *)message.bytes, ((uint8_t *)message.bytes) + message.length);
-    auto result = tde2e_api::call_encrypt(_callId, 0, mappedMessage);
+    auto result = tde2e_api::call_encrypt(_callId, channelId, mappedMessage);
     if (!result.is_ok()) {
         return nil;
     }

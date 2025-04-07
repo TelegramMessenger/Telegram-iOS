@@ -42,7 +42,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (nullable NSData *)generateRemoveParticipantsBlock:(NSArray<NSNumber *> *)participantIds;
 
-- (nullable NSData *)encrypt:(NSData *)message;
+- (nullable NSData *)encrypt:(NSData *)message channelId:(int32_t)channelId;
 - (nullable NSData *)decrypt:(NSData *)message userId:(int64_t)userId;
 
 @end

@@ -19,242 +19,6 @@ import TemporaryCachedPeerDataManager
 import CallsEmoji
 import TdBinding
 
-private extension GroupCallParticipantsContext.Participant {
-    var allSsrcs: Set<UInt32> {
-        var participantSsrcs = Set<UInt32>()
-        if let ssrc = self.ssrc {
-            participantSsrcs.insert(ssrc)
-        }
-        if let videoDescription = self.videoDescription {
-            for group in videoDescription.ssrcGroups {
-                for ssrc in group.ssrcs {
-                    participantSsrcs.insert(ssrc)
-                }
-            }
-        }
-        if let presentationDescription = self.presentationDescription {
-            for group in presentationDescription.ssrcGroups {
-                for ssrc in group.ssrcs {
-                    participantSsrcs.insert(ssrc)
-                }
-            }
-        }
-        return participantSsrcs
-    }
-
-    var videoSsrcs: Set<UInt32> {
-        var participantSsrcs = Set<UInt32>()
-        if let videoDescription = self.videoDescription {
-            for group in videoDescription.ssrcGroups {
-                for ssrc in group.ssrcs {
-                    participantSsrcs.insert(ssrc)
-                }
-            }
-        }
-        return participantSsrcs
-    }
-
-    var presentationSsrcs: Set<UInt32> {
-        var participantSsrcs = Set<UInt32>()
-        if let presentationDescription = self.presentationDescription {
-            for group in presentationDescription.ssrcGroups {
-                for ssrc in group.ssrcs {
-                    participantSsrcs.insert(ssrc)
-                }
-            }
-        }
-        return participantSsrcs
-    }
-}
-
-public final class AccountGroupCallContextImpl: AccountGroupCallContext {
-    public final class Proxy {
-        public let context: AccountGroupCallContextImpl
-        let removed: () -> Void
-        
-        public init(context: AccountGroupCallContextImpl, removed: @escaping () -> Void) {
-            self.context = context
-            self.removed = removed
-        }
-        
-        deinit {
-            self.removed()
-        }
-        
-        public func keep() {
-        }
-    }
-    
-    var disposable: Disposable?
-    public var participantsContext: GroupCallParticipantsContext?
-    
-    private let panelDataPromise = Promise<GroupCallPanelData?>()
-    public var panelData: Signal<GroupCallPanelData?, NoError> {
-        return self.panelDataPromise.get()
-    }
-    
-    public init(account: Account, engine: TelegramEngine, peerId: PeerId?, isChannel: Bool, call: EngineGroupCallDescription) {
-        self.panelDataPromise.set(.single(nil))
-        let state = engine.calls.getGroupCallParticipants(reference: .id(id: call.id, accessHash: call.accessHash), offset: "", ssrcs: [], limit: 100, sortAscending: nil)
-        |> map(Optional.init)
-        |> `catch` { _ -> Signal<GroupCallParticipantsContext.State?, NoError> in
-            return .single(nil)
-        }
-        
-        let peer: Signal<EnginePeer?, NoError>
-        if let peerId {
-            peer = engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-        } else {
-            peer = .single(nil)
-        }
-        self.disposable = (combineLatest(queue: .mainQueue(),
-            state,
-            peer
-        )
-        |> deliverOnMainQueue).start(next: { [weak self] state, peer in
-            guard let self, let state = state else {
-                return
-            }
-            let context = engine.calls.groupCall(
-                peerId: peerId,
-                myPeerId: account.peerId,
-                id: call.id,
-                reference: .id(id: call.id, accessHash: call.accessHash),
-                state: state,
-                previousServiceState: nil
-            )
-            
-            self.participantsContext = context
-            
-            if let peerId {
-                self.panelDataPromise.set(combineLatest(queue: .mainQueue(),
-                    context.state,
-                    context.activeSpeakers
-                )
-                |> map { state, activeSpeakers -> GroupCallPanelData in
-                    var topParticipants: [GroupCallParticipantsContext.Participant] = []
-                    for participant in state.participants {
-                        if topParticipants.count >= 3 {
-                            break
-                        }
-                        topParticipants.append(participant)
-                    }
-                    
-                    var isChannel = false
-                    if let peer = peer, case let .channel(channel) = peer, case .broadcast = channel.info {
-                        isChannel = true
-                    }
-                    
-                    return GroupCallPanelData(
-                        peerId: peerId,
-                        isChannel: isChannel,
-                        info: GroupCallInfo(
-                            id: call.id,
-                            accessHash: call.accessHash,
-                            participantCount: state.totalCount,
-                            streamDcId: nil,
-                            title: state.title,
-                            scheduleTimestamp: state.scheduleTimestamp,
-                            subscribedToScheduled: state.subscribedToScheduled,
-                            recordingStartTimestamp: nil,
-                            sortAscending: state.sortAscending,
-                            defaultParticipantsAreMuted: state.defaultParticipantsAreMuted,
-                            isVideoEnabled: state.isVideoEnabled,
-                            unmutedVideoLimit: state.unmutedVideoLimit,
-                            isStream: state.isStream,
-                            isCreator: state.isCreator
-                        ),
-                        topParticipants: topParticipants,
-                        participantCount: state.totalCount,
-                        activeSpeakers: activeSpeakers,
-                        groupCall: nil
-                    )
-                })
-            }
-        })
-    }
-    
-    deinit {
-        self.disposable?.dispose()
-    }
-}
-
-public final class AccountGroupCallContextCacheImpl: AccountGroupCallContextCache {
-    public class Impl {
-        private class Record {
-            let context: AccountGroupCallContextImpl
-            let subscribers = Bag<Void>()
-            var removeTimer: SwiftSignalKit.Timer?
-            
-            init(context: AccountGroupCallContextImpl) {
-                self.context = context
-            }
-        }
-        
-        private let queue: Queue
-        private var contexts: [Int64: Record] = [:]
-
-        private let leaveDisposables = DisposableSet()
-        
-        init(queue: Queue) {
-            self.queue = queue
-        }
-        
-        public func get(account: Account, engine: TelegramEngine, peerId: PeerId, isChannel: Bool, call: EngineGroupCallDescription) -> AccountGroupCallContextImpl.Proxy {
-            let result: Record
-            if let current = self.contexts[call.id] {
-                result = current
-            } else {
-                let context = AccountGroupCallContextImpl(account: account, engine: engine, peerId: peerId, isChannel: isChannel, call: call)
-                result = Record(context: context)
-                self.contexts[call.id] = result
-            }
-            
-            let index = result.subscribers.add(Void())
-            result.removeTimer?.invalidate()
-            result.removeTimer = nil
-            return AccountGroupCallContextImpl.Proxy(context: result.context, removed: { [weak self, weak result] in
-                Queue.mainQueue().async {
-                    if let strongResult = result, let self, self.contexts[call.id] === strongResult {
-                        strongResult.subscribers.remove(index)
-                        if strongResult.subscribers.isEmpty {
-                            let removeTimer = SwiftSignalKit.Timer(timeout: 30, repeat: false, completion: { [weak self] in
-                                if let result = result, let self, self.contexts[call.id] === result, result.subscribers.isEmpty {
-                                    self.contexts.removeValue(forKey: call.id)
-                                }
-                            }, queue: .mainQueue())
-                            strongResult.removeTimer = removeTimer
-                            removeTimer.start()
-                        }
-                    }
-                }
-            })
-        }
-
-        public func leaveInBackground(engine: TelegramEngine, id: Int64, accessHash: Int64, source: UInt32) {
-            let disposable = engine.calls.leaveGroupCall(callId: id, accessHash: accessHash, source: source).start(completed: { [weak self] in
-                guard let self else {
-                    return
-                }
-                if let context = self.contexts[id] {
-                    context.context.participantsContext?.removeLocalPeerId()
-                }
-            })
-            self.leaveDisposables.add(disposable)
-        }
-    }
-    
-    let queue: Queue = .mainQueue()
-    public let impl: QueueLocalObject<Impl>
-    
-    public init() {
-        let queue = self.queue
-        self.impl = QueueLocalObject(queue: queue, generate: {
-            return Impl(queue: queue)
-        })
-    }
-}
-
 private extension PresentationGroupCallState {
     static func initialValue(myPeerId: PeerId, title: String?, scheduleTimestamp: Int32?, subscribedToScheduled: Bool) -> PresentationGroupCallState {
         return PresentationGroupCallState(
@@ -440,183 +204,6 @@ private extension CurrentImpl {
     }
 }
 
-public func groupCallLogsPath(account: Account) -> String {
-    return account.basePath + "/group-calls"
-}
-
-private func cleanupGroupCallLogs(account: Account) {
-    let path = groupCallLogsPath(account: account)
-    let fileManager = FileManager.default
-    if !fileManager.fileExists(atPath: path, isDirectory: nil) {
-        try? fileManager.createDirectory(atPath: path, withIntermediateDirectories: true, attributes: nil)
-    }
-    
-    var oldest: [(URL, Date)] = []
-    var count = 0
-    if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: path), includingPropertiesForKeys: [.contentModificationDateKey], options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants], errorHandler: nil) {
-        for url in enumerator {
-            if let url = url as? URL {
-                if let date = (try? url.resourceValues(forKeys: Set([.contentModificationDateKey])))?.contentModificationDate {
-                    oldest.append((url, date))
-                    count += 1
-                }
-            }
-        }
-    }
-    let callLogsLimit = 20
-    if count > callLogsLimit {
-        oldest.sort(by: { $0.1 > $1.1 })
-        while oldest.count > callLogsLimit {
-            try? fileManager.removeItem(atPath: oldest[oldest.count - 1].0.path)
-            oldest.removeLast()
-        }
-    }
-}
-
-public func allocateCallLogPath(account: Account) -> String {
-    let path = groupCallLogsPath(account: account)
-    
-    let _ = try? FileManager.default.createDirectory(at: URL(fileURLWithPath: path), withIntermediateDirectories: true, attributes: nil)
-    
-    let name = "log-\(Date())".replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: ":", with: "_")
-    
-    return "\(path)/\(name).log"
-}
-
-private protocol ScreencastIPCContext: AnyObject {
-    var isActive: Signal<Bool, NoError> { get }
-    
-    func requestScreencast() -> Signal<(String, UInt32), NoError>?
-    func setJoinResponse(clientParams: String)
-    func disableScreencast(account: Account)
-}
-
-private final class ScreencastInProcessIPCContext: ScreencastIPCContext {
-    private let isConference: Bool
-    
-    private let screencastBufferServerContext: IpcGroupCallBufferAppContext
-    private var screencastCallContext: ScreencastContext?
-    private let screencastCapturer: OngoingCallVideoCapturer
-    private var screencastFramesDisposable: Disposable?
-    private var screencastAudioDataDisposable: Disposable?
-    
-    var isActive: Signal<Bool, NoError> {
-        return self.screencastBufferServerContext.isActive
-    }
-    
-    init(basePath: String, isConference: Bool) {
-        self.isConference = isConference
-        
-        let screencastBufferServerContext = IpcGroupCallBufferAppContext(basePath: basePath + "/broadcast-coordination")
-        self.screencastBufferServerContext = screencastBufferServerContext
-        let screencastCapturer = OngoingCallVideoCapturer(isCustom: true)
-        self.screencastCapturer = screencastCapturer
-        self.screencastFramesDisposable = (screencastBufferServerContext.frames
-        |> deliverOnMainQueue).start(next: { [weak screencastCapturer] screencastFrame in
-            guard let screencastCapturer = screencastCapturer else {
-                return
-            }
-            guard let sampleBuffer = sampleBufferFromPixelBuffer(pixelBuffer: screencastFrame.0) else {
-                return
-            }
-            screencastCapturer.injectSampleBuffer(sampleBuffer, rotation: screencastFrame.1, completion: {})
-        })
-        self.screencastAudioDataDisposable = (screencastBufferServerContext.audioData
-        |> deliverOnMainQueue).start(next: { [weak self] data in
-            Queue.mainQueue().async {
-                guard let self else {
-                    return
-                }
-                self.screencastCallContext?.addExternalAudioData(data: data)
-            }
-        })
-    }
-    
-    deinit {
-        self.screencastFramesDisposable?.dispose()
-        self.screencastAudioDataDisposable?.dispose()
-    }
-    
-    func requestScreencast() -> Signal<(String, UInt32), NoError>? {
-        if self.screencastCallContext == nil {
-            let screencastCallContext = InProcessScreencastContext(
-                context: OngoingGroupCallContext(
-                    audioSessionActive: .single(true),
-                    video: self.screencastCapturer,
-                    requestMediaChannelDescriptions: { _, _ in EmptyDisposable },
-                    rejoinNeeded: { },
-                    outgoingAudioBitrateKbit: nil,
-                    videoContentType: .screencast,
-                    enableNoiseSuppression: false,
-                    disableAudioInput: true,
-                    enableSystemMute: false,
-                    prioritizeVP8: false,
-                    logPath: "",
-                    onMutedSpeechActivityDetected: { _ in },
-                    isConference: self.isConference,
-                    audioIsActiveByDefault: true,
-                    isStream: false,
-                    sharedAudioDevice: nil,
-                    encryptionContext: nil
-                )
-            )
-            self.screencastCallContext = screencastCallContext
-            return screencastCallContext.joinPayload
-        } else {
-            return nil
-        }
-    }
-    
-    func setJoinResponse(clientParams: String) {
-        if let screencastCallContext = self.screencastCallContext {
-            screencastCallContext.setRTCJoinResponse(clientParams: clientParams)
-        }
-    }
-    
-    func disableScreencast(account: Account) {
-        if let screencastCallContext = self.screencastCallContext {
-            self.screencastCallContext = nil
-            screencastCallContext.stop(account: account, reportCallId: nil)
-            
-            self.screencastBufferServerContext.stopScreencast()
-        }
-    }
-}
-
-private final class ScreencastEmbeddedIPCContext: ScreencastIPCContext {
-    private let serverContext: IpcGroupCallEmbeddedAppContext
-    
-    var isActive: Signal<Bool, NoError> {
-        return self.serverContext.isActive
-    }
-    
-    init(basePath: String) {
-        self.serverContext = IpcGroupCallEmbeddedAppContext(basePath: basePath + "/embedded-broadcast-coordination")
-    }
-    
-    func requestScreencast() -> Signal<(String, UInt32), NoError>? {
-        if let id = self.serverContext.startScreencast() {
-            return self.serverContext.joinPayload
-            |> filter { joinPayload -> Bool in
-                return joinPayload.id == id
-            }
-            |> map { joinPayload -> (String, UInt32) in
-                return (joinPayload.data, joinPayload.ssrc)
-            }
-        } else {
-            return nil
-        }
-    }
-    
-    func setJoinResponse(clientParams: String) {
-        self.serverContext.joinResponse = IpcGroupCallEmbeddedAppContext.JoinResponse(data: clientParams)
-    }
-    
-    func disableScreencast(account: Account) {
-        self.serverContext.stopScreencast()
-    }
-}
-
 private final class PendingConferenceInvitationContext {
     enum State {
         case ringing
@@ -748,12 +335,31 @@ private final class ConferenceCallE2EContextStateImpl: ConferenceCallE2EContextS
         return self.call.takeOutgoingBroadcastBlocks()
     }
 
-    func encrypt(message: Data) -> Data? {
-        return self.call.encrypt(message)
+    func encrypt(message: Data, channelId: Int32) -> Data? {
+        return self.call.encrypt(message, channelId: channelId)
     }
 
     func decrypt(message: Data, userId: Int64) -> Data? {
         return self.call.decrypt(message, userId: userId)
+    }
+}
+
+class OngoingGroupCallEncryptionContextImpl: OngoingGroupCallEncryptionContext {
+    private let e2eCall: Atomic<ConferenceCallE2EContext.ContextStateHolder>
+    private let channelId: Int32
+    
+    init(e2eCall: Atomic<ConferenceCallE2EContext.ContextStateHolder>, channelId: Int32) {
+        self.e2eCall = e2eCall
+        self.channelId = channelId
+    }
+    
+    func encrypt(message: Data) -> Data? {
+        let channelId = self.channelId
+        return self.e2eCall.with({ $0.state?.encrypt(message: message, channelId: channelId) })
+    }
+    
+    func decrypt(message: Data, userId: Int64) -> Data? {
+        return self.e2eCall.with({ $0.state?.decrypt(message: message, userId: userId) })
     }
 }
 
@@ -1505,9 +1111,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             self.requestCall(movingFromBroadcastToRtc: false)
         }
 
-        var useIPCContext = "".isEmpty
-        if let data = self.accountContext.currentAppConfiguration.with({ $0 }).data, data["ios_killswitch_use_inprocess_screencast"] != nil {
-            useIPCContext = false
+        var useIPCContext = false
+        if let data = self.accountContext.currentAppConfiguration.with({ $0 }).data, let value = data["ios_use_inprocess_screencast"] as? Double {
+            useIPCContext = value != 0.0
         }
         
         let embeddedBroadcastImplementationTypePath = self.accountContext.sharedContext.basePath + "/broadcast-coordination-type"
@@ -1517,7 +1123,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             screencastIPCContext = ScreencastEmbeddedIPCContext(basePath: self.accountContext.sharedContext.basePath)
             let _ = try? "ipc".write(toFile: embeddedBroadcastImplementationTypePath, atomically: true, encoding: .utf8)
         } else {
-            screencastIPCContext = ScreencastInProcessIPCContext(basePath: self.accountContext.sharedContext.basePath, isConference: self.isConference)
+            screencastIPCContext = ScreencastInProcessIPCContext(basePath: self.accountContext.sharedContext.basePath, isConference: self.isConference, e2eContext: self.e2eContext)
             let _ = try? "legacy".write(toFile: embeddedBroadcastImplementationTypePath, atomically: true, encoding: .utf8)
         }
         self.screencastIPCContext = screencastIPCContext
@@ -2093,28 +1699,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         audioIsActiveByDefault = false
                     }
                     
-                    class OngoingGroupCallEncryptionContextImpl: OngoingGroupCallEncryptionContext {
-                        private let e2eCall: Atomic<ConferenceCallE2EContext.ContextStateHolder>
-                        
-                        init(e2eCall: Atomic<ConferenceCallE2EContext.ContextStateHolder>) {
-                            self.e2eCall = e2eCall
-                        }
-                        
-                        func encrypt(message: Data) -> Data? {
-                            return self.e2eCall.with({ $0.state?.encrypt(message: message) })
-                        }
-                        
-                        func decrypt(message: Data, userId: Int64) -> Data? {
-                            return self.e2eCall.with({ $0.state?.decrypt(message: message, userId: userId) })
-                        }
-                    }
-                    
                     var encryptionContext: OngoingGroupCallEncryptionContext?
                     if let e2eContext = self.e2eContext {
-                        encryptionContext = OngoingGroupCallEncryptionContextImpl(e2eCall: e2eContext.state)
+                        encryptionContext = OngoingGroupCallEncryptionContextImpl(e2eCall: e2eContext.state, channelId: 0)
                     } else if self.isConference {
                         // Prevent non-encrypted conference calls
-                        encryptionContext = OngoingGroupCallEncryptionContextImpl(e2eCall: Atomic(value: ConferenceCallE2EContext.ContextStateHolder()))
+                        encryptionContext = OngoingGroupCallEncryptionContextImpl(e2eCall: Atomic(value: ConferenceCallE2EContext.ContextStateHolder()), channelId: 0)
                     }
                     
                     var prioritizeVP8 = false
@@ -4197,37 +3787,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 pendingDisconnedUpgradedConferenceCall.resetAsMovedToConference()
             }
         })
-    }
-}
-
-private protocol ScreencastContext: AnyObject {
-    func addExternalAudioData(data: Data)
-    func stop(account: Account, reportCallId: CallId?)
-    func setRTCJoinResponse(clientParams: String)
-}
-
-private final class InProcessScreencastContext: ScreencastContext {
-    private let context: OngoingGroupCallContext
-    
-    var joinPayload: Signal<(String, UInt32), NoError> {
-        return self.context.joinPayload
-    }
-    
-    init(context: OngoingGroupCallContext) {
-        self.context = context
-    }
-    
-    func addExternalAudioData(data: Data) {
-        self.context.addExternalAudioData(data: data)
-    }
-    
-    func stop(account: Account, reportCallId: CallId?) {
-        self.context.stop(account: account, reportCallId: reportCallId, debugLog: Promise())
-    }
-    
-    func setRTCJoinResponse(clientParams: String) {
-        self.context.setConnectionMode(.rtc, keepBroadcastConnectedIfWasEnabled: false, isUnifiedBroadcast: false)
-        self.context.setJoinResponse(payload: clientParams)
     }
 }
 

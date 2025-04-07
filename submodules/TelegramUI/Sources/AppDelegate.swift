@@ -2165,7 +2165,14 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             let internalId = CallSessionManager.getStableIncomingUUID(peerId: fromPeerId.id._internalGetInt64Value(), messageId: messageId.id)
             
             //TODO:localize
-            let displayTitle: "\(fromTitle)"
+            var displayTitle = "\(fromTitle)"
+            if let memberCountString = payloadJson["member_count"] as? String, let memberCount = Int(memberCountString) {
+                if memberCount == 1 {
+                    displayTitle.append(" and 1 other")
+                } else {
+                    displayTitle.append(" and \(memberCount) others")
+                }
+            }
             
             callKitIntegration.reportIncomingCall(
                 uuid: internalId,

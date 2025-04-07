@@ -930,6 +930,7 @@ private final class NotificationServiceHandler {
                         var id: Int64
                         var fromId: PeerId
                         var fromTitle: String
+                        var memberCount: Int
                         var isVideo: Bool
                         var messageId: Int32
                         var accountId: Int64
@@ -972,11 +973,16 @@ private final class NotificationServiceHandler {
                         if let callId = Int64(callIdString), let messageId = Int32(messageIdString) {
                             if let fromTitle = payloadJson["call_conference_from"] as? String {
                                 let isVideo = locKey == "CONF_VIDEOCALL_REQUEST"
+                                var memberCount = 0
+                                if let callParticipantsCountString = payloadJson["call_participants_cnt"] as? String, let callParticipantsCount = Int(callParticipantsCountString) {
+                                    memberCount = callParticipantsCount
+                                }
                                 
                                 groupCallData = GroupCallData(
                                     id: callId,
                                     fromId: peerId,
                                     fromTitle: fromTitle,
+                                    memberCount: memberCount,
                                     isVideo: isVideo,
                                     messageId: messageId,
                                     accountId: recordId.int64
@@ -1292,7 +1298,8 @@ private final class NotificationServiceHandler {
                                     var voipPayload: [AnyHashable: Any] = [
                                         "group_call_id": "\(groupCallData.id)",
                                         "msg_id": "\(groupCallData.messageId)",
-                                        "video": "0",
+                                        "video": "\(groupCallData.isVideo)",
+                                        "member_count": "\(groupCallData.memberCount)",
                                         "from_id": "\(groupCallData.fromId.id._internalGetInt64Value())",
                                         "from_title": groupCallData.fromTitle,
                                         "accountId": "\(groupCallData.accountId)"

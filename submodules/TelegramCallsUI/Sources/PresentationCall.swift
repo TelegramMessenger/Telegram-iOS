@@ -241,6 +241,7 @@ public final class PresentationCallImpl: PresentationCall {
     public let isOutgoing: Bool
     private let incomingConferenceSource: EngineMessage.Id?
     private let conferenceStableId: Int64?
+    private var conferenceTitle: String?
     public var isVideo: Bool
     public var isVideoPossible: Bool
     private let enableStunMarking: Bool
@@ -483,7 +484,7 @@ public final class PresentationCallImpl: PresentationCall {
                 }
 
                 let state: CallSessionState
-                if let message = message {
+                if let message {
                     var foundAction: TelegramMediaAction?
                     for media in message.media {
                         if let action = media as? TelegramMediaAction {
@@ -498,6 +499,21 @@ public final class PresentationCallImpl: PresentationCall {
                         } else {
                             state = .ringing
                         }
+                        
+                        var conferenceTitle = "Group Call"
+                        if let peer = message.peers[message.id.peerId].flatMap(EnginePeer.init) {
+                            conferenceTitle = peer.compactDisplayTitle
+
+                            let otherCount = conferenceCall.otherParticipants.filter({ $0 != peer.id }).count
+                            if otherCount != 0 {
+                                if otherCount == 1 {
+                                    conferenceTitle.append(" and 1 other")
+                                } else {
+                                    conferenceTitle.append(" and \(otherCount) others")
+                                }
+                            }
+                        }
+                        self.conferenceTitle = conferenceTitle
                     } else {
                         state = .terminated(id: nil, reason: .ended(.hungUp), options: CallTerminationOptions())
                     }
@@ -749,7 +765,8 @@ public final class PresentationCallImpl: PresentationCall {
         self.localVideoEndpointId = nil
         self.remoteVideoEndpointId = nil
         
-        self.callKitIntegration?.updateCallIsConference(uuid: self.internalId)
+        //TODO:localize
+        self.callKitIntegration?.updateCallIsConference(uuid: self.internalId, title: self.conferenceTitle ?? "Group Call")
     }
     
     func internal_markAsCanBeRemoved() {
