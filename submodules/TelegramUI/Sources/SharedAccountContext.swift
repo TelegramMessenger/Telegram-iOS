@@ -80,6 +80,7 @@ import ShareController
 import AccountFreezeInfoScreen
 import JoinSubjectScreen
 import OldChannelsController
+import InviteLinksUI
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -1902,6 +1903,200 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     public func makeDebugSettingsController(context: AccountContext?) -> ViewController? {
         let controller = debugController(sharedContext: self, context: context)
         return controller
+    }
+    
+    public func openCreateGroupCallUI(context: AccountContext, peerIds: [EnginePeer.Id], parentController: ViewController) {
+        let _ = (context.engine.data.get(
+            EngineDataList(peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
+        )
+        |> deliverOnMainQueue).startStandalone(next: { [weak parentController] peers in
+            guard let parentController else {
+                return
+            }
+            
+            let peers = peers.compactMap({ $0 })
+            
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(
+                context: context,
+                title: presentationData.strings.Calls_NewCall,
+                mode: .groupCreation(isCall: true),
+                options: .single([]),
+                filters: [.excludeSelf],
+                onlyWriteable: true,
+                isGroupInvitation: false,
+                isPeerEnabled: nil,
+                attemptDisabledItemSelection: nil,
+                alwaysEnabled: false,
+                limit: nil,
+                reachedLimit: nil,
+                openProfile: nil,
+                sendMessage: nil,
+                initialSelectedPeers: peers
+            ))
+            controller.navigationPresentation = .modal
+            if let navigationController = parentController.navigationController as? NavigationController {
+                navigationController.pushViewController(controller)
+            } else if let navigationController = context.sharedContext.mainWindow?.viewController as? NavigationController {
+                navigationController.pushViewController(controller)
+            }
+
+            let _ = (controller.result
+            |> take(1)
+            |> deliverOnMainQueue).startStandalone(next: { [weak controller] result in
+                guard case let .result(rawPeerIds, _) = result else {
+                    controller?.dismiss()
+                    return
+                }
+                let peerIds = rawPeerIds.compactMap { id -> EnginePeer.Id? in
+                    if case let .peer(id) = id {
+                        return id
+                    }
+                    return nil
+                }
+                if peerIds.isEmpty {
+                    controller?.dismiss()
+                    return
+                }
+
+                if peerIds.count == 1 {
+                    //TODO:release isVideo
+                    controller?.dismiss()
+                    self.performCall(context: context, parentController: parentController, peerId: peerIds[0], isVideo: false, began: {
+                        let _ = (context.sharedContext.hasOngoingCall.get()
+                        |> filter { $0 }
+                        |> timeout(1.0, queue: Queue.mainQueue(), alternate: .single(true))
+                        |> delay(0.5, queue: Queue.mainQueue())
+                        |> take(1)
+                        |> deliverOnMainQueue).startStandalone(next: { _ in
+                            if let controller, let navigationController = controller.navigationController as? NavigationController {
+                                if navigationController.viewControllers.last === controller {
+                                    let _ = navigationController.popViewController(animated: true)
+                                }
+                            }
+                        })
+                    })
+                } else {
+                    self.createGroupCall(context: context, parentController: parentController, peerIds: peerIds, completion: {
+                        controller?.dismiss()
+                    })
+                }
+            })
+        })
+    }
+    
+    private func performCall(context: AccountContext, parentController: ViewController, peerId: EnginePeer.Id, isVideo: Bool, began: (() -> Void)? = nil) {
+        let _ = (context.account.viewTracker.peerView(peerId)
+        |> take(1)
+        |> deliverOnMainQueue).startStandalone(next: { [weak parentController] view in
+            guard let parentController else {
+                return
+            }
+            guard let peer = peerViewMainPeer(view) else {
+                return
+            }
+                
+            if let cachedUserData = view.cachedData as? CachedUserData, cachedUserData.callsPrivate {
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                parentController.present(textAlertController(context: context, title: presentationData.strings.Call_ConnectionErrorTitle, text: presentationData.strings.Call_PrivacyErrorMessage(EnginePeer(peer).compactDisplayTitle).string, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                return
+            }
+            
+            context.requestCall(peerId: peerId, isVideo: isVideo, completion: {
+                began?()
+            })
+        })
+    }
+    
+    private func createGroupCall(context: AccountContext, parentController: ViewController, peerIds: [EnginePeer.Id], completion: (() -> Void)? = nil) {
+        parentController.view.endEditing(true)
+        
+        var cancelImpl: (() -> Void)?
+        var signal = context.engine.calls.createConferenceCall()
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let progressSignal = Signal<Never, NoError> { [weak parentController] subscriber in
+            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+                cancelImpl?()
+            }))
+            parentController?.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            return ActionDisposable { [weak controller] in
+                Queue.mainQueue().async() {
+                    controller?.dismiss()
+                }
+            }
+        }
+        |> runOn(Queue.mainQueue())
+        |> delay(0.3, queue: Queue.mainQueue())
+        let progressDisposable = progressSignal.start()
+        
+        signal = signal
+        |> afterDisposed {
+            Queue.mainQueue().async {
+                progressDisposable.dispose()
+            }
+        }
+        
+        let disposable = (signal
+        |> deliverOnMainQueue).startStandalone(next: { [weak parentController] call in
+            guard let parentController else {
+                return
+            }
+            
+            let openCall: () -> Void = {
+                context.sharedContext.callManager?.joinConferenceCall(
+                    accountContext: context,
+                    initialCall: EngineGroupCallDescription(
+                        id: call.callInfo.id,
+                        accessHash: call.callInfo.accessHash,
+                        title: call.callInfo.title,
+                        scheduleTimestamp: nil,
+                        subscribedToScheduled: false,
+                        isStream: false
+                    ),
+                    reference: .id(id: call.callInfo.id, accessHash: call.callInfo.accessHash),
+                    beginWithVideo: false,
+                    invitePeerIds: peerIds
+                )
+                completion?()
+            }
+            
+            if !peerIds.isEmpty {
+                openCall()
+            } else {
+                let controller = InviteLinkInviteController(
+                    context: context,
+                    updatedPresentationData: nil,
+                    mode: .groupCall(InviteLinkInviteController.Mode.GroupCall(callId: call.callInfo.id, accessHash: call.callInfo.accessHash, isRecentlyCreated: true, canRevoke: true)),
+                    initialInvite: .link(link: call.link, title: nil, isPermanent: true, requestApproval: false, isRevoked: false, adminId: context.account.peerId, date: 0, startDate: nil, expireDate: nil, usageLimit: nil, count: nil, requestedCount: nil, pricing: nil),
+                    parentNavigationController: parentController.navigationController as? NavigationController,
+                    completed: { [weak parentController] result in
+                        guard let parentController else {
+                            return
+                        }
+                        if let result {
+                            switch result {
+                            case .linkCopied:
+                                //TODO:localize
+                                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                parentController.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_linkcopied", scale: 0.08, colors: ["info1.info1.stroke": UIColor.clear, "info2.info2.Fill": UIColor.clear], title: nil, text: "Call link copied.", customUndoText: "View Call", timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
+                                    if case .undo = action {
+                                        openCall()
+                                    }
+                                    return false
+                                }), in: .window(.root))
+                            case .openCall:
+                                openCall()
+                            }
+                        }
+                    }
+                )
+                parentController.present(controller, in: .window(.root), with: nil)
+            }
+        })
+        
+        cancelImpl = {
+            disposable.dispose()
+        }
     }
     
     public func openExternalUrl(context: AccountContext, urlContext: OpenURLContext, url: String, forceExternal: Bool, presentationData: PresentationData, navigationController: NavigationController?, dismissInput: @escaping () -> Void) {

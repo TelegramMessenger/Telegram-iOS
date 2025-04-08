@@ -842,7 +842,7 @@ public extension TelegramEngine {
             return _internal_joinCallLinkInformation(hash, account: self.account)
         }
         
-        public func joinCallInvitationInformation(messageId: EngineMessage.Id) -> Signal<JoinCallLinkInformation, JoinLinkInfoError> {
+        public func joinCallInvitationInformation(messageId: EngineMessage.Id) -> Signal<JoinCallLinkInformation, JoinCallLinkInfoError> {
             return _internal_joinCallInvitationInformation(account: self.account, messageId: messageId)
         }
 

@@ -178,17 +178,23 @@ func _internal_joinCallLinkInformation(_ hash: String, account: Account) -> Sign
     }
 }
 
-func _internal_joinCallInvitationInformation(account: Account, messageId: MessageId) -> Signal<JoinCallLinkInformation, JoinLinkInfoError> {
+public enum JoinCallLinkInfoError {
+    case generic
+    case flood
+    case doesNotExist
+}
+
+func _internal_joinCallInvitationInformation(account: Account, messageId: MessageId) -> Signal<JoinCallLinkInformation, JoinCallLinkInfoError> {
     return _internal_getCurrentGroupCall(account: account, reference: .message(id: messageId))
-    |> mapError { error -> JoinLinkInfoError in
+    |> mapError { error -> JoinCallLinkInfoError in
         switch error {
         case .generic:
             return .generic
         }
     }
-    |> mapToSignal { call -> Signal<JoinCallLinkInformation, JoinLinkInfoError> in
-        guard let call = call else {
-            return .fail(.generic)
+    |> mapToSignal { call -> Signal<JoinCallLinkInformation, JoinCallLinkInfoError> in
+        guard let call else {
+            return .fail(.doesNotExist)
         }
         var members: [EnginePeer] = []
         for participant in call.topParticipants {

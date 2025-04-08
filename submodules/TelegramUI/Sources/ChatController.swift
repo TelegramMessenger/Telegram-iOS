@@ -2894,6 +2894,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             if conferenceCall.duration != nil {
+                self.context.sharedContext.openCreateGroupCallUI(context: self.context, peerIds: conferenceCall.otherParticipants, parentController: self)
                 return
             }
             
@@ -2919,8 +2920,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         isStream: false
                     ),
                     reference: .message(id: message.id),
-                    beginWithVideo: conferenceCall.flags.contains(.isVideo)
+                    beginWithVideo: conferenceCall.flags.contains(.isVideo),
+                    invitePeerIds: []
                 )
+            }, error: { [weak self] error in
+                guard let self else {
+                    return
+                }
+                switch error {
+                case .doesNotExist:
+                    self.context.sharedContext.openCreateGroupCallUI(context: self.context, peerIds: conferenceCall.otherParticipants, parentController: self)
+                default:
+                    let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+                    //TODO:localize
+                    self.present(textAlertController(context: self.context, title: nil, text: "An error occurred", actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                }
             })
         }, longTap: { [weak self] action, params in
             if let self {

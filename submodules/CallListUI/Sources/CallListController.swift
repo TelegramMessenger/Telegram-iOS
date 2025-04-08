@@ -208,7 +208,7 @@ public final class CallListController: TelegramBaseController {
         }
     }
 
-    private func createGroupCall() {
+    private func createGroupCall(peerIds: [EnginePeer.Id], completion: (() -> Void)? = nil) {
         self.view.endEditing(true)
         
         guard !self.presentAccountFrozenInfoIfNeeded() else {
@@ -274,38 +274,44 @@ public final class CallListController: TelegramBaseController {
                         isStream: false
                     ),
                     reference: .id(id: call.callInfo.id, accessHash: call.callInfo.accessHash),
-                    beginWithVideo: false
+                    beginWithVideo: false,
+                    invitePeerIds: peerIds
                 )
+                completion?()
             }
             
-            let controller = InviteLinkInviteController(
-                context: self.context,
-                updatedPresentationData: nil,
-                mode: .groupCall(InviteLinkInviteController.Mode.GroupCall(callId: call.callInfo.id, accessHash: call.callInfo.accessHash, isRecentlyCreated: true, canRevoke: true)),
-                initialInvite: .link(link: call.link, title: nil, isPermanent: true, requestApproval: false, isRevoked: false, adminId: self.context.account.peerId, date: 0, startDate: nil, expireDate: nil, usageLimit: nil, count: nil, requestedCount: nil, pricing: nil),
-                parentNavigationController: self.navigationController as? NavigationController,
-                completed: { [weak self] result in
-                    guard let self else {
-                        return
-                    }
-                    if let result {
-                        switch result {
-                        case .linkCopied:
-                            //TODO:localize
-                            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-                            self.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_linkcopied", scale: 0.08, colors: ["info1.info1.stroke": UIColor.clear, "info2.info2.Fill": UIColor.clear], title: nil, text: "Call link copied.", customUndoText: "View Call", timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
-                                if case .undo = action {
-                                    openCall()
-                                }
-                                return false
-                            }), in: .window(.root))
-                        case .openCall:
-                            openCall()
+            if !peerIds.isEmpty {
+                openCall()
+            } else {
+                let controller = InviteLinkInviteController(
+                    context: self.context,
+                    updatedPresentationData: nil,
+                    mode: .groupCall(InviteLinkInviteController.Mode.GroupCall(callId: call.callInfo.id, accessHash: call.callInfo.accessHash, isRecentlyCreated: true, canRevoke: true)),
+                    initialInvite: .link(link: call.link, title: nil, isPermanent: true, requestApproval: false, isRevoked: false, adminId: self.context.account.peerId, date: 0, startDate: nil, expireDate: nil, usageLimit: nil, count: nil, requestedCount: nil, pricing: nil),
+                    parentNavigationController: self.navigationController as? NavigationController,
+                    completed: { [weak self] result in
+                        guard let self else {
+                            return
+                        }
+                        if let result {
+                            switch result {
+                            case .linkCopied:
+                                //TODO:localize
+                                let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+                                self.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_linkcopied", scale: 0.08, colors: ["info1.info1.stroke": UIColor.clear, "info2.info2.Fill": UIColor.clear], title: nil, text: "Call link copied.", customUndoText: "View Call", timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
+                                    if case .undo = action {
+                                        openCall()
+                                    }
+                                    return false
+                                }), in: .window(.root))
+                            case .openCall:
+                                openCall()
+                            }
                         }
                     }
-                }
-            )
-            self.present(controller, in: .window(.root), with: nil)
+                )
+                self.present(controller, in: .window(.root), with: nil)
+            }
         })
     }
     
@@ -395,7 +401,7 @@ public final class CallListController: TelegramBaseController {
             }
         }, createGroupCall: { [weak self] in
             if let strongSelf = self {
-                strongSelf.createGroupCall()
+                strongSelf.createGroupCall(peerIds: [])
             }
         })
         
@@ -508,21 +514,69 @@ public final class CallListController: TelegramBaseController {
         guard !self.presentAccountFrozenInfoIfNeeded() else {
             return
         }
-        let controller = self.context.sharedContext.makeContactSelectionController(ContactSelectionControllerParams(context: self.context, title: { $0.Calls_NewCall }, displayCallIcons: true))
+
+        //TODO:localize
+        let options = [ContactListAdditionalOption(title: "New Call Link", icon: .generic(PresentationResourcesItemList.linkIcon(presentationData.theme)!), action: { [weak self] in
+            guard let self else {
+                return
+            }
+            self.createGroupCall(peerIds: [])
+        }, clearHighlightAutomatically: true)]
+
+        let controller = self.context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(
+            context: self.context,
+            title: self.presentationData.strings.Calls_NewCall,
+            mode: .groupCreation(isCall: true),
+            options: .single(options),
+            filters: [.excludeSelf],
+            onlyWriteable: true,
+            isGroupInvitation: false,
+            isPeerEnabled: nil,
+            attemptDisabledItemSelection: nil,
+            alwaysEnabled: false,
+            limit: nil,
+            reachedLimit: nil,
+            openProfile: nil,
+            sendMessage: nil
+        ))
         controller.navigationPresentation = .modal
-        self.createActionDisposable.set((controller.result
+        if let navigationController = self.context.sharedContext.mainWindow?.viewController as? NavigationController {
+            navigationController.pushViewController(controller)
+        }
+
+        let _ = (controller.result
         |> take(1)
-        |> deliverOnMainQueue).startStrict(next: { [weak controller, weak self] result in
-            controller?.dismissSearch()
-            if let strongSelf = self, let (contactPeers, action, _, _, _, _) = result, let contactPeer = contactPeers.first,  case let .peer(peer, _, _) = contactPeer {
-                strongSelf.call(peer.id, isVideo: action == .videoCall, began: {
+        |> deliverOnMainQueue).startStandalone(next: { [weak controller, weak self] result in
+            guard let self else {
+                controller?.dismiss()
+                return
+            }
+            guard case let .result(rawPeerIds, _) = result else {
+                controller?.dismiss()
+                return
+            }
+            let peerIds = rawPeerIds.compactMap { id -> EnginePeer.Id? in
+                if case let .peer(id) = id {
+                    return id
+                }
+                return nil
+            }
+            if peerIds.isEmpty {
+                controller?.dismiss()
+                return
+            }
+
+            if peerIds.count == 1 {
+                //TODO:release isVideo
+                controller?.dismiss()
+                self.call(peerIds[0], isVideo: false, began: { [weak self] in
                     if let strongSelf = self {
                         let _ = (strongSelf.context.sharedContext.hasOngoingCall.get()
                         |> filter { $0 }
                         |> timeout(1.0, queue: Queue.mainQueue(), alternate: .single(true))
                         |> delay(0.5, queue: Queue.mainQueue())
                         |> take(1)
-                        |> deliverOnMainQueue).startStandalone(next: { _ in
+                        |> deliverOnMainQueue).startStandalone(next: { [weak self] _ in
                             if let _ = self, let controller = controller, let navigationController = controller.navigationController as? NavigationController {
                                 if navigationController.viewControllers.last === controller {
                                     let _ = navigationController.popViewController(animated: true)
@@ -531,11 +585,12 @@ public final class CallListController: TelegramBaseController {
                         })
                     }
                 })
+            } else {
+                self.createGroupCall(peerIds: peerIds, completion: {
+                    controller?.dismiss()
+                })
             }
-        }))
-        if let navigationController = self.context.sharedContext.mainWindow?.viewController as? NavigationController {
-            navigationController.pushViewController(controller)
-        }
+        })
     }
     
     private func presentAccountFrozenInfoIfNeeded(delay: Bool = false) -> Bool {
@@ -612,8 +667,8 @@ public final class CallListController: TelegramBaseController {
             return
         }
         self.peerViewDisposable.set((self.context.account.viewTracker.peerView(peerId)
-            |> take(1)
-            |> deliverOnMainQueue).startStrict(next: { [weak self] view in
+        |> take(1)
+        |> deliverOnMainQueue).startStrict(next: { [weak self] view in
             if let strongSelf = self {
                 guard let peer = peerViewMainPeer(view) else {
                     return
@@ -621,7 +676,6 @@ public final class CallListController: TelegramBaseController {
                 
                 if let cachedUserData = view.cachedData as? CachedUserData, cachedUserData.callsPrivate {
                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                    
                     strongSelf.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_ConnectionErrorTitle, text: presentationData.strings.Call_PrivacyErrorMessage(EnginePeer(peer).compactDisplayTitle).string, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     return
                 }
@@ -645,6 +699,7 @@ public final class CallListController: TelegramBaseController {
             return
         }
         if conferenceCall.duration != nil {
+            self.context.sharedContext.openCreateGroupCallUI(context: self.context, peerIds: conferenceCall.otherParticipants, parentController: self)
             return
         }
         
@@ -670,8 +725,21 @@ public final class CallListController: TelegramBaseController {
                     isStream: false
                 ),
                 reference: .message(id: message.id),
-                beginWithVideo: conferenceCall.flags.contains(.isVideo)
+                beginWithVideo: conferenceCall.flags.contains(.isVideo),
+                invitePeerIds: []
             )
+        }, error: { [weak self] error in
+            guard let self else {
+                return
+            }
+            switch error {
+            case .doesNotExist:
+                self.context.sharedContext.openCreateGroupCallUI(context: self.context, peerIds: conferenceCall.otherParticipants, parentController: self)
+            default:
+                let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+                //TODO:localize
+                self.present(textAlertController(context: self.context, title: nil, text: "An error occurred", actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+            }
         })
     }
     

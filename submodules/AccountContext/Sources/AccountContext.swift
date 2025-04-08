@@ -1203,6 +1203,8 @@ public protocol SharedAccountContext: AnyObject {
     
     func makeDebugSettingsController(context: AccountContext?) -> ViewController?
     
+    func openCreateGroupCallUI(context: AccountContext, peerIds: [EnginePeer.Id], parentController: ViewController)
+    
     func navigateToCurrentCall()
     var hasOngoingCall: ValuePromise<Bool> { get }
     var immediateHasOngoingCall: Bool { get }

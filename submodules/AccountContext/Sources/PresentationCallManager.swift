@@ -224,6 +224,7 @@ public struct PresentationGroupCallState: Equatable {
     public var subscribedToScheduled: Bool
     public var isVideoEnabled: Bool
     public var isVideoWatchersLimitReached: Bool
+    public var isMyVideoActive: Bool
     
     public init(
         myPeerId: EnginePeer.Id,
@@ -238,7 +239,8 @@ public struct PresentationGroupCallState: Equatable {
         scheduleTimestamp: Int32?,
         subscribedToScheduled: Bool,
         isVideoEnabled: Bool,
-        isVideoWatchersLimitReached: Bool
+        isVideoWatchersLimitReached: Bool,
+        isMyVideoActive: Bool
     ) {
         self.myPeerId = myPeerId
         self.networkState = networkState
@@ -253,6 +255,7 @@ public struct PresentationGroupCallState: Equatable {
         self.subscribedToScheduled = subscribedToScheduled
         self.isVideoEnabled = isVideoEnabled
         self.isVideoWatchersLimitReached = isVideoWatchersLimitReached
+        self.isMyVideoActive = isMyVideoActive
     }
 }
 
@@ -569,6 +572,7 @@ public protocol PresentationCallManager: AnyObject {
         accountContext: AccountContext,
         initialCall: EngineGroupCallDescription,
         reference: InternalGroupCallReference,
-        beginWithVideo: Bool
+        beginWithVideo: Bool,
+        invitePeerIds: [EnginePeer.Id]
     )
 }
