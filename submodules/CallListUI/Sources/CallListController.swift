@@ -208,7 +208,7 @@ public final class CallListController: TelegramBaseController {
         }
     }
 
-    private func createGroupCall(peerIds: [EnginePeer.Id], completion: (() -> Void)? = nil) {
+    private func createGroupCall(peerIds: [EnginePeer.Id], isVideo: Bool, completion: (() -> Void)? = nil) {
         self.view.endEditing(true)
         
         guard !self.presentAccountFrozenInfoIfNeeded() else {
@@ -274,7 +274,7 @@ public final class CallListController: TelegramBaseController {
                         isStream: false
                     ),
                     reference: .id(id: call.callInfo.id, accessHash: call.callInfo.accessHash),
-                    beginWithVideo: false,
+                    beginWithVideo: isVideo,
                     invitePeerIds: peerIds
                 )
                 completion?()
@@ -401,7 +401,7 @@ public final class CallListController: TelegramBaseController {
             }
         }, createGroupCall: { [weak self] in
             if let strongSelf = self {
-                strongSelf.createGroupCall(peerIds: [])
+                strongSelf.createGroupCall(peerIds: [], isVideo: false)
             }
         })
         
@@ -520,7 +520,7 @@ public final class CallListController: TelegramBaseController {
             guard let self else {
                 return
             }
-            self.createGroupCall(peerIds: [])
+            self.createGroupCall(peerIds: [], isVideo: false)
         }, clearHighlightAutomatically: true)]
 
         let controller = self.context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(
@@ -565,11 +565,12 @@ public final class CallListController: TelegramBaseController {
                 controller?.dismiss()
                 return
             }
+            
+            let isVideo = controller?.isCallVideoOptionSelected ?? false
 
             if peerIds.count == 1 {
-                //TODO:release isVideo
                 controller?.dismiss()
-                self.call(peerIds[0], isVideo: false, began: { [weak self] in
+                self.call(peerIds[0], isVideo: isVideo, began: { [weak self] in
                     if let strongSelf = self {
                         let _ = (strongSelf.context.sharedContext.hasOngoingCall.get()
                         |> filter { $0 }
@@ -586,7 +587,7 @@ public final class CallListController: TelegramBaseController {
                     }
                 })
             } else {
-                self.createGroupCall(peerIds: peerIds, completion: {
+                self.createGroupCall(peerIds: peerIds, isVideo: isVideo, completion: {
                     controller?.dismiss()
                 })
             }

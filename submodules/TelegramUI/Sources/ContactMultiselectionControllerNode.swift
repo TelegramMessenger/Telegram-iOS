@@ -15,6 +15,8 @@ import EditableTokenListNode
 import SolidRoundedButtonNode
 import ContextUI
 import ComponentFlow
+import MultilineTextComponent
+import CheckComponent
 
 private struct SearchResultEntry: Identifiable {
     let index: Int
@@ -84,7 +86,9 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
     private let onlyWriteable: Bool
     private let isGroupInvitation: Bool
 
-    private var bottomPanel: ComponentView<Empty>?
+    var isCallVideoOptionSelected: Bool {
+        return self.footerPanelNode?.isCheckOptionSelected ?? false
+    }
     
     init(navigationBar: NavigationBar?, context: AccountContext, presentationData: PresentationData, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, mode: ContactMultiselectionControllerMode, isPeerEnabled: ((EnginePeer) -> Bool)?, attemptDisabledItemSelection: ((EnginePeer, ChatListDisabledPeerReason) -> Void)?, options: Signal<[ContactListAdditionalOption], NoError>, filters: [ContactListFilter], onlyWriteable: Bool, isGroupInvitation: Bool, limit: Int32?, reachedSelectionLimit: ((Int32) -> Void)?, present: @escaping (ViewController, Any?) -> Void) {
         self.navigationBar = navigationBar
@@ -119,19 +123,19 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
             shortPlaceholder = self.presentationData.strings.Common_Search
             self.footerPanelNode = FooterPanelNode(theme: self.presentationData.theme, strings: self.presentationData.strings, action: {
                 proceedImpl?()
-            })
+            }, checkOptionTitle: nil)
         case .requestedUsersSelection:
             placeholder = self.presentationData.strings.RequestPeer_SelectUsers_SearchPlaceholder
             self.footerPanelNode = FooterPanelNode(theme: self.presentationData.theme, strings: self.presentationData.strings, action: {
                 proceedImpl?()
-            })
+            }, checkOptionTitle: nil)
         case let .groupCreation(isCall):
             if isCall {
                 //TODO:localize
                 placeholder = "Search for contacts or usernames"
                 self.footerPanelNode = FooterPanelNode(theme: self.presentationData.theme, strings: self.presentationData.strings, action: {
                     proceedImpl?()
-                })
+                }, checkOptionTitle: isCall ? "Call with video enabled" : nil)
             } else {
                 placeholder = self.presentationData.strings.Compose_TokenListPlaceholder    
                 self.footerPanelNode = nil
@@ -554,9 +558,16 @@ private final class FooterPanelNode: ASDisplayNode {
     
     private let theme: PresentationTheme
     private let strings: PresentationStrings
+
+    private let checkOptionTitle: String?
+    private var checkOptionButton: HighlightTrackingButton?
+    private var checkOptionText: ComponentView<Empty>?
+    private var checkOptionControl: ComponentView<Empty>?
     
     private let separatorNode: ASDisplayNode
     private let button: SolidRoundedButtonView
+
+    private(set) var isCheckOptionSelected: Bool = false
     
     private var validLayout: (CGFloat, CGFloat, CGFloat)?
     
@@ -573,14 +584,15 @@ private final class FooterPanelNode: ASDisplayNode {
         }
     }
     
-    init(theme: PresentationTheme, strings: PresentationStrings, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, action: @escaping () -> Void, checkOptionTitle: String?) {
         self.theme = theme
         self.strings = strings
+        self.checkOptionTitle = checkOptionTitle
 
         self.separatorNode = ASDisplayNode()
         self.separatorNode.backgroundColor = theme.rootController.navigationBar.separatorColor
         
-        self.button = SolidRoundedButtonView(theme: SolidRoundedButtonTheme(theme: theme), height: 48.0, cornerRadius: 10.0)
+        self.button = SolidRoundedButtonView(theme: SolidRoundedButtonTheme(theme: theme), height: 50.0, cornerRadius: 10.0)
 
         self.content = Content(title: self.strings.Premium_Gift_ContactSelection_Proceed, badge: "")
         
@@ -599,9 +611,17 @@ private final class FooterPanelNode: ASDisplayNode {
         super.didLoad()
         self.view.addSubview(self.button)
     }
+
+    @objc private func checkOptionButtonPressed() {
+        self.isCheckOptionSelected = !self.isCheckOptionSelected
+        if let validLayout = self.validLayout {
+            let _ = self.updateLayout(width: validLayout.0, sideInset: validLayout.1, bottomInset: validLayout.2, transition: .animated(duration: 0.2, curve: .easeInOut))
+        }
+    }
     
     func updateLayout(width: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         self.validLayout = (width, sideInset, bottomInset)
+
         let topInset: CGFloat = 9.0
         var bottomInset = bottomInset
         bottomInset += topInset - (bottomInset.isZero ? 0.0 : 4.0)
@@ -609,10 +629,104 @@ private final class FooterPanelNode: ASDisplayNode {
         let buttonInset: CGFloat = 16.0 + sideInset
         let buttonWidth = width - buttonInset * 2.0
         let buttonHeight = self.button.updateLayout(width: buttonWidth, transition: transition)
-        transition.updateFrame(view: self.button, frame: CGRect(x: buttonInset, y: topInset, width: buttonWidth, height: buttonHeight))
         
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: UIScreenPixel)))
         
-        return topInset + buttonHeight + bottomInset
+        var height = topInset + buttonHeight + bottomInset
+
+        var buttonOffset: CGFloat = 0.0
+        if let checkOptionTitle = self.checkOptionTitle {
+            let checkSpacing: CGFloat = 10.0
+
+            let checkOptionButton: HighlightTrackingButton
+            if let current = self.checkOptionButton {
+                checkOptionButton = current
+            } else {
+                checkOptionButton = HighlightTrackingButton()
+                self.checkOptionButton = checkOptionButton
+                self.view.addSubview(checkOptionButton)
+                checkOptionButton.addTarget(self, action: #selector(self.checkOptionButtonPressed), for: .touchUpInside)
+            }
+            
+            let checkOptionText: ComponentView<Empty>
+            if let current = self.checkOptionText {
+                checkOptionText = current
+            } else {
+                checkOptionText = ComponentView()
+                self.checkOptionText = checkOptionText
+            }
+
+            let checkOptionControl: ComponentView<Empty>
+            if let current = self.checkOptionControl {
+                checkOptionControl = current
+            } else {
+                checkOptionControl = ComponentView()
+                self.checkOptionControl = checkOptionControl
+            }
+
+            let checkOptionTextSize = checkOptionText.update(
+                transition: .immediate,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: checkOptionTitle, font: Font.regular(13.0), textColor: theme.rootController.navigationBar.primaryTextColor))
+                )),
+                environment: {},
+                containerSize: CGSize(width: width - sideInset * 2.0 - checkSpacing - 20.0, height: 100.0)
+            )
+
+            let checkTheme = CheckComponent.Theme(
+                backgroundColor: self.theme.list.itemCheckColors.fillColor,
+                strokeColor: self.theme.list.itemCheckColors.foregroundColor,
+                borderColor: self.theme.list.itemCheckColors.strokeColor,
+                overlayBorder: false,
+                hasInset: false,
+                hasShadow: false
+            )
+            let checkOptionControlSize = checkOptionControl.update(
+                transition: transition.isAnimated ? .easeInOut(duration: 0.2) : .immediate,
+                component: AnyComponent(CheckComponent(
+                    theme: checkTheme,
+                    size: CGSize(width: 18.0, height: 18.0),
+                    selected: self.isCheckOptionSelected
+                )),
+                environment: {},
+                containerSize: CGSize(width: 18.0, height: 18.0)
+            )
+
+            let checkContentWidth = checkOptionControlSize.width + checkSpacing + checkOptionTextSize.width
+            let checkContentHeight = 49.0
+
+            let checkOptionControlFrame = CGRect(origin: CGPoint(x: floor((width - checkContentWidth) * 0.5), y: floor(checkContentHeight - checkOptionControlSize.height) * 0.5), size: checkOptionControlSize)
+            let checkOptionTextFrame = CGRect(origin: CGPoint(x: checkOptionControlFrame.maxX + checkSpacing, y: floor((checkContentHeight - checkOptionTextSize.height) * 0.5)), size: checkOptionTextSize)
+
+            if let checkOptionControlView = checkOptionControl.view {
+                if checkOptionControlView.superview == nil {
+                    checkOptionControlView.isUserInteractionEnabled = false
+                    checkOptionButton.addSubview(checkOptionControlView)
+                }
+                checkOptionControlView.frame = checkOptionControlFrame
+            }
+
+            if let checkOptionTextView = checkOptionText.view {
+                if checkOptionTextView.superview == nil {
+                    checkOptionTextView.isUserInteractionEnabled = false
+                    checkOptionButton.addSubview(checkOptionTextView)
+                }
+                checkOptionTextView.frame = checkOptionTextFrame
+            }
+
+            checkOptionButton.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: checkContentHeight))
+
+            height += checkContentHeight
+            buttonOffset += checkContentHeight
+        } else {
+            if let checkOptionButton = self.checkOptionButton {
+                self.checkOptionButton = nil
+                checkOptionButton.removeFromSuperview()
+            }
+        }
+
+        transition.updateFrame(view: self.button, frame: CGRect(x: buttonInset, y: topInset + buttonOffset, width: buttonWidth, height: buttonHeight))
+
+        return height
     }
 }
