@@ -157,4 +157,5 @@ public protocol ContactMultiselectionController: ViewController {
     var result: Signal<ContactMultiselectionResult, NoError> { get }
     var displayProgress: Bool { get set }
     var dismissed: (() -> Void)? { get set }
+    var isCallVideoOptionSelected: Bool { get }
 }
