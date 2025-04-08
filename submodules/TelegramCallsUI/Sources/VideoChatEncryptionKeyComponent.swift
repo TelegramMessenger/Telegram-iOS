@@ -522,7 +522,9 @@ final class VideoChatEncryptionKeyComponent: Component {
         }
 
         deinit {
+            #if DEBUG
             self.mockStateTimer?.invalidate()
+            #endif
         }
         
         @objc private func tapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
