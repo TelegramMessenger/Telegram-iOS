@@ -227,6 +227,7 @@ final class VideoChatScreenComponent: Component {
         var isEncryptionKeyExpanded: Bool = false
         
         let videoButton = ComponentView<Empty>()
+        let videoControlButton = ComponentView<Empty>()
         let leaveButton = ComponentView<Empty>()
         let microphoneButton = ComponentView<Empty>()
         
@@ -1130,7 +1131,8 @@ final class VideoChatScreenComponent: Component {
                     scheduleTimestamp: nil,
                     subscribedToScheduled: false,
                     isVideoEnabled: true,
-                    isVideoWatchersLimitReached: false
+                    isVideoWatchersLimitReached: false,
+                    isMyVideoActive: false
                 )
                 
                 return .single((callState, invitedPeers.compactMap({ peer -> VideoChatScreenComponent.InvitedPeer? in
@@ -2657,38 +2659,84 @@ final class VideoChatScreenComponent: Component {
             }
             
             let videoButtonContent: VideoChatActionButtonComponent.Content
-            if let callState = self.callState, let muteState = callState.muteState, !muteState.canUnmute {
-                var buttonAudio: VideoChatActionButtonComponent.Content.Audio = .speaker
-                var buttonIsEnabled = false
-                if let (availableOutputs, maybeCurrentOutput) = self.audioOutputState, let currentOutput = maybeCurrentOutput {
-                    buttonIsEnabled = availableOutputs.count > 1
-                    switch currentOutput {
-                    case .builtin:
-                        buttonAudio = .builtin
-                    case .speaker:
-                        buttonAudio = .speaker
-                    case .headphones:
-                        buttonAudio = .headphones
-                    case let .port(port):
-                        var type: VideoChatActionButtonComponent.Content.BluetoothType = .generic
-                        let portName = port.name.lowercased()
-                        if portName.contains("airpods max") {
-                            type = .airpodsMax
-                        } else if portName.contains("airpods pro") {
-                            type = .airpodsPro
-                        } else if portName.contains("airpods") {
-                            type = .airpods
-                        }
-                        buttonAudio = .bluetooth(type)
+            let videoControlButtonContent: VideoChatActionButtonComponent.Content
+
+            var buttonAudio: VideoChatActionButtonComponent.Content.Audio = .speaker
+            var buttonIsEnabled = false
+            if let (availableOutputs, maybeCurrentOutput) = self.audioOutputState, let currentOutput = maybeCurrentOutput {
+                buttonIsEnabled = availableOutputs.count > 1
+                switch currentOutput {
+                case .builtin:
+                    buttonAudio = .builtin
+                case .speaker:
+                    buttonAudio = .speaker
+                case .headphones:
+                    buttonAudio = .headphones
+                case let .port(port):
+                    var type: VideoChatActionButtonComponent.Content.BluetoothType = .generic
+                    let portName = port.name.lowercased()
+                    if portName.contains("airpods max") {
+                        type = .airpodsMax
+                    } else if portName.contains("airpods pro") {
+                        type = .airpodsPro
+                    } else if portName.contains("airpods") {
+                        type = .airpods
                     }
-                    if availableOutputs.count <= 1 {
-                        buttonAudio = .none
-                    }
+                    buttonAudio = .bluetooth(type)
                 }
-                videoButtonContent = .audio(audio: buttonAudio, isEnabled: buttonIsEnabled)
-            } else {
-                videoButtonContent = .video(isActive: false)
+                if availableOutputs.count <= 1 {
+                    buttonAudio = .none
+                }
             }
+
+            if let callState = self.callState, let muteState = callState.muteState, !muteState.canUnmute {
+                videoButtonContent = .audio(audio: buttonAudio, isEnabled: buttonIsEnabled)
+                videoControlButtonContent = .audio(audio: buttonAudio, isEnabled: buttonIsEnabled)
+            } else {
+                let isVideoActive = self.callState?.isMyVideoActive ?? false
+                videoButtonContent = .video(isActive: isVideoActive)
+                if isVideoActive {
+                    videoControlButtonContent = .rotateCamera
+                } else {
+                    videoControlButtonContent = .audio(audio: buttonAudio, isEnabled: buttonIsEnabled)
+                }
+            }
+
+            var displayVideoControlButton = true
+            if areButtonsCollapsed {
+                displayVideoControlButton = false
+            } else if let expandedParticipantsVideoState = self.expandedParticipantsVideoState, !expandedParticipantsVideoState.isUIHidden {
+                displayVideoControlButton = false
+            }
+
+            let videoControlButtonSize = self.videoControlButton.update(
+                transition: transition,
+                component: AnyComponent(PlainButtonComponent(
+                    content: AnyComponent(VideoChatActionButtonComponent(
+                        strings: environment.strings,
+                        content: videoControlButtonContent,
+                        microphoneState: actionButtonMicrophoneState,
+                        isCollapsed: true
+                    )),
+                    effectAlignment: .center,
+                    action: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        if let state = self.callState, state.isMyVideoActive {
+                            if case let .group(groupCall) = self.currentCall {
+                                groupCall.switchVideoCamera()
+                            }
+                        } else {
+                            self.onAudioRoutePressed()
+                        }
+                    },
+                    animateAlpha: false
+                )),
+                environment: {},
+                containerSize: CGSize(width: 32.0, height: 32.0)
+            )
+
             let _ = self.videoButton.update(
                 transition: transition,
                 component: AnyComponent(PlainButtonComponent(
@@ -2714,12 +2762,33 @@ final class VideoChatScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: actionButtonDiameter, height: actionButtonDiameter)
             )
+
+            let videoControlButtonSpacing: CGFloat = 8.0
+
+            var videoButtonFrame = leftActionButtonFrame
+            if displayVideoControlButton {
+                let totalVideoButtonsHeight = actionButtonDiameter + videoControlButtonSpacing + videoControlButtonSize.height
+                videoButtonFrame.origin.y = videoButtonFrame.minY + floor((videoButtonFrame.height - totalVideoButtonsHeight) / 2.0) + videoControlButtonSpacing + videoControlButtonSize.height
+            }
+
+            let videoControlButtonFrame = CGRect(origin: CGPoint(x: videoButtonFrame.minX + floor((videoButtonFrame.width - videoControlButtonSize.width) / 2.0), y: videoButtonFrame.minY - videoControlButtonSpacing - videoControlButtonSize.height), size: videoControlButtonSize)
+
+            if let videoControlButtonView = self.videoControlButton.view {
+                if videoControlButtonView.superview == nil {
+                    self.containerView.addSubview(videoControlButtonView)
+                }
+                transition.setPosition(view: videoControlButtonView, position: videoControlButtonFrame.center)
+                transition.setBounds(view: videoControlButtonView, bounds: CGRect(origin: CGPoint(), size: videoControlButtonFrame.size))
+                alphaTransition.setAlpha(view: videoControlButtonView, alpha: displayVideoControlButton ? 1.0 : 0.0)
+                transition.setScale(view: videoControlButtonView, scale: displayVideoControlButton ? 1.0 : 0.001)
+            }
+
             if let videoButtonView = self.videoButton.view {
                 if videoButtonView.superview == nil {
                     self.containerView.addSubview(videoButtonView)
                 }
-                transition.setPosition(view: videoButtonView, position: leftActionButtonFrame.center)
-                transition.setBounds(view: videoButtonView, bounds: CGRect(origin: CGPoint(), size: leftActionButtonFrame.size))
+                transition.setPosition(view: videoButtonView, position: videoButtonFrame.center)
+                transition.setBounds(view: videoButtonView, bounds: CGRect(origin: CGPoint(), size: videoButtonFrame.size))
             }
             
             let _ = self.leaveButton.update(
