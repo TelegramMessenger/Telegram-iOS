@@ -6,6 +6,7 @@ import MultilineTextComponent
 import BalancedTextComponent
 import TelegramPresentationData
 import CallsEmoji
+import ImageBlur
 
 private final class EmojiContainerView: UIView {
     private let maskImageView: UIImageView?
@@ -97,6 +98,100 @@ private final class EmojiContainerView: UIView {
     }
 }
 
+private final class EmojiContentLayer: SimpleLayer {
+    private let size: CGSize
+    private(set) var emoji: String?
+    private var image: UIImage?
+
+    private var motionBlurLayer: SimpleLayer?
+
+    init(size: CGSize) {
+        self.size = size
+
+        super.init()
+
+        self.contentsGravity = .center
+        self.contentsScale = UIScreenScale
+    }
+
+    override init(layer: Any) {
+        if let layer = layer as? EmojiContentLayer {
+            self.size = layer.size
+        } else {
+            self.size = CGSize()
+        }
+
+        super.init(layer: layer)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func setEmoji(emoji: String, font: UIFont) {
+        if self.emoji == emoji {
+            return
+        }
+        self.emoji = emoji
+
+        let attributedText = NSAttributedString(string: emoji, attributes: [
+            NSAttributedString.Key.font: font,
+            NSAttributedString.Key.foregroundColor: UIColor.black
+        ])
+        
+        var boundingRect = attributedText.boundingRect(with: CGSize(width: 200.0, height: 200.0), options: .usesLineFragmentOrigin, context: nil)
+        boundingRect.size.width = ceil(boundingRect.size.width)
+        boundingRect.size.height = ceil(boundingRect.size.height)
+
+        let renderer = UIGraphicsImageRenderer(bounds: CGRect(origin: CGPoint(), size: boundingRect.size))
+        let image = renderer.image { context in
+            UIGraphicsPushContext(context.cgContext)
+            attributedText.draw(at: CGPoint())
+            UIGraphicsPopContext()
+        }
+        self.image = image
+        self.contents = image.cgImage
+        if let motionBlurLayer = self.motionBlurLayer {
+            motionBlurLayer.contents = verticalBlurredImage(image, radius: 6.0)?.cgImage
+        }
+    }
+
+    func setMotionBlurFactor(factor: CGFloat, transition: ComponentTransition) {
+        if factor != 0.0 {
+            let motionBlurLayer: SimpleLayer
+            if let current = self.motionBlurLayer {
+                motionBlurLayer = current
+            } else {
+                motionBlurLayer = SimpleLayer()
+
+                if let image = self.image {
+                    motionBlurLayer.contents = verticalBlurredImage(image, radius: 6.0)?.cgImage
+                }
+
+                motionBlurLayer.contentsScale = self.contentsScale
+                self.motionBlurLayer = motionBlurLayer
+                self.addSublayer(motionBlurLayer)
+
+                motionBlurLayer.position = CGPoint(x: self.size.width * 0.5, y: self.size.height * 0.5)
+                motionBlurLayer.bounds = CGRect(origin: CGPoint(), size: self.size)
+
+                motionBlurLayer.opacity = 0.0
+            }
+            
+            let scaleFactor = 1.0 * (1.0 - factor) + 2.0 * factor
+            let opacityFactor = 0.0 * (1.0 - factor) + 0.6 * factor
+            
+            transition.setTransform(layer: motionBlurLayer, transform: CATransform3DMakeScale(1.0, scaleFactor, 1.0))
+            transition.setAlpha(layer: motionBlurLayer, alpha: opacityFactor)
+        } else if let motionBlurLayer = self.motionBlurLayer {
+            self.motionBlurLayer = nil
+            transition.setAlpha(layer: motionBlurLayer, alpha: 0.0, completion: { [weak motionBlurLayer] _ in
+                motionBlurLayer?.removeFromSuperlayer()
+            })
+            transition.setTransform(layer: motionBlurLayer, transform: CATransform3DIdentity)
+        }
+    }
+}
 private final class EmojiItemComponent: Component {
     let emoji: String?
 
@@ -115,8 +210,8 @@ private final class EmojiItemComponent: Component {
         private let containerView: EmojiContainerView
         private let measureEmojiView = ComponentView<Empty>()
         private var pendingContainerView: EmojiContainerView?
-        private var pendingEmojiViews: [ComponentView<Empty>] = []
-        private var emojiView: ComponentView<Empty>?
+        private var pendingEmojiLayers: [EmojiContentLayer] = []
+        private var emojiLayer: EmojiContentLayer?
 
         private var component: EmojiItemComponent?
         private weak var state: EmptyComponentState?
@@ -139,10 +234,17 @@ private final class EmojiItemComponent: Component {
         }
 
         func update(component: EmojiItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
-            let pendingContainerInset: CGFloat = 6.0
+            let pendingContainerInset: CGFloat = 8.0
 
             self.component = component
             self.state = state
+
+            let motionBlurTransition: ComponentTransition
+            if transition.animation.isImmediate {
+                motionBlurTransition = .immediate
+            } else {
+                motionBlurTransition = .easeInOut(duration: 0.2)
+            }
 
             let size = self.measureEmojiView.update(
                 transition: .immediate,
@@ -155,85 +257,65 @@ private final class EmojiItemComponent: Component {
 
             let containerFrame = CGRect(origin: CGPoint(x: -pendingContainerInset, y: -pendingContainerInset), size: CGSize(width: size.width + pendingContainerInset * 2.0, height: size.height + pendingContainerInset * 2.0))
             self.containerView.frame = containerFrame
-            self.containerView.update(size: containerFrame.size, borderWidth: 12.0)
-
-            /*let maxBlur: CGFloat = 4.0
-            if component.emoji == nil, (self.containerView.contentView.layer.filters == nil || self.containerView.contentView.layer.filters?.count == 0) {
-                if let blurFilter = CALayer.blur() {
-                    blurFilter.setValue(maxBlur as NSNumber, forKey: "inputRadius")
-                    self.containerView.contentView.layer.filters = [blurFilter]
-                    self.containerView.contentView.layer.animate(from: 0.0 as NSNumber, to: maxBlur as NSNumber, keyPath: "filters.gaussianBlur.inputRadius", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.2, removeOnCompletion: true)
-                }
-            } else if self.containerView.contentView.layer.filters != nil && self.containerView.contentView.layer.filters?.count != 0 {
-                if let blurFilter = CALayer.blur() {
-                    blurFilter.setValue(0.0 as NSNumber, forKey: "inputRadius")
-                    self.containerView.contentView.layer.filters = [blurFilter]
-                    self.containerView.contentView.layer.animate(from: maxBlur as NSNumber, to: 0.0 as NSNumber, keyPath: "filters.gaussianBlur.inputRadius", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.2, removeOnCompletion: false, completion: { [weak self] flag in
-                        if flag, let self {
-                            self.containerView.contentView.layer.filters = nil
-                        }
-                    })
-                }
-            }*/
+            self.containerView.update(size: containerFrame.size, borderWidth: 10.0)
             
             let borderEmoji = 2
             let numEmoji = borderEmoji * 2 + 3
 
-            var previousEmojiView: ComponentView<Empty>?
+            var previousEmojiLayer: EmojiContentLayer?
 
             if let emoji = component.emoji {
-                let emojiView: ComponentView<Empty>
-                var emojiViewTransition = transition
-                if let current = self.emojiView {
-                    emojiView = current
+                let emojiLayer: EmojiContentLayer
+                var emojiLayerTransition = transition
+                if let current = self.emojiLayer {
+                    emojiLayer = current
                 } else {
-                    emojiViewTransition = .immediate
-                    emojiView = ComponentView()
-                    self.emojiView = emojiView
+                    emojiLayerTransition = .immediate
+                    emojiLayer = EmojiContentLayer(size: size)
+                    self.emojiLayer = emojiLayer
                 }
-                let emojiSize = emojiView.update(
-                    transition: .immediate,
-                    component: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: emoji, font: Font.regular(40.0), textColor: .white))
-                    )),
-                    environment: {},
-                    containerSize: CGSize(width: 200.0, height: 200.0)
-                )
+                emojiLayer.setEmoji(emoji: emoji, font: Font.regular(40.0))
+                let emojiSize = size
                 let emojiFrame = CGRect(origin: CGPoint(x: pendingContainerInset + floor((size.width - emojiSize.width) * 0.5), y: pendingContainerInset + floor((size.height - emojiSize.height) * 0.5)), size: emojiSize)
-                if let emojiComponentView = emojiView.view {
-                    if emojiComponentView.superview == nil {
-                        self.containerView.contentView.addSubview(emojiComponentView)
+
+                if emojiLayer.superlayer == nil {
+                    self.containerView.contentView.layer.addSublayer(emojiLayer)
+                }
+                emojiLayerTransition.setFrame(layer: emojiLayer, frame: emojiFrame)
+
+                emojiLayer.setMotionBlurFactor(factor: 0.0, transition: emojiLayerTransition.animation.isImmediate ? .immediate : motionBlurTransition)
+
+                if let pendingContainerView = self.pendingContainerView {
+                    self.pendingContainerView = nil
+
+                    for pendingEmojiLayer in self.pendingEmojiLayers {
+                        pendingEmojiLayer.setMotionBlurFactor(factor: 0.0, transition: motionBlurTransition)
                     }
-                    emojiViewTransition.setFrame(view: emojiComponentView, frame: emojiFrame)
+                    self.pendingEmojiLayers.removeAll()
 
-                    if let pendingContainerView = self.pendingContainerView {
-                        self.pendingContainerView = nil
-                        self.pendingEmojiViews.removeAll()
+                    let currentPendingContainerOffset = pendingContainerView.contentView.layer.presentation()?.position.y ?? pendingContainerView.contentView.layer.position.y
+                    
+                    pendingContainerView.contentView.layer.removeAnimation(forKey: "offsetCycle")
+                    pendingContainerView.contentView.layer.position.y = currentPendingContainerOffset
 
-                        let currentPendingContainerOffset = pendingContainerView.contentView.layer.presentation()?.position.y ?? pendingContainerView.contentView.layer.position.y
-                        
-                        pendingContainerView.contentView.layer.removeAnimation(forKey: "offsetCycle")
-                        pendingContainerView.contentView.layer.position.y = currentPendingContainerOffset
+                    let animateTransition: ComponentTransition = .spring(duration: 0.4)
+                    let targetOffset: CGFloat = CGFloat(borderEmoji - 1) * size.height
+                    animateTransition.setPosition(layer: pendingContainerView.contentView.layer, position: CGPoint(x: 0.0, y: targetOffset), completion: { [weak self, weak pendingContainerView] _ in
+                        pendingContainerView?.removeFromSuperview()
 
-                        let animateTransition: ComponentTransition = .spring(duration: 0.4)
-                        let targetOffset: CGFloat = CGFloat(borderEmoji - 1) * size.height
-                        animateTransition.setPosition(layer: pendingContainerView.contentView.layer, position: CGPoint(x: 0.0, y: targetOffset), completion: { [weak self, weak pendingContainerView] _ in
-                            pendingContainerView?.removeFromSuperview()
+                        self?.containerView.isMaskEnabled = false
+                    })
 
-                            self?.containerView.isMaskEnabled = false
-                        })
-
-                        animateTransition.animatePosition(view: emojiComponentView, from: CGPoint(x: 0.0, y: currentPendingContainerOffset - targetOffset), to: CGPoint(), additive: true)
-                    } else {
-                        self.containerView.isMaskEnabled = false
-                    }
+                    animateTransition.animatePosition(layer: emojiLayer, from: CGPoint(x: 0.0, y: currentPendingContainerOffset - targetOffset), to: CGPoint(), additive: true)
+                } else {
+                    self.containerView.isMaskEnabled = false
                 }
                 
                 self.pendingEmojiValues = nil
             } else {
-                if let emojiView = self.emojiView {
-                    self.emojiView = nil
-                    previousEmojiView = emojiView
+                if let emojiLayer = self.emojiLayer {
+                    self.emojiLayer = nil
+                    previousEmojiLayer = emojiLayer
                 }
                 
                 if self.pendingEmojiValues?.count != numEmoji {
@@ -260,31 +342,25 @@ private final class EmojiItemComponent: Component {
                 }
 
                 for i in 0 ..< numEmoji {
-                    let pendingEmojiView: ComponentView<Empty>
-                    if self.pendingEmojiViews.count > i {
-                        pendingEmojiView = self.pendingEmojiViews[i]
+                    let pendingEmojiLayer: EmojiContentLayer
+                    if self.pendingEmojiLayers.count > i {
+                        pendingEmojiLayer = self.pendingEmojiLayers[i]
                     } else {
-                        pendingEmojiView = ComponentView()
-                        self.pendingEmojiViews.append(pendingEmojiView)
+                        pendingEmojiLayer = EmojiContentLayer(size: size)
+                        self.pendingEmojiLayers.append(pendingEmojiLayer)
                     }
-                    let pendingEmojiViewSize = pendingEmojiView.update(
-                        transition: .immediate,
-                        component: AnyComponent(MultilineTextComponent(
-                            text: .plain(NSAttributedString(string: pendingEmojiValues[i], font: Font.regular(40.0), textColor: .white))
-                        )),
-                        environment: {},
-                        containerSize: CGSize(width: 200.0, height: 200.0)
-                    )
-                    if let pendingEmojiComponentView = pendingEmojiView.view {
-                        if pendingEmojiComponentView.superview == nil {
-                            pendingContainerView.contentView.addSubview(pendingEmojiComponentView)
-                        }
-                        pendingEmojiComponentView.frame = CGRect(origin: CGPoint(x: pendingContainerInset, y: pendingContainerInset + CGFloat(i) * size.height), size: pendingEmojiViewSize)
+                    pendingEmojiLayer.setEmoji(emoji: pendingEmojiValues[i], font: Font.regular(40.0))
+                    let pendingEmojiViewSize = size
+                    if pendingEmojiLayer.superlayer == nil {
+                        pendingContainerView.contentView.layer.addSublayer(pendingEmojiLayer)
                     }
+                    pendingEmojiLayer.frame = CGRect(origin: CGPoint(x: pendingContainerInset, y: pendingContainerInset + CGFloat(i) * size.height), size: pendingEmojiViewSize)
+
+                    pendingEmojiLayer.setMotionBlurFactor(factor: 1.0, transition: motionBlurTransition)
                 }
 
                 pendingContainerView.frame = CGRect(origin: CGPoint(), size: containerFrame.size)
-                pendingContainerView.update(size: containerFrame.size, borderWidth: 12.0)
+                pendingContainerView.update(size: containerFrame.size, borderWidth: 10.0)
 
                 if pendingContainerView.superview == nil {
                     self.containerView.contentView.addSubview(pendingContainerView)
@@ -292,11 +368,11 @@ private final class EmojiItemComponent: Component {
                     let startTime = CACurrentMediaTime()
 
                     var loopAnimationOffset: Double = 0.0
-                    if let previousEmojiComponentView = previousEmojiView?.view {
-                        previousEmojiView = nil
+                    if let previousEmojiLayerValue = previousEmojiLayer {
+                        previousEmojiLayer = nil
 
-                        pendingContainerView.contentView.addSubview(previousEmojiComponentView)
-                        previousEmojiComponentView.center = previousEmojiComponentView.center.offsetBy(dx: 0.0, dy: CGFloat(numEmoji) * size.height)
+                        pendingContainerView.contentView.layer.addSublayer(previousEmojiLayerValue)
+                        previousEmojiLayerValue.position = previousEmojiLayerValue.position.offsetBy(dx: 0.0, dy: CGFloat(numEmoji) * size.height)
 
                         let animation = CABasicAnimation(keyPath: "position.y")
                         loopAnimationOffset = 0.25
@@ -311,11 +387,13 @@ private final class EmojiItemComponent: Component {
                         animation.beginTime = pendingContainerView.contentView.layer.convertTime(startTime, from: nil)
                         animation.isAdditive = true
 
-                        animation.completion = { [weak previousEmojiComponentView] _ in
-                            previousEmojiComponentView?.removeFromSuperview()
+                        animation.completion = { [weak previousEmojiLayerValue] _ in
+                            previousEmojiLayerValue?.removeFromSuperlayer()
                         }
                         
                         pendingContainerView.contentView.layer.add(animation, forKey: "offsetCyclePre")
+
+                        previousEmojiLayerValue.setMotionBlurFactor(factor: 1.0, transition: motionBlurTransition)
                     } 
 
                     let animation = CABasicAnimation(keyPath: "position.y")
@@ -346,14 +424,14 @@ private final class EmojiItemComponent: Component {
                 self.pendingContainerView = nil
                 pendingContainerView.removeFromSuperview()
 
-                for emojiView in self.pendingEmojiViews {
-                    emojiView.view?.removeFromSuperview()
+                for emojiLayer in self.pendingEmojiLayers {
+                    emojiLayer.removeFromSuperlayer()
                 }
-                self.pendingEmojiViews.removeAll()
+                self.pendingEmojiLayers.removeAll()
             }
 
-            if let previousEmojiView {
-                previousEmojiView.view?.removeFromSuperview()
+            if let previousEmojiLayer = previousEmojiLayer {
+                previousEmojiLayer.removeFromSuperlayer()
             }
 
             return size
@@ -470,7 +548,7 @@ final class VideoChatEncryptionKeyComponent: Component {
                 self.isUpdating = false
             }
 
-            #if DEBUG && false
+            #if DEBUG && true
             if self.component == nil {
                 self.mockStateTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 4.0, repeats: true, block: { [weak self] _ in
                     guard let self else {

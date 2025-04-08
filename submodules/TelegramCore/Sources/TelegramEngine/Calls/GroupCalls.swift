@@ -3111,14 +3111,9 @@ func _internal_refreshInlineGroupCall(account: Account, messageId: MessageId) ->
 
                 for i in 0 ..< updatedMedia.count {
                     if let action = updatedMedia[i] as? TelegramMediaAction, case let .conferenceCall(conferenceCall) = action.action {
-                        var otherParticipants: [PeerId] = []
+                        let otherParticipants: [PeerId] = conferenceCall.otherParticipants
                         var duration: Int32? = conferenceCall.duration
                         if let result {
-                            for id in result.participants {
-                                if id != account.peerId {
-                                    otherParticipants.append(id)
-                                }
-                            }
                             duration = result.duration
                         } else {
                             duration = nil

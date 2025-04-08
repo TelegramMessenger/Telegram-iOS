@@ -727,6 +727,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                 peerIds.append(senderId)
             }
             return peerIds
+        case let .conferenceCall(conferenceCall):
+            return conferenceCall.otherParticipants
         default:
             return []
         }
