@@ -569,6 +569,7 @@ public protocol PresentationCallManager: AnyObject {
         accountContext: AccountContext,
         initialCall: EngineGroupCallDescription,
         reference: InternalGroupCallReference,
-        beginWithVideo: Bool
+        beginWithVideo: Bool,
+        invitePeerIds: [EnginePeer.Id]
     )
 }

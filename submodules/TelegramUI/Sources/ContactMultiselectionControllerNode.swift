@@ -14,6 +14,7 @@ import MultiAnimationRenderer
 import EditableTokenListNode
 import SolidRoundedButtonNode
 import ContextUI
+import ComponentFlow
 
 private struct SearchResultEntry: Identifiable {
     let index: Int
@@ -53,6 +54,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
     var searchResultsNode: ContactListNode?
     
     private let context: AccountContext
+    private let mode: ContactMultiselectionControllerMode
     
     private var containerLayout: (ContainerViewLayout, CGFloat, CGFloat)?
     
@@ -81,12 +83,15 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
     private let isPeerEnabled: ((EnginePeer) -> Bool)?
     private let onlyWriteable: Bool
     private let isGroupInvitation: Bool
+
+    private var bottomPanel: ComponentView<Empty>?
     
     init(navigationBar: NavigationBar?, context: AccountContext, presentationData: PresentationData, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, mode: ContactMultiselectionControllerMode, isPeerEnabled: ((EnginePeer) -> Bool)?, attemptDisabledItemSelection: ((EnginePeer, ChatListDisabledPeerReason) -> Void)?, options: Signal<[ContactListAdditionalOption], NoError>, filters: [ContactListFilter], onlyWriteable: Bool, isGroupInvitation: Bool, limit: Int32?, reachedSelectionLimit: ((Int32) -> Void)?, present: @escaping (ViewController, Any?) -> Void) {
         self.navigationBar = navigationBar
         
         self.context = context
         self.presentationData = presentationData
+        self.mode = mode
         
         self.animationCache = context.animationCache
         self.animationRenderer = context.animationRenderer
@@ -120,6 +125,17 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
             self.footerPanelNode = FooterPanelNode(theme: self.presentationData.theme, strings: self.presentationData.strings, action: {
                 proceedImpl?()
             })
+        case let .groupCreation(isCall):
+            if isCall {
+                //TODO:localize
+                placeholder = "Search for contacts or usernames"
+                self.footerPanelNode = FooterPanelNode(theme: self.presentationData.theme, strings: self.presentationData.strings, action: {
+                    proceedImpl?()
+                })
+            } else {
+                placeholder = self.presentationData.strings.Compose_TokenListPlaceholder    
+                self.footerPanelNode = nil
+            }
         default:
             placeholder = self.presentationData.strings.Compose_TokenListPlaceholder
             self.footerPanelNode = nil
@@ -462,7 +478,24 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
             if case let .contacts(contactListNode) = self.contentNode {
                 count = contactListNode.selectionState?.selectedPeerIndices.count ?? 0
             }
-            footerPanelNode.count = count
+            if case let .groupCreation(isCall) = self.mode, isCall {
+                //TODO:localize
+                if count == 0 {
+                    // Don't set anything to prevent state update
+                } else if count <= 1 {
+                    let callTitle: String
+                    if case let .contacts(contactListNode) = self.contentNode, let peer = contactListNode.selectedPeers.first, case let .peer(peer, _, _) = peer {
+                        callTitle = "Call \(EnginePeer(peer).compactDisplayTitle)"
+                    } else {
+                        callTitle = "Call"
+                    }
+                    footerPanelNode.content = FooterPanelNode.Content(title: callTitle, badge: "")
+                } else {
+                    footerPanelNode.content = FooterPanelNode.Content(title: "Call", badge: "\(count)")
+                }
+            } else {
+                footerPanelNode.content = FooterPanelNode.Content(title: self.presentationData.strings.Premium_Gift_ContactSelection_Proceed, badge: count == 0 ? "" : "\(count)")
+            }
             let panelHeight = footerPanelNode.updateLayout(width: layout.size.width, sideInset: layout.safeInsets.left, bottomInset: headerInsets.bottom, transition: transition)
             if count == 0 {
                 transition.updateFrame(node: footerPanelNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height), size: CGSize(width: layout.size.width, height: panelHeight)))
@@ -509,6 +542,16 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
 
 
 private final class FooterPanelNode: ASDisplayNode {
+    struct Content: Equatable {
+        let title: String
+        let badge: String
+
+        init(title: String, badge: String) {
+            self.title = title
+            self.badge = badge
+        }
+    }
+    
     private let theme: PresentationTheme
     private let strings: PresentationStrings
     
@@ -517,11 +560,11 @@ private final class FooterPanelNode: ASDisplayNode {
     
     private var validLayout: (CGFloat, CGFloat, CGFloat)?
     
-    var count: Int = 0 {
+    var content: Content {
         didSet {
-            if self.count != oldValue && self.count > 0 {
-                self.button.title = self.strings.Premium_Gift_ContactSelection_Proceed
-                self.button.badge = "\(self.count)"
+            if self.content != oldValue {
+                self.button.title = content.title
+                self.button.badge = content.badge.isEmpty ? nil : content.badge
                 
                 if let (width, sideInset, bottomInset) = self.validLayout {
                     let _ = self.updateLayout(width: width, sideInset: sideInset, bottomInset: bottomInset, transition: .immediate)
@@ -538,6 +581,8 @@ private final class FooterPanelNode: ASDisplayNode {
         self.separatorNode.backgroundColor = theme.rootController.navigationBar.separatorColor
         
         self.button = SolidRoundedButtonView(theme: SolidRoundedButtonTheme(theme: theme), height: 48.0, cornerRadius: 10.0)
+
+        self.content = Content(title: self.strings.Premium_Gift_ContactSelection_Proceed, badge: "")
         
         super.init()
         

@@ -6,9 +6,9 @@ import TelegramPresentationData
 
 public struct CounterControllerTitle: Equatable {
     public var title: String
-    public var counter: String
+    public var counter: String?
     
-    public init(title: String, counter: String) {
+    public init(title: String, counter: String?) {
         self.title = title
         self.counter = counter
     }
@@ -18,7 +18,7 @@ public final class CounterControllerTitleView: UIView {
     private let titleNode: ImmediateTextNode
     private let subtitleNode: ImmediateTextNode
     
-    public var title: CounterControllerTitle = CounterControllerTitle(title: "", counter: "") {
+    public var title: CounterControllerTitle = CounterControllerTitle(title: "", counter: nil) {
         didSet {
             if self.title != oldValue {
                 self.update()
@@ -59,7 +59,7 @@ public final class CounterControllerTitleView: UIView {
         let primaryTextColor = self.primaryTextColor ?? self.theme.rootController.navigationBar.primaryTextColor
         let secondaryTextColor = self.secondaryTextColor ?? self.theme.rootController.navigationBar.secondaryTextColor
         self.titleNode.attributedText = NSAttributedString(string: self.title.title, font: Font.semibold(17.0), textColor: primaryTextColor)
-        self.subtitleNode.attributedText = NSAttributedString(string: self.title.counter, font: Font.with(size: 13.0, traits: .monospacedNumbers), textColor: secondaryTextColor)
+        self.subtitleNode.attributedText = NSAttributedString(string: self.title.counter ?? "", font: Font.with(size: 13.0, traits: .monospacedNumbers), textColor: secondaryTextColor)
         
         self.accessibilityLabel = self.title.title
         self.accessibilityValue = self.title.counter
@@ -103,7 +103,13 @@ public final class CounterControllerTitleView: UIView {
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: max(1.0, size.width), height: size.height))
         let subtitleSize = self.subtitleNode.updateLayout(CGSize(width: max(1.0, size.width), height: size.height))
-        let combinedHeight = titleSize.height + subtitleSize.height + spacing
+        
+        let combinedHeight: CGFloat
+        if self.title.counter != nil {
+            combinedHeight = titleSize.height + subtitleSize.height + spacing
+        } else {
+            combinedHeight = titleSize.height
+        }
         
         let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor((size.height - combinedHeight) / 2.0)), size: titleSize)
         self.titleNode.frame = titleFrame

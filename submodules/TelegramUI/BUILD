@@ -469,6 +469,9 @@ swift_library(
         "//submodules/TelegramUI/Components/Settings/AccountFreezeInfoScreen",
         "//submodules/TelegramUI/Components/JoinSubjectScreen",
         "//submodules/TelegramUI/Components/Chat/QuickShareScreen",
+        "//submodules/TelegramUI/Components/ButtonComponent",
+        "//submodules/Components/BlurredBackgroundComponent",
+        "//submodules/TelegramUI/Components/CheckComponent",
         "//third-party/recaptcha:RecaptchaEnterprise",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,

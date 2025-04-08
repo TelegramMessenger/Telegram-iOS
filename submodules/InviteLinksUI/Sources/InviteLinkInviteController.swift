@@ -427,7 +427,7 @@ public final class InviteLinkInviteController: ViewController {
                                 strongSelf.controller?.present(controller, in: .window(.root))
                             })
                         } else if case .groupCall = self.mode {
-                            let controller = QrCodeScreen(context: context, updatedPresentationData: (self.presentationData, self.presentationDataPromise.get()), subject: .invite(invite: invite, type: .channel))
+                            let controller = QrCodeScreen(context: context, updatedPresentationData: (self.presentationData, self.presentationDataPromise.get()), subject: .invite(invite: invite, type: .groupCall))
                             self.controller?.present(controller, in: .window(.root))
                         }
                     }

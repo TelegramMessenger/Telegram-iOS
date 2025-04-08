@@ -1083,7 +1083,8 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         accountContext: AccountContext,
         initialCall: EngineGroupCallDescription,
         reference: InternalGroupCallReference,
-        beginWithVideo: Bool
+        beginWithVideo: Bool,
+        invitePeerIds: [EnginePeer.Id]
     ) {
         let keyPair: TelegramKeyPair
         guard let keyPairValue = TelegramE2EEncryptionProviderImpl.shared.generateKeyPair() else {
@@ -1109,6 +1110,9 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
             beginWithVideo: beginWithVideo,
             sharedAudioContext: nil
         )
+        for peerId in invitePeerIds {
+            let _ = call.invitePeer(peerId, isVideo: beginWithVideo)
+        }
         self.updateCurrentGroupCall(.group(call))
     }
 }
