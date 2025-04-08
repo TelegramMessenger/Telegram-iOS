@@ -14,7 +14,7 @@
 namespace td {
 
 struct CallDiscardReason {
-  enum class Type : int32 { Empty, Missed, Disconnected, HungUp, Declined, AllowGroupCall };
+  enum class Type : int32 { Empty, Missed, Disconnected, HungUp, Declined };
   Type type_ = Type::Empty;
   string encrypted_key_;
 };

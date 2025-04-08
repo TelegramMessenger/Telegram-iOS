@@ -117,7 +117,12 @@ class UpdatesManager final : public Actor {
 
   static vector<InputGroupCallId> get_update_new_group_call_ids(const telegram_api::Updates *updates_ptr);
 
+  void process_updates_users_and_chats(telegram_api::Updates *updates_ptr);
+
   static string extract_join_group_call_presentation_params(telegram_api::Updates *updates_ptr);
+
+  static telegram_api::object_ptr<telegram_api::StoryItem> extract_story(telegram_api::Updates *updates_ptr,
+                                                                         DialogId owner_dialog_id);
 
   static vector<DialogId> get_update_notify_settings_dialog_ids(const telegram_api::Updates *updates_ptr);
 
@@ -699,6 +704,8 @@ class UpdatesManager final : public Actor {
   // unsupported updates
 
   void on_update(tl_object_ptr<telegram_api::updateNewStoryReaction> update, Promise<Unit> &&promise);
+
+  void on_update(tl_object_ptr<telegram_api::updateSentPhoneCode> update, Promise<Unit> &&promise);
 };
 
 }  // namespace td

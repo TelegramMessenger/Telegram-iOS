@@ -169,8 +169,8 @@ class StickersManager final : public Actor {
   Status on_animated_emoji_message_clicked(string &&emoji, MessageFullId message_full_id, string data);
 
   void create_sticker(FileId file_id, FileId premium_animation_file_id, string minithumbnail, PhotoSize thumbnail,
-                      Dimensions dimensions, tl_object_ptr<telegram_api::documentAttributeSticker> sticker,
-                      tl_object_ptr<telegram_api::documentAttributeCustomEmoji> custom_emoji,
+                      Dimensions dimensions, telegram_api::object_ptr<telegram_api::documentAttributeSticker> sticker,
+                      telegram_api::object_ptr<telegram_api::documentAttributeCustomEmoji> custom_emoji,
                       StickerFormat sticker_format, MultiPromiseActor *load_data_multipromise_ptr);
 
   bool has_secret_input_media(FileId sticker_file_id) const;

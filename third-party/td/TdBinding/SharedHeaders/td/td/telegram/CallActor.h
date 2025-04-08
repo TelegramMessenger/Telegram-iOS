@@ -46,9 +46,9 @@ struct CallProtocol {
 
   explicit CallProtocol(const telegram_api::phoneCallProtocol &protocol);
 
-  tl_object_ptr<telegram_api::phoneCallProtocol> get_input_phone_call_protocol() const;
+  telegram_api::object_ptr<telegram_api::phoneCallProtocol> get_input_phone_call_protocol() const;
 
-  tl_object_ptr<td_api::callProtocol> get_call_protocol_object() const;
+  td_api::object_ptr<td_api::callProtocol> get_call_protocol_object() const;
 };
 
 struct CallConnection {
