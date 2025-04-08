@@ -34,7 +34,8 @@ private extension PresentationGroupCallState {
             scheduleTimestamp: scheduleTimestamp,
             subscribedToScheduled: subscribedToScheduled,
             isVideoEnabled: false,
-            isVideoWatchersLimitReached: false
+            isVideoWatchersLimitReached: false,
+            isMyVideoActive: false
         )
     }
 }
@@ -1708,6 +1709,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     }
                     
                     var prioritizeVP8 = false
+                    #if DEBUG
+                    prioritizeVP8 = "".isEmpty
+                    #endif
                     if let data = self.accountContext.currentAppConfiguration.with({ $0 }).data, let value = data["ios_calls_prioritize_vp8"] as? Double {
                         prioritizeVP8 = value != 0.0
                     }
@@ -3130,6 +3134,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
 
         if let videoCapturer = self.videoCapturer {
             self.requestVideo(capturer: videoCapturer)
+
+            var stateValue = self.stateValue
+            stateValue.isMyVideoActive = true
+            self.stateValue = stateValue
         }
     }
 
@@ -3152,6 +3160,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             }))
 
             self.updateLocalVideoState()
+
+            var stateValue = self.stateValue
+            stateValue.isMyVideoActive = true
+            self.stateValue = stateValue
         }
     }
     
@@ -3165,6 +3177,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             self.isVideoMuted = true
         
             self.updateLocalVideoState()
+
+            var stateValue = self.stateValue
+            stateValue.isMyVideoActive = false
+            self.stateValue = stateValue
         }
     }
 

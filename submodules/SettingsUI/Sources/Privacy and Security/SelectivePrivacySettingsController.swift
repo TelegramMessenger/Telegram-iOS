@@ -1048,14 +1048,10 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
         entries.append(.settingInfo(presentationData.theme, settingInfoText, settingInfoLink))
     }
     
-    if case .phoneNumber = kind, state.setting == .nobody {
-        if state.phoneDiscoveryEnabled == false || phoneNumber.hasPrefix("888") {
-            entries.append(.phoneDiscoveryHeader(presentationData.theme, presentationData.strings.PrivacyPhoneNumberSettings_DiscoveryHeader))
-            entries.append(.phoneDiscoveryEverybody(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenEverybody, state.phoneDiscoveryEnabled != false))
-            entries.append(.phoneDiscoveryMyContacts(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenContacts, state.phoneDiscoveryEnabled == false))
-            entries.append(.phoneDiscoveryInfo(presentationData.theme, state.phoneDiscoveryEnabled != false ? presentationData.strings.PrivacyPhoneNumberSettings_CustomPublicLink("+\(phoneNumber)").string : presentationData.strings.PrivacyPhoneNumberSettings_CustomDisabledHelp, phoneLink))
-        }
-    }
+    entries.append(.phoneDiscoveryHeader(presentationData.theme, presentationData.strings.PrivacyPhoneNumberSettings_DiscoveryHeader))
+    entries.append(.phoneDiscoveryEverybody(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenEverybody, state.phoneDiscoveryEnabled != false))
+    entries.append(.phoneDiscoveryMyContacts(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenContacts, state.phoneDiscoveryEnabled == false))
+    entries.append(.phoneDiscoveryInfo(presentationData.theme, state.phoneDiscoveryEnabled != false ? presentationData.strings.PrivacyPhoneNumberSettings_CustomPublicLink("+\(phoneNumber)").string : presentationData.strings.PrivacyPhoneNumberSettings_CustomDisabledHelp, phoneLink))
      
     if case .voiceMessages = kind, !isPremium {
         
