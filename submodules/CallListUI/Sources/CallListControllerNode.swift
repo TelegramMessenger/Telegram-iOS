@@ -127,7 +127,7 @@ private func mappedInsertEntries(context: AccountContext, presentationData: Item
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: 0), directionHint: entry.directionHint)
             case .createGroupCall:
                 //TODO:localize
-            let item = ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.linkIcon(presentationData.theme), title: "New Call Link", hasSeparator: false, sectionId: 1, noInsets: true, editing: false, action: {
+                let item = ItemListPeerActionItem(presentationData: presentationData, style: showSettings ? .blocks : .plain, icon: PresentationResourcesItemList.linkIcon(presentationData.theme), title: "New Call Link", hasSeparator: false, sectionId: 1, noInsets: true, editing: false, action: {
                     nodeInteraction.createGroupCall()
                 })
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)

@@ -2384,6 +2384,7 @@ public final class AccountViewTracker {
                 var lhsVideo = false
                 var lhsMissed = false
                 var lhsOther = false
+                var lhsConferenceId: Int64?
                 inner: for media in lhs.media {
                     if let action = media as? TelegramMediaAction {
                         if case let .phoneCall(_, discardReason, _, video) = action.action {
@@ -2394,12 +2395,15 @@ public final class AccountViewTracker {
                                 lhsOther = true
                             }
                             break inner
+                        } else if case let .conferenceCall(conferenceCall) = action.action {
+                            lhsConferenceId = conferenceCall.callId
                         }
                     }
                 }
                 var rhsVideo = false
                 var rhsMissed = false
                 var rhsOther = false
+                var rhsConferenceId: Int64?
                 inner: for media in rhs.media {
                     if let action = media as? TelegramMediaAction {
                         if case let .phoneCall(_, discardReason, _, video) = action.action {
@@ -2410,10 +2414,12 @@ public final class AccountViewTracker {
                                 rhsOther = true
                             }
                             break inner
+                        } else if case let .conferenceCall(conferenceCall) = action.action {
+                            rhsConferenceId = conferenceCall.callId
                         }
                     }
                 }
-                if lhsMissed != rhsMissed || lhsOther != rhsOther || lhsVideo != rhsVideo {
+                if lhsMissed != rhsMissed || lhsOther != rhsOther || lhsVideo != rhsVideo || lhsConferenceId != rhsConferenceId {
                     return false
                 }
                 return true
@@ -2454,22 +2460,22 @@ public final class AccountViewTracker {
                     var currentMessages: [Message] = []
                     for entry in view.entries {
                         switch entry {
-                            case .hole:
+                        case .hole:
+                            if !currentMessages.isEmpty {
+                                entries.append(.message(currentMessages[currentMessages.count - 1], currentMessages))
+                                currentMessages.removeAll()
+                            }
+                            //entries.append(.hole(index))
+                        case let .message(message):
+                            if currentMessages.isEmpty || groupingPredicate(message, currentMessages[currentMessages.count - 1]) {
+                                currentMessages.append(message)
+                            } else {
                                 if !currentMessages.isEmpty {
                                     entries.append(.message(currentMessages[currentMessages.count - 1], currentMessages))
                                     currentMessages.removeAll()
                                 }
-                                //entries.append(.hole(index))
-                            case let .message(message):
-                                if currentMessages.isEmpty || groupingPredicate(message, currentMessages[currentMessages.count - 1]) {
-                                    currentMessages.append(message)
-                                } else {
-                                    if !currentMessages.isEmpty {
-                                        entries.append(.message(currentMessages[currentMessages.count - 1], currentMessages))
-                                        currentMessages.removeAll()
-                                    }
-                                    currentMessages.append(message)
-                                }
+                                currentMessages.append(message)
+                            }
                         }
                     }
                     if !currentMessages.isEmpty {

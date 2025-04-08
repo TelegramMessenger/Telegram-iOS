@@ -11,6 +11,7 @@ import AvatarNode
 import TelegramStringFormatting
 import AccountContext
 import ChatListSearchItemHeader
+import AnimatedAvatarSetNode
 
 private func callDurationString(strings: PresentationStrings, duration: Int32) -> String {
     if duration < 60 {
@@ -173,6 +174,7 @@ class CallListCallItem: ListViewItem {
 }
 
 private let avatarFont = avatarPlaceholderFont(size: 16.0)
+private let multipleAvatarFont = avatarPlaceholderFont(size: 12.0)
 
 class CallListCallItemNode: ItemListRevealOptionsItemNode {
     private let backgroundNode: ASDisplayNode
@@ -187,6 +189,10 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
     }
     
     private let avatarNode: AvatarNode
+    
+    private var conferenceAvatarListContext: AnimatedAvatarSetContext?
+    private var conferenceAvatarListNode: AnimatedAvatarSetNode?
+
     private let titleNode: TextNode
     private var credibilityIconNode: ASImageNode?
     private let statusNode: TextNode
@@ -321,6 +327,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             let statusFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 14.0 / 17.0))
             let dateFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0))
             let avatarDiameter = min(40.0, floor(item.presentationData.fontSize.itemListBaseFontSize * 40.0 / 17.0))
+            let multipleAvatarDiameter = min(30.0, floor(item.presentationData.fontSize.itemListBaseFontSize * 30.0 / 17.0))
             
             let editingOffset: CGFloat
             var editableControlSizeAndApply: (CGFloat, (CGFloat) -> ItemListEditableControlNode)?
@@ -376,6 +383,11 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             var isConference = false
             var conferenceIsDeclined = false
             
+            let _ = isConference
+            let _ = conferenceIsDeclined
+
+            var conferenceAvatars: [EnginePeer] = []
+            
             for message in item.messages {
                 inner: for media in message.media {
                     if let action = media as? TelegramMediaAction {
@@ -399,6 +411,16 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                             }
                         } else if case let .conferenceCall(conferenceCall) = action.action {
                             isConference = true
+
+                            if let peer = message.author, !conferenceAvatars.contains(where: { $0.id == peer.id }) {
+                                conferenceAvatars.append(peer)
+                            }
+
+                            for id in conferenceCall.otherParticipants {
+                                if let peer = message.peers[id], !conferenceAvatars.contains(where: { $0.id == peer.id }) {
+                                    conferenceAvatars.append(EnginePeer(peer))
+                                }
+                            }
                             
                             isVideo = conferenceCall.flags.contains(.isVideo)
                             if message.flags.contains(.Incoming) {
@@ -434,7 +456,21 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             }
             
             if let peer = item.topMessage.peers[item.topMessage.id.peerId] {
-                if let user = peer as? TelegramUser {
+                if conferenceAvatars.count > 1 {
+                    var peersString = ""
+                    for peer in conferenceAvatars {
+                        if !peersString.isEmpty {
+                            peersString.append(", ")
+                        }
+                        if peer.id == item.context.account.peerId {
+                            //TODO:localize
+                            peersString += "You"
+                        } else {
+                            peersString += peer.compactDisplayTitle
+                        }
+                    }
+                    titleAttributedString = NSAttributedString(string: peersString, font: titleFont, textColor: titleColor)
+                } else if let user = peer as? TelegramUser {
                     if let firstName = user.firstName, let lastName = user.lastName, !firstName.isEmpty, !lastName.isEmpty {
                         let string = NSMutableAttributedString()
                         string.append(NSAttributedString(string: firstName, font: titleFont, textColor: titleColor))
@@ -457,18 +493,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                     titleAttributedString = NSAttributedString(string: channel.title, font: titleFont, textColor: titleColor)
                 }
                 
-                if isConference {
-                    //TODO:localize
-                    if conferenceIsDeclined {
-                        statusAttributedString = NSAttributedString(string: "Declined Group Call", font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
-                    } else if hasMissed {
-                        statusAttributedString = NSAttributedString(string: "Missed Group Call", font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
-                    } else {
-                        statusAttributedString = NSAttributedString(string: "Group call", font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
-                    }
-                    
-                    statusAccessibilityString = statusAttributedString?.string ?? ""
-                } else if hasMissed {
+                if hasMissed {
                     statusAttributedString = NSAttributedString(string: item.presentationData.strings.Notification_CallMissedShort, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
                     statusAccessibilityString = isVideo ? item.presentationData.strings.Call_VoiceOver_VideoCallMissed : item.presentationData.strings.Call_VoiceOver_VoiceCallMissed
                 } else if hasIncoming && hasOutgoing {
@@ -658,7 +683,39 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                             }
                             
                     
-                            transition.updateFrameAdditive(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 52.0, y: floor((contentSize.height - avatarDiameter) / 2.0)), size: CGSize(width: avatarDiameter, height: avatarDiameter)))
+                            let avatarFrame = CGRect(origin: CGPoint(x: revealOffset + leftInset - 52.0, y: floor((contentSize.height - avatarDiameter) / 2.0)), size: CGSize(width: avatarDiameter, height: avatarDiameter))
+                            transition.updateFrameAdditive(node: strongSelf.avatarNode, frame: avatarFrame)
+
+                            if conferenceAvatars.count > 1 {
+                                strongSelf.avatarNode.isHidden = true
+
+                                let conferenceAvatarListContext: AnimatedAvatarSetContext
+                                if let current = strongSelf.conferenceAvatarListContext {
+                                    conferenceAvatarListContext = current
+                                } else {
+                                    conferenceAvatarListContext = AnimatedAvatarSetContext()
+                                    strongSelf.conferenceAvatarListContext = conferenceAvatarListContext
+                                }
+                                let conferenceAvatarListNode: AnimatedAvatarSetNode
+                                if let current = strongSelf.conferenceAvatarListNode {
+                                    conferenceAvatarListNode = current
+                                } else {
+                                    conferenceAvatarListNode = AnimatedAvatarSetNode()
+                                    strongSelf.conferenceAvatarListNode = conferenceAvatarListNode
+                                    strongSelf.containerNode.addSubnode(conferenceAvatarListNode)
+                                }
+                                let avatarListContents = conferenceAvatarListContext.update(peers: conferenceAvatars, animated: false)
+                                let avatarListSize = conferenceAvatarListNode.update(context: item.context, content: avatarListContents, itemSize: CGSize(width: CGFloat(multipleAvatarDiameter), height: CGFloat(multipleAvatarDiameter)), customSpacing: multipleAvatarDiameter - 8.0, font: multipleAvatarFont, animated: false, synchronousLoad: synchronousLoads)
+                                conferenceAvatarListNode.frame = CGRect(origin: CGPoint(x: avatarFrame.minX + floor((avatarFrame.width - avatarListSize.width) / 2.0), y: avatarFrame.minY + floor((avatarFrame.height - avatarListSize.height) / 2.0)), size: avatarListSize)
+                            } else {
+                                strongSelf.avatarNode.isHidden = false
+                                
+                                strongSelf.conferenceAvatarListContext = nil
+                                if let conferenceAvatarListNode = strongSelf.conferenceAvatarListNode {
+                                    strongSelf.conferenceAvatarListNode = nil
+                                    conferenceAvatarListNode.removeFromSupernode()
+                                }
+                            }
                             
                             let _ = titleApply()
                             let titleFrame = CGRect(origin: CGPoint(x: revealOffset + leftInset, y: verticalInset), size: titleLayout.size)
