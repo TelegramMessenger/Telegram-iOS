@@ -667,8 +667,8 @@ public final class CallListController: TelegramBaseController {
             return
         }
         self.peerViewDisposable.set((self.context.account.viewTracker.peerView(peerId)
-            |> take(1)
-            |> deliverOnMainQueue).startStrict(next: { [weak self] view in
+        |> take(1)
+        |> deliverOnMainQueue).startStrict(next: { [weak self] view in
             if let strongSelf = self {
                 guard let peer = peerViewMainPeer(view) else {
                     return
@@ -676,7 +676,6 @@ public final class CallListController: TelegramBaseController {
                 
                 if let cachedUserData = view.cachedData as? CachedUserData, cachedUserData.callsPrivate {
                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                    
                     strongSelf.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_ConnectionErrorTitle, text: presentationData.strings.Call_PrivacyErrorMessage(EnginePeer(peer).compactDisplayTitle).string, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     return
                 }
@@ -700,6 +699,7 @@ public final class CallListController: TelegramBaseController {
             return
         }
         if conferenceCall.duration != nil {
+            self.context.sharedContext.openCreateGroupCallUI(context: self.context, peerIds: conferenceCall.otherParticipants, parentController: self)
             return
         }
         
@@ -728,6 +728,18 @@ public final class CallListController: TelegramBaseController {
                 beginWithVideo: conferenceCall.flags.contains(.isVideo),
                 invitePeerIds: []
             )
+        }, error: { [weak self] error in
+            guard let self else {
+                return
+            }
+            switch error {
+            case .doesNotExist:
+                self.context.sharedContext.openCreateGroupCallUI(context: self.context, peerIds: conferenceCall.otherParticipants, parentController: self)
+            default:
+                let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+                //TODO:localize
+                self.present(textAlertController(context: self.context, title: nil, text: "An error occurred", actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+            }
         })
     }
     

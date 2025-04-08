@@ -114,7 +114,6 @@ public class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                 var callDuration: Int32?
                 var callSuccessful = true
                 var isVideo = false
-                var hasCallButton = true
                 var updateConferenceTimerEndTimeout: Int32?
                 for media in item.message.media {
                     if let action = media as? TelegramMediaAction, case let .phoneCall(_, discardReason, duration, isVideoValue) = action.action {
@@ -173,9 +172,7 @@ public class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                         #else
                         missedTimeout = 30
                         #endif
-                        if conferenceCall.duration != nil {
-                            hasCallButton = false
-                        }
+                        
                         let currentTime = Int32(Date().timeIntervalSince1970)
                         if conferenceCall.flags.contains(.isMissed) {
                             titleString = "Declined Group Call"
@@ -296,9 +293,7 @@ public class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                 boundingSize.width += layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
                 boundingSize.height += layoutConstants.text.bubbleInsets.top + layoutConstants.text.bubbleInsets.bottom
                 
-                if hasCallButton {
-                    boundingSize.width += 54.0
-                }
+                boundingSize.width += 54.0
                 
                 return (boundingSize.width, { boundingWidth in
                     return (boundingSize, { [weak self] animation, _, _ in
@@ -359,7 +354,6 @@ public class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                             if let buttonImage = buttonImage {
                                 strongSelf.buttonNode.setImage(buttonImage, for: [])
                                 strongSelf.buttonNode.frame = CGRect(origin: CGPoint(x: boundingWidth - buttonImage.size.width - 8.0, y: 15.0), size: buttonImage.size)
-                                strongSelf.buttonNode.isHidden = !hasCallButton
                             }
                             
                             if let activeConferenceUpdateTimer = strongSelf.activeConferenceUpdateTimer {
@@ -411,10 +405,6 @@ public class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
     }
     
     override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
-        if self.buttonNode.isHidden {
-            return ChatMessageBubbleContentTapAction(content: .none)
-        }
-        
         if self.buttonNode.frame.contains(point) {
             return ChatMessageBubbleContentTapAction(content: .ignore)
         } else if self.bounds.contains(point), let item = self.item {

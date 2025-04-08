@@ -109,6 +109,7 @@ public final class ContactMultiselectionControllerParams {
     public let reachedLimit: ((Int32) -> Void)?
     public let openProfile: ((EnginePeer) -> Void)?
     public let sendMessage: ((EnginePeer) -> Void)?
+    public let initialSelectedPeers: [EnginePeer]
     
     public init(
         context: AccountContext,
@@ -125,7 +126,8 @@ public final class ContactMultiselectionControllerParams {
         limit: Int32? = nil,
         reachedLimit: ((Int32) -> Void)? = nil,
         openProfile: ((EnginePeer) -> Void)? = nil,
-        sendMessage: ((EnginePeer) -> Void)? = nil
+        sendMessage: ((EnginePeer) -> Void)? = nil,
+        initialSelectedPeers: [EnginePeer] = []
     ) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
@@ -142,6 +144,7 @@ public final class ContactMultiselectionControllerParams {
         self.reachedLimit = reachedLimit
         self.openProfile = openProfile
         self.sendMessage = sendMessage
+        self.initialSelectedPeers = initialSelectedPeers
     }
 }
 

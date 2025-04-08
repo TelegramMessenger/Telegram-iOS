@@ -337,7 +337,12 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                 var addedToken: EditableTokenListToken?
                 var removedTokenId: AnyHashable?
                 
-                let maxRegularCount: Int32 = strongSelf.limitsConfiguration?.maxGroupMemberCount ?? 200
+                let maxRegularCount: Int32
+                if case .groupCreation(true) = strongSelf.mode {
+                    maxRegularCount = strongSelf.context.userLimits.maxConferenceParticipantCount
+                } else {
+                    maxRegularCount = strongSelf.limitsConfiguration?.maxGroupMemberCount ?? 200
+                }
                 var displayCountAlert = false
                 
                 var selectionState: ContactListNodeGroupSelectionState?
@@ -427,6 +432,24 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                     strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.CreateGroup_SoftUserLimitAlert, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                 }
             }
+        }
+
+        if !self.params.initialSelectedPeers.isEmpty {
+            for peer in self.params.initialSelectedPeers {
+                self.contactsNode.openPeer?(.peer(peer: peer._asPeer(), isGlobal: false, participantCount: nil))
+            }
+            /*if case let .contacts(contactsNode) = self.contactsNode.contentNode {
+                contactsNode.updateSelectionState { state in
+                    var updatedState = state ?? ContactListNodeGroupSelectionState()
+                    var selectedPeerMap = updatedState.selectedPeerMap
+                    for peer in self.params.initialSelectedPeers {
+                        updatedState = updatedState.withToggledPeerId(.peer(peer.id))
+                        selectedPeerMap[.peer(peer.id)] = .peer(peer: peer._asPeer(), isGlobal: false, participantCount: nil)
+                    }
+                    updatedState = updatedState.withSelectedPeerMap(selectedPeerMap)
+                    return updatedState
+                }
+            }*/
         }
         
         self.contactsNode.openPeerMore  = { [weak self] peer, node, gesture in
