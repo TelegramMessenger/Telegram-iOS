@@ -87,7 +87,7 @@ fragment half4 cameraBlobFragment(
     } else if (primaryParameters.y < 0) {
         float cutRadius = abs(primaryParameters.y);
         float2 primaryFeatheredOffset = primaryOffset;
-        primaryFeatheredOffset.x *= 1.129;
+        primaryFeatheredOffset.x *= 1.131;
         
         float distFromCenter = length(uv - primaryFeatheredOffset);
         

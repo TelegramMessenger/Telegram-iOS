@@ -504,7 +504,6 @@ final class GiftSetupScreenComponent: Component {
                             self.state?.updated()
                             
                             starsContext.add(balance: StarsAmount(value: stars, nanos: 0))
-                            
                             let _ = (starsContext.onUpdate
                             |> deliverOnMainQueue).start(next: {
                                 proceed()

@@ -86,6 +86,7 @@ swift_library(
         "//submodules/UndoUI",
         "//submodules/ContextUI",
         "//submodules/AvatarNode",
+        "//submodules/TelegramUI/Components/Utils/AnimatableProperty",
     ],
     visibility = [
         "//visibility:public",
