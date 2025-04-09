@@ -139,7 +139,7 @@ public struct GroupCallSummary: Equatable {
 extension GroupCallInfo {
     init?(_ call: Api.GroupCall) {
         switch call {
-        case let .groupCall(flags, id, accessHash, participantsCount, title, streamDcId, recordStartDate, scheduleDate, _, unmutedVideoLimit, _):
+        case let .groupCall(flags, id, accessHash, participantsCount, title, streamDcId, recordStartDate, scheduleDate, _, unmutedVideoLimit, _, _):
             self.init(
                 id: id,
                 accessHash: accessHash,
@@ -652,7 +652,7 @@ func _internal_joinGroupCall(account: Account, peerId: PeerId?, joinAs: PeerId?,
                 flags |= (1 << 3)
             }
             
-            let joinRequest = account.network.request(Api.functions.phone.joinGroupCall(flags: flags, call: reference.apiInputGroupCall, joinAs: inputJoinAs, inviteHash: inviteHash, publicKey: e2eData?.publicKey.value, block: (e2eData?.block).flatMap({ Buffer.init(data: $0) }), inviteMsgId: nil, params: .dataJSON(data: joinPayload)))
+            let joinRequest = account.network.request(Api.functions.phone.joinGroupCall(flags: flags, call: reference.apiInputGroupCall, joinAs: inputJoinAs, inviteHash: inviteHash, publicKey: e2eData?.publicKey.value, block: (e2eData?.block).flatMap({ Buffer.init(data: $0) }), params: .dataJSON(data: joinPayload)))
             |> `catch` { error -> Signal<Api.Updates, InternalJoinError> in
                 if error.errorDescription == "GROUPCALL_ANONYMOUS_FORBIDDEN" {
                     return .fail(.error(.anonymousNotAllowed))
@@ -745,7 +745,7 @@ func _internal_joinGroupCall(account: Account, peerId: PeerId?, joinAs: PeerId?,
                             maybeParsedCall = GroupCallInfo(call)
                             
                             switch call {
-                            case let .groupCall(flags, _, _, _, title, _, recordStartDate, scheduleDate, _, unmutedVideoLimit, _):
+                            case let .groupCall(flags, _, _, _, title, _, recordStartDate, scheduleDate, _, unmutedVideoLimit, _, _):
                                 let isMuted = (flags & (1 << 1)) != 0
                                 let canChange = (flags & (1 << 2)) != 0
                                 let isVideoEnabled = (flags & (1 << 9)) != 0
@@ -2977,48 +2977,48 @@ public final class EngineCreatedGroupCall {
 }
 
 func _internal_createConferenceCall(postbox: Postbox, network: Network, accountPeerId: PeerId) -> Signal<EngineCreatedGroupCall, CreateConferenceCallError> {
-    return network.request(Api.functions.phone.createConferenceCall(randomId: Int32.random(in: Int32.min ... Int32.max)))
+    return network.request(Api.functions.phone.createConferenceCall(flags: 0, randomId: Int32.random(in: Int32.min ... Int32.max), publicKey: nil, block: nil, params: nil))
     |> mapError { _ -> CreateConferenceCallError in
         return .generic
     }
     |> mapToSignal { result in
-        switch result {
-        case let .groupCall(call, participants, _, chats, users):
-            return postbox.transaction { transaction -> Signal<EngineCreatedGroupCall, CreateConferenceCallError> in
-                guard let info = GroupCallInfo(call) else {
-                    return .fail(.generic)
-                }
-                
-                let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
-                
-                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
-                
-                let parsedParticipants = participants.compactMap { GroupCallParticipantsContext.Participant($0, transaction: transaction) }
-                let _ = parsedParticipants
-                
-                let speakerInvite: Signal<EngineCreatedGroupCall, CreateConferenceCallError> = network.request(Api.functions.phone.exportGroupCallInvite(flags: 1 << 0, call: .inputGroupCall(id: info.id, accessHash: info.accessHash)))
-                |> map(Optional.init)
-                |> `catch` { _ -> Signal<Api.phone.ExportedGroupCallInvite?, NoError> in
-                    return .single(nil)
-                }
-                |> castError(CreateConferenceCallError.self)
-                |> mapToSignal { result -> Signal<EngineCreatedGroupCall, CreateConferenceCallError> in
-                    if let result, case let .exportedGroupCallInvite(link) = result {
-                        let slug = link.components(separatedBy: "/").last ?? link
-                        return .single(EngineCreatedGroupCall(
-                            slug: slug,
-                            link: link,
-                            callInfo: info
-                        ))
+        for update in result.allUpdates {
+            if case let .updateGroupCall(_, _, call) = update {
+                return postbox.transaction { transaction -> Signal<EngineCreatedGroupCall, CreateConferenceCallError> in
+                    guard let info = GroupCallInfo(call) else {
+                        return .fail(.generic)
                     }
-                    return .fail(.generic)
+                    
+                    let parsedPeers = AccumulatedPeers(transaction: transaction, chats: result.chats, users: result.users)
+                    
+                    updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
+                    
+                    let speakerInvite: Signal<EngineCreatedGroupCall, CreateConferenceCallError> = network.request(Api.functions.phone.exportGroupCallInvite(flags: 1 << 0, call: .inputGroupCall(id: info.id, accessHash: info.accessHash)))
+                    |> map(Optional.init)
+                    |> `catch` { _ -> Signal<Api.phone.ExportedGroupCallInvite?, NoError> in
+                        return .single(nil)
+                    }
+                    |> castError(CreateConferenceCallError.self)
+                    |> mapToSignal { result -> Signal<EngineCreatedGroupCall, CreateConferenceCallError> in
+                        if let result, case let .exportedGroupCallInvite(link) = result {
+                            let slug = link.components(separatedBy: "/").last ?? link
+                            return .single(EngineCreatedGroupCall(
+                                slug: slug,
+                                link: link,
+                                callInfo: info
+                            ))
+                        }
+                        return .fail(.generic)
+                    }
+                    return speakerInvite
                 }
-                return speakerInvite
+                |> mapError { _ -> CreateConferenceCallError in
+                }
+                |> switchToLatest
             }
-            |> mapError { _ -> CreateConferenceCallError in
-            }
-            |> switchToLatest
         }
+        
+        return .fail(.generic)
     }
 }
 

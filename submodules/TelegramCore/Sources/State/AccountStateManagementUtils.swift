@@ -4517,7 +4517,7 @@ func replayFinalState(
                         }
                         
                         switch call {
-                        case let .groupCall(flags, _, _, participantsCount, title, _, recordStartDate, scheduleDate, _, _, _):
+                        case let .groupCall(flags, _, _, participantsCount, title, _, recordStartDate, scheduleDate, _, _, _, _):
                             let isMuted = (flags & (1 << 1)) != 0
                             let canChange = (flags & (1 << 2)) != 0
                             let isVideoEnabled = (flags & (1 << 9)) != 0
