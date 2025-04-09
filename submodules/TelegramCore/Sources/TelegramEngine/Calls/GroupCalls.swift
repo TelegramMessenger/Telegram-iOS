@@ -882,13 +882,19 @@ func _internal_joinGroupCall(account: Account, peerId: PeerId?, joinAs: PeerId?,
     }
 }
 
-func _internal_inviteConferenceCallParticipant(account: Account, reference: InternalGroupCallReference, peerId: EnginePeer.Id, isVideo: Bool) -> Signal<MessageId?, NoError> {
+public enum InviteConferenceCallParticipantError {
+    case generic
+    case privacy(peer: EnginePeer?)
+}
+
+func _internal_inviteConferenceCallParticipant(account: Account, reference: InternalGroupCallReference, peerId: EnginePeer.Id, isVideo: Bool) -> Signal<MessageId, InviteConferenceCallParticipantError> {
     return account.postbox.transaction { transaction -> Api.InputUser? in
         return transaction.getPeer(peerId).flatMap(apiInputUser)
     }
-    |> mapToSignal { inputPeer -> Signal<MessageId?, NoError> in
+    |> castError(InviteConferenceCallParticipantError.self)
+    |> mapToSignal { inputPeer -> Signal<MessageId, InviteConferenceCallParticipantError> in
         guard let inputPeer else {
-            return .complete()
+            return .fail(.generic)
         }
         
         var flags: Int32 = 0
@@ -897,17 +903,26 @@ func _internal_inviteConferenceCallParticipant(account: Account, reference: Inte
         }
         return account.network.request(Api.functions.phone.inviteConferenceCallParticipant(flags: flags, call: reference.apiInputGroupCall, userId: inputPeer))
         |> map(Optional.init)
-        |> `catch` { _ -> Signal<Api.Updates?, NoError> in
-            return .single(nil)
+        |> `catch` { error -> Signal<Api.Updates?, InviteConferenceCallParticipantError> in
+            if error.errorDescription == "USER_PRIVACY_RESTRICTED" {
+                return account.postbox.transaction { transaction -> InviteConferenceCallParticipantError in
+                    return .privacy(peer: transaction.getPeer(peerId).flatMap(EnginePeer.init))
+                }
+                |> castError(InviteConferenceCallParticipantError.self)
+                |> mapToSignal { error -> Signal<Api.Updates?, InviteConferenceCallParticipantError> in
+                    return .fail(error)
+                }
+            }
+            return .fail(.generic)
         }
-        |> mapToSignal { result -> Signal<MessageId?, NoError> in
+        |> mapToSignal { result -> Signal<MessageId, InviteConferenceCallParticipantError> in
             if let result {
                 account.stateManager.addUpdates(result)
                 if let message = result.messageIds.first {
                     return .single(message)
                 }
             }
-            return .single(nil)
+            return .fail(.generic)
         }
     }
 }

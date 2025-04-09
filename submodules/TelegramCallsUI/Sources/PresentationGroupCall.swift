@@ -210,6 +210,11 @@ private final class PendingConferenceInvitationContext {
         case ringing
     }
     
+    enum InvitationError {
+        case generic
+        case privacy(peer: EnginePeer?)
+    }
+    
     private let engine: TelegramEngine
     private var requestDisposable: Disposable?
     private var stateDisposable: Disposable?
@@ -218,17 +223,10 @@ private final class PendingConferenceInvitationContext {
     private var hadMessage: Bool = false
     private var didNotifyEnded: Bool = false
     
-    init(engine: TelegramEngine, reference: InternalGroupCallReference, peerId: PeerId, isVideo: Bool, onStateUpdated: @escaping (State) -> Void, onEnded: @escaping (Bool) -> Void) {
+    init(engine: TelegramEngine, reference: InternalGroupCallReference, peerId: PeerId, isVideo: Bool, onStateUpdated: @escaping (State) -> Void, onEnded: @escaping (Bool) -> Void, onError: @escaping (InvitationError) -> Void) {
         self.engine = engine
-        self.requestDisposable = (engine.calls.inviteConferenceCallParticipant(reference: reference, peerId: peerId, isVideo: isVideo).startStrict(next: { [weak self] messageId in
+        self.requestDisposable = ((engine.calls.inviteConferenceCallParticipant(reference: reference, peerId: peerId, isVideo: isVideo) |> deliverOnMainQueue).startStrict(next: { [weak self] messageId in
             guard let self else {
-                return
-            }
-            guard let messageId else {
-                if !self.didNotifyEnded {
-                    self.didNotifyEnded = true
-                    onEnded(false)
-                }
                 return
             }
             self.messageId = messageId
@@ -296,6 +294,24 @@ private final class PendingConferenceInvitationContext {
                     }
                 }
             })
+        }, error: { [weak self] error in
+            guard let self else {
+                return
+            }
+            
+            if !self.didNotifyEnded {
+                self.didNotifyEnded = true
+                onEnded(false)
+            }
+            
+            let mappedError: InvitationError
+            switch error {
+            case .privacy(let peer):
+                mappedError = .privacy(peer: peer)
+            default:
+                mappedError = .generic
+            }
+            onError(mappedError)
         }))
     }
     
@@ -791,6 +807,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var conferenceInvitationContexts: [PeerId: PendingConferenceInvitationContext] = [:]
 
     private let e2eContext: ConferenceCallE2EContext?
+    
+    private var lastErrorAlertTimestamp: Double = 0.0
     
     init(
         accountContext: AccountContext,
@@ -3536,6 +3554,33 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 onEnded: { success in
                     didEndAlready = true
                     onEnded?(success)
+                },
+                onError: { [weak self] error in
+                    guard let self else {
+                        return
+                    }
+                    
+                    let timestamp = CACurrentMediaTime()
+                    if self.lastErrorAlertTimestamp > timestamp - 1.0 {
+                        return
+                    }
+                    self.lastErrorAlertTimestamp = timestamp
+                    
+                    let presentationData = self.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkColorPresentationTheme)
+                    
+                    //TODO:localize
+                    var errorText = "An error occurred"
+                    switch error {
+                    case let .privacy(peer):
+                        if let peer {
+                            errorText = presentationData.strings.Call_PrivacyErrorMessage(peer.compactDisplayTitle).string
+                        }
+                    default:
+                        break
+                    }
+                    self.accountContext.sharedContext.mainWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: errorText, actions: [
+                        TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})
+                    ]), on: .root, blockInteraction: false, completion: {})
                 }
             )
             if !didEndAlready {

@@ -25,7 +25,7 @@ enum CallListNodeEntry: Comparable, Identifiable {
     enum SortIndex: Comparable {
         case displayTab
         case displayTabInfo
-        case createGroupCall
+        case openNewCall
         case groupCall(EnginePeer.Id, String)
         case message(EngineMessage.Index)
         case hole(EngineMessage.Index)
@@ -41,7 +41,7 @@ enum CallListNodeEntry: Comparable, Identifiable {
                 default:
                     return false
                 }
-            case .createGroupCall:
+            case .openNewCall:
                 switch rhs {
                 case .displayTab, .displayTabInfo:
                     return false
@@ -50,7 +50,7 @@ enum CallListNodeEntry: Comparable, Identifiable {
                 }
             case let .groupCall(lhsPeerId, lhsTitle):
                 switch rhs {
-                case .displayTab, .displayTabInfo, .createGroupCall:
+                case .displayTab, .displayTabInfo, .openNewCall:
                     return false
                 case let .groupCall(rhsPeerId, rhsTitle):
                     if lhsTitle == rhsTitle {
@@ -63,7 +63,7 @@ enum CallListNodeEntry: Comparable, Identifiable {
                 }
             case let .hole(lhsIndex):
                 switch rhs {
-                case .displayTab, .displayTabInfo, .groupCall, .createGroupCall:
+                case .displayTab, .displayTabInfo, .groupCall, .openNewCall:
                     return false
                 case let .hole(rhsIndex):
                     return lhsIndex < rhsIndex
@@ -72,7 +72,7 @@ enum CallListNodeEntry: Comparable, Identifiable {
                 }
             case let .message(lhsIndex):
                 switch rhs {
-                case .displayTab, .displayTabInfo, .groupCall, .createGroupCall:
+                case .displayTab, .displayTabInfo, .groupCall, .openNewCall:
                     return false
                 case let .hole(rhsIndex):
                     return lhsIndex < rhsIndex
@@ -86,7 +86,7 @@ enum CallListNodeEntry: Comparable, Identifiable {
     
     case displayTab(PresentationTheme, String, Bool)
     case displayTabInfo(PresentationTheme, String)
-    case createGroupCall
+    case openNewCall
     case groupCall(peer: EnginePeer, editing: Bool, isActive: Bool)
     case messageEntry(topMessage: EngineMessage, messages: [EngineMessage], theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, editing: Bool, hasActiveRevealControls: Bool, displayHeader: Bool, missed: Bool)
     case holeEntry(index: EngineMessage.Index, theme: PresentationTheme)
@@ -97,8 +97,8 @@ enum CallListNodeEntry: Comparable, Identifiable {
             return .displayTab
         case .displayTabInfo:
             return .displayTabInfo
-        case .createGroupCall:
-            return .createGroupCall
+        case .openNewCall:
+            return .openNewCall
         case let .groupCall(peer, _, _):
             return .groupCall(peer.id, peer.compactDisplayTitle)
         case let .messageEntry(message, _, _, _, _, _, _, _, _):
@@ -114,7 +114,7 @@ enum CallListNodeEntry: Comparable, Identifiable {
             return .setting(0)
         case .displayTabInfo:
             return .setting(1)
-        case .createGroupCall:
+        case .openNewCall:
             return .setting(2)
         case let .groupCall(peer, _, _):
             return .groupCall(peer.id)
@@ -143,8 +143,8 @@ enum CallListNodeEntry: Comparable, Identifiable {
             } else {
                 return false
             }
-        case .createGroupCall:
-            if case .createGroupCall = rhs {
+        case .openNewCall:
+            if case .openNewCall = rhs {
                 return true
             } else {
                 return false
@@ -212,7 +212,7 @@ enum CallListNodeEntry: Comparable, Identifiable {
     }
 }
 
-func callListNodeEntriesForView(view: EngineCallList, canCreateGroupCall: Bool, groupCalls: [EnginePeer], state: CallListNodeState, showSettings: Bool, showCallsTab: Bool, isRecentCalls: Bool, currentGroupCallPeerId: EnginePeer.Id?) -> [CallListNodeEntry] {
+func callListNodeEntriesForView(view: EngineCallList, displayOpenNewCall: Bool, groupCalls: [EnginePeer], state: CallListNodeState, showSettings: Bool, showCallsTab: Bool, isRecentCalls: Bool, currentGroupCallPeerId: EnginePeer.Id?) -> [CallListNodeEntry] {
     var result: [CallListNodeEntry] = []
     for entry in view.items {
         switch entry {
@@ -237,8 +237,8 @@ func callListNodeEntriesForView(view: EngineCallList, canCreateGroupCall: Bool, 
             }
         }
 
-        if canCreateGroupCall {
-            result.append(.createGroupCall)
+        if displayOpenNewCall {
+            result.append(.openNewCall)
         }
         
         if showSettings {
