@@ -28,8 +28,6 @@ func metalLibrary(device: MTLDevice) -> MTLLibrary? {
     return library
 }
 
-
-
 final class StoryBlobLayer: MetalEngineSubjectLayer, MetalEngineSubject {
     var internalData: MetalEngineSubjectInternalData?
     
