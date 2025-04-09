@@ -1751,10 +1751,12 @@ final class VideoChatParticipantsComponent: Component {
             }
             
             let previousComponent = self.component
+            let _ = previousComponent
+            
             self.component = component
             self.state = state
             
-            if let expandedVideoState = component.expandedVideoState, expandedVideoState.isUIHidden {
+            /*if let expandedVideoState = component.expandedVideoState, expandedVideoState.isUIHidden {
                 if self.stopRequestingNonCentralVideoTimer == nil || previousComponent?.expandedVideoState != expandedVideoState {
                     self.stopRequestingNonCentralVideoTimer?.invalidate()
                     
@@ -1775,7 +1777,7 @@ final class VideoChatParticipantsComponent: Component {
                     self.stopRequestingNonCentralVideoTimer = nil
                     stopRequestingNonCentralVideoTimer.invalidate()
                 }
-            }
+            }*/
             
             var gridParticipants: [VideoParticipant] = []
             var listParticipants: [GroupCallParticipantsContext.Participant] = []
