@@ -32,7 +32,7 @@ final class FlipButtonContentComponent: Component {
         private let icon = SimpleLayer()
         
         init() {
-            self.backgroundView = BlurredBackgroundView(color: UIColor(white: 0.0, alpha: 0.5), enableBlur: true)
+            self.backgroundView = BlurredBackgroundView(color: UIColor(white: 0.2, alpha: 0.45), enableBlur: true)
             
             super.init(frame: CGRect())
             

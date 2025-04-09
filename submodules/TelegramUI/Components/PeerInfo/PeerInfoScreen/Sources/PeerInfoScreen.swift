@@ -1001,9 +1001,9 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         }))
     }
     if let starsState = data.starsState {
-        if !isPremiumDisabled || starsState.balance > StarsAmount.zero {
+        if !isPremiumDisabled || abs(starsState.balance.value) > 0 {
             let balanceText: NSAttributedString
-            if starsState.balance > StarsAmount.zero {
+            if abs(starsState.balance.value) > 0 {
                 let formattedLabel = formatStarsAmountText(starsState.balance, dateTimeFormat: presentationData.dateTimeFormat)
                 let smallLabelFont = Font.regular(floor(presentationData.listsFontSize.itemListBaseFontSize / 17.0 * 13.0))
                 let labelFont = Font.regular(presentationData.listsFontSize.itemListBaseFontSize)
