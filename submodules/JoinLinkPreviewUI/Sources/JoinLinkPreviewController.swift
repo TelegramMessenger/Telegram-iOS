@@ -193,9 +193,7 @@ public func JoinLinkPreviewController(
 ) -> ViewController {
     if let data = context.currentAppConfiguration.with({ $0 }).data, data["ios_killswitch_legacy_join_link"] != nil {
         return LegacyJoinLinkPreviewController(context: context, link: link, navigateToPeer: navigateToPeer, parentNavigationController: parentNavigationController, resolvedState: resolvedState)
-    } else if case let .invite(invite) = resolvedState, !invite.flags.requestNeeded, !invite.flags.isBroadcast, !invite.flags.canRefulfillSubscription {
-        //TODO:release
-        
+    } else if case let .invite(invite) = resolvedState, !invite.flags.requestNeeded, !invite.flags.isBroadcast, !invite.flags.canRefulfillSubscription { 
         var verificationStatus: JoinSubjectScreenMode.Group.VerificationStatus?
         if invite.flags.isFake {
             verificationStatus = .fake

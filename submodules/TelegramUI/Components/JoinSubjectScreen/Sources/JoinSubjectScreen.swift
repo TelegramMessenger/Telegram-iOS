@@ -490,7 +490,7 @@ private final class JoinSubjectScreenComponent: Component {
                 contentHeight += 31.0
 
                 titleString = group.title
-                subtitleString = group.isPublic ? "public group" : "private group"
+                subtitleString = group.isPublic ? environment.strings.Invitation_PublicGroup : environment.strings.Invitation_PrivateGroup
                 descriptionTextString = group.about
 
                 previewPeers = group.members
@@ -528,10 +528,9 @@ private final class JoinSubjectScreenComponent: Component {
                 }
                 contentHeight += peerAvatarSize.height + 21.0
             case let .groupCall(groupCall):
-                //TODO:localize
-                titleString = "Group Call"
+                titleString = environment.strings.Invitation_GroupCall
                 subtitleString = nil
-                descriptionTextString = "You are invited to join a group call."
+                descriptionTextString = environment.strings.Invitation_GroupCall_Text
 
                 previewPeers = groupCall.members
                 totalMemberCount = groupCall.totalMemberCount
@@ -691,12 +690,11 @@ private final class JoinSubjectScreenComponent: Component {
             if !previewPeers.isEmpty {
                 contentHeight += 11.0
 
-                //TODO:localize
                 let previewPeersString: String
                 switch component.mode {
                 case .group:
                     if previewPeers.count == 1 {
-                        previewPeersString = "**\(previewPeers[0].compactDisplayTitle)** already joined this group."
+                        previewPeersString = environment.strings.Invitation_Group_AlreadyJoinedSingle(previewPeers[0].compactDisplayTitle).string
                     } else {
                         let firstPeers = previewPeers.prefix(upTo: 2)
                         let peersTextArray = firstPeers.map { "**\($0.compactDisplayTitle)**" }
@@ -717,14 +715,14 @@ private final class JoinSubjectScreenComponent: Component {
                             }
                         }
                         if totalMemberCount > firstPeers.count {
-                            previewPeersString = "\(peersText) and **\(totalMemberCount - firstPeers.count)** other people already joined this group."
+                            previewPeersString = environment.strings.Invitation_Group_AlreadyJoinedMultipleWithCount(Int32(totalMemberCount - firstPeers.count)).replacingOccurrences(of: "{}", with: peersText)
                         } else {
-                            previewPeersString = "\(peersText) already joined this group."
+                            previewPeersString = environment.strings.Invitation_Group_AlreadyJoinedMultiple(peersText).string
                         }
                     }
                 case .groupCall:
                     if previewPeers.count == 1 {
-                        previewPeersString = "**\(previewPeers[0].compactDisplayTitle)** already joined this call."
+                        previewPeersString = environment.strings.Invitation_GroupCall_AlreadyJoinedSingle(previewPeers[0].compactDisplayTitle).string
                     } else {
                         let firstPeers = previewPeers.prefix(upTo: 2)
                         let peersTextArray = firstPeers.map { "**\($0.compactDisplayTitle)**" }
@@ -745,9 +743,9 @@ private final class JoinSubjectScreenComponent: Component {
                             }
                         }
                         if totalMemberCount > firstPeers.count {
-                            previewPeersString = "\(peersText) and **\(totalMemberCount - firstPeers.count)** other people already joined this call."
+                            previewPeersString = environment.strings.Invitation_GroupCall_AlreadyJoinedMultipleWithCount(Int32(totalMemberCount - firstPeers.count)).replacingOccurrences(of: "{}", with: peersText)
                         } else {
-                            previewPeersString = "\(peersText) already joined this call."
+                            previewPeersString = environment.strings.Invitation_GroupCall_AlreadyJoinedMultiple(peersText).string
                         }
                     }
                 }
@@ -854,8 +852,7 @@ private final class JoinSubjectScreenComponent: Component {
             case .group:
                 actionButtonTitle = environment.strings.Invitation_JoinGroup
             case .groupCall:
-                //TODO:localize
-                actionButtonTitle = "Join Group Call"
+                actionButtonTitle = environment.strings.Invitation_JoinGroupCall
             }
             let actionButtonSize = self.actionButton.update(
                 transition: transition,

@@ -126,8 +126,7 @@ private func mappedInsertEntries(context: AccountContext, presentationData: Item
             case let .displayTabInfo(_, text):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: 0), directionHint: entry.directionHint)
             case .openNewCall:
-                //TODO:localize
-                let item = ItemListPeerActionItem(presentationData: presentationData, style: showSettings ? .blocks : .plain, icon: .none, title: "New Call", hasSeparator: false, sectionId: 1, height: .generic, noInsets: true, editing: false, action: {
+                let item = ItemListPeerActionItem(presentationData: presentationData, style: showSettings ? .blocks : .plain, icon: .none, title: presentationData.strings.CallList_NewCall, hasSeparator: false, sectionId: 1, height: .generic, noInsets: true, editing: false, action: {
                     nodeInteraction.openNewCall()
                 })
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)
@@ -151,8 +150,7 @@ private func mappedUpdateEntries(context: AccountContext, presentationData: Item
             case let .displayTabInfo(_, text):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: 0), directionHint: entry.directionHint)
             case .openNewCall:
-                //TODO:localize
-                let item = ItemListPeerActionItem(presentationData: presentationData, icon: .none, title: "New Call", sectionId: 1, height: .generic, noInsets: true, editing: false, action: {
+                let item = ItemListPeerActionItem(presentationData: presentationData, icon: .none, title: presentationData.strings.CallList_NewCall, sectionId: 1, height: .generic, noInsets: true, editing: false, action: {
                     nodeInteraction.openNewCall()
                 })
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)

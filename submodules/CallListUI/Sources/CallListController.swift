@@ -297,9 +297,8 @@ public final class CallListController: TelegramBaseController {
                         if let result {
                             switch result {
                             case .linkCopied:
-                                //TODO:localize
                                 let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-                                self.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_linkcopied", scale: 0.08, colors: ["info1.info1.stroke": UIColor.clear, "info2.info2.Fill": UIColor.clear], title: nil, text: "Call link copied.", customUndoText: "View Call", timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
+                                self.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_linkcopied", scale: 0.08, colors: ["info1.info1.stroke": UIColor.clear, "info2.info2.Fill": UIColor.clear], title: nil, text: presentationData.strings.CallList_ToastCallLinkCopied_Text, customUndoText: presentationData.strings.CallList_ToastCallLinkCopied_Action, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
                                     if case .undo = action {
                                         openCall()
                                     }
@@ -517,8 +516,7 @@ public final class CallListController: TelegramBaseController {
             return
         }
 
-        //TODO:localize
-        let options = [ContactListAdditionalOption(title: "New Call Link", icon: .generic(PresentationResourcesItemList.linkIcon(presentationData.theme)!), action: { [weak self] in
+        let options = [ContactListAdditionalOption(title: self.presentationData.strings.CallList_NewCallLink, icon: .generic(PresentationResourcesItemList.linkIcon(presentationData.theme)!), action: { [weak self] in
             guard let self else {
                 return
             }
@@ -741,8 +739,7 @@ public final class CallListController: TelegramBaseController {
                 self.context.sharedContext.openCreateGroupCallUI(context: self.context, peerIds: conferenceCall.otherParticipants, parentController: self)
             default:
                 let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-                //TODO:localize
-                self.present(textAlertController(context: self.context, title: nil, text: "An error occurred", actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                self.present(textAlertController(context: self.context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
             }
         })
     }

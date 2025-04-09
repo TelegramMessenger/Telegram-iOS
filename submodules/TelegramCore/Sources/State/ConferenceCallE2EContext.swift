@@ -182,7 +182,6 @@ public final class ConferenceCallE2EContext {
             self.e2eEncryptionKeyHashValue.set(outEmoji.isEmpty ? nil : outEmoji)
             
             for outBlock in outBlocks {
-                //TODO:release queue
                 let _ = self.engine.calls.sendConferenceCallBroadcast(callId: self.callId, accessHash: self.accessHash, block: outBlock).startStandalone()
             }
         }
@@ -400,7 +399,6 @@ public final class ConferenceCallE2EContext {
         }
         
         func kickPeer(id: EnginePeer.Id) {
-            //TODO:release
             if !self.pendingKickPeers.contains(id) {
                 self.pendingKickPeers.append(id)
                 

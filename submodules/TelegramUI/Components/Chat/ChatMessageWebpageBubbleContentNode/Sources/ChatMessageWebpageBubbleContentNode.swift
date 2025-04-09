@@ -475,8 +475,7 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                             text = nil
                             entities = nil
                         case "telegram_call":
-                            //TODO:localize
-                            actionTitle = "JOIN GROUP CALL"
+                            actionTitle = item.presentationData.strings.Chat_ViewGroupCall
                         default:
                             break
                     }

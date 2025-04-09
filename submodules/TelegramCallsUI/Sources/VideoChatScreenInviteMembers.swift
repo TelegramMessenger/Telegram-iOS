@@ -129,7 +129,6 @@ extension VideoChatScreenComponent.View {
                         if let participant {
                             dismissController?()
                             
-                            //TODO:release
                             if groupCall.invitePeer(participant.peer.id, isVideo: false) {
                                 let text: String
                                 if case let .channel(channel) = self.peer, case .broadcast = channel.info {
@@ -242,7 +241,6 @@ extension VideoChatScreenComponent.View {
                                             }
                                             dismissController?()
                                             
-                                            //TODO:release
                                             if groupCall.invitePeer(peer.id, isVideo: false) {
                                                 let text: String
                                                 if case let .channel(channel) = self.peer, case .broadcast = channel.info {
@@ -315,7 +313,6 @@ extension VideoChatScreenComponent.View {
                                             }
                                             dismissController?()
                                             
-                                            //TODO:release
                                             if groupCall.invitePeer(peer.id, isVideo: false) {
                                                 let text: String
                                                 if case let .channel(channel) = self.peer, case .broadcast = channel.info {

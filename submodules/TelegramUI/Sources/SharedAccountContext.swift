@@ -1962,10 +1962,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     return
                 }
 
+                let isVideo = controller?.isCallVideoOptionSelected ?? false
+
                 if peerIds.count == 1 {
-                    //TODO:release isVideo
                     controller?.dismiss()
-                    self.performCall(context: context, parentController: parentController, peerId: peerIds[0], isVideo: false, began: {
+                    self.performCall(context: context, parentController: parentController, peerId: peerIds[0], isVideo: isVideo, began: {
                         let _ = (context.sharedContext.hasOngoingCall.get()
                         |> filter { $0 }
                         |> timeout(1.0, queue: Queue.mainQueue(), alternate: .single(true))
@@ -1980,7 +1981,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         })
                     })
                 } else {
-                    self.createGroupCall(context: context, parentController: parentController, peerIds: peerIds, completion: {
+                    self.createGroupCall(context: context, parentController: parentController, peerIds: peerIds, isVideo: isVideo, completion: {
                         controller?.dismiss()
                     })
                 }
@@ -2011,7 +2012,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         })
     }
     
-    private func createGroupCall(context: AccountContext, parentController: ViewController, peerIds: [EnginePeer.Id], completion: (() -> Void)? = nil) {
+    private func createGroupCall(context: AccountContext, parentController: ViewController, peerIds: [EnginePeer.Id], isVideo: Bool, completion: (() -> Void)? = nil) {
         parentController.view.endEditing(true)
         
         var cancelImpl: (() -> Void)?
@@ -2057,7 +2058,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         isStream: false
                     ),
                     reference: .id(id: call.callInfo.id, accessHash: call.callInfo.accessHash),
-                    beginWithVideo: false,
+                    beginWithVideo: isVideo,
                     invitePeerIds: peerIds
                 )
                 completion?()
@@ -2079,9 +2080,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         if let result {
                             switch result {
                             case .linkCopied:
-                                //TODO:localize
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                parentController.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_linkcopied", scale: 0.08, colors: ["info1.info1.stroke": UIColor.clear, "info2.info2.Fill": UIColor.clear], title: nil, text: "Call link copied.", customUndoText: "View Call", timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
+                                parentController.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_linkcopied", scale: 0.08, colors: ["info1.info1.stroke": UIColor.clear, "info2.info2.Fill": UIColor.clear], title: nil, text: presentationData.strings.CallList_ToastCallLinkCopied_Text, customUndoText: presentationData.strings.CallList_ToastCallLinkCopied_Action, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
                                     if case .undo = action {
                                         openCall()
                                     }

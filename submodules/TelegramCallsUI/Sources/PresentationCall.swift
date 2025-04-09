@@ -765,8 +765,8 @@ public final class PresentationCallImpl: PresentationCall {
         self.localVideoEndpointId = nil
         self.remoteVideoEndpointId = nil
         
-        //TODO:localize
-        self.callKitIntegration?.updateCallIsConference(uuid: self.internalId, title: self.conferenceTitle ?? "Group Call")
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        self.callKitIntegration?.updateCallIsConference(uuid: self.internalId, title: self.conferenceTitle ?? presentationData.strings.Call_GenericGroupCallTitle)
     }
     
     func internal_markAsCanBeRemoved() {

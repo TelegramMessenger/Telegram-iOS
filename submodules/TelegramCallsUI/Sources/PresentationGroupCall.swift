@@ -3568,8 +3568,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     
                     let presentationData = self.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkColorPresentationTheme)
                     
-                    //TODO:localize
-                    var errorText = "An error occurred"
+                    var errorText = presentationData.strings.Login_UnknownError
                     switch error {
                     case let .privacy(peer):
                         if let peer {

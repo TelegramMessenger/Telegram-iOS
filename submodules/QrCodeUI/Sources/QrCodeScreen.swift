@@ -253,8 +253,7 @@ public final class QrCodeScreen: ViewController {
                         case .channel:
                             text = self.presentationData.strings.InviteLink_QRCode_InfoChannel
                         case .groupCall:
-                            //TODO:localize
-                            text = "Everyone on Telegram can scan this code to join your group call."
+                            text = self.presentationData.strings.InviteLink_QRCode_InfoGroupCall
                     }
                 case .chatFolder:
                     title = self.presentationData.strings.InviteLink_QRCodeFolder_Title

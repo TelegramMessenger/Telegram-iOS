@@ -1256,7 +1256,6 @@ final class VoiceChatControllerImpl: ViewController, VoiceChatController {
                         if let participant = participant {
                             dismissController?()
                             
-                            //TODO:release
                             if strongSelf.call.invitePeer(participant.peer.id, isVideo: false) {
                                 let text: String
                                 if let channel = strongSelf.peer as? TelegramChannel, case .broadcast = channel.info {
@@ -1365,7 +1364,6 @@ final class VoiceChatControllerImpl: ViewController, VoiceChatController {
                                             }
                                             dismissController?()
                                             
-                                            //TODO:release
                                             if strongSelf.call.invitePeer(peer.id, isVideo: false) {
                                                 let text: String
                                                 if let channel = strongSelf.peer as? TelegramChannel, case .broadcast = channel.info {
@@ -1434,7 +1432,6 @@ final class VoiceChatControllerImpl: ViewController, VoiceChatController {
                                             }
                                             dismissController?()
                                             
-                                            //TODO:release
                                             if strongSelf.call.invitePeer(peer.id, isVideo: false) {
                                                 let text: String
                                                 if let channel = strongSelf.peer as? TelegramChannel, case .broadcast = channel.info {

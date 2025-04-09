@@ -153,8 +153,7 @@ public class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                         callDuration = conferenceCall.duration
 
                         if conferenceCall.otherParticipants.count > 0 {
-                            //TODO:localize
-                            peopleTextString = "\(conferenceCall.otherParticipants.count + 1) people"
+                            peopleTextString = item.presentationData.strings.Chat_CallMessage_GroupCallParticipantCount(Int32(conferenceCall.otherParticipants.count + 1))
                             if let peer = item.message.author {
                                 peopleAvatars.append(peer)
                             }
@@ -165,9 +164,8 @@ public class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                         }
 
-                        //TODO:localize
                         let missedTimeout: Int32
-                        #if DEBUG
+                        #if DEBUG && false
                         missedTimeout = 5
                         #else
                         missedTimeout = 30
@@ -175,16 +173,16 @@ public class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                         
                         let currentTime = Int32(Date().timeIntervalSince1970)
                         if conferenceCall.flags.contains(.isMissed) {
-                            titleString = "Declined Group Call"
+                            titleString = item.presentationData.strings.Chat_CallMessage_DeclinedGroupCall
                         } else if item.message.timestamp < currentTime - missedTimeout {
-                            titleString = "Missed Group Call"
+                            titleString = item.presentationData.strings.Chat_CallMessage_MissedGroupCall
                         } else if conferenceCall.duration != nil {
-                            titleString = "Cancelled Group Call"
+                            titleString = item.presentationData.strings.Chat_CallMessage_CancelledGroupCall
                         } else {
                             if incoming {
-                                titleString = "Incoming Group Call"
+                                titleString = item.presentationData.strings.Chat_CallMessage_IncomingGroupCall
                             } else {
-                                titleString = "Outgoing Group Call"
+                                titleString = item.presentationData.strings.Chat_CallMessage_OutgoingGroupCall
                             }
                             updateConferenceTimerEndTimeout = (item.message.timestamp + missedTimeout) - currentTime
                         }

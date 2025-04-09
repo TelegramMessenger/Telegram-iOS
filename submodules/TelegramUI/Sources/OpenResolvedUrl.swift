@@ -407,8 +407,7 @@ func openResolvedUrlImpl(
                 if case .chat = urlContext {
                     elevatedLayout = false
                 }
-                //TODO:localize
-                present(UndoOverlayController(presentationData: presentationData, content: .linkRevoked(text: "This link is no longer active"), elevatedLayout: elevatedLayout, animateInAsReplacement: false, action: { _ in
+                present(UndoOverlayController(presentationData: presentationData, content: .linkRevoked(text: presentationData.strings.Chat_ToastCallLinkExpired_Text), elevatedLayout: elevatedLayout, animateInAsReplacement: false, action: { _ in
                     return true
                 }), nil)
             })
