@@ -237,7 +237,7 @@ private final class QuickShareToastScreenComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(PlainButtonComponent(
                     content: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: "Undo", font: Font.regular(17.0), textColor: environment.theme.list.itemAccentColor.withMultiplied(hue: 0.933, saturation: 0.61, brightness: 1.0)))
+                        text: .plain(NSAttributedString(string: component.peer.id != component.context.account.peerId ? environment.strings.Undo_Undo : "", font: Font.regular(17.0), textColor: environment.theme.list.itemAccentColor.withMultiplied(hue: 0.933, saturation: 0.61, brightness: 1.0)))
                     )),
                     effectAlignment: .center,
                     contentInsets: UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0),
@@ -267,7 +267,7 @@ private final class QuickShareToastScreenComponent: Component {
                         linkAttribute: { _ in return nil })
                 ))),
                 environment: {},
-                containerSize: CGSize(width: availableContentSize.width - contentInsets.left - contentInsets.right - spacing - iconSize.width - 16.0, height: availableContentSize.height)
+                containerSize: CGSize(width: availableContentSize.width - contentInsets.left - contentInsets.right - spacing - iconSize.width - actionButtonSize.width - 16.0 - 4.0, height: availableContentSize.height)
             )
             
             var contentHeight: CGFloat = 0.0

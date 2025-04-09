@@ -5754,6 +5754,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 } else {
                     displayedPeerVerification = .single(false)
                 }
+                
+                let globalPrivacySettings = context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.GlobalPrivacy())
 
                 self.peerDisposable.set(combineLatest(
                     queue: Queue.mainQueue(),
@@ -5769,8 +5771,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     isPremiumRequiredForMessaging,
                     managingBot,
                     adMessage,
-                    displayedPeerVerification
-                ).startStrict(next: { [weak self] peerView, globalNotificationSettings, onlineMemberCount, hasScheduledMessages, peerReportNotice, pinnedCount, threadInfo, hasSearchTags, hasSavedChats, isPremiumRequiredForMessaging, managingBot, adMessage, displayedPeerVerification in
+                    displayedPeerVerification,
+                    globalPrivacySettings
+                ).startStrict(next: { [weak self] peerView, globalNotificationSettings, onlineMemberCount, hasScheduledMessages, peerReportNotice, pinnedCount, threadInfo, hasSearchTags, hasSavedChats, isPremiumRequiredForMessaging, managingBot, adMessage, displayedPeerVerification, globalPrivacySettings in
                     if let strongSelf = self {
                         if strongSelf.peerView === peerView && strongSelf.reportIrrelvantGeoNotice == peerReportNotice && strongSelf.hasScheduledMessages == hasScheduledMessages && strongSelf.threadInfo == threadInfo && strongSelf.presentationInterfaceState.hasSearchTags == hasSearchTags && strongSelf.presentationInterfaceState.hasSavedChats == hasSavedChats && strongSelf.presentationInterfaceState.isPremiumRequiredForMessaging == isPremiumRequiredForMessaging && managingBot == strongSelf.presentationInterfaceState.contactStatus?.managingBot && adMessage?.id == strongSelf.presentationInterfaceState.adMessage?.id {
                             return
@@ -5869,6 +5872,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         var contactStatus: ChatContactStatus?
                         var businessIntro: TelegramBusinessIntro?
                         var sendPaidMessageStars: StarsAmount?
+                        var alwaysShowGiftButton = false
+                        var disallowedGifts: TelegramDisallowedGifts?
                         if let peer = peerView.peers[peerView.peerId] {
                             if let cachedData = peerView.cachedData as? CachedUserData {
                                 contactStatus = ChatContactStatus(canAddContact: !peerView.peerIsContact, canReportIrrelevantLocation: false, peerStatusSettings: cachedData.peerStatusSettings, invitedBy: nil, managingBot: managingBot)
@@ -5878,6 +5883,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 if case let .peer(peerId) = chatLocation, peerId.namespace == Namespaces.Peer.SecretChat {
                                 } else {
                                     sendPaidMessageStars = cachedData.sendPaidMessageStars
+                                    if cachedData.disallowedGifts != .All {
+                                        alwaysShowGiftButton = globalPrivacySettings.displayGiftButton || cachedData.flags.contains(.displayGiftButton)
+                                    }
+                                    disallowedGifts = cachedData.disallowedGifts
                                 }
                             } else if let cachedData = peerView.cachedData as? CachedGroupData {
                                 var invitedBy: Peer?
@@ -6113,6 +6122,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                              .updatedHasSearchTags(hasSearchTags)
                              .updatedIsPremiumRequiredForMessaging(isPremiumRequiredForMessaging)
                              .updatedSendPaidMessageStars(sendPaidMessageStars)
+                             .updatedAlwaysShowGiftButton(alwaysShowGiftButton)
+                             .updatedDisallowedGifts(disallowedGifts)
                              .updatedHasSavedChats(hasSavedChats)
                              .updatedAppliedBoosts(appliedBoosts)
                              .updatedBoostsToUnrestrict(boostsToUnrestrict)
