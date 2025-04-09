@@ -1943,7 +1943,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
 
             let _ = (controller.result
             |> take(1)
-            |> deliverOnMainQueue).startStandalone(next: { [weak controller] result in
+            |> deliverOnMainQueue).startStandalone(next: { [weak controller, weak parentController] result in
+                guard let parentController else {
+                    return
+                }
                 guard case let .result(rawPeerIds, _) = result else {
                     controller?.dismiss()
                     return

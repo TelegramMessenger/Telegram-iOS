@@ -704,7 +704,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                                     strongSelf.conferenceAvatarListNode = conferenceAvatarListNode
                                     strongSelf.containerNode.addSubnode(conferenceAvatarListNode)
                                 }
-                                let avatarListContents = conferenceAvatarListContext.update(peers: conferenceAvatars, animated: false)
+                                let avatarListContents = conferenceAvatarListContext.update(peers: Array(conferenceAvatars.prefix(3)), animated: false)
                                 let avatarListSize = conferenceAvatarListNode.update(context: item.context, content: avatarListContents, itemSize: CGSize(width: CGFloat(multipleAvatarDiameter), height: CGFloat(multipleAvatarDiameter)), customSpacing: multipleAvatarDiameter - 8.0, font: multipleAvatarFont, animated: false, synchronousLoad: synchronousLoads)
                                 conferenceAvatarListNode.frame = CGRect(origin: CGPoint(x: avatarFrame.minX + floor((avatarFrame.width - avatarListSize.width) / 2.0), y: avatarFrame.minY + floor((avatarFrame.height - avatarListSize.height) / 2.0)), size: avatarListSize)
                             } else {

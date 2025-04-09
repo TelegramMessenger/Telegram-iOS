@@ -86,6 +86,13 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
     private let onlyWriteable: Bool
     private let isGroupInvitation: Bool
     private let limit: Int32?
+
+    public var isCallVideoOptionSelected: Bool {
+        guard self.displayNode.isNodeLoaded, let displayNode = self.displayNode as? ContactMultiselectionControllerNode else {
+            return false
+        }
+        return displayNode.isCallVideoOptionSelected
+    }
     
     init(_ params: ContactMultiselectionControllerParams) {
         self.params = params

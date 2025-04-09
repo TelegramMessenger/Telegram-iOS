@@ -323,7 +323,7 @@ public class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                                     strongSelf.addSubnode(peopleAvatarsNode)
                                 }
 
-                                let peopleAvatarsContent = peopleAvatarsContext.update(peers: peopleAvatars.map(EnginePeer.init), animated: false)
+                                let peopleAvatarsContent = peopleAvatarsContext.update(peers: peopleAvatars.prefix(3).map(EnginePeer.init), animated: false)
                                 let peopleAvatarsSize = peopleAvatarsNode.update(context: item.context, content: peopleAvatarsContent, itemSize: CGSize(width: peopleAvatarSize, height: peopleAvatarSize), customSpacing: peopleAvatarSize - peopleAvatarSpacing, font: avatarFont, animated: false, synchronousLoad: false)
                                 peopleAvatarsNode.frame = CGRect(origin: CGPoint(x: labelFrame.maxX + avatarsLeftInset, y: labelFrame.minY - 1.0), size: peopleAvatarsSize)
                             } else {
