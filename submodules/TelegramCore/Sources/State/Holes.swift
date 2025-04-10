@@ -109,6 +109,10 @@ func messageFilterForTagMask(_ tagMask: MessageTags) -> Api.MessagesFilter? {
         return Api.MessagesFilter.inputMessagesFilterGif
     } else if tagMask == .pinned {
         return Api.MessagesFilter.inputMessagesFilterPinned
+    } else if tagMask == .voice {
+        return Api.MessagesFilter.inputMessagesFilterVoice
+    } else if tagMask == .roundVideo {
+        return Api.MessagesFilter.inputMessagesFilterRoundVideo
     } else {
         return nil
     }

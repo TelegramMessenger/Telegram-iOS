@@ -9767,6 +9767,22 @@ public extension Api.functions.payments {
                 }
 }
 public extension Api.functions.payments {
+                static func updateStarGiftPrice(slug: String, resellStars: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-489360582)
+                    serializeString(slug, buffer: buffer, boxed: false)
+                    serializeInt64(resellStars, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "payments.updateStarGiftPrice", parameters: [("slug", String(describing: slug)), ("resellStars", String(describing: resellStars))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.payments {
                 static func upgradeStarGift(flags: Int32, stargift: Api.InputSavedStarGift) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-1361648395)
