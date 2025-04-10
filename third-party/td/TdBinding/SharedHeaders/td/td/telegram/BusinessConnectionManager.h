@@ -13,8 +13,11 @@
 #include "td/telegram/MessageId.h"
 #include "td/telegram/MessageInputReplyTo.h"
 #include "td/telegram/net/DcId.h"
+#include "td/telegram/StarGiftSettings.h"
+#include "td/telegram/StoryId.h"
 #include "td/telegram/td_api.h"
 #include "td/telegram/telegram_api.h"
+#include "td/telegram/UserId.h"
 
 #include "td/actor/actor.h"
 
@@ -41,7 +44,11 @@ class BusinessConnectionManager final : public Actor {
   BusinessConnectionManager &operator=(BusinessConnectionManager &&) = delete;
   ~BusinessConnectionManager() final;
 
+  Status check_business_connection(const BusinessConnectionId &connection_id) const;
+
   Status check_business_connection(const BusinessConnectionId &connection_id, DialogId dialog_id) const;
+
+  UserId get_business_connection_user_id(const BusinessConnectionId &connection_id) const;
 
   DcId get_business_connection_dc_id(const BusinessConnectionId &connection_id) const;
 
@@ -103,9 +110,35 @@ class BusinessConnectionManager final : public Actor {
                  td_api::object_ptr<td_api::ReplyMarkup> &&reply_markup,
                  Promise<td_api::object_ptr<td_api::businessMessage>> &&promise);
 
+  void read_business_message(BusinessConnectionId business_connection_id, DialogId dialog_id, MessageId message_id,
+                             Promise<Unit> &&promise);
+
+  void delete_business_messages(BusinessConnectionId business_connection_id, const vector<MessageId> &message_ids,
+                                Promise<Unit> &&promise);
+
+  void delete_business_story(BusinessConnectionId business_connection_id, StoryId story_id, Promise<Unit> &&promise);
+
+  void set_business_name(BusinessConnectionId business_connection_id, const string &first_name, const string &last_name,
+                         Promise<Unit> &&promise);
+
+  void set_business_about(BusinessConnectionId business_connection_id, const string &about, Promise<Unit> &&promise);
+
+  void set_business_username(BusinessConnectionId business_connection_id, const string &username,
+                             Promise<Unit> &&promise);
+
+  void set_business_gift_settings(BusinessConnectionId business_connection_id, StarGiftSettings settings,
+                                  Promise<Unit> &&promise);
+
+  void get_business_star_status(BusinessConnectionId business_connection_id,
+                                Promise<td_api::object_ptr<td_api::starAmount>> &&promise);
+
+  void transfer_business_stars(BusinessConnectionId business_connection_id, int64 star_count, Promise<Unit> &&promise);
+
   void get_current_state(vector<td_api::object_ptr<td_api::Update>> &updates) const;
 
  private:
+  static constexpr size_t MAX_NAME_LENGTH = 64;  // server side limit for first/last name
+
   struct BusinessConnection;
   struct PendingMessage;
   class SendBusinessMessageQuery;
@@ -139,6 +172,8 @@ class BusinessConnectionManager final : public Actor {
   void tear_down() final;
 
   Status check_business_message_id(MessageId message_id) const;
+
+  Status check_business_story_id(StoryId story_id) const;
 
   void on_get_business_connection(const BusinessConnectionId &connection_id,
                                   Result<telegram_api::object_ptr<telegram_api::Updates>> r_updates);

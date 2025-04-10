@@ -108,6 +108,14 @@ class StoryManager final : public Actor {
     int64 log_event_id_ = 0;
   };
 
+  struct BeingEditedBusinessStory {
+    unique_ptr<StoryContent> content_;
+    vector<MediaArea> areas_;
+    FormattedText caption_;
+    UserPrivacySettingRules privacy_rules_;
+    Promise<td_api::object_ptr<td_api::story>> promise_;
+  };
+
   struct PendingStory {
     DialogId dialog_id_;
     StoryId story_id_;
@@ -227,6 +235,13 @@ class StoryManager final : public Actor {
                   td_api::object_ptr<td_api::InputStoryContent> &&input_story_content,
                   td_api::object_ptr<td_api::inputStoryAreas> &&input_areas,
                   td_api::object_ptr<td_api::formattedText> &&input_caption, Promise<Unit> &&promise);
+
+  void edit_business_story(DialogId owner_dialog_id, StoryId story_id,
+                           td_api::object_ptr<td_api::InputStoryContent> &&input_story_content,
+                           td_api::object_ptr<td_api::inputStoryAreas> &&input_areas,
+                           td_api::object_ptr<td_api::formattedText> &&input_caption,
+                           td_api::object_ptr<td_api::StoryPrivacySettings> &&settings,
+                           Promise<td_api::object_ptr<td_api::story>> &&promise);
 
   void edit_story_cover(DialogId owner_dialog_id, StoryId story_id, double main_frame_timestamp,
                         Promise<Unit> &&promise);
@@ -378,6 +393,7 @@ class StoryManager final : public Actor {
 
   class SendStoryQuery;
   class EditStoryQuery;
+  class EditBusinessStoryQuery;
 
   class DeleteStoryOnServerLogEvent;
   class ReadStoriesOnServerLogEvent;
@@ -577,6 +593,9 @@ class StoryManager final : public Actor {
   void do_edit_story(unique_ptr<PendingStory> &&pending_story,
                      telegram_api::object_ptr<telegram_api::InputFile> input_file);
 
+  void on_edit_business_story(unique_ptr<PendingStory> &&pending_story,
+                              telegram_api::object_ptr<telegram_api::Updates> updates);
+
   void on_toggle_story_is_pinned(StoryFullId story_full_id, bool is_pinned, Promise<Unit> &&promise);
 
   void on_update_dialog_max_story_ids(DialogId owner_dialog_id, StoryId max_story_id, StoryId max_read_story_id);
@@ -687,6 +706,8 @@ class StoryManager final : public Actor {
   FlatHashMap<DialogId, uint64, DialogIdHash> load_expiring_stories_log_event_ids_;
 
   FlatHashMap<StoryFullId, unique_ptr<BeingEditedStory>, StoryFullIdHash> being_edited_stories_;
+
+  FlatHashMap<uint32, unique_ptr<BeingEditedBusinessStory>> being_edited_business_stories_;
 
   FlatHashMap<StoryFullId, int64, StoryFullIdHash> edit_generations_;
 

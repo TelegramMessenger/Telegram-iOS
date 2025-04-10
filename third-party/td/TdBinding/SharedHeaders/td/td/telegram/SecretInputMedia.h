@@ -19,18 +19,18 @@ class FileView;
 
 struct SecretInputMedia {
   telegram_api::object_ptr<telegram_api::InputEncryptedFile> input_file_;
-  tl_object_ptr<secret_api::DecryptedMessageMedia> decrypted_media_;
+  secret_api::object_ptr<secret_api::DecryptedMessageMedia> decrypted_media_;
 
   SecretInputMedia() = default;
 
   SecretInputMedia(telegram_api::object_ptr<telegram_api::InputEncryptedFile> input_file,
-                   tl_object_ptr<secret_api::DecryptedMessageMedia> decrypted_media)
+                   secret_api::object_ptr<secret_api::DecryptedMessageMedia> decrypted_media)
       : input_file_(std::move(input_file)), decrypted_media_(std::move(decrypted_media)) {
   }
 
   SecretInputMedia(telegram_api::object_ptr<telegram_api::InputEncryptedFile> input_file, BufferSlice &&thumbnail,
                    Dimensions thumbnail_dimensions, const string &mime_type, const FileView &file_view,
-                   vector<tl_object_ptr<secret_api::DocumentAttribute>> &&attributes, const string &caption,
+                   vector<secret_api::object_ptr<secret_api::DocumentAttribute>> &&attributes, const string &caption,
                    int32 layer);
 
   bool empty() const {

@@ -174,7 +174,6 @@ Result<PrivateKeyId> login_finish_for_bob(LoginId bob_login_id, UserId alice_use
 Result<Ok> login_destroy(LoginId login_id);
 Result<Ok> login_destroy_all();
 
-
 // Personal info
 // TODO: UserId
 
@@ -296,7 +295,8 @@ struct CallState {
 };
 
 Result<Bytes> call_create_zero_block(PrivateKeyId private_key_id, const CallState &initial_state);
-Result<Bytes> call_create_self_add_block(PrivateKeyId private_key_id, Slice previous_block, const CallParticipant &self);
+Result<Bytes> call_create_self_add_block(PrivateKeyId private_key_id, Slice previous_block,
+                                         const CallParticipant &self);
 Result<CallId> call_create(UserId user_id, PrivateKeyId private_key_id, Slice last_block);
 
 Result<std::string> call_describe(CallId call);

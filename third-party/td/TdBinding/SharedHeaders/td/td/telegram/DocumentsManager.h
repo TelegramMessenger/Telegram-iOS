@@ -48,7 +48,7 @@ class DocumentsManager {
     tl_object_ptr<telegram_api::WebDocument> web_document;
     PhotoSize thumbnail;
 
-    vector<tl_object_ptr<telegram_api::DocumentAttribute>> attributes;
+    vector<telegram_api::object_ptr<telegram_api::DocumentAttribute>> attributes;
 
     RemoteDocument(tl_object_ptr<telegram_api::document> &&server_document)
         : document(std::move(server_document))
@@ -60,7 +60,7 @@ class DocumentsManager {
     }
 
     RemoteDocument(tl_object_ptr<telegram_api::WebDocument> &&web_document, PhotoSize thumbnail,
-                   vector<tl_object_ptr<telegram_api::DocumentAttribute>> &&attributes)
+                   vector<telegram_api::object_ptr<telegram_api::DocumentAttribute>> &&attributes)
         : document(nullptr)
         , secret_file(nullptr)
         , secret_document(nullptr)
@@ -71,7 +71,7 @@ class DocumentsManager {
 
     RemoteDocument(unique_ptr<EncryptedFile> &&secret_file,
                    tl_object_ptr<secret_api::decryptedMessageMediaDocument> &&secret_document,
-                   vector<tl_object_ptr<telegram_api::DocumentAttribute>> &&attributes)
+                   vector<telegram_api::object_ptr<telegram_api::DocumentAttribute>> &&attributes)
         : document(nullptr)
         , secret_file(std::move(secret_file))
         , secret_document(std::move(secret_document))

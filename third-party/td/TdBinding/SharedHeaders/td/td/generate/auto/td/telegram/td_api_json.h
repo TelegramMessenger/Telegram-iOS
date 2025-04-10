@@ -194,6 +194,8 @@ Result<int32> tl_constructor_from_string(td_api::Object *object, const std::stri
 
 Result<int32> tl_constructor_from_string(td_api::Function *object, const std::string &str);
 
+Status from_json(td_api::acceptedGiftTypes &to, JsonObject &from);
+
 Status from_json(td_api::accountTtl &to, JsonObject &from);
 
 Status from_json(td_api::address &to, JsonObject &from);
@@ -269,6 +271,8 @@ Status from_json(td_api::businessAwayMessageScheduleOutsideOfOpeningHours &to, J
 Status from_json(td_api::businessAwayMessageScheduleCustom &to, JsonObject &from);
 
 Status from_json(td_api::businessAwayMessageSettings &to, JsonObject &from);
+
+Status from_json(td_api::businessBotRights &to, JsonObject &from);
 
 Status from_json(td_api::businessConnectedBot &to, JsonObject &from);
 
@@ -531,6 +535,8 @@ Status from_json(td_api::firebaseAuthenticationSettingsIos &to, JsonObject &from
 Status from_json(td_api::formattedText &to, JsonObject &from);
 
 Status from_json(td_api::forumTopicIcon &to, JsonObject &from);
+
+Status from_json(td_api::giftSettings &to, JsonObject &from);
 
 Status from_json(td_api::giveawayParameters &to, JsonObject &from);
 
@@ -1734,6 +1740,10 @@ Status from_json(td_api::deleteBusinessChatLink &to, JsonObject &from);
 
 Status from_json(td_api::deleteBusinessConnectedBot &to, JsonObject &from);
 
+Status from_json(td_api::deleteBusinessMessages &to, JsonObject &from);
+
+Status from_json(td_api::deleteBusinessStory &to, JsonObject &from);
+
 Status from_json(td_api::deleteChat &to, JsonObject &from);
 
 Status from_json(td_api::deleteChatBackground &to, JsonObject &from);
@@ -1813,6 +1823,8 @@ Status from_json(td_api::editBusinessMessageMedia &to, JsonObject &from);
 Status from_json(td_api::editBusinessMessageReplyMarkup &to, JsonObject &from);
 
 Status from_json(td_api::editBusinessMessageText &to, JsonObject &from);
+
+Status from_json(td_api::editBusinessStory &to, JsonObject &from);
 
 Status from_json(td_api::editChatFolder &to, JsonObject &from);
 
@@ -1927,6 +1939,8 @@ Status from_json(td_api::getBotName &to, JsonObject &from);
 Status from_json(td_api::getBotSimilarBotCount &to, JsonObject &from);
 
 Status from_json(td_api::getBotSimilarBots &to, JsonObject &from);
+
+Status from_json(td_api::getBusinessAccountStarAmount &to, JsonObject &from);
 
 Status from_json(td_api::getBusinessChatLinkInfo &to, JsonObject &from);
 
@@ -2320,6 +2334,8 @@ Status from_json(td_api::getSavedOrderInfo &to, JsonObject &from);
 
 Status from_json(td_api::getScopeNotificationSettings &to, JsonObject &from);
 
+Status from_json(td_api::getSearchSponsoredChats &to, JsonObject &from);
+
 Status from_json(td_api::getSearchedForTags &to, JsonObject &from);
 
 Status from_json(td_api::getSecretChat &to, JsonObject &from);
@@ -2434,6 +2450,8 @@ Status from_json(td_api::getWebAppUrl &to, JsonObject &from);
 
 Status from_json(td_api::getWebPageInstantView &to, JsonObject &from);
 
+Status from_json(td_api::giftPremiumWithStars &to, JsonObject &from);
+
 Status from_json(td_api::hideContactCloseBirthdays &to, JsonObject &from);
 
 Status from_json(td_api::hideSuggestedAction &to, JsonObject &from);
@@ -2478,6 +2496,8 @@ Status from_json(td_api::openChatSimilarChat &to, JsonObject &from);
 
 Status from_json(td_api::openMessageContent &to, JsonObject &from);
 
+Status from_json(td_api::openSponsoredChat &to, JsonObject &from);
+
 Status from_json(td_api::openStory &to, JsonObject &from);
 
 Status from_json(td_api::openWebApp &to, JsonObject &from);
@@ -2511,6 +2531,8 @@ Status from_json(td_api::readAllChatReactions &to, JsonObject &from);
 Status from_json(td_api::readAllMessageThreadMentions &to, JsonObject &from);
 
 Status from_json(td_api::readAllMessageThreadReactions &to, JsonObject &from);
+
+Status from_json(td_api::readBusinessMessage &to, JsonObject &from);
 
 Status from_json(td_api::readChatList &to, JsonObject &from);
 
@@ -2603,6 +2625,8 @@ Status from_json(td_api::reportChatSponsoredMessage &to, JsonObject &from);
 Status from_json(td_api::reportMessageReactions &to, JsonObject &from);
 
 Status from_json(td_api::reportPhoneNumberCodeMissing &to, JsonObject &from);
+
+Status from_json(td_api::reportSponsoredChat &to, JsonObject &from);
 
 Status from_json(td_api::reportStory &to, JsonObject &from);
 
@@ -2794,6 +2818,16 @@ Status from_json(td_api::setBotProfilePhoto &to, JsonObject &from);
 
 Status from_json(td_api::setBotUpdatesStatus &to, JsonObject &from);
 
+Status from_json(td_api::setBusinessAccountBio &to, JsonObject &from);
+
+Status from_json(td_api::setBusinessAccountGiftSettings &to, JsonObject &from);
+
+Status from_json(td_api::setBusinessAccountName &to, JsonObject &from);
+
+Status from_json(td_api::setBusinessAccountProfilePhoto &to, JsonObject &from);
+
+Status from_json(td_api::setBusinessAccountUsername &to, JsonObject &from);
+
 Status from_json(td_api::setBusinessAwayMessageSettings &to, JsonObject &from);
 
 Status from_json(td_api::setBusinessConnectedBot &to, JsonObject &from);
@@ -2883,6 +2917,8 @@ Status from_json(td_api::setFileGenerationProgress &to, JsonObject &from);
 Status from_json(td_api::setForumTopicNotificationSettings &to, JsonObject &from);
 
 Status from_json(td_api::setGameScore &to, JsonObject &from);
+
+Status from_json(td_api::setGiftSettings &to, JsonObject &from);
 
 Status from_json(td_api::setGroupCallParticipantIsSpeaking &to, JsonObject &from);
 
@@ -3126,6 +3162,8 @@ Status from_json(td_api::toggleSupergroupUsernameIsActive &to, JsonObject &from)
 
 Status from_json(td_api::toggleUsernameIsActive &to, JsonObject &from);
 
+Status from_json(td_api::transferBusinessAccountStars &to, JsonObject &from);
+
 Status from_json(td_api::transferChatOwnership &to, JsonObject &from);
 
 Status from_json(td_api::transferGift &to, JsonObject &from);
@@ -3152,11 +3190,15 @@ Status from_json(td_api::viewMessages &to, JsonObject &from);
 
 Status from_json(td_api::viewPremiumFeature &to, JsonObject &from);
 
+Status from_json(td_api::viewSponsoredChat &to, JsonObject &from);
+
 Status from_json(td_api::viewTrendingStickerSets &to, JsonObject &from);
 
 Status from_json(td_api::writeGeneratedFilePart &to, JsonObject &from);
 
 void to_json(JsonValueScope &jv, const td_api::accentColor &object);
+
+void to_json(JsonValueScope &jv, const td_api::acceptedGiftTypes &object);
 
 void to_json(JsonValueScope &jv, const td_api::accountInfo &object);
 
@@ -3341,6 +3383,8 @@ void to_json(JsonValueScope &jv, const td_api::businessAwayMessageScheduleCustom
 void to_json(JsonValueScope &jv, const td_api::businessAwayMessageSettings &object);
 
 void to_json(JsonValueScope &jv, const td_api::businessBotManageBar &object);
+
+void to_json(JsonValueScope &jv, const td_api::businessBotRights &object);
 
 void to_json(JsonValueScope &jv, const td_api::businessChatLink &object);
 
@@ -4064,6 +4108,8 @@ void to_json(JsonValueScope &jv, const td_api::gameHighScores &object);
 
 void to_json(JsonValueScope &jv, const td_api::gift &object);
 
+void to_json(JsonValueScope &jv, const td_api::giftSettings &object);
+
 void to_json(JsonValueScope &jv, const td_api::giftUpgradePreview &object);
 
 void to_json(JsonValueScope &jv, const td_api::gifts &object);
@@ -4661,6 +4707,10 @@ void to_json(JsonValueScope &jv, const td_api::messageGift &object);
 void to_json(JsonValueScope &jv, const td_api::messageUpgradedGift &object);
 
 void to_json(JsonValueScope &jv, const td_api::messageRefundedUpgradedGift &object);
+
+void to_json(JsonValueScope &jv, const td_api::messagePaidMessagesRefunded &object);
+
+void to_json(JsonValueScope &jv, const td_api::messagePaidMessagePriceChanged &object);
 
 void to_json(JsonValueScope &jv, const td_api::messageContactRegistered &object);
 
@@ -5408,19 +5458,19 @@ void to_json(JsonValueScope &jv, const td_api::reportChatResultTextRequired &obj
 
 void to_json(JsonValueScope &jv, const td_api::reportChatResultMessagesRequired &object);
 
-void to_json(JsonValueScope &jv, const td_api::ReportChatSponsoredMessageResult &object);
-
-void to_json(JsonValueScope &jv, const td_api::reportChatSponsoredMessageResultOk &object);
-
-void to_json(JsonValueScope &jv, const td_api::reportChatSponsoredMessageResultFailed &object);
-
-void to_json(JsonValueScope &jv, const td_api::reportChatSponsoredMessageResultOptionRequired &object);
-
-void to_json(JsonValueScope &jv, const td_api::reportChatSponsoredMessageResultAdsHidden &object);
-
-void to_json(JsonValueScope &jv, const td_api::reportChatSponsoredMessageResultPremiumRequired &object);
-
 void to_json(JsonValueScope &jv, const td_api::reportOption &object);
+
+void to_json(JsonValueScope &jv, const td_api::ReportSponsoredResult &object);
+
+void to_json(JsonValueScope &jv, const td_api::reportSponsoredResultOk &object);
+
+void to_json(JsonValueScope &jv, const td_api::reportSponsoredResultFailed &object);
+
+void to_json(JsonValueScope &jv, const td_api::reportSponsoredResultOptionRequired &object);
+
+void to_json(JsonValueScope &jv, const td_api::reportSponsoredResultAdsHidden &object);
+
+void to_json(JsonValueScope &jv, const td_api::reportSponsoredResultPremiumRequired &object);
 
 void to_json(JsonValueScope &jv, const td_api::ReportStoryResult &object);
 
@@ -5578,6 +5628,10 @@ void to_json(JsonValueScope &jv, const td_api::speechRecognitionResultText &obje
 
 void to_json(JsonValueScope &jv, const td_api::speechRecognitionResultError &object);
 
+void to_json(JsonValueScope &jv, const td_api::sponsoredChat &object);
+
+void to_json(JsonValueScope &jv, const td_api::sponsoredChats &object);
+
 void to_json(JsonValueScope &jv, const td_api::sponsoredMessage &object);
 
 void to_json(JsonValueScope &jv, const td_api::sponsoredMessages &object);
@@ -5673,6 +5727,10 @@ void to_json(JsonValueScope &jv, const td_api::starTransactionTypePaidMessageSen
 void to_json(JsonValueScope &jv, const td_api::starTransactionTypePaidMessageReceive &object);
 
 void to_json(JsonValueScope &jv, const td_api::starTransactionTypePremiumPurchase &object);
+
+void to_json(JsonValueScope &jv, const td_api::starTransactionTypeBusinessBotTransferSend &object);
+
+void to_json(JsonValueScope &jv, const td_api::starTransactionTypeBusinessBotTransferReceive &object);
 
 void to_json(JsonValueScope &jv, const td_api::starTransactionTypeUnsupported &object);
 
@@ -6189,6 +6247,8 @@ void to_json(JsonValueScope &jv, const td_api::updateProfileAccentColors &object
 void to_json(JsonValueScope &jv, const td_api::updateLanguagePackStrings &object);
 
 void to_json(JsonValueScope &jv, const td_api::updateConnectionState &object);
+
+void to_json(JsonValueScope &jv, const td_api::updateFreezeState &object);
 
 void to_json(JsonValueScope &jv, const td_api::updateTermsOfService &object);
 

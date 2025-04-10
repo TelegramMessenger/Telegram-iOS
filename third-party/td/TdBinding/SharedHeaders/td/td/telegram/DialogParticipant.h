@@ -376,11 +376,11 @@ class DialogParticipantStatus {
 
   DialogParticipantStatus apply_restrictions(RestrictedRights default_restrictions, bool is_booster, bool is_bot) const;
 
-  tl_object_ptr<td_api::ChatMemberStatus> get_chat_member_status_object() const;
+  td_api::object_ptr<td_api::ChatMemberStatus> get_chat_member_status_object() const;
 
-  tl_object_ptr<telegram_api::chatAdminRights> get_chat_admin_rights() const;
+  telegram_api::object_ptr<telegram_api::chatAdminRights> get_chat_admin_rights() const;
 
-  tl_object_ptr<telegram_api::chatBannedRights> get_chat_banned_rights() const;
+  telegram_api::object_ptr<telegram_api::chatBannedRights> get_chat_banned_rights() const;
 
   // unrestricts user if restriction time expired. Should be called before all privileges checks
   void update_restrictions() const;
