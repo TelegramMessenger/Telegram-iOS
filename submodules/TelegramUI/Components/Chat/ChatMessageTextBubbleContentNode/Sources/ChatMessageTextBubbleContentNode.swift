@@ -21,6 +21,9 @@ import EmojiTextAttachmentView
 import TextNodeWithEntities
 import ChatMessageDateAndStatusNode
 import ChatMessageBubbleContentNode
+import ChatMessageInteractiveFileNode
+import ComponentFlow
+import AudioTranscriptionButtonComponent
 import ShimmeringLinkNode
 import ChatMessageItemCommon
 import TextLoadingEffect
@@ -86,6 +89,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     private let textNode: InteractiveTextNodeWithEntities
     
     private let textAccessibilityOverlayNode: TextAccessibilityOverlayNode
+    private var audioNode: ChatMessageInteractiveFileNode?
     public var statusNode: ChatMessageDateAndStatusNode?
     private var linkHighlightingNode: LinkHighlightingNode?
     private var shimmeringNode: ShimmeringLinkNode?
@@ -112,6 +116,8 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     private var expandedBlockIds: Set<Int> = Set()
     private var appliedExpandedBlockIds: Set<Int>?
     private var displayContentsUnderSpoilers: (value: Bool, location: CGPoint?) = (false, nil)
+    
+    private var attributeResettingDisposable: Disposable?
     
     override public var visibility: ListViewItemNodeVisibility {
         didSet {
@@ -201,6 +207,9 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     
     override public func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let textLayout = InteractiveTextNodeWithEntities.asyncLayout(self.textNode)
+        
+        let audioLayout = ChatMessageInteractiveFileNode.asyncLayout(self.audioNode)
+        
         let statusLayout = ChatMessageDateAndStatusNode.asyncLayout(self.statusNode)
         
         let currentCachedChatMessageText = self.cachedChatMessageText
@@ -264,6 +273,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 var viewCount: Int?
                 var dateReplies = 0
+                var audioAttribute: TextTranscriptionMessageAttribute?
                 var dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeerId: item.context.account.peerId, accountPeer: item.associatedData.accountPeer, message: item.topMessage)
                 if item.message.isRestricted(platform: "ios", contentSettings: item.context.currentContentSettings.with { $0 }) {
                     dateReactionsAndPeers = ([], [])
@@ -278,6 +288,9 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .group = channel.info {
                             dateReplies = Int(attribute.count)
                         }
+                    }
+                    else if let attribute = attribute as? TextTranscriptionMessageAttribute {
+                        audioAttribute = attribute
                     }
                 }
                 
@@ -654,6 +667,96 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
                     ))
                 }
+                    
+                let preferredWidth: CGFloat?
+                let audioFinalizeLayout: ChatMessageInteractiveFileNode.FinalizeLayout?
+                
+                if let audioAttribute, audioAttribute.visible {
+                    var insets = UIEdgeInsets()
+                    insets.left = layoutConstants.text.bubbleInsets.left
+                    insets.right = layoutConstants.text.bubbleInsets.right
+                    
+                    let transcriptionState: AudioTranscriptionButtonComponent.TranscriptionState
+                    let forcedResourceStatus: FileMediaResourceStatus?
+                    if audioAttribute.downloading == true {
+                        transcriptionState = .inProgress
+                        forcedResourceStatus = .init(mediaStatus: .fetchStatus(.Local), fetchStatus: .Local)
+                    } else {
+                        transcriptionState = .expanded
+                        forcedResourceStatus = nil
+                    }
+                    
+                    let (_, refineLayout) = audioLayout(ChatMessageInteractiveFileNode.Arguments(
+                        context: item.context,
+                        presentationData: item.presentationData,
+                        customTintColor: nil,
+                        message: message,
+                        topMessage: message,
+                        associatedData: item.associatedData,
+                        chatLocation: item.chatLocation,
+                        attributes: item.attributes,
+                        isPinned: item.isItemPinned,
+                        forcedIsEdited: false,
+                        file: audioAttribute.file,
+                        automaticDownload: false,
+                        incoming: incoming,
+                        isRecentActions: false,
+                        forcedResourceStatus: forcedResourceStatus,
+                        dateAndStatusType: nil,
+                        displayReactions: false,
+                        messageSelection: nil,
+                        isAttachedContentBlock: true,
+                        layoutConstants: layoutConstants,
+                        constrainedSize: CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height),
+                        controllerInteraction: item.controllerInteraction,
+                        transcriptionState: transcriptionState,
+                        transcriptionButtonTapped: { [weak self] in
+                            guard let self else { return }
+                            self.attributeResettingDisposable = item.context.account.postbox.transaction { transaction in
+                                transaction.updateMessage(message.id) { message in
+                                    var attributes = message.attributes.filter { !($0 is TextTranscriptionMessageAttribute) }
+                                    
+                                    let newAttribute = TextTranscriptionMessageAttribute(
+                                        id: audioAttribute.id,
+                                        visible: false,
+                                        downloading: audioAttribute.downloading,
+                                        file: audioAttribute.file)
+                                    attributes.append(newAttribute)
+                                    
+                                    let storeForwardInfo = message.forwardInfo.flatMap(StoreMessageForwardInfo.init)
+                                    return .update(StoreMessage(
+                                        id: message.id,
+                                        globallyUniqueId: message.globallyUniqueId,
+                                        groupingKey: message.groupingKey,
+                                        threadId: message.threadId,
+                                        timestamp: message.timestamp,
+                                        flags: StoreMessageFlags(message.flags),
+                                        tags: message.tags,
+                                        globalTags: message.globalTags,
+                                        localTags: message.localTags,
+                                        forwardInfo: storeForwardInfo,
+                                        authorId: message.author?.id,
+                                        text: message.text,
+                                        attributes: attributes,
+                                        media: message.media))
+                                }
+                            }
+                            .startStrict(next: { _ in
+                                self.attributeResettingDisposable?.dispose()
+                                self.attributeResettingDisposable = nil
+                            })
+                        }
+                    ))
+                    let finalizeLayout = refineLayout(CGSize(width: constrainedSize.width, height: constrainedSize.height))
+                    
+                    self.audioNode?.audioTranscriptionState = transcriptionState
+                    
+                    preferredWidth = finalizeLayout.0
+                    audioFinalizeLayout = finalizeLayout.1
+                } else {
+                    preferredWidth = nil
+                    audioFinalizeLayout = nil
+                }
                 
                 var textFrame = CGRect(origin: CGPoint(x: -textInsets.left, y: -textInsets.top), size: textLayout.size)
                 var textFrameWithoutInsets = CGRect(origin: CGPoint(x: textFrame.origin.x + textInsets.left, y: textFrame.origin.y + textInsets.top), size: CGSize(width: textFrame.width - textInsets.left - textInsets.right, height: textFrame.height - textInsets.top - textInsets.bottom))
@@ -665,15 +768,25 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 if let statusSuggestedWidthAndContinue = statusSuggestedWidthAndContinue {
                     suggestedBoundingWidth = max(suggestedBoundingWidth, statusSuggestedWidthAndContinue.0)
                 }
+                
+                if let preferredWidth {
+                    suggestedBoundingWidth = max(suggestedBoundingWidth, preferredWidth)
+                }
                 let sideInsets = layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
                 suggestedBoundingWidth += sideInsets
                 
                 return (suggestedBoundingWidth, { boundingWidth in
                     var boundingSize: CGSize
                     
+                    let audioSizeAndApply = audioFinalizeLayout?(boundingWidth - sideInsets)
+                                        
+                    boundingSize = textFrameWithoutInsets.size
+                    if let audioSizeAndApply {
+                        boundingSize.height += audioSizeAndApply.0.height + 20
+                    }
+                    
                     let statusSizeAndApply = statusSuggestedWidthAndContinue?.1(boundingWidth - sideInsets)
                     
-                    boundingSize = textFrameWithoutInsets.size
                     if let statusSizeAndApply = statusSizeAndApply {
                         boundingSize.height += statusSizeAndApply.0.height
                     }
@@ -759,9 +872,39 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     
                             strongSelf.updateIsTranslating(isTranslating)
                             
+                            
+                            if let audioSizeAndApply {
+                                let audioNode = audioSizeAndApply.1(synchronousLoads, animation, itemApply)
+                                let audioFrame = CGRect(origin: CGPoint(x: textFrameWithoutInsets.minX, y: textFrameWithoutInsets.maxY + 6), size: audioSizeAndApply.0)
+                                
+                                if strongSelf.audioNode !== audioNode {
+                                    strongSelf.audioNode?.removeFromSupernode()
+                                    strongSelf.audioNode = audioNode
+                                    
+                                    audioNode.activateLocalContent = {
+                                        if let strongSelf = self, let item = strongSelf.item {
+                                            let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: .default))
+                                        }
+                                    }
+                                    
+                                    audioNode.requestUpdateLayout = { _ in
+                                        item.controllerInteraction.requestMessageUpdate(item.message.id, false)
+                                    }
+                                    
+                                    strongSelf.addSubnode(audioNode)
+                                    
+                                    audioNode.frame = audioFrame
+                                } else {
+                                    animation.animator.updateFrame(layer: audioNode.layer, frame: audioFrame, completion: nil)
+                                }
+                            } else if let audioNode = strongSelf.audioNode {
+                                strongSelf.audioNode = nil
+                                audioNode.removeFromSupernode()
+                            }
+                            
                             if let statusSizeAndApply {
                                 let statusNode = statusSizeAndApply.1(strongSelf.statusNode == nil ? .None : animation)
-                                let statusFrame = CGRect(origin: CGPoint(x: textFrameWithoutInsets.minX, y: textFrameWithoutInsets.maxY), size: statusSizeAndApply.0)
+                                let statusFrame = CGRect(origin: CGPoint(x: textFrameWithoutInsets.minX, y: boundingSize.height - statusSizeAndApply.0.height - bottomInset), size: statusSizeAndApply.0)
                                 
                                 if strongSelf.statusNode !== statusNode {
                                     strongSelf.statusNode?.removeFromSupernode()
@@ -1031,6 +1174,9 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if let statusNode = self.statusNode, statusNode.supernode != nil, let result = statusNode.hitTest(self.view.convert(point, to: statusNode.view), with: event) {
+            return result
+        }
+        if let audioNode, audioNode.supernode != nil, let result = audioNode.hitTest(self.view.convert(point, to: audioNode.view), with: event) {
             return result
         }
         return super.hitTest(point, with: event)

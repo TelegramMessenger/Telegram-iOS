@@ -35,6 +35,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ShimmeringLinkNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemCommon",
         "//submodules/TelegramUI/Components/Chat/MessageQuoteComponent",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageInteractiveFileNode",
         "//submodules/TelegramUI/Components/TextLoadingEffect",
         "//submodules/TelegramUI/Components/ChatControllerInteraction",
         "//submodules/TelegramUI/Components/InteractiveTextComponent",

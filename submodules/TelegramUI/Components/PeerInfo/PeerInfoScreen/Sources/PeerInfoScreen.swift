@@ -437,6 +437,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, updateHistoryFilter: { _ in
         }, updateDisplayHistoryFilterAsList: { _ in
         }, requestLayout: { _ in
+        }, startTranscribingText: { _ in
         }, chatController: {
             return nil
         }, statuses: nil)

@@ -380,6 +380,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     var buttonKeyboardMessageDisposable: Disposable?
     var cachedDataDisposable: Disposable?
+    var transcribingTextDisposable: Disposable?
     var chatUnreadCountDisposable: Disposable?
     var buttonUnreadCountDisposable: Disposable?
     var chatUnreadMentionCountDisposable: Disposable?

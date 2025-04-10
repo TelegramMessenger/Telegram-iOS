@@ -175,6 +175,7 @@ public final class ChatPanelInterfaceInteraction {
     public let openBoostToUnrestrict: () -> Void
     public let updateVideoTrimRange: (Double, Double, Bool, Bool) -> Void
     public let requestLayout: (ContainedViewLayoutTransition) -> Void
+    public let startTranscribingText: (Message) -> Void
     public let chatController: () -> ViewController?
     public let statuses: ChatPanelInterfaceInteractionStatuses?
     
@@ -292,6 +293,7 @@ public final class ChatPanelInterfaceInteraction {
         updateHistoryFilter: @escaping ((ChatPresentationInterfaceState.HistoryFilter?) -> ChatPresentationInterfaceState.HistoryFilter?) -> Void,
         updateDisplayHistoryFilterAsList: @escaping (Bool) -> Void,
         requestLayout: @escaping (ContainedViewLayoutTransition) -> Void,
+        startTranscribingText: @escaping (Message) -> Void,
         chatController: @escaping () -> ViewController?,
         statuses: ChatPanelInterfaceInteractionStatuses?
     ) {
@@ -408,7 +410,7 @@ public final class ChatPanelInterfaceInteraction {
         self.updateHistoryFilter = updateHistoryFilter
         self.updateDisplayHistoryFilterAsList = updateDisplayHistoryFilterAsList
         self.requestLayout = requestLayout
-
+        self.startTranscribingText = startTranscribingText
         self.chatController = chatController
         self.statuses = statuses
     }
@@ -532,6 +534,7 @@ public final class ChatPanelInterfaceInteraction {
         }, updateHistoryFilter: { _ in
         }, updateDisplayHistoryFilterAsList: { _ in
         }, requestLayout: { _ in
+        }, startTranscribingText: { _ in
         }, chatController: {
             return nil
         }, statuses: nil)

@@ -107,6 +107,9 @@ public func peerMessageMediaPlayerType(_ message: EngineMessage) -> MediaManager
                 break
             }
         }
+        if let attribute = message.attributes.first(where: { $0 is TextTranscriptionMessageAttribute }) as? TextTranscriptionMessageAttribute {
+            file = attribute.file
+        }
         return file
     }
     

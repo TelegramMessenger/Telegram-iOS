@@ -44,6 +44,9 @@ private func extractFileMedia(_ message: Message) -> TelegramMediaFile? {
             break
         }
     }
+    if let attribute = message.attributes.first(where: { $0 is TextTranscriptionMessageAttribute }) as? TextTranscriptionMessageAttribute {
+        file = attribute.file
+    }
     return file
 }
 
