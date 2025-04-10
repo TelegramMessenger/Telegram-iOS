@@ -859,6 +859,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.isConference = isConference
         self.beginWithVideo = beginWithVideo
         self.keyPair = keyPair
+        
+        if self.isConference && conferenceSourceId == nil {
+            self.isMutedValue = .unmuted
+            self.isMutedPromise.set(self.isMutedValue)
+            self.stateValue.muteState = nil
+        }
 
         if let keyPair, let initialCall {
             self.e2eContext = ConferenceCallE2EContext(
@@ -1760,6 +1766,15 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             self.onMutedSpeechActivityDetected?(value)
                         }
                     }, isConference: self.isConference, audioIsActiveByDefault: audioIsActiveByDefault, isStream: self.isStream, sharedAudioDevice: self.sharedAudioContext?.audioDevice, encryptionContext: encryptionContext))
+                    
+                    let isEffectivelyMuted: Bool
+                    switch self.isMutedValue {
+                    case let .muted(isPushToTalkActive):
+                        isEffectivelyMuted = !isPushToTalkActive
+                    case .unmuted:
+                        isEffectivelyMuted = false
+                    }
+                    genericCallContext.setIsMuted(isEffectivelyMuted)
                 }
 
                 self.genericCallContext = genericCallContext
@@ -1907,6 +1922,14 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 } else {
                     reference = .id(id: callInfo.id, accessHash: callInfo.accessHash)
                 }
+                
+                let isEffectivelyMuted: Bool
+                switch self.isMutedValue {
+                case let .muted(isPushToTalkActive):
+                    isEffectivelyMuted = !isPushToTalkActive
+                case .unmuted:
+                    isEffectivelyMuted = false
+                }
 
                 self.currentLocalSsrc = ssrc
                 self.requestDisposable.set((self.accountContext.engine.calls.joinGroupCall(
@@ -1914,7 +1937,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     joinAs: self.joinAsPeerId,
                     callId: callInfo.id,
                     reference: reference,
-                    preferMuted: true,
+                    preferMuted: isEffectivelyMuted,
                     joinPayload: joinPayload,
                     peerAdminIds: peerAdminIds,
                     inviteHash: self.invite,
