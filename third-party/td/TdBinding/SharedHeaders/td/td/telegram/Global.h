@@ -679,6 +679,10 @@ class Global final : public ActorContext {
       // flood wait
       return true;
     }
+    if (error.code() == 406 && error.message() == "FROZEN_METHOD_INVALID") {
+      // the account is frozen
+      return true;
+    }
     return close_flag();
   }
 

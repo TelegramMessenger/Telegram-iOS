@@ -10,18 +10,17 @@
 #include "td/e2e/Container.h"
 #include "td/e2e/e2e_api.h"
 
-#include "td/utils/HashTableUtils.h"
 #include "td/utils/SharedSlice.h"
 #include "td/utils/Slice.h"
-#include "td/utils/Span.h"
+#include "td/utils/SliceBuilder.h"
 #include "td/utils/Status.h"
+#include "td/utils/StringBuilder.h"
 #include "td/utils/Time.h"
 #include "td/utils/UInt.h"
 #include "td/utils/VectorQueue.h"
 
 #include <map>
 #include <set>
-#include <unordered_map>
 #include <utility>
 
 namespace tde2e_core {
@@ -43,6 +42,9 @@ struct CallVerificationChain {
   CallVerificationState get_verification_state() const;
   CallVerificationWords get_verification_words() const;
 
+  void set_user_id(td::int64 user_id) {
+    user_id_ = user_id;
+  }
   void allow_delay() {
     delay_allowed_ = true;
   }
@@ -66,6 +68,17 @@ struct CallVerificationChain {
   std::map<td::int64, std::string> committed_;
   std::map<td::int64, std::string> revealed_;
 
+  td::int64 user_id_{};
+
+  td::Timestamp commit_at_{};
+  td::Timestamp reveal_at_{};
+  td::Timestamp done_at_{};
+  struct UserState {
+    td::Timestamp receive_commit_at_{};
+    td::Timestamp receive_reveal_at_{};
+  };
+  std::map<td::int64, UserState> users_;
+
   bool delay_allowed_{false};
   bool may_skip_signatures_validation_{false};
   std::map<td::int32, std::vector<std::pair<std::string, e2e::object_ptr<e2e::e2e_chain_GroupBroadcast>>>>
@@ -74,7 +87,7 @@ struct CallVerificationChain {
 
 class CallEncryption {
  public:
-  explicit CallEncryption(td::int64 user_id, PrivateKey private_key);
+  CallEncryption(td::int64 user_id, PrivateKey private_key);
   td::Status add_shared_key(td::int32 epoch, td::SecureString key, GroupStateRef group_state);
   void forget_shared_key(td::int32 epoch);
 
@@ -83,7 +96,7 @@ class CallEncryption {
 
  private:
   static constexpr double FORGET_EPOCH_DELAY = 10;
-  static constexpr int MAX_ACTIVE_EPOCHS = 15;
+  static constexpr td::int32 MAX_ACTIVE_EPOCHS = 15;
   td::int64 user_id_{};
   PrivateKey private_key_;
 
@@ -194,7 +207,7 @@ struct Call {
     TRY_STATUS(call_verification_.receive_inbound_message(local_verification_message));
     return get_verification_state();
   }
-  friend td::StringBuilder &operator<<(td::StringBuilder &builder, const Call &call);
+  friend td::StringBuilder &operator<<(td::StringBuilder &sb, const Call &call);
 
  private:
   td::Status status_{td::Status::OK()};
