@@ -149,6 +149,11 @@ public final class GiftCompositionComponent: Component {
                     previewTimer.invalidate()
                     self.previewTimer = nil
                 }
+                
+                if !self.fetchedFiles.contains(file.fileId.id) {
+                    self.disposables.add(freeMediaFileResourceInteractiveFetched(account: component.context.account, userLocation: .other, fileReference: .standalone(media: file), resource: file.resource).start())
+                    self.fetchedFiles.insert(file.fileId.id)
+                }
             case let .unique(gift):
                 for attribute in gift.attributes {
                     switch attribute {
@@ -161,7 +166,7 @@ public final class GiftCompositionComponent: Component {
                     case let .pattern(_, file, _):
                         patternFile = file
                         files[file.fileId.id] = file
-                    case let .backdrop(_, innerColorValue, outerColorValue, patternColorValue, _, _):
+                    case let .backdrop(_, _, innerColorValue, outerColorValue, patternColorValue, _, _):
                         backgroundColor = UIColor(rgb: UInt32(bitPattern: outerColorValue))
                         secondBackgroundColor = UIColor(rgb: UInt32(bitPattern: innerColorValue))
                         patternColor = UIColor(rgb: UInt32(bitPattern: patternColorValue))
@@ -222,7 +227,7 @@ public final class GiftCompositionComponent: Component {
                         files[file.fileId.id] = file
                     }
                     
-                    if case let .backdrop(_, innerColorValue, outerColorValue, patternColorValue, _, _) = self.previewBackdrops[Int(self.previewBackdropIndex)] {
+                    if case let .backdrop(_, _, innerColorValue, outerColorValue, patternColorValue, _, _) = self.previewBackdrops[Int(self.previewBackdropIndex)] {
                         backgroundColor = UIColor(rgb: UInt32(bitPattern: outerColorValue))
                         secondBackgroundColor = UIColor(rgb: UInt32(bitPattern: innerColorValue))
                         patternColor = UIColor(rgb: UInt32(bitPattern: patternColorValue))

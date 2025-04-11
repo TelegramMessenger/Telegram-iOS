@@ -1155,7 +1155,7 @@ private final class ProfileGiftsContextImpl {
                 if !filter.contains(.unique) {
                     flags |= (1 << 4)
                 }
-                return network.request(Api.functions.payments.getSavedStarGifts(flags: flags, peer: inputPeer, offset: initialNextOffset ?? "", limit: 32))
+                return network.request(Api.functions.payments.getSavedStarGifts(flags: flags, peer: inputPeer, offset: initialNextOffset ?? "", limit: 36))
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<Api.payments.SavedStarGifts?, NoError> in
                     return .single(nil)
@@ -2218,5 +2218,285 @@ public extension StarGift.UniqueGift {
             }
         }
         return nil
+    }
+}
+
+private final class ResaleGiftsContextImpl {
+    private let queue: Queue
+    private let account: Account
+    private let giftId: Int64
+    
+    private let disposable = MetaDisposable()
+    
+    private var sorting: ResaleGiftsContext.Sorting = .date
+    private var filterAttributes: [ResaleGiftsContext.Attribute] = []
+    
+    private var gifts: [StarGift] = []
+    private var attributes: [StarGift.UniqueGift.Attribute] = []
+    private var attributeCount: [ResaleGiftsContext.Attribute: Int32] = [:]
+ 
+    private var count: Int32?
+    private var dataState: ResaleGiftsContext.State.DataState = .ready(canLoadMore: true, nextOffset: nil)
+        
+    var _state: ResaleGiftsContext.State?
+    private let stateValue = Promise<ResaleGiftsContext.State>()
+    var state: Signal<ResaleGiftsContext.State, NoError> {
+        return self.stateValue.get()
+    }
+    
+    init(
+        queue: Queue,
+        account: Account,
+        giftId: Int64
+    ) {
+        self.queue = queue
+        self.account = account
+        self.giftId = giftId
+        
+        self.loadMore()
+    }
+    
+    deinit {
+        self.disposable.dispose()
+    }
+    
+    func reload() {
+        self.gifts = []
+        self.dataState = .ready(canLoadMore: true, nextOffset: nil)
+        self.loadMore(reload: true)
+    }
+    
+    func loadMore(reload: Bool = false) {
+        let giftId = self.giftId
+        let accountPeerId = self.account.peerId
+        let network = self.account.network
+        let postbox = self.account.postbox
+        let sorting = self.sorting
+        let filterAttributes = self.filterAttributes
+        
+        let dataState =  self.dataState
+        
+        if case let .ready(true, initialNextOffset) = dataState {
+            self.dataState = .loading
+            if !reload {
+                self.pushState()
+            }
+            
+            var flags: Int32 = 0
+            switch sorting {
+            case .date:
+                break
+            case .value:
+                flags |= (1 << 1)
+            case .number:
+                flags |= (1 << 2)
+            }
+          
+            var apiAttributes: [Api.StarGiftAttributeId]?
+            if !filterAttributes.isEmpty {
+                flags |= (1 << 3)
+                apiAttributes = filterAttributes.map {
+                    switch $0 {
+                    case let .model(id):
+                        return .starGiftAttributeIdModel(documentId: id)
+                    case let .pattern(id):
+                        return .starGiftAttributeIdPattern(documentId: id)
+                    case let .backdrop(id):
+                        return .starGiftAttributeIdBackdrop(backdropId: id)
+                    }
+                }
+            }
+                        
+            var attributesHash: Int64?
+            if "".isEmpty {
+                flags |= (1 << 0)
+                attributesHash = 0
+            }
+            
+            let signal = network.request(Api.functions.payments.getResaleStarGifts(flags: flags, attributesHash: attributesHash, giftId: giftId, attributes: apiAttributes, offset: initialNextOffset ?? "", limit: 36))
+            |> map(Optional.init)
+            |> `catch` { _ -> Signal<Api.payments.ResaleStarGifts?, NoError> in
+                return .single(nil)
+            }
+            |> mapToSignal { result -> Signal<([StarGift], [StarGift.UniqueGift.Attribute], [ResaleGiftsContext.Attribute: Int32], Int32, String?), NoError> in
+                guard let result else {
+                    return .single(([], [], [:], 0, nil))
+                }
+                return postbox.transaction { transaction -> ([StarGift], [StarGift.UniqueGift.Attribute], [ResaleGiftsContext.Attribute: Int32], Int32, String?) in
+                    switch result {
+                    case let .resaleStarGifts(_, count, gifts, nextOffset, attributes, attributesHash, chats, counters, users):
+                        let _ = attributesHash
+
+                        var resultAttributes: [StarGift.UniqueGift.Attribute] = []
+                        if let attributes {
+                            resultAttributes = attributes.compactMap { StarGift.UniqueGift.Attribute(apiAttribute: $0) }
+                        }
+                        
+                        var attributeCount: [ResaleGiftsContext.Attribute: Int32] = [:]
+                        if let counters {
+                            for counter in counters {
+                                switch counter {
+                                case let .starGiftAttributeCounter(attribute, count):
+                                    switch attribute {
+                                    case let .starGiftAttributeIdModel(documentId):
+                                        attributeCount[.model(documentId)] = count
+                                    case let .starGiftAttributeIdPattern(documentId):
+                                        attributeCount[.pattern(documentId)] = count
+                                    case let .starGiftAttributeIdBackdrop(backdropId):
+                                        attributeCount[.backdrop(backdropId)] = count
+                                    }
+                                }
+                            }
+                        }
+                        
+                        let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
+                        updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
+                        return (gifts.compactMap { StarGift(apiStarGift: $0) }, resultAttributes, attributeCount, count, nextOffset)
+                    }
+                }
+            }
+        
+            self.disposable.set((signal
+            |> deliverOn(self.queue)).start(next: { [weak self] (gifts, attributes, attributeCount, count, nextOffset) in
+                guard let self else {
+                    return 
+                }
+                if initialNextOffset == nil || reload {
+                    self.gifts = gifts
+                } else {
+                    for gift in gifts {
+                        self.gifts.append(gift)
+                    }
+                }
+                
+                let updatedCount = max(Int32(self.gifts.count), count)
+                self.count = updatedCount
+                self.attributes = attributes
+                if !attributeCount.isEmpty {
+                    self.attributeCount = attributeCount
+                }
+                self.dataState = .ready(canLoadMore: count != 0 && updatedCount > self.gifts.count && nextOffset != nil, nextOffset: nextOffset)
+            
+                self.pushState()
+            }))
+        }
+    }
+    
+    func updateFilterAttributes(_ filterAttributes: [ResaleGiftsContext.Attribute]) {
+        guard self.filterAttributes != filterAttributes else {
+            return
+        }
+        self.filterAttributes = filterAttributes
+        self.dataState = .ready(canLoadMore: true, nextOffset: nil)
+        self.pushState()
+        
+        self.loadMore()
+    }
+    
+    func updateSorting(_ sorting: ResaleGiftsContext.Sorting) {
+        guard self.sorting != sorting else {
+            return
+        }
+        self.sorting = sorting
+        self.dataState = .ready(canLoadMore: true, nextOffset: nil)
+        self.pushState()
+        
+        self.loadMore()
+    }
+        
+    private func pushState() {
+        let state = ResaleGiftsContext.State(
+            sorting: self.sorting,
+            filterAttributes: self.filterAttributes,
+            gifts: self.gifts,
+            attributes: self.attributes,
+            attributeCount: self.attributeCount,
+            count: self.count,
+            dataState: self.dataState
+        )
+        self._state = state
+        self.stateValue.set(.single(state))
+    }
+}
+
+public final class ResaleGiftsContext {
+    public enum Sorting: Equatable {
+        case date
+        case value
+        case number
+    }
+    
+    public enum Attribute: Equatable, Hashable {
+        case model(Int64)
+        case pattern(Int64)
+        case backdrop(Int32)
+    }
+    
+    public struct State: Equatable {
+        public enum DataState: Equatable {
+            case loading
+            case ready(canLoadMore: Bool, nextOffset: String?)
+        }
+        
+        public var sorting: Sorting
+        public var filterAttributes: [Attribute]
+        public var gifts: [StarGift]
+        public var attributes: [StarGift.UniqueGift.Attribute]
+        public var attributeCount: [Attribute: Int32]
+        public var count: Int32?
+        public var dataState: ResaleGiftsContext.State.DataState
+    }
+    
+    private let queue: Queue = .mainQueue()
+    private let impl: QueueLocalObject<ResaleGiftsContextImpl>
+    
+    public var state: Signal<ResaleGiftsContext.State, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            
+            self.impl.with { impl in
+                disposable.set(impl.state.start(next: { value in
+                    subscriber.putNext(value)
+                }))
+            }
+            
+            return disposable
+        }
+    }
+    
+    public init(
+        account: Account,
+        giftId: Int64
+    ) {
+        let queue = self.queue
+        self.impl = QueueLocalObject(queue: queue, generate: {
+            return ResaleGiftsContextImpl(queue: queue, account: account, giftId: giftId)
+        })
+    }
+    
+    public func loadMore() {
+        self.impl.with { impl in
+            impl.loadMore()
+        }
+    }
+    
+    public func updateSorting(_ sorting: ResaleGiftsContext.Sorting) {
+        self.impl.with { impl in
+            impl.updateSorting(sorting)
+        }
+    }
+    
+    public func updateFilterAttributes(_ attributes: [ResaleGiftsContext.Attribute]) {
+        self.impl.with { impl in
+            impl.updateFilterAttributes(attributes)
+        }
+    }
+
+    public var currentState: ResaleGiftsContext.State? {
+        var state: ResaleGiftsContext.State?
+        self.impl.syncWith { impl in
+            state = impl._state
+        }
+        return state
     }
 }

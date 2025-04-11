@@ -357,6 +357,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 key = .music
             case .voice:
                 key = .voice
+            case .instantVideo:
+                key = .instantVideo
             case .publicPosts:
                 key = .publicPosts
             case let .date(minDate, maxDate, title):
@@ -685,6 +687,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             filterKey = .music
         case .voice:
             filterKey = .voice
+        case .instantVideo:
+            filterKey = .instantVideo
         case .publicPosts:
             filterKey = .publicPosts
         }
@@ -725,6 +729,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             key = .music
         case .voice:
             key = .voice
+        case .instantVideo:
+            key = .instantVideo
         case .downloads:
             key = .downloads
         default:

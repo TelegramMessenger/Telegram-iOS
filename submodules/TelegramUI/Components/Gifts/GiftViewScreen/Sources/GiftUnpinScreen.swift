@@ -159,7 +159,7 @@ private final class SheetContent: CombinedComponent {
                 
                 var ribbonColor: GiftItemComponent.Ribbon.Color = .blue
                 for attribute in displayGift.attributes {
-                    if case let .backdrop(_, innerColor, outerColor, _, _, _) = attribute {
+                    if case let .backdrop(_, _, innerColor, outerColor, _, _, _) = attribute {
                         ribbonColor = .custom(outerColor, innerColor)
                         break
                     }
@@ -175,7 +175,7 @@ private final class SheetContent: CombinedComponent {
                                         context: component.context,
                                         theme: theme,
                                         strings: strings,
-                                        subject: .uniqueGift(gift: displayGift),
+                                        subject: .uniqueGift(gift: displayGift, price: nil),
                                         ribbon: GiftItemComponent.Ribbon(text: "#\(displayGift.number)", font: .monospaced, color: ribbonColor),
                                         mode: .grid
                                     )

@@ -1149,7 +1149,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         attributedString = addAttributesToStringWithRanges(strings.Notification_StarsGift_Sent(authorName, starsPrice)._tuple, body: bodyAttributes, argumentAttributes: attributes)
                     }
                 }
-            case let .starGiftUnique(gift, isUpgrade, _, _, _, _, _, peerId, senderId, _):
+            case let .starGiftUnique(gift, isUpgrade, _, _, _, _, _, peerId, senderId, _, _):
                 if case let .unique(gift) = gift {
                     if !forAdditionalServiceMessage && !"".isEmpty {
                         attributedString = NSAttributedString(string: "\(gift.title) #\(presentationStringsFormattedNumber(gift.number, dateTimeFormat.groupingSeparator))", font: titleFont, textColor: primaryTextColor)

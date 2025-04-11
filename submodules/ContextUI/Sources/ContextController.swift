@@ -126,6 +126,7 @@ public final class ContextMenuActionItem {
     public let id: AnyHashable?
     public let text: String
     public let entities: [MessageTextEntity]
+    public let entityFiles: [Int64: TelegramMediaFile]
     public let enableEntityAnimations: Bool
     public let textColor: ContextMenuActionItemTextColor
     public let textFont: ContextMenuActionItemFont
@@ -147,6 +148,7 @@ public final class ContextMenuActionItem {
         id: AnyHashable? = nil,
         text: String,
         entities: [MessageTextEntity] = [],
+        entityFiles: [Int64: TelegramMediaFile] = [:],
         enableEntityAnimations: Bool = true,
         textColor: ContextMenuActionItemTextColor = .primary,
         textLayout: ContextMenuActionItemTextLayout = .twoLinesMax,
@@ -168,6 +170,7 @@ public final class ContextMenuActionItem {
             id: id,
             text: text,
             entities: entities,
+            entityFiles: entityFiles,
             enableEntityAnimations: enableEntityAnimations,
             textColor: textColor,
             textLayout: textLayout,
@@ -199,6 +202,7 @@ public final class ContextMenuActionItem {
         id: AnyHashable? = nil,
         text: String,
         entities: [MessageTextEntity] = [],
+        entityFiles: [Int64: TelegramMediaFile] = [:],
         enableEntityAnimations: Bool = true,
         textColor: ContextMenuActionItemTextColor = .primary,
         textLayout: ContextMenuActionItemTextLayout = .twoLinesMax,
@@ -219,6 +223,7 @@ public final class ContextMenuActionItem {
         self.id = id
         self.text = text
         self.entities = entities
+        self.entityFiles = entityFiles
         self.enableEntityAnimations = enableEntityAnimations
         self.textColor = textColor
         self.textFont = textFont

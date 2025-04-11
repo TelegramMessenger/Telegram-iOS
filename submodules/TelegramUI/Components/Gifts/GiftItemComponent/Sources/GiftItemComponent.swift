@@ -20,7 +20,7 @@ public final class GiftItemComponent: Component {
     public enum Subject: Equatable {
         case premium(months: Int32, price: String)
         case starGift(gift: StarGift.Gift, price: String)
-        case uniqueGift(gift: StarGift.UniqueGift)
+        case uniqueGift(gift: StarGift.UniqueGift, price: String?)
     }
     
     public struct Ribbon: Equatable {
@@ -28,6 +28,7 @@ public final class GiftItemComponent: Component {
             case red
             case blue
             case purple
+            case green
             case custom(Int32, Int32)
             
             func colors(theme: PresentationTheme) -> [UIColor] {
@@ -61,6 +62,11 @@ public final class GiftItemComponent: Component {
                         UIColor(rgb: 0x747bf6),
                         UIColor(rgb: 0xe367d8)
                     ]
+                case .green:
+                    return [
+                        UIColor(rgb: 0x4bb121),
+                        UIColor(rgb: 0x53d654)
+                    ]
                 case let .custom(topColor, _):
                     return [
                         UIColor(rgb: UInt32(bitPattern: topColor)).withMultiplied(hue: 0.97, saturation: 1.45, brightness: 0.89),
@@ -72,17 +78,25 @@ public final class GiftItemComponent: Component {
         
         public enum Font {
             case generic
+            case larger
             case monospaced
         }
         
         public let text: String
         public let font: Font
         public let color: Color
+        public let outline: UIColor?
         
-        public init(text: String, font: Font = .generic, color: Color) {
+        public init(
+            text: String,
+            font: Font = .generic,
+            color: Color,
+            outline: UIColor? = nil
+        ) {
             self.text = text
             self.font = font
             self.color = color
+            self.outline = outline
         }
     }
     
@@ -108,6 +122,7 @@ public final class GiftItemComponent: Component {
     let subtitle: String?
     let label: String?
     let ribbon: Ribbon?
+    let resellPrice: Int64?
     let isLoading: Bool
     let isHidden: Bool
     let isSoldOut: Bool
@@ -128,6 +143,7 @@ public final class GiftItemComponent: Component {
         subtitle: String? = nil,
         label: String? = nil,
         ribbon: Ribbon? = nil,
+        resellPrice: Int64? = nil,
         isLoading: Bool = false,
         isHidden: Bool = false,
         isSoldOut: Bool = false,
@@ -147,6 +163,7 @@ public final class GiftItemComponent: Component {
         self.subtitle = subtitle
         self.label = label
         self.ribbon = ribbon
+        self.resellPrice = resellPrice
         self.isLoading = isLoading
         self.isHidden = isHidden
         self.isSoldOut = isSoldOut
@@ -184,6 +201,9 @@ public final class GiftItemComponent: Component {
             return false
         }
         if lhs.ribbon != rhs.ribbon {
+            return false
+        }
+        if lhs.resellPrice != rhs.resellPrice {
             return false
         }
         if lhs.isLoading != rhs.isLoading {
@@ -229,6 +249,8 @@ public final class GiftItemComponent: Component {
         private let subtitle = ComponentView<Empty>()
         private let button = ComponentView<Empty>()
         private let label = ComponentView<Empty>()
+       
+        private let ribbonOutline = UIImageView()
         private let ribbon = UIImageView()
         private let ribbonText = ComponentView<Empty>()
         
@@ -243,6 +265,9 @@ public final class GiftItemComponent: Component {
         private var iconBackground: UIVisualEffectView?
         private var hiddenIcon: UIImageView?
         private var pinnedIcon: UIImageView?
+        
+        private var resellBackground: BlurredBackgroundView?
+        private let reselLabel = ComponentView<Empty>()
         
         override init(frame: CGRect) {
             super.init(frame: frame)
@@ -383,7 +408,7 @@ public final class GiftItemComponent: Component {
                     file: gift.file
                 )
                 animationOffset = 16.0
-            case let .uniqueGift(gift):
+            case let .uniqueGift(gift, _):
                 animationOffset = 16.0
                 for attribute in gift.attributes {
                     switch attribute {
@@ -396,7 +421,7 @@ public final class GiftItemComponent: Component {
                     case let .pattern(_, file, _):
                         patternFile = file
                         files[file.fileId.id] = file
-                    case let .backdrop(_, innerColorValue, outerColorValue, patternColorValue, _, _):
+                    case let .backdrop(_, _, innerColorValue, outerColorValue, patternColorValue, _, _):
                         backgroundColor = UIColor(rgb: UInt32(bitPattern: outerColorValue))
                         secondBackgroundColor = UIColor(rgb: UInt32(bitPattern: innerColorValue))
                         patternColor = UIColor(rgb: UInt32(bitPattern: patternColorValue))
@@ -530,6 +555,7 @@ public final class GiftItemComponent: Component {
                 
                 let buttonColor: UIColor
                 var starsColor: UIColor?
+                var tinted = false
                 let price: String
                 switch component.subject {
                 case let .premium(_, priceValue), let .starGift(_, priceValue):
@@ -542,9 +568,10 @@ public final class GiftItemComponent: Component {
                         buttonColor = component.theme.list.itemAccentColor
                     }
                     price = priceValue
-                case .uniqueGift:
+                case let .uniqueGift(_, priceValue):
                     buttonColor = UIColor.white
-                    price = component.strings.Gift_Options_Gift_Transfer
+                    price = priceValue ?? component.strings.Gift_Options_Gift_Transfer
+                    tinted = true
                 }
                 
                 let buttonSize = self.button.update(
@@ -554,6 +581,7 @@ public final class GiftItemComponent: Component {
                             context: component.context,
                             text: price,
                             color: buttonColor,
+                            tinted: tinted,
                             starsColor: starsColor
                         )
                     ),
@@ -623,6 +651,8 @@ public final class GiftItemComponent: Component {
                 switch ribbon.font {
                 case .generic:
                     ribbonFont = Font.semibold(ribbonFontSize)
+                case .larger:
+                    ribbonFont = Font.semibold(10.0)
                 case .monospaced:
                     ribbonFont = Font.with(size: 10.0, design: .monospace, weight: .semibold)
                 }
@@ -645,6 +675,18 @@ public final class GiftItemComponent: Component {
                     }
                     ribbonTextView.bounds = CGRect(origin: .zero, size: ribbonTextSize)
                     
+                    if let _ = component.ribbon?.outline {
+                        if self.ribbonOutline.image == nil || themeUpdated || previousComponent?.ribbon?.outline != component.ribbon?.outline {
+                            self.ribbonOutline.image = ribbonOutlineImage
+                            self.ribbonOutline.tintColor = component.ribbon?.outline
+                            if self.ribbonOutline.superview == nil {
+                                self.insertSubview(self.ribbonOutline, belowSubview: self.ribbon)
+                            }
+                        }
+                    } else if self.ribbonOutline.superview != nil {
+                        self.ribbonOutline.removeFromSuperview()
+                    }
+                    
                     if self.ribbon.image == nil || themeUpdated || previousComponent?.ribbon?.color != component.ribbon?.color {
                         var direction: GradientImageDirection = .mirroredDiagonal
                         if case .custom = ribbon.color {
@@ -661,11 +703,16 @@ public final class GiftItemComponent: Component {
                     if let ribbonImage = self.ribbon.image {
                         self.ribbon.frame = CGRect(origin: CGPoint(x: size.width - ribbonImage.size.width + ribbonOffset.x, y: ribbonOffset.y), size: ribbonImage.size)
                     }
+                    if let ribbonOutlineImage = self.ribbonOutline.image {
+                        self.ribbonOutline.frame = ribbonOutlineImage.size.centered(around: self.ribbon.center.offsetBy(dx: 0.0, dy: 2.0))
+                    }
+                    
                     ribbonTextView.transform = CGAffineTransform(rotationAngle: .pi / 4.0)
                     ribbonTextView.center = CGPoint(x: size.width - 22.0 + ribbonOffset.x, y: 22.0 + ribbonOffset.y)
                 }
             } else {
                 if self.ribbonText.view?.superview != nil {
+                    self.ribbonOutline.removeFromSuperview()
                     self.ribbon.removeFromSuperview()
                     self.ribbonText.view?.removeFromSuperview()
                 }
@@ -808,6 +855,72 @@ public final class GiftItemComponent: Component {
                 hiddenIcon.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
             }
             
+
+            if let resellPrice = component.resellPrice {
+                let labelColor = UIColor.white
+                let attributes = MarkdownAttributes(
+                    body: MarkdownAttributeSet(font: Font.semibold(11.0), textColor: labelColor),
+                    bold: MarkdownAttributeSet(font: Font.semibold(11.0), textColor: labelColor),
+                    link: MarkdownAttributeSet(font: Font.regular(11.0), textColor: labelColor),
+                    linkAttribute: { contents in
+                        return (TelegramTextAttributes.URL, contents)
+                    }
+                )
+                let labelText = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString("#\(resellPrice)", attributes: attributes))
+                if let range = labelText.string.range(of: "#") {
+                    labelText.addAttribute(NSAttributedString.Key.font, value: Font.semibold(10.0), range: NSRange(range, in: labelText.string))
+                    labelText.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: true)), range: NSRange(range, in: labelText.string))
+                }
+                
+                let resellSize = self.reselLabel.update(
+                    transition: transition,
+                    component: AnyComponent(
+                        MultilineTextWithEntitiesComponent(
+                            context: component.context,
+                            animationCache: component.context.animationCache,
+                            animationRenderer: component.context.animationRenderer,
+                            placeholderColor: .white,
+                            text: .plain(labelText),
+                            horizontalAlignment: .center
+                        )
+                    ),
+                    environment: {},
+                    containerSize: availableSize
+                )
+                
+                let resellFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - resellSize.width) / 2.0), y: size.height - 20.0), size: resellSize)
+                
+                let resellBackground: BlurredBackgroundView
+                var resellBackgroundTransition = transition
+                if let currentBackground = self.resellBackground {
+                    resellBackground = currentBackground
+                } else {
+                    resellBackgroundTransition = .immediate
+                    
+                    resellBackground = BlurredBackgroundView(color: UIColor(rgb: 0x000000, alpha: 0.3), enableBlur: true) //UIVisualEffectView(effect: blurEffect)
+                    resellBackground.clipsToBounds = true
+                    self.resellBackground = resellBackground
+                    
+                    self.addSubview(resellBackground)
+                }
+                let resellBackgroundFrame = resellFrame.insetBy(dx: -6.0, dy: -4.0)
+                resellBackgroundTransition.setFrame(view: resellBackground, frame: resellBackgroundFrame)
+                resellBackground.update(size: resellBackgroundFrame.size, cornerRadius: resellBackgroundFrame.size.height / 2.0, transition: resellBackgroundTransition.containedViewLayoutTransition)
+                
+                if let resellLabelView = self.reselLabel.view {
+                    if resellLabelView.superview == nil {
+                        self.addSubview(resellLabelView)
+                    }
+                    transition.setFrame(view: resellLabelView, frame: resellFrame)
+                }
+            } else {
+                self.reselLabel.view?.removeFromSuperview()
+                if let resellBackground = self.resellBackground {
+                    self.resellBackground = nil
+                    resellBackground.removeFromSuperview()
+                }
+            }
+            
             if case .grid = component.mode {
                 let lineWidth: CGFloat = 2.0
                 let selectionFrame = backgroundFrame.insetBy(dx: 3.0, dy: 3.0)
@@ -873,17 +986,20 @@ private final class ButtonContentComponent: Component {
     let context: AccountContext
     let text: String
     let color: UIColor
+    let tinted: Bool
     let starsColor: UIColor?
     
     public init(
         context: AccountContext,
         text: String,
         color: UIColor,
+        tinted: Bool = false,
         starsColor: UIColor? = nil
     ) {
         self.context = context
         self.text = text
         self.color = color
+        self.tinted = tinted
         self.starsColor = starsColor
     }
 
@@ -895,6 +1011,9 @@ private final class ButtonContentComponent: Component {
             return false
         }
         if lhs.color != rhs.color {
+            return false
+        }
+        if lhs.tinted != rhs.tinted {
             return false
         }
         if lhs.starsColor != rhs.starsColor {
@@ -930,7 +1049,7 @@ private final class ButtonContentComponent: Component {
             let attributedText = NSMutableAttributedString(string: component.text, font: Font.semibold(11.0), textColor: component.color)
             let range = (attributedText.string as NSString).range(of: "⭐️")
             if range.location != NSNotFound {
-                attributedText.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: range)
+                attributedText.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: component.tinted)), range: range)
                 attributedText.addAttribute(.font, value: Font.semibold(15.0), range: range)
                 attributedText.addAttribute(.baselineOffset, value: 2.0, range: NSRange(location: range.upperBound, length: attributedText.length - range.upperBound))
             }
@@ -1057,3 +1176,11 @@ private final class StarsButtonEffectLayer: SimpleLayer {
         self.emitterLayer.emitterPosition = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
     }
 }
+
+private var ribbonOutlineImage: UIImage? = {
+    if let image = UIImage(bundleImageName: "Premium/GiftRibbon") {
+        return generateScaledImage(image: image, size: CGSize(width: image.size.width + 8.0, height: image.size.height + 8.0), opaque: false)?.withRenderingMode(.alwaysTemplate)
+    } else {
+        return UIImage()
+    }
+}()

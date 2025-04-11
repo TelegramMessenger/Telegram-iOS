@@ -81,6 +81,7 @@ import AccountFreezeInfoScreen
 import JoinSubjectScreen
 import OldChannelsController
 import InviteLinksUI
+import GiftStoreScreen
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -3267,6 +3268,15 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return controller
     }
     
+    public func makeGiftStoreController(context: AccountContext, peerId: EnginePeer.Id, gift: StarGift.Gift) -> ViewController {
+        guard let starsContext = context.starsContext else {
+            fatalError()
+        }
+        let controller = GiftStoreScreen(context: context, starsContext: starsContext, peerId: peerId, gift: gift)
+        controller.navigationPresentation = .modal
+        return controller
+    }
+    
     public func makePremiumPrivacyControllerController(context: AccountContext, subject: PremiumPrivacySubject, peerId: EnginePeer.Id) -> ViewController {
         let mappedSubject: PremiumPrivacyScreen.Subject
         let introSource: PremiumIntroSource
@@ -3654,6 +3664,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func makeStarsWithdrawalScreen(context: AccountContext, completion: @escaping (Int64) -> Void) -> ViewController {
         return StarsWithdrawScreen(context: context, mode: .accountWithdraw, completion: completion)
+    }
+    
+    public func makeStarGiftResellScreen(context: AccountContext, completion: @escaping (Int64) -> Void) -> ViewController {
+        return StarsWithdrawScreen(context: context, mode: .starGiftResell, completion: completion)
     }
     
     public func makeStarsGiftScreen(context: AccountContext, message: EngineMessage) -> ViewController {

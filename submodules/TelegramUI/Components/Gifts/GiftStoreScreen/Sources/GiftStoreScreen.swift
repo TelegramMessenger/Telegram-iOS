@@ -1,0 +1,1343 @@
+import Foundation
+import UIKit
+import Display
+import AsyncDisplayKit
+import SwiftSignalKit
+import Postbox
+import TelegramCore
+import TelegramPresentationData
+import TelegramUIPreferences
+import PresentationDataUtils
+import AccountContext
+import ComponentFlow
+import ViewControllerComponent
+import MultilineTextComponent
+import BalancedTextComponent
+import BundleIconComponent
+import Markdown
+import TelegramStringFormatting
+import PlainButtonComponent
+import BlurredBackgroundComponent
+import PremiumStarComponent
+import TextFormat
+import GiftItemComponent
+import InAppPurchaseManager
+import GiftViewScreen
+import UndoUI
+import ContextUI
+import LottieComponent
+
+final class GiftStoreScreenComponent: Component {
+    typealias EnvironmentType = ViewControllerComponentContainer.Environment
+    
+    let context: AccountContext
+    let starsContext: StarsContext
+    let peerId: EnginePeer.Id
+    let gift: StarGift.Gift
+    
+    init(
+        context: AccountContext,
+        starsContext: StarsContext,
+        peerId: EnginePeer.Id,
+        gift: StarGift.Gift
+    ) {
+        self.context = context
+        self.starsContext = starsContext
+        self.peerId = peerId
+        self.gift = gift
+    }
+
+    static func ==(lhs: GiftStoreScreenComponent, rhs: GiftStoreScreenComponent) -> Bool {
+        if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.peerId != rhs.peerId {
+            return false
+        }
+        if lhs.gift != rhs.gift {
+            return false
+        }
+        return true
+    }
+    
+    private final class ScrollView: UIScrollView {
+        override func touchesShouldCancel(in view: UIView) -> Bool {
+            return true
+        }
+    }
+     
+    final class View: UIView, UIScrollViewDelegate {
+        private let topOverscrollLayer = SimpleLayer()
+        private let scrollView: ScrollView
+        private let loadingNode: LoadingShimmerNode
+        private let emptyResultsAnimation = ComponentView<Empty>()
+        private let emptyResultsTitle = ComponentView<Empty>()
+        private let emptyResultsAction = ComponentView<Empty>()
+        
+        private let topPanel = ComponentView<Empty>()
+        private let topSeparator = ComponentView<Empty>()
+        private let cancelButton = ComponentView<Empty>()
+        private let sortButton = ComponentView<Empty>()
+                
+        private let balanceTitle = ComponentView<Empty>()
+        private let balanceValue = ComponentView<Empty>()
+        private let balanceIcon = ComponentView<Empty>()
+        
+        private let title = ComponentView<Empty>()
+        private let subtitle = ComponentView<Empty>()
+        
+        private var starsItems: [AnyHashable: ComponentView<Empty>] = [:]
+        private let filterSelector = ComponentView<Empty>()
+        private var isLoading = false
+
+        private var isUpdating: Bool = false
+        
+        private var starsStateDisposable: Disposable?
+        private var starsState: StarsContext.State?
+                
+        private var component: GiftStoreScreenComponent?
+        private(set) weak var state: State?
+        private var environment: EnvironmentType?
+        
+        override init(frame: CGRect) {
+            self.scrollView = ScrollView()
+            self.scrollView.showsVerticalScrollIndicator = true
+            self.scrollView.showsHorizontalScrollIndicator = false
+            self.scrollView.scrollsToTop = false
+            self.scrollView.delaysContentTouches = false
+            self.scrollView.canCancelContentTouches = true
+            self.scrollView.contentInsetAdjustmentBehavior = .never
+            if #available(iOS 13.0, *) {
+                self.scrollView.automaticallyAdjustsScrollIndicatorInsets = false
+            }
+            self.scrollView.alwaysBounceVertical = true
+            
+            self.loadingNode = LoadingShimmerNode()
+            
+            super.init(frame: frame)
+            
+            self.scrollView.delegate = self
+            self.addSubview(self.scrollView)
+            self.addSubview(self.loadingNode.view)
+            
+            self.scrollView.layer.addSublayer(self.topOverscrollLayer)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        deinit {
+            self.starsStateDisposable?.dispose()
+        }
+
+        func scrollToTop() {
+            self.scrollView.setContentOffset(CGPoint(), animated: true)
+        }
+        
+        var nextScrollTransition: ComponentTransition?
+        func scrollViewDidScroll(_ scrollView: UIScrollView) {
+            self.updateScrolling(interactive: true, transition: self.nextScrollTransition ?? .immediate)
+        }
+        
+        private var currentGifts: ([StarGift], Set<String>, Set<String>, Set<String>)?
+        private var effectiveGifts: [StarGift]? {
+            if let gifts = self.state?.starGiftsState?.gifts {
+                return gifts
+//                if self.selectedModels.isEmpty && self.selectedBackdrops.isEmpty && self.selectedSymbols.isEmpty {
+//                    return gifts
+//                } else if let (currentGifts, currentModels, currentBackdrops, currentSymbols) = self.currentGifts, currentModels == self.selectedModels && currentBackdrops == self.selectedBackdrops && currentSymbols == self.selectedSymbols {
+//                    return currentGifts
+//                } else {
+//                    var filteredGifts: [StarGift] = []
+//                    for gift in gifts {
+//                        guard case let .unique(uniqueGift) = gift else {
+//                            continue
+//                        }
+//                        var match = true
+//                        for attribute in uniqueGift.attributes {
+//                            if case let .model(name, _, _) = attribute {
+//                                if !self.selectedModels.isEmpty && !self.selectedModels.contains(name) {
+//                                    match = false
+//                                }
+//                            }
+//                            if case let .backdrop(name, _, _, _, _, _, _) = attribute {
+//                                if !self.selectedBackdrops.isEmpty && !self.selectedBackdrops.contains(name) {
+//                                    match = false
+//                                }
+//                            }
+//                            if case let .pattern(name, _, _) = attribute {
+//                                if !self.selectedSymbols.isEmpty && !self.selectedSymbols.contains(name) {
+//                                    match = false
+//                                }
+//                            }
+//                        }
+//                        if match {
+//                            filteredGifts.append(gift)
+//                        }
+//                    }
+//                    self.currentGifts = (filteredGifts, self.selectedModels, self.selectedBackdrops, self.selectedSymbols)
+//                    return filteredGifts
+//                }
+            } else {
+                return nil
+            }
+        }
+        
+        private func updateScrolling(interactive: Bool = false, transition: ComponentTransition) {
+            guard let environment = self.environment, let component = self.component, !self.isLoading else {
+                return
+            }
+               
+            let availableWidth = self.scrollView.bounds.width
+            let contentOffset = self.scrollView.contentOffset.y
+                        
+            let topPanelAlpha = min(20.0, max(0.0, contentOffset)) / 20.0
+            if let topPanelView = self.topPanel.view, let topSeparator = self.topSeparator.view {
+                transition.setAlpha(view: topPanelView, alpha: topPanelAlpha)
+                transition.setAlpha(view: topSeparator, alpha: topPanelAlpha)
+            }
+            
+            let visibleBounds = self.scrollView.bounds.insetBy(dx: 0.0, dy: -10.0)
+            if let starGifts = self.effectiveGifts {
+                let sideInset: CGFloat = 16.0 + environment.safeInsets.left
+                
+                let optionSpacing: CGFloat = 10.0
+                let optionWidth = (availableWidth - sideInset * 2.0 - optionSpacing * 2.0) / 3.0
+                let starsOptionSize = CGSize(width: optionWidth, height: 154.0)
+                
+                var validIds: [AnyHashable] = []
+                var itemFrame = CGRect(origin: CGPoint(x: sideInset, y: environment.navigationHeight + 39.0 + 9.0), size: starsOptionSize)
+                
+                let controller = environment.controller
+                
+                for gift in starGifts {
+                    guard case let .unique(uniqueGift) = gift else {
+                        continue
+                    }
+                    var isVisible = false
+                    if visibleBounds.intersects(itemFrame) {
+                        isVisible = true
+                    }
+                    
+                    if isVisible {
+                        let itemId = AnyHashable(gift.id)
+                        validIds.append(itemId)
+                        
+                        var itemTransition = transition
+                        let visibleItem: ComponentView<Empty>
+                        if let current = self.starsItems[itemId] {
+                            visibleItem = current
+                        } else {
+                            visibleItem = ComponentView()
+                            if !transition.animation.isImmediate {
+                                itemTransition = .immediate
+                            }
+                            self.starsItems[itemId] = visibleItem
+                        }
+                        
+                        var ribbon: GiftItemComponent.Ribbon?
+                        var ribbonColor: GiftItemComponent.Ribbon.Color = .blue
+                        for attribute in uniqueGift.attributes {
+                            if case let .backdrop(_, _, innerColor, outerColor, _, _, _) = attribute {
+                                ribbonColor = .custom(outerColor, innerColor)
+                                break
+                            }
+                        }
+                        ribbon = GiftItemComponent.Ribbon(
+                            text: "#\(uniqueGift.number)",
+                            font: .monospaced,
+                            color: ribbonColor
+                        )
+                        
+                        let subject: GiftItemComponent.Subject = .uniqueGift(gift: uniqueGift, price: "⭐️\(uniqueGift.resellStars ?? 0)")
+                        let _ = visibleItem.update(
+                            transition: itemTransition,
+                            component: AnyComponent(
+                                PlainButtonComponent(
+                                    content: AnyComponent(
+                                        GiftItemComponent(
+                                            context: component.context,
+                                            theme: environment.theme,
+                                            strings: environment.strings,
+                                            peer: nil,
+                                            subject: subject,
+                                            ribbon: ribbon
+                                        )
+                                    ),
+                                    effectAlignment: .center,
+                                    action: { [weak self] in
+                                        if let self, let component = self.component {
+                                            if let controller = controller() as? GiftStoreScreen {
+                                                let mainController: ViewController
+                                                if let parentController = controller.parentController() {
+                                                    mainController = parentController
+                                                } else {
+                                                    mainController = controller
+                                                }
+                                                let giftController = GiftViewScreen(
+                                                    context: component.context,
+                                                    subject: .uniqueGift(uniqueGift)
+                                                )
+                                                mainController.push(giftController)
+                                            }
+                                        }
+                                    },
+                                    animateAlpha: false
+                                )
+                            ),
+                            environment: {},
+                            containerSize: starsOptionSize
+                        )
+                        if let itemView = visibleItem.view {
+                            if itemView.superview == nil {
+                                self.scrollView.addSubview(itemView)
+                            }
+                            itemTransition.setFrame(view: itemView, frame: itemFrame)
+                        }
+                    }
+                    itemFrame.origin.x += itemFrame.width + optionSpacing
+                    if itemFrame.maxX > availableWidth {
+                        itemFrame.origin.x = sideInset
+                        itemFrame.origin.y += starsOptionSize.height + optionSpacing
+                    }
+                }
+                
+                var removeIds: [AnyHashable] = []
+                for (id, item) in self.starsItems {
+                    if !validIds.contains(id) {
+                        removeIds.append(id)
+                        if let itemView = item.view {
+                            if !transition.animation.isImmediate {
+                                itemView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.25, removeOnCompletion: false)
+                                itemView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
+                                    itemView.removeFromSuperview()
+                                })
+                            } else {
+                                itemView.removeFromSuperview()
+                            }
+                        }
+                    }
+                }
+                for id in removeIds {
+                    self.starsItems.removeValue(forKey: id)
+                }
+            }
+            
+            let bottomContentOffset = max(0.0, self.scrollView.contentSize.height - self.scrollView.contentOffset.y - self.scrollView.frame.height)
+            if interactive, bottomContentOffset < 320.0 {
+                self.state?.starGiftsContext.loadMore()
+            }
+        }
+        
+        var selectedModels = Set<String>()
+        var selectedBackdrops = Set<String>()
+        var selectedSymbols = Set<String>()
+        
+        private func simulateLoading() {
+            self.isLoading = true
+            self.state?.updated(transition: .immediate)
+            
+            Queue.mainQueue().after(1.0, {
+                self.isLoading = false
+                self.state?.updated(transition: .immediate)
+            })
+        }
+        
+        func openContextMenu(sourceView: UIView) {
+            guard let component = self.component, let controller = self.environment?.controller() else {
+                return
+            }
+            
+            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+            
+            var items: [ContextMenuItem] = []
+            items.append(.action(ContextMenuActionItem(text: "Sort by Price", icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Peer Info/SortValue"), color: theme.contextMenu.primaryColor)
+            }, action: { [weak self] _, f in
+                f(.default)
+                
+                self?.state?.starGiftsContext.updateSorting(.value)
+            })))
+            items.append(.action(ContextMenuActionItem(text: "Sort by Date", icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Peer Info/SortDate"), color: theme.contextMenu.primaryColor)
+            }, action: { [weak self] _, f in
+                f(.default)
+                
+                self?.state?.starGiftsContext.updateSorting(.date)
+            })))
+            items.append(.action(ContextMenuActionItem(text: "Sort by Number", icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Peer Info/SortNumber"), color: theme.contextMenu.primaryColor)
+            }, action: { [weak self] _, f in
+                f(.default)
+                
+                self?.state?.starGiftsContext.updateSorting(.number)
+            })))
+            
+            items.append(.separator)
+            
+            items.append(.action(ContextMenuActionItem(text: "Model", textLayout: .secondLineWithValue("all models"), icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Peer Info/SortNumber"), color: theme.contextMenu.primaryColor)
+            }, action: { _, f in
+                f(.default)
+                
+            })))
+            
+            items.append(.action(ContextMenuActionItem(text: "Backdrop", textLayout: .secondLineWithValue("all backdrops"), icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Peer Info/SortNumber"), color: theme.contextMenu.primaryColor)
+            }, action: { _, f in
+                f(.default)
+                
+            })))
+            
+            items.append(.action(ContextMenuActionItem(text: "Symbol", textLayout: .secondLineWithValue("all symbols"), icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Peer Info/SortNumber"), color: theme.contextMenu.primaryColor)
+            }, action: { _, f in
+                f(.default)
+                
+            })))
+            
+            let contextController = ContextController(context: component.context, presentationData: presentationData, source: .reference(GiftStoreReferenceContentSource(controller: controller, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
+            controller.presentInGlobalOverlay(contextController)
+        }
+        
+        func openSortContextMenu(sourceView: UIView) {
+            guard let component = self.component, let controller = self.environment?.controller() else {
+                return
+            }
+            
+            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+            
+            var items: [ContextMenuItem] = []
+            items.append(.action(ContextMenuActionItem(text: "Sort by Price", icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Peer Info/SortValue"), color: theme.contextMenu.primaryColor)
+            }, action: { [weak self] _, f in
+                f(.default)
+                
+                self?.state?.starGiftsContext.updateSorting(.value)
+            })))
+            items.append(.action(ContextMenuActionItem(text: "Sort by Date", icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Peer Info/SortDate"), color: theme.contextMenu.primaryColor)
+            }, action: { [weak self] _, f in
+                f(.default)
+                
+                self?.state?.starGiftsContext.updateSorting(.date)
+            })))
+            items.append(.action(ContextMenuActionItem(text: "Sort by Number", icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Peer Info/SortNumber"), color: theme.contextMenu.primaryColor)
+            }, action: { [weak self] _, f in
+                f(.default)
+                
+                self?.state?.starGiftsContext.updateSorting(.number)
+            })))
+            
+            let contextController = ContextController(presentationData: presentationData, source: .reference(GiftStoreReferenceContentSource(controller: controller, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
+            controller.presentInGlobalOverlay(contextController)
+        }
+        
+        func openModelContextMenu(sourceView: UIView) {
+            guard let component = self.component, let controller = self.environment?.controller() else {
+                return
+            }
+            
+            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+            
+            var items: [ContextMenuItem] = []
+            var allSelected = true
+            
+            var currentFilterAttributes: [ResaleGiftsContext.Attribute] = []
+            var selectedIds = Set<Int64>()
+            
+            if let filterAttributes = self.state?.starGiftsState?.filterAttributes {
+                currentFilterAttributes = filterAttributes
+                for attribute in filterAttributes {
+                    if case let .model(id) = attribute {
+                        allSelected = false
+                        selectedIds.insert(id)
+                    }
+                }
+            }
+            items.append(.action(ContextMenuActionItem(text: "Select All", icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor)
+            }, iconPosition: .left, action: { [weak self] _, f in
+                f(.default)
+                
+                if let self {
+                    let updatedFilterAttributes = currentFilterAttributes.filter { attribute in
+                        if case .model = attribute {
+                            return false
+                        }
+                        return true
+                    }
+                    self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
+                }
+            })))
+            
+            if let attributes = self.state?.starGiftsState?.attributes {
+                for attribute in attributes {
+                    if case let .model(name, file, _) = attribute {
+                        let isSelected = allSelected || selectedIds.contains(file.fileId.id)
+                        
+                        var entities: [MessageTextEntity] = []
+                        var entityFiles: [Int64: TelegramMediaFile] = [:]
+                        entities = [
+                            MessageTextEntity(
+                                range: 0..<1,
+                                type: .CustomEmoji(stickerPack: nil, fileId: file.fileId.id)
+                            )
+                        ]
+                        entityFiles[file.fileId.id] = file
+                                                
+                        var title = "#  \(name)"
+                        var count = ""
+                        if let counter = self.state?.starGiftsState?.attributeCount[.model(file.fileId.id)] {
+                            count = "  \(presentationStringsFormattedNumber(counter, presentationData.dateTimeFormat.groupingSeparator))"
+                            entities.append(
+                                MessageTextEntity(range: title.count ..< title.count + count.count, type: .Bold)
+                            )
+                            title += count
+                        }
+                        items.append(.action(ContextMenuActionItem(text: title,  entities: entities, entityFiles: entityFiles, enableEntityAnimations: false, parseMarkdown: true, icon: { theme in
+                            return isSelected ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
+                        }, action: { [weak self] _, f in
+                            f(.default)
+                            
+                            if let self {
+                                var updatedFilterAttributes = currentFilterAttributes
+                                if selectedIds.contains(file.fileId.id) {
+                                    updatedFilterAttributes.removeAll(where: { $0 == .model(file.fileId.id) })
+                                } else {
+                                    updatedFilterAttributes.append(.model(file.fileId.id))
+                                }
+                                self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
+                            }
+                        }, longPressAction: { [weak self] _, f in
+                            f(.default)
+                            
+                            if let self {
+                                var updatedFilterAttributes = currentFilterAttributes.filter { attribute in
+                                    if case .model = attribute {
+                                        return false
+                                    }
+                                    return true
+                                }
+                                updatedFilterAttributes.append(.model(file.fileId.id))
+                                self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
+                            }
+                        })))
+                    }
+                }
+            }
+
+            let contextController = ContextController(context: component.context, presentationData: presentationData, source: .reference(GiftStoreReferenceContentSource(controller: controller, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
+            controller.presentInGlobalOverlay(contextController)
+        }
+        
+        func openBackdropContextMenu(sourceView: UIView) {
+            guard let component = self.component, let controller = self.environment?.controller() else {
+                return
+            }
+            
+            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+            
+            var items: [ContextMenuItem] = []
+            var allSelected = true
+            
+            var currentFilterAttributes: [ResaleGiftsContext.Attribute] = []
+            var selectedIds = Set<Int32>()
+            
+            if let filterAttributes = self.state?.starGiftsState?.filterAttributes {
+                currentFilterAttributes = filterAttributes
+                for attribute in filterAttributes {
+                    if case let .backdrop(id) = attribute {
+                        allSelected = false
+                        selectedIds.insert(id)
+                    }
+                }
+            }
+            items.append(.action(ContextMenuActionItem(text: "Select All", icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor)
+            }, iconPosition: .left, action: { [weak self] _, f in
+                f(.default)
+                
+                if let self {
+                    let updatedFilterAttributes = currentFilterAttributes.filter { attribute in
+                        if case .backdrop = attribute {
+                            return false
+                        }
+                        return true
+                    }
+                    self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
+                }
+            })))
+            
+            if let attributes = self.state?.starGiftsState?.attributes {
+                for attribute in attributes {
+                    if case let .backdrop(name, id, innerColor, outerColor, _, _, _) = attribute {
+                        let isSelected = allSelected || selectedIds.contains(id)
+                        
+                        var entities: [MessageTextEntity] = []
+                        var title = "\(name)"
+                        var count = ""
+                        if let counter = self.state?.starGiftsState?.attributeCount[.backdrop(id)] {
+                            count = "  \(presentationStringsFormattedNumber(counter, presentationData.dateTimeFormat.groupingSeparator))"
+                            entities.append(
+                                MessageTextEntity(range: title.count ..< title.count + count.count, type: .Bold)
+                            )
+                            title += count
+                        }
+                        items.append(.action(ContextMenuActionItem(text: "\(name)\(count)", entities: entities, icon: { theme in
+                            return isSelected ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
+                        }, additionalLeftIcon: { _ in
+                            return generateGradientFilledCircleImage(diameter: 24.0, colors: [UIColor(rgb: UInt32(bitPattern: innerColor)).cgColor, UIColor(rgb: UInt32(bitPattern: outerColor)).cgColor])
+                        }, action: { [weak self] _, f in
+                            f(.default)
+                            
+                            if let self {
+                                var updatedFilterAttributes = currentFilterAttributes
+                                if selectedIds.contains(id) {
+                                    updatedFilterAttributes.removeAll(where: { $0 == .backdrop(id) })
+                                } else {
+                                    updatedFilterAttributes.append(.backdrop(id))
+                                }
+                                self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
+                            }
+                        }, longPressAction: { [weak self] _, f in
+                            f(.default)
+                            
+                            if let self {
+                                var updatedFilterAttributes = currentFilterAttributes.filter { attribute in
+                                    if case .backdrop = attribute {
+                                        return false
+                                    }
+                                    return true
+                                }
+                                updatedFilterAttributes.append(.backdrop(id))
+                                self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
+                            }
+                        })))
+                    }
+                }
+            }
+
+            let contextController = ContextController(context: component.context, presentationData: presentationData, source: .reference(GiftStoreReferenceContentSource(controller: controller, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
+            controller.presentInGlobalOverlay(contextController)
+        }
+        
+        func openSymbolContextMenu(sourceView: UIView) {
+            guard let component = self.component, let controller = self.environment?.controller() else {
+                return
+            }
+            
+            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+            
+            var items: [ContextMenuItem] = []
+            var allSelected = true
+            
+            var currentFilterAttributes: [ResaleGiftsContext.Attribute] = []
+            var selectedIds = Set<Int64>()
+            
+            if let filterAttributes = self.state?.starGiftsState?.filterAttributes {
+                currentFilterAttributes = filterAttributes
+                for attribute in filterAttributes {
+                    if case let .pattern(id) = attribute {
+                        allSelected = false
+                        selectedIds.insert(id)
+                    }
+                }
+            }
+            items.append(.action(ContextMenuActionItem(text: "Select All", icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor)
+            }, iconPosition: .left, action: { [weak self] _, f in
+                f(.default)
+                
+                if let self {
+                    let updatedFilterAttributes = currentFilterAttributes.filter { attribute in
+                        if case .pattern = attribute {
+                            return false
+                        }
+                        return true
+                    }
+                    self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
+                }
+            })))
+            
+            if let attributes = self.state?.starGiftsState?.attributes {
+                for attribute in attributes {
+                    if case let .pattern(name, file, _) = attribute {
+                        let isSelected = allSelected || selectedIds.contains(file.fileId.id)
+                        
+                        var entities: [MessageTextEntity] = []
+                        var entityFiles: [Int64: TelegramMediaFile] = [:]
+                        entities = [
+                            MessageTextEntity(
+                                range: 0..<1,
+                                type: .CustomEmoji(stickerPack: nil, fileId: file.fileId.id)
+                            )
+                        ]
+                        entityFiles[file.fileId.id] = file
+                        
+                        var title = "#  \(name)"
+                        var count = ""
+                        if let counter = self.state?.starGiftsState?.attributeCount[.pattern(file.fileId.id)] {
+                            count = "  \(presentationStringsFormattedNumber(counter, presentationData.dateTimeFormat.groupingSeparator))"
+                            entities.append(
+                                MessageTextEntity(range: title.count ..< title.count + count.count, type: .Bold)
+                            )
+                            title += count
+                        }
+                        items.append(.action(ContextMenuActionItem(text: title, entities: entities, entityFiles: entityFiles, enableEntityAnimations: false, icon: { theme in
+                            return isSelected ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
+                        }, action: { [weak self] _, f in
+                            f(.default)
+                            
+                            if let self {
+                                var updatedFilterAttributes = currentFilterAttributes
+                                if selectedIds.contains(file.fileId.id) {
+                                    updatedFilterAttributes.removeAll(where: { $0 == .pattern(file.fileId.id) })
+                                } else {
+                                    updatedFilterAttributes.append(.pattern(file.fileId.id))
+                                }
+                                self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
+                            }
+                        }, longPressAction: { [weak self] _, f in
+                            f(.default)
+                            
+                            if let self {
+                                var updatedFilterAttributes = currentFilterAttributes.filter { attribute in
+                                    if case .pattern = attribute {
+                                        return false
+                                    }
+                                    return true
+                                }
+                                updatedFilterAttributes.append(.pattern(file.fileId.id))
+                                self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
+                            }
+                        })))
+                    }
+                }
+            }
+
+            let contextController = ContextController(context: component.context, presentationData: presentationData, source: .reference(GiftStoreReferenceContentSource(controller: controller, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
+            controller.presentInGlobalOverlay(contextController)
+        }
+        
+        func update(component: GiftStoreScreenComponent, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
+            self.isUpdating = true
+            defer {
+                self.isUpdating = false
+            }
+            
+            let environment = environment[EnvironmentType.self].value
+            let controller = environment.controller
+            let themeUpdated = self.environment?.theme !== environment.theme
+            self.environment = environment
+            self.state = state
+            
+            if self.component == nil {
+                self.starsStateDisposable = (component.starsContext.state
+                |> deliverOnMainQueue).start(next: { [weak self] state in
+                    guard let self else {
+                        return
+                    }
+                    self.starsState = state
+                    if !self.isUpdating {
+                        self.state?.updated()
+                    }
+                })
+            }
+            self.component = component
+            
+            let theme = environment.theme
+            let strings = environment.strings
+            
+            if themeUpdated {
+                self.backgroundColor = environment.theme.list.blocksBackgroundColor
+            }
+                        
+            let bottomContentInset: CGFloat = 24.0
+            let sideInset: CGFloat = 16.0 + environment.safeInsets.left
+            let headerSideInset: CGFloat = 24.0 + environment.safeInsets.left
+                        
+            var contentHeight: CGFloat = 0.0
+            contentHeight += environment.navigationHeight
+            
+            let topPanelHeight = environment.navigationHeight + 39.0
+
+            let topPanelSize = self.topPanel.update(
+                transition: transition,
+                component: AnyComponent(BlurredBackgroundComponent(
+                    color: theme.rootController.navigationBar.blurredBackgroundColor
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width, height: topPanelHeight)
+            )
+            
+            let topSeparatorSize = self.topSeparator.update(
+                transition: transition,
+                component: AnyComponent(Rectangle(
+                    color: theme.rootController.navigationBar.separatorColor
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width, height: UIScreenPixel)
+            )
+            let topPanelFrame = CGRect(origin: .zero, size: CGSize(width: availableSize.width, height: topPanelSize.height))
+            let topSeparatorFrame = CGRect(origin: CGPoint(x: 0.0, y: topPanelSize.height), size: CGSize(width: topSeparatorSize.width, height: topSeparatorSize.height))
+            if let topPanelView = self.topPanel.view, let topSeparatorView = self.topSeparator.view {
+                if topPanelView.superview == nil {
+                    self.addSubview(topPanelView)
+                    self.addSubview(topSeparatorView)
+                }
+                transition.setFrame(view: topPanelView, frame: topPanelFrame)
+                transition.setFrame(view: topSeparatorView, frame: topSeparatorFrame)
+            }
+            
+            let cancelButtonSize = self.cancelButton.update(
+                transition: transition,
+                component: AnyComponent(
+                    PlainButtonComponent(
+                        content: AnyComponent(
+                            MultilineTextComponent(
+                                text: .plain(NSAttributedString(string: strings.Common_Cancel, font: Font.regular(17.0), textColor: theme.rootController.navigationBar.accentTextColor)),
+                                horizontalAlignment: .center
+                            )
+                        ),
+                        effectAlignment: .center,
+                        action: {
+                            controller()?.dismiss()
+                        },
+                        animateScale: false
+                    )
+                ),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width, height: 100.0)
+            )
+            let cancelButtonFrame = CGRect(origin: CGPoint(x: environment.safeInsets.left + 16.0, y: environment.statusBarHeight + (environment.navigationHeight - environment.statusBarHeight) / 2.0 - cancelButtonSize.height / 2.0), size: cancelButtonSize)
+            if let cancelButtonView = self.cancelButton.view {
+                if cancelButtonView.superview == nil {
+                    self.addSubview(cancelButtonView)
+                }
+                transition.setFrame(view: cancelButtonView, frame: cancelButtonFrame)
+            }
+            
+//            let showFilters = !"".isEmpty
+            
+//            let sortButtonSize = self.sortButton.update(
+//                transition: transition,
+//                component: AnyComponent(
+//                    PlainButtonComponent(
+//                        content: AnyComponent(
+//                            BundleIconComponent(
+//                                name: "Peer Info/SortIcon",
+//                                tintColor: theme.rootController.navigationBar.accentTextColor
+//                            )
+//                        ),
+//                        effectAlignment: .center,
+//                        action: { [weak self] in
+//                            if let sourceView = self?.sortButton.view {
+//                                self?.openContextMenu(sourceView: sourceView)
+//                            }
+//                        },
+//                        animateScale: false
+//                    )
+//                ),
+//                environment: {},
+//                containerSize: CGSize(width: availableSize.width, height: 100.0)
+//            )
+//            let sortButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - environment.safeInsets.right - sortButtonSize.width - 10.0, y: environment.statusBarHeight + (environment.navigationHeight - environment.statusBarHeight) / 2.0 - sortButtonSize.height / 2.0), size: sortButtonSize)
+//            if let sortButtonView = self.sortButton.view {
+//                if sortButtonView.superview == nil {
+//                    self.addSubview(sortButtonView)
+//                }
+//                transition.setFrame(view: sortButtonView, frame: sortButtonFrame)
+//                transition.setAlpha(view: sortButtonView, alpha: showFilters ? 0.0 : 1.0)
+//            }
+            
+            let balanceTitleSize = self.balanceTitle.update(
+                transition: .immediate,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(
+                        string: strings.Stars_Purchase_Balance,
+                        font: Font.regular(14.0),
+                        textColor: environment.theme.actionSheet.primaryTextColor
+                    )),
+                    maximumNumberOfLines: 1
+                )),
+                environment: {},
+                containerSize: availableSize
+            )
+            
+            let formattedBalance = formatStarsAmountText(self.starsState?.balance ?? StarsAmount.zero, dateTimeFormat: environment.dateTimeFormat)
+            let smallLabelFont = Font.regular(11.0)
+            let labelFont = Font.semibold(14.0)
+            let balanceText = tonAmountAttributedString(formattedBalance, integralFont: labelFont, fractionalFont: smallLabelFont, color: environment.theme.actionSheet.primaryTextColor, decimalSeparator: environment.dateTimeFormat.decimalSeparator)
+            
+            let balanceValueSize = self.balanceValue.update(
+                transition: .immediate,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(balanceText),
+                    maximumNumberOfLines: 1
+                )),
+                environment: {},
+                containerSize: availableSize
+            )
+            let balanceIconSize = self.balanceIcon.update(
+                transition: .immediate,
+                component: AnyComponent(BundleIconComponent(name: "Premium/Stars/StarSmall", tintColor: nil)),
+                environment: {},
+                containerSize: availableSize
+            )
+            
+            if let balanceTitleView = self.balanceTitle.view, let balanceValueView = self.balanceValue.view, let balanceIconView = self.balanceIcon.view {
+                if balanceTitleView.superview == nil {
+                    self.addSubview(balanceTitleView)
+                    self.addSubview(balanceValueView)
+                    self.addSubview(balanceIconView)
+                }
+                let navigationHeight = environment.navigationHeight - environment.statusBarHeight
+                let topBalanceOriginY = environment.statusBarHeight + (navigationHeight - balanceTitleSize.height - balanceValueSize.height) / 2.0
+                balanceTitleView.center = CGPoint(x: availableSize.width - 16.0 - environment.safeInsets.right - balanceTitleSize.width / 2.0, y: topBalanceOriginY + balanceTitleSize.height / 2.0)
+                balanceTitleView.bounds = CGRect(origin: .zero, size: balanceTitleSize)
+                balanceValueView.center = CGPoint(x: availableSize.width - 16.0 - environment.safeInsets.right - balanceValueSize.width / 2.0, y: topBalanceOriginY + balanceTitleSize.height + balanceValueSize.height / 2.0)
+                balanceValueView.bounds = CGRect(origin: .zero, size: balanceValueSize)
+                balanceIconView.center = CGPoint(x: availableSize.width - 16.0 - environment.safeInsets.right - balanceValueSize.width - balanceIconSize.width / 2.0 - 2.0, y: topBalanceOriginY + balanceTitleSize.height + balanceValueSize.height / 2.0 - UIScreenPixel)
+                balanceIconView.bounds = CGRect(origin: .zero, size: balanceIconSize)
+                
+//                transition.setAlpha(view: balanceTitleView, alpha: showFilters ? 1.0 : 0.0)
+//                transition.setAlpha(view: balanceValueView, alpha: showFilters ? 1.0 : 0.0)
+//                transition.setAlpha(view: balanceIconView, alpha: showFilters ? 1.0 : 0.0)
+            }
+            
+            let titleSize = self.title.update(
+                transition: transition,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: "Gift Name", font: Font.semibold(17.0), textColor: theme.rootController.navigationBar.primaryTextColor)),
+                    horizontalAlignment: .center
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - headerSideInset * 2.0, height: 100.0)
+            )
+            if let titleView = self.title.view {
+                if titleView.superview == nil {
+                    self.addSubview(titleView)
+                }
+                transition.setFrame(view: titleView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) / 2.0), y: 10.0), size: titleSize))
+            }
+            
+            let subtitleSize = self.subtitle.update(
+                transition: transition,
+                component: AnyComponent(BalancedTextComponent(
+                    text: .plain(NSAttributedString(string: "\(self.effectiveGifts?.count ?? 0) for resale", font: Font.regular(13.0), textColor: theme.rootController.navigationBar.secondaryTextColor)),
+                    horizontalAlignment: .center,
+                    maximumNumberOfLines: 1
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - headerSideInset * 2.0, height: 100.0)
+            )
+            let subtitleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - subtitleSize.width) / 2.0), y: 31.0), size: subtitleSize)
+            if let subtitleView = self.subtitle.view {
+                if subtitleView.superview == nil {
+                    self.addSubview(subtitleView)
+                }
+                transition.setFrame(view: subtitleView, frame: subtitleFrame)
+            }
+            
+            let optionSpacing: CGFloat = 10.0
+            let optionWidth = (availableSize.width - sideInset * 2.0 - optionSpacing * 2.0) / 3.0
+                         
+            var sortingTitle = "Date"
+            if let sorting = self.state?.starGiftsState?.sorting {
+                switch sorting {
+                case .date:
+                    sortingTitle = "Date"
+                case .value:
+                    sortingTitle = "Price"
+                case .number:
+                    sortingTitle = "Number"
+                }
+            }
+            
+            var filterItems: [FilterSelectorComponent.Item] = []
+            filterItems.append(FilterSelectorComponent.Item(
+                id: AnyHashable(0),
+                title: sortingTitle,
+                action: { [weak self] view in
+                    if let self {
+                        self.openSortContextMenu(sourceView: view)
+                    }
+                }
+            ))
+            
+            var modelTitle = "Model"
+            var backdropTitle = "Backdrop"
+            var symbolTitle = "Symbol"
+            if let filterAttributes = self.state?.starGiftsState?.filterAttributes {
+                var modelCount = 0
+                var backdropCount = 0
+                var symbolCount = 0
+                
+                for attribute in filterAttributes {
+                    switch attribute {
+                    case .model:
+                        modelCount += 1
+                    case .pattern:
+                        symbolCount += 1
+                    case .backdrop:
+                        backdropCount += 1
+                    }
+                }
+                
+                if modelCount > 0 {
+                    if modelCount > 1 {
+                        modelTitle = "\(modelCount) Models"
+                    } else {
+                        modelTitle = "1 Model"
+                    }
+                }
+                if backdropCount > 0 {
+                    if backdropCount > 1 {
+                        backdropTitle = "\(backdropCount) Backdrops"
+                    } else {
+                        backdropTitle = "1 Backdrop"
+                    }
+                }
+                if symbolCount > 0 {
+                    if symbolCount > 1 {
+                        symbolTitle = "\(symbolCount) Symbols"
+                    } else {
+                        symbolTitle = "1 Symbol"
+                    }
+                }
+            }
+            
+            filterItems.append(FilterSelectorComponent.Item(
+                id: AnyHashable(1),
+                title: modelTitle,
+                action: { [weak self] view in
+                    if let self {
+                        self.openModelContextMenu(sourceView: view)
+                    }
+                }
+            ))
+            filterItems.append(FilterSelectorComponent.Item(
+                id: AnyHashable(2),
+                title: backdropTitle,
+                action: { [weak self] view in
+                    if let self {
+                        self.openBackdropContextMenu(sourceView: view)
+                    }
+                }
+            ))
+            filterItems.append(FilterSelectorComponent.Item(
+                id: AnyHashable(3),
+                title: symbolTitle,
+                action: { [weak self] view in
+                    if let self {
+                        self.openSymbolContextMenu(sourceView: view)
+                    }
+                }
+            ))
+                        
+            let filterSize = self.filterSelector.update(
+                transition: transition,
+                component: AnyComponent(FilterSelectorComponent(
+                    context: component.context,
+                    colors: FilterSelectorComponent.Colors(
+                        foreground: theme.list.itemSecondaryTextColor,
+                        background: theme.list.itemSecondaryTextColor.withMultipliedAlpha(0.15)
+                    ),
+                    items: filterItems
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - 10.0 * 2.0, height: 50.0)
+            )
+            if let filterSelectorView = self.filterSelector.view {
+                if filterSelectorView.superview == nil {
+                    self.addSubview(filterSelectorView)
+                }
+                transition.setFrame(view: filterSelectorView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - filterSize.width) / 2.0), y: 56.0), size: filterSize))
+            }
+            
+            if let starGifts = self.state?.starGiftsState?.gifts {
+                let starsOptionSize = CGSize(width: optionWidth, height: 154.0)
+                let optionSpacing: CGFloat = 10.0
+                contentHeight += ceil(CGFloat(starGifts.count) / 3.0) * (starsOptionSize.height + optionSpacing)
+                contentHeight += -optionSpacing + 66.0
+            }
+            
+            contentHeight += bottomContentInset
+            contentHeight += environment.safeInsets.bottom
+            
+            let previousBounds = self.scrollView.bounds
+            
+            let contentSize = CGSize(width: availableSize.width, height: contentHeight)
+            if self.scrollView.frame != CGRect(origin: CGPoint(), size: availableSize) {
+                self.scrollView.frame = CGRect(origin: CGPoint(), size: availableSize)
+            }
+            if self.scrollView.contentSize != contentSize {
+                if contentSize.height < self.scrollView.contentSize.height, !transition.animation.isImmediate {
+                    self.nextScrollTransition = transition
+                }
+                self.scrollView.contentSize = contentSize
+                self.nextScrollTransition = nil
+            }
+            let scrollInsets = UIEdgeInsets(top: environment.navigationHeight, left: 0.0, bottom: 0.0, right: 0.0)
+            if self.scrollView.scrollIndicatorInsets != scrollInsets {
+                self.scrollView.scrollIndicatorInsets = scrollInsets
+            }
+                        
+            if !previousBounds.isEmpty, !transition.animation.isImmediate {
+                let bounds = self.scrollView.bounds
+                if bounds.maxY != previousBounds.maxY {
+                    let offsetY = previousBounds.maxY - bounds.maxY
+                    transition.animateBoundsOrigin(view: self.scrollView, from: CGPoint(x: 0.0, y: offsetY), to: CGPoint(), additive: true)
+                }
+            }
+            
+            self.topOverscrollLayer.frame = CGRect(origin: CGPoint(x: 0.0, y: -3000.0), size: CGSize(width: availableSize.width, height: 3000.0))
+            
+            self.updateScrolling(transition: transition)
+            
+            var isLoading = false
+            if self.state?.starGiftsState?.gifts == nil || self.state?.starGiftsState?.dataState == .loading {
+                isLoading = true
+            }
+            
+            let loadingTransition: ComponentTransition = .easeInOut(duration: 0.25)
+            if isLoading {
+                self.loadingNode.update(size: availableSize, theme: environment.theme, transition: .immediate)
+                loadingTransition.setAlpha(view: self.loadingNode.view, alpha: 1.0)
+            } else {
+                loadingTransition.setAlpha(view: self.loadingNode.view, alpha: 0.0)
+            }
+            transition.setFrame(view: self.loadingNode.view, frame: CGRect(origin: CGPoint(x: 0.0, y: environment.navigationHeight + 39.0 + 7.0), size: availableSize))
+            
+            let fadeTransition = ComponentTransition.easeInOut(duration: 0.25)
+            if let effectiveGifts = self.effectiveGifts, effectiveGifts.isEmpty && !self.isLoading {
+                let sideInset: CGFloat = 44.0
+                let emptyAnimationHeight = 148.0
+                let topInset: CGFloat = environment.navigationHeight + 39.0
+                let bottomInset: CGFloat = environment.safeInsets.bottom
+                let visibleHeight = availableSize.height
+                let emptyAnimationSpacing: CGFloat = 20.0
+                let emptyTextSpacing: CGFloat = 18.0
+                                                                
+                let emptyResultsTitleSize = self.emptyResultsTitle.update(
+                    transition: .immediate,
+                    component: AnyComponent(
+                        MultilineTextComponent(
+                            text: .plain(NSAttributedString(string: "No Matching Gifts", font: Font.semibold(17.0), textColor: theme.list.itemPrimaryTextColor)),
+                            horizontalAlignment: .center
+                        )
+                    ),
+                    environment: {},
+                    containerSize: availableSize
+                )
+                let emptyResultsActionSize = self.emptyResultsAction.update(
+                    transition: .immediate,
+                    component: AnyComponent(
+                        PlainButtonComponent(
+                            content: AnyComponent(
+                                MultilineTextComponent(
+                                    text: .plain(NSAttributedString(string: "Clear Filters", font: Font.regular(17.0), textColor: theme.list.itemAccentColor)),
+                                    horizontalAlignment: .center,
+                                    maximumNumberOfLines: 0
+                                )
+                            ),
+                            effectAlignment: .center,
+                            action: { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                self.selectedModels.removeAll()
+                                self.selectedBackdrops.removeAll()
+                                self.selectedSymbols.removeAll()
+                                self.simulateLoading()
+                            },
+                            animateScale: false
+                        )
+                    ),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: visibleHeight)
+                )
+                let emptyResultsAnimationSize = self.emptyResultsAnimation.update(
+                    transition: .immediate,
+                    component: AnyComponent(LottieComponent(
+                        content: LottieComponent.AppBundleContent(name: "ChatListNoResults")
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: emptyAnimationHeight, height: emptyAnimationHeight)
+                )
+      
+                let emptyTotalHeight = emptyAnimationHeight + emptyAnimationSpacing + emptyResultsTitleSize.height + emptyResultsActionSize.height + emptyTextSpacing
+                let emptyAnimationY = topInset + floorToScreenPixels((visibleHeight - topInset - bottomInset - emptyTotalHeight) / 2.0)
+                
+                let emptyResultsAnimationFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - emptyResultsAnimationSize.width) / 2.0), y: emptyAnimationY), size: emptyResultsAnimationSize)
+                
+                let emptyResultsTitleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - emptyResultsTitleSize.width) / 2.0), y: emptyResultsAnimationFrame.maxY + emptyAnimationSpacing), size: emptyResultsTitleSize)
+                
+                let emptyResultsActionFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - emptyResultsActionSize.width) / 2.0), y: emptyResultsTitleFrame.maxY + emptyTextSpacing), size: emptyResultsActionSize)
+                
+                if let view = self.emptyResultsAnimation.view as? LottieComponent.View {
+                    if view.superview == nil {
+                        view.alpha = 0.0
+                        fadeTransition.setAlpha(view: view, alpha: 1.0)
+                        self.insertSubview(view, belowSubview: self.loadingNode.view)
+                        view.playOnce()
+                    }
+                    view.bounds = CGRect(origin: .zero, size: emptyResultsAnimationFrame.size)
+                    ComponentTransition.immediate.setPosition(view: view, position: emptyResultsAnimationFrame.center)
+                }
+                if let view = self.emptyResultsTitle.view {
+                    if view.superview == nil {
+                        view.alpha = 0.0
+                        fadeTransition.setAlpha(view: view, alpha: 1.0)
+                        self.insertSubview(view, belowSubview: self.loadingNode.view)
+                    }
+                    view.bounds = CGRect(origin: .zero, size: emptyResultsTitleFrame.size)
+                    ComponentTransition.immediate.setPosition(view: view, position: emptyResultsTitleFrame.center)
+                }
+                if let view = self.emptyResultsAction.view {
+                    if view.superview == nil {
+                        view.alpha = 0.0
+                        fadeTransition.setAlpha(view: view, alpha: 1.0)
+                        self.insertSubview(view, belowSubview: self.loadingNode.view)
+                    }
+                    view.bounds = CGRect(origin: .zero, size: emptyResultsActionFrame.size)
+                    ComponentTransition.immediate.setPosition(view: view, position: emptyResultsActionFrame.center)
+                }
+            } else {
+                if let view = self.emptyResultsAnimation.view {
+                    fadeTransition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                        view.removeFromSuperview()
+                    })
+                }
+                if let view = self.emptyResultsTitle.view {
+                    fadeTransition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                        view.removeFromSuperview()
+                    })
+                }
+                if let view = self.emptyResultsAction.view {
+                    fadeTransition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                        view.removeFromSuperview()
+                    })
+                }
+            }
+            
+            return availableSize
+        }
+    }
+    
+    func makeView() -> View {
+        return View()
+    }
+    
+    final class State: ComponentState {
+        private let context: AccountContext
+        private var disposable: Disposable?
+        
+        fileprivate let starGiftsContext: ResaleGiftsContext
+        fileprivate var starGiftsState: ResaleGiftsContext.State?
+        
+        init(
+            context: AccountContext,
+            giftId: Int64
+        ) {
+            self.context = context
+            self.starGiftsContext = ResaleGiftsContext(account: context.account, giftId: giftId)
+            
+            super.init()
+            
+            self.disposable = (self.starGiftsContext.state
+            |> deliverOnMainQueue).start(next: { [weak self] state in
+                guard let self else {
+                    return
+                }
+                self.starGiftsState = state
+                self.updated()
+            })
+        }
+        
+        deinit {
+            self.disposable?.dispose()
+        }
+    }
+    
+    func makeState() -> State {
+        return State(context: self.context, giftId: self.gift.id)
+    }
+    
+    func update(view: View, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
+public class GiftStoreScreen: ViewControllerComponentContainer {
+    private let context: AccountContext
+    
+    public var parentController: () -> ViewController? = {
+        return nil
+    }
+    
+    public init(
+        context: AccountContext,
+        starsContext: StarsContext,
+        peerId: EnginePeer.Id,
+        gift: StarGift.Gift
+    ) {
+        self.context = context
+        
+        super.init(context: context, component: GiftStoreScreenComponent(
+            context: context,
+            starsContext: starsContext,
+            peerId: peerId,
+            gift: gift
+        ), navigationBarAppearance: .none, theme: .default, updatedPresentationData: nil)
+        
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.context.sharedContext.currentPresentationData.with { $0 }.strings.Common_Back, style: .plain, target: nil, action: nil)
+        
+        
+        self.scrollToTop = { [weak self] in
+            guard let self, let componentView = self.node.hostView.componentView as? GiftStoreScreenComponent.View else {
+                return
+            }
+            componentView.scrollToTop()
+        }
+    }
+    
+    required public init(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+    }
+    
+    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        super.containerLayoutUpdated(layout, transition: transition)
+    }
+}
+
+private extension StarGift {
+    var id: String {
+        switch self {
+        case let .generic(gift):
+            return "\(gift.id)"
+        case let .unique(gift):
+            return gift.slug
+        }
+    }
+}
+
+private final class GiftStoreReferenceContentSource: ContextReferenceContentSource {
+    private let controller: ViewController
+    private let sourceView: UIView
+    
+    init(controller: ViewController, sourceView: UIView) {
+        self.controller = controller
+        self.sourceView = sourceView
+    }
+    
+    func transitionInfo() -> ContextControllerReferenceViewInfo? {
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+}

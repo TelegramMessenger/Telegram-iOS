@@ -326,6 +326,8 @@ final class MediaEditorScreenComponent: Component {
         
         private let switchCameraButton = ComponentView<Empty>()
         
+        private let selectionButton = ComponentView<Empty>()
+        
         private let textCancelButton = ComponentView<Empty>()
         private let textDoneButton = ComponentView<Empty>()
         private let textSize =  ComponentView<Empty>()
@@ -334,6 +336,8 @@ final class MediaEditorScreenComponent: Component {
         
         private var isEditingCaption = false
         private var currentInputMode: MessageInputPanelComponent.InputMode = .text
+        
+        private var isSelectionPanelOpen = false
         
         private var didInitializeInputMediaNodeDataPromise = false
         private var inputMediaNodeData: ChatEntityKeyboardInputNode.InputData?
@@ -1988,6 +1992,40 @@ final class MediaEditorScreenComponent: Component {
                     transition.setScale(view: switchCameraButtonView, scale: isRecordingAdditionalVideo ? 1.0 : 0.01)
                     transition.setAlpha(view: switchCameraButtonView, alpha: isRecordingAdditionalVideo ? 1.0 : 0.0)
                 }
+                
+                
+                let selectionButtonSize = self.selectionButton.update(
+                    transition: transition,
+                    component: AnyComponent(PlainButtonComponent(
+                        content: AnyComponent(
+                            SelectionPanelButtonContentComponent(
+                                count: 1,
+                                isSelected: self.isSelectionPanelOpen,
+                                tag: nil
+                            )
+                        ),
+                        effectAlignment: .center,
+                        action: { [weak self] in
+                            if let self {
+                                self.isSelectionPanelOpen = !self.isSelectionPanelOpen
+                                self.state?.updated()
+                            }
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 33.0, height: 33.0)
+                )
+                let selectionButtonFrame = CGRect(
+                    origin: CGPoint(x: availableSize.width - selectionButtonSize.width - 12.0, y: max(environment.statusBarHeight + 10.0, inputPanelFrame.minY - selectionButtonSize.height - 3.0)),
+                    size: selectionButtonSize
+                )
+                if let selectionButtonView = self.selectionButton.view {
+                    if selectionButtonView.superview == nil {
+                        self.addSubview(selectionButtonView)
+                    }
+                    transition.setPosition(view: selectionButtonView, position: selectionButtonFrame.center)
+                    transition.setBounds(view: selectionButtonView, bounds: CGRect(origin: .zero, size: selectionButtonFrame.size))
+                }
             } else {
                 inputPanelSize = CGSize(width: 0.0, height: 12.0)
             }
@@ -3407,7 +3445,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                     }
                 } else if case let .gift(gift) = effectiveSubject {
                     isGift = true
-                    let media: [Media] = [TelegramMediaAction(action: .starGiftUnique(gift: .unique(gift), isUpgrade: false, isTransferred: false, savedToProfile: false, canExportDate: nil, transferStars: nil, isRefunded: false, peerId: nil, senderId: nil, savedId: nil))]
+                    let media: [Media] = [TelegramMediaAction(action: .starGiftUnique(gift: .unique(gift), isUpgrade: false, isTransferred: false, savedToProfile: false, canExportDate: nil, transferStars: nil, isRefunded: false, peerId: nil, senderId: nil, savedId: nil, resaleStars: nil))]
                     let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: self.context.account.peerId, namespace: Namespaces.Message.Cloud, id: -1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: media, peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
                     messages = .single([message])
                 } else {

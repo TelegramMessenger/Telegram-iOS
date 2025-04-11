@@ -477,42 +477,52 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         itemTransition = .immediate
                     }
                     
-                    let ribbonText: String?
+                    var ribbonText: String?
                     var ribbonColor: GiftItemComponent.Ribbon.Color = .blue
                     var ribbonFont: GiftItemComponent.Ribbon.Font = .generic
+                    var ribbonOutline: UIColor?
+                    
+                    let peer: GiftItemComponent.Peer?
+                    let subject: GiftItemComponent.Subject
+                    var resellPrice: Int64?
+                    
                     switch product.gift {
                     case let .generic(gift):
+                        subject = .starGift(gift: gift, price: "⭐️ \(gift.price)")
+                        peer = product.fromPeer.flatMap { .peer($0) } ?? .anonymous
+                        
                         if let availability = gift.availability {
                             ribbonText = params.presentationData.strings.PeerInfo_Gifts_OneOf(compactNumericCountString(Int(availability.total), decimalSeparator: params.presentationData.dateTimeFormat.decimalSeparator)).string
                         } else {
                             ribbonText = nil
                         }
                     case let .unique(gift):
-                        if product.pinnedToTop {
-                            ribbonFont = .monospaced
-                            ribbonText = "#\(gift.number)"
+                        subject = .uniqueGift(gift: gift, price: nil)
+                        peer = nil
+                        resellPrice = gift.resellStars
+                        
+                        if let _ = resellPrice {
+                            //TODO:localize
+                            ribbonText = "sale"
+                            ribbonFont = .larger
+                            ribbonColor = .green
+                            ribbonOutline =  params.presentationData.theme.list.blocksBackgroundColor
                         } else {
-                            ribbonText = params.presentationData.strings.PeerInfo_Gifts_OneOf(compactNumericCountString(Int(gift.availability.issued), decimalSeparator: params.presentationData.dateTimeFormat.decimalSeparator)).string
-                        }
-                        for attribute in gift.attributes {
-                            if case let .backdrop(_, innerColor, outerColor, _, _, _) = attribute {
-                                ribbonColor = .custom(outerColor, innerColor)
-                                break
+                            if product.pinnedToTop {
+                                ribbonFont = .monospaced
+                                ribbonText = "#\(gift.number)"
+                            } else {
+                                ribbonText = params.presentationData.strings.PeerInfo_Gifts_OneOf(compactNumericCountString(Int(gift.availability.issued), decimalSeparator: params.presentationData.dateTimeFormat.decimalSeparator)).string
+                            }
+                            for attribute in gift.attributes {
+                                if case let .backdrop(_, _, innerColor, outerColor, _, _, _) = attribute {
+                                    ribbonColor = .custom(outerColor, innerColor)
+                                    break
+                                }
                             }
                         }
                     }
-                    
-                    let peer: GiftItemComponent.Peer?
-                    let subject: GiftItemComponent.Subject
-                    switch product.gift {
-                    case let .generic(gift):
-                        subject = .starGift(gift: gift, price: "⭐️ \(gift.price)")
-                        peer = product.fromPeer.flatMap { .peer($0) } ?? .anonymous
-                    case let .unique(gift):
-                        subject = .uniqueGift(gift: gift)
-                        peer = nil
-                    }
-                    
+                                      
                     let _ = visibleItem.update(
                         transition: itemTransition,
                         component: AnyComponent(
@@ -522,7 +532,8 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                 strings: params.presentationData.strings,
                                 peer: peer,
                                 subject: subject,
-                                ribbon: ribbonText.flatMap { GiftItemComponent.Ribbon(text: $0, font: ribbonFont, color: ribbonColor) },
+                                ribbon: ribbonText.flatMap { GiftItemComponent.Ribbon(text: $0, font: ribbonFont, color: ribbonColor, outline: ribbonOutline) },
+                                resellPrice: resellPrice,
                                 isHidden: !product.savedToProfile,
                                 isPinned: product.pinnedToTop,
                                 isEditing: self.isReordering,
@@ -588,6 +599,12 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                                     return .never()
                                                 }
                                                 return self.profileGifts.upgradeStarGift(formId: formId, reference: reference, keepOriginalInfo: keepOriginalInfo)
+                                            },
+                                            updateResellStars: { [weak self] price in
+                                                guard let self, case let .unique(uniqueGift) = product.gift else {
+                                                    return
+                                                }
+                                                self.profileGifts.updateStarGiftResellPrice(slug: uniqueGift.slug, price: price)
                                             },
                                             togglePinnedToTop: { [weak self] pinnedToTop in
                                                 guard let self else {
