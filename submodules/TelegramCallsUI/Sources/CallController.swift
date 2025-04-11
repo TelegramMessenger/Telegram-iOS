@@ -517,6 +517,7 @@ public final class CallController: ViewController {
             },
             options: .single(options),
             displayCallIcons: true,
+            multipleSelection: .disabled,
             confirmation: { peer in
                 switch peer {
                 case let .peer(peer, _, _):

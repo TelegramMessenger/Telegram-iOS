@@ -394,6 +394,11 @@ func openResolvedUrlImpl(
         
             let _ = (signal
             |> deliverOnMainQueue).startStandalone(next: { [weak navigationController] resolvedCallLink in
+                if let currentGroupCallController = context.sharedContext.currentGroupCallController as? VoiceChatController, case let .group(groupCall) = currentGroupCallController.call, let currentCallId = groupCall.callId, currentCallId == resolvedCallLink.id {
+                    context.sharedContext.navigateToCurrentCall()
+                    return
+                }
+                
                 navigationController?.pushViewController(context.sharedContext.makeJoinSubjectScreen(context: context, mode: JoinSubjectScreenMode.groupCall(JoinSubjectScreenMode.GroupCall(
                     id: resolvedCallLink.id,
                     accessHash: resolvedCallLink.accessHash,

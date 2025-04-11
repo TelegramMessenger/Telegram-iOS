@@ -40,7 +40,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
     private let options: Signal<[ContactListAdditionalOption], NoError>
     private let displayDeviceContacts: Bool
     private let displayCallIcons: Bool
-    private let multipleSelection: Bool
+    private let multipleSelection: ContactSelectionControllerParams.MultipleSelectionMode
     private let requirePhoneNumbers: Bool
     private let allowChannelsInSearch: Bool
     
@@ -153,15 +153,17 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
             }
         })
         
-        if !params.multipleSelection {
+        if self.multipleSelection != .always {
             self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Common_Search, activate: { [weak self] in
                 self?.activateSearch()
             })
             self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
         }
         
-        if params.multipleSelection {
+        if self.multipleSelection == .always {
             self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCompactSearchIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.beginSearch))
+        } else if self.multipleSelection == .possible {
+            self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Select, style: .plain, target: self, action: #selector(self.beginSelection))
         }
         
         self.getCurrentSendMessageContextMediaPreview = { [weak self] in
@@ -220,7 +222,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
     }
     
     override func loadDisplayNode() {
-        self.displayNode = ContactSelectionControllerNode(context: self.context, mode: self.mode, presentationData: self.presentationData, options: self.options, displayDeviceContacts: self.displayDeviceContacts, displayCallIcons: self.displayCallIcons, multipleSelection: self.multipleSelection, requirePhoneNumbers: self.requirePhoneNumbers, allowChannelsInSearch: self.allowChannelsInSearch, isPeerEnabled: self.isPeerEnabled)
+        self.displayNode = ContactSelectionControllerNode(context: self.context, mode: self.mode, presentationData: self.presentationData, options: self.options, displayDeviceContacts: self.displayDeviceContacts, displayCallIcons: self.displayCallIcons, multipleSelection: self.multipleSelection == .always, requirePhoneNumbers: self.requirePhoneNumbers, allowChannelsInSearch: self.allowChannelsInSearch, isPeerEnabled: self.isPeerEnabled)
         self._ready.set(self.contactsNode.contactListNode.ready)
         
         self.contactsNode.navigationBar = self.navigationBar
@@ -335,7 +337,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
             if let searchContentNode = self.searchContentNode as? NavigationBarSearchContentNode {
                 self.contactsNode.activateSearch(placeholderNode: searchContentNode.placeholderNode)
                 self.setDisplayNavigationBar(false, transition: .animated(duration: 0.5, curve: .spring))
-            } else if self.multipleSelection {
+            } else if self.multipleSelection == .always {
                 let contentNode = ContactsSearchNavigationContentNode(presentationData: self.presentationData, dismissSearch: { [weak self] in
                     if let strongSelf = self, let navigationBar = strongSelf.navigationBar, let searchContentNode = strongSelf.searchContentNode as? ContactsSearchNavigationContentNode {
                         searchContentNode.deactivate()

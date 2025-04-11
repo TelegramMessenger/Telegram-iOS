@@ -2706,6 +2706,15 @@ final class VideoChatScreenComponent: Component {
             } else if let expandedParticipantsVideoState = self.expandedParticipantsVideoState, !expandedParticipantsVideoState.isUIHidden {
                 displayVideoControlButton = false
             }
+            if case .audio = videoControlButtonContent {
+                if let (availableOutputs, _) = self.audioOutputState {
+                    if availableOutputs.count <= 0 {
+                        displayVideoControlButton = false
+                    }
+                } else {
+                    displayVideoControlButton = false
+                }
+            }
 
             let videoControlButtonSize = self.videoControlButton.update(
                 transition: transition,
