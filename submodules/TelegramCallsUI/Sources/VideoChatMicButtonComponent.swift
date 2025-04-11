@@ -182,7 +182,7 @@ final class VideoChatMicButtonComponent: Component {
     
     enum Content: Equatable {
         case connecting
-        case muted
+        case muted(forced: Bool)
         case unmuted(pushToTalk: Bool)
         case raiseHand(isRaised: Bool)
         case scheduled(state: ScheduledState)
@@ -263,9 +263,13 @@ final class VideoChatMicButtonComponent: Component {
                 switch component.content {
                 case .connecting, .unmuted, .raiseHand, .scheduled:
                     self.beginTrackingWasPushToTalk = false
-                case .muted:
-                    self.beginTrackingWasPushToTalk = true
-                    component.updateUnmutedStateIsPushToTalk(true)
+                case let .muted(forced):
+                    if forced {
+                        self.beginTrackingWasPushToTalk = false
+                    } else {
+                        self.beginTrackingWasPushToTalk = true
+                        component.updateUnmutedStateIsPushToTalk(true)
+                    }
                 }
             }
             
@@ -291,8 +295,11 @@ final class VideoChatMicButtonComponent: Component {
                 switch component.content {
                 case .connecting:
                     break
-                case .muted:
-                    component.updateUnmutedStateIsPushToTalk(false)
+                case let .muted(forced):
+                    if forced {   
+                    } else {
+                        component.updateUnmutedStateIsPushToTalk(false)
+                    }
                 case .unmuted:
                     if self.beginTrackingWasPushToTalk {
                         if timestamp < self.beginTrackingTimestamp + 0.15 {
@@ -340,8 +347,12 @@ final class VideoChatMicButtonComponent: Component {
             case .connecting:
                 titleText = component.strings.VoiceChat_Connecting
                 isEnabled = false
-            case .muted:
-                titleText = component.strings.VoiceChat_Unmute
+            case let .muted(forced):
+                if forced {
+                    titleText = component.strings.VoiceChat_MutedByAdmin
+                } else {
+                    titleText = component.strings.VoiceChat_Unmute
+                }
             case let .unmuted(isPushToTalk):
                 titleText = isPushToTalk ? component.strings.VoiceChat_Live : component.strings.VoiceChat_Mute
             case let .raiseHand(isRaised):

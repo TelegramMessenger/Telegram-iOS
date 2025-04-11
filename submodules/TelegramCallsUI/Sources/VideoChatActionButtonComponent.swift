@@ -65,9 +65,9 @@ final class VideoChatActionButtonComponent: Component {
         }
     }
     
-    enum MicrophoneState {
+    enum MicrophoneState: Equatable {
         case connecting
-        case muted
+        case muted(forced: Bool)
         case unmuted
         case raiseHand
         case scheduled

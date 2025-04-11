@@ -2553,9 +2553,12 @@ final class VideoChatScreenComponent: Component {
                                     micButtonContent = .unmuted(pushToTalk: self.isPushToTalkActive)
                                     actionButtonMicrophoneState = .unmuted
                                 } else {
-                                    micButtonContent = .muted
-                                    actionButtonMicrophoneState = .muted
+                                    micButtonContent = .muted(forced: false)
+                                    actionButtonMicrophoneState = .muted(forced: false)
                                 }
+                            } else if isConference {
+                                micButtonContent = .muted(forced: true)
+                                actionButtonMicrophoneState = .muted(forced: true)
                             } else {
                                 micButtonContent = .raiseHand(isRaised: callState.raisedHand)
                                 actionButtonMicrophoneState = .raiseHand
