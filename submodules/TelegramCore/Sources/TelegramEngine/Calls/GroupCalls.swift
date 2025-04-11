@@ -587,11 +587,22 @@ public struct JoinGroupCallResult {
         case rtc
         case broadcast(isExternalStream: Bool)
     }
+
+    public struct E2EState {
+        public let subChain0: (offset: Int, blocks: [Data])
+        public let subChain1: (offset: Int, blocks: [Data])
+
+        public init(subChain0: (offset: Int, blocks: [Data]), subChain1: (offset: Int, blocks: [Data])) {
+            self.subChain0 = subChain0
+            self.subChain1 = subChain1
+        }
+    }
     
     public var callInfo: GroupCallInfo
     public var state: GroupCallParticipantsContext.State
     public var connectionMode: ConnectionMode
     public var jsonParams: String
+    public var e2eState: E2EState?
 }
 
 public class JoinGroupCallE2E {
@@ -791,7 +802,7 @@ func _internal_joinGroupCall(account: Account, peerId: PeerId?, joinAs: PeerId?,
                         connectionMode = .broadcast(isExternalStream: false)
                     }
                     
-                    return account.postbox.transaction { transaction -> JoinGroupCallResult in
+                    return account.postbox.transaction { transaction -> Signal<JoinGroupCallResult, InternalJoinError> in
                         if let peerId {
                             transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
                                 if let cachedData = cachedData as? CachedChannelData {
@@ -805,6 +816,9 @@ func _internal_joinGroupCall(account: Account, peerId: PeerId?, joinAs: PeerId?,
                         }
                         
                         var state = state
+                        
+                        var e2eSubChain1State: (offset: Int, blocks: [Data])?
+                        var e2eSubChain0State: (offset: Int, blocks: [Data])?
                         
                         for update in updates.allUpdates {
                             switch update {
@@ -852,21 +866,41 @@ func _internal_joinGroupCall(account: Account, peerId: PeerId?, joinAs: PeerId?,
                                         }
                                     }
                                 }
+                            case let .updateGroupCallChainBlocks(_, subChainId, blocks, nextOffset):
+                                if subChainId == 0 {
+                                    e2eSubChain0State = (offset: Int(nextOffset), blocks: blocks.map { $0.makeData() })
+                                } else {
+                                    e2eSubChain1State = (offset: Int(nextOffset), blocks: blocks.map { $0.makeData() })
+                                }
                             default:
                                 break
                             }
                         }
+
+                        var e2eState: JoinGroupCallResult.E2EState?
+                        if let e2eSubChain0State, let e2eSubChain1State {
+                            e2eState = JoinGroupCallResult.E2EState(
+                                subChain0: e2eSubChain0State,
+                                subChain1: e2eSubChain1State
+                            )
+                        }
+
+                        if generateE2E != nil && e2eState == nil {
+                            return .fail(.error(.generic))
+                        }
                         
                         state.participants.sort(by: { GroupCallParticipantsContext.Participant.compare(lhs: $0, rhs: $1, sortAscending: state.sortAscending) })
                         
-                        return JoinGroupCallResult(
+                        return .single(JoinGroupCallResult(
                             callInfo: parsedCall,
                             state: state,
                             connectionMode: connectionMode,
-                            jsonParams: parsedClientParams
-                        )
+                            jsonParams: parsedClientParams,
+                            e2eState: e2eState
+                        ))
                     }
                     |> castError(InternalJoinError.self)
+                    |> switchToLatest
                 }
             }
         }

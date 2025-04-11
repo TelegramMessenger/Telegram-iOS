@@ -2003,7 +2003,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
 
                     self.updateSessionState(internalState: .established(info: joinCallResult.callInfo, connectionMode: joinCallResult.connectionMode, clientParams: clientParams, localSsrc: ssrc, initialState: joinCallResult.state), audioSessionControl: self.audioSessionControl)
                     
-                    self.e2eContext?.begin()
+                    if let e2eState = joinCallResult.e2eState {
+                        self.e2eContext?.begin(initialState: e2eState)
+                    } else {
+                        self.e2eContext?.begin(initialState: nil)
+                    }
                 }, error: { [weak self] error in
                     guard let self else {
                         return

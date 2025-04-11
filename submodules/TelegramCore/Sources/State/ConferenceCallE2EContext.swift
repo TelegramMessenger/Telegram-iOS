@@ -79,7 +79,7 @@ public final class ConferenceCallE2EContext {
             self.synchronizeRemovedParticipantsTimer?.invalidate()
         }
 
-        func begin() {
+        func begin(initialState: JoinGroupCallResult.E2EState?) {
             self.scheduledSynchronizeRemovedParticipantsAfterPoll = true
             self.synchronizeRemovedParticipantsTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 10.0, repeats: true, block: { [weak self] _ in
                 guard let self else {
@@ -87,6 +87,13 @@ public final class ConferenceCallE2EContext {
                 }
                 self.synchronizeRemovedParticipants()
             })
+            
+            if let initialState {
+                self.e2ePoll0Offset = initialState.subChain0.offset
+                self.e2ePoll1Offset = initialState.subChain1.offset
+                self.addE2EBlocks(blocks: initialState.subChain0.blocks, subChainId: 0)
+                self.addE2EBlocks(blocks: initialState.subChain1.blocks, subChainId: 1)
+            }
             
             self.e2ePoll(subChainId: 0)
             self.e2ePoll(subChainId: 1)
@@ -424,9 +431,9 @@ public final class ConferenceCallE2EContext {
         })
     }
 
-    public func begin() {
+    public func begin(initialState: JoinGroupCallResult.E2EState?) {
         self.impl.with { impl in
-            impl.begin()
+            impl.begin(initialState: initialState)
         }
     }
 

@@ -550,7 +550,7 @@ final class VideoChatEncryptionKeyComponent: Component {
                 self.isUpdating = false
             }
 
-            #if DEBUG && true
+#if DEBUG && false
             if self.component == nil {
                 self.mockStateTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 4.0, repeats: true, block: { [weak self] _ in
                     guard let self else {

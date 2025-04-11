@@ -14180,3 +14180,5 @@ Sorry for the inconvenience.";
 "Call.IncomingGroupCallTitle.Single" = "%@";
 "Call.IncomingGroupCallTitle.Multiple_1" = "{} and 1 other";
 "Call.IncomingGroupCallTitle.Multiple_any" = "{} and %d others";
+
+"GroupCall.RevokeLinkText" = "Are you sure you want to revoke this link? Once you do, no one will be able to join the call using it.";

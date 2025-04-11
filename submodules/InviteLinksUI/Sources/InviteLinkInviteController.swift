@@ -494,7 +494,7 @@ public final class InviteLinkInviteController: ViewController {
                         }
                         controller.setItemGroups([
                             ActionSheetItemGroup(items: [
-                                ActionSheetTextItem(title: presentationData.strings.VideoChat_RevokeLink),
+                                ActionSheetTextItem(title: presentationData.strings.GroupCall_RevokeLinkText),
                                 ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: { [weak self] in
                                     dismissAction()
 
