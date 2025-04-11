@@ -59,24 +59,38 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
             enum CodingKeys: String, CodingKey {
                 case remains
                 case total
+                case resale
+                case minResaleStars
             }
 
             public let remains: Int32
             public let total: Int32
+            public let resale: Int64
+            public let minResaleStars: Int64?
             
-            public init(remains: Int32, total: Int32) {
+            public init(remains: Int32, total: Int32, resale: Int64, minResaleStars: Int64?) {
                 self.remains = remains
                 self.total = total
+                self.resale = resale
+                self.minResaleStars = minResaleStars
             }
             
             public init(decoder: PostboxDecoder) {
                 self.remains = decoder.decodeInt32ForKey(CodingKeys.remains.rawValue, orElse: 0)
                 self.total = decoder.decodeInt32ForKey(CodingKeys.total.rawValue, orElse: 0)
+                self.resale = decoder.decodeInt64ForKey(CodingKeys.resale.rawValue, orElse: 0)
+                self.minResaleStars = decoder.decodeInt64ForKey(CodingKeys.minResaleStars.rawValue, orElse: 0)
             }
             
             public func encode(_ encoder: PostboxEncoder) {
                 encoder.encodeInt32(self.remains, forKey: CodingKeys.remains.rawValue)
                 encoder.encodeInt32(self.total, forKey: CodingKeys.total.rawValue)
+                encoder.encodeInt64(self.resale, forKey: CodingKeys.resale.rawValue)
+                if let minResaleStars = self.minResaleStars {
+                    encoder.encodeInt64(minResaleStars, forKey: CodingKeys.minResaleStars.rawValue)
+                } else {
+                    encoder.encodeNil(forKey: CodingKeys.minResaleStars.rawValue)
+                }
             }
         }
         
@@ -219,6 +233,7 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
                 case type
                 case name
                 case file
+                case id
                 case innerColor
                 case outerColor
                 case patternColor
@@ -240,7 +255,7 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
             
             case model(name: String, file: TelegramMediaFile, rarity: Int32)
             case pattern(name: String, file: TelegramMediaFile, rarity: Int32)
-            case backdrop(name: String, innerColor: Int32, outerColor: Int32, patternColor: Int32, textColor: Int32, rarity: Int32)
+            case backdrop(name: String, id: Int32, innerColor: Int32, outerColor: Int32, patternColor: Int32, textColor: Int32, rarity: Int32)
             case originalInfo(senderPeerId: EnginePeer.Id?, recipientPeerId: EnginePeer.Id, date: Int32, text: String?, entities: [MessageTextEntity]?)
             
             public var attributeType: AttributeType {
@@ -276,6 +291,7 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
                 case 2:
                     self = .backdrop(
                         name: try container.decode(String.self, forKey: .name),
+                        id: try container.decodeIfPresent(Int32.self, forKey: .id) ?? 0,
                         innerColor: try container.decode(Int32.self, forKey: .innerColor),
                         outerColor: try container.decode(Int32.self, forKey: .outerColor),
                         patternColor: try container.decode(Int32.self, forKey: .patternColor),
@@ -314,6 +330,7 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
                 case 2:
                     self = .backdrop(
                         name: decoder.decodeStringForKey(CodingKeys.name.rawValue, orElse: ""),
+                        id: decoder.decodeInt32ForKey(CodingKeys.id.rawValue, orElse: 0),
                         innerColor: decoder.decodeInt32ForKey(CodingKeys.innerColor.rawValue, orElse: 0),
                         outerColor: decoder.decodeInt32ForKey(CodingKeys.outerColor.rawValue, orElse: 0),
                         patternColor: decoder.decodeInt32ForKey(CodingKeys.patternColor.rawValue, orElse: 0),
@@ -347,9 +364,10 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
                     try container.encode(name, forKey: .name)
                     try container.encode(file, forKey: .file)
                     try container.encode(rarity, forKey: .rarity)
-                case let .backdrop(name, innerColor, outerColor, patternColor, textColor, rarity):
+                case let .backdrop(name, id, innerColor, outerColor, patternColor, textColor, rarity):
                     try container.encode(Int32(2), forKey: .type)
                     try container.encode(name, forKey: .name)
+                    try container.encode(id, forKey: .id)
                     try container.encode(innerColor, forKey: .innerColor)
                     try container.encode(outerColor, forKey: .outerColor)
                     try container.encode(patternColor, forKey: .patternColor)
@@ -377,9 +395,10 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
                     encoder.encodeString(name, forKey: CodingKeys.name.rawValue)
                     encoder.encodeObject(file, forKey: CodingKeys.file.rawValue)
                     encoder.encodeInt32(rarity, forKey: CodingKeys.rarity.rawValue)
-                case let .backdrop(name, innerColor, outerColor, patternColor, textColor, rarity):
+                case let .backdrop(name, id, innerColor, outerColor, patternColor, textColor, rarity):
                     encoder.encodeInt32(2, forKey: CodingKeys.type.rawValue)
                     encoder.encodeString(name, forKey: CodingKeys.name.rawValue)
+                    encoder.encodeInt32(id, forKey: CodingKeys.id.rawValue)
                     encoder.encodeInt32(innerColor, forKey: CodingKeys.innerColor.rawValue)
                     encoder.encodeInt32(outerColor, forKey: CodingKeys.outerColor.rawValue)
                     encoder.encodeInt32(patternColor, forKey: CodingKeys.patternColor.rawValue)
@@ -633,7 +652,7 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
 extension StarGift {
     init?(apiStarGift: Api.StarGift) {
         switch apiStarGift {
-        case let .starGift(apiFlags, id, sticker, stars, availabilityRemains, availabilityTotal, convertStars, firstSale, lastSale, upgradeStars):
+        case let .starGift(apiFlags, id, sticker, stars, availabilityRemains, availabilityTotal, availabilityResale, convertStars, firstSale, lastSale, upgradeStars, minResaleStars):
             var flags = StarGift.Gift.Flags()
             if (apiFlags & (1 << 2)) != 0 {
                 flags.insert(.isBirthdayGift)
@@ -641,7 +660,12 @@ extension StarGift {
             
             var availability: StarGift.Gift.Availability?
             if let availabilityRemains, let availabilityTotal {
-                availability = StarGift.Gift.Availability(remains: availabilityRemains, total: availabilityTotal)
+                availability = StarGift.Gift.Availability(
+                    remains: availabilityRemains,
+                    total: availabilityTotal,
+                    resale: availabilityResale ?? 0,
+                    minResaleStars: minResaleStars
+                )
             }
             var soldOut: StarGift.Gift.SoldOut?
             if let firstSale, let lastSale {
@@ -888,7 +912,7 @@ func _internal_upgradeStarGift(account: Account, formId: Int64?, reference: Star
                     case let .updateNewMessage(message, _, _):
                         if let message = StoreMessage(apiMessage: message, accountPeerId: account.peerId, peerIsForum: false) {
                             for media in message.media {
-                                if let action = media as? TelegramMediaAction, case let .starGiftUnique(gift, _, _, savedToProfile, canExportDate, transferStars, _, peerId, _, savedId) = action.action, case let .Id(messageId) = message.id {
+                                if let action = media as? TelegramMediaAction, case let .starGiftUnique(gift, _, _, savedToProfile, canExportDate, transferStars, _, peerId, _, savedId, _) = action.action, case let .Id(messageId) = message.id {
                                     let reference: StarGiftReference
                                     if let peerId, let savedId {
                                         reference = .peer(peerId: peerId, id: savedId)
@@ -1926,8 +1950,8 @@ extension StarGift.UniqueGift.Attribute {
                 return nil
             }
             self = .pattern(name: name, file: file, rarity: rarityPermille)
-        case let .starGiftAttributeBackdrop(name, centerColor, edgeColor, patternColor, textColor, rarityPermille):
-            self = .backdrop(name: name, innerColor: centerColor, outerColor: edgeColor, patternColor: patternColor, textColor: textColor, rarity: rarityPermille)
+        case let .starGiftAttributeBackdrop(name, id, centerColor, edgeColor, patternColor, textColor, rarityPermille):
+            self = .backdrop(name: name, id: id, innerColor: centerColor, outerColor: edgeColor, patternColor: patternColor, textColor: textColor, rarity: rarityPermille)
         case let .starGiftAttributeOriginalDetails(_, sender, recipient, date, message):
             var text: String?
             var entities: [MessageTextEntity]?

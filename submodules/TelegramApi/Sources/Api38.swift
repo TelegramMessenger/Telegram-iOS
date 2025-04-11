@@ -9333,6 +9333,30 @@ public extension Api.functions.payments {
                 }
 }
 public extension Api.functions.payments {
+                static func getResaleStarGifts(flags: Int32, attributesHash: Int64?, giftId: Int64, attributes: [Api.StarGiftAttributeId]?, offset: String, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.ResaleStarGifts>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(2053087798)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt64(attributesHash!, buffer: buffer, boxed: false)}
+                    serializeInt64(giftId, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 3) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(attributes!.count))
+                    for item in attributes! {
+                        item.serialize(buffer, true)
+                    }}
+                    serializeString(offset, buffer: buffer, boxed: false)
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "payments.getResaleStarGifts", parameters: [("flags", String(describing: flags)), ("attributesHash", String(describing: attributesHash)), ("giftId", String(describing: giftId)), ("attributes", String(describing: attributes)), ("offset", String(describing: offset)), ("limit", String(describing: limit))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.payments.ResaleStarGifts? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.payments.ResaleStarGifts?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.payments.ResaleStarGifts
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.payments {
                 static func getSavedInfo() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.SavedInfo>) {
                     let buffer = Buffer()
                     buffer.appendInt32(578650699)

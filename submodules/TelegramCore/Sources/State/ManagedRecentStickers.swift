@@ -350,7 +350,7 @@ func managedUniqueStarGifts(accountPeerId: PeerId, postbox: Postbox, network: Ne
                                     attributes: [
                                         .model(name: "", file: file, rarity: 0),
                                         .pattern(name: "", file: patternFile, rarity: 0),
-                                        .backdrop(name: "", innerColor: innerColor, outerColor: outerColor, patternColor: patternColor, textColor: textColor, rarity: 0)
+                                        .backdrop(name: "", id: 0, innerColor: innerColor, outerColor: outerColor, patternColor: patternColor, textColor: textColor, rarity: 0)
                                     ],
                                     availability: StarGift.UniqueGift.Availability(issued: 0, total: 0),
                                     giftAddress: nil,
