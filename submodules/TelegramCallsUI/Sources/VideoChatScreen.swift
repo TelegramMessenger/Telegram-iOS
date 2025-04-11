@@ -2718,6 +2718,9 @@ final class VideoChatScreenComponent: Component {
                     displayVideoControlButton = false
                 }
             }
+            if videoControlButtonContent == videoButtonContent {
+                displayVideoControlButton = false
+            }
 
             let videoControlButtonSize = self.videoControlButton.update(
                 transition: transition,

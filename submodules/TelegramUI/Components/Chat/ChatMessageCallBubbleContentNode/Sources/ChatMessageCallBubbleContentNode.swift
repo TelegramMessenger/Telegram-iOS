@@ -278,7 +278,7 @@ public class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                 var avatarsWidth: CGFloat = 0.0
                 if !peopleAvatars.isEmpty {
                     avatarsWidth += avatarsLeftInset
-                    avatarsWidth += 1.0 * peopleAvatarSize + CGFloat(peopleAvatars.count - 1) * peopleAvatarSpacing
+                    avatarsWidth += 1.0 * peopleAvatarSize + CGFloat(min(3, peopleAvatars.count) - 1) * peopleAvatarSpacing
                     avatarsWidth += avatarsRightInset
                     labelsWidth += avatarsWidth
                 }

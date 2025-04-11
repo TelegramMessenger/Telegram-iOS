@@ -14118,8 +14118,8 @@ Sorry for the inconvenience.";
 
 "CallList.ToastCallLinkCopied.Text" = "Call link copied";
 "CallList.ToastCallLinkCopied.Action" = "View Call";
-"CallList.NewCall" = "New Call";
-"CallList.NewCallLink" = "New Call Link";
+"CallList.NewCall" = "Start New Call";
+"CallList.NewCallLink" = "Create Call Link";
 
 "Chat.SendStarsToBecomeTopInfo" = "Send %@ or more to highlight your profile";
 

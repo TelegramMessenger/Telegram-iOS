@@ -265,6 +265,10 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
             if isCall && count == 0 {
                 self.titleView.title = CounterControllerTitle(title: self.params.title ?? self.presentationData.strings.Compose_NewGroupTitle, counter: nil)
             } else {
+                var count = count
+                if isCall {
+                    count += 1
+                }
                 self.titleView.title = CounterControllerTitle(title: self.params.title ?? self.presentationData.strings.Compose_NewGroupTitle, counter: "\(count)/\(maxCount)")
             }
             if self.rightNavigationButton == nil && !isCall {

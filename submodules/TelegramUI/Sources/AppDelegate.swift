@@ -1977,6 +1977,22 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         self.maybeCheckForUpdates()
         
         SharedDisplayLinkDriver.shared.updateForegroundState(self.isActiveValue)
+        
+        func cancelWindowPanGestures(view: UIView) {
+            if let gestureRecognizers = view.gestureRecognizers {
+                for recognizer in gestureRecognizers {
+                    if let recognizer = recognizer as? WindowPanRecognizer {
+                        recognizer.cancel()
+                    }
+                }
+            }
+            
+            for subview in view.subviews {
+                cancelWindowPanGestures(view: subview)
+            }
+        }
+        
+        //cancelWindowPanGestures(view: self.mainWindow.hostView.containerView)
     }
     
     func applicationWillTerminate(_ application: UIApplication) {

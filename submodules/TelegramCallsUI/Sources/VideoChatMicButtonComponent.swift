@@ -444,7 +444,9 @@ final class VideoChatMicButtonComponent: Component {
                         context.fill(CGRect(origin: CGPoint(), size: size))
                     case .muted, .unmuted, .raiseHand, .scheduled:
                         let colors: [UIColor]
-                        if case .muted = component.content {
+                        if case .muted(forced: true) = component.content {
+                            colors = [UIColor(rgb: 0x3252EF), UIColor(rgb: 0xC64688)]
+                        } else if case .muted(forced: false) = component.content {
                             colors = [UIColor(rgb: 0x0080FF), UIColor(rgb: 0x00A1FE)]
                         } else if case .raiseHand = component.content {
                             colors = [UIColor(rgb: 0x3252EF), UIColor(rgb: 0xC64688)]
@@ -617,7 +619,9 @@ final class VideoChatMicButtonComponent: Component {
                 transition.setScale(view: blobView, scale: availableSize.width / 116.0)
                 
                 let blobsColor: UIColor
-                if case .muted = component.content {
+                if case .muted(forced: true) = component.content {
+                    blobsColor = UIColor(rgb: 0x914BAD)
+                } else if case .muted(forced: false) = component.content {
                     blobsColor = UIColor(rgb: 0x0086FF)
                 } else if case .raiseHand = component.content {
                     blobsColor = UIColor(rgb: 0x914BAD)
@@ -668,7 +672,9 @@ final class VideoChatMicButtonComponent: Component {
                 }
                 
                 let glowColor: UIColor
-                if case .muted = component.content {
+                if case .muted(forced: true) = component.content {
+                    glowColor = UIColor(rgb: 0x3252EF)
+                } else if case .muted(forced: false) = component.content {
                     glowColor = UIColor(rgb: 0x0086FF)
                 } else if case .raiseHand = component.content {
                     glowColor = UIColor(rgb: 0x3252EF)
