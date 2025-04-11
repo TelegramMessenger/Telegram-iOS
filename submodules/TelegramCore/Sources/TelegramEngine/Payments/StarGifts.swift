@@ -75,11 +75,27 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
                 self.minResaleStars = minResaleStars
             }
             
+            public init(from decoder: Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                self.remains = try container.decode(Int32.self, forKey: .remains)
+                self.total = try container.decode(Int32.self, forKey: .total)
+                self.resale = (try? container.decodeIfPresent(Int64.self, forKey: .resale)) ?? 0
+                self.minResaleStars = try? container.decodeIfPresent(Int64.self, forKey: .minResaleStars)
+            }
+            
             public init(decoder: PostboxDecoder) {
                 self.remains = decoder.decodeInt32ForKey(CodingKeys.remains.rawValue, orElse: 0)
                 self.total = decoder.decodeInt32ForKey(CodingKeys.total.rawValue, orElse: 0)
                 self.resale = decoder.decodeInt64ForKey(CodingKeys.resale.rawValue, orElse: 0)
                 self.minResaleStars = decoder.decodeInt64ForKey(CodingKeys.minResaleStars.rawValue, orElse: 0)
+            }
+            
+            public func encode(to encoder: Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                try container.encode(self.remains, forKey: .remains)
+                try container.encode(self.total, forKey: .total)
+                try container.encode(self.resale, forKey: .resale)
+                try container.encodeIfPresent(self.minResaleStars, forKey: .minResaleStars)
             }
             
             public func encode(_ encoder: PostboxEncoder) {
