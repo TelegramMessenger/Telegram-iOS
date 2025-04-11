@@ -474,7 +474,7 @@ final class ContactsControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
             if let requestAddContact = self?.requestAddContact {
                 requestAddContact(phoneNumber)
             }
-        }, openPeer: { [weak self] peer in
+        }, openPeer: { [weak self] peer, _ in
             if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch {
                 requestOpenPeerFromSearch(peer)
             }
