@@ -834,6 +834,34 @@ public enum TransferStarGiftError {
     case disallowedStarGift
 }
 
+public enum BuyStarGiftError {
+    case generic
+}
+
+public enum UpgradeStarGiftError {
+    case generic
+}
+
+func _internal_buyStarGift(account: Account, slug: String, peerId: EnginePeer.Id) -> Signal<Never, BuyStarGiftError> {
+    let source: BotPaymentInvoiceSource = .starGiftResale(slug: slug, toPeerId: peerId)
+    return _internal_fetchBotPaymentForm(accountPeerId: account.peerId, postbox: account.postbox, network: account.network, source: source, themeParams: nil)
+    |> map(Optional.init)
+    |> `catch` { error -> Signal<BotPaymentForm?, BuyStarGiftError> in
+        return .fail(.generic)
+    }
+    |> mapToSignal { paymentForm in
+        if let paymentForm {
+            return _internal_sendStarsPaymentForm(account: account, formId: paymentForm.id, source: source)
+            |> mapError { _ -> BuyStarGiftError in
+                return .generic
+            }
+            |> ignoreValues
+        } else {
+            return .fail(.generic)
+        }
+    }
+}
+
 func _internal_transferStarGift(account: Account, prepaid: Bool, reference: StarGiftReference, peerId: EnginePeer.Id) -> Signal<Never, TransferStarGiftError> {
     return account.postbox.transaction { transaction -> (Api.InputPeer, Api.InputSavedStarGift)? in
         guard let inputPeer = transaction.getPeer(peerId).flatMap(apiInputPeer), let starGift = reference.apiStarGiftReference(transaction: transaction) else {
@@ -884,10 +912,6 @@ func _internal_transferStarGift(account: Account, prepaid: Bool, reference: Star
             }
         }
     }
-}
-
-public enum UpgradeStarGiftError {
-    case generic
 }
 
 func _internal_upgradeStarGift(account: Account, formId: Int64?, reference: StarGiftReference, keepOriginalInfo: Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError> {
@@ -1424,6 +1448,25 @@ private final class ProfileGiftsContextImpl {
         return _internal_transferStarGift(account: self.account, prepaid: prepaid, reference: reference, peerId: peerId)
     }
     
+    func buyStarGift(reference: StarGiftReference, peerId: EnginePeer.Id) -> Signal<Never, BuyStarGiftError> {
+        var gift = self.gifts.first(where: { $0.reference == reference })
+        if gift == nil {
+            gift = self.filteredGifts.first(where: { $0.reference == reference })
+        }
+        guard case let .unique(uniqueGift) = gift?.gift else {
+            return .complete()
+        }
+        
+        if let count = self.count {
+            self.count = max(0, count - 1)
+        }
+        self.gifts.removeAll(where: { $0.reference == reference })
+        self.filteredGifts.removeAll(where: { $0.reference == reference })
+        self.pushState()
+        
+        return _internal_buyStarGift(account: self.account, slug: uniqueGift.slug, peerId: peerId)
+    }
+    
     func upgradeStarGift(formId: Int64?, reference: StarGiftReference, keepOriginalInfo: Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError> {
         return Signal { [weak self] subscriber in
             guard let self else {
@@ -1836,6 +1879,20 @@ public final class ProfileGiftsContext {
     public func convertStarGift(reference: StarGiftReference) {
         self.impl.with { impl in
             impl.convertStarGift(reference: reference)
+        }
+    }
+    
+    public func buyStarGift(reference: StarGiftReference, peerId: EnginePeer.Id) -> Signal<Never, BuyStarGiftError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.buyStarGift(reference: reference, peerId: peerId).start(error: { error in
+                    subscriber.putError(error)
+                }, completed: {
+                    subscriber.putCompletion()
+                }))
+            }
+            return disposable
         }
     }
     
