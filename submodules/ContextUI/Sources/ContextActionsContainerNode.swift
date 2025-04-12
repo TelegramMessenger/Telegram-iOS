@@ -438,9 +438,8 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
             icon = nil
             isUserInteractionEnabled = action != nil
         case let .starsReactions(topCount):
-            //TODO:localize
             self.action = nil
-            self.text = "Send \(topCount) or more to highlight your profile"
+            self.text = self.presentationData.strings.Chat_SendStarsToBecomeTopInfo("\(topCount)").string
             self.targetSelectionIndex = nil
             icon = nil
             isUserInteractionEnabled = action != nil

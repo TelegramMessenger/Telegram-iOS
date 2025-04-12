@@ -131,11 +131,10 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
             }, checkOptionTitle: nil)
         case let .groupCreation(isCall):
             if isCall {
-                //TODO:localize
-                placeholder = "Search for contacts or usernames"
+                placeholder = self.presentationData.strings.NewCall_SearchPlaceholder
                 self.footerPanelNode = FooterPanelNode(theme: self.presentationData.theme, strings: self.presentationData.strings, action: {
                     proceedImpl?()
-                }, checkOptionTitle: isCall ? "Call with video enabled" : nil)
+                }, checkOptionTitle: self.presentationData.strings.NewCall_VideoOption)
             } else {
                 placeholder = self.presentationData.strings.Compose_TokenListPlaceholder    
                 self.footerPanelNode = nil
@@ -483,15 +482,14 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                 count = contactListNode.selectionState?.selectedPeerIndices.count ?? 0
             }
             if case let .groupCreation(isCall) = self.mode, isCall {
-                //TODO:localize
                 if count == 0 {
                     // Don't set anything to prevent state update
                 } else if count <= 1 {
                     let callTitle: String
                     if case let .contacts(contactListNode) = self.contentNode, let peer = contactListNode.selectedPeers.first, case let .peer(peer, _, _) = peer {
-                        callTitle = "Call \(EnginePeer(peer).compactDisplayTitle)"
+                        callTitle = self.presentationData.strings.NewCall_ActionCallSingle(EnginePeer(peer).compactDisplayTitle).string
                     } else {
-                        callTitle = "Call"
+                        callTitle = self.presentationData.strings.NewCall_ActionCallMultiple
                     }
                     footerPanelNode.content = FooterPanelNode.Content(title: callTitle, badge: "")
                 } else {

@@ -14115,3 +14115,70 @@ Sorry for the inconvenience.";
 "WebApp.ImportData.AccountHeader" = "ACCOUNT TO IMPORT DATA FROM";
 "WebApp.ImportData.CreatedOn" = "created on %@";
 "WebApp.ImportData.Import" = "Import";
+
+"CallList.ToastCallLinkCopied.Text" = "Call link copied";
+"CallList.ToastCallLinkCopied.Action" = "View Call";
+"CallList.NewCall" = "Start New Call";
+"CallList.NewCallLink" = "Create Call Link";
+
+"Chat.SendStarsToBecomeTopInfo" = "Send %@ or more to highlight your profile";
+
+"VideoChat.RevokeLink" = "Revoke Link";
+
+"InviteLink.GroupCallLinkHelp" = "Anyone on Telegram can join your call by following the link below.";
+"InviteLink.CallLinkTitle" = "Call Link";
+"InviteLink.CreatedGroupCallFooter" = "Be the first to join the call and add people from there. [Open Call >](open_call)";
+"InviteLink.QRCode.InfoGroupCall" = "Everyone on Telegram can scan this code to join your group call.";
+
+"Call.GenericGroupCallTitle" = "Group Call";
+
+"VideoChat.EncryptionKeyLabel" = "End-to-end encrypted";
+"VideoChat.EncryptionKeyText" = "These four emojis represent the call's encryption key. They must match for all participants and change when someone joins or leaves.";
+"VideoChat.EncryptionKeyDone" = "Close";
+"VideoChat.InviteMember" = "Add Member";
+
+"VideoChat.GroupCallTitle" = "Group Call";
+
+"Chat.ViewGroupCall" = "JOIN GROUP CALL";
+
+"NewCall.SearchPlaceholder" = "Search for contacts or usernames";
+"NewCall.VideoOption" = "Call with video enabled";
+"NewCall.ActionCallSingle" = "Call %@";
+"NewCall.ActionCallMultiple" = "Call";
+
+"Chat.ToastCallLinkExpired.Text" = "This link is no longer active";
+
+"Chat.CallMessage.GroupCallParticipantCount_1" = "1 person";
+"Chat.CallMessage.GroupCallParticipantCount_any" = "%d people";
+
+"Chat.CallMessage.DeclinedGroupCall" = "Declined Group Call";
+"Chat.CallMessage.MissedGroupCall" = "Missed Group Call";
+"Chat.CallMessage.CancelledGroupCall" = "Cancelled Group Call";
+"Chat.CallMessage.IncomingGroupCall" = "Incoming Group Call";
+"Chat.CallMessage.OutgoingGroupCall" = "Outgoing Group Call";
+
+"Invitation.GroupCall" = "Group Call";
+"Invitation.JoinGroupCall" = "Join Group Call";
+"Invitation.PublicGroup" = "public group";
+"Invitation.PrivateGroup" = "private group";
+
+"Invitation.GroupCall.Text" = "You are invited to join a group call.";
+
+"Invitation.Group.AlreadyJoinedSingle" = "**%@** already joined this group.";
+"Invitation.Group.AlreadyJoinedMultiple" = "%@ already joined this group.";
+"Invitation.Group.AlreadyJoinedMultipleWithCount_1" = "{} and **%d** other person already joined this group.";
+"Invitation.Group.AlreadyJoinedMultipleWithCount_any" = "{} and **%d** other people already joined this group.";
+
+"Invitation.GroupCall.AlreadyJoinedSingle" = "**%@** already joined this call.";
+"Invitation.GroupCall.AlreadyJoinedMultiple" = "%@ already joined this call.";
+"Invitation.GroupCall.AlreadyJoinedMultipleWithCount_1" = "{} and **%d** other person already joined this call.";
+"Invitation.GroupCall.AlreadyJoinedMultipleWithCount_any" = "{} and **%d** other people already joined this call.";
+
+"Call.ShareLink" = "Share Call Link";
+"Call.AddMemberTitle" = "Add Member";
+
+"Call.IncomingGroupCallTitle.Single" = "%@";
+"Call.IncomingGroupCallTitle.Multiple_1" = "{} and 1 other";
+"Call.IncomingGroupCallTitle.Multiple_any" = "{} and %d others";
+
+"GroupCall.RevokeLinkText" = "Are you sure you want to revoke this link? Once you do, no one will be able to join the call using it.";

@@ -99,6 +99,12 @@ public enum ContactListPeer: Equatable {
 }
 
 public final class ContactSelectionControllerParams {
+    public enum MultipleSelectionMode {
+        case disabled
+        case possible
+        case always
+    }
+    
     public let context: AccountContext
     public let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     public let mode: ContactSelectionControllerMode
@@ -107,7 +113,7 @@ public final class ContactSelectionControllerParams {
     public let options: Signal<[ContactListAdditionalOption], NoError>
     public let displayDeviceContacts: Bool
     public let displayCallIcons: Bool
-    public let multipleSelection: Bool
+    public let multipleSelection: MultipleSelectionMode
     public let requirePhoneNumbers: Bool
     public let allowChannelsInSearch: Bool
     public let confirmation: (ContactListPeer) -> Signal<Bool, NoError>
@@ -124,7 +130,7 @@ public final class ContactSelectionControllerParams {
         options: Signal<[ContactListAdditionalOption], NoError> = .single([]),
         displayDeviceContacts: Bool = false,
         displayCallIcons: Bool = false,
-        multipleSelection: Bool = false,
+        multipleSelection: MultipleSelectionMode = .disabled,
         requirePhoneNumbers: Bool = false,
         allowChannelsInSearch: Bool = false,
         confirmation: @escaping (ContactListPeer) -> Signal<Bool, NoError> = { _ in .single(true) },

@@ -29,3 +29,6 @@ url=../tgcalls.git
 [submodule "third-party/dav1d/dav1d"]
 	path = third-party/dav1d/dav1d
 	url = https://github.com/ali-fareed/dav1d.git
+[submodule "third-party/td/td"]
+	path = third-party/td/td
+	url = https://github.com/tdlib/td

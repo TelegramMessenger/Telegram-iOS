@@ -2898,7 +2898,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             
-            if let currentGroupCallController = self.context.sharedContext as? VoiceChatController, case let .group(groupCall) = currentGroupCallController.call, let currentCallId = groupCall.callId, currentCallId == conferenceCall.callId {
+            if let currentGroupCallController = self.context.sharedContext.currentGroupCallController as? VoiceChatController, case let .group(groupCall) = currentGroupCallController.call, let currentCallId = groupCall.callId, currentCallId == conferenceCall.callId {
                 self.context.sharedContext.navigateToCurrentCall()
                 return
             }
@@ -2932,8 +2932,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     self.context.sharedContext.openCreateGroupCallUI(context: self.context, peerIds: conferenceCall.otherParticipants, parentController: self)
                 default:
                     let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-                    //TODO:localize
-                    self.present(textAlertController(context: self.context, title: nil, text: "An error occurred", actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    self.present(textAlertController(context: self.context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                 }
             })
         }, longTap: { [weak self] action, params in
@@ -7513,17 +7512,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         navigationController.pushViewController(self, animated: false)
         
         let updatedLayout = self.validLayout
-        let updatedFrame = self.view.frame
         
         if let initialLayout, let updatedLayout, transition.isAnimated {
             let initialView = self.view.superview
+            let updatedFrame = self.view.convert(self.view.bounds, to: navigationController.view)
             navigationController.view.addSubview(self.view)
             
             self.view.clipsToBounds = true
             self.view.frame = initialFrame
             self.containerLayoutUpdated(initialLayout, transition: .immediate)
             self.containerLayoutUpdated(updatedLayout, transition: transition)
-            
+            self.chatDisplayNode.historyNode.layer.animateScaleX(from: initialLayout.size.width / updatedLayout.size.width, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+            self.chatDisplayNode.historyNode.layer.animatePosition(from: CGPoint(x: (updatedLayout.size.width - initialLayout.size.width) / 2.0, y: 0.0), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+            self.chatDisplayNode.inputPanelBackgroundNode.layer.removeAllAnimations()
+            self.chatDisplayNode.inputPanelBackgroundNode.layer.animatePosition(from: CGPoint(x: 0.0, y: self.chatDisplayNode.inputPanelNode?.frame.height ?? 45.0), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
             self.view.layer.animate(from: 14.0, to: updatedLayout.deviceMetrics.screenCornerRadius, keyPath: "cornerRadius", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.4)
             
             transition.updateFrame(view: self.view, frame: updatedFrame, completion: { _ in

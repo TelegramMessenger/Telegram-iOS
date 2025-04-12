@@ -685,9 +685,8 @@ final class VideoChatScreenComponent: Component {
                         if let result {
                             switch result {
                             case .linkCopied:
-                                //TODO:localize
                                 let presentationData = groupCall.accountContext.sharedContext.currentPresentationData.with { $0 }
-                                self.environment?.controller()?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_linkcopied", scale: 0.08, colors: ["info1.info1.stroke": UIColor.clear, "info2.info2.Fill": UIColor.clear], title: nil, text: "Call link copied.", customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
+                                self.environment?.controller()?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_linkcopied", scale: 0.08, colors: ["info1.info1.stroke": UIColor.clear, "info2.info2.Fill": UIColor.clear], title: nil, text: presentationData.strings.CallList_ToastCallLinkCopied_Text, customUndoText: presentationData.strings.CallList_ToastCallLinkCopied_Action, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
                                     return false
                                 }), in: .current)
                             case .openCall:
@@ -2038,11 +2037,10 @@ final class VideoChatScreenComponent: Component {
                 maxTitleWidth -= 110.0
             }
             
-            //TODO:localize
             let titleSize = self.title.update(
                 transition: transition,
                 component: AnyComponent(VideoChatTitleComponent(
-                    title: self.callState?.title ?? self.peer?.debugDisplayTitle ?? "Group Call",
+                    title: self.callState?.title ?? self.peer?.debugDisplayTitle ?? environment.strings.VideoChat_GroupCallTitle,
                     status: idleTitleStatusText,
                     isRecording: self.callState?.recordingStartTimestamp != nil,
                     strings: environment.strings,
@@ -2555,9 +2553,12 @@ final class VideoChatScreenComponent: Component {
                                     micButtonContent = .unmuted(pushToTalk: self.isPushToTalkActive)
                                     actionButtonMicrophoneState = .unmuted
                                 } else {
-                                    micButtonContent = .muted
-                                    actionButtonMicrophoneState = .muted
+                                    micButtonContent = .muted(forced: false)
+                                    actionButtonMicrophoneState = .muted(forced: false)
                                 }
+                            } else if isConference {
+                                micButtonContent = .muted(forced: true)
+                                actionButtonMicrophoneState = .muted(forced: true)
                             } else {
                                 micButtonContent = .raiseHand(isRaised: callState.raisedHand)
                                 actionButtonMicrophoneState = .raiseHand
@@ -2706,6 +2707,18 @@ final class VideoChatScreenComponent: Component {
             if areButtonsCollapsed {
                 displayVideoControlButton = false
             } else if let expandedParticipantsVideoState = self.expandedParticipantsVideoState, !expandedParticipantsVideoState.isUIHidden {
+                displayVideoControlButton = false
+            }
+            if case .audio = videoControlButtonContent {
+                if let (availableOutputs, _) = self.audioOutputState {
+                    if availableOutputs.count <= 0 {
+                        displayVideoControlButton = false
+                    }
+                } else {
+                    displayVideoControlButton = false
+                }
+            }
+            if videoControlButtonContent == videoButtonContent {
                 displayVideoControlButton = false
             }
 

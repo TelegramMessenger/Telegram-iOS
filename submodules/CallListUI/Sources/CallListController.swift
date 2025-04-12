@@ -108,7 +108,8 @@ public final class CallListController: TelegramBaseController {
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         if case .tab = self.mode {
-            self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCallIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.callPressed))
+            //self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCallIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.callPressed))
+            self.navigationItem.rightBarButtonItem = nil
             
             let icon: UIImage?
             if useSpecialTabBarIcons() {
@@ -191,7 +192,7 @@ public final class CallListController: TelegramBaseController {
                     }
                 }
                 
-                self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCallIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.callPressed))
+                //self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCallIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.callPressed))
             case .navigation:
                 if self.editingMode {
                     self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
@@ -296,9 +297,8 @@ public final class CallListController: TelegramBaseController {
                         if let result {
                             switch result {
                             case .linkCopied:
-                                //TODO:localize
                                 let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-                                self.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_linkcopied", scale: 0.08, colors: ["info1.info1.stroke": UIColor.clear, "info2.info2.Fill": UIColor.clear], title: nil, text: "Call link copied.", customUndoText: "View Call", timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
+                                self.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_linkcopied", scale: 0.08, colors: ["info1.info1.stroke": UIColor.clear, "info2.info2.Fill": UIColor.clear], title: nil, text: presentationData.strings.CallList_ToastCallLinkCopied_Text, customUndoText: presentationData.strings.CallList_ToastCallLinkCopied_Action, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
                                     if case .undo = action {
                                         openCall()
                                     }
@@ -383,7 +383,8 @@ public final class CallListController: TelegramBaseController {
                                     })
                                 } else {
                                     strongSelf.navigationItem.setLeftBarButton(UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Edit, style: .plain, target: strongSelf, action: #selector(strongSelf.editPressed)), animated: true)
-                                    strongSelf.navigationItem.setRightBarButton(UIBarButtonItem(image: PresentationResourcesRootController.navigationCallIcon(strongSelf.presentationData.theme), style: .plain, target: self, action: #selector(strongSelf.callPressed)), animated: true)
+                                    //strongSelf.navigationItem.setRightBarButton(UIBarButtonItem(image: PresentationResourcesRootController.navigationCallIcon(strongSelf.presentationData.theme), style: .plain, target: self, action: #selector(strongSelf.callPressed)), animated: true)
+                                    strongSelf.navigationItem.setRightBarButton(nil, animated: true)
                                 }
                             case .navigation:
                                 if strongSelf.editingMode {
@@ -399,9 +400,9 @@ public final class CallListController: TelegramBaseController {
                     }
                 }
             }
-        }, createGroupCall: { [weak self] in
+        }, openNewCall: { [weak self] in
             if let strongSelf = self {
-                strongSelf.createGroupCall(peerIds: [], isVideo: false)
+                strongSelf.callPressed()
             }
         })
         
@@ -515,8 +516,7 @@ public final class CallListController: TelegramBaseController {
             return
         }
 
-        //TODO:localize
-        let options = [ContactListAdditionalOption(title: "New Call Link", icon: .generic(PresentationResourcesItemList.linkIcon(presentationData.theme)!), action: { [weak self] in
+        let options = [ContactListAdditionalOption(title: self.presentationData.strings.CallList_NewCallLink, icon: .generic(PresentationResourcesItemList.linkIcon(presentationData.theme)!), action: { [weak self] in
             guard let self else {
                 return
             }
@@ -652,7 +652,8 @@ public final class CallListController: TelegramBaseController {
         switch self.mode {
             case .tab:
                 self.navigationItem.setLeftBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed)), animated: true)
-                self.navigationItem.setRightBarButton(UIBarButtonItem(image: PresentationResourcesRootController.navigationCallIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.callPressed)), animated: true)
+                self.navigationItem.setRightBarButton(nil, animated: true)
+                //self.navigationItem.setRightBarButton(UIBarButtonItem(image: PresentationResourcesRootController.navigationCallIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.callPressed)), animated: true)
             case .navigation:
                 self.navigationItem.setLeftBarButton(nil, animated: true)
                 self.navigationItem.setRightBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed)), animated: true)
@@ -738,8 +739,7 @@ public final class CallListController: TelegramBaseController {
                 self.context.sharedContext.openCreateGroupCallUI(context: self.context, peerIds: conferenceCall.otherParticipants, parentController: self)
             default:
                 let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-                //TODO:localize
-                self.present(textAlertController(context: self.context, title: nil, text: "An error occurred", actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                self.present(textAlertController(context: self.context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
             }
         })
     }

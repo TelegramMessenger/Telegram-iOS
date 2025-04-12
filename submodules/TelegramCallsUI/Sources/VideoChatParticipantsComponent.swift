@@ -1282,18 +1282,7 @@ final class VideoChatParticipantsComponent: Component {
                         let invitedPeer = component.invitedPeers[i - self.listParticipants.count]
                         participantPeerId = invitedPeer.peer.id
                         
-                        let subtitle: PeerListItemComponent.Subtitle
-                        //TODO:localize
-                        switch invitedPeer.state {
-                        case .none:
-                            subtitle = PeerListItemComponent.Subtitle(text: component.strings.VoiceChat_StatusInvited, color: .neutral)
-                        case .connecting:
-                            subtitle = PeerListItemComponent.Subtitle(text: "connecting...", color: .neutral)
-                        case .requesting:
-                            subtitle = PeerListItemComponent.Subtitle(text: "requesting...", color: .neutral)
-                        case .ringing:
-                            subtitle = PeerListItemComponent.Subtitle(text: "invited", color: .neutral)
-                        }
+                        let subtitle: PeerListItemComponent.Subtitle = PeerListItemComponent.Subtitle(text: component.strings.VoiceChat_StatusInvited, color: .neutral)
                         
                         let rightAccessoryComponent: AnyComponent<Empty> = AnyComponent(VideoChatParticipantInvitedStatusComponent(
                             theme: component.theme
@@ -1861,11 +1850,10 @@ final class VideoChatParticipantsComponent: Component {
                     let iconType: VideoChatListInviteComponent.Icon
                     switch inviteOption.type {
                     case let .invite(isMultiple):
-                        //TODO:localize
                         if isMultiple {
                             inviteText = component.strings.VoiceChat_InviteMember
                         } else {
-                            inviteText = "Add Member"
+                            inviteText = component.strings.VideoChat_InviteMember
                         }
                         iconType = .addUser
                     case .shareLink:

@@ -210,6 +210,11 @@ private final class PendingConferenceInvitationContext {
         case ringing
     }
     
+    enum InvitationError {
+        case generic
+        case privacy(peer: EnginePeer?)
+    }
+    
     private let engine: TelegramEngine
     private var requestDisposable: Disposable?
     private var stateDisposable: Disposable?
@@ -218,17 +223,10 @@ private final class PendingConferenceInvitationContext {
     private var hadMessage: Bool = false
     private var didNotifyEnded: Bool = false
     
-    init(engine: TelegramEngine, reference: InternalGroupCallReference, peerId: PeerId, isVideo: Bool, onStateUpdated: @escaping (State) -> Void, onEnded: @escaping (Bool) -> Void) {
+    init(engine: TelegramEngine, reference: InternalGroupCallReference, peerId: PeerId, isVideo: Bool, onStateUpdated: @escaping (State) -> Void, onEnded: @escaping (Bool) -> Void, onError: @escaping (InvitationError) -> Void) {
         self.engine = engine
-        self.requestDisposable = (engine.calls.inviteConferenceCallParticipant(reference: reference, peerId: peerId, isVideo: isVideo).startStrict(next: { [weak self] messageId in
+        self.requestDisposable = ((engine.calls.inviteConferenceCallParticipant(reference: reference, peerId: peerId, isVideo: isVideo) |> deliverOnMainQueue).startStrict(next: { [weak self] messageId in
             guard let self else {
-                return
-            }
-            guard let messageId else {
-                if !self.didNotifyEnded {
-                    self.didNotifyEnded = true
-                    onEnded(false)
-                }
                 return
             }
             self.messageId = messageId
@@ -296,6 +294,24 @@ private final class PendingConferenceInvitationContext {
                     }
                 }
             })
+        }, error: { [weak self] error in
+            guard let self else {
+                return
+            }
+            
+            if !self.didNotifyEnded {
+                self.didNotifyEnded = true
+                onEnded(false)
+            }
+            
+            let mappedError: InvitationError
+            switch error {
+            case .privacy(let peer):
+                mappedError = .privacy(peer: peer)
+            default:
+                mappedError = .generic
+            }
+            onError(mappedError)
         }))
     }
     
@@ -792,6 +808,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
 
     private let e2eContext: ConferenceCallE2EContext?
     
+    private var lastErrorAlertTimestamp: Double = 0.0
+    
     init(
         accountContext: AccountContext,
         audioSession: ManagedAudioSession,
@@ -841,6 +859,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.isConference = isConference
         self.beginWithVideo = beginWithVideo
         self.keyPair = keyPair
+        
+        if self.isConference && conferenceSourceId == nil {
+            self.isMutedValue = .unmuted
+            self.isMutedPromise.set(self.isMutedValue)
+            self.stateValue.muteState = nil
+        }
 
         if let keyPair, let initialCall {
             self.e2eContext = ConferenceCallE2EContext(
@@ -1742,6 +1766,15 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             self.onMutedSpeechActivityDetected?(value)
                         }
                     }, isConference: self.isConference, audioIsActiveByDefault: audioIsActiveByDefault, isStream: self.isStream, sharedAudioDevice: self.sharedAudioContext?.audioDevice, encryptionContext: encryptionContext))
+                    
+                    let isEffectivelyMuted: Bool
+                    switch self.isMutedValue {
+                    case let .muted(isPushToTalkActive):
+                        isEffectivelyMuted = !isPushToTalkActive
+                    case .unmuted:
+                        isEffectivelyMuted = false
+                    }
+                    genericCallContext.setIsMuted(isEffectivelyMuted)
                 }
 
                 self.genericCallContext = genericCallContext
@@ -1889,6 +1922,14 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 } else {
                     reference = .id(id: callInfo.id, accessHash: callInfo.accessHash)
                 }
+                
+                let isEffectivelyMuted: Bool
+                switch self.isMutedValue {
+                case let .muted(isPushToTalkActive):
+                    isEffectivelyMuted = !isPushToTalkActive
+                case .unmuted:
+                    isEffectivelyMuted = false
+                }
 
                 self.currentLocalSsrc = ssrc
                 self.requestDisposable.set((self.accountContext.engine.calls.joinGroupCall(
@@ -1896,7 +1937,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     joinAs: self.joinAsPeerId,
                     callId: callInfo.id,
                     reference: reference,
-                    preferMuted: true,
+                    preferMuted: isEffectivelyMuted,
                     joinPayload: joinPayload,
                     peerAdminIds: peerAdminIds,
                     inviteHash: self.invite,
@@ -1962,7 +2003,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
 
                     self.updateSessionState(internalState: .established(info: joinCallResult.callInfo, connectionMode: joinCallResult.connectionMode, clientParams: clientParams, localSsrc: ssrc, initialState: joinCallResult.state), audioSessionControl: self.audioSessionControl)
                     
-                    self.e2eContext?.begin()
+                    if let e2eState = joinCallResult.e2eState {
+                        self.e2eContext?.begin(initialState: e2eState)
+                    } else {
+                        self.e2eContext?.begin(initialState: nil)
+                    }
                 }, error: { [weak self] error in
                     guard let self else {
                         return
@@ -3536,6 +3581,32 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 onEnded: { success in
                     didEndAlready = true
                     onEnded?(success)
+                },
+                onError: { [weak self] error in
+                    guard let self else {
+                        return
+                    }
+                    
+                    let timestamp = CACurrentMediaTime()
+                    if self.lastErrorAlertTimestamp > timestamp - 1.0 {
+                        return
+                    }
+                    self.lastErrorAlertTimestamp = timestamp
+                    
+                    let presentationData = self.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkColorPresentationTheme)
+                    
+                    var errorText = presentationData.strings.Login_UnknownError
+                    switch error {
+                    case let .privacy(peer):
+                        if let peer {
+                            errorText = presentationData.strings.Call_PrivacyErrorMessage(peer.compactDisplayTitle).string
+                        }
+                    default:
+                        break
+                    }
+                    self.accountContext.sharedContext.mainWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: errorText, actions: [
+                        TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})
+                    ]), on: .root, blockInteraction: false, completion: {})
                 }
             )
             if !didEndAlready {

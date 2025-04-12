@@ -1977,6 +1977,22 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         self.maybeCheckForUpdates()
         
         SharedDisplayLinkDriver.shared.updateForegroundState(self.isActiveValue)
+        
+        func cancelWindowPanGestures(view: UIView) {
+            if let gestureRecognizers = view.gestureRecognizers {
+                for recognizer in gestureRecognizers {
+                    if let recognizer = recognizer as? WindowPanRecognizer {
+                        recognizer.cancel()
+                    }
+                }
+            }
+            
+            for subview in view.subviews {
+                cancelWindowPanGestures(view: subview)
+            }
+        }
+        
+        //cancelWindowPanGestures(view: self.mainWindow.hostView.containerView)
     }
     
     func applicationWillTerminate(_ application: UIApplication) {
@@ -2164,14 +2180,18 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             
             let internalId = CallSessionManager.getStableIncomingUUID(peerId: fromPeerId.id._internalGetInt64Value(), messageId: messageId.id)
             
-            //TODO:localize
-            var displayTitle = "\(fromTitle)"
+            var strings: PresentationStrings = defaultPresentationStrings
+            let _ = (self.sharedContextPromise.get()
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { sharedApplicationContext in
+                strings = sharedApplicationContext.sharedContext.currentPresentationData.with { $0.strings }
+            })
+
+            let displayTitle: String
             if let memberCountString = payloadJson["member_count"] as? String, let memberCount = Int(memberCountString) {
-                if memberCount == 1 {
-                    displayTitle.append(" and 1 other")
-                } else {
-                    displayTitle.append(" and \(memberCount) others")
-                }
+                displayTitle = strings.Call_IncomingGroupCallTitle_Multiple(Int32(memberCount)).replacingOccurrences(of: "{}", with: fromTitle)
+            } else {
+                displayTitle = strings.Call_IncomingGroupCallTitle_Single(fromTitle).string
             }
             
             callKitIntegration.reportIncomingCall(

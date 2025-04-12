@@ -109,7 +109,7 @@ public extension TelegramEngine {
             return _internal_sendConferenceCallBroadcast(account: self.account, callId: callId, accessHash: accessHash, block: block)
         }
         
-        public func inviteConferenceCallParticipant(reference: InternalGroupCallReference, peerId: EnginePeer.Id, isVideo: Bool) -> Signal<EngineMessage.Id?, NoError> {
+        public func inviteConferenceCallParticipant(reference: InternalGroupCallReference, peerId: EnginePeer.Id, isVideo: Bool) -> Signal<EngineMessage.Id, InviteConferenceCallParticipantError> {
             return _internal_inviteConferenceCallParticipant(account: self.account, reference: reference, peerId: peerId, isVideo: isVideo)
         }
         

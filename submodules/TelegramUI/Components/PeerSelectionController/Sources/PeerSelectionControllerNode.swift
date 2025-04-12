@@ -1330,7 +1330,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             if self.hasGlobalSearch {
                 categories.insert(.global)
             }
-            self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(context: self.context, updatedPresentationData: self.updatedPresentationData, onlyWriteable: true, categories: categories, addContact: nil, openPeer: { [weak self] peer in
+            self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(context: self.context, updatedPresentationData: self.updatedPresentationData, onlyWriteable: true, categories: categories, addContact: nil, openPeer: { [weak self] peer, _ in
                 if let strongSelf = self {
                     var updated = false
                     var count = 0

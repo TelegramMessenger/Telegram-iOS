@@ -425,9 +425,8 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                             isVideo = conferenceCall.flags.contains(.isVideo)
                             if message.flags.contains(.Incoming) {
                                 hasIncoming = true
-                                //TODO:localize
                                 let missedTimeout: Int32
-                                #if DEBUG
+                                #if DEBUG && false
                                 missedTimeout = 5
                                 #else
                                 missedTimeout = 30
@@ -463,8 +462,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                             peersString.append(", ")
                         }
                         if peer.id == item.context.account.peerId {
-                            //TODO:localize
-                            peersString += "You"
+                            peersString += item.presentationData.strings.DialogList_You
                         } else {
                             peersString += peer.compactDisplayTitle
                         }

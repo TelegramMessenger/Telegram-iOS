@@ -616,9 +616,27 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     }
                 }
                 attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
-            case .conferenceCall:
-                //TODO:localize
-                let titleString = "Group call"
+            case let .conferenceCall(conferenceCall):
+                var titleString: String
+                let incoming = message.flags.contains(.Incoming)
+                
+                let missedTimeout: Int32 = 30
+                let currentTime = Int32(Date().timeIntervalSince1970)
+                
+                if conferenceCall.flags.contains(.isMissed) {
+                    titleString = strings.Chat_CallMessage_DeclinedGroupCall
+                } else if message.timestamp < currentTime - missedTimeout {
+                    titleString = strings.Chat_CallMessage_MissedGroupCall
+                } else if conferenceCall.duration != nil {
+                    titleString = strings.Chat_CallMessage_CancelledGroupCall
+                } else {
+                    if incoming {
+                        titleString = strings.Chat_CallMessage_IncomingGroupCall
+                    } else {
+                        titleString = strings.Chat_CallMessage_OutgoingGroupCall
+                    }
+                }
+
                 attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
             case let .groupPhoneCall(_, _, scheduleDate, duration):
                 if let scheduleDate = scheduleDate {

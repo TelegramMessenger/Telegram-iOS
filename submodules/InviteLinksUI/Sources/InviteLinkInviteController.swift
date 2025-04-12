@@ -492,10 +492,9 @@ public final class InviteLinkInviteController: ViewController {
                         let dismissAction: () -> Void = { [weak controller] in
                             controller?.dismissAnimated()
                         }
-                        //TODO:localize
                         controller.setItemGroups([
                             ActionSheetItemGroup(items: [
-                                ActionSheetTextItem(title: "Revoke Link"),
+                                ActionSheetTextItem(title: presentationData.strings.GroupCall_RevokeLinkText),
                                 ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: { [weak self] in
                                     dismissAction()
 
@@ -674,9 +673,8 @@ public final class InviteLinkInviteController: ViewController {
                     }
                     var entries: [InviteLinkInviteEntry] = []
                     
-                    //TODO:localize
-                    let helpText: String = "Anyone on Telegram can join your call by following the link below."
-                    entries.append(.header(title: "Call Link", text: helpText))
+                    let helpText: String = presentationData.strings.InviteLink_GroupCallLinkHelp
+                    entries.append(.header(title: presentationData.strings.InviteLink_CallLinkTitle, text: helpText))
                     
                     let mainInvite: ExportedInvitation = .link(link: mainInvite?.link ?? "", title: nil, isPermanent: true, requestApproval: false, isRevoked: false, adminId: self.context.account.peerId, date: 0, startDate: nil, expireDate: nil, usageLimit: nil, count: nil, requestedCount: nil, pricing: nil)
                     

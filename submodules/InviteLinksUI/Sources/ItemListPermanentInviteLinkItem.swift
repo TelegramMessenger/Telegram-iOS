@@ -369,8 +369,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                         return (TelegramTextAttributes.URL, contents)
                     }
                 )
-                //TODO:localize
-                let justCreatedCallTextAttributedString = parseMarkdownIntoAttributedString("Be the first to join the call and add people from there. [Open Call >](open_call)", attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
+                let justCreatedCallTextAttributedString = parseMarkdownIntoAttributedString(item.presentationData.strings.InviteLink_CreatedGroupCallFooter, attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
                 if let range = justCreatedCallTextAttributedString.string.range(of: ">"), let chevronImage {
                     justCreatedCallTextAttributedString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: justCreatedCallTextAttributedString.string))
                 }

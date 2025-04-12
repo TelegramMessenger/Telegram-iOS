@@ -498,14 +498,12 @@ public final class CallController: ViewController {
     }
     
     static func openConferenceAddParticipant(context: AccountContext, disablePeerIds: [EnginePeer.Id], shareLink: (() -> Void)?, completion: @escaping ([(id: EnginePeer.Id, isVideo: Bool)]) -> Void) -> ViewController {
-        //TODO:localize
         let presentationData = context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkColorPresentationTheme)
         
         var options: [ContactListAdditionalOption] = []
         var openShareLinkImpl: (() -> Void)?
         if shareLink != nil {
-            //TODO:localize
-            options.append(ContactListAdditionalOption(title: "Share Call Link", icon: .generic(UIImage(bundleImageName: "Contact List/LinkActionIcon")!), action: {
+            options.append(ContactListAdditionalOption(title: presentationData.strings.Call_ShareLink, icon: .generic(UIImage(bundleImageName: "Contact List/LinkActionIcon")!), action: {
                 openShareLinkImpl?()
             }, clearHighlightAutomatically: false))
         }
@@ -515,11 +513,11 @@ public final class CallController: ViewController {
             updatedPresentationData: (initial: presentationData, signal: .single(presentationData)),
             mode: .generic,
             title: { strings in
-                //TODO:localize
-                return "Add Member"
+                return strings.Call_AddMemberTitle
             },
             options: .single(options),
             displayCallIcons: true,
+            multipleSelection: .disabled,
             confirmation: { peer in
                 switch peer {
                 case let .peer(peer, _, _):

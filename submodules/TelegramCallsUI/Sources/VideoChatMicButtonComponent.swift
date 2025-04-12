@@ -182,7 +182,7 @@ final class VideoChatMicButtonComponent: Component {
     
     enum Content: Equatable {
         case connecting
-        case muted
+        case muted(forced: Bool)
         case unmuted(pushToTalk: Bool)
         case raiseHand(isRaised: Bool)
         case scheduled(state: ScheduledState)
@@ -263,9 +263,13 @@ final class VideoChatMicButtonComponent: Component {
                 switch component.content {
                 case .connecting, .unmuted, .raiseHand, .scheduled:
                     self.beginTrackingWasPushToTalk = false
-                case .muted:
-                    self.beginTrackingWasPushToTalk = true
-                    component.updateUnmutedStateIsPushToTalk(true)
+                case let .muted(forced):
+                    if forced {
+                        self.beginTrackingWasPushToTalk = false
+                    } else {
+                        self.beginTrackingWasPushToTalk = true
+                        component.updateUnmutedStateIsPushToTalk(true)
+                    }
                 }
             }
             
@@ -291,8 +295,11 @@ final class VideoChatMicButtonComponent: Component {
                 switch component.content {
                 case .connecting:
                     break
-                case .muted:
-                    component.updateUnmutedStateIsPushToTalk(false)
+                case let .muted(forced):
+                    if forced {   
+                    } else {
+                        component.updateUnmutedStateIsPushToTalk(false)
+                    }
                 case .unmuted:
                     if self.beginTrackingWasPushToTalk {
                         if timestamp < self.beginTrackingTimestamp + 0.15 {
@@ -340,8 +347,12 @@ final class VideoChatMicButtonComponent: Component {
             case .connecting:
                 titleText = component.strings.VoiceChat_Connecting
                 isEnabled = false
-            case .muted:
-                titleText = component.strings.VoiceChat_Unmute
+            case let .muted(forced):
+                if forced {
+                    titleText = component.strings.VoiceChat_MutedByAdmin
+                } else {
+                    titleText = component.strings.VoiceChat_Unmute
+                }
             case let .unmuted(isPushToTalk):
                 titleText = isPushToTalk ? component.strings.VoiceChat_Live : component.strings.VoiceChat_Mute
             case let .raiseHand(isRaised):
@@ -433,7 +444,9 @@ final class VideoChatMicButtonComponent: Component {
                         context.fill(CGRect(origin: CGPoint(), size: size))
                     case .muted, .unmuted, .raiseHand, .scheduled:
                         let colors: [UIColor]
-                        if case .muted = component.content {
+                        if case .muted(forced: true) = component.content {
+                            colors = [UIColor(rgb: 0x3252EF), UIColor(rgb: 0xC64688)]
+                        } else if case .muted(forced: false) = component.content {
                             colors = [UIColor(rgb: 0x0080FF), UIColor(rgb: 0x00A1FE)]
                         } else if case .raiseHand = component.content {
                             colors = [UIColor(rgb: 0x3252EF), UIColor(rgb: 0xC64688)]
@@ -606,7 +619,9 @@ final class VideoChatMicButtonComponent: Component {
                 transition.setScale(view: blobView, scale: availableSize.width / 116.0)
                 
                 let blobsColor: UIColor
-                if case .muted = component.content {
+                if case .muted(forced: true) = component.content {
+                    blobsColor = UIColor(rgb: 0x914BAD)
+                } else if case .muted(forced: false) = component.content {
                     blobsColor = UIColor(rgb: 0x0086FF)
                 } else if case .raiseHand = component.content {
                     blobsColor = UIColor(rgb: 0x914BAD)
@@ -657,7 +672,9 @@ final class VideoChatMicButtonComponent: Component {
                 }
                 
                 let glowColor: UIColor
-                if case .muted = component.content {
+                if case .muted(forced: true) = component.content {
+                    glowColor = UIColor(rgb: 0x3252EF)
+                } else if case .muted(forced: false) = component.content {
                     glowColor = UIColor(rgb: 0x0086FF)
                 } else if case .raiseHand = component.content {
                     glowColor = UIColor(rgb: 0x3252EF)
