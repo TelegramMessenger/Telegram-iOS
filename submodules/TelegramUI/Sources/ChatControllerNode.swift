@@ -190,7 +190,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     let inputPanelContainerNode: ChatInputPanelContainer
     private let inputPanelOverlayNode: SparseNode
     private let inputPanelClippingNode: SparseNode
-    private let inputPanelBackgroundNode: NavigationBackgroundNode
+    let inputPanelBackgroundNode: NavigationBackgroundNode
     
     private var navigationBarBackgroundContent: WallpaperBubbleBackgroundNode?
     private var inputPanelBackgroundContent: WallpaperBubbleBackgroundNode?
