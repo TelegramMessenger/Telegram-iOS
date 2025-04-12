@@ -1880,9 +1880,9 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             displayMode = .aspectFit
         } else if case .compact = layout.metrics.widthClass {
             if layout.size.width < layout.size.height && layout.size.height < layout.deviceMetrics.screenSize.height {
-                wallpaperBounds.size.height = layout.deviceMetrics.screenSize.height
+                wallpaperBounds.size = layout.deviceMetrics.screenSize
             } else if layout.size.width > layout.size.height && layout.size.height < layout.deviceMetrics.screenSize.width {
-                wallpaperBounds.size.height = layout.deviceMetrics.screenSize.width
+                wallpaperBounds.size = layout.deviceMetrics.screenSize
             }
         }
         self.backgroundNode.updateLayout(size: wallpaperBounds.size, displayMode: displayMode, transition: transition)
@@ -2296,13 +2296,21 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         self.navigateButtons.update(rect: apparentNavigateButtonsFrame, within: layout.size, transition: transition)
     
         if let titleAccessoryPanelNode = self.titleAccessoryPanelNode, let titleAccessoryPanelFrame, !titleAccessoryPanelNode.frame.equalTo(titleAccessoryPanelFrame) {
+            let previousFrame = titleAccessoryPanelNode.frame
             titleAccessoryPanelNode.frame = titleAccessoryPanelFrame
-            transition.animatePositionAdditive(node: titleAccessoryPanelNode, offset: CGPoint(x: 0.0, y: -titleAccessoryPanelFrame.height))
+            if transition.isAnimated && previousFrame.width != titleAccessoryPanelFrame.width {
+            } else {
+                transition.animatePositionAdditive(node: titleAccessoryPanelNode, offset: CGPoint(x: 0.0, y: -titleAccessoryPanelFrame.height))
+            }
         }
         
         if let chatTranslationPanel = self.chatTranslationPanel, let translationPanelFrame, !chatTranslationPanel.frame.equalTo(translationPanelFrame) {
+            let previousFrame = chatTranslationPanel.frame
             chatTranslationPanel.frame = translationPanelFrame
-            transition.animatePositionAdditive(node: chatTranslationPanel, offset: CGPoint(x: 0.0, y: -translationPanelFrame.height))
+            if transition.isAnimated && previousFrame.width != translationPanelFrame.width {
+            } else {
+                transition.animatePositionAdditive(node: chatTranslationPanel, offset: CGPoint(x: 0.0, y: -translationPanelFrame.height))
+            }
         }
         
         if let chatImportStatusPanel = self.chatImportStatusPanel, let importStatusPanelFrame, !chatImportStatusPanel.frame.equalTo(importStatusPanelFrame) {
