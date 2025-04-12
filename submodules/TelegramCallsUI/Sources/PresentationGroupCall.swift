@@ -891,12 +891,18 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         var sharedAudioContext = sharedAudioContext
         if sharedAudioContext == nil {
             var useSharedAudio = !isStream
-            if let data = self.accountContext.currentAppConfiguration.with({ $0 }).data, data["ios_killswitch_group_shared_audio"] != nil {
-                useSharedAudio = false
+            var canReuseCurrent = true
+            if let data = self.accountContext.currentAppConfiguration.with({ $0 }).data {
+                if data["ios_killswitch_group_shared_audio"] != nil {
+                    useSharedAudio = false
+                }
+                if data["ios_killswitch_group_shared_audio_reuse"] != nil {
+                    canReuseCurrent = false
+                }
             }
             
             if useSharedAudio {
-                let sharedAudioContextValue = SharedCallAudioContext(audioSession: audioSession, callKitIntegration: callKitIntegration, defaultToSpeaker: true)
+                let sharedAudioContextValue = SharedCallAudioContext.get(audioSession: audioSession, callKitIntegration: callKitIntegration, defaultToSpeaker: true, reuseCurrent: canReuseCurrent && callKitIntegration == nil)
                 sharedAudioContext = sharedAudioContextValue
             }
         }
