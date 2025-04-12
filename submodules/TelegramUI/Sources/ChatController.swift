@@ -7512,17 +7512,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         navigationController.pushViewController(self, animated: false)
         
         let updatedLayout = self.validLayout
-        let updatedFrame = self.view.frame
         
         if let initialLayout, let updatedLayout, transition.isAnimated {
             let initialView = self.view.superview
+            let updatedFrame = self.view.convert(self.view.bounds, to: navigationController.view)
             navigationController.view.addSubview(self.view)
             
             self.view.clipsToBounds = true
             self.view.frame = initialFrame
             self.containerLayoutUpdated(initialLayout, transition: .immediate)
             self.containerLayoutUpdated(updatedLayout, transition: transition)
-            
+            self.chatDisplayNode.historyNode.layer.animateScaleX(from: initialLayout.size.width / updatedLayout.size.width, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+            self.chatDisplayNode.historyNode.layer.animatePosition(from: CGPoint(x: (updatedLayout.size.width - initialLayout.size.width) / 2.0, y: 0.0), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+            self.chatDisplayNode.inputPanelBackgroundNode.layer.removeAllAnimations()
+            self.chatDisplayNode.inputPanelBackgroundNode.layer.animatePosition(from: CGPoint(x: 0.0, y: self.chatDisplayNode.inputPanelNode?.frame.height ?? 45.0), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
             self.view.layer.animate(from: 14.0, to: updatedLayout.deviceMetrics.screenCornerRadius, keyPath: "cornerRadius", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.4)
             
             transition.updateFrame(view: self.view, frame: updatedFrame, completion: { _ in
