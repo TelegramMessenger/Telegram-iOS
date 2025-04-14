@@ -144,8 +144,8 @@ public extension TelegramEngine {
             return _internal_getVideoBroadcastPart(dataSource: dataSource, callId: callId, accessHash: accessHash, timestampIdMilliseconds: timestampIdMilliseconds, durationMilliseconds: durationMilliseconds, channelId: channelId, quality: quality)
         }
 
-        public func groupCall(peerId: PeerId?, myPeerId: PeerId, id: Int64, reference: InternalGroupCallReference, state: GroupCallParticipantsContext.State, previousServiceState: GroupCallParticipantsContext.ServiceState?) -> GroupCallParticipantsContext {
-            return GroupCallParticipantsContext(account: self.account, peerId: peerId, myPeerId: myPeerId, id: id, reference: reference, state: state, previousServiceState: previousServiceState)
+        public func groupCall(peerId: PeerId?, myPeerId: PeerId, id: Int64, reference: InternalGroupCallReference, state: GroupCallParticipantsContext.State, previousServiceState: GroupCallParticipantsContext.ServiceState?, e2eContext: ConferenceCallE2EContext?) -> GroupCallParticipantsContext {
+            return GroupCallParticipantsContext(account: self.account, peerId: peerId, myPeerId: myPeerId, id: id, reference: reference, state: state, previousServiceState: previousServiceState, e2eContext: e2eContext)
         }
 
         public func serverTime() -> Signal<Int64, NoError> {

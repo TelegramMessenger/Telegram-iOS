@@ -133,14 +133,14 @@ private final class BlobView: UIView {
 
 final class VideoChatParticipantAvatarComponent: Component {
     let call: VideoChatCall
-    let peer: EnginePeer
+    let peer: EnginePeer?
     let myPeerId: EnginePeer.Id
     let isSpeaking: Bool
     let theme: PresentationTheme
 
     init(
         call: VideoChatCall,
-        peer: EnginePeer,
+        peer: EnginePeer?,
         myPeerId: EnginePeer.Id,
         isSpeaking: Bool,
         theme: PresentationTheme
@@ -267,7 +267,7 @@ final class VideoChatParticipantAvatarComponent: Component {
                 tintTransition.setTintColor(layer: blobView.blobsLayer, color: component.isSpeaking ? UIColor(rgb: 0x33C758) : component.theme.list.itemAccentColor)
             }
             
-            if component.peer.smallProfileImage != nil {
+            if component.peer?.smallProfileImage != nil {
                 avatarNode.setPeerV2(
                     context: component.call.accountContext,
                     theme: component.theme,
@@ -296,7 +296,7 @@ final class VideoChatParticipantAvatarComponent: Component {
                     var isSpeaking: Bool
                 }
                 
-                let peerId = component.peer.id
+                let peerId = component.peer?.id
                 let levelSignal: Signal<Level?, NoError>
                 if peerId == component.myPeerId {
                     levelSignal = component.call.myAudioLevelAndSpeaking

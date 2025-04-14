@@ -331,9 +331,13 @@ private final class ConferenceCallE2EContextStateImpl: ConferenceCallE2EContextS
     func getEmojiState() -> Data? {
         return self.call.emojiState()
     }
+    
+    func getParticipants() -> [ConferenceCallE2EContext.BlockchainParticipant] {
+        return self.call.participants().map { ConferenceCallE2EContext.BlockchainParticipant(userId: $0.userId, internalId: $0.internalId) }
+    }
 
     func getParticipantIds() -> [Int64] {
-        return self.call.participantIds().compactMap { $0.int64Value }
+        return self.call.participants().map { $0.userId }
     }
 
     func applyBlock(block: Data) {
@@ -1246,7 +1250,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
         
         if let sourceContext = sourceContext, let initialState = sourceContext.immediateState {
-            let temporaryParticipantsContext = self.accountContext.engine.calls.groupCall(peerId: self.peerId, myPeerId: myPeerId, id: sourceContext.id, reference: sourceContext.reference, state: initialState, previousServiceState: sourceContext.serviceState)
+            let temporaryParticipantsContext = self.accountContext.engine.calls.groupCall(peerId: self.peerId, myPeerId: myPeerId, id: sourceContext.id, reference: sourceContext.reference, state: initialState, previousServiceState: sourceContext.serviceState, e2eContext: self.e2eContext)
             self.temporaryParticipantsContext = temporaryParticipantsContext
             self.participantsContextStateDisposable.set((combineLatest(queue: .mainQueue(),
                 myPeerData,
@@ -1274,14 +1278,14 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
 
                 if oldMyPeerId != myPeerId {
                     for i in 0 ..< participants.count {
-                        if participants[i].peer.id == oldMyPeerId {
+                        if participants[i].id == .peer(oldMyPeerId) {
                             participants.remove(at: i)
                             break
                         }
                     }
                 }
 
-                if !participants.contains(where: { $0.peer.id == myPeerId }) {
+                if !participants.contains(where: { $0.id == .peer(myPeerId) }) {
                     if let (myPeer, aboutText) = myPeerData {
                         let about: String?
                         if let aboutText = aboutText {
@@ -1290,7 +1294,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             about = " "
                         }
                         participants.append(GroupCallParticipantsContext.Participant(
-                            peer: myPeer._asPeer(),
+                            id: .peer(myPeer.id),
+                            peer: myPeer,
                             ssrc: nil,
                             videoDescription: nil,
                             presentationDescription: nil,
@@ -1315,7 +1320,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         topParticipants.append(participant)
                     }
 
-                    if let index = updatedInvitedPeers.firstIndex(where: { $0.id == participant.peer.id }) {
+                    if let index = updatedInvitedPeers.firstIndex(where: { participant.id == .peer($0.id) }) {
                         updatedInvitedPeers.remove(at: index)
                         didUpdateInvitedPeers = true
                     }
@@ -1370,7 +1375,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         about = " "
                     }
                     participants.append(GroupCallParticipantsContext.Participant(
-                        peer: myPeer._asPeer(),
+                        id: .peer(myPeer.id),
+                        peer: myPeer,
                         ssrc: nil,
                         videoDescription: nil,
                         presentationDescription: nil,
@@ -1495,7 +1501,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 isStream: callInfo.isStream,
                 version: 0
             ),
-            previousServiceState: nil
+            previousServiceState: nil,
+            e2eContext: self.e2eContext
         )
         self.temporaryParticipantsContext = nil
         self.participantsContext = participantsContext
@@ -1555,7 +1562,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     about = " "
                 }
                 participants.append(GroupCallParticipantsContext.Participant(
-                    peer: myPeer._asPeer(),
+                    id: .peer(myPeer.id),
+                    peer: myPeer,
                     ssrc: nil,
                     videoDescription: nil,
                     presentationDescription: nil,
@@ -1967,11 +1975,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
 
                     self.ssrcMapping.removeAll()
                     for participant in joinCallResult.state.participants {
-                        if let ssrc = participant.ssrc {
-                            self.ssrcMapping[ssrc] = SsrcMapping(peerId: participant.peer.id, isPresentation: false)
+                        if let ssrc = participant.ssrc, let participantPeer = participant.peer {
+                            self.ssrcMapping[ssrc] = SsrcMapping(peerId: participantPeer.id, isPresentation: false)
                         }
-                        if let presentationSsrc = participant.presentationDescription?.audioSsrc {
-                            self.ssrcMapping[presentationSsrc] = SsrcMapping(peerId: participant.peer.id, isPresentation: true)
+                        if let presentationSsrc = participant.presentationDescription?.audioSsrc, let participantPeer = participant.peer {
+                            self.ssrcMapping[presentationSsrc] = SsrcMapping(peerId: participantPeer.id, isPresentation: true)
                         }
                     }
 
@@ -2268,7 +2276,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     id: callInfo.id,
                     reference: reference,
                     state: initialState,
-                    previousServiceState: serviceState
+                    previousServiceState: serviceState,
+                    e2eContext: self.e2eContext
                 )
                 self.temporaryParticipantsContext = nil
                 self.participantsContext = participantsContext
@@ -2367,14 +2376,14 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
 
                     if let (ignorePeerId, ignoreSsrc) = self.ignorePreviousJoinAsPeerId {
                         for i in 0 ..< participants.count {
-                            if participants[i].peer.id == ignorePeerId && participants[i].ssrc == ignoreSsrc {
+                            if participants[i].id == .peer(ignorePeerId) && participants[i].ssrc == ignoreSsrc {
                                 participants.remove(at: i)
                                 break
                             }
                         }
                     }
 
-                    if !participants.contains(where: { $0.peer.id == myPeerId }) && !self.leaving {
+                    if !participants.contains(where: { $0.id == .peer(myPeerId) }) && !self.leaving {
                         if let (myPeer, cachedData) = myPeerAndCachedData {
                             let about: String?
                             if let cachedData = cachedData as? CachedUserData {
@@ -2386,7 +2395,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             }
 
                             participants.append(GroupCallParticipantsContext.Participant(
-                                peer: myPeer,
+                                id: .peer(myPeer.id),
+                                peer: EnginePeer(myPeer),
                                 ssrc: nil,
                                 videoDescription: nil,
                                 presentationDescription: nil,
@@ -2415,13 +2425,17 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         }
                         
                         if let ssrc = participant.ssrc {
-                            self.ssrcMapping[ssrc] = SsrcMapping(peerId: participant.peer.id, isPresentation: false)
+                            if let participantPeer = participant.peer {
+                                self.ssrcMapping[ssrc] = SsrcMapping(peerId: participantPeer.id, isPresentation: false)
+                            }
                         }
                         if let presentationSsrc = participant.presentationDescription?.audioSsrc {
-                            self.ssrcMapping[presentationSsrc] = SsrcMapping(peerId: participant.peer.id, isPresentation: true)
+                            if let participantPeer = participant.peer {
+                                self.ssrcMapping[presentationSsrc] = SsrcMapping(peerId: participantPeer.id, isPresentation: true)
+                            }
                         }
                         
-                        if participant.peer.id == self.joinAsPeerId {
+                        if participant.id == .peer(self.joinAsPeerId) {
                             if let (myPeer, cachedData) = myPeerAndCachedData {
                                 let about: String?
                                 if let cachedData = cachedData as? CachedUserData {
@@ -2431,7 +2445,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 } else {
                                     about = " "
                                 }
-                                participant.peer = myPeer
+                                participant.peer = EnginePeer(myPeer)
                                 participant.about = about
                             }
                         
@@ -2531,7 +2545,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             }
                         }
                         
-                        if let index = updatedInvitedPeers.firstIndex(where: { $0.id == participant.peer.id }) {
+                        if let index = updatedInvitedPeers.firstIndex(where: { participant.id == .peer($0.id) }) {
                             updatedInvitedPeers.remove(at: index)
                             didUpdateInvitedPeers = true
                         }
@@ -2646,24 +2660,28 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 if remainingSsrcs.contains(audioSsrc) {
                     remainingSsrcs.remove(audioSsrc)
 
-                    result.append(OngoingGroupCallContext.MediaChannelDescription(
-                        kind: .audio,
-                        peerId: participant.peer.id.id._internalGetInt64Value(),
-                        audioSsrc: audioSsrc,
-                        videoDescription: nil
-                    ))
+                    if let participantPeer = participant.peer {
+                        result.append(OngoingGroupCallContext.MediaChannelDescription(
+                            kind: .audio,
+                            peerId: participantPeer.id.id._internalGetInt64Value(),
+                            audioSsrc: audioSsrc,
+                            videoDescription: nil
+                        ))
+                    }
                 }
 
                 if let screencastSsrc = participant.presentationDescription?.audioSsrc {
                     if remainingSsrcs.contains(screencastSsrc) {
                         remainingSsrcs.remove(screencastSsrc)
 
-                        result.append(OngoingGroupCallContext.MediaChannelDescription(
-                            kind: .audio,
-                            peerId: participant.peer.id.id._internalGetInt64Value(),
-                            audioSsrc: screencastSsrc,
-                            videoDescription: nil
-                        ))
+                        if let participantPeer = participant.peer {
+                            result.append(OngoingGroupCallContext.MediaChannelDescription(
+                                kind: .audio,
+                                peerId: participantPeer.id.id._internalGetInt64Value(),
+                                audioSsrc: screencastSsrc,
+                                videoDescription: nil
+                            ))
+                        }
                     }
                 }
             }
@@ -2849,7 +2867,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 
                 if let participantsContext = self.participantsContext, let immediateState = participantsContext.immediateState {
                     for participant in immediateState.participants {
-                        if participant.peer.id == previousPeerId {
+                        if participant.id == .peer(previousPeerId) {
                             self.temporaryJoinTimestamp = participant.joinTimestamp
                             self.temporaryActivityTimestamp = participant.activityTimestamp
                             self.temporaryActivityRank = participant.activityRank
@@ -3008,7 +3026,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             return
         }
         for participant in membersValue.participants {
-            if participant.peer.id == self.joinAsPeerId {
+            if participant.id == .peer(self.joinAsPeerId) {
                 if participant.hasRaiseHand {
                     return
                 }
@@ -3024,7 +3042,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             return
         }
         for participant in membersValue.participants {
-            if participant.peer.id == self.joinAsPeerId {
+            if participant.id == .peer(self.joinAsPeerId) {
                 if !participant.hasRaiseHand {
                     return
                 }

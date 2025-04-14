@@ -425,8 +425,8 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
             if let members = currentMembers {
                 var speakingPeers: [Peer] = []
                 for member in members.participants {
-                    if members.speakingParticipants.contains(member.peer.id) {
-                        speakingPeers.append(member.peer)
+                    if let memberPeer = member.peer, members.speakingParticipants.contains(memberPeer.id) {
+                        speakingPeers.append(memberPeer._asPeer())
                     }
                 }
                 speakingPeer = speakingPeers.first
