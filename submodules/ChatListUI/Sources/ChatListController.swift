@@ -1523,6 +1523,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             if let self, let contextController {
                                 if animateIn {
                                     contextController.statusBar.statusBarStyle = .Ignore
+                                    contextController.animateDismissalIfNeeded()
                                     self.present(contextController, in: .window(.root))
                                     return {
                                         contextController.dismissNow()
