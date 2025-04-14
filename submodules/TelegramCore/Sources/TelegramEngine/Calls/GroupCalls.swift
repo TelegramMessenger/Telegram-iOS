@@ -280,7 +280,7 @@ func _internal_getCurrentGroupCallInfo(account: Account, reference: InternalGrou
                 
                 let parsedParticipants = participants.compactMap { GroupCallParticipantsContext.Participant($0, transaction: transaction) }
                 return (
-                    parsedParticipants.map(\.peer.id),
+                    parsedParticipants.compactMap(\.peer?.id),
                     nil
                 )
             }
@@ -847,9 +847,10 @@ func _internal_joinGroupCall(account: Account, peerId: PeerId?, joinAs: PeerId?,
                                             presentationDescription = nil
                                         }
                                         let joinedVideo = (flags & (1 << 15)) != 0
-                                        if !state.participants.contains(where: { $0.peer.id == peer.id }) {
+                                        if !state.participants.contains(where: { $0.id == .peer(peer.id) }) {
                                             state.participants.append(GroupCallParticipantsContext.Participant(
-                                                peer: peer,
+                                                id: .peer(peer.id),
+                                                peer: EnginePeer(peer),
                                                 ssrc: ssrc,
                                                 videoDescription: videoDescription,
                                                 presentationDescription: presentationDescription,
@@ -1175,7 +1176,41 @@ public final class GroupCallParticipantsContext {
             }
         }
         
-        public var peer: Peer
+        public enum Id: Hashable, Comparable, CustomStringConvertible {
+            case peer(EnginePeer.Id)
+            case blockchain(String)
+            
+            public var description: String { 
+                switch self {
+                case let .peer(id):
+                    return "\(id)"
+                case let .blockchain(internalId):
+                    return internalId
+                }
+            }
+
+            public static func <(lhs: Id, rhs: Id) -> Bool {
+                switch lhs {
+                case let .peer(lhsId):
+                    switch rhs {
+                    case let .peer(rhsId):
+                        return lhsId < rhsId
+                    case .blockchain:
+                        return true
+                    }
+                case let .blockchain(lhsData):
+                    switch rhs {
+                    case .peer:
+                        return false
+                    case let .blockchain(rhsData):
+                        return lhsData < rhsData
+                    }
+                }
+            }
+        }
+        
+        public var id: Id
+        public var peer: EnginePeer?
         public var ssrc: UInt32?
         public var videoDescription: VideoDescription?
         public var presentationDescription: VideoDescription?
@@ -1190,7 +1225,8 @@ public final class GroupCallParticipantsContext {
         public var joinedVideo: Bool
         
         public init(
-            peer: Peer,
+            id: Id,
+            peer: EnginePeer?,
             ssrc: UInt32?,
             videoDescription: VideoDescription?,
             presentationDescription: VideoDescription?,
@@ -1204,6 +1240,7 @@ public final class GroupCallParticipantsContext {
             about: String?,
             joinedVideo: Bool
         ) {
+            self.id = id
             self.peer = peer
             self.ssrc = ssrc
             self.videoDescription = videoDescription
@@ -1220,7 +1257,7 @@ public final class GroupCallParticipantsContext {
         }
 
         public var description: String {
-            return "Participant(peer: \(peer.id): \(peer.debugDisplayTitle), ssrc: \(String(describing: self.ssrc))"
+            return "Participant(peer: \(self.id): \(peer?.debugDisplayTitle ?? "User \(self.id)"), ssrc: \(String(describing: self.ssrc))"
         }
         
         public mutating func mergeActivity(from other: Participant, mergeActivityTimestamp: Bool) {
@@ -1231,7 +1268,10 @@ public final class GroupCallParticipantsContext {
         }
         
         public static func ==(lhs: Participant, rhs: Participant) -> Bool {
-            if !lhs.peer.isEqual(rhs.peer) {
+            if lhs.id != rhs.id {
+                return false
+            }
+            if lhs.peer != rhs.peer {
                 return false
             }
             if lhs.ssrc != rhs.ssrc {
@@ -1318,7 +1358,7 @@ public final class GroupCallParticipantsContext {
                 }
             }
             
-            return lhs.peer.id < rhs.peer.id
+            return lhs.id < rhs.id
         }
     }
     
@@ -1352,13 +1392,15 @@ public final class GroupCallParticipantsContext {
         public mutating func mergeActivity(from other: State, myPeerId: PeerId?, previousMyPeerId: PeerId?, mergeActivityTimestamps: Bool) {
             var indexMap: [PeerId: Int] = [:]
             for i in 0 ..< other.participants.count {
-                indexMap[other.participants[i].peer.id] = i
+                if let otherParticipantPeer = other.participants[i].peer {
+                    indexMap[otherParticipantPeer.id] = i
+                }
             }
             
             for i in 0 ..< self.participants.count {
-                if let index = indexMap[self.participants[i].peer.id] {
+                if let selfParticipantPeer = self.participants[i].peer, let index = indexMap[selfParticipantPeer.id] {
                     self.participants[i].mergeActivity(from: other.participants[index], mergeActivityTimestamp: mergeActivityTimestamps)
-                    if self.participants[i].peer.id == myPeerId || self.participants[i].peer.id == previousMyPeerId {
+                    if selfParticipantPeer.id == myPeerId || selfParticipantPeer.id == previousMyPeerId {
                         self.participants[i].joinTimestamp = other.participants[index].joinTimestamp
                     }
                 }
@@ -1547,7 +1589,7 @@ public final class GroupCallParticipantsContext {
             var sortAgain = false
             var canSeeHands = state.state.isCreator || state.state.adminIds.contains(accountPeerId)
             for participant in publicState.participants {
-                if participant.peer.id == myPeerId {
+                if participant.id == .peer(myPeerId) {
                     if let muteState = participant.muteState {
                         if muteState.canUnmute {
                             canSeeHands = true
@@ -1559,7 +1601,7 @@ public final class GroupCallParticipantsContext {
                 }
             }
             for i in 0 ..< publicState.participants.count {
-                if let pendingMuteState = state.overlayState.pendingMuteStateChanges[publicState.participants[i].peer.id] {
+                if let participantPeer = publicState.participants[i].peer, let pendingMuteState = state.overlayState.pendingMuteStateChanges[participantPeer.id] {
                     publicState.participants[i].muteState = pendingMuteState.state
                     publicState.participants[i].volume = pendingMuteState.volume
                 }
@@ -1631,7 +1673,9 @@ public final class GroupCallParticipantsContext {
 
     public private(set) var serviceState: ServiceState
     
-    init(account: Account, peerId: PeerId?, myPeerId: PeerId, id: Int64, reference: InternalGroupCallReference, state: State, previousServiceState: ServiceState?) {
+    private var e2eStateUpdateDisposable: Disposable?
+    
+    init(account: Account, peerId: PeerId?, myPeerId: PeerId, id: Int64, reference: InternalGroupCallReference, state: State, previousServiceState: ServiceState?, e2eContext: ConferenceCallE2EContext?) {
         self.account = account
         self.peerId = peerId
         self.myPeerId = myPeerId
@@ -1660,7 +1704,7 @@ public final class GroupCallParticipantsContext {
         if let peerId {
             let activityCategory: PeerActivitySpace.Category = .voiceChat
             self.activitiesDisposable = (self.account.peerInputActivities(peerId: PeerActivitySpace(peerId: peerId, category: activityCategory))
-                                         |> deliverOnMainQueue).start(next: { [weak self] activities in
+            |> deliverOnMainQueue).start(next: { [weak self] activities in
                 guard let strongSelf = self else {
                     return
                 }
@@ -1674,7 +1718,9 @@ public final class GroupCallParticipantsContext {
                     var updatedParticipants = strongSelf.stateValue.state.participants
                     var indexMap: [PeerId: Int] = [:]
                     for i in 0 ..< updatedParticipants.count {
-                        indexMap[updatedParticipants[i].peer.id] = i
+                        if let participantPeer = updatedParticipants[i].peer {
+                            indexMap[participantPeer.id] = i
+                        }
                     }
                     var updated = false
                     
@@ -1753,6 +1799,16 @@ public final class GroupCallParticipantsContext {
             }
         }, queue: .mainQueue())
         self.activityRankResetTimer?.start()
+        
+        if let e2eContext {
+            self.e2eStateUpdateDisposable = (e2eContext.blockchainParticipants
+            |> deliverOnMainQueue).startStrict(next: { [weak self] blockchainParticipants in
+                guard let self else {
+                    return
+                }
+                let _ = self
+            })
+        }
     }
     
     deinit {
@@ -1764,6 +1820,7 @@ public final class GroupCallParticipantsContext {
         self.activityRankResetTimer?.invalidate()
         self.resetInviteLinksDisposable.dispose()
         self.subscribeDisposable.dispose()
+        self.e2eStateUpdateDisposable?.dispose()
     }
     
     public func addUpdates(updates: [Update]) {
@@ -1795,7 +1852,7 @@ public final class GroupCallParticipantsContext {
     public func removeLocalPeerId() {
         var state = self.stateValue.state
         
-        state.participants.removeAll(where: { $0.peer.id == self.myPeerId })
+        state.participants.removeAll(where: { $0.id == .peer(self.myPeerId) })
         
         self.stateValue.state = state
     }
@@ -1822,7 +1879,9 @@ public final class GroupCallParticipantsContext {
         var updatedParticipants = strongSelf.stateValue.state.participants
         var indexMap: [PeerId: Int] = [:]
         for i in 0 ..< updatedParticipants.count {
-            indexMap[updatedParticipants[i].peer.id] = i
+            if let participantPeer = updatedParticipants[i].peer {
+                indexMap[participantPeer.id] = i
+            }
         }
         var updated = false
         
@@ -2000,7 +2059,7 @@ public final class GroupCallParticipantsContext {
             
             for participantUpdate in update.participantUpdates {
                 if case .left = participantUpdate.participationStatusChange {
-                    if let index = updatedParticipants.firstIndex(where: { $0.peer.id == participantUpdate.peerId }) {
+                    if let index = updatedParticipants.firstIndex(where: { $0.id == .peer(participantUpdate.peerId) }) {
                         updatedParticipants.remove(at: index)
                         updatedTotalCount = max(0, updatedTotalCount - 1)
                         strongSelf.memberEventsPipe.putNext(MemberEvent(peerId: participantUpdate.peerId, canUnmute: false, joined: false))
@@ -2017,7 +2076,7 @@ public final class GroupCallParticipantsContext {
                     var previousActivityRank: Int?
                     var previousMuteState: GroupCallParticipantsContext.Participant.MuteState?
                     var previousVolume: Int32?
-                    if let index = updatedParticipants.firstIndex(where: { $0.peer.id == participantUpdate.peerId }) {
+                    if let index = updatedParticipants.firstIndex(where: { $0.id == .peer(participantUpdate.peerId) }) {
                         previousJoinTimestamp = updatedParticipants[index].joinTimestamp
                         previousActivityTimestamp = updatedParticipants[index].activityTimestamp
                         previousActivityRank = updatedParticipants[index].activityRank
@@ -2054,7 +2113,8 @@ public final class GroupCallParticipantsContext {
                         }
                     }
                     let participant = Participant(
-                        peer: peer,
+                        id: .peer(peer.id),
+                        peer: EnginePeer(peer),
                         ssrc: participantUpdate.ssrc,
                         videoDescription: participantUpdate.videoDescription,
                         presentationDescription: participantUpdate.presentationDescription,
@@ -2158,7 +2218,7 @@ public final class GroupCallParticipantsContext {
         }
         
         for participant in self.stateValue.state.participants {
-            if participant.peer.id == peerId {
+            if participant.id == .peer(peerId) {
                 var raiseHandEqual: Bool = true
                 if let raiseHand = raiseHand {
                     raiseHandEqual = (participant.raiseHandRating == nil && !raiseHand) ||
@@ -2744,14 +2804,14 @@ func _internal_updatedCurrentPeerGroupCall(postbox: Postbox, network: Network, a
 private func mergeAndSortParticipants(current currentParticipants: [GroupCallParticipantsContext.Participant], with updatedParticipants: [GroupCallParticipantsContext.Participant], sortAscending: Bool) -> [GroupCallParticipantsContext.Participant] {
     var mergedParticipants = currentParticipants
     
-    var existingParticipantIndices: [PeerId: Int] = [:]
+    var existingParticipantIndices: [GroupCallParticipantsContext.Participant.Id: Int] = [:]
     for i in 0 ..< mergedParticipants.count {
-        existingParticipantIndices[mergedParticipants[i].peer.id] = i
+        existingParticipantIndices[mergedParticipants[i].id] = i
     }
     for participant in updatedParticipants {
-        if let _ = existingParticipantIndices[participant.peer.id] {
+        if let _ = existingParticipantIndices[participant.id] {
         } else {
-            existingParticipantIndices[participant.peer.id] = mergedParticipants.count
+            existingParticipantIndices[participant.id] = mergedParticipants.count
             mergedParticipants.append(participant)
         }
     }
@@ -2942,7 +3002,8 @@ extension GroupCallParticipantsContext.Participant {
                 let joinedVideo = (flags & (1 << 15)) != 0
                 
                 self.init(
-                    peer: peer,
+                    id: .peer(peer.id),
+                    peer: EnginePeer(peer),
                     ssrc: ssrc,
                     videoDescription: videoDescription,
                     presentationDescription: presentationDescription,

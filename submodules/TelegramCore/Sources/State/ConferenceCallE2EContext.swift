@@ -4,6 +4,7 @@ import SwiftSignalKit
 public protocol ConferenceCallE2EContextState: AnyObject {
     func getEmojiState() -> Data?
     func getParticipantIds() -> [Int64]
+    func getParticipants() -> [ConferenceCallE2EContext.BlockchainParticipant]
 
     func applyBlock(block: Data)
     func applyBroadcastBlock(block: Data)
@@ -25,6 +26,16 @@ public final class ConferenceCallE2EContext {
         }
     }
     
+    public struct BlockchainParticipant: Equatable {
+        public let userId: Int64
+        public let internalId: String
+        
+        public init(userId: Int64, internalId: String) {
+            self.userId = userId
+            self.internalId = internalId
+        }
+    }
+    
     private final class Impl {
         private let queue: Queue
 
@@ -38,6 +49,7 @@ public final class ConferenceCallE2EContext {
         private let keyPair: TelegramKeyPair
 
         let e2eEncryptionKeyHashValue = ValuePromise<Data?>(nil)
+        let blockchainParticipantsValue = ValuePromise<[BlockchainParticipant]>([])
 
         private var e2ePoll0Offset: Int?
         private var e2ePoll0Timer: Foundation.Timer?
@@ -154,7 +166,7 @@ public final class ConferenceCallE2EContext {
             let keyPair = self.keyPair
             let userId = self.userId
             let initializeState = self.initializeState
-            let (outBlocks, outEmoji) = self.state.with({ callState -> ([Data], Data) in
+            let (outBlocks, outEmoji, outBlockchainParticipants) = self.state.with({ callState -> ([Data], Data, [BlockchainParticipant]) in
                 if let state = callState.state {
                     for block in blocks {
                         if subChainId == 0 {
@@ -163,30 +175,31 @@ public final class ConferenceCallE2EContext {
                             state.applyBroadcastBlock(block: block)
                         }
                     }
-                    return (state.takeOutgoingBroadcastBlocks(), state.getEmojiState() ?? Data())
+                    return (state.takeOutgoingBroadcastBlocks(), state.getEmojiState() ?? Data(), state.getParticipants())
                 } else {
                     if subChainId == 0 {
                         guard let block = blocks.last else {
-                            return ([], Data())
+                            return ([], Data(), [])
                         }
                         guard let state = initializeState(keyPair, userId, block) else {
-                            return ([], Data())
+                            return ([], Data(), [])
                         }
                         callState.state = state
                         for block in callState.pendingIncomingBroadcastBlocks {
                             state.applyBroadcastBlock(block: block)
                         }
                         callState.pendingIncomingBroadcastBlocks.removeAll()
-                        return (state.takeOutgoingBroadcastBlocks(), state.getEmojiState() ?? Data())
+                        return (state.takeOutgoingBroadcastBlocks(), state.getEmojiState() ?? Data(), state.getParticipants())
                     } else if subChainId == 1 {
                         callState.pendingIncomingBroadcastBlocks.append(contentsOf: blocks)
-                        return ([], Data())
+                        return ([], Data(), [])
                     } else {
-                        return ([], Data())
+                        return ([], Data(), [])
                     }
                 }
             })
             self.e2eEncryptionKeyHashValue.set(outEmoji.isEmpty ? nil : outEmoji)
+            self.blockchainParticipantsValue.set(outBlockchainParticipants)
             
             for outBlock in outBlocks {
                 let _ = self.engine.calls.sendConferenceCallBroadcast(callId: self.callId, accessHash: self.accessHash, block: outBlock).startStandalone()
@@ -278,6 +291,7 @@ public final class ConferenceCallE2EContext {
             let state = self.state
             let callId = self.callId
             let accessHash = self.accessHash
+            let accountPeerId = engine.account.peerId
             
             if !self.pendingKickPeers.isEmpty {
                 let pendingKickPeers = self.pendingKickPeers
@@ -363,9 +377,16 @@ public final class ConferenceCallE2EContext {
                     }
                     
                     // Peer ids that are in the blockchain but not in the server list
-                    let removedPeerIds = blockchainPeerIds.filter { blockchainPeerId in
-                        return !result.participants.contains(where: { $0.peer.id.id._internalGetInt64Value() == blockchainPeerId })
+                    var removedPeerIds = blockchainPeerIds.filter { blockchainPeerId in
+                        return !result.participants.contains(where: { participant in
+                            if case let .peer(id) = participant.id, id.namespace == Namespaces.Peer.CloudChannel, id.id._internalGetInt64Value() == blockchainPeerId {
+                                return true
+                            } else {
+                                return false
+                            }
+                        })
                     }
+                    removedPeerIds.removeAll(where: { $0 == accountPeerId.id._internalGetInt64Value() })
                     
                     if removedPeerIds.isEmpty {
                         return .single(false)
@@ -420,6 +441,12 @@ public final class ConferenceCallE2EContext {
     public var e2eEncryptionKeyHash: Signal<Data?, NoError> {
         return self.impl.signalWith { impl, subscriber in
             return impl.e2eEncryptionKeyHashValue.get().start(next: subscriber.putNext)
+        }
+    }
+    
+    public var blockchainParticipants: Signal<[BlockchainParticipant]?, NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            return impl.blockchainParticipantsValue.get().start(next: subscriber.putNext)
         }
     }
 

@@ -395,7 +395,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             if data.info.isStream {
                 self.avatarsContent = self.avatarsContext.update(peers: [], animated: false)
             } else {
-                self.avatarsContent = self.avatarsContext.update(peers: data.topParticipants.map { EnginePeer($0.peer) }, animated: false)
+                self.avatarsContent = self.avatarsContext.update(peers: data.topParticipants.compactMap { $0.peer }, animated: false)
                 
                 if let imageDisposable = self.imageDisposable {
                     self.imageDisposable = nil
@@ -430,7 +430,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                     if let info = summaryState.info, info.isStream {
                         strongSelf.avatarsContent = strongSelf.avatarsContext.update(peers: [], animated: false)
                     } else {
-                        strongSelf.avatarsContent = strongSelf.avatarsContext.update(peers: summaryState.topParticipants.map { EnginePeer($0.peer) }, animated: false)
+                        strongSelf.avatarsContent = strongSelf.avatarsContext.update(peers: summaryState.topParticipants.compactMap { $0.peer }, animated: false)
                     }
                     
                     if let (size, leftInset, rightInset, isHidden) = strongSelf.validLayout {
@@ -513,7 +513,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             if data.info.isStream {
                 self.avatarsContent = self.avatarsContext.update(peers: [], animated: false)
             } else {
-                self.avatarsContent = self.avatarsContext.update(peers: data.topParticipants.map { EnginePeer($0.peer) }, animated: false)
+                self.avatarsContent = self.avatarsContext.update(peers: data.topParticipants.compactMap { $0.peer }, animated: false)
             }
             
             updateAudioLevels = true

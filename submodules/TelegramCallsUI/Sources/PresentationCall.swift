@@ -908,7 +908,7 @@ public final class PresentationCallImpl: PresentationCall {
                             var found = false
                             if let members {
                                 for participant in members.participants {
-                                    if participant.peer.id == waitForRemotePeerId {
+                                    if participant.id == .peer(waitForRemotePeerId) {
                                         found = true
                                         break
                                     }
@@ -921,7 +921,7 @@ public final class PresentationCallImpl: PresentationCall {
                         if waitForLocalVideo {
                             if let members {
                                 for participant in members.participants {
-                                    if participant.peer.id == state.myPeerId {
+                                    if participant.id == .peer(state.myPeerId) {
                                         if participant.videoDescription == nil {
                                             return false
                                         }
@@ -932,7 +932,7 @@ public final class PresentationCallImpl: PresentationCall {
                         if let waitForRemoteVideo {
                             if let members {
                                 for participant in members.participants {
-                                    if participant.peer.id == waitForRemoteVideo {
+                                    if participant.id == .peer(waitForRemoteVideo) {
                                         if participant.videoDescription == nil {
                                             return false
                                         }
