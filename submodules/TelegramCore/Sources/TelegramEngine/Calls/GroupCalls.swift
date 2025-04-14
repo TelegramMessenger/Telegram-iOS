@@ -1479,9 +1479,28 @@ public final class GroupCallParticipantsContext {
         }
     }
     
+    private final class ResolvedBlockchainParticipant: Equatable {
+        let participant: ConferenceCallE2EContext.BlockchainParticipant
+        let peer: EnginePeer?
+
+        init(participant: ConferenceCallE2EContext.BlockchainParticipant, peer: EnginePeer?) {
+            self.participant = participant
+            self.peer = peer
+        }
+
+        static func ==(lhs: ResolvedBlockchainParticipant, rhs: ResolvedBlockchainParticipant) -> Bool {
+            return lhs.participant == rhs.participant && lhs.peer == rhs.peer
+        }
+    }
+    
+    private struct BlockchainState: Equatable {
+        var blockchainParticipants: [ResolvedBlockchainParticipant]
+    }
+    
     private struct InternalState: Equatable {
         var state: State
         var overlayState: OverlayState
+        var blockchainState: BlockchainState
     }
     
     public enum Update {
@@ -1620,6 +1639,27 @@ public final class GroupCallParticipantsContext {
             if sortAgain {
                 publicState.participants.sort(by: { GroupCallParticipantsContext.Participant.compare(lhs: $0, rhs: $1, sortAscending: publicState.sortAscending) })
             }
+            for blockchainParticipant in state.blockchainState.blockchainParticipants {
+                let blockchainParticipantPeerId = EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(blockchainParticipant.participant.userId))
+                if !publicState.participants.contains(where: { $0.id == .peer(blockchainParticipantPeerId) }) {
+                    publicState.participants.append(Participant(
+                        id: .peer(blockchainParticipantPeerId),
+                        peer: blockchainParticipant.peer,
+                        ssrc: nil,
+                        videoDescription: nil,
+                        presentationDescription: nil,
+                        joinTimestamp: 0,
+                        raiseHandRating: nil,
+                        hasRaiseHand: false,
+                        activityTimestamp: nil,
+                        activityRank: nil,
+                        muteState: nil,
+                        volume: nil,
+                        about: nil,
+                        joinedVideo: false
+                    ))
+                }
+            }
             return publicState
         }
         |> beforeNext { [weak self] next in
@@ -1674,6 +1714,8 @@ public final class GroupCallParticipantsContext {
     public private(set) var serviceState: ServiceState
     
     private var e2eStateUpdateDisposable: Disposable?
+    private var pendingBlockchainState: [ResolvedBlockchainParticipant]?
+    private var pendingApplyBlockchainStateTimer: Foundation.Timer?
     
     init(account: Account, peerId: PeerId?, myPeerId: PeerId, id: Int64, reference: InternalGroupCallReference, state: State, previousServiceState: ServiceState?, e2eContext: ConferenceCallE2EContext?) {
         self.account = account
@@ -1681,7 +1723,7 @@ public final class GroupCallParticipantsContext {
         self.myPeerId = myPeerId
         self.id = id
         self.reference = reference
-        self.stateValue = InternalState(state: state, overlayState: OverlayState())
+        self.stateValue = InternalState(state: state, overlayState: OverlayState(), blockchainState: BlockchainState(blockchainParticipants: []))
         self.statePromise = ValuePromise<InternalState>(self.stateValue)
         self.serviceState = previousServiceState ?? ServiceState()
         
@@ -1763,7 +1805,8 @@ public final class GroupCallParticipantsContext {
                                 isStream: strongSelf.stateValue.state.isStream,
                                 version: strongSelf.stateValue.state.version
                             ),
-                            overlayState: strongSelf.stateValue.overlayState
+                            overlayState: strongSelf.stateValue.overlayState,
+                            blockchainState: strongSelf.stateValue.blockchainState
                         )
                     }
                 }
@@ -1801,12 +1844,49 @@ public final class GroupCallParticipantsContext {
         self.activityRankResetTimer?.start()
         
         if let e2eContext {
+            let postbox = self.account.postbox
             self.e2eStateUpdateDisposable = (e2eContext.blockchainParticipants
+            |> mapToSignal { value -> Signal<[ResolvedBlockchainParticipant], NoError> in
+                return postbox.transaction { transaction -> [ResolvedBlockchainParticipant] in
+                    var result: [ResolvedBlockchainParticipant] = []
+                    for participant in value {
+                        let blockchainParticipantPeerId = EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(participant.userId))
+                        if let peer = transaction.getPeer(blockchainParticipantPeerId) {
+                            result.append(ResolvedBlockchainParticipant(participant: participant, peer: EnginePeer(peer)))
+                        } else {
+                            result.append(ResolvedBlockchainParticipant(participant: participant, peer: nil))
+                        }
+                    }
+                    return result
+                }
+            }
             |> deliverOnMainQueue).startStrict(next: { [weak self] blockchainParticipants in
                 guard let self else {
                     return
                 }
-                let _ = self
+                
+                self.pendingBlockchainState = blockchainParticipants
+                
+                self.pendingApplyBlockchainStateTimer?.invalidate()
+                self.pendingApplyBlockchainStateTimer = nil
+                
+                var hasUnknownParticipants: Bool = false
+                for blockchainParticipant in blockchainParticipants {
+                    if !self.stateValue.state.participants.contains(where: { $0.id == .peer(EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(blockchainParticipant.participant.userId))) }) {
+                        hasUnknownParticipants = true
+                        break
+                    }
+                }
+                if hasUnknownParticipants {
+                    self.pendingApplyBlockchainStateTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false, block: { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        self.applyPendingBlockchainState()
+                    })
+                } else {
+                    self.applyPendingBlockchainState()
+                }
             })
         }
     }
@@ -1821,6 +1901,18 @@ public final class GroupCallParticipantsContext {
         self.resetInviteLinksDisposable.dispose()
         self.subscribeDisposable.dispose()
         self.e2eStateUpdateDisposable?.dispose()
+        self.pendingApplyBlockchainStateTimer?.invalidate()
+    }
+    
+    private func applyPendingBlockchainState() {
+        self.pendingApplyBlockchainStateTimer?.invalidate()
+        self.pendingApplyBlockchainStateTimer = nil
+
+        if let pendingBlockchainState = self.pendingBlockchainState {
+            self.pendingBlockchainState = nil
+
+            self.stateValue.blockchainState = BlockchainState(blockchainParticipants: pendingBlockchainState)
+        }
     }
     
     public func addUpdates(updates: [Update]) {
@@ -1928,7 +2020,8 @@ public final class GroupCallParticipantsContext {
                     isStream: strongSelf.stateValue.state.isStream,
                     version: strongSelf.stateValue.state.version
                 ),
-                overlayState: strongSelf.stateValue.overlayState
+                overlayState: strongSelf.stateValue.overlayState,
+                blockchainState: strongSelf.stateValue.blockchainState
             )
         }
         
@@ -2171,7 +2264,8 @@ public final class GroupCallParticipantsContext {
                     isStream: isStream,
                     version: update.version
                 ),
-                overlayState: updatedOverlayState
+                overlayState: updatedOverlayState,
+                blockchainState: strongSelf.stateValue.blockchainState
             )
             
             strongSelf.endedProcessingUpdate()

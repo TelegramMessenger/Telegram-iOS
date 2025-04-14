@@ -444,7 +444,7 @@ public final class ConferenceCallE2EContext {
         }
     }
     
-    public var blockchainParticipants: Signal<[BlockchainParticipant]?, NoError> {
+    public var blockchainParticipants: Signal<[BlockchainParticipant], NoError> {
         return self.impl.signalWith { impl, subscriber in
             return impl.blockchainParticipantsValue.get().start(next: subscriber.putNext)
         }
