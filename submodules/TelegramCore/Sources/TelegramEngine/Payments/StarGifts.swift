@@ -46,6 +46,7 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
         
         enum CodingKeys: String, CodingKey {
             case id
+            case title
             case file
             case price
             case convertStars
@@ -140,6 +141,7 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
         }
         
         public let id: Int64
+        public let title: String?
         public let file: TelegramMediaFile
         public let price: Int64
         public let convertStars: Int64
@@ -148,8 +150,9 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
         public let flags: Flags
         public let upgradeStars: Int64?
         
-        public init(id: Int64, file: TelegramMediaFile, price: Int64, convertStars: Int64, availability: Availability?, soldOut: SoldOut?, flags: Flags, upgradeStars: Int64?) {
+        public init(id: Int64, title: String?, file: TelegramMediaFile, price: Int64, convertStars: Int64, availability: Availability?, soldOut: SoldOut?, flags: Flags, upgradeStars: Int64?) {
             self.id = id
+            self.title = title
             self.file = file
             self.price = price
             self.convertStars = convertStars
@@ -162,6 +165,7 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
         public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             self.id = try container.decode(Int64.self, forKey: .id)
+            self.title = try container.decodeIfPresent(String.self, forKey: .title)
             
             if let fileData = try container.decodeIfPresent(Data.self, forKey: .file), let file = PostboxDecoder(buffer: MemoryBuffer(data: fileData)).decodeRootObject() as? TelegramMediaFile {
                 self.file = file
@@ -179,6 +183,7 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
         
         public init(decoder: PostboxDecoder) {
             self.id = decoder.decodeInt64ForKey(CodingKeys.id.rawValue, orElse: 0)
+            self.title = decoder.decodeOptionalStringForKey(CodingKeys.title.rawValue)
             self.file = decoder.decodeObjectForKey(CodingKeys.file.rawValue) as! TelegramMediaFile
             self.price = decoder.decodeInt64ForKey(CodingKeys.price.rawValue, orElse: 0)
             self.convertStars = decoder.decodeInt64ForKey(CodingKeys.convertStars.rawValue, orElse: 0)
@@ -191,6 +196,7 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
         public func encode(to encoder: Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(self.id, forKey: .id)
+            try container.encodeIfPresent(self.title, forKey: .title)
         
             let encoder = PostboxEncoder()
             encoder.encodeRootObject(self.file)
@@ -207,6 +213,11 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
         
         public func encode(_ encoder: PostboxEncoder) {
             encoder.encodeInt64(self.id, forKey: CodingKeys.id.rawValue)
+            if let title = self.title {
+                encoder.encodeString(title, forKey: CodingKeys.title.rawValue)
+            } else {
+                encoder.encodeNil(forKey: CodingKeys.title.rawValue)
+            }
             encoder.encodeObject(self.file, forKey: CodingKeys.file.rawValue)
             encoder.encodeInt64(self.price, forKey: CodingKeys.price.rawValue)
             encoder.encodeInt64(self.convertStars, forKey: CodingKeys.convertStars.rawValue)
@@ -668,7 +679,7 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
 extension StarGift {
     init?(apiStarGift: Api.StarGift) {
         switch apiStarGift {
-        case let .starGift(apiFlags, id, sticker, stars, availabilityRemains, availabilityTotal, availabilityResale, convertStars, firstSale, lastSale, upgradeStars, minResaleStars):
+        case let .starGift(apiFlags, id, sticker, stars, availabilityRemains, availabilityTotal, availabilityResale, convertStars, firstSale, lastSale, upgradeStars, minResaleStars, title):
             var flags = StarGift.Gift.Flags()
             if (apiFlags & (1 << 2)) != 0 {
                 flags.insert(.isBirthdayGift)
@@ -690,7 +701,7 @@ extension StarGift {
             guard let file = telegramMediaFileFromApiDocument(sticker, altDocuments: nil) else {
                 return nil
             }
-            self = .generic(StarGift.Gift(id: id, file: file, price: stars, convertStars: convertStars, availability: availability, soldOut: soldOut, flags: flags, upgradeStars: upgradeStars))
+            self = .generic(StarGift.Gift(id: id, title: title, file: file, price: stars, convertStars: convertStars, availability: availability, soldOut: soldOut, flags: flags, upgradeStars: upgradeStars))
         case let .starGiftUnique(_, id, title, slug, num, ownerPeerId, ownerName, ownerAddress, attributes, availabilityIssued, availabilityTotal, giftAddress, reselltars):
             let owner: StarGift.UniqueGift.Owner
             if let ownerAddress {
