@@ -245,7 +245,9 @@ final class VideoChatParticipantVideoComponent: Component {
                     gesture.cancel()
                     return
                 }
-                component.contextAction?(EnginePeer(component.participant.peer), self.extractedContainerView, gesture)
+                if let participantPeer = component.participant.peer {
+                    component.contextAction?(participantPeer, self.extractedContainerView, gesture)
+                }
             }
         }
         
@@ -316,12 +318,12 @@ final class VideoChatParticipantVideoComponent: Component {
             let controlsAlpha: CGFloat = component.isUIHidden ? 0.0 : 1.0
             
             if previousComponent == nil {
-                let colors = calculateAvatarColors(context: component.call.accountContext, explicitColorIndex: nil, peerId: component.participant.peer.id, nameColor: component.participant.peer.nameColor, icon: .none, theme: component.theme)
+                let colors = calculateAvatarColors(context: component.call.accountContext, explicitColorIndex: nil, peerId: component.participant.peer?.id, nameColor: component.participant.peer?.nameColor, icon: .none, theme: component.theme)
                 
                 self.backgroundGradientView.image = generateGradientImage(size: CGSize(width: 8.0, height: 32.0), colors: colors.reversed(), locations: [0.0, 1.0], direction: .vertical)
             }
             
-            if let smallProfileImage = component.participant.peer.smallProfileImage {
+            if let smallProfileImage = component.participant.peer?.smallProfileImage {
                 let blurredAvatarView: UIImageView
                 if let current = self.blurredAvatarView {
                     blurredAvatarView = current
@@ -338,8 +340,8 @@ final class VideoChatParticipantVideoComponent: Component {
                 
                 if self.blurredAvatarDisposable == nil {
                     //TODO:release synchronous
-                    if let imageCache = component.call.accountContext.imageCache as? DirectMediaImageCache, let peerReference = PeerReference(component.participant.peer) {
-                        if let result = imageCache.getAvatarImage(peer: peerReference, resource: MediaResourceReference.avatar(peer: peerReference, resource: smallProfileImage.resource), immediateThumbnail: component.participant.peer.profileImageRepresentations.first?.immediateThumbnailData, size: 64, synchronous: false) {
+                    if let participantPeer = component.participant.peer, let imageCache = component.call.accountContext.imageCache as? DirectMediaImageCache, let peerReference = PeerReference(participantPeer._asPeer()) {
+                        if let result = imageCache.getAvatarImage(peer: peerReference, resource: MediaResourceReference.avatar(peer: peerReference, resource: smallProfileImage.resource), immediateThumbnail: participantPeer.profileImageRepresentations.first?.immediateThumbnailData, size: 64, synchronous: false) {
                             if let image = result.image {
                                 blurredAvatarView.image = blurredAvatarImage(image)
                             }
@@ -402,7 +404,7 @@ final class VideoChatParticipantVideoComponent: Component {
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: component.participant.peer.debugDisplayTitle, font: Font.semibold(16.0), textColor: .white)),
+                    text: .plain(NSAttributedString(string: component.participant.peer?.debugDisplayTitle ?? "User \(component.participant.id)", font: Font.semibold(16.0), textColor: .white)),
                     insets: titleInnerInsets,
                     textShadowColor: UIColor(white: 0.0, alpha: 0.7),
                     textShadowBlur: 8.0

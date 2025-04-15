@@ -21,8 +21,8 @@ extension VideoChatScreenComponent.View {
             disablePeerIds.append(groupCall.accountContext.account.peerId)
             if let members = self.members {
                 for participant in members.participants {
-                    if !disablePeerIds.contains(participant.peer.id) {
-                        disablePeerIds.append(participant.peer.id)
+                    if let participantPeer = participant.peer, !disablePeerIds.contains(participantPeer.id) {
+                        disablePeerIds.append(participantPeer.id)
                     }
                 }
             }
@@ -99,7 +99,7 @@ extension VideoChatScreenComponent.View {
                     
                     var filters: [ChannelMembersSearchFilter] = []
                     if let members = self.members {
-                        filters.append(.disable(Array(members.participants.map { $0.peer.id })))
+                        filters.append(.disable(Array(members.participants.compactMap { $0.peer?.id })))
                     }
                     if case let .channel(groupPeer) = groupPeer {
                         if !groupPeer.hasPermission(.inviteMembers) && inviteLinks?.listenerLink == nil {

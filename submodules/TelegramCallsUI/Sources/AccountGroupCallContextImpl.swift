@@ -57,7 +57,8 @@ public final class AccountGroupCallContextImpl: AccountGroupCallContext {
                 id: call.id,
                 reference: .id(id: call.id, accessHash: call.accessHash),
                 state: state,
-                previousServiceState: nil
+                previousServiceState: nil,
+                e2eContext: nil
             )
             
             self.participantsContext = context

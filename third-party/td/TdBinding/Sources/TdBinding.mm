@@ -58,10 +58,10 @@ static NSString *hexStringFromData(NSData *data) {
 
 @implementation TdCallParticipant
 
-- (nullable instancetype)initWithPublicKey:(NSData *)publicKey userId:(int64_t)userId {
+- (nullable instancetype)initWithInternalId:(NSString *)internalId userId:(int64_t)userId {
     self = [super init];
     if (self != nil) {
-        _publicKey = publicKey;
+        _internalId = internalId;
         _userId = userId;
     }
     return self;
@@ -176,17 +176,18 @@ static NSString *hexStringFromData(NSData *data) {
     return outEmojiHash;
 }
 
-- (NSArray<NSNumber *> *)participantIds {
+- (NSArray<TdCallParticipant *> *)participants {
     auto result = tde2e_api::call_get_state(_callId);
     if (!result.is_ok()) {
         return @[];
     }
     auto state = result.value();
-    NSMutableArray<NSNumber *> *participantIds = [[NSMutableArray alloc] init];
+    NSMutableArray<TdCallParticipant *> *participants = [[NSMutableArray alloc] init];
     for (const auto &it : state.participants) {
-        [participantIds addObject:[NSNumber numberWithLongLong:it.user_id]];
+        NSString *internalId = [[NSString alloc] initWithFormat:@"%lld", it.public_key_id];
+        [participants addObject:[[TdCallParticipant alloc] initWithInternalId:internalId userId:it.user_id]];
     }
-    return participantIds;
+    return participants;
 }
 
 - (void)applyBlock:(NSData *)block {

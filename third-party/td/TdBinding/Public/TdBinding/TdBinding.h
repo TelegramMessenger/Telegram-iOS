@@ -22,10 +22,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface TdCallParticipant : NSObject
 
-@property (nonatomic, strong, readonly) NSData *publicKey;
+@property (nonatomic, strong, readonly) NSString *internalId;
 @property (nonatomic, readonly) int64_t userId;
 
-- (nullable instancetype)initWithPublicKey:(NSData *)publicKey userId:(int64_t)userId;
+- (nullable instancetype)initWithInternalId:(NSString *)internalId userId:(int64_t)userId;
 
 @end
 
@@ -35,7 +35,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (NSArray<NSData *> *)takeOutgoingBroadcastBlocks;
 - (NSData *)emojiState;
-- (NSArray<NSNumber *> *)participantIds;
+- (NSArray<TdCallParticipant *> *)participants;
 
 - (void)applyBlock:(NSData *)block;
 - (void)applyBroadcastBlock:(NSData *)block;

@@ -657,6 +657,17 @@ public:
             
             if (!WrappedInstance()->Playing()) {
                 WrappedInstance()->InitPlayout();
+                for (int i = 0; i < 3; i++) {
+                    if (!WrappedInstance()->PlayoutIsInitialized()) {
+                        sleep(1);
+                        WrappedInstance()->InitPlayout();
+                    } else {
+                        break;
+                    }
+                }
+                if (!WrappedInstance()->PlayoutIsInitialized()) {
+                    return;
+                }
                 WrappedInstance()->StartPlayout();
                 WrappedInstance()->InitRecording();
                 WrappedInstance()->StartRecording();
