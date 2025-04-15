@@ -882,9 +882,13 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                     strongSelf.audioNode = audioNode
                                     
                                     audioNode.activateLocalContent = {
-                                        if let strongSelf = self, let item = strongSelf.item {
-                                            let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: .default))
+                                        guard let self,
+                                              let item = self.item,
+                                              let audioAttribute = item.message.attributes.first(where: { $0 is TextTranscriptionMessageAttribute }) as? TextTranscriptionMessageAttribute,
+                                              !audioAttribute.downloading else {
+                                            return
                                         }
+                                        let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: .default))
                                     }
                                     
                                     audioNode.requestUpdateLayout = { _ in
