@@ -165,10 +165,10 @@ class Container {
     auto id = next_id.fetch_add(1, std::memory_order_relaxed);
     if constexpr (TI::is_mutable) {
       auto value_ptr = std::make_shared<MutableValue<T>>(std::move(value));
-      storage.values.emplace(id, std::move(o_hash), value_ptr);
+      storage.values.emplace(id, o_hash, value_ptr);
     } else {
       auto value_ptr = std::make_shared<T>(std::move(value));
-      storage.values.emplace(id, std::move(o_hash), value_ptr);
+      storage.values.emplace(id, o_hash, value_ptr);
     }
 
     if constexpr (TI::has_hash) {
@@ -243,6 +243,7 @@ td::Result<SharedRef<T>> convert(SharedRef<S> from) {
   }
   return td::Status::Error(static_cast<int>(tde2e_api::ErrorCode::UnknownError), "TODO");
 }
+
 template <class T, class S>
 td::Result<UniqueRef<T>> convert(UniqueRef<S> from) {
   if (std::holds_alternative<T>(*from)) {

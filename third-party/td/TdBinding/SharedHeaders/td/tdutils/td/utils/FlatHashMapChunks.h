@@ -68,7 +68,7 @@ struct MaskPortable {
   static MaskIterator<1> equal_mask(uint8 *bytes, uint8 needle) {
     uint64 res = 0;
     for (int i = 0; i < 16; i++) {
-      res |= (bytes[i] == needle) << i;
+      res |= static_cast<int>(bytes[i] == needle) << i;
     }
     return {res & ((1u << 14) - 1)};
   }

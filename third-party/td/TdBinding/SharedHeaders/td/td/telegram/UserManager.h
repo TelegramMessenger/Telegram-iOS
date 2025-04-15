@@ -239,14 +239,14 @@ class UserManager final : public Actor {
 
   struct BotData {
     string username;
-    bool can_be_edited;
-    bool can_join_groups;
-    bool can_read_all_group_messages;
-    bool has_main_app;
-    bool is_inline;
-    bool is_business;
-    bool need_location;
-    bool can_be_added_to_attach_menu;
+    bool can_be_edited = false;
+    bool can_join_groups = false;
+    bool can_read_all_group_messages = false;
+    bool has_main_app = false;
+    bool is_inline = false;
+    bool is_business = false;
+    bool need_location = false;
+    bool can_be_added_to_attach_menu = false;
   };
   Result<BotData> get_bot_data(UserId user_id) const TD_WARN_UNUSED_RESULT;
 

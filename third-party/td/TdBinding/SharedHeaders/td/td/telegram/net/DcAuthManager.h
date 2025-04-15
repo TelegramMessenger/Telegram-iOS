@@ -38,7 +38,7 @@ class DcAuthManager final : public NetQueryCallback {
   struct DcInfo {
     DcId dc_id;
     std::shared_ptr<AuthDataShared> shared_auth_data;
-    AuthKeyState auth_key_state;
+    AuthKeyState auth_key_state = AuthKeyState::Empty;
 
     enum class State : int32 { Waiting, Export, Import, BeforeOk, Ok };
     State state = State::Waiting;

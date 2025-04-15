@@ -25,6 +25,7 @@ enum class ErrorCode : int {
   InvalidBlock_InvalidStateProof_Secret = 206,
   InvalidBlock_NoPermissions = 207,
   InvalidBlock_InvalidGroupState = 208,
+  InvalidBlock_InvalidSharedSecret = 209,
   InvalidCallGroupState_NotParticipant = 300,
   InvalidCallGroupState_WrongUserId = 301,
   Decrypt_UnknownEpoch = 400,
@@ -37,7 +38,8 @@ enum class ErrorCode : int {
   InvalidBroadcast_InvalidReveal = 505,
   InvalidBroadcast_InvalidBlockHash = 506,
   InvalidCallChannelId = 600,
-  CallFailed = 601
+  CallFailed = 601,
+  CallKeyAlreadyUsed = 602
 };
 inline std::string_view error_string(ErrorCode error_code) {
   switch (error_code) {
@@ -67,6 +69,8 @@ inline std::string_view error_string(ErrorCode error_code) {
       return "INVALID_BLOCK__INVALID_STATE_PROOF__SECRET";
     case ErrorCode::InvalidBlock_InvalidGroupState:
       return "INVALID_BLOCK__INVALID_GROUP_STATE";
+    case ErrorCode::InvalidBlock_InvalidSharedSecret:
+      return "INVALID_BLOCK__INVALID_SHARED_SECRET";
     case ErrorCode::InvalidBlock_NoPermissions:
       return "INVALID_BLOCK__NO_PERMISSIONS";
     case ErrorCode::InvalidCallGroupState_NotParticipant:
@@ -93,6 +97,8 @@ inline std::string_view error_string(ErrorCode error_code) {
       return "INVALID_BROADCAST__INVALID_BLOCK_HASH";
     case ErrorCode::CallFailed:
       return "CALL_FAILED";
+    case ErrorCode::CallKeyAlreadyUsed:
+      return "CALL_KEY_ALREADY_USED";
     case ErrorCode::InvalidCallChannelId:
       return "INVALID_CALL_CHANNEL_ID";
   }
