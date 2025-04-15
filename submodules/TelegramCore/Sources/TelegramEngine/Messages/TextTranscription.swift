@@ -43,7 +43,7 @@ func _internal_transcribeText(postbox: Postbox, network: Network, messageId: Mes
             
             let mediaId = MediaId(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min...Int64.max))
             
-            let voiceAttributes: [TelegramMediaFileAttribute] = [.Audio(isVoice: true, duration: 23, title: nil, performer: nil, waveform: nil)]
+            let voiceAttributes: [TelegramMediaFileAttribute] = [.Audio(isVoice: true, duration: 0, title: nil, performer: nil, waveform: nil)]
             
             let file = TelegramMediaFile(
                 fileId: mediaId,
@@ -78,7 +78,7 @@ func _internal_transcribeText(postbox: Postbox, network: Network, messageId: Mes
                 // TODO: Fetch duration, waveform from response
                 let waveformBase64 = "DAAOAAkACQAGAAwADwAMABAADQAPABsAGAALAA0AGAAfABoAHgATABgAGQAYABQADAAVABEAHwANAA0ACQAWABkACQAOAAwACQAfAAAAGQAVAAAAEwATAAAACAAfAAAAHAAAABwAHwAAABcAGQAAABQADgAAABQAHwAAAB8AHwAAAAwADwAAAB8AEwAAABoAFwAAAB8AFAAAAAAAHwAAAAAAHgAAAAAAHwAAAAAAHwAAAAAAHwAAAAAAHwAAAAAAHwAAAAAAAAA="
                 
-                let voiceAttributes: [TelegramMediaFileAttribute] = [.Audio(isVoice: true, duration: 23, title: nil, performer: nil, waveform: Data(base64Encoded: waveformBase64)!)]
+                let voiceAttributes: [TelegramMediaFileAttribute] = [.Audio(isVoice: true, duration: 0, title: nil, performer: nil, waveform: Data(base64Encoded: waveformBase64)!)]
                 
                 let file = TelegramMediaFile(
                     fileId: mediaId,
