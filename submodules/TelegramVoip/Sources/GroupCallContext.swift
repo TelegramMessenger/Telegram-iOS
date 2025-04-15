@@ -217,7 +217,7 @@ final class OngoingGroupCallBroadcastPartTaskImpl: NSObject, OngoingGroupCallBro
 }
 
 public protocol OngoingGroupCallEncryptionContext: AnyObject {
-    func encrypt(message: Data) -> Data?
+    func encrypt(message: Data, plaintextPrefixLength: Int) -> Data?
     func decrypt(message: Data, userId: Int64) -> Data?
 }
 
@@ -645,9 +645,9 @@ public final class OngoingGroupCallContext {
                 isConference: isConference,
                 isActiveByDefault: audioIsActiveByDefault,
                 encryptDecrypt: encryptionContext.flatMap { encryptionContext in
-                    return { data, userId, isEncrypt in
+                    return { data, userId, isEncrypt, plaintextPrefixLength in
                         if isEncrypt {
-                            return encryptionContext.encrypt(message: data)
+                            return encryptionContext.encrypt(message: data, plaintextPrefixLength: Int(plaintextPrefixLength))
                         } else {
                             return encryptionContext.decrypt(message: data, userId: userId)
                         }
@@ -755,9 +755,9 @@ public final class OngoingGroupCallContext {
                 isConference: isConference,
                 isActiveByDefault: audioIsActiveByDefault,
                 encryptDecrypt: encryptionContext.flatMap { encryptionContext in
-                    return { data, userId, isEncrypt in
+                    return { data, userId, isEncrypt, plaintextPrefixLength in
                         if isEncrypt {
-                            return encryptionContext.encrypt(message: data)
+                            return encryptionContext.encrypt(message: data, plaintextPrefixLength: Int(plaintextPrefixLength))
                         } else {
                             return encryptionContext.decrypt(message: data, userId: userId)
                         }

@@ -791,7 +791,7 @@ private final class SendInviteLinkScreenComponent: Component {
                         }
                     }
                 case .groupCall:
-                    text = " "
+                    text = environment.strings.SendInviteLink_TextCallsRestrictedSendInviteLink
                 }
                 
                 let body = MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.itemPrimaryTextColor)

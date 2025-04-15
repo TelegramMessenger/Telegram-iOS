@@ -14187,3 +14187,4 @@ Sorry for the inconvenience.";
 "SendInviteLink.TextCallsRestrictedOneUser" = "%@ does not accept calls.";
 "SendInviteLink.TextCallsRestrictedMultipleUsers_1" = "{user_list}, and **%d** more person do not accept calls.";
 "SendInviteLink.TextCallsRestrictedMultipleUsers_any" = "{user_list}, and **%d** more people do not accept calls.";
+"SendInviteLink.TextCallsRestrictedSendInviteLink" = "You can try to send an invite link instead.";

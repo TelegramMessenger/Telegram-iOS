@@ -13,7 +13,7 @@ public protocol ConferenceCallE2EContextState: AnyObject {
 
     func takeOutgoingBroadcastBlocks() -> [Data]
 
-    func encrypt(message: Data, channelId: Int32) -> Data?
+    func encrypt(message: Data, channelId: Int32, plaintextPrefixLength: Int) -> Data?
     func decrypt(message: Data, userId: Int64) -> Data?
 }
 

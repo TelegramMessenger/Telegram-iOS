@@ -356,8 +356,8 @@ private final class ConferenceCallE2EContextStateImpl: ConferenceCallE2EContextS
         return self.call.takeOutgoingBroadcastBlocks()
     }
 
-    func encrypt(message: Data, channelId: Int32) -> Data? {
-        return self.call.encrypt(message, channelId: channelId)
+    func encrypt(message: Data, channelId: Int32, plaintextPrefixLength: Int) -> Data? {
+        return self.call.encrypt(message, channelId: channelId, plaintextPrefixLength: plaintextPrefixLength)
     }
 
     func decrypt(message: Data, userId: Int64) -> Data? {
@@ -374,9 +374,9 @@ class OngoingGroupCallEncryptionContextImpl: OngoingGroupCallEncryptionContext {
         self.channelId = channelId
     }
     
-    func encrypt(message: Data) -> Data? {
+    func encrypt(message: Data, plaintextPrefixLength: Int) -> Data? {
         let channelId = self.channelId
-        return self.e2eCall.with({ $0.state?.encrypt(message: message, channelId: channelId) })
+        return self.e2eCall.with({ $0.state?.encrypt(message: message, channelId: channelId, plaintextPrefixLength: plaintextPrefixLength) })
     }
     
     func decrypt(message: Data, userId: Int64) -> Data? {
