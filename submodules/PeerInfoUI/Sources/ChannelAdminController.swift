@@ -1247,7 +1247,7 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                         }
                         
                         if let adminPeer, case let .restricted(forbiddenPeer) = error {
-                            let inviteScreen = SendInviteLinkScreen(context: context, peer: channelPeer, link: exportedInvitation?.link, peers: [forbiddenPeer ?? TelegramForbiddenInvitePeer(peer: adminPeer, canInviteWithPremium: false, premiumRequiredToContact: false)])
+                            let inviteScreen = SendInviteLinkScreen(context: context, subject: .chat(peer: channelPeer, link: exportedInvitation?.link), peers: [forbiddenPeer ?? TelegramForbiddenInvitePeer(peer: adminPeer, canInviteWithPremium: false, premiumRequiredToContact: false)])
                             pushControllerImpl?(inviteScreen)
                             
                             dismissImpl?()
@@ -1437,7 +1437,7 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                         updateRightsDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(engine: context.engine, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(rights: updateFlags), rank: updateRank) |> deliverOnMainQueue).start(error: { error in
                             if case let .addMemberError(addMemberError) = error, case let .restricted(forbiddenPeer) = addMemberError, let admin = adminPeer {
                                 if let channelPeer {
-                                    let inviteScreen = SendInviteLinkScreen(context: context, peer: channelPeer, link: exportedInvitation?.link, peers: [forbiddenPeer ?? TelegramForbiddenInvitePeer(peer: admin, canInviteWithPremium: false, premiumRequiredToContact: false)])
+                                    let inviteScreen = SendInviteLinkScreen(context: context, subject: .chat(peer: channelPeer, link: exportedInvitation?.link), peers: [forbiddenPeer ?? TelegramForbiddenInvitePeer(peer: admin, canInviteWithPremium: false, premiumRequiredToContact: false)])
                                     pushControllerImpl?(inviteScreen)
                                     
                                     dismissImpl?()
@@ -1519,7 +1519,7 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                                     )
                                     |> deliverOnMainQueue).startStandalone(next: { exportedInvitation in
                                         let _ = exportedInvitation
-                                        let inviteScreen = SendInviteLinkScreen(context: context, peer: .legacyGroup(group), link: exportedInvitation?.link, peers: [failedPeer])
+                                        let inviteScreen = SendInviteLinkScreen(context: context, subject: .chat(peer: .legacyGroup(group), link: exportedInvitation?.link), peers: [failedPeer])
                                         pushControllerImpl?(inviteScreen)
                                     })
                                 } else {

@@ -14182,3 +14182,8 @@ Sorry for the inconvenience.";
 "Call.IncomingGroupCallTitle.Multiple_any" = "{} and %d others";
 
 "GroupCall.RevokeLinkText" = "Are you sure you want to revoke this link? Once you do, no one will be able to join the call using it.";
+
+
+"SendInviteLink.TextCallsRestrictedOneUser" = "%@ does not accept calls.";
+"SendInviteLink.TextCallsRestrictedMultipleUsers_1" = "{user_list}, and **%d** more person do not accept calls.";
+"SendInviteLink.TextCallsRestrictedMultipleUsers_any" = "{user_list}, and **%d** more people do not accept calls.";

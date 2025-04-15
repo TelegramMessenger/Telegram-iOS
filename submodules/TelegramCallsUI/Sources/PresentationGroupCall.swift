@@ -3620,14 +3620,24 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     let presentationData = self.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkColorPresentationTheme)
                     
                     var errorText = presentationData.strings.Login_UnknownError
+                    
                     switch error {
                     case let .privacy(peer):
                         if let peer {
-                            errorText = presentationData.strings.Call_PrivacyErrorMessage(peer.compactDisplayTitle).string
+                            if let currentInviteLinks = self.currentInviteLinks {
+                                let inviteLinkScreen = self.accountContext.sharedContext.makeSendInviteLinkScreen(context: self.accountContext, subject: .groupCall(link: currentInviteLinks.listenerLink), peers: [TelegramForbiddenInvitePeer(peer: peer, canInviteWithPremium: false, premiumRequiredToContact: false)], theme: defaultDarkColorPresentationTheme)
+                                if let navigationController = self.accountContext.sharedContext.mainWindow?.viewController as? NavigationController {
+                                    navigationController.pushViewController(inviteLinkScreen)
+                                }
+                                return
+                            } else {
+                                errorText = presentationData.strings.Call_PrivacyErrorMessage(peer.compactDisplayTitle).string
+                            }
                         }
                     default:
                         break
                     }
+                    
                     self.accountContext.sharedContext.mainWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: errorText, actions: [
                         TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})
                     ]), on: .root, blockInteraction: false, completion: {})
@@ -3751,6 +3761,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             }
         }
     }
+    
+    public var currentInviteLinks: GroupCallInviteLinks?
     
     private var currentMyAudioLevel: Float = 0.0
     private var currentMyAudioLevelTimestamp: Double = 0.0

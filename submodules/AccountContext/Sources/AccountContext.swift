@@ -985,6 +985,11 @@ public enum OldChannelsControllerIntent {
     case upgrade
 }
 
+public enum SendInviteLinkScreenSubject {
+    case chat(peer: EnginePeer, link: String?)
+    case groupCall(link: String)
+}
+
 public protocol SharedAccountContext: AnyObject {
     var sharedContainerPath: String { get }
     var basePath: String { get }
@@ -1200,6 +1205,8 @@ public protocol SharedAccountContext: AnyObject {
     func makeGalleryController(context: AccountContext, source: GalleryControllerItemSource, streamSingleVideo: Bool, isPreview: Bool) -> ViewController
     
     func makeAccountFreezeInfoScreen(context: AccountContext) -> ViewController
+    
+    func makeSendInviteLinkScreen(context: AccountContext, subject: SendInviteLinkScreenSubject, peers: [TelegramForbiddenInvitePeer], theme: PresentationTheme?) -> ViewController
     
     func makeDebugSettingsController(context: AccountContext?) -> ViewController?
     
