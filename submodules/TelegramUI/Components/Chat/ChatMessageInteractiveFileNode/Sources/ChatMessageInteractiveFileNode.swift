@@ -65,6 +65,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
         public let layoutConstants: ChatMessageItemLayoutConstants
         public let constrainedSize: CGSize
         public let controllerInteraction: ChatControllerInteraction
+        public let alwaysDisplayTranscriptionButton: Bool
         public let transcriptionState: AudioTranscriptionButtonComponent.TranscriptionState?
         public let transcriptionButtonTapped: (() -> Void)?
         
@@ -91,6 +92,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
             layoutConstants: ChatMessageItemLayoutConstants,
             constrainedSize: CGSize,
             controllerInteraction: ChatControllerInteraction,
+            alwaysDisplayTranscriptionButton: Bool = false,
             transcriptionState: AudioTranscriptionButtonComponent.TranscriptionState? = nil,
             transcriptionButtonTapped: (() -> Void)? = nil
         ) {
@@ -116,6 +118,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
             self.layoutConstants = layoutConstants
             self.constrainedSize = constrainedSize
             self.controllerInteraction = controllerInteraction
+            self.alwaysDisplayTranscriptionButton = alwaysDisplayTranscriptionButton
             self.transcriptionState = transcriptionState
             self.transcriptionButtonTapped = transcriptionButtonTapped
         }
@@ -793,6 +796,10 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     } else if arguments.associatedData.alwaysDisplayTranscribeButton.providedByGroupBoost {
                         displayTranscribe = true
                     }
+                }
+                
+                if arguments.alwaysDisplayTranscriptionButton {
+                    displayTranscribe = true
                 }
                 
                 let transcribedText = forcedAudioTranscriptionText ?? transcribedText(message: arguments.message)

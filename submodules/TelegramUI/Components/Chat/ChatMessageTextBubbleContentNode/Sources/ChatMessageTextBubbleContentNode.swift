@@ -709,6 +709,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         layoutConstants: layoutConstants,
                         constrainedSize: CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height),
                         controllerInteraction: item.controllerInteraction,
+                        alwaysDisplayTranscriptionButton: true,
                         transcriptionState: transcriptionState,
                         transcriptionButtonTapped: { [weak self] in
                             guard let self else { return }
