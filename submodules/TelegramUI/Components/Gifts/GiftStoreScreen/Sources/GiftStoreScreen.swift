@@ -88,7 +88,6 @@ final class GiftStoreScreenComponent: Component {
         
         private var starsItems: [AnyHashable: ComponentView<Empty>] = [:]
         private let filterSelector = ComponentView<Empty>()
-        private var isLoading = false
 
         private var isUpdating: Bool = false
         
@@ -144,48 +143,13 @@ final class GiftStoreScreenComponent: Component {
         private var effectiveGifts: [StarGift]? {
             if let gifts = self.state?.starGiftsState?.gifts {
                 return gifts
-//                if self.selectedModels.isEmpty && self.selectedBackdrops.isEmpty && self.selectedSymbols.isEmpty {
-//                    return gifts
-//                } else if let (currentGifts, currentModels, currentBackdrops, currentSymbols) = self.currentGifts, currentModels == self.selectedModels && currentBackdrops == self.selectedBackdrops && currentSymbols == self.selectedSymbols {
-//                    return currentGifts
-//                } else {
-//                    var filteredGifts: [StarGift] = []
-//                    for gift in gifts {
-//                        guard case let .unique(uniqueGift) = gift else {
-//                            continue
-//                        }
-//                        var match = true
-//                        for attribute in uniqueGift.attributes {
-//                            if case let .model(name, _, _) = attribute {
-//                                if !self.selectedModels.isEmpty && !self.selectedModels.contains(name) {
-//                                    match = false
-//                                }
-//                            }
-//                            if case let .backdrop(name, _, _, _, _, _, _) = attribute {
-//                                if !self.selectedBackdrops.isEmpty && !self.selectedBackdrops.contains(name) {
-//                                    match = false
-//                                }
-//                            }
-//                            if case let .pattern(name, _, _) = attribute {
-//                                if !self.selectedSymbols.isEmpty && !self.selectedSymbols.contains(name) {
-//                                    match = false
-//                                }
-//                            }
-//                        }
-//                        if match {
-//                            filteredGifts.append(gift)
-//                        }
-//                    }
-//                    self.currentGifts = (filteredGifts, self.selectedModels, self.selectedBackdrops, self.selectedSymbols)
-//                    return filteredGifts
-//                }
             } else {
                 return nil
             }
         }
         
         private func updateScrolling(interactive: Bool = false, transition: ComponentTransition) {
-            guard let environment = self.environment, let component = self.component, !self.isLoading else {
+            guard let environment = self.environment, let component = self.component, self.state?.starGiftsState?.dataState != .loading else {
                 return
             }
                
@@ -267,7 +231,7 @@ final class GiftStoreScreenComponent: Component {
                                     ),
                                     effectAlignment: .center,
                                     action: { [weak self] in
-                                        if let self, let component = self.component {
+                                        if let self, let component = self.component, let state = self.state {
                                             if let controller = controller() as? GiftStoreScreen {
                                                 let mainController: ViewController
                                                 if let parentController = controller.parentController() {
@@ -277,7 +241,7 @@ final class GiftStoreScreenComponent: Component {
                                                 }
                                                 let giftController = GiftViewScreen(
                                                     context: component.context,
-                                                    subject: .uniqueGift(uniqueGift)
+                                                    subject: .uniqueGift(uniqueGift, state.peerId)
                                                 )
                                                 mainController.push(giftController)
                                             }
@@ -330,77 +294,6 @@ final class GiftStoreScreenComponent: Component {
             }
         }
         
-        var selectedModels = Set<String>()
-        var selectedBackdrops = Set<String>()
-        var selectedSymbols = Set<String>()
-        
-        private func simulateLoading() {
-            self.isLoading = true
-            self.state?.updated(transition: .immediate)
-            
-            Queue.mainQueue().after(1.0, {
-                self.isLoading = false
-                self.state?.updated(transition: .immediate)
-            })
-        }
-        
-        func openContextMenu(sourceView: UIView) {
-            guard let component = self.component, let controller = self.environment?.controller() else {
-                return
-            }
-            
-            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-            
-            var items: [ContextMenuItem] = []
-            items.append(.action(ContextMenuActionItem(text: "Sort by Price", icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Peer Info/SortValue"), color: theme.contextMenu.primaryColor)
-            }, action: { [weak self] _, f in
-                f(.default)
-                
-                self?.state?.starGiftsContext.updateSorting(.value)
-            })))
-            items.append(.action(ContextMenuActionItem(text: "Sort by Date", icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Peer Info/SortDate"), color: theme.contextMenu.primaryColor)
-            }, action: { [weak self] _, f in
-                f(.default)
-                
-                self?.state?.starGiftsContext.updateSorting(.date)
-            })))
-            items.append(.action(ContextMenuActionItem(text: "Sort by Number", icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Peer Info/SortNumber"), color: theme.contextMenu.primaryColor)
-            }, action: { [weak self] _, f in
-                f(.default)
-                
-                self?.state?.starGiftsContext.updateSorting(.number)
-            })))
-            
-            items.append(.separator)
-            
-            items.append(.action(ContextMenuActionItem(text: "Model", textLayout: .secondLineWithValue("all models"), icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Peer Info/SortNumber"), color: theme.contextMenu.primaryColor)
-            }, action: { _, f in
-                f(.default)
-                
-            })))
-            
-            items.append(.action(ContextMenuActionItem(text: "Backdrop", textLayout: .secondLineWithValue("all backdrops"), icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Peer Info/SortNumber"), color: theme.contextMenu.primaryColor)
-            }, action: { _, f in
-                f(.default)
-                
-            })))
-            
-            items.append(.action(ContextMenuActionItem(text: "Symbol", textLayout: .secondLineWithValue("all symbols"), icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Peer Info/SortNumber"), color: theme.contextMenu.primaryColor)
-            }, action: { _, f in
-                f(.default)
-                
-            })))
-            
-            let contextController = ContextController(context: component.context, presentationData: presentationData, source: .reference(GiftStoreReferenceContentSource(controller: controller, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
-            controller.presentInGlobalOverlay(contextController)
-        }
-        
         func openSortContextMenu(sourceView: UIView) {
             guard let component = self.component, let controller = self.environment?.controller() else {
                 return
@@ -441,28 +334,70 @@ final class GiftStoreScreenComponent: Component {
             }
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+            let searchQueryPromise = ValuePromise<String>("")
             
-            var items: [ContextMenuItem] = []
-            var allSelected = true
-            
-            var currentFilterAttributes: [ResaleGiftsContext.Attribute] = []
-            var selectedIds = Set<Int64>()
-            
-            if let filterAttributes = self.state?.starGiftsState?.filterAttributes {
-                currentFilterAttributes = filterAttributes
-                for attribute in filterAttributes {
-                    if case let .model(id) = attribute {
-                        allSelected = false
-                        selectedIds.insert(id)
-                    }
+            let attributes = self.state?.starGiftsState?.attributes ?? []
+            let modelAttributes = attributes.filter { attribute in
+                if case .model = attribute {
+                    return true
+                } else {
+                    return false
                 }
             }
-            items.append(.action(ContextMenuActionItem(text: "Select All", icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor)
-            }, iconPosition: .left, action: { [weak self] _, f in
-                f(.default)
-                
-                if let self {
+            
+            let currentFilterAttributes = self.state?.starGiftsState?.filterAttributes ?? []
+            let selectedModelAttributes = currentFilterAttributes.filter { attribute in
+                if case .model = attribute {
+                    return true
+                } else {
+                    return false
+                }
+            }
+            
+            //TODO:localize
+            var items: [ContextMenuItem] = []
+            items.append(.custom(SearchContextItem(
+                context: component.context,
+                placeholder: "Search",
+                value: "",
+                valueChanged: { value in
+                    searchQueryPromise.set(value)
+                }
+            ), false))
+            items.append(.separator)
+            items.append(.custom(GiftAttributeListContextItem(
+                context: component.context,
+                attributes: modelAttributes,
+                selectedAttributes: selectedModelAttributes,
+                attributeCount: self.state?.starGiftsState?.attributeCount ?? [:],
+                searchQuery: searchQueryPromise.get(),
+                attributeSelected: { [weak self] attribute, exclusive in
+                    guard let self else {
+                        return
+                    }
+                    var updatedFilterAttributes: [ResaleGiftsContext.Attribute]
+                    if exclusive {
+                        updatedFilterAttributes = currentFilterAttributes.filter { attribute in
+                            if case .model = attribute {
+                                return false
+                            }
+                            return true
+                        }
+                        updatedFilterAttributes.append(attribute)
+                    } else {
+                        updatedFilterAttributes = currentFilterAttributes
+                        if selectedModelAttributes.contains(attribute) {
+                            updatedFilterAttributes.removeAll(where: { $0 == attribute })
+                        } else {
+                            updatedFilterAttributes.append(attribute)
+                        }
+                    }
+                    self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
+                },
+                selectAll: { [weak self] in
+                    guard let self else {
+                        return
+                    }
                     let updatedFilterAttributes = currentFilterAttributes.filter { attribute in
                         if case .model = attribute {
                             return false
@@ -471,65 +406,15 @@ final class GiftStoreScreenComponent: Component {
                     }
                     self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
                 }
-            })))
+            ), false))
             
-            if let attributes = self.state?.starGiftsState?.attributes {
-                for attribute in attributes {
-                    if case let .model(name, file, _) = attribute {
-                        let isSelected = allSelected || selectedIds.contains(file.fileId.id)
-                        
-                        var entities: [MessageTextEntity] = []
-                        var entityFiles: [Int64: TelegramMediaFile] = [:]
-                        entities = [
-                            MessageTextEntity(
-                                range: 0..<1,
-                                type: .CustomEmoji(stickerPack: nil, fileId: file.fileId.id)
-                            )
-                        ]
-                        entityFiles[file.fileId.id] = file
-                                                
-                        var title = "#  \(name)"
-                        var count = ""
-                        if let counter = self.state?.starGiftsState?.attributeCount[.model(file.fileId.id)] {
-                            count = "  \(presentationStringsFormattedNumber(counter, presentationData.dateTimeFormat.groupingSeparator))"
-                            entities.append(
-                                MessageTextEntity(range: title.count ..< title.count + count.count, type: .Bold)
-                            )
-                            title += count
-                        }
-                        items.append(.action(ContextMenuActionItem(text: title,  entities: entities, entityFiles: entityFiles, enableEntityAnimations: false, parseMarkdown: true, icon: { theme in
-                            return isSelected ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
-                        }, action: { [weak self] _, f in
-                            f(.default)
-                            
-                            if let self {
-                                var updatedFilterAttributes = currentFilterAttributes
-                                if selectedIds.contains(file.fileId.id) {
-                                    updatedFilterAttributes.removeAll(where: { $0 == .model(file.fileId.id) })
-                                } else {
-                                    updatedFilterAttributes.append(.model(file.fileId.id))
-                                }
-                                self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
-                            }
-                        }, longPressAction: { [weak self] _, f in
-                            f(.default)
-                            
-                            if let self {
-                                var updatedFilterAttributes = currentFilterAttributes.filter { attribute in
-                                    if case .model = attribute {
-                                        return false
-                                    }
-                                    return true
-                                }
-                                updatedFilterAttributes.append(.model(file.fileId.id))
-                                self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
-                            }
-                        })))
-                    }
-                }
-            }
-
-            let contextController = ContextController(context: component.context, presentationData: presentationData, source: .reference(GiftStoreReferenceContentSource(controller: controller, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
+            let contextController = ContextController(
+                context: component.context,
+                presentationData: presentationData,
+                source: .reference(GiftStoreReferenceContentSource(controller: controller, sourceView: sourceView)),
+                items: .single(ContextController.Items(content: .list(items))),
+                gesture: nil
+            )
             controller.presentInGlobalOverlay(contextController)
         }
         
@@ -539,28 +424,70 @@ final class GiftStoreScreenComponent: Component {
             }
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+            let searchQueryPromise = ValuePromise<String>("")
             
-            var items: [ContextMenuItem] = []
-            var allSelected = true
-            
-            var currentFilterAttributes: [ResaleGiftsContext.Attribute] = []
-            var selectedIds = Set<Int32>()
-            
-            if let filterAttributes = self.state?.starGiftsState?.filterAttributes {
-                currentFilterAttributes = filterAttributes
-                for attribute in filterAttributes {
-                    if case let .backdrop(id) = attribute {
-                        allSelected = false
-                        selectedIds.insert(id)
-                    }
+            let attributes = self.state?.starGiftsState?.attributes ?? []
+            let backdropAttributes = attributes.filter { attribute in
+                if case .backdrop = attribute {
+                    return true
+                } else {
+                    return false
                 }
             }
-            items.append(.action(ContextMenuActionItem(text: "Select All", icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor)
-            }, iconPosition: .left, action: { [weak self] _, f in
-                f(.default)
-                
-                if let self {
+            
+            let currentFilterAttributes = self.state?.starGiftsState?.filterAttributes ?? []
+            let selectedBackdropAttributes = currentFilterAttributes.filter { attribute in
+                if case .backdrop = attribute {
+                    return true
+                } else {
+                    return false
+                }
+            }
+            
+            //TODO:localize
+            var items: [ContextMenuItem] = []
+            items.append(.custom(SearchContextItem(
+                context: component.context,
+                placeholder: "Search",
+                value: "",
+                valueChanged: { value in
+                    searchQueryPromise.set(value)
+                }
+            ), false))
+            items.append(.separator)
+            items.append(.custom(GiftAttributeListContextItem(
+                context: component.context,
+                attributes: backdropAttributes,
+                selectedAttributes: selectedBackdropAttributes,
+                attributeCount: self.state?.starGiftsState?.attributeCount ?? [:],
+                searchQuery: searchQueryPromise.get(),
+                attributeSelected: { [weak self] attribute, exclusive in
+                    guard let self else {
+                        return
+                    }
+                    var updatedFilterAttributes: [ResaleGiftsContext.Attribute]
+                    if exclusive {
+                        updatedFilterAttributes = currentFilterAttributes.filter { attribute in
+                            if case .backdrop = attribute {
+                                return false
+                            }
+                            return true
+                        }
+                        updatedFilterAttributes.append(attribute)
+                    } else {
+                        updatedFilterAttributes = currentFilterAttributes
+                        if selectedBackdropAttributes.contains(attribute) {
+                            updatedFilterAttributes.removeAll(where: { $0 == attribute })
+                        } else {
+                            updatedFilterAttributes.append(attribute)
+                        }
+                    }
+                    self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
+                },
+                selectAll: { [weak self] in
+                    guard let self else {
+                        return
+                    }
                     let updatedFilterAttributes = currentFilterAttributes.filter { attribute in
                         if case .backdrop = attribute {
                             return false
@@ -569,58 +496,15 @@ final class GiftStoreScreenComponent: Component {
                     }
                     self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
                 }
-            })))
+            ), false))
             
-            if let attributes = self.state?.starGiftsState?.attributes {
-                for attribute in attributes {
-                    if case let .backdrop(name, id, innerColor, outerColor, _, _, _) = attribute {
-                        let isSelected = allSelected || selectedIds.contains(id)
-                        
-                        var entities: [MessageTextEntity] = []
-                        var title = "\(name)"
-                        var count = ""
-                        if let counter = self.state?.starGiftsState?.attributeCount[.backdrop(id)] {
-                            count = "  \(presentationStringsFormattedNumber(counter, presentationData.dateTimeFormat.groupingSeparator))"
-                            entities.append(
-                                MessageTextEntity(range: title.count ..< title.count + count.count, type: .Bold)
-                            )
-                            title += count
-                        }
-                        items.append(.action(ContextMenuActionItem(text: "\(name)\(count)", entities: entities, icon: { theme in
-                            return isSelected ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
-                        }, additionalLeftIcon: { _ in
-                            return generateGradientFilledCircleImage(diameter: 24.0, colors: [UIColor(rgb: UInt32(bitPattern: innerColor)).cgColor, UIColor(rgb: UInt32(bitPattern: outerColor)).cgColor])
-                        }, action: { [weak self] _, f in
-                            f(.default)
-                            
-                            if let self {
-                                var updatedFilterAttributes = currentFilterAttributes
-                                if selectedIds.contains(id) {
-                                    updatedFilterAttributes.removeAll(where: { $0 == .backdrop(id) })
-                                } else {
-                                    updatedFilterAttributes.append(.backdrop(id))
-                                }
-                                self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
-                            }
-                        }, longPressAction: { [weak self] _, f in
-                            f(.default)
-                            
-                            if let self {
-                                var updatedFilterAttributes = currentFilterAttributes.filter { attribute in
-                                    if case .backdrop = attribute {
-                                        return false
-                                    }
-                                    return true
-                                }
-                                updatedFilterAttributes.append(.backdrop(id))
-                                self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
-                            }
-                        })))
-                    }
-                }
-            }
-
-            let contextController = ContextController(context: component.context, presentationData: presentationData, source: .reference(GiftStoreReferenceContentSource(controller: controller, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
+            let contextController = ContextController(
+                context: component.context,
+                presentationData: presentationData,
+                source: .reference(GiftStoreReferenceContentSource(controller: controller, sourceView: sourceView)),
+                items: .single(ContextController.Items(content: .list(items))),
+                gesture: nil
+            )
             controller.presentInGlobalOverlay(contextController)
         }
         
@@ -630,28 +514,70 @@ final class GiftStoreScreenComponent: Component {
             }
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+            let searchQueryPromise = ValuePromise<String>("")
             
-            var items: [ContextMenuItem] = []
-            var allSelected = true
-            
-            var currentFilterAttributes: [ResaleGiftsContext.Attribute] = []
-            var selectedIds = Set<Int64>()
-            
-            if let filterAttributes = self.state?.starGiftsState?.filterAttributes {
-                currentFilterAttributes = filterAttributes
-                for attribute in filterAttributes {
-                    if case let .pattern(id) = attribute {
-                        allSelected = false
-                        selectedIds.insert(id)
-                    }
+            let attributes = self.state?.starGiftsState?.attributes ?? []
+            let patternAttributes = attributes.filter { attribute in
+                if case .pattern = attribute {
+                    return true
+                } else {
+                    return false
                 }
             }
-            items.append(.action(ContextMenuActionItem(text: "Select All", icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor)
-            }, iconPosition: .left, action: { [weak self] _, f in
-                f(.default)
-                
-                if let self {
+            
+            let currentFilterAttributes = self.state?.starGiftsState?.filterAttributes ?? []
+            let selectedPatternAttributes = currentFilterAttributes.filter { attribute in
+                if case .pattern = attribute {
+                    return true
+                } else {
+                    return false
+                }
+            }
+            
+            //TODO:localize
+            var items: [ContextMenuItem] = []
+            items.append(.custom(SearchContextItem(
+                context: component.context,
+                placeholder: "Search",
+                value: "",
+                valueChanged: { value in
+                    searchQueryPromise.set(value)
+                }
+            ), false))
+            items.append(.separator)
+            items.append(.custom(GiftAttributeListContextItem(
+                context: component.context,
+                attributes: patternAttributes,
+                selectedAttributes: selectedPatternAttributes,
+                attributeCount: self.state?.starGiftsState?.attributeCount ?? [:],
+                searchQuery: searchQueryPromise.get(),
+                attributeSelected: { [weak self] attribute, exclusive in
+                    guard let self else {
+                        return
+                    }
+                    var updatedFilterAttributes: [ResaleGiftsContext.Attribute]
+                    if exclusive {
+                        updatedFilterAttributes = currentFilterAttributes.filter { attribute in
+                            if case .pattern = attribute {
+                                return false
+                            }
+                            return true
+                        }
+                        updatedFilterAttributes.append(attribute)
+                    } else {
+                        updatedFilterAttributes = currentFilterAttributes
+                        if selectedPatternAttributes.contains(attribute) {
+                            updatedFilterAttributes.removeAll(where: { $0 == attribute })
+                        } else {
+                            updatedFilterAttributes.append(attribute)
+                        }
+                    }
+                    self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
+                },
+                selectAll: { [weak self] in
+                    guard let self else {
+                        return
+                    }
                     let updatedFilterAttributes = currentFilterAttributes.filter { attribute in
                         if case .pattern = attribute {
                             return false
@@ -660,65 +586,15 @@ final class GiftStoreScreenComponent: Component {
                     }
                     self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
                 }
-            })))
+            ), false))
             
-            if let attributes = self.state?.starGiftsState?.attributes {
-                for attribute in attributes {
-                    if case let .pattern(name, file, _) = attribute {
-                        let isSelected = allSelected || selectedIds.contains(file.fileId.id)
-                        
-                        var entities: [MessageTextEntity] = []
-                        var entityFiles: [Int64: TelegramMediaFile] = [:]
-                        entities = [
-                            MessageTextEntity(
-                                range: 0..<1,
-                                type: .CustomEmoji(stickerPack: nil, fileId: file.fileId.id)
-                            )
-                        ]
-                        entityFiles[file.fileId.id] = file
-                        
-                        var title = "#  \(name)"
-                        var count = ""
-                        if let counter = self.state?.starGiftsState?.attributeCount[.pattern(file.fileId.id)] {
-                            count = "  \(presentationStringsFormattedNumber(counter, presentationData.dateTimeFormat.groupingSeparator))"
-                            entities.append(
-                                MessageTextEntity(range: title.count ..< title.count + count.count, type: .Bold)
-                            )
-                            title += count
-                        }
-                        items.append(.action(ContextMenuActionItem(text: title, entities: entities, entityFiles: entityFiles, enableEntityAnimations: false, icon: { theme in
-                            return isSelected ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
-                        }, action: { [weak self] _, f in
-                            f(.default)
-                            
-                            if let self {
-                                var updatedFilterAttributes = currentFilterAttributes
-                                if selectedIds.contains(file.fileId.id) {
-                                    updatedFilterAttributes.removeAll(where: { $0 == .pattern(file.fileId.id) })
-                                } else {
-                                    updatedFilterAttributes.append(.pattern(file.fileId.id))
-                                }
-                                self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
-                            }
-                        }, longPressAction: { [weak self] _, f in
-                            f(.default)
-                            
-                            if let self {
-                                var updatedFilterAttributes = currentFilterAttributes.filter { attribute in
-                                    if case .pattern = attribute {
-                                        return false
-                                    }
-                                    return true
-                                }
-                                updatedFilterAttributes.append(.pattern(file.fileId.id))
-                                self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
-                            }
-                        })))
-                    }
-                }
-            }
-
-            let contextController = ContextController(context: component.context, presentationData: presentationData, source: .reference(GiftStoreReferenceContentSource(controller: controller, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
+            let contextController = ContextController(
+                context: component.context,
+                presentationData: presentationData,
+                source: .reference(GiftStoreReferenceContentSource(controller: controller, sourceView: sourceView)),
+                items: .single(ContextController.Items(content: .list(items))),
+                gesture: nil
+            )
             controller.presentInGlobalOverlay(contextController)
         }
         
@@ -729,7 +605,6 @@ final class GiftStoreScreenComponent: Component {
             }
             
             let environment = environment[EnvironmentType.self].value
-            let controller = environment.controller
             let themeUpdated = self.environment?.theme !== environment.theme
             self.environment = environment
             self.state = state
@@ -785,6 +660,9 @@ final class GiftStoreScreenComponent: Component {
             let topSeparatorFrame = CGRect(origin: CGPoint(x: 0.0, y: topPanelSize.height), size: CGSize(width: topSeparatorSize.width, height: topSeparatorSize.height))
             if let topPanelView = self.topPanel.view, let topSeparatorView = self.topSeparator.view {
                 if topPanelView.superview == nil {
+                    topPanelView.alpha = 0.0
+                    topSeparatorView.alpha = 0.0
+                    
                     self.addSubview(topPanelView)
                     self.addSubview(topSeparatorView)
                 }
@@ -792,51 +670,19 @@ final class GiftStoreScreenComponent: Component {
                 transition.setFrame(view: topSeparatorView, frame: topSeparatorFrame)
             }
             
-            let cancelButtonSize = self.cancelButton.update(
-                transition: transition,
-                component: AnyComponent(
-                    PlainButtonComponent(
-                        content: AnyComponent(
-                            MultilineTextComponent(
-                                text: .plain(NSAttributedString(string: strings.Common_Cancel, font: Font.regular(17.0), textColor: theme.rootController.navigationBar.accentTextColor)),
-                                horizontalAlignment: .center
-                            )
-                        ),
-                        effectAlignment: .center,
-                        action: {
-                            controller()?.dismiss()
-                        },
-                        animateScale: false
-                    )
-                ),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width, height: 100.0)
-            )
-            let cancelButtonFrame = CGRect(origin: CGPoint(x: environment.safeInsets.left + 16.0, y: environment.statusBarHeight + (environment.navigationHeight - environment.statusBarHeight) / 2.0 - cancelButtonSize.height / 2.0), size: cancelButtonSize)
-            if let cancelButtonView = self.cancelButton.view {
-                if cancelButtonView.superview == nil {
-                    self.addSubview(cancelButtonView)
-                }
-                transition.setFrame(view: cancelButtonView, frame: cancelButtonFrame)
-            }
-            
-//            let showFilters = !"".isEmpty
-            
-//            let sortButtonSize = self.sortButton.update(
+//            let cancelButtonSize = self.cancelButton.update(
 //                transition: transition,
 //                component: AnyComponent(
 //                    PlainButtonComponent(
 //                        content: AnyComponent(
-//                            BundleIconComponent(
-//                                name: "Peer Info/SortIcon",
-//                                tintColor: theme.rootController.navigationBar.accentTextColor
+//                            MultilineTextComponent(
+//                                text: .plain(NSAttributedString(string: strings.Common_Cancel, font: Font.regular(17.0), textColor: theme.rootController.navigationBar.accentTextColor)),
+//                                horizontalAlignment: .center
 //                            )
 //                        ),
 //                        effectAlignment: .center,
-//                        action: { [weak self] in
-//                            if let sourceView = self?.sortButton.view {
-//                                self?.openContextMenu(sourceView: sourceView)
-//                            }
+//                        action: {
+//                            controller()?.dismiss()
 //                        },
 //                        animateScale: false
 //                    )
@@ -844,15 +690,14 @@ final class GiftStoreScreenComponent: Component {
 //                environment: {},
 //                containerSize: CGSize(width: availableSize.width, height: 100.0)
 //            )
-//            let sortButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - environment.safeInsets.right - sortButtonSize.width - 10.0, y: environment.statusBarHeight + (environment.navigationHeight - environment.statusBarHeight) / 2.0 - sortButtonSize.height / 2.0), size: sortButtonSize)
-//            if let sortButtonView = self.sortButton.view {
-//                if sortButtonView.superview == nil {
-//                    self.addSubview(sortButtonView)
+//            let cancelButtonFrame = CGRect(origin: CGPoint(x: environment.safeInsets.left + 16.0, y: environment.statusBarHeight + (environment.navigationHeight - environment.statusBarHeight) / 2.0 - cancelButtonSize.height / 2.0), size: cancelButtonSize)
+//            if let cancelButtonView = self.cancelButton.view {
+//                if cancelButtonView.superview == nil {
+//                    self.addSubview(cancelButtonView)
 //                }
-//                transition.setFrame(view: sortButtonView, frame: sortButtonFrame)
-//                transition.setAlpha(view: sortButtonView, alpha: showFilters ? 0.0 : 1.0)
+//                transition.setFrame(view: cancelButtonView, frame: cancelButtonFrame)
 //            }
-            
+                        
             let balanceTitleSize = self.balanceTitle.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
@@ -902,16 +747,12 @@ final class GiftStoreScreenComponent: Component {
                 balanceValueView.bounds = CGRect(origin: .zero, size: balanceValueSize)
                 balanceIconView.center = CGPoint(x: availableSize.width - 16.0 - environment.safeInsets.right - balanceValueSize.width - balanceIconSize.width / 2.0 - 2.0, y: topBalanceOriginY + balanceTitleSize.height + balanceValueSize.height / 2.0 - UIScreenPixel)
                 balanceIconView.bounds = CGRect(origin: .zero, size: balanceIconSize)
-                
-//                transition.setAlpha(view: balanceTitleView, alpha: showFilters ? 1.0 : 0.0)
-//                transition.setAlpha(view: balanceValueView, alpha: showFilters ? 1.0 : 0.0)
-//                transition.setAlpha(view: balanceIconView, alpha: showFilters ? 1.0 : 0.0)
             }
             
             let titleSize = self.title.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "Gift Name", font: Font.semibold(17.0), textColor: theme.rootController.navigationBar.primaryTextColor)),
+                    text: .plain(NSAttributedString(string: component.gift.title ?? "Gift", font: Font.semibold(17.0), textColor: theme.rootController.navigationBar.primaryTextColor)),
                     horizontalAlignment: .center
                 )),
                 environment: {},
@@ -946,20 +787,25 @@ final class GiftStoreScreenComponent: Component {
             let optionWidth = (availableSize.width - sideInset * 2.0 - optionSpacing * 2.0) / 3.0
                          
             var sortingTitle = "Date"
+            var sortingIcon: String = "Peer Info/SortDate"
             if let sorting = self.state?.starGiftsState?.sorting {
                 switch sorting {
                 case .date:
                     sortingTitle = "Date"
+                    sortingIcon = "Peer Info/SortDate"
                 case .value:
                     sortingTitle = "Price"
+                    sortingIcon = "Peer Info/SortValue"
                 case .number:
                     sortingTitle = "Number"
+                    sortingIcon = "Peer Info/SortNumber"
                 }
             }
             
             var filterItems: [FilterSelectorComponent.Item] = []
             filterItems.append(FilterSelectorComponent.Item(
                 id: AnyHashable(0),
+                iconName: sortingIcon,
                 title: sortingTitle,
                 action: { [weak self] view in
                     if let self {
@@ -1043,7 +889,7 @@ final class GiftStoreScreenComponent: Component {
                 component: AnyComponent(FilterSelectorComponent(
                     context: component.context,
                     colors: FilterSelectorComponent.Colors(
-                        foreground: theme.list.itemSecondaryTextColor,
+                        foreground: theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.65),
                         background: theme.list.itemSecondaryTextColor.withMultipliedAlpha(0.15)
                     ),
                     items: filterItems
@@ -1113,7 +959,7 @@ final class GiftStoreScreenComponent: Component {
             transition.setFrame(view: self.loadingNode.view, frame: CGRect(origin: CGPoint(x: 0.0, y: environment.navigationHeight + 39.0 + 7.0), size: availableSize))
             
             let fadeTransition = ComponentTransition.easeInOut(duration: 0.25)
-            if let effectiveGifts = self.effectiveGifts, effectiveGifts.isEmpty && !self.isLoading {
+            if let effectiveGifts = self.effectiveGifts, effectiveGifts.isEmpty && self.state?.starGiftsState?.dataState != .loading {
                 let sideInset: CGFloat = 44.0
                 let emptyAnimationHeight = 148.0
                 let topInset: CGFloat = environment.navigationHeight + 39.0
@@ -1149,10 +995,7 @@ final class GiftStoreScreenComponent: Component {
                                 guard let self else {
                                     return
                                 }
-                                self.selectedModels.removeAll()
-                                self.selectedBackdrops.removeAll()
-                                self.selectedSymbols.removeAll()
-                                self.simulateLoading()
+                                self.state?.starGiftsContext.updateFilterAttributes([])
                             },
                             animateScale: false
                         )
@@ -1205,6 +1048,8 @@ final class GiftStoreScreenComponent: Component {
                     }
                     view.bounds = CGRect(origin: .zero, size: emptyResultsActionFrame.size)
                     ComponentTransition.immediate.setPosition(view: view, position: emptyResultsActionFrame.center)
+                    
+                    view.alpha = self.state?.starGiftsState?.attributes.isEmpty == true ? 0.0 : 1.0
                 }
             } else {
                 if let view = self.emptyResultsAnimation.view {
@@ -1234,6 +1079,7 @@ final class GiftStoreScreenComponent: Component {
     
     final class State: ComponentState {
         private let context: AccountContext
+        var peerId: EnginePeer.Id
         private var disposable: Disposable?
         
         fileprivate let starGiftsContext: ResaleGiftsContext
@@ -1241,9 +1087,11 @@ final class GiftStoreScreenComponent: Component {
         
         init(
             context: AccountContext,
+            peerId: EnginePeer.Id,
             giftId: Int64
         ) {
             self.context = context
+            self.peerId = peerId
             self.starGiftsContext = ResaleGiftsContext(account: context.account, giftId: giftId)
             
             super.init()
@@ -1264,7 +1112,7 @@ final class GiftStoreScreenComponent: Component {
     }
     
     func makeState() -> State {
-        return State(context: self.context, giftId: self.gift.id)
+        return State(context: self.context, peerId: self.peerId, giftId: self.gift.id)
     }
     
     func update(view: View, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
@@ -1292,10 +1140,9 @@ public class GiftStoreScreen: ViewControllerComponentContainer {
             starsContext: starsContext,
             peerId: peerId,
             gift: gift
-        ), navigationBarAppearance: .none, theme: .default, updatedPresentationData: nil)
+        ), navigationBarAppearance: .transparent, theme: .default, updatedPresentationData: nil)
         
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.context.sharedContext.currentPresentationData.with { $0 }.strings.Common_Back, style: .plain, target: nil, action: nil)
-        
         
         self.scrollToTop = { [weak self] in
             guard let self, let componentView = self.node.hostView.componentView as? GiftStoreScreenComponent.View else {
@@ -1331,6 +1178,8 @@ private extension StarGift {
 private final class GiftStoreReferenceContentSource: ContextReferenceContentSource {
     private let controller: ViewController
     private let sourceView: UIView
+    
+    let forceDisplayBelowKeyboard = true
     
     init(controller: ViewController, sourceView: UIView) {
         self.controller = controller

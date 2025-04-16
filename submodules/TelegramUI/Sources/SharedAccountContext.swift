@@ -3273,7 +3273,6 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             fatalError()
         }
         let controller = GiftStoreScreen(context: context, starsContext: starsContext, peerId: peerId, gift: gift)
-        controller.navigationPresentation = .modal
         return controller
     }
     
@@ -3666,8 +3665,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return StarsWithdrawScreen(context: context, mode: .accountWithdraw, completion: completion)
     }
     
-    public func makeStarGiftResellScreen(context: AccountContext, completion: @escaping (Int64) -> Void) -> ViewController {
-        return StarsWithdrawScreen(context: context, mode: .starGiftResell, completion: completion)
+    public func makeStarGiftResellScreen(context: AccountContext, update: Bool, completion: @escaping (Int64) -> Void) -> ViewController {
+        return StarsWithdrawScreen(context: context, mode: .starGiftResell(update), completion: completion)
     }
     
     public func makeStarsGiftScreen(context: AccountContext, message: EngineMessage) -> ViewController {
@@ -3687,7 +3686,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func makeGiftViewScreen(context: AccountContext, gift: StarGift.UniqueGift, shareStory: ((StarGift.UniqueGift) -> Void)?, dismissed: (() -> Void)?) -> ViewController {
-        let controller = GiftViewScreen(context: context, subject: .uniqueGift(gift), shareStory: shareStory)
+        let controller = GiftViewScreen(context: context, subject: .uniqueGift(gift, nil), shareStory: shareStory)
         controller.disposed = {
             dismissed?()
         }

@@ -476,6 +476,7 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
     private var size: CGSize?
     
     private let backgroundAnimationNode: ASImageNode
+    private var iconNode: ASImageNode?
     fileprivate let textNode: ImmediateTextNode
     private var badgeNode: BadgeNode?
     private let statusNode: SemanticStatusNode
@@ -781,6 +782,25 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
             badgeNode.removeFromSupernode()
         }
         
+        if let iconName = state.iconName {
+            let iconNode: ASImageNode
+            if let current = self.iconNode {
+                iconNode = current
+            } else {
+                iconNode = ASImageNode()
+                iconNode.displaysAsynchronously = false
+                iconNode.image = generateTintedImage(image: UIImage(bundleImageName: iconName), color: state.textColor)
+                self.addSubnode(iconNode)
+            }
+            if let iconSize = iconNode.image?.size {
+                textFrame.origin.x += (iconSize.width + 6.0) / 2.0
+                iconNode.frame = CGRect(origin: CGPoint(x: textFrame.minX - iconSize.width - 6.0, y: textFrame.minY + floorToScreenPixels((textFrame.height - iconSize.height) * 0.5)), size: iconSize)
+            }
+        } else if let iconNode = self.iconNode {
+            self.iconNode = nil
+            iconNode.removeFromSupernode()
+        }
+        
         if self.textNode.frame.width.isZero {
             self.textNode.frame = textFrame
         } else {
@@ -795,7 +815,7 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
                 self.transitionFromProgress()
             }
         }
-        
+                
         if let shimmerView = self.shimmerView, let borderView = self.borderView, let borderMaskView = self.borderMaskView, let borderShimmerView = self.borderShimmerView {
             let buttonFrame = CGRect(origin: .zero, size: size)
             let buttonWidth = size.width

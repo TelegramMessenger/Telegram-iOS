@@ -273,7 +273,7 @@ public final class ContextControllerActionsListActionItemNode: HighlightTracking
         return super.hitTest(point, with: event)
     }
     
-    func setItem(item: ContextMenuActionItem) {
+    public func setItem(item: ContextMenuActionItem) {
         self.item = item
         self.accessibilityLabel = item.text
     }
@@ -363,6 +363,8 @@ public final class ContextControllerActionsListActionItemNode: HighlightTracking
                         return ChatTextInputStateTextAttribute(type: .customEmoji(stickerPack: nil, fileId: fileId, enableAnimation: true), range: entity.range)
                     } else if case .Bold = entity.type {
                         return ChatTextInputStateTextAttribute(type: .bold, range: entity.range)
+                    } else if case .Italic = entity.type {
+                        return ChatTextInputStateTextAttribute(type: .italic, range: entity.range)
                     }
                     return nil
                 })
@@ -373,6 +375,8 @@ public final class ContextControllerActionsListActionItemNode: HighlightTracking
                 ], range: NSRange(location: 0, length: result.length))
                 for attribute in inputStateText.attributes {
                     if case .bold = attribute.type {
+                        result.addAttribute(NSAttributedString.Key.font, value: Font.semibold(presentationData.listsFontSize.baseDisplaySize), range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
+                    } else if case .italic = attribute.type {
                         result.addAttribute(NSAttributedString.Key.font, value: Font.semibold(15.0), range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
                     }
                 }

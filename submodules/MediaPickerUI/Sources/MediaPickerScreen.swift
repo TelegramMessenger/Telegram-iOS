@@ -1823,6 +1823,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
     private var isDismissing = false
     
     fileprivate let mainButtonStatePromise = Promise<AttachmentMainButtonState?>(nil)
+    fileprivate let secondaryButtonStatePromise = Promise<AttachmentMainButtonState?>(nil)
 
     private let mainButtonAction: (() -> Void)?
     
@@ -2380,9 +2381,23 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         transition.updateAlpha(node: self.moreButtonNode.iconNode, alpha: moreIsVisible ? 1.0 : 0.0)
         transition.updateTransformScale(node: self.moreButtonNode.iconNode, scale: moreIsVisible ? 1.0 : 0.1)
         
-        //if self. {
-            //self.mainButtonStatePromise.set(.single(AttachmentMainButtonState(text: "Add", badge: "\(count)", font: .bold, background: .color(self.presentationData.theme.actionSheet.controlAccentColor), textColor: self.presentationData.theme.list.itemCheckColors.foregroundColor, isVisible: count > 0, progress: .none, isEnabled: true, hasShimmer: false)))
-        //}
+        if self.selectionCount > 0 {
+            //TODO:localize
+            var text = "Create 1 Story"
+            if self.selectionCount > 1 {
+                text = "Create \(self.selectionCount) Stories"
+            }
+            self.mainButtonStatePromise.set(.single(AttachmentMainButtonState(text: text, badge: nil, font: .bold, background: .color(self.presentationData.theme.actionSheet.controlAccentColor), textColor: self.presentationData.theme.list.itemCheckColors.foregroundColor, isVisible: true, progress: .none, isEnabled: true, hasShimmer: false, position: .top)))
+            
+            if self.selectionCount > 1 && self.selectionCount <= 6 {
+                self.secondaryButtonStatePromise.set(.single(AttachmentMainButtonState(text: "Combine into Collage", badge: nil, font: .regular, background: .color(.clear), textColor: self.presentationData.theme.actionSheet.controlAccentColor, isVisible: true, progress: .none, isEnabled: true, hasShimmer: false, iconName: "Media Editor/Collage", position: .bottom)))
+            } else {
+                self.secondaryButtonStatePromise.set(.single(nil))
+            }
+        } else {
+            self.mainButtonStatePromise.set(.single(nil))
+            self.secondaryButtonStatePromise.set(.single(nil))
+        }
     }
     
     private func updateThemeAndStrings() {
@@ -2933,6 +2948,10 @@ final class MediaPickerContext: AttachmentMediaPickerContext {
         return self.controller?.mainButtonStatePromise.get() ?? .single(nil)
     }
     
+    public var secondaryButtonState: Signal<AttachmentMainButtonState?, NoError> {
+        return self.controller?.secondaryButtonStatePromise.get() ?? .single(nil)
+    }
+    
     init(controller: MediaPickerScreenImpl) {
         self.controller = controller
     }
@@ -2950,6 +2969,10 @@ final class MediaPickerContext: AttachmentMediaPickerContext {
     }
     
     func mainButtonAction() {
+        self.controller?.mainButtonPressed()
+    }
+    
+    func secondaryButtonAction() {
         self.controller?.mainButtonPressed()
     }
 }

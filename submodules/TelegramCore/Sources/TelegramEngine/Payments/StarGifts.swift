@@ -2296,7 +2296,7 @@ private final class ResaleGiftsContextImpl {
     
     private let disposable = MetaDisposable()
     
-    private var sorting: ResaleGiftsContext.Sorting = .date
+    private var sorting: ResaleGiftsContext.Sorting = .value
     private var filterAttributes: [ResaleGiftsContext.Attribute] = []
     
     private var gifts: [StarGift] = []

@@ -2726,9 +2726,13 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             self.additionalPreviewView.isEnabled = false
             self.collageView?.isEnabled = false
             
+            #if DEBUG
+            
+            #else
             Queue.mainQueue().after(0.3) {
                 self.previewBlurPromise.set(true)
             }
+            #endif
             self.camera?.stopCapture()
             
             self.cameraIsActive = false
@@ -3627,12 +3631,17 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             if self.cameraState.isCollageEnabled, let collage = self.node.collage {
                 selectionLimit = collage.grid.count - collage.results.count
             } else {
-                selectionLimit = 6
+                if self.cameraState.isCollageEnabled {
+                    selectionLimit = 6
+                } else {
+                    selectionLimit = 10
+                }
             }
+            //TODO:unmock
             controller = self.context.sharedContext.makeStoryMediaPickerScreen(
                 context: self.context,
                 isDark: true,
-                forCollage: self.cameraState.isCollageEnabled,
+                forCollage: self.cameraState.isCollageEnabled || "".isEmpty,
                 selectionLimit: selectionLimit,
                 getSourceRect: { [weak self] in
                     if let self {

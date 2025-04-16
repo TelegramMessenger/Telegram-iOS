@@ -2145,11 +2145,17 @@ public protocol ContextReferenceContentSource: AnyObject {
     
     var shouldBeDismissed: Signal<Bool, NoError> { get }
     
+    var forceDisplayBelowKeyboard: Bool { get }
+    
     func transitionInfo() -> ContextControllerReferenceViewInfo?
 }
 
 public extension ContextReferenceContentSource {
     var keepInPlace: Bool {
+        return false
+    }
+    
+    var forceDisplayBelowKeyboard: Bool {
         return false
     }
     
@@ -2744,7 +2750,9 @@ public final class ContextController: ViewController, StandalonePresentableContr
     }
     
     public func dismiss(result: ContextMenuActionResult, completion: (() -> Void)?) {
-        if viewTreeContainsFirstResponder(view: self.view) {
+        if let mainSource = self.configuration.sources.first(where: { $0.id == self.configuration.initialId }), case let .reference(source) = mainSource.source, source.forceDisplayBelowKeyboard {
+            
+        } else if viewTreeContainsFirstResponder(view: self.view) { 
             self.dismissOnInputClose = (result, completion)
             self.view.endEditing(true)
             return

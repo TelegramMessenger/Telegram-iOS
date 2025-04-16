@@ -24,21 +24,24 @@ public final class FilterSelectorComponent: Component {
     
     public struct Item: Equatable {
         public var id: AnyHashable
+        public var iconName: String?
         public var title: String
         public var action: (UIView) -> Void
 
         public init(
             id: AnyHashable,
+            iconName: String? = nil,
             title: String,
             action: @escaping (UIView) -> Void
         ) {
             self.id = id
+            self.iconName = iconName
             self.title = title
             self.action = action
         }
         
         public static func ==(lhs: Item, rhs: Item) -> Bool {
-            return lhs.id == rhs.id && lhs.title == rhs.title
+            return lhs.id == rhs.id && lhs.iconName == rhs.iconName && lhs.title == rhs.title
         }
     }
 
@@ -142,6 +145,7 @@ public final class FilterSelectorComponent: Component {
                     component: AnyComponent(PlainButtonComponent(
                         content: AnyComponent(ItemComponent(
                             context: component.context,
+                            iconName: item.iconName,
                             text: item.title,
                             font: itemFont,
                             color: component.colors.foreground,
@@ -231,6 +235,7 @@ extension CGRect {
 
 private final class ItemComponent: CombinedComponent {
     let context: AccountContext?
+    let iconName: String?
     let text: String
     let font: UIFont
     let color: UIColor
@@ -238,12 +243,14 @@ private final class ItemComponent: CombinedComponent {
     
     init(
         context: AccountContext?,
+        iconName: String?,
         text: String,
         font: UIFont,
         color: UIColor,
         backgroundColor: UIColor
     ) {
         self.context = context
+        self.iconName = iconName
         self.text = text
         self.font = font
         self.color = color
@@ -252,6 +259,9 @@ private final class ItemComponent: CombinedComponent {
 
     static func ==(lhs: ItemComponent, rhs: ItemComponent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.iconName != rhs.iconName {
             return false
         }
         if lhs.text != rhs.text {
@@ -297,17 +307,22 @@ private final class ItemComponent: CombinedComponent {
             
             let icon = icon.update(
                 component: BundleIconComponent(
-                    name: "Item List/ExpandableSelectorArrows",
-                    tintColor: component.color
+                    name: component.iconName ?? "Item List/ExpandableSelectorArrows",
+                    tintColor: component.color,
+                    maxSize: component.iconName != nil ? CGSize(width: 22.0, height: 22.0) : nil
                 ),
                 availableSize: CGSize(width: 100, height: 100),
                 transition: .immediate
             )
             
             let padding: CGFloat = 12.0
+            var leftPadding = padding
+            if let _ = component.iconName {
+                leftPadding -= 4.0
+            }
             let spacing: CGFloat = 4.0
             let totalWidth = title.size.width + icon.size.width + spacing
-            let size = CGSize(width: totalWidth + padding * 2.0, height: 28.0)
+            let size = CGSize(width: totalWidth + leftPadding + padding, height: 28.0)
             let background = background.update(
                 component: RoundedRectangle(
                     color: component.backgroundColor,
@@ -319,12 +334,21 @@ private final class ItemComponent: CombinedComponent {
             context.add(background
                 .position(CGPoint(x: size.width / 2.0, y: size.height / 2.0))
             )
-            context.add(title
-                .position(CGPoint(x: padding + title.size.width / 2.0, y: size.height / 2.0))
-            )
-            context.add(icon
-                .position(CGPoint(x: size.width - padding - icon.size.width / 2.0, y: size.height / 2.0))
-            )
+            if let _ = component.iconName {
+                context.add(title
+                    .position(CGPoint(x: size.width - padding - title.size.width / 2.0, y: size.height / 2.0))
+                )
+                context.add(icon
+                    .position(CGPoint(x: leftPadding + icon.size.width / 2.0, y: size.height / 2.0))
+                )
+            } else {
+                context.add(title
+                    .position(CGPoint(x: padding + title.size.width / 2.0, y: size.height / 2.0))
+                )
+                context.add(icon
+                    .position(CGPoint(x: size.width - padding - icon.size.width / 2.0, y: size.height / 2.0))
+                )
+            }
             return size
         }
     }
