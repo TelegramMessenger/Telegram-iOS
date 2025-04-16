@@ -3926,6 +3926,9 @@ func replayFinalState(
                                 updatedAttributes.append(translation)
                             }
                         }
+                        if let transcription = previousMessage.attributes.first(where: { $0 is TextTranscriptionMessageAttribute }) as? TextTranscriptionMessageAttribute {
+                            updatedAttributes.append(transcription)
+                        }
                     }
                     
                     if let previousFactCheckAttribute = previousMessage.attributes.first(where: { $0 is FactCheckMessageAttribute }) as? FactCheckMessageAttribute, let updatedFactCheckAttribute = message.attributes.first(where: { $0 is FactCheckMessageAttribute }) as? FactCheckMessageAttribute {

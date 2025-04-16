@@ -4506,6 +4506,24 @@ extension ChatControllerImpl {
             if let strongSelf = self, let layout = strongSelf.validLayout {
                 strongSelf.containerLayoutUpdated(layout, transition: transition)
             }
+        }, startTranscribingText: { [weak self] message in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.transcribingTextDisposable = (strongSelf.context.engine.messages.transcribeText(messageId: message.id)
+            |> deliverOnMainQueue).startStrict(next: { [weak self] result in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                switch result {
+                case .finished:
+                    strongSelf.transcribingTextDisposable?.dispose()
+                    strongSelf.transcribingTextDisposable = nil
+                default:
+                    break
+                }
+            })
         }, chatController: { [weak self] in
             return self
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get(), inlineSearch: self.performingInlineSearch.get()))

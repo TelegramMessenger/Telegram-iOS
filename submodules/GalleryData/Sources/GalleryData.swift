@@ -175,6 +175,10 @@ public func chatMessageGalleryControllerData(context: AccountContext, chatLocati
         }
     }
     
+    if let attribute = message.attributes.first(where: { $0 is TextTranscriptionMessageAttribute }) as? TextTranscriptionMessageAttribute {
+        galleryMedia = attribute.file
+    }
+    
     var stream = false
     var autoplayingVideo = false
     var landscape = false

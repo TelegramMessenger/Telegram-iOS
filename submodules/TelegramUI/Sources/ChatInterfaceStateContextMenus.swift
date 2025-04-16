@@ -1642,6 +1642,21 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 }
             }
             
+            if !message.text.isEmpty {
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                
+                let contextMenuItem = ContextMenuActionItem(
+                    text: "Listen", // TODO: Localize,
+                    badge: ContextMenuActionBadge(value: presentationData.strings.ChatList_ContextMenuBadgeNew, color: .accent, style: .label),
+                    icon: { theme in
+                        generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/SoundOn"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { _, f in
+                        interfaceInteraction.startTranscribingText(message)
+                        f(.dismissWithoutContent)
+                    })
+                actions.append(.action(contextMenuItem))
+            }
+            
             if !hasAutoremove {
                 for media in message.media {
                     if let action = media as? TelegramMediaAction {

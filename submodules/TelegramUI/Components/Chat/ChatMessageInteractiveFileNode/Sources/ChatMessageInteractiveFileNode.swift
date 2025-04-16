@@ -65,6 +65,9 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
         public let layoutConstants: ChatMessageItemLayoutConstants
         public let constrainedSize: CGSize
         public let controllerInteraction: ChatControllerInteraction
+        public let alwaysDisplayTranscriptionButton: Bool
+        public let transcriptionState: AudioTranscriptionButtonComponent.TranscriptionState?
+        public let transcriptionButtonTapped: (() -> Void)?
         
         public init(
             context: AccountContext,
@@ -88,7 +91,10 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
             isAttachedContentBlock: Bool,
             layoutConstants: ChatMessageItemLayoutConstants,
             constrainedSize: CGSize,
-            controllerInteraction: ChatControllerInteraction
+            controllerInteraction: ChatControllerInteraction,
+            alwaysDisplayTranscriptionButton: Bool = false,
+            transcriptionState: AudioTranscriptionButtonComponent.TranscriptionState? = nil,
+            transcriptionButtonTapped: (() -> Void)? = nil
         ) {
             self.context = context
             self.presentationData = presentationData
@@ -112,6 +118,9 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
             self.layoutConstants = layoutConstants
             self.constrainedSize = constrainedSize
             self.controllerInteraction = controllerInteraction
+            self.alwaysDisplayTranscriptionButton = alwaysDisplayTranscriptionButton
+            self.transcriptionState = transcriptionState
+            self.transcriptionButtonTapped = transcriptionButtonTapped
         }
     }
     
@@ -789,6 +798,10 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     }
                 }
                 
+                if arguments.alwaysDisplayTranscriptionButton {
+                    displayTranscribe = true
+                }
+                
                 let transcribedText = forcedAudioTranscriptionText ?? transcribedText(message: arguments.message)
                 
                 switch audioTranscriptionState {
@@ -805,7 +818,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     updatedAudioTranscriptionState = .locked
                 }
                 
-                let effectiveAudioTranscriptionState = updatedAudioTranscriptionState ?? audioTranscriptionState
+                let effectiveAudioTranscriptionState = updatedAudioTranscriptionState ?? arguments.transcriptionState ?? audioTranscriptionState
                 
                 var displayTrailingAnimatedDots = false
                 
@@ -1356,7 +1369,11 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                                 guard let strongSelf = self else {
                                                     return
                                                 }
-                                                strongSelf.transcribe()
+                                                if let action = arguments.transcriptionButtonTapped {
+                                                    action()
+                                                } else {
+                                                    strongSelf.transcribe()
+                                                }
                                             }
                                         )),
                                         environment: {},

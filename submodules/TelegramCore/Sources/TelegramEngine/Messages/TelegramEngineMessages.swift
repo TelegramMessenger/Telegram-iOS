@@ -581,6 +581,10 @@ public extension TelegramEngine {
             |> ignoreValues
         }
         
+        public func transcribeText(messageId: MessageId) -> Signal<EngineTextTranscriptionResult, NoError> {
+            _internal_transcribeText(postbox: self.account.postbox, network: self.account.network, messageId: messageId)
+        }
+        
         public func storeLocallyDerivedData(messageId: MessageId, data: [String: CodableEntry]) -> Signal<Never, NoError> {
             return self.account.postbox.transaction { transaction -> Void in
                 transaction.updateMessage(messageId, update: { currentMessage in
