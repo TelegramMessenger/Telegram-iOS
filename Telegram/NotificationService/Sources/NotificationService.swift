@@ -1298,7 +1298,7 @@ private final class NotificationServiceHandler {
                                     var voipPayload: [AnyHashable: Any] = [
                                         "group_call_id": "\(groupCallData.id)",
                                         "msg_id": "\(groupCallData.messageId)",
-                                        "video": "\(groupCallData.isVideo)",
+                                        "video": "\(groupCallData.isVideo ? 1 : 0)",
                                         "member_count": "\(groupCallData.memberCount)",
                                         "from_id": "\(groupCallData.fromId.id._internalGetInt64Value())",
                                         "from_title": groupCallData.fromTitle,
