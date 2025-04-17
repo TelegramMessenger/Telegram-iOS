@@ -11118,7 +11118,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 giftsContext?.updateSorting(sorting == .date ? .value : .date)
             })))
             
-            if hasPinnedGifts {
+            if hasPinnedGifts && hasVisibility {
                 items.append(.action(ContextMenuActionItem(text: strings.PeerInfo_Gifts_Reorder, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReorderItems"), color: theme.contextMenu.primaryColor)
                 }, action: { _, f in
