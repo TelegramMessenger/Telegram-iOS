@@ -32,6 +32,8 @@ class ForumTopic {
   DialogNotificationSettings notification_settings_;
   unique_ptr<DraftMessage> draft_message_;
 
+  int64 get_forum_topic_order(Td *td, DialogId dialog_id) const;
+
  public:
   ForumTopic() = default;
 
@@ -64,6 +66,9 @@ class ForumTopic {
 
   td_api::object_ptr<td_api::forumTopic> get_forum_topic_object(Td *td, DialogId dialog_id,
                                                                 const ForumTopicInfo &info) const;
+
+  td_api::object_ptr<td_api::updateForumTopic> get_update_forum_topic_object(Td *td, DialogId dialog_id,
+                                                                             MessageId top_thread_message_id) const;
 
   template <class StorerT>
   void store(StorerT &storer) const;

@@ -2733,7 +2733,6 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
             var messageIdsWithUnseenPersonalMention: [MessageId] = []
             var messageIdsWithUnseenReactions: [MessageId] = []
             var messageIdsWithInactiveExtendedMedia = Set<MessageId>()
-            var messageIdsWithGroupCalls: [MessageId] = []
             var downloadableResourceIds: [(messageId: MessageId, resourceId: String)] = []
             var allVisibleAnchorMessageIds: [(MessageId, Int)] = []
             var visibleAdOpaqueIds: [Data] = []
@@ -2832,13 +2831,6 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                                 storiesRequiredValidation = true
                             } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, let _ = content.story {
                                 storiesRequiredValidation = true
-                            } else if let media = media as? TelegramMediaAction {
-                                if case let .conferenceCall(conferenceCall) = media.action {
-                                    if conferenceCall.duration != nil {
-                                    } else {
-                                        messageIdsWithGroupCalls.append(message.id)
-                                    }
-                                }
                             }
                         }
                         if contentRequiredValidation {
@@ -3095,9 +3087,6 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
             }
             if !peerIdsWithRefreshStories.isEmpty {
                 self.context.account.viewTracker.refreshStoryStatsForPeerIds(peerIds: peerIdsWithRefreshStories)
-            }
-            if !messageIdsWithGroupCalls.isEmpty {
-                self.inlineGroupCallsProcessingManager.add(messageIdsWithGroupCalls.map { MessageAndThreadId(messageId: $0, threadId: nil) })
             }
             
             self.currentEarlierPrefetchMessages = toEarlierMediaMessages

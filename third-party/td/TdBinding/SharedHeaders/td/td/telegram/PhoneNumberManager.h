@@ -38,7 +38,7 @@ class PhoneNumberManager final : public Actor {
   void check_code(string code, Promise<Unit> &&promise);
 
  private:
-  enum class Type : int32 { ChangePhone, VerifyPhone, ConfirmPhone };
+  enum class Type : int32 { None, ChangePhone, VerifyPhone, ConfirmPhone };
   enum class State : int32 { Ok, WaitCode } state_ = State::Ok;
 
   void tear_down() final;
@@ -56,7 +56,7 @@ class PhoneNumberManager final : public Actor {
   Td *td_;
   ActorShared<> parent_;
 
-  Type type_;
+  Type type_ = Type::None;
   SendCodeHelper send_code_helper_;
   int64 generation_ = 0;
 };

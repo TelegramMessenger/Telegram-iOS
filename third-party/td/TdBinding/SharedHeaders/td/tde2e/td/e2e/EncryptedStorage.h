@@ -365,7 +365,7 @@ struct EncryptedStorage {
 
   // current blockchain height
   td::int64 get_height() const;
-  // one must only apply blocks from server (TODO: signature from server)
+  // one should only apply blocks from server (TODO: signature from server?)
   td::Result<KeyValueUpdates> apply_block(td::Slice block);
 
   // proof must be from block of current height

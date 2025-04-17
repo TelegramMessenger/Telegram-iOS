@@ -852,6 +852,23 @@ class authorizationStateWaitPhoneNumber final : public AuthorizationState {
   void store(TlStorerToString &s, const char *field_name) const final;
 };
 
+class authorizationStateWaitPremiumPurchase final : public AuthorizationState {
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+ public:
+  string store_product_id_;
+
+  authorizationStateWaitPremiumPurchase();
+
+  explicit authorizationStateWaitPremiumPurchase(string const &store_product_id_);
+
+  static const std::int32_t ID = -862487743;
+
+  void store(TlStorerToString &s, const char *field_name) const final;
+};
+
 class authorizationStateWaitEmailAddress final : public AuthorizationState {
   std::int32_t get_id() const final {
     return ID;
@@ -8687,6 +8704,7 @@ class forumTopic final : public Object {
  public:
   object_ptr<forumTopicInfo> info_;
   object_ptr<message> last_message_;
+  int64 order_;
   bool is_pinned_;
   int32 unread_count_;
   int53 last_read_inbox_message_id_;
@@ -8698,9 +8716,9 @@ class forumTopic final : public Object {
 
   forumTopic();
 
-  forumTopic(object_ptr<forumTopicInfo> &&info_, object_ptr<message> &&last_message_, bool is_pinned_, int32 unread_count_, int53 last_read_inbox_message_id_, int53 last_read_outbox_message_id_, int32 unread_mention_count_, int32 unread_reaction_count_, object_ptr<chatNotificationSettings> &&notification_settings_, object_ptr<draftMessage> &&draft_message_);
+  forumTopic(object_ptr<forumTopicInfo> &&info_, object_ptr<message> &&last_message_, int64 order_, bool is_pinned_, int32 unread_count_, int53 last_read_inbox_message_id_, int53 last_read_outbox_message_id_, int32 unread_mention_count_, int32 unread_reaction_count_, object_ptr<chatNotificationSettings> &&notification_settings_, object_ptr<draftMessage> &&draft_message_);
 
-  static const std::int32_t ID = 303279334;
+  static const std::int32_t ID = -2094608976;
 
   void store(TlStorerToString &s, const char *field_name) const final;
 };
@@ -8733,6 +8751,7 @@ class forumTopicInfo final : public Object {
   }
 
  public:
+  int53 chat_id_;
   int53 message_thread_id_;
   string name_;
   object_ptr<forumTopicIcon> icon_;
@@ -8745,9 +8764,9 @@ class forumTopicInfo final : public Object {
 
   forumTopicInfo();
 
-  forumTopicInfo(int53 message_thread_id_, string const &name_, object_ptr<forumTopicIcon> &&icon_, int32 creation_date_, object_ptr<MessageSender> &&creator_id_, bool is_general_, bool is_outgoing_, bool is_closed_, bool is_hidden_);
+  forumTopicInfo(int53 chat_id_, int53 message_thread_id_, string const &name_, object_ptr<forumTopicIcon> &&icon_, int32 creation_date_, object_ptr<MessageSender> &&creator_id_, bool is_general_, bool is_outgoing_, bool is_closed_, bool is_hidden_);
 
-  static const std::int32_t ID = -1879842914;
+  static const std::int32_t ID = -654857606;
 
   void store(TlStorerToString &s, const char *field_name) const final;
 };
@@ -26213,6 +26232,46 @@ class storePaymentPurposeGiftedStars final : public StorePaymentPurpose {
   void store(TlStorerToString &s, const char *field_name) const final;
 };
 
+class StoreTransaction: public Object {
+ public:
+};
+
+class storeTransactionAppStore final : public StoreTransaction {
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+ public:
+  bytes receipt_;
+
+  storeTransactionAppStore();
+
+  explicit storeTransactionAppStore(bytes const &receipt_);
+
+  static const std::int32_t ID = 1625562441;
+
+  void store(TlStorerToString &s, const char *field_name) const final;
+};
+
+class storeTransactionGooglePlay final : public StoreTransaction {
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+ public:
+  string package_name_;
+  string store_product_id_;
+  string purchase_token_;
+
+  storeTransactionGooglePlay();
+
+  storeTransactionGooglePlay(string const &package_name_, string const &store_product_id_, string const &purchase_token_);
+
+  static const std::int32_t ID = 1094018617;
+
+  void store(TlStorerToString &s, const char *field_name) const final;
+};
+
 class story;
 
 class stories final : public Object {
@@ -29909,14 +29968,34 @@ class updateForumTopicInfo final : public Update {
   }
 
  public:
-  int53 chat_id_;
   object_ptr<forumTopicInfo> info_;
 
   updateForumTopicInfo();
 
-  updateForumTopicInfo(int53 chat_id_, object_ptr<forumTopicInfo> &&info_);
+  explicit updateForumTopicInfo(object_ptr<forumTopicInfo> &&info_);
 
-  static const std::int32_t ID = 1802448073;
+  static const std::int32_t ID = 1420762696;
+
+  void store(TlStorerToString &s, const char *field_name) const final;
+};
+
+class updateForumTopic final : public Update {
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+ public:
+  int53 chat_id_;
+  int53 message_thread_id_;
+  bool is_pinned_;
+  int53 last_read_outbox_message_id_;
+  object_ptr<chatNotificationSettings> notification_settings_;
+
+  updateForumTopic();
+
+  updateForumTopic(int53 chat_id_, int53 message_thread_id_, bool is_pinned_, int53 last_read_outbox_message_id_, object_ptr<chatNotificationSettings> &&notification_settings_);
+
+  static const std::int32_t ID = 807069971;
 
   void store(TlStorerToString &s, const char *field_name) const final;
 };
@@ -33817,48 +33896,24 @@ class applyPremiumGiftCode final : public Function {
 
 class StorePaymentPurpose;
 
+class StoreTransaction;
+
 class ok;
 
-class assignAppStoreTransaction final : public Function {
+class assignStoreTransaction final : public Function {
   std::int32_t get_id() const final {
     return ID;
   }
 
  public:
-  bytes receipt_;
+  object_ptr<StoreTransaction> transaction_;
   object_ptr<StorePaymentPurpose> purpose_;
 
-  assignAppStoreTransaction();
+  assignStoreTransaction();
 
-  assignAppStoreTransaction(bytes const &receipt_, object_ptr<StorePaymentPurpose> &&purpose_);
+  assignStoreTransaction(object_ptr<StoreTransaction> &&transaction_, object_ptr<StorePaymentPurpose> &&purpose_);
 
-  static const std::int32_t ID = -2030892112;
-
-  using ReturnType = object_ptr<ok>;
-
-  void store(TlStorerToString &s, const char *field_name) const final;
-};
-
-class StorePaymentPurpose;
-
-class ok;
-
-class assignGooglePlayTransaction final : public Function {
-  std::int32_t get_id() const final {
-    return ID;
-  }
-
- public:
-  string package_name_;
-  string store_product_id_;
-  string purchase_token_;
-  object_ptr<StorePaymentPurpose> purpose_;
-
-  assignGooglePlayTransaction();
-
-  assignGooglePlayTransaction(string const &package_name_, string const &store_product_id_, string const &purchase_token_, object_ptr<StorePaymentPurpose> &&purpose_);
-
-  static const std::int32_t ID = -1992704860;
+  static const std::int32_t ID = -2046202900;
 
   using ReturnType = object_ptr<ok>;
 
@@ -34268,6 +34323,28 @@ class checkAuthenticationPasswordRecoveryCode final : public Function {
   explicit checkAuthenticationPasswordRecoveryCode(string const &recovery_code_);
 
   static const std::int32_t ID = -603309083;
+
+  using ReturnType = object_ptr<ok>;
+
+  void store(TlStorerToString &s, const char *field_name) const final;
+};
+
+class ok;
+
+class checkAuthenticationPremiumPurchase final : public Function {
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+ public:
+  string currency_;
+  int53 amount_;
+
+  checkAuthenticationPremiumPurchase();
+
+  checkAuthenticationPremiumPurchase(string const &currency_, int53 amount_);
+
+  static const std::int32_t ID = 1588959934;
 
   using ReturnType = object_ptr<ok>;
 
@@ -47421,6 +47498,32 @@ class setAuthenticationPhoneNumber final : public Function {
   setAuthenticationPhoneNumber(string const &phone_number_, object_ptr<phoneNumberAuthenticationSettings> &&settings_);
 
   static const std::int32_t ID = 868276259;
+
+  using ReturnType = object_ptr<ok>;
+
+  void store(TlStorerToString &s, const char *field_name) const final;
+};
+
+class StoreTransaction;
+
+class ok;
+
+class setAuthenticationPremiumPurchaseTransaction final : public Function {
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+ public:
+  object_ptr<StoreTransaction> transaction_;
+  bool is_restore_;
+  string currency_;
+  int53 amount_;
+
+  setAuthenticationPremiumPurchaseTransaction();
+
+  setAuthenticationPremiumPurchaseTransaction(object_ptr<StoreTransaction> &&transaction_, bool is_restore_, string const &currency_, int53 amount_);
+
+  static const std::int32_t ID = -450986887;
 
   using ReturnType = object_ptr<ok>;
 

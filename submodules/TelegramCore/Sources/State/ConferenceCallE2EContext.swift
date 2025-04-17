@@ -13,7 +13,7 @@ public protocol ConferenceCallE2EContextState: AnyObject {
 
     func takeOutgoingBroadcastBlocks() -> [Data]
 
-    func encrypt(message: Data, channelId: Int32) -> Data?
+    func encrypt(message: Data, channelId: Int32, plaintextPrefixLength: Int) -> Data?
     func decrypt(message: Data, userId: Int64) -> Data?
 }
 
@@ -379,7 +379,7 @@ public final class ConferenceCallE2EContext {
                     // Peer ids that are in the blockchain but not in the server list
                     var removedPeerIds = blockchainPeerIds.filter { blockchainPeerId in
                         return !result.participants.contains(where: { participant in
-                            if case let .peer(id) = participant.id, id.namespace == Namespaces.Peer.CloudChannel, id.id._internalGetInt64Value() == blockchainPeerId {
+                            if case let .peer(id) = participant.id, id.namespace == Namespaces.Peer.CloudUser, id.id._internalGetInt64Value() == blockchainPeerId {
                                 return true
                             } else {
                                 return false

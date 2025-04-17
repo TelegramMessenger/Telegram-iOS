@@ -101,6 +101,42 @@ class ok final : public Object {
   void store(TlStorerToString &s, const char *field_name) const final;
 };
 
+class e2e_callPacket final : public Object {
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+ public:
+
+  static const std::int32_t ID = 1084669673;
+
+  static object_ptr<e2e_callPacket> fetch(TlParser &p);
+
+  void store(TlStorerCalcLength &s) const final;
+
+  void store(TlStorerUnsafe &s) const final;
+
+  void store(TlStorerToString &s, const char *field_name) const final;
+};
+
+class e2e_callPacketLargeMsgId final : public Object {
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+ public:
+
+  static const std::int32_t ID = 484797485;
+
+  static object_ptr<e2e_callPacketLargeMsgId> fetch(TlParser &p);
+
+  void store(TlStorerCalcLength &s) const final;
+
+  void store(TlStorerUnsafe &s) const final;
+
+  void store(TlStorerToString &s, const char *field_name) const final;
+};
+
 class e2e_HandshakePrivate: public Object {
  public:
 

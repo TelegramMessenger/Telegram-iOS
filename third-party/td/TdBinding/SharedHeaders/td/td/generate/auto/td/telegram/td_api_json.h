@@ -8,9 +8,9 @@
 namespace td {
 namespace td_api {
 
-void to_json(JsonValueScope &jv, const tl_object_ptr<Object> &value);
+void to_json(JsonValueScope &jv, const td_api::object_ptr<Object> &value);
 
-Status from_json(tl_object_ptr<Function> &to, td::JsonValue from);
+Status from_json(td_api::object_ptr<Function> &to, td::JsonValue from);
 
 void to_json(JsonValueScope &jv, const Object &object);
 
@@ -165,6 +165,8 @@ Result<int32> tl_constructor_from_string(td_api::StickerFormat *object, const st
 Result<int32> tl_constructor_from_string(td_api::StickerType *object, const std::string &str);
 
 Result<int32> tl_constructor_from_string(td_api::StorePaymentPurpose *object, const std::string &str);
+
+Result<int32> tl_constructor_from_string(td_api::StoreTransaction *object, const std::string &str);
 
 Result<int32> tl_constructor_from_string(td_api::StoryList *object, const std::string &str);
 
@@ -1294,6 +1296,10 @@ Status from_json(td_api::storePaymentPurposeStars &to, JsonObject &from);
 
 Status from_json(td_api::storePaymentPurposeGiftedStars &to, JsonObject &from);
 
+Status from_json(td_api::storeTransactionAppStore &to, JsonObject &from);
+
+Status from_json(td_api::storeTransactionGooglePlay &to, JsonObject &from);
+
 Status from_json(td_api::storyAreaPosition &to, JsonObject &from);
 
 Status from_json(td_api::storyFullId &to, JsonObject &from);
@@ -1580,9 +1586,7 @@ Status from_json(td_api::answerWebAppQuery &to, JsonObject &from);
 
 Status from_json(td_api::applyPremiumGiftCode &to, JsonObject &from);
 
-Status from_json(td_api::assignAppStoreTransaction &to, JsonObject &from);
-
-Status from_json(td_api::assignGooglePlayTransaction &to, JsonObject &from);
+Status from_json(td_api::assignStoreTransaction &to, JsonObject &from);
 
 Status from_json(td_api::banChatMember &to, JsonObject &from);
 
@@ -1621,6 +1625,8 @@ Status from_json(td_api::checkAuthenticationEmailCode &to, JsonObject &from);
 Status from_json(td_api::checkAuthenticationPassword &to, JsonObject &from);
 
 Status from_json(td_api::checkAuthenticationPasswordRecoveryCode &to, JsonObject &from);
+
+Status from_json(td_api::checkAuthenticationPremiumPurchase &to, JsonObject &from);
 
 Status from_json(td_api::checkChatFolderInviteLink &to, JsonObject &from);
 
@@ -2800,6 +2806,8 @@ Status from_json(td_api::setAuthenticationEmailAddress &to, JsonObject &from);
 
 Status from_json(td_api::setAuthenticationPhoneNumber &to, JsonObject &from);
 
+Status from_json(td_api::setAuthenticationPremiumPurchaseTransaction &to, JsonObject &from);
+
 Status from_json(td_api::setAutoDownloadSettings &to, JsonObject &from);
 
 Status from_json(td_api::setAutosaveSettings &to, JsonObject &from);
@@ -3263,6 +3271,8 @@ void to_json(JsonValueScope &jv, const td_api::AuthorizationState &object);
 void to_json(JsonValueScope &jv, const td_api::authorizationStateWaitTdlibParameters &object);
 
 void to_json(JsonValueScope &jv, const td_api::authorizationStateWaitPhoneNumber &object);
+
+void to_json(JsonValueScope &jv, const td_api::authorizationStateWaitPremiumPurchase &object);
 
 void to_json(JsonValueScope &jv, const td_api::authorizationStateWaitEmailAddress &object);
 
@@ -6139,6 +6149,8 @@ void to_json(JsonValueScope &jv, const td_api::updateQuickReplyShortcuts &object
 void to_json(JsonValueScope &jv, const td_api::updateQuickReplyShortcutMessages &object);
 
 void to_json(JsonValueScope &jv, const td_api::updateForumTopicInfo &object);
+
+void to_json(JsonValueScope &jv, const td_api::updateForumTopic &object);
 
 void to_json(JsonValueScope &jv, const td_api::updateScopeNotificationSettings &object);
 

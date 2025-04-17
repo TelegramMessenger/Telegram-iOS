@@ -45,14 +45,23 @@ class DialogDate {
   int64 get_order() const {
     return order;
   }
+
   DialogId get_dialog_id() const {
     return dialog_id;
   }
+
   int32 get_date() const {
     return static_cast<int32>((order >> 32) & 0x7FFFFFFF);
   }
+
   MessageId get_message_id() const {
     return MessageId(ServerMessageId(static_cast<int32>(order & 0x7FFFFFFF)));
+  }
+
+  static int64 get_dialog_order(MessageId message_id, int32 message_date) {
+    CHECK(!message_id.is_scheduled());
+    return (static_cast<int64>(message_date) << 32) +
+           message_id.get_prev_server_message_id().get_server_message_id().get();
   }
 };
 

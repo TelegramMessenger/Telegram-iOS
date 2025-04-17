@@ -117,7 +117,7 @@ class DialogInviteLinkManager final : public Actor {
     vector<UserId> participant_user_ids;
     string description;
     StarSubscriptionPricing subscription_pricing;
-    int64 subscription_form_id;
+    int64 subscription_form_id = 0;
     CustomEmojiId bot_verification_icon;
     bool creates_join_request = false;
     bool can_refulfill_subscription = false;

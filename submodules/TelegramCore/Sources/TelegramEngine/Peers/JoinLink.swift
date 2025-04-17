@@ -200,7 +200,7 @@ func _internal_joinCallInvitationInformation(account: Account, messageId: Messag
         }
         var members: [EnginePeer] = []
         for participant in call.topParticipants {
-            if let peer = participant.peer {
+            if let peer = participant.peer, peer.id != account.peerId {
                 members.append(peer)
             }
         }

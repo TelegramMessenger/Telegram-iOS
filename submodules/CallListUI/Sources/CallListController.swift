@@ -700,10 +700,6 @@ public final class CallListController: TelegramBaseController {
         guard case let .conferenceCall(conferenceCall) = action?.action else {
             return
         }
-        if conferenceCall.duration != nil {
-            self.context.sharedContext.openCreateGroupCallUI(context: self.context, peerIds: conferenceCall.otherParticipants, parentController: self)
-            return
-        }
         
         if let currentGroupCallController = self.context.sharedContext as? VoiceChatController, case let .group(groupCall) = currentGroupCallController.call, let currentCallId = groupCall.callId, currentCallId == conferenceCall.callId {
             self.context.sharedContext.navigateToCurrentCall()

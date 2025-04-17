@@ -14182,7 +14182,7 @@ public func presentAddMembersImpl(context: AccountContext, updatedPresentationDa
                         if !failedPeers.isEmpty, let contactsController, let navigationController = contactsController.navigationController as? NavigationController {
                             var viewControllers = navigationController.viewControllers
                             if let index = viewControllers.firstIndex(where: { $0 === contactsController }) {
-                                let inviteScreen = SendInviteLinkScreen(context: context, peer: EnginePeer(groupPeer), link: exportedInvitation?.link, peers: failedPeers)
+                                let inviteScreen = SendInviteLinkScreen(context: context, subject: .chat(peer: EnginePeer(groupPeer), link: exportedInvitation?.link), peers: failedPeers)
                                 viewControllers.remove(at: index)
                                 viewControllers.append(inviteScreen)
                                 navigationController.setViewControllers(viewControllers, animated: true)

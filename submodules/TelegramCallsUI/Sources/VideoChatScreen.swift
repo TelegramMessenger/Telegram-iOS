@@ -1530,6 +1530,9 @@ final class VideoChatScreenComponent: Component {
                             return
                         }
                         self.inviteLinks = value
+                        if case let .group(groupCall) = self.currentCall, let groupCall = groupCall as? PresentationGroupCallImpl {
+                            groupCall.currentInviteLinks = value
+                        }
                     })
                     
                     self.reconnectedAsEventsDisposable?.dispose()

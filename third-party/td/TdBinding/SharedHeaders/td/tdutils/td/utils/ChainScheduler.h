@@ -138,7 +138,7 @@ class ChainScheduler final : public ChainSchedulerBase {
   struct Task {
     enum class State { Pending, Active, Paused } state{State::Pending};
     vector<TaskChainInfo> chains;
-    ExtraT extra;
+    ExtraT extra{};
   };
   FlatHashMap<ChainId, unique_ptr<ChainInfo>> chains_;
   FlatHashMap<ChainId, TaskId> limited_tasks_;
