@@ -2726,7 +2726,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             self.additionalPreviewView.isEnabled = false
             self.collageView?.isEnabled = false
             
-            #if DEBUG
+            #if targetEnvironment(simulator)
             
             #else
             Queue.mainQueue().after(0.3) {

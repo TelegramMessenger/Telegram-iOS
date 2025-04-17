@@ -2421,7 +2421,15 @@ private final class ResaleGiftsContextImpl {
                         
                         let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                         updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
-                        return (gifts.compactMap { StarGift(apiStarGift: $0) }, resultAttributes, attributeCount, count, nextOffset)
+                        
+                        var mappedGifts: [StarGift] = []
+                        for gift in gifts {
+                            if let mappedGift = StarGift(apiStarGift: gift), case let .unique(uniqueGift) = mappedGift, let resellStars = uniqueGift.resellStars, resellStars > 0 {
+                                mappedGifts.append(mappedGift)
+                            }
+                        }
+
+                        return (mappedGifts, resultAttributes, attributeCount, count, nextOffset)
                     }
                 }
             }
@@ -2434,9 +2442,7 @@ private final class ResaleGiftsContextImpl {
                 if initialNextOffset == nil || reload {
                     self.gifts = gifts
                 } else {
-                    for gift in gifts {
-                        self.gifts.append(gift)
-                    }
+                    self.gifts.append(contentsOf: gifts)
                 }
                 
                 let updatedCount = max(Int32(self.gifts.count), count)

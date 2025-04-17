@@ -765,10 +765,19 @@ final class GiftStoreScreenComponent: Component {
                 transition.setFrame(view: titleView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) / 2.0), y: 10.0), size: titleSize))
             }
             
+            let effectiveCount: Int32
+            if let count = self.effectiveGifts?.count {
+                effectiveCount = Int32(count)
+            } else if let resale = component.gift.availability?.resale {
+                effectiveCount = Int32(resale)
+            } else {
+                effectiveCount = 0
+            }
+            
             let subtitleSize = self.subtitle.update(
                 transition: transition,
                 component: AnyComponent(BalancedTextComponent(
-                    text: .plain(NSAttributedString(string: "\(self.effectiveGifts?.count ?? 0) for resale", font: Font.regular(13.0), textColor: theme.rootController.navigationBar.secondaryTextColor)),
+                    text: .plain(NSAttributedString(string: "\(effectiveCount) for resale", font: Font.regular(13.0), textColor: theme.rootController.navigationBar.secondaryTextColor)),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 1
                 )),
@@ -927,7 +936,7 @@ final class GiftStoreScreenComponent: Component {
                 self.scrollView.contentSize = contentSize
                 self.nextScrollTransition = nil
             }
-            let scrollInsets = UIEdgeInsets(top: environment.navigationHeight, left: 0.0, bottom: 0.0, right: 0.0)
+            let scrollInsets = UIEdgeInsets(top: topPanelHeight, left: 0.0, bottom: 0.0, right: 0.0)
             if self.scrollView.scrollIndicatorInsets != scrollInsets {
                 self.scrollView.scrollIndicatorInsets = scrollInsets
             }

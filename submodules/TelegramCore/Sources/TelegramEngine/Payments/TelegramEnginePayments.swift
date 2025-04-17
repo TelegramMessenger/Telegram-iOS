@@ -125,7 +125,7 @@ public extension TelegramEngine {
             return _internal_transferStarGift(account: self.account, prepaid: prepaid, reference: reference, peerId: peerId)
         }
         
-        public func buyStarGift(prepaid: Bool, slug: String, peerId: EnginePeer.Id) -> Signal<Never, BuyStarGiftError> {
+        public func buyStarGift(slug: String, peerId: EnginePeer.Id) -> Signal<Never, BuyStarGiftError> {
             return _internal_buyStarGift(account: self.account, slug: slug, peerId: peerId)
         }
         

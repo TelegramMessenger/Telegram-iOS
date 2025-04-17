@@ -2987,11 +2987,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         ))
         controller.navigationPresentation = .modal
         
-        let _ = combineLatest(
+        let _ = (combineLatest(
             queue: Queue.mainQueue(),
             controller.result,
-            options.get()
-        ).startStandalone(next: { [weak controller] result, options in
+            options.get())
+        |> take(1)).startStandalone(next: { [weak controller] result, options in
             if let (peers, _, _, _, _, _) = result, let contactPeer = peers.first, case let .peer(peer, _, _) = contactPeer, let starsContext = context.starsContext {
                 if case .starGiftTransfer = source {
                     presentTransferAlertImpl?(EnginePeer(peer))
