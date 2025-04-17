@@ -2373,9 +2373,6 @@ public final class AccountViewTracker {
             }()
             
             let groupingPredicate: (Message, Message) -> Bool = { lhs, rhs in
-                if lhs.id.peerId != rhs.id.peerId {
-                    return false
-                }
                 let lhsTimestamp = ((lhs.timestamp + timezoneOffset) / (granularity)) * (granularity)
                 let rhsTimestamp = ((rhs.timestamp + timezoneOffset) / (granularity)) * (granularity)
                 if lhsTimestamp != rhsTimestamp {
@@ -2400,6 +2397,7 @@ public final class AccountViewTracker {
                         }
                     }
                 }
+                
                 var rhsVideo = false
                 var rhsMissed = false
                 var rhsOther = false
@@ -2422,6 +2420,14 @@ public final class AccountViewTracker {
                 if lhsMissed != rhsMissed || lhsOther != rhsOther || lhsVideo != rhsVideo || lhsConferenceId != rhsConferenceId {
                     return false
                 }
+
+                if lhsConferenceId != nil && rhsConferenceId != nil {
+                } else {
+                    if lhs.id.peerId != rhs.id.peerId {
+                        return false
+                    }
+                }
+
                 return true
             }
             

@@ -65,58 +65,75 @@ private func stringForCallType(message: Message, strings: PresentationStrings) -
     var string = ""
     for media in message.media {
         switch media {
-            case let action as TelegramMediaAction:
-                switch action.action {
-                    case let .phoneCall(_, discardReason, _, isVideo):
-                        let incoming = message.flags.contains(.Incoming)
-                        if let discardReason = discardReason {
-                            switch discardReason {
-                            case .disconnect:
-                                if isVideo {
-                                    string = strings.Notification_VideoCallCanceled
-                                } else {
-                                    string = strings.Notification_CallCanceled
-                                }
-                            case .missed, .busy:
-                                if incoming {
-                                    if isVideo {
-                                        string = strings.Notification_VideoCallMissed
-                                    } else {
-                                        string = strings.Notification_CallMissed
-                                    }
-                                } else {
-                                    if isVideo {
-                                        string = strings.Notification_VideoCallCanceled
-                                    } else {
-                                        string = strings.Notification_CallCanceled
-                                    }
-                                }
-                            case .hangup:
-                                break
-                            }
+        case let action as TelegramMediaAction:
+            switch action.action {
+            case let .phoneCall(_, discardReason, _, isVideo):
+                let incoming = message.flags.contains(.Incoming)
+                if let discardReason = discardReason {
+                    switch discardReason {
+                    case .disconnect:
+                        if isVideo {
+                            string = strings.Notification_VideoCallCanceled
+                        } else {
+                            string = strings.Notification_CallCanceled
                         }
-                        
-                        if string.isEmpty {
-                            if incoming {
-                                if isVideo {
-                                    string = strings.Notification_VideoCallIncoming
-                                } else {
-                                    string = strings.Notification_CallIncoming
-                                }
+                    case .missed, .busy:
+                        if incoming {
+                            if isVideo {
+                                string = strings.Notification_VideoCallMissed
                             } else {
-                                if isVideo {
-                                    string = strings.Notification_VideoCallOutgoing
-                                } else {
-                                    string = strings.Notification_CallOutgoing
-                                }
+                                string = strings.Notification_CallMissed
+                            }
+                        } else {
+                            if isVideo {
+                                string = strings.Notification_VideoCallCanceled
+                            } else {
+                                string = strings.Notification_CallCanceled
                             }
                         }
-                    default:
+                    case .hangup:
                         break
+                    }
                 }
-                    
+                
+                if string.isEmpty {
+                    if incoming {
+                        if isVideo {
+                            string = strings.Notification_VideoCallIncoming
+                        } else {
+                            string = strings.Notification_CallIncoming
+                        }
+                    } else {
+                        if isVideo {
+                            string = strings.Notification_VideoCallOutgoing
+                        } else {
+                            string = strings.Notification_CallOutgoing
+                        }
+                    }
+                }
+            case let .conferenceCall(conferenceCall):
+                let incoming = message.flags.contains(.Incoming)
+                                
+                let missedTimeout: Int32 = 30
+                let currentTime = Int32(Date().timeIntervalSince1970)
+                
+                if conferenceCall.flags.contains(.isMissed) {
+                    string = strings.Chat_CallMessage_DeclinedGroupCall
+                } else if conferenceCall.duration == nil && message.timestamp < currentTime - missedTimeout {
+                    string = strings.Chat_CallMessage_MissedGroupCall
+                } else {
+                    if incoming {
+                        string = strings.Chat_CallMessage_IncomingGroupCall
+                    } else {
+                        string = strings.Chat_CallMessage_OutgoingGroupCall
+                    }
+                }
             default:
                 break
+            }
+            
+        default:
+            break
         }
     }
     return string
