@@ -457,7 +457,7 @@ onMutedSpeechActivityDetected:(void (^ _Nullable)(bool))onMutedSpeechActivityDet
 audioDevice:(SharedCallAudioDevice * _Nullable)audioDevice
 isConference:(bool)isConference
 isActiveByDefault:(bool)isActiveByDefault
-encryptDecrypt:(NSData * _Nullable (^ _Nullable)(NSData * _Nonnull, int64_t, bool))encryptDecrypt;
+encryptDecrypt:(NSData * _Nullable (^ _Nullable)(NSData * _Nonnull, int64_t, bool, int32_t))encryptDecrypt;
 
 - (void)stop:(void (^ _Nullable)())completion;
 

@@ -44,14 +44,14 @@ enum CallListNodeEntry: Comparable, Identifiable {
             case .openNewCall:
                 switch rhs {
                 case .displayTab, .displayTabInfo:
-                    return false
-                default:
                     return true
+                default:
+                    return false
                 }
             case let .groupCall(lhsPeerId, lhsTitle):
                 switch rhs {
                 case .displayTab, .displayTabInfo, .openNewCall:
-                    return false
+                    return true
                 case let .groupCall(rhsPeerId, rhsTitle):
                     if lhsTitle == rhsTitle {
                         return lhsPeerId < rhsPeerId
@@ -64,7 +64,7 @@ enum CallListNodeEntry: Comparable, Identifiable {
             case let .hole(lhsIndex):
                 switch rhs {
                 case .displayTab, .displayTabInfo, .groupCall, .openNewCall:
-                    return false
+                    return true
                 case let .hole(rhsIndex):
                     return lhsIndex < rhsIndex
                 case let .message(rhsIndex):
@@ -73,7 +73,7 @@ enum CallListNodeEntry: Comparable, Identifiable {
             case let .message(lhsIndex):
                 switch rhs {
                 case .displayTab, .displayTabInfo, .groupCall, .openNewCall:
-                    return false
+                    return true
                 case let .hole(rhsIndex):
                     return lhsIndex < rhsIndex
                 case let .message(rhsIndex):

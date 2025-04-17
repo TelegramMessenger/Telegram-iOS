@@ -162,7 +162,7 @@ class Session final
     double created_at_ = 0;
   };
 
-  ConnectionInfo *current_info_;
+  ConnectionInfo *current_info_ = nullptr;
   ConnectionInfo main_connection_;
   ConnectionInfo long_poll_connection_;
   mtproto::ConnectionManager::ConnectionToken connection_token_;
@@ -195,7 +195,7 @@ class Session final
   enum HandshakeId : int32 { MainAuthKeyHandshake = 0, TmpAuthKeyHandshake = 1 };
   std::array<HandshakeInfo, 2> handshake_info_;
 
-  double wakeup_at_;
+  double wakeup_at_ = 0.0;
 
   // mtproto::AuthData should be the last field, because it's size is about 32 KB
   mtproto::AuthData auth_data_;

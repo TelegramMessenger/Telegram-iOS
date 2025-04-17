@@ -67,11 +67,7 @@ void get_premium_giveaway_info(Td *td, MessageFullId message_full_id,
 
 void can_purchase_premium(Td *td, td_api::object_ptr<td_api::StorePaymentPurpose> &&purpose, Promise<Unit> &&promise);
 
-void assign_app_store_transaction(Td *td, const string &receipt,
-                                  td_api::object_ptr<td_api::StorePaymentPurpose> &&purpose, Promise<Unit> &&promise);
-
-void assign_play_market_transaction(Td *td, const string &package_name, const string &store_product_id,
-                                    const string &purchase_token,
-                                    td_api::object_ptr<td_api::StorePaymentPurpose> &&purpose, Promise<Unit> &&promise);
+void assign_store_transaction(Td *td, td_api::object_ptr<td_api::StoreTransaction> &&transaction,
+                              td_api::object_ptr<td_api::StorePaymentPurpose> &&purpose, Promise<Unit> &&promise);
 
 }  // namespace td

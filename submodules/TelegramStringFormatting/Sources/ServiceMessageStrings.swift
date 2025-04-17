@@ -625,10 +625,8 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 
                 if conferenceCall.flags.contains(.isMissed) {
                     titleString = strings.Chat_CallMessage_DeclinedGroupCall
-                } else if message.timestamp < currentTime - missedTimeout {
+                } else if conferenceCall.duration == nil && message.timestamp < currentTime - missedTimeout {
                     titleString = strings.Chat_CallMessage_MissedGroupCall
-                } else if conferenceCall.duration != nil {
-                    titleString = strings.Chat_CallMessage_CancelledGroupCall
                 } else {
                     if incoming {
                         titleString = strings.Chat_CallMessage_IncomingGroupCall

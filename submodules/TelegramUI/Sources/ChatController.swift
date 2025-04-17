@@ -2893,10 +2893,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard case let .conferenceCall(conferenceCall) = action?.action else {
                 return
             }
-            if conferenceCall.duration != nil {
-                self.context.sharedContext.openCreateGroupCallUI(context: self.context, peerIds: conferenceCall.otherParticipants, parentController: self)
-                return
-            }
             
             if let currentGroupCallController = self.context.sharedContext.currentGroupCallController as? VoiceChatController, case let .group(groupCall) = currentGroupCallController.call, let currentCallId = groupCall.callId, currentCallId == conferenceCall.callId {
                 self.context.sharedContext.navigateToCurrentCall()

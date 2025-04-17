@@ -33,31 +33,57 @@ class AuthManager final : public NetActor {
   }
 
   bool is_authorized() const;
+
   bool was_authorized() const;
+
   void get_state(uint64 query_id);
 
   void set_phone_number(uint64 query_id, string phone_number,
                         td_api::object_ptr<td_api::phoneNumberAuthenticationSettings> settings);
+
+  void check_premium_purchase(uint64 query_id, string currency, int64 amount);
+
+  void set_premium_purchase_transaction(uint64 query_id, td_api::object_ptr<td_api::StoreTransaction> &&transaction,
+                                        bool is_restore, string currency, int64 amount);
+
   void set_firebase_token(uint64 query_id, string token);
+
   void report_missing_code(uint64 query_id, string mobile_network_code);
+
   void set_email_address(uint64 query_id, string email_address);
+
   void resend_authentication_code(uint64 query_id, td_api::object_ptr<td_api::ResendCodeReason> &&reason);
+
   void check_email_code(uint64 query_id, EmailVerification &&code);
+
   void reset_email_address(uint64 query_id);
+
   void check_code(uint64 query_id, string code);
+
   void register_user(uint64 query_id, string first_name, string last_name, bool disable_notification);
+
   void request_qr_code_authentication(uint64 query_id, vector<UserId> other_user_ids);
+
   void check_bot_token(uint64 query_id, string bot_token);
+
   void check_password(uint64 query_id, string password);
+
   void request_password_recovery(uint64 query_id);
+
   void check_password_recovery_code(uint64 query_id, string code);
+
   void recover_password(uint64 query_id, string code, string new_password, string new_hint);
+
   void log_out(uint64 query_id);
+
   void delete_account(uint64 query_id, string reason, string password);
 
   void on_update_login_token();
 
+  void on_update_sent_code(telegram_api::object_ptr<telegram_api::auth_SentCode> &&sent_code_ptr);
+
   void on_authorization_lost(string source);
+
   void on_closing(bool destroy_flag);
 
   // can return nullptr if state isn't initialized yet
@@ -69,6 +95,7 @@ class AuthManager final : public NetActor {
   enum class State : int32 {
     None,
     WaitPhoneNumber,
+    WaitPremiumPurchase,
     WaitCode,
     WaitQrCodeConfirmation,
     WaitPassword,
@@ -86,6 +113,8 @@ class AuthManager final : public NetActor {
     SignIn,
     SignUp,
     SendCode,
+    CheckPremiumPurchase,
+    SetPremiumPurchaseTransaction,
     SendEmailCode,
     VerifyEmailAddress,
     ResetEmailAddress,
@@ -132,6 +161,9 @@ class AuthManager final : public NetActor {
   // from constructor
   int32 api_id_;
   string api_hash_;
+
+  // State::WaitPremiumPurchase
+  string store_product_id_;
 
   // State::WaitEmailAddress
   bool allow_apple_id_ = false;
@@ -204,6 +236,8 @@ class AuthManager final : public NetActor {
   void on_sent_code(telegram_api::object_ptr<telegram_api::auth_SentCode> &&sent_code_ptr);
 
   void on_send_code_result(NetQueryPtr &&net_query);
+  void on_check_premium_purchase_result(NetQueryPtr &&net_query);
+  void on_set_premium_purchase_transaction_result(NetQueryPtr &&net_query);
   void on_send_email_code_result(NetQueryPtr &&net_query);
   void on_verify_email_address_result(NetQueryPtr &&net_query);
   void on_reset_email_address_result(NetQueryPtr &&net_query);

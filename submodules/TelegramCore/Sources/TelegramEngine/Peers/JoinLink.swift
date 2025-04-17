@@ -172,7 +172,9 @@ func _internal_joinCallLinkInformation(_ hash: String, account: Account) -> Sign
         }
         var members: [EnginePeer] = []
         for participant in call.topParticipants {
-            members.append(EnginePeer(participant.peer))
+            if let peer = participant.peer {
+                members.append(peer)
+            }
         }
         return .single(JoinCallLinkInformation(id: call.info.id, accessHash: call.info.accessHash, inviter: nil, members: members, totalMemberCount: call.info.participantCount))
     }
@@ -198,7 +200,9 @@ func _internal_joinCallInvitationInformation(account: Account, messageId: Messag
         }
         var members: [EnginePeer] = []
         for participant in call.topParticipants {
-            members.append(EnginePeer(participant.peer))
+            if let peer = participant.peer, peer.id != account.peerId {
+                members.append(peer)
+            }
         }
         return .single(JoinCallLinkInformation(id: call.info.id, accessHash: call.info.accessHash, inviter: nil, members: members, totalMemberCount: call.info.participantCount))
     }

@@ -657,6 +657,17 @@ public:
             
             if (!WrappedInstance()->Playing()) {
                 WrappedInstance()->InitPlayout();
+                for (int i = 0; i < 3; i++) {
+                    if (!WrappedInstance()->PlayoutIsInitialized()) {
+                        sleep(1);
+                        WrappedInstance()->InitPlayout();
+                    } else {
+                        break;
+                    }
+                }
+                if (!WrappedInstance()->PlayoutIsInitialized()) {
+                    return;
+                }
                 WrappedInstance()->StartPlayout();
                 WrappedInstance()->InitRecording();
                 WrappedInstance()->StartRecording();
@@ -2378,7 +2389,7 @@ onMutedSpeechActivityDetected:(void (^ _Nullable)(bool))onMutedSpeechActivityDet
 audioDevice:(SharedCallAudioDevice * _Nullable)audioDevice
 isConference:(bool)isConference
 isActiveByDefault:(bool)isActiveByDefault
-encryptDecrypt:(NSData * _Nullable (^ _Nullable)(NSData * _Nonnull, int64_t, bool))encryptDecrypt {
+encryptDecrypt:(NSData * _Nullable (^ _Nullable)(NSData * _Nonnull, int64_t, bool, int32_t))encryptDecrypt {
     self = [super init];
     if (self != nil) {
         _queue = queue;
@@ -2447,12 +2458,12 @@ encryptDecrypt:(NSData * _Nullable (^ _Nullable)(NSData * _Nonnull, int64_t, boo
         
         std::string statsLogPathValue(statsLogPath.length == 0 ? "" : statsLogPath.UTF8String);
         
-        std::function<std::vector<uint8_t>(std::vector<uint8_t> const &, int64_t, bool)> mappedEncryptDecrypt;
+        std::function<std::vector<uint8_t>(std::vector<uint8_t> const &, int64_t, bool, int32_t)> mappedEncryptDecrypt;
         if (encryptDecrypt) {
-            NSData * _Nullable (^encryptDecryptBlock)(NSData * _Nonnull, int64_t, bool) = [encryptDecrypt copy];
-            mappedEncryptDecrypt = [encryptDecryptBlock](std::vector<uint8_t> const &message, int64_t userId, bool isEncrypt) -> std::vector<uint8_t> {
+            NSData * _Nullable (^encryptDecryptBlock)(NSData * _Nonnull, int64_t, bool, int32_t) = [encryptDecrypt copy];
+            mappedEncryptDecrypt = [encryptDecryptBlock](std::vector<uint8_t> const &message, int64_t userId, bool isEncrypt, int32_t plaintextPrefixLength) -> std::vector<uint8_t> {
                 NSData *mappedMessage = [[NSData alloc] initWithBytes:message.data() length:message.size()];
-                NSData *result = encryptDecryptBlock(mappedMessage, userId, isEncrypt);
+                NSData *result = encryptDecryptBlock(mappedMessage, userId, isEncrypt, plaintextPrefixLength);
                 if (!result) {
                     return std::vector<uint8_t>();
                 }

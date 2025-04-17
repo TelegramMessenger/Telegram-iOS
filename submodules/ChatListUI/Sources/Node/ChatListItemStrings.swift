@@ -306,10 +306,8 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                                 
                                 if conferenceCall.flags.contains(.isMissed) {
                                     messageText = strings.Chat_CallMessage_DeclinedGroupCall
-                                } else if message.timestamp < currentTime - missedTimeout {
+                                } else if conferenceCall.duration == nil && message.timestamp < currentTime - missedTimeout {
                                     messageText = strings.Chat_CallMessage_MissedGroupCall
-                                } else if conferenceCall.duration != nil {
-                                    messageText = strings.Chat_CallMessage_CancelledGroupCall
                                 } else {
                                     if incoming {
                                         messageText = strings.Chat_CallMessage_IncomingGroupCall

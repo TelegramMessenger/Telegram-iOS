@@ -23,23 +23,20 @@ private final class SendInviteLinkScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
-    let peer: EnginePeer
-    let link: String?
+    let subject: SendInviteLinkScreenSubject
     let peers: [TelegramForbiddenInvitePeer]
     let peerPresences: [EnginePeer.Id: EnginePeer.Presence]
     let sendPaidMessageStars: [EnginePeer.Id: StarsAmount]
     
     init(
         context: AccountContext,
-        peer: EnginePeer,
-        link: String?,
+        subject: SendInviteLinkScreenSubject,
         peers: [TelegramForbiddenInvitePeer],
         peerPresences: [EnginePeer.Id: EnginePeer.Presence],
         sendPaidMessageStars: [EnginePeer.Id: StarsAmount]
     ) {
         self.context = context
-        self.peer = peer
-        self.link = link
+        self.subject = subject
         self.peers = peers
         self.peerPresences = peerPresences
         self.sendPaidMessageStars = sendPaidMessageStars
@@ -47,9 +44,6 @@ private final class SendInviteLinkScreenComponent: Component {
     
     static func ==(lhs: SendInviteLinkScreenComponent, rhs: SendInviteLinkScreenComponent) -> Bool {
         if lhs.context !== rhs.context {
-            return false
-        }
-        if lhs.link != rhs.link {
             return false
         }
         if lhs.peers != rhs.peers {
@@ -315,7 +309,12 @@ private final class SendInviteLinkScreenComponent: Component {
             
             if self.component == nil {
                 for peer in component.peers {
-                    if component.link != nil && !peer.premiumRequiredToContact {
+                    switch component.subject {
+                    case let .chat(_, link):
+                        if link != nil && !peer.premiumRequiredToContact {
+                            self.selectedItems.insert(peer.peer.id)
+                        }
+                    case .groupCall:
                         self.selectedItems.insert(peer.peer.id)
                     }
                 }
@@ -329,10 +328,15 @@ private final class SendInviteLinkScreenComponent: Component {
                 return peer.canInviteWithPremium
             }
             var hasInviteLink = true
-            if premiumRestrictedUsers.count == component.peers.count && component.link == nil {
-                hasInviteLink = false
-            } else if component.link != nil && !premiumRestrictedUsers.isEmpty && component.peers.allSatisfy({ $0.premiumRequiredToContact }) {
-                hasInviteLink = false
+            switch component.subject {
+            case let .chat(_, link):
+                if premiumRestrictedUsers.count == component.peers.count && link == nil {
+                    hasInviteLink = false
+                } else if link != nil && !premiumRestrictedUsers.isEmpty && component.peers.allSatisfy({ $0.premiumRequiredToContact }) {
+                    hasInviteLink = false
+                }
+            case .groupCall:
+                hasInviteLink = true
             }
             
             if themeUpdated {
@@ -453,48 +457,85 @@ private final class SendInviteLinkScreenComponent: Component {
                 contentHeight += 8.0
                 
                 let text: String
-                if premiumRestrictedUsers.count == 1 {
-                    if case let .channel(channel) = component.peer, case .broadcast = channel.info {
-                        text = environment.strings.SendInviteLink_ChannelTextContactsAndPremiumOneUser(premiumRestrictedUsers[0].peer.compactDisplayTitle).string
-                    } else {
-                        text = environment.strings.SendInviteLink_TextContactsAndPremiumOneUser(premiumRestrictedUsers[0].peer.compactDisplayTitle).string
-                    }
-                } else {
-                    let extraCount = premiumRestrictedUsers.count - 3
-                    
-                    var peersTextArray: [String] = []
-                    for i in 0 ..< min(3, premiumRestrictedUsers.count) {
-                        peersTextArray.append("**\(premiumRestrictedUsers[i].peer.compactDisplayTitle)**")
-                    }
-                    
-                    var peersText = ""
-                    if #available(iOS 13.0, *) {
-                        let listFormatter = ListFormatter()
-                        listFormatter.locale = localeWithStrings(environment.strings)
-                        if let value = listFormatter.string(from: peersTextArray) {
-                            peersText = value
+                switch component.subject {
+                case let .chat(peer, _):
+                    if premiumRestrictedUsers.count == 1 {
+                        if case let .channel(channel) = peer, case .broadcast = channel.info {
+                            text = environment.strings.SendInviteLink_ChannelTextContactsAndPremiumOneUser(premiumRestrictedUsers[0].peer.compactDisplayTitle).string
+                        } else {
+                            text = environment.strings.SendInviteLink_TextContactsAndPremiumOneUser(premiumRestrictedUsers[0].peer.compactDisplayTitle).string
                         }
-                    }
-                    if peersText.isEmpty {
-                        for i in 0 ..< peersTextArray.count {
-                            if i != 0 {
-                                peersText.append(", ")
+                    } else {
+                        let extraCount = premiumRestrictedUsers.count - 3
+                        
+                        var peersTextArray: [String] = []
+                        for i in 0 ..< min(3, premiumRestrictedUsers.count) {
+                            peersTextArray.append("**\(premiumRestrictedUsers[i].peer.compactDisplayTitle)**")
+                        }
+                        
+                        var peersText = ""
+                        if #available(iOS 13.0, *) {
+                            let listFormatter = ListFormatter()
+                            listFormatter.locale = localeWithStrings(environment.strings)
+                            if let value = listFormatter.string(from: peersTextArray) {
+                                peersText = value
                             }
-                            peersText.append(peersTextArray[i])
+                        }
+                        if peersText.isEmpty {
+                            for i in 0 ..< peersTextArray.count {
+                                if i != 0 {
+                                    peersText.append(", ")
+                                }
+                                peersText.append(peersTextArray[i])
+                            }
+                        }
+                        
+                        if extraCount >= 1 {
+                            if case let .channel(channel) = peer, case .broadcast = channel.info {
+                                text = environment.strings.SendInviteLink_ChannelTextContactsAndPremiumMultipleUsers(Int32(extraCount)).replacingOccurrences(of: "{user_list}", with: peersText)
+                            } else {
+                                text = environment.strings.SendInviteLink_TextContactsAndPremiumMultipleUsers(Int32(extraCount)).replacingOccurrences(of: "{user_list}", with: peersText)
+                            }
+                        } else {
+                            if case let .channel(channel) = peer, case .broadcast = channel.info {
+                                text = environment.strings.SendInviteLink_ChannelTextContactsAndPremiumOneUser(peersText).string
+                            } else {
+                                text = environment.strings.SendInviteLink_TextContactsAndPremiumOneUser(peersText).string
+                            }
                         }
                     }
-                    
-                    if extraCount >= 1 {
-                        if case let .channel(channel) = component.peer, case .broadcast = channel.info {
-                            text = environment.strings.SendInviteLink_ChannelTextContactsAndPremiumMultipleUsers(Int32(extraCount)).replacingOccurrences(of: "{user_list}", with: peersText)
-                        } else {
-                            text = environment.strings.SendInviteLink_TextContactsAndPremiumMultipleUsers(Int32(extraCount)).replacingOccurrences(of: "{user_list}", with: peersText)
-                        }
+                case .groupCall:
+                    if premiumRestrictedUsers.count == 1 {
+                        text = environment.strings.SendInviteLink_TextCallsRestrictedOneUser(premiumRestrictedUsers[0].peer.compactDisplayTitle).string
                     } else {
-                        if case let .channel(channel) = component.peer, case .broadcast = channel.info {
-                            text = environment.strings.SendInviteLink_ChannelTextContactsAndPremiumOneUser(peersText).string
+                        let extraCount = premiumRestrictedUsers.count - 3
+                        
+                        var peersTextArray: [String] = []
+                        for i in 0 ..< min(3, premiumRestrictedUsers.count) {
+                            peersTextArray.append("**\(premiumRestrictedUsers[i].peer.compactDisplayTitle)**")
+                        }
+                        
+                        var peersText = ""
+                        if #available(iOS 13.0, *) {
+                            let listFormatter = ListFormatter()
+                            listFormatter.locale = localeWithStrings(environment.strings)
+                            if let value = listFormatter.string(from: peersTextArray) {
+                                peersText = value
+                            }
+                        }
+                        if peersText.isEmpty {
+                            for i in 0 ..< peersTextArray.count {
+                                if i != 0 {
+                                    peersText.append(", ")
+                                }
+                                peersText.append(peersTextArray[i])
+                            }
+                        }
+                        
+                        if extraCount >= 1 {
+                            text = environment.strings.SendInviteLink_TextCallsRestrictedMultipleUsers(Int32(extraCount)).replacingOccurrences(of: "{user_list}", with: peersText)
                         } else {
-                            text = environment.strings.SendInviteLink_TextContactsAndPremiumOneUser(peersText).string
+                            text = environment.strings.SendInviteLink_TextCallsRestrictedOneUser(peersText).string
                         }
                     }
                 }
@@ -693,11 +734,19 @@ private final class SendInviteLinkScreenComponent: Component {
                     actionButton = ComponentView()
                     self.actionButton = actionButton
                 }
+
+                let titleText: String
+                switch component.subject {
+                case let .chat(_, link):
+                    titleText = link != nil ? environment.strings.SendInviteLink_InviteTitle : environment.strings.SendInviteLink_LinkUnavailableTitle
+                case .groupCall:
+                    titleText = environment.strings.SendInviteLink_InviteTitle
+                }
                 
                 let titleSize = title.update(
                     transition: .immediate,
                     component: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: component.link != nil ? environment.strings.SendInviteLink_InviteTitle : environment.strings.SendInviteLink_LinkUnavailableTitle, font: Font.semibold(24.0), textColor: environment.theme.list.itemPrimaryTextColor))
+                        text: .plain(NSAttributedString(string: titleText, font: Font.semibold(24.0), textColor: environment.theme.list.itemPrimaryTextColor))
                     )),
                     environment: {},
                     containerSize: CGSize(width: availableSize.width - leftButtonFrame.maxX * 2.0, height: 100.0)
@@ -714,30 +763,35 @@ private final class SendInviteLinkScreenComponent: Component {
                 contentHeight += 8.0
                 
                 let text: String
-                if !premiumRestrictedUsers.isEmpty {
-                    if component.link != nil {
-                        text = environment.strings.SendInviteLink_TextSendInviteLink
-                    } else {
-                        if component.peers.count == 1 {
-                            text = environment.strings.SendInviteLink_TextUnavailableSingleUser(component.peers[0].peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)).string
+                switch component.subject {
+                case let .chat(_, link):
+                    if !premiumRestrictedUsers.isEmpty {
+                        if link != nil {
+                            text = environment.strings.SendInviteLink_TextSendInviteLink
                         } else {
-                            text = environment.strings.SendInviteLink_TextUnavailableMultipleUsers(Int32(component.peers.count))
-                        }
-                    }
-                } else {
-                    if component.link != nil {
-                        if component.peers.count == 1 {
-                            text = environment.strings.SendInviteLink_TextAvailableSingleUser(component.peers[0].peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)).string
-                        } else {
-                            text = environment.strings.SendInviteLink_TextAvailableMultipleUsers(Int32(component.peers.count))
+                            if component.peers.count == 1 {
+                                text = environment.strings.SendInviteLink_TextUnavailableSingleUser(component.peers[0].peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)).string
+                            } else {
+                                text = environment.strings.SendInviteLink_TextUnavailableMultipleUsers(Int32(component.peers.count))
+                            }
                         }
                     } else {
-                        if component.peers.count == 1 {
-                            text = environment.strings.SendInviteLink_TextUnavailableSingleUser(component.peers[0].peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)).string
+                        if link != nil {
+                            if component.peers.count == 1 {
+                                text = environment.strings.SendInviteLink_TextAvailableSingleUser(component.peers[0].peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)).string
+                            } else {
+                                text = environment.strings.SendInviteLink_TextAvailableMultipleUsers(Int32(component.peers.count))
+                            }
                         } else {
-                            text = environment.strings.SendInviteLink_TextUnavailableMultipleUsers(Int32(component.peers.count))
+                            if component.peers.count == 1 {
+                                text = environment.strings.SendInviteLink_TextUnavailableSingleUser(component.peers[0].peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)).string
+                            } else {
+                                text = environment.strings.SendInviteLink_TextUnavailableMultipleUsers(Int32(component.peers.count))
+                            }
                         }
                     }
+                case .groupCall:
+                    text = environment.strings.SendInviteLink_TextCallsRestrictedSendInviteLink
                 }
                 
                 let body = MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.itemPrimaryTextColor)
@@ -793,7 +847,13 @@ private final class SendInviteLinkScreenComponent: Component {
                         }
                         
                         let itemSubtitle: PeerListItemComponent.Subtitle
-                        let canBeSelected = component.link != nil && !peer.premiumRequiredToContact
+                        let canBeSelected : Bool
+                        switch component.subject {
+                        case let .chat(_, link):
+                            canBeSelected = link != nil && !peer.premiumRequiredToContact
+                        case .groupCall:
+                            canBeSelected = true
+                        }
                         if peer.premiumRequiredToContact {
                             itemSubtitle = .text(text: environment.strings.SendInviteLink_StatusAvailableToPremiumOnly, icon: .lock)
                         } else {
@@ -862,16 +922,24 @@ private final class SendInviteLinkScreenComponent: Component {
                 initialContentHeight += 24.0
                 
                 let actionButtonTitle: String
-                if component.link != nil {
-                    actionButtonTitle = self.selectedItems.isEmpty ? environment.strings.SendInviteLink_ActionSkip : environment.strings.SendInviteLink_ActionInvite
-                } else {
-                    actionButtonTitle = environment.strings.SendInviteLink_ActionClose
+                let actionButtonBadge: String?
+                switch component.subject {
+                case let.chat(_, link):
+                    if link != nil {
+                        actionButtonTitle = self.selectedItems.isEmpty ? environment.strings.SendInviteLink_ActionSkip : environment.strings.SendInviteLink_ActionInvite
+                    } else {
+                        actionButtonTitle = environment.strings.SendInviteLink_ActionClose
+                    }
+                    actionButtonBadge = (self.selectedItems.isEmpty || link == nil) ? nil : "\(self.selectedItems.count)"
+                case .groupCall:
+                    actionButtonTitle = environment.strings.SendInviteLink_ActionInvite
+                    actionButtonBadge = self.selectedItems.isEmpty ? nil : "\(self.selectedItems.count)"
                 }
                 let actionButtonSize = actionButton.update(
                     transition: transition,
                     component: AnyComponent(SolidRoundedButtonComponent(
                         title: actionButtonTitle,
-                        badge: (self.selectedItems.isEmpty || component.link == nil) ? nil : "\(self.selectedItems.count)",
+                        badge: actionButtonBadge,
                         theme: SolidRoundedButtonComponent.Theme(theme: environment.theme),
                         font: .bold,
                         fontSize: 17.0,
@@ -885,9 +953,18 @@ private final class SendInviteLinkScreenComponent: Component {
                             guard let self, let component = self.component, let controller = self.environment?.controller() else {
                                 return
                             }
+
+                            let link: String?
+                            switch component.subject {
+                            case let .chat(_, linkValue):
+                                link = linkValue
+                            case let .groupCall(linkValue):
+                                link = linkValue
+                            }
+
                             if self.selectedItems.isEmpty {
                                 controller.dismiss()
-                            } else if let link = component.link {
+                            } else if let link {
                                 let selectedPeers = component.peers.filter { self.selectedItems.contains($0.peer.id) }
                                 
                                 self.presentPaidMessageAlertIfNeeded(
@@ -1012,15 +1089,21 @@ public class SendInviteLinkScreen: ViewControllerComponentContainer {
     
     private var presenceDisposable: Disposable?
     
-    public init(context: AccountContext, peer: EnginePeer, link: String?, peers: [TelegramForbiddenInvitePeer]) {
+    public init(context: AccountContext, subject: SendInviteLinkScreenSubject, peers: [TelegramForbiddenInvitePeer], theme: PresentationTheme? = nil) {
         self.context = context
         
-        var link = link
-        if link == nil, let addressName = peer.addressName {
-            link = "https://t.me/\(addressName)"
+        switch subject {
+        case let .chat(peer, link):
+            var link = link
+            if link == nil, let addressName = peer.addressName {
+                link = "https://t.me/\(addressName)"
+            }
+            self.link = link
+        case let .groupCall(link):
+            self.link = link
         }
         
-        #if DEBUG
+        #if DEBUG && false
         var peers = peers
         
         if !"".isEmpty {
@@ -1136,10 +1219,9 @@ public class SendInviteLinkScreen: ViewControllerComponentContainer {
         }
         #endif
         
-        self.link = link
         self.peers = peers
         
-        super.init(context: context, component: SendInviteLinkScreenComponent(context: context, peer: peer, link: link, peers: peers, peerPresences: [:], sendPaidMessageStars: [:]), navigationBarAppearance: .none)
+        super.init(context: context, component: SendInviteLinkScreenComponent(context: context, subject: subject, peers: peers, peerPresences: [:], sendPaidMessageStars: [:]), navigationBarAppearance: .none, theme: theme.flatMap { .custom($0) } ?? .default)
         
         self.statusBar.statusBarStyle = .Ignore
         self.navigationPresentation = .flatModal
@@ -1169,7 +1251,7 @@ public class SendInviteLinkScreen: ViewControllerComponentContainer {
                     parsedSendPaidMessageStars[id] = sendPaidMessageStars
                 }
             }
-            self.updateComponent(component: AnyComponent(SendInviteLinkScreenComponent(context: context, peer: peer, link: link, peers: peers, peerPresences: parsedPresences, sendPaidMessageStars: parsedSendPaidMessageStars)), transition: .immediate)
+            self.updateComponent(component: AnyComponent(SendInviteLinkScreenComponent(context: context, subject: subject, peers: peers, peerPresences: parsedPresences, sendPaidMessageStars: parsedSendPaidMessageStars)), transition: .immediate)
         })
     }
     

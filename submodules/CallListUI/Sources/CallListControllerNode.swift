@@ -126,7 +126,7 @@ private func mappedInsertEntries(context: AccountContext, presentationData: Item
             case let .displayTabInfo(_, text):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: 0), directionHint: entry.directionHint)
             case .openNewCall:
-                let item = ItemListPeerActionItem(presentationData: presentationData, style: showSettings ? .blocks : .plain, icon: PresentationResourcesRootController.callListCallIcon(presentationData.theme), title: presentationData.strings.CallList_NewCall, hasSeparator: false, sectionId: 1, height: .generic, noInsets: true, editing: false, action: {
+                let item = ItemListPeerActionItem(presentationData: presentationData, style: showSettings ? .blocks : .plain, icon: PresentationResourcesRootController.callListCallIcon(presentationData.theme), title: presentationData.strings.CallList_NewCall, hasSeparator: false, sectionId: 1, height: .generic, noInsets: !showSettings, editing: false, action: {
                     nodeInteraction.openNewCall()
                 })
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)
@@ -150,7 +150,7 @@ private func mappedUpdateEntries(context: AccountContext, presentationData: Item
             case let .displayTabInfo(_, text):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: 0), directionHint: entry.directionHint)
             case .openNewCall:
-                let item = ItemListPeerActionItem(presentationData: presentationData, style: showSettings ? .blocks : .plain, icon: PresentationResourcesRootController.callListCallIcon(presentationData.theme), title: presentationData.strings.CallList_NewCall, hasSeparator: false, sectionId: 1, height: .generic, noInsets: true, editing: false, action: {
+                let item = ItemListPeerActionItem(presentationData: presentationData, style: showSettings ? .blocks : .plain, icon: PresentationResourcesRootController.callListCallIcon(presentationData.theme), title: presentationData.strings.CallList_NewCall, hasSeparator: false, sectionId: 1, height: .generic, noInsets: !showSettings, editing: false, action: {
                     nodeInteraction.openNewCall()
                 })
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)
@@ -525,7 +525,7 @@ final class CallListControllerNode: ASDisplayNode {
         |> mapToQueue { (updateAndType, state, groupCalls, showCallsTab, currentGroupCallPeerId) -> Signal<CallListNodeListViewTransition, NoError> in
             let (update, type) = updateAndType
             
-            let processedView = CallListNodeView(originalView: update.view, filteredEntries: callListNodeEntriesForView(view: update.view, displayOpenNewCall: mode == .tab && type == .all, groupCalls: groupCalls, state: state, showSettings: showSettings, showCallsTab: showCallsTab, isRecentCalls: type == .all, currentGroupCallPeerId: currentGroupCallPeerId), presentationData: state.presentationData)
+            let processedView = CallListNodeView(originalView: update.view, filteredEntries: callListNodeEntriesForView(view: update.view, displayOpenNewCall: type == .all, groupCalls: groupCalls, state: state, showSettings: showSettings, showCallsTab: showCallsTab, isRecentCalls: type == .all, currentGroupCallPeerId: currentGroupCallPeerId), presentationData: state.presentationData)
             let previous = previousView.swap(processedView)
             let previousType = previousType.swap(type)
                         

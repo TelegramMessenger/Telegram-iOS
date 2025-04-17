@@ -80,16 +80,21 @@ struct TrieNode {
 };
 
 td::Result<TrieRef> set(const TrieRef &n, BitString key, td::Slice value, td::Slice snapshot = {});
+
 td::Result<std::string> get(const TrieRef &n, const BitString &key, td::Slice snapshot = {});
+
 td::Result<TrieRef> generate_pruned_tree(const TrieRef &n, td::Span<td::Slice> keys, td::Slice snapshot = {});
 
 std::ostream &operator<<(std::ostream &os, const td::UInt256 &hash);
+
 void print_tree(const TrieRef &node, const std::string &prefix = "", bool is_root = true);
 
 BitString to_key(td::Slice key);
+
 inline td::Result<TrieRef> set(const TrieRef &n, td::Slice key, td::Slice value) {
   return set(n, to_key(key), value);
 }
+
 inline td::Result<std::string> get(const TrieRef &n, td::Slice key, td::Slice snapshot = {}) {
   return get(n, to_key(key), snapshot);
 }

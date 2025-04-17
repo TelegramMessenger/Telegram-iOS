@@ -343,17 +343,17 @@ final class VideoChatScreenComponent: Component {
                 sourceCallControllerView?.removeFromSuperview()
             }
             
-            var expandedPeer: (id: EnginePeer.Id, isPresentation: Bool)?
+            var expandedPeer: (id: GroupCallParticipantsContext.Participant.Id, isPresentation: Bool)?
             if let animateOutData, animateOutData.incomingVideoLayer != nil, let members = self.members {
-                if let participant = members.participants.first(where: { $0.peer.id == animateOutData.incomingPeerId }) {
+                if let participant = members.participants.first(where: { $0.id == .peer(animateOutData.incomingPeerId) }) {
                     if let _ = participant.videoDescription {
-                        expandedPeer = (participant.peer.id, false)
-                        self.expandedParticipantsVideoState = VideoChatParticipantsComponent.ExpandedVideoState(mainParticipant: VideoChatParticipantsComponent.VideoParticipantKey(id: participant.peer.id, isPresentation: false), isMainParticipantPinned: false, isUIHidden: true)
+                        expandedPeer = (participant.id, false)
+                        self.expandedParticipantsVideoState = VideoChatParticipantsComponent.ExpandedVideoState(mainParticipant: VideoChatParticipantsComponent.VideoParticipantKey(id: participant.id, isPresentation: false), isMainParticipantPinned: false, isUIHidden: true)
                     }
-                } else if let participant = members.participants.first(where: { $0.peer.id == sourceCallController.call.context.account.peerId }) {
+                } else if let participant = members.participants.first(where: { $0.id == .peer(sourceCallController.call.context.account.peerId) }) {
                     if let _ = participant.videoDescription {
-                        expandedPeer = (participant.peer.id, false)
-                        self.expandedParticipantsVideoState = VideoChatParticipantsComponent.ExpandedVideoState(mainParticipant: VideoChatParticipantsComponent.VideoParticipantKey(id: participant.peer.id, isPresentation: false), isMainParticipantPinned: false, isUIHidden: true)
+                        expandedPeer = (participant.id, false)
+                        self.expandedParticipantsVideoState = VideoChatParticipantsComponent.ExpandedVideoState(mainParticipant: VideoChatParticipantsComponent.VideoParticipantKey(id: participant.id, isPresentation: false), isMainParticipantPinned: false, isUIHidden: true)
                     }
                 }
             }
@@ -1164,7 +1164,8 @@ final class VideoChatScreenComponent: Component {
                     }
                     
                     participants.append(GroupCallParticipantsContext.Participant(
-                        peer: myPeer._asPeer(),
+                        id: .peer(myPeer.id),
+                        peer: myPeer,
                         ssrc: nil,
                         videoDescription: myVideoDescription,
                         presentationDescription: nil,
@@ -1189,7 +1190,8 @@ final class VideoChatScreenComponent: Component {
                     }
                     
                     participants.append(GroupCallParticipantsContext.Participant(
-                        peer: remotePeer._asPeer(),
+                        id: .peer(remotePeer.id),
+                        peer: remotePeer,
                         ssrc: nil,
                         videoDescription: remoteVideoDescription,
                         presentationDescription: nil,
@@ -1235,7 +1237,7 @@ final class VideoChatScreenComponent: Component {
                 self.members = component.initialData.members
                 self.invitedPeers = component.initialData.invitedPeers
                 if let members = self.members {
-                    self.invitedPeers.removeAll(where: { invitedPeer in members.participants.contains(where: { $0.peer.id == invitedPeer.peer.id }) })
+                    self.invitedPeers.removeAll(where: { invitedPeer in members.participants.contains(where: { $0.id == .peer(invitedPeer.peer.id) }) })
                 }
                 self.callState = component.initialData.callState
             }
@@ -1276,7 +1278,7 @@ final class VideoChatScreenComponent: Component {
                             
                             self.members = members
                             if let members {
-                                self.invitedPeers.removeAll(where: { invitedPeer in members.participants.contains(where: { $0.peer.id == invitedPeer.peer.id }) })
+                                self.invitedPeers.removeAll(where: { invitedPeer in members.participants.contains(where: { $0.id == .peer(invitedPeer.peer.id) }) })
                             }
                             
                             if let members, let expandedParticipantsVideoState = self.expandedParticipantsVideoState, !expandedParticipantsVideoState.isUIHidden {
@@ -1299,28 +1301,28 @@ final class VideoChatScreenComponent: Component {
                             
                             if let expandedParticipantsVideoState = self.expandedParticipantsVideoState, let members {
                                 if CFAbsoluteTimeGetCurrent() > self.focusedSpeakerAutoSwitchDeadline, !expandedParticipantsVideoState.isMainParticipantPinned, let participant = members.participants.first(where: { participant in
-                                    if let callState = self.callState, participant.peer.id == callState.myPeerId {
+                                    if let callState = self.callState, participant.id == .peer(callState.myPeerId) {
                                         return false
                                     }
                                     if participant.videoDescription != nil || participant.presentationDescription != nil {
-                                        if members.speakingParticipants.contains(participant.peer.id) {
+                                        if let participantPeer = participant.peer, members.speakingParticipants.contains(participantPeer.id) {
                                             return true
                                         }
                                     }
                                     return false
                                 }) {
-                                    if participant.peer.id != expandedParticipantsVideoState.mainParticipant.id {
+                                    if participant.id != expandedParticipantsVideoState.mainParticipant.id {
                                         if participant.presentationDescription != nil {
-                                            self.expandedParticipantsVideoState = VideoChatParticipantsComponent.ExpandedVideoState(mainParticipant: VideoChatParticipantsComponent.VideoParticipantKey(id: participant.peer.id, isPresentation: true), isMainParticipantPinned: false, isUIHidden: expandedParticipantsVideoState.isUIHidden)
+                                            self.expandedParticipantsVideoState = VideoChatParticipantsComponent.ExpandedVideoState(mainParticipant: VideoChatParticipantsComponent.VideoParticipantKey(id: participant.id, isPresentation: true), isMainParticipantPinned: false, isUIHidden: expandedParticipantsVideoState.isUIHidden)
                                         } else {
-                                            self.expandedParticipantsVideoState = VideoChatParticipantsComponent.ExpandedVideoState(mainParticipant: VideoChatParticipantsComponent.VideoParticipantKey(id: participant.peer.id, isPresentation: false), isMainParticipantPinned: false, isUIHidden: expandedParticipantsVideoState.isUIHidden)
+                                            self.expandedParticipantsVideoState = VideoChatParticipantsComponent.ExpandedVideoState(mainParticipant: VideoChatParticipantsComponent.VideoParticipantKey(id: participant.id, isPresentation: false), isMainParticipantPinned: false, isUIHidden: expandedParticipantsVideoState.isUIHidden)
                                         }
                                         self.focusedSpeakerAutoSwitchDeadline = CFAbsoluteTimeGetCurrent() + 1.0
                                     }
                                 }
                                 
                                 if let _ = members.participants.first(where: { participant in
-                                    if participant.peer.id == expandedParticipantsVideoState.mainParticipant.id {
+                                    if participant.id == expandedParticipantsVideoState.mainParticipant.id {
                                         if expandedParticipantsVideoState.mainParticipant.isPresentation {
                                             if participant.presentationDescription == nil {
                                                 return false
@@ -1344,9 +1346,9 @@ final class VideoChatScreenComponent: Component {
                                     return false
                                 }) {
                                     if participant.presentationDescription != nil {
-                                        self.expandedParticipantsVideoState = VideoChatParticipantsComponent.ExpandedVideoState(mainParticipant: VideoChatParticipantsComponent.VideoParticipantKey(id: participant.peer.id, isPresentation: true), isMainParticipantPinned: false, isUIHidden: expandedParticipantsVideoState.isUIHidden)
+                                        self.expandedParticipantsVideoState = VideoChatParticipantsComponent.ExpandedVideoState(mainParticipant: VideoChatParticipantsComponent.VideoParticipantKey(id: participant.id, isPresentation: true), isMainParticipantPinned: false, isUIHidden: expandedParticipantsVideoState.isUIHidden)
                                     } else {
-                                        self.expandedParticipantsVideoState = VideoChatParticipantsComponent.ExpandedVideoState(mainParticipant: VideoChatParticipantsComponent.VideoParticipantKey(id: participant.peer.id, isPresentation: false), isMainParticipantPinned: false, isUIHidden: expandedParticipantsVideoState.isUIHidden)
+                                        self.expandedParticipantsVideoState = VideoChatParticipantsComponent.ExpandedVideoState(mainParticipant: VideoChatParticipantsComponent.VideoParticipantKey(id: participant.id, isPresentation: false), isMainParticipantPinned: false, isUIHidden: expandedParticipantsVideoState.isUIHidden)
                                     }
                                     self.focusedSpeakerAutoSwitchDeadline = CFAbsoluteTimeGetCurrent() + 1.0
                                 } else {
@@ -1365,8 +1367,8 @@ final class VideoChatScreenComponent: Component {
                             var speakingParticipantPeers: [EnginePeer] = []
                             if let members, !members.speakingParticipants.isEmpty {
                                 for participant in members.participants {
-                                    if members.speakingParticipants.contains(participant.peer.id) {
-                                        speakingParticipantPeers.append(EnginePeer(participant.peer))
+                                    if let participantPeer = participant.peer, members.speakingParticipants.contains(participantPeer.id) {
+                                        speakingParticipantPeers.append(participantPeer)
                                     }
                                 }
                             }
@@ -1401,7 +1403,7 @@ final class VideoChatScreenComponent: Component {
                         
                         var invitedPeers = invitedPeers
                         if let members {
-                            invitedPeers.removeAll(where: { invitedPeer in members.participants.contains(where: { $0.peer.id == invitedPeer.peer.id }) })
+                            invitedPeers.removeAll(where: { invitedPeer in members.participants.contains(where: { $0.id == .peer(invitedPeer.peer.id) }) })
                         }
                         
                         if self.invitedPeers != invitedPeers {
@@ -1528,6 +1530,9 @@ final class VideoChatScreenComponent: Component {
                             return
                         }
                         self.inviteLinks = value
+                        if case let .group(groupCall) = self.currentCall, let groupCall = groupCall as? PresentationGroupCallImpl {
+                            groupCall.currentInviteLinks = value
+                        }
                     })
                     
                     self.reconnectedAsEventsDisposable?.dispose()
@@ -1612,28 +1617,28 @@ final class VideoChatScreenComponent: Component {
                             
                             if let expandedParticipantsVideoState = self.expandedParticipantsVideoState {
                                 if CFAbsoluteTimeGetCurrent() > self.focusedSpeakerAutoSwitchDeadline, !expandedParticipantsVideoState.isMainParticipantPinned, let participant = members.participants.first(where: { participant in
-                                    if let callState = self.callState, participant.peer.id == callState.myPeerId {
+                                    if let callState = self.callState, participant.id == .peer(callState.myPeerId) {
                                         return false
                                     }
                                     if participant.videoDescription != nil || participant.presentationDescription != nil {
-                                        if members.speakingParticipants.contains(participant.peer.id) {
+                                        if let participantPeer = participant.peer, members.speakingParticipants.contains(participantPeer.id) {
                                             return true
                                         }
                                     }
                                     return false
                                 }) {
-                                    if participant.peer.id != expandedParticipantsVideoState.mainParticipant.id {
+                                    if participant.id != expandedParticipantsVideoState.mainParticipant.id {
                                         if participant.presentationDescription != nil {
-                                            self.expandedParticipantsVideoState = VideoChatParticipantsComponent.ExpandedVideoState(mainParticipant: VideoChatParticipantsComponent.VideoParticipantKey(id: participant.peer.id, isPresentation: true), isMainParticipantPinned: false, isUIHidden: expandedParticipantsVideoState.isUIHidden)
+                                            self.expandedParticipantsVideoState = VideoChatParticipantsComponent.ExpandedVideoState(mainParticipant: VideoChatParticipantsComponent.VideoParticipantKey(id: participant.id, isPresentation: true), isMainParticipantPinned: false, isUIHidden: expandedParticipantsVideoState.isUIHidden)
                                         } else {
-                                            self.expandedParticipantsVideoState = VideoChatParticipantsComponent.ExpandedVideoState(mainParticipant: VideoChatParticipantsComponent.VideoParticipantKey(id: participant.peer.id, isPresentation: false), isMainParticipantPinned: false, isUIHidden: expandedParticipantsVideoState.isUIHidden)
+                                            self.expandedParticipantsVideoState = VideoChatParticipantsComponent.ExpandedVideoState(mainParticipant: VideoChatParticipantsComponent.VideoParticipantKey(id: participant.id, isPresentation: false), isMainParticipantPinned: false, isUIHidden: expandedParticipantsVideoState.isUIHidden)
                                         }
                                         self.focusedSpeakerAutoSwitchDeadline = CFAbsoluteTimeGetCurrent() + 1.0
                                     }
                                 }
                                 
                                 if let _ = members.participants.first(where: { participant in
-                                    if participant.peer.id == expandedParticipantsVideoState.mainParticipant.id {
+                                    if participant.id == expandedParticipantsVideoState.mainParticipant.id {
                                         if expandedParticipantsVideoState.mainParticipant.isPresentation {
                                             if participant.presentationDescription == nil {
                                                 return false
@@ -1657,9 +1662,9 @@ final class VideoChatScreenComponent: Component {
                                     return false
                                 }) {
                                     if participant.presentationDescription != nil {
-                                        self.expandedParticipantsVideoState = VideoChatParticipantsComponent.ExpandedVideoState(mainParticipant: VideoChatParticipantsComponent.VideoParticipantKey(id: participant.peer.id, isPresentation: true), isMainParticipantPinned: false, isUIHidden: expandedParticipantsVideoState.isUIHidden)
+                                        self.expandedParticipantsVideoState = VideoChatParticipantsComponent.ExpandedVideoState(mainParticipant: VideoChatParticipantsComponent.VideoParticipantKey(id: participant.id, isPresentation: true), isMainParticipantPinned: false, isUIHidden: expandedParticipantsVideoState.isUIHidden)
                                     } else {
-                                        self.expandedParticipantsVideoState = VideoChatParticipantsComponent.ExpandedVideoState(mainParticipant: VideoChatParticipantsComponent.VideoParticipantKey(id: participant.peer.id, isPresentation: false), isMainParticipantPinned: false, isUIHidden: expandedParticipantsVideoState.isUIHidden)
+                                        self.expandedParticipantsVideoState = VideoChatParticipantsComponent.ExpandedVideoState(mainParticipant: VideoChatParticipantsComponent.VideoParticipantKey(id: participant.id, isPresentation: false), isMainParticipantPinned: false, isUIHidden: expandedParticipantsVideoState.isUIHidden)
                                     }
                                     self.focusedSpeakerAutoSwitchDeadline = CFAbsoluteTimeGetCurrent() + 1.0
                                 } else {
@@ -1678,8 +1683,8 @@ final class VideoChatScreenComponent: Component {
                             var speakingParticipantPeers: [EnginePeer] = []
                             if !members.speakingParticipants.isEmpty {
                                 for participant in members.participants {
-                                    if members.speakingParticipants.contains(participant.peer.id) {
-                                        speakingParticipantPeers.append(EnginePeer(participant.peer))
+                                    if let participantPeer = participant.peer, members.speakingParticipants.contains(participantPeer.id) {
+                                        speakingParticipantPeers.append(participantPeer)
                                     }
                                 }
                             }

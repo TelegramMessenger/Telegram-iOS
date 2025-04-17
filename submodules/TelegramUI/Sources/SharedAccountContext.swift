@@ -82,6 +82,8 @@ import JoinSubjectScreen
 import OldChannelsController
 import InviteLinksUI
 import GiftStoreScreen
+import SendInviteLinkScreen
+
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -3831,6 +3833,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func makeAccountFreezeInfoScreen(context: AccountContext) -> ViewController {
         return AccountFreezeInfoScreen(context: context)
+    }
+
+    public func makeSendInviteLinkScreen(context: AccountContext, subject: SendInviteLinkScreenSubject, peers: [TelegramForbiddenInvitePeer], theme: PresentationTheme?) -> ViewController {
+        return SendInviteLinkScreen(context: context, subject: subject, peers: peers, theme: theme)
     }
 }
 

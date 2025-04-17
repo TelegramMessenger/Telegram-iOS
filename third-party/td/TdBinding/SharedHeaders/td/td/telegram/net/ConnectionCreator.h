@@ -180,7 +180,7 @@ class ConnectionCreator final : public NetQueryCallback {
 
   struct TestProxyRequest {
     Proxy proxy_;
-    int16 dc_id_;
+    int16 dc_id_ = -1;
     ActorOwn<> child_;
     Promise<Unit> promise_;
 

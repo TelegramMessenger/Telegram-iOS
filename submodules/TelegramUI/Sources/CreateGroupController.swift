@@ -850,7 +850,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                                         |> deliverOnMainQueue).start(next: { peer in
                                             if let peer, let exportedInvitation, let link = exportedInvitation.link {
                                                 
-                                                let inviteScreen = SendInviteLinkScreen(context: context, peer: peer, link: link, peers: result.result.forbiddenPeers)
+                                                let inviteScreen = SendInviteLinkScreen(context: context, subject: .chat(peer: peer, link: link), peers: result.result.forbiddenPeers)
                                                 controller?.push(inviteScreen)
                                             }
                                         })

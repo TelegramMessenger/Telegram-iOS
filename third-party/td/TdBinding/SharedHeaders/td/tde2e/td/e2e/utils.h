@@ -23,7 +23,9 @@
 
 #include <string>
 #include <utility>
+
 namespace tde2e_api {
+
 inline Error to_error(const td::Status &status) {
   auto error_code = ErrorCode(status.code());
   if (error_string(error_code) == "UNKNOWN_ERROR") {
@@ -39,6 +41,7 @@ Result<T> to_result(td::Result<T> &value) {
   }
   return Result<T>(to_error(value.error()));
 }
+
 template <typename T>
 Result<T>::Result(td::Result<T> &&value) : Result(to_result(value)) {
 }
@@ -50,11 +53,14 @@ Result<T>::Result(td::Status &&status) : Result(to_error(status)) {
 }  // namespace tde2e_api
 
 namespace tde2e_core {
+
 using E = tde2e_api::ErrorCode;
+
 inline td::Status Error(E error_code) {
   auto msg = tde2e_api::error_string(error_code);
   return td::Status::Error(static_cast<int>(error_code), td::Slice(msg.data(), msg.size()));
 }
+
 inline td::Status Error(E error_code, td::Slice message) {
   auto msg = tde2e_api::error_string(error_code);
   return td::Status::Error(static_cast<int>(error_code), PSLICE()

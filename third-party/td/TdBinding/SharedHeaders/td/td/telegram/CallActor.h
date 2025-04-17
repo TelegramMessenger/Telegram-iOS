@@ -183,7 +183,7 @@ class CallActor final : public NetQueryCallback {
   Status do_update_call(const telegram_api::phoneCallWaiting &call);
   Status do_update_call(const telegram_api::phoneCallRequested &call);
   Status do_update_call(const telegram_api::phoneCallAccepted &call);
-  Status do_update_call(const telegram_api::phoneCall &call);
+  Status do_update_call(telegram_api::phoneCall &call);
   Status do_update_call(const telegram_api::phoneCallDiscarded &call);
 
   void on_get_call_id();

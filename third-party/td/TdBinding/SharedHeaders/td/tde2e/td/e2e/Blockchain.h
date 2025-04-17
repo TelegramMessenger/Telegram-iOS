@@ -320,6 +320,9 @@ class ClientBlockchain {
   td::UInt256 get_last_block_hash() const {
     return blockchain_.last_block_hash_;
   }
+  td::UInt256 get_previous_block_hash() const {
+    return blockchain_.last_block_.prev_block_hash_;
+  }
 
   td::Status add_proof(td::Slice proof);
 

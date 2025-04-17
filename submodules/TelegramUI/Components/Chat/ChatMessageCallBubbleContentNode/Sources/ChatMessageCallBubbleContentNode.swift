@@ -174,10 +174,8 @@ public class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                         let currentTime = Int32(Date().timeIntervalSince1970)
                         if conferenceCall.flags.contains(.isMissed) {
                             titleString = item.presentationData.strings.Chat_CallMessage_DeclinedGroupCall
-                        } else if item.message.timestamp < currentTime - missedTimeout {
+                        } else if conferenceCall.duration == nil && item.message.timestamp < currentTime - missedTimeout {
                             titleString = item.presentationData.strings.Chat_CallMessage_MissedGroupCall
-                        } else if conferenceCall.duration != nil {
-                            titleString = item.presentationData.strings.Chat_CallMessage_CancelledGroupCall
                         } else {
                             if incoming {
                                 titleString = item.presentationData.strings.Chat_CallMessage_IncomingGroupCall
