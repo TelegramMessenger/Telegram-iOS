@@ -287,10 +287,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                         }
                     }
                     |> distinctUntilChanged(isEqual: { lhs, rhs in
-                        if lhs.0 != rhs.0 {
-                            return false
-                        }
-                        return true
+                        return lhs.0 == rhs.0
                     })
                     |> mapToSignal { activeCall, peer -> Signal<GroupCallPanelData?, NoError> in
                         guard let activeCall = activeCall else {
@@ -457,7 +454,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
             } else {
                 let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
                 groupCallAccessoryPanel = GroupCallNavigationAccessoryPanel(context: self.context, presentationData: presentationData, tapAction: { [weak self] in
-                    guard let strongSelf = self else {
+                    guard let strongSelf = self, let groupCallPanelData = strongSelf.groupCallPanelData else {
                         return
                     }
                     strongSelf.joinGroupCall(
