@@ -412,8 +412,8 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                         } else if case let .conferenceCall(conferenceCall) = action.action {
                             isConference = true
 
-                            if let peer = message.author, !conferenceAvatars.contains(where: { $0.id == peer.id }) {
-                                conferenceAvatars.append(peer)
+                            if let peer = message.peers[message.id.peerId], !conferenceAvatars.contains(where: { $0.id == peer.id }) {
+                                conferenceAvatars.append(EnginePeer(peer))
                             }
 
                             for id in conferenceCall.otherParticipants {

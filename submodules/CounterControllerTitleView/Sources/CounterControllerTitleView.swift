@@ -3,6 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import TelegramPresentationData
+import ComponentFlow
 
 public struct CounterControllerTitle: Equatable {
     public var title: String
@@ -16,24 +17,28 @@ public struct CounterControllerTitle: Equatable {
 
 public final class CounterControllerTitleView: UIView {
     private let titleNode: ImmediateTextNode
-    private let subtitleNode: ImmediateTextNode
+
+    private var subtitleNode: ImmediateTextNode
+    private var disappearingSubtitleNode: ImmediateTextNode?
     
     public var title: CounterControllerTitle = CounterControllerTitle(title: "", counter: nil) {
         didSet {
             if self.title != oldValue {
-                self.update()
+                self.update(animated: oldValue.title.isEmpty == self.title.title.isEmpty)
             }
         }
     }
     
     public var theme: PresentationTheme {
         didSet {
-            self.update()
+            self.update(animated: false)
         }
     }
     
     private var primaryTextColor: UIColor?
     private var secondaryTextColor: UIColor?
+
+    private var nextLayoutTransition: ContainedViewLayoutTransition?
     
     public func updateTextColors(primary: UIColor?, secondary: UIColor?, transition: ContainedViewLayoutTransition) {
         self.primaryTextColor = primary
@@ -52,18 +57,40 @@ public final class CounterControllerTitleView: UIView {
             }
         }
         
-        self.update()
+        self.update(animated: false)
     }
     
-    private func update() {
+    private func update(animated: Bool) {
         let primaryTextColor = self.primaryTextColor ?? self.theme.rootController.navigationBar.primaryTextColor
         let secondaryTextColor = self.secondaryTextColor ?? self.theme.rootController.navigationBar.secondaryTextColor
         self.titleNode.attributedText = NSAttributedString(string: self.title.title, font: Font.semibold(17.0), textColor: primaryTextColor)
-        self.subtitleNode.attributedText = NSAttributedString(string: self.title.counter ?? "", font: Font.with(size: 13.0, traits: .monospacedNumbers), textColor: secondaryTextColor)
+
+        let subtitleText = NSAttributedString(string: self.title.counter ?? "", font: Font.with(size: 13.0, traits: .monospacedNumbers), textColor: secondaryTextColor)
+        if let previousSubtitleText = self.subtitleNode.attributedText, previousSubtitleText.string.isEmpty != subtitleText.string.isEmpty && subtitleText.string.isEmpty {
+            if let disappearingSubtitleNode = self.disappearingSubtitleNode {
+                self.disappearingSubtitleNode = nil
+                disappearingSubtitleNode.removeFromSupernode()
+            }
+
+            self.disappearingSubtitleNode = self.subtitleNode
+
+            self.subtitleNode = ImmediateTextNode()
+            self.subtitleNode.displaysAsynchronously = false
+            self.subtitleNode.maximumNumberOfLines = 1
+            self.subtitleNode.truncationType = .end
+            self.subtitleNode.isOpaque = false
+            self.subtitleNode.attributedText = subtitleText
+            self.addSubnode(self.subtitleNode)
+        } else {
+            self.subtitleNode.attributedText = subtitleText
+        }
         
         self.accessibilityLabel = self.title.title
         self.accessibilityValue = self.title.counter
         
+        if animated {
+            self.nextLayoutTransition = .animated(duration: 0.4, curve: .spring)
+        }
         self.setNeedsLayout()
     }
     
@@ -110,11 +137,31 @@ public final class CounterControllerTitleView: UIView {
         } else {
             combinedHeight = titleSize.height
         }
+
+        var transition: ContainedViewLayoutTransition = .immediate
+        if let nextLayoutTransition = self.nextLayoutTransition {
+            if !self.titleNode.bounds.isEmpty {
+                transition = nextLayoutTransition
+            }
+            self.nextLayoutTransition = nil
+        }
         
         let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor((size.height - combinedHeight) / 2.0)), size: titleSize)
-        self.titleNode.frame = titleFrame
+        self.titleNode.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
+        transition.updatePosition(node: self.titleNode, position: titleFrame.center)
         
         let subtitleFrame = CGRect(origin: CGPoint(x: floor((size.width - subtitleSize.width) / 2.0), y: floor((size.height - combinedHeight) / 2.0) + titleSize.height + spacing), size: subtitleSize)
-        self.subtitleNode.frame = subtitleFrame
+        self.subtitleNode.bounds = CGRect(origin: CGPoint(), size: subtitleFrame.size)
+        transition.updatePosition(node: self.subtitleNode, position: subtitleFrame.center)
+        transition.updateTransformScale(node: self.subtitleNode, scale: self.title.counter != nil ? 1.0 : 0.001)
+        transition.updateAlpha(node: self.subtitleNode, alpha: self.title.counter != nil ? 1.0 : 0.0)
+
+        if let disappearingSubtitleNode = self.disappearingSubtitleNode {
+            transition.updatePosition(node: disappearingSubtitleNode, position: subtitleFrame.center)
+            transition.updateTransformScale(node: disappearingSubtitleNode, scale: self.title.counter != nil ? 1.0 : 0.001)
+            transition.updateAlpha(node: disappearingSubtitleNode, alpha: self.title.counter != nil ? 1.0 : 0.0, completion: { [weak disappearingSubtitleNode] _ in
+                disappearingSubtitleNode?.removeFromSupernode()
+            })
+        }
     }
 }

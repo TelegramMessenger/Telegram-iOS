@@ -13,6 +13,7 @@ swift_library(
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/Display:Display",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/ComponentFlow",
     ],
     visibility = [
         "//visibility:public",
