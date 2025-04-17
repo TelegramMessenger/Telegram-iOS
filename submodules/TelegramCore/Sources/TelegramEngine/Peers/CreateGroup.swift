@@ -37,6 +37,11 @@ func _internal_createGroup(account: Account, title: String, peerIds: [PeerId], t
             }
         }
         
+        var ttlPeriod = ttlPeriod
+        if ttlPeriod == nil {
+            ttlPeriod = 0
+        }
+        
         var flags: Int32 = 0
         if let _ = ttlPeriod {
             flags |= 1 << 0
