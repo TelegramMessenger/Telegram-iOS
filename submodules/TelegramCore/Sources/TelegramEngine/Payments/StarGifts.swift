@@ -1459,10 +1459,10 @@ private final class ProfileGiftsContextImpl {
         return _internal_transferStarGift(account: self.account, prepaid: prepaid, reference: reference, peerId: peerId)
     }
     
-    func buyStarGift(reference: StarGiftReference, peerId: EnginePeer.Id) -> Signal<Never, BuyStarGiftError> {
-        var gift = self.gifts.first(where: { $0.reference == reference })
+    func buyStarGift(gift inputGift: TelegramCore.StarGift, peerId: EnginePeer.Id) -> Signal<Never, BuyStarGiftError> {
+        var gift = self.gifts.first(where: { $0.gift == inputGift })
         if gift == nil {
-            gift = self.filteredGifts.first(where: { $0.reference == reference })
+            gift = self.filteredGifts.first(where: { $0.gift == inputGift })
         }
         guard case let .unique(uniqueGift) = gift?.gift else {
             return .complete()
@@ -1471,11 +1471,17 @@ private final class ProfileGiftsContextImpl {
         if let count = self.count {
             self.count = max(0, count - 1)
         }
-        self.gifts.removeAll(where: { $0.reference == reference })
-        self.filteredGifts.removeAll(where: { $0.reference == reference })
+        self.gifts.removeAll(where: { $0.gift == inputGift })
+        self.filteredGifts.removeAll(where: { $0.gift == inputGift })
         self.pushState()
         
         return _internal_buyStarGift(account: self.account, slug: uniqueGift.slug, peerId: peerId)
+    }
+    
+    func removeStarGift(gift: TelegramCore.StarGift) {
+        self.gifts.removeAll(where: { $0.gift == gift })
+        self.filteredGifts.removeAll(where: { $0.gift == gift })
+        self.pushState()
     }
     
     func upgradeStarGift(formId: Int64?, reference: StarGiftReference, keepOriginalInfo: Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError> {
@@ -1893,17 +1899,23 @@ public final class ProfileGiftsContext {
         }
     }
     
-    public func buyStarGift(reference: StarGiftReference, peerId: EnginePeer.Id) -> Signal<Never, BuyStarGiftError> {
+    public func buyStarGift(gift: TelegramCore.StarGift, peerId: EnginePeer.Id) -> Signal<Never, BuyStarGiftError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.impl.with { impl in
-                disposable.set(impl.buyStarGift(reference: reference, peerId: peerId).start(error: { error in
+                disposable.set(impl.buyStarGift(gift: gift, peerId: peerId).start(error: { error in
                     subscriber.putError(error)
                 }, completed: {
                     subscriber.putCompletion()
                 }))
             }
             return disposable
+        }
+    }
+    
+    public func removeStarGift(gift: TelegramCore.StarGift) {
+        self.impl.with { impl in
+            impl.removeStarGift(gift: gift)
         }
     }
     
