@@ -2168,11 +2168,18 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         
         let phoneNumber = payloadJson["phoneNumber"] as? String
         
-        if let fromIdString = payloadJson["from_id"] as? String, let fromId = Int64(fromIdString), let groupCallIdString = payloadJson["group_call_id"] as? String, let groupCallId = Int64(groupCallIdString), let messageIdString = payloadJson["msg_id"] as? String, let messageId = Int32(messageIdString), let isVideoString = payloadJson["video"] as? String, let isVideo = Int32(isVideoString), let fromTitle = payloadJson["from_title"] as? String {
+        if let fromIdString = payloadJson["from_id"] as? String, let fromId = Int64(fromIdString), let groupCallIdString = payloadJson["group_call_id"] as? String, let groupCallId = Int64(groupCallIdString), let messageIdString = payloadJson["msg_id"] as? String, let messageId = Int32(messageIdString), let fromTitle = payloadJson["from_title"] as? String {
             guard let callKitIntegration = CallKitIntegration.shared else {
                 Logger.shared.log("App \(self.episodeId) PushRegistry", "CallKitIntegration is not available")
                 completion()
                 return
+            }
+            
+            var isVideo = false
+            if let isVideoString = payloadJson["video"] as? String, let isVideoValue = Int32(isVideoString) {
+                isVideo = isVideoValue != 0
+            } else if let isVideoString = payloadJson["video"] as? String, let isVideoValue = Bool(isVideoString) {
+                isVideo = isVideoValue
             }
 
             let fromPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(fromId))
@@ -2199,7 +2206,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 stableId: groupCallId,
                 handle: "\(fromPeerId.id._internalGetInt64Value())",
                 phoneNumber: phoneNumber.flatMap(formatPhoneNumber),
-                isVideo: isVideo != 0,
+                isVideo: isVideo,
                 displayTitle: displayTitle,
                 completion: { error in
                     if let error = error {
@@ -2226,7 +2233,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                     var processed = false
                     for (_, context, _) in activeAccounts.accounts {
                         if context.account.id == accountId {
-                            context.account.callSessionManager.addConferenceInvitationMessages(ids: [(messageId, IncomingConferenceTermporaryExternalInfo(callId: groupCallId, isVideo: isVideo != 0))])
+                            context.account.callSessionManager.addConferenceInvitationMessages(ids: [(messageId, IncomingConferenceTermporaryExternalInfo(callId: groupCallId, isVideo: isVideo))])
                             
                             /*disposable.set((context.account.callSessionManager.callState(internalId: internalId)
                             |> deliverOnMainQueue).start(next: { state in
