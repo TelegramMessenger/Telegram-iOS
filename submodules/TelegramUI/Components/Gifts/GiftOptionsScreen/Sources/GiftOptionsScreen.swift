@@ -450,12 +450,7 @@ final class GiftOptionsScreenComponent: Component {
                                                     mainController = controller
                                                 }
                                                 if case let .generic(gift) = gift {
-                                                    var forceStore = !"".isEmpty
-                                                    #if DEBUG
-                                                    forceStore = true
-                                                    #endif
-                                                    
-                                                    if let availability = gift.availability, availability.remains == 0 || (availability.resale > 0 && forceStore) {
+                                                    if let availability = gift.availability, availability.remains == 0 || (availability.resale > 0) {
                                                         if availability.resale > 0 {
                                                             let storeController = component.context.sharedContext.makeGiftStoreController(
                                                                 context: component.context,
