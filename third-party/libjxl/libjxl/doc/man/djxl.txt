@@ -1,0 +1,61 @@
+djxl(1)
+=======
+:doctype: manpage
+
+Name
+----
+
+djxl - decompress JPEG XL images
+
+Synopsis
+--------
+
+*djxl* ['options'...] 'input.jxl' ['output']
+
+Description
+-----------
+
+`djxl` decompresses a JPEG XL image or animation. The output format is determined
+by the extension of the output file, which can be `.png`, `.jpg`, `.ppm`, `.pfm`.
+If the JPEG XL input file contains an animation, multiple output files will be
+produced, with names of the form "'output'-*framenumber*.ext".
+
+
+Options
+-------
+
+-h::
+--help::
+    Displays the options that `djxl` supports.
+
+-j::
+--pixels_to_jpeg::
+    By default, if the input JPEG XL contains a recompressed JPEG file,
+    djxl reconstructs the exact original JPEG file if the output file has the
+    `.jpg` (or `.jpeg`) filename extension.
+    This flag causes the decoder to instead decode the image to pixels and
+    encode a new (lossy) JPEG in this case.
+
+
+-q 'quality'::
+--jpeg_quality='quality'::
+    When decoding to `.jpg`, use this output quality. This option implicitly
+    enables the --pixels_to_jpeg option.
+
+
+Examples
+--------
+
+----
+# Decompress a JPEG XL file to PNG
+$ djxl input.jxl output.png
+
+# Reconstruct a losslessly-recompressed JPEG file
+$ djxl lossless-jpeg.jxl reconstructed.jpeg
+----
+
+
+See also
+--------
+
+*cjxl*(1)

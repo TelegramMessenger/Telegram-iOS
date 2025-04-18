@@ -1,0 +1,22 @@
+include "TelegramMediaResource.fbs";
+
+namespace TelegramCore;
+
+enum TelegramMediaImageRepresentation_TypeHint:int32 {
+    generic = 0,
+    animated = 1,
+    video = 2
+}
+
+table TelegramMediaImageRepresentation {
+    width:int32 (id: 0);
+    height:int32 (id: 1);
+    resource:TelegramMediaResource (id: 2, required);
+    progressiveSizes:[int32] (id: 3);
+    immediateThumbnailData:[ubyte] (id: 4);
+    hasVideo:bool (id: 5);
+    isPersonal:bool (id: 6);
+    typeHint:TelegramMediaImageRepresentation_TypeHint (id: 7);
+}
+
+root_type TelegramMediaImageRepresentation;

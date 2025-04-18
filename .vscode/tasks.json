@@ -1,0 +1,19 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "type": "sweetpad",
+        "action": "launch",
+        "problemMatcher": [
+          "$sweetpad-watch", // ! Required for debugging
+          "$sweetpad-xcodebuild-default",
+          "$sweetpad-xcbeautify-errors",
+          "$sweetpad-xcbeautify-warnings"
+        ],
+        "label": "sweetpad: launch",
+        "detail": "Build and Launch the app",
+        "isBackground": true // ! Required for debugging
+      }
+    ]
+  }
+  

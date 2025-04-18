@@ -1,0 +1,4 @@
+mode          = .xsan-portable
+extra_cflags  = -fsanitize=address,integer,undefined -fno-sanitize-recover=all -DSKCMS_PORTABLE
+extra_ldflags = -fsanitize=address,integer,undefined
+include ninja/clang

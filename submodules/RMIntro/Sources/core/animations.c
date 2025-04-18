@@ -286,7 +286,7 @@ float t_local(float start_value, float end_value, float start_time, float durati
 
 
 
-static int ribbonLength = 86.5;
+static int ribbonLength = 86;
 static int starsFar=500;
 
 static float scroll_offset;

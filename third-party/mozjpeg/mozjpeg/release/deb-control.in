@@ -1,0 +1,24 @@
+Package: {__PKGNAME}
+Version: @VERSION@-@BUILD@
+Section: misc
+Priority: optional
+Architecture: {__ARCH}
+Essential: no
+Maintainer: @PKGVENDOR@ <@PKGEMAIL@>
+Homepage: @PKGURL@
+Installed-Size: {__SIZE}
+Description: A JPEG codec that provides increased compression for JPEG images (at the expense of compression performance)
+ mozjpeg is a fork of libjpeg-turbo that aims to speed up load times of web
+ pages by reducing the size (and, by extension, the transmission time) of JPEG
+ files.  It accomplishes this by enabling optimized Huffman trees and
+ progressive entropy coding by default in the JPEG compressor, as well as
+ splitting the spectrum of DCT coefficients into separate scans and using
+ Trellis quantisation.
+ .
+ Although it is based on libjpeg-turbo, mozjpeg is not intended to be a
+ general-purpose or high-performance JPEG library.  Its performance is highly
+ "asymmetric".  That is, the JPEG files it generates require much more time to
+ compress than to decompress.  When the default settings are used, mozjpeg is
+ considerably slower than libjpeg-turbo or even libjpeg at compressing images.
+ Thus, it is not generally suitable for real-time compression.  It is best used
+ as part of a web encoding workflow.

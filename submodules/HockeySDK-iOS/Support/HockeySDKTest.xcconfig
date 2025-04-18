@@ -1,3 +1,0 @@
-#include "HockeySDKBase.xcconfig"
-
-WARNING_CFLAGS = -Wno-partial-availability

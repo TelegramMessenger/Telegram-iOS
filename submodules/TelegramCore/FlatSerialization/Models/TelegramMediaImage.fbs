@@ -1,0 +1,51 @@
+include "MediaId.fbs";
+include "TelegramMediaImageRepresentation.fbs";
+include "StickerPackReference.fbs";
+include "PartialMediaReference.fbs";
+
+namespace TelegramCore;
+
+table TelegramMediaImageReference {
+    imageId:int64 (id: 0);
+    accessHash:int64 (id: 1);
+    fileReference:[ubyte] (id: 2);
+}
+
+table VideoRepresentation {
+    width:int32 (id: 0);
+    height:int32 (id: 1);
+    resource:TelegramMediaResource (id: 2, required);
+    startTimestamp:float32 (id: 3);
+}
+
+table EmojiMarkup_Content_Emoji {
+    fileId:int64 (id: 0);
+}
+
+table EmojiMarkup_Content_Sticker {
+    packReference:StickerPackReference (id: 0, required);
+    fileId:int64 (id: 1);
+}
+
+union EmojiMarkup_Content {
+    EmojiMarkup_Content_Emoji,
+    EmojiMarkup_Content_Sticker
+}
+
+table EmojiMarkup {
+    content:EmojiMarkup_Content (id: 1, required);
+    backgroundColors:[int32] (id: 2);
+}
+
+table TelegramMediaImage {
+    imageId:MediaId (id: 0, required);
+    representations:[TelegramMediaImageRepresentation] (id: 1);
+    videoRepresentations:[VideoRepresentation] (id: 2);
+    immediateThumbnailData:[ubyte] (id: 3);
+    emojiMarkup:EmojiMarkup (id: 4);
+    reference:TelegramMediaImageReference (id: 5);
+    partialReference:PartialMediaReference (id: 6);
+    flags:int32 (id: 7);
+}
+
+root_type TelegramMediaImage;

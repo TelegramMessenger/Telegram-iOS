@@ -68,9 +68,13 @@ private func contextForCurrentThread() -> FFMpegMediaFrameSourceContext? {
 public final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
     private let queue: Queue
     private let postbox: Postbox
+    private let userLocation: MediaResourceUserLocation
+    private let userContentType: MediaResourceUserContentType
     private let resourceReference: MediaResourceReference
     private let tempFilePath: String?
+    private let limitedFileRange: Range<Int64>?
     private let streamable: Bool
+    private let isSeekable: Bool
     private let stallDuration: Double
     private let lowWaterDuration: Double
     private let highWaterDuration: Double
@@ -78,6 +82,8 @@ public final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
     private let preferSoftwareDecoding: Bool
     private let fetchAutomatically: Bool
     private let maximumFetchSize: Int?
+    private let storeAfterDownload: (() -> Void)?
+    private let isAudioVideoMessage: Bool
     
     private let taskQueue: ThreadTaskQueue
     private let thread: Thread
@@ -98,12 +104,16 @@ public final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
         }
     }
    
-    public init(queue: Queue, postbox: Postbox, resourceReference: MediaResourceReference, tempFilePath: String?, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, fetchAutomatically: Bool, maximumFetchSize: Int? = nil, stallDuration: Double = 1.0, lowWaterDuration: Double = 2.0, highWaterDuration: Double = 3.0) {
+    public init(queue: Queue, postbox: Postbox, userLocation: MediaResourceUserLocation, userContentType: MediaResourceUserContentType, resourceReference: MediaResourceReference, tempFilePath: String?, limitedFileRange: Range<Int64>?, streamable: Bool, isSeekable: Bool, video: Bool, preferSoftwareDecoding: Bool, fetchAutomatically: Bool, maximumFetchSize: Int? = nil, stallDuration: Double = 1.0, lowWaterDuration: Double = 2.0, highWaterDuration: Double = 3.0, storeAfterDownload: (() -> Void)? = nil, isAudioVideoMessage: Bool = false) {
         self.queue = queue
         self.postbox = postbox
+        self.userLocation = userLocation
+        self.userContentType = userContentType
         self.resourceReference = resourceReference
         self.tempFilePath = tempFilePath
+        self.limitedFileRange = limitedFileRange
         self.streamable = streamable
+        self.isSeekable = isSeekable
         self.video = video
         self.preferSoftwareDecoding = preferSoftwareDecoding
         self.fetchAutomatically = fetchAutomatically
@@ -111,6 +121,8 @@ public final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
         self.stallDuration = stallDuration
         self.lowWaterDuration = lowWaterDuration
         self.highWaterDuration = highWaterDuration
+        self.storeAfterDownload = storeAfterDownload
+        self.isAudioVideoMessage = isAudioVideoMessage
         
         self.taskQueue = ThreadTaskQueue()
         
@@ -139,13 +151,13 @@ public final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
         self.eventSinkBag.remove(index)
     }
     
-    public func generateFrames(until timestamp: Double) {
+    public func generateFrames(until timestamp: Double, types: [MediaTrackFrameType]) {
         assert(self.queue.isCurrent())
         
         if self.requestedFrameGenerationTimestamp == nil || !self.requestedFrameGenerationTimestamp!.isEqual(to: timestamp) {
             self.requestedFrameGenerationTimestamp = timestamp
             
-            self.internalGenerateFrames(until: timestamp)
+            self.internalGenerateFrames(until: timestamp, types: types)
         }
     }
     
@@ -161,7 +173,7 @@ public final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
             })
             self.performWithContext({ context in
                 let _ = currentSemaphore.swap(context.currentSemaphore)
-                let _ = context.takeFrames(until: timestamp)
+                let _ = context.takeFrames(until: timestamp, types: [.audio, .video])
                 subscriber.putCompletion()
             })
             return disposable
@@ -169,7 +181,7 @@ public final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
         |> runOn(self.queue)
     }
     
-    private func internalGenerateFrames(until timestamp: Double) {
+    private func internalGenerateFrames(until timestamp: Double, types: [MediaTrackFrameType]) {
         if self.generatingFrames {
             return
         }
@@ -179,17 +191,22 @@ public final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
         let postbox = self.postbox
         let resourceReference = self.resourceReference
         let tempFilePath = self.tempFilePath
+        let limitedFileRange = self.limitedFileRange
         let queue = self.queue
         let streamable = self.streamable
+        let isSeekable = self.isSeekable
+        let userLocation = self.userLocation
         let video = self.video
         let preferSoftwareDecoding = self.preferSoftwareDecoding
         let fetchAutomatically = self.fetchAutomatically
         let maximumFetchSize = self.maximumFetchSize
+        let storeAfterDownload = self.storeAfterDownload
+        let isAudioVideoMessage = self.isAudioVideoMessage
         
         self.performWithContext { [weak self] context in
-            context.initializeState(postbox: postbox, resourceReference: resourceReference, tempFilePath: tempFilePath, streamable: streamable, video: video, preferSoftwareDecoding: preferSoftwareDecoding, fetchAutomatically: fetchAutomatically, maximumFetchSize: maximumFetchSize)
+            context.initializeState(postbox: postbox, userLocation: userLocation, resourceReference: resourceReference, tempFilePath: tempFilePath, limitedFileRange: limitedFileRange, streamable: streamable, isSeekable: isSeekable, video: video, preferSoftwareDecoding: preferSoftwareDecoding, fetchAutomatically: fetchAutomatically, maximumFetchSize: maximumFetchSize, storeAfterDownload: storeAfterDownload, isAudioVideoMessage: isAudioVideoMessage)
             
-            let (frames, endOfStream) = context.takeFrames(until: timestamp)
+            let (frames, endOfStream) = context.takeFrames(until: timestamp, types: types)
             
             queue.async { [weak self] in
                 if let strongSelf = self {
@@ -203,7 +220,7 @@ public final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
                     }
                     
                     if strongSelf.requestedFrameGenerationTimestamp != nil && !strongSelf.requestedFrameGenerationTimestamp!.isEqual(to: timestamp) {
-                        strongSelf.internalGenerateFrames(until: strongSelf.requestedFrameGenerationTimestamp!)
+                        strongSelf.internalGenerateFrames(until: strongSelf.requestedFrameGenerationTimestamp!, types: types)
                     }
                 }
             }
@@ -228,13 +245,18 @@ public final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
             
             let queue = self.queue
             let postbox = self.postbox
+            let userLocation = self.userLocation
             let resourceReference = self.resourceReference
             let tempFilePath = self.tempFilePath
+            let limitedFileRange = self.limitedFileRange
             let streamable = self.streamable
+            let isSeekable = self.isSeekable
             let video = self.video
             let preferSoftwareDecoding = self.preferSoftwareDecoding
             let fetchAutomatically = self.fetchAutomatically
             let maximumFetchSize = self.maximumFetchSize
+            let storeAfterDownload = self.storeAfterDownload
+            let isAudioVideoMessage = self.isAudioVideoMessage
             
             let currentSemaphore = Atomic<Atomic<DispatchSemaphore?>?>(value: nil)
             
@@ -245,7 +267,7 @@ public final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
             self.performWithContext { [weak self] context in
                 let _ = currentSemaphore.swap(context.currentSemaphore)
                 
-                context.initializeState(postbox: postbox, resourceReference: resourceReference, tempFilePath: tempFilePath, streamable: streamable, video: video, preferSoftwareDecoding: preferSoftwareDecoding, fetchAutomatically: fetchAutomatically, maximumFetchSize: maximumFetchSize)
+                context.initializeState(postbox: postbox, userLocation: userLocation, resourceReference: resourceReference, tempFilePath: tempFilePath, limitedFileRange: limitedFileRange, streamable: streamable, isSeekable: isSeekable, video: video, preferSoftwareDecoding: preferSoftwareDecoding, fetchAutomatically: fetchAutomatically, maximumFetchSize: maximumFetchSize, storeAfterDownload: storeAfterDownload, isAudioVideoMessage: isAudioVideoMessage)
                 
                 context.seek(timestamp: timestamp, completed: { streamDescriptionsAndTimestamp in
                     queue.async {
@@ -258,15 +280,22 @@ public final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
                                         var videoBuffer: MediaTrackFrameBuffer?
                                         
                                         if let audio = streamDescriptions.audio {
-                                            audioBuffer = MediaTrackFrameBuffer(frameSource: strongSelf, decoder: audio.decoder, type: .audio, duration: audio.duration, rotationAngle: 0.0, aspect: 1.0, stallDuration: strongSelf.stallDuration, lowWaterDuration: strongSelf.lowWaterDuration, highWaterDuration: strongSelf.highWaterDuration)
+                                            audioBuffer = MediaTrackFrameBuffer(frameSource: strongSelf, decoder: audio.decoder, type: .audio, startTime: audio.startTime, duration: audio.duration, rotationAngle: 0.0, aspect: 1.0, stallDuration: strongSelf.stallDuration, lowWaterDuration: strongSelf.lowWaterDuration, highWaterDuration: strongSelf.highWaterDuration)
                                         }
                                         
                                         var extraDecodedVideoFrames: [MediaTrackFrame] = []
                                         if let video = streamDescriptions.video {
-                                            videoBuffer = MediaTrackFrameBuffer(frameSource: strongSelf, decoder: video.decoder, type: .video, duration: video.duration, rotationAngle: video.rotationAngle, aspect: video.aspect, stallDuration: strongSelf.stallDuration, lowWaterDuration: strongSelf.lowWaterDuration, highWaterDuration: strongSelf.highWaterDuration)
+                                            videoBuffer = MediaTrackFrameBuffer(frameSource: strongSelf, decoder: video.decoder, type: .video, startTime: video.startTime, duration: video.duration, rotationAngle: video.rotationAngle, aspect: video.aspect, stallDuration: strongSelf.stallDuration, lowWaterDuration: strongSelf.lowWaterDuration, highWaterDuration: strongSelf.highWaterDuration)
                                             for videoFrame in streamDescriptions.extraVideoFrames {
-                                                if let decodedFrame = video.decoder.decode(frame: videoFrame) {
+                                                if !video.decoder.send(frame: videoFrame) {
+                                                    break
+                                                }
+                                            }
+                                            while true {
+                                                if let decodedFrame = video.decoder.decode() {
                                                     extraDecodedVideoFrames.append(decodedFrame)
+                                                } else {
+                                                    break
                                                 }
                                             }
                                         }
@@ -282,6 +311,9 @@ public final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
                                 let _ = currentSemaphore.swap(nil)
                                 subscriber.putError(.generic)
                             }
+                        } else {
+                            let _ = currentSemaphore.swap(nil)
+                            subscriber.putError(.generic)
                         }
                     }
                 })

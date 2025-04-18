@@ -1,0 +1,4 @@
+mode         = .sse41
+extra_cflags = -msse4.1 -DSKCMS_NO_RUNTIME_CPU_DETECTION
+include ninja/clang
+

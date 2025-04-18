@@ -1,6 +1,6 @@
 import Foundation
 import CoreMedia
-import FFMpeg
+import FFMpegBinding
 
 public enum MediaTrackFrameType {
     case video
@@ -22,5 +22,9 @@ public final class MediaTrackDecodableFrame {
         self.duration = duration
         
         self.packet = packet
+    }
+    
+    public func copyPacketData() -> Data {
+        return Data(bytes: self.packet.data, count: Int(self.packet.size))
     }
 }

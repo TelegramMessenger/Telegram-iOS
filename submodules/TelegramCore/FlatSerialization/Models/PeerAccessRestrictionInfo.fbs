@@ -1,0 +1,11 @@
+namespace TelegramCore;
+
+table RestrictionRule {
+    platform:string (id: 0, required);
+    reason:string (id: 1, required);
+    text:string (id: 2, required);
+}
+
+table PeerAccessRestrictionInfo {
+    rules:[RestrictionRule] (id: 0, required);
+}

@@ -1,0 +1,14 @@
+{
+	"bundle_id": "org.{! a random string !}.Telegram",
+	"api_id": "{! get one at https://my.telegram.org/apps !}",
+	"api_hash": "{! get one at https://my.telegram.org/apps !}",
+	"team_id": "{! check README.md !}",
+	"app_center_id": "0",
+	"is_internal_build": "true",
+	"is_appstore_build": "false",
+	"appstore_id": "0",
+	"app_specific_url_scheme": "tg",
+	"premium_iap_product_id": "",
+	"enable_siri": false,
+	"enable_icloud": false
+}

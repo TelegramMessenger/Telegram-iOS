@@ -1,0 +1,47 @@
+builddir = out
+
+subninja ninja/clang
+subninja ninja/clang.O0
+subninja ninja/clang.sse2
+subninja ninja/clang.sse41
+subninja ninja/clang.avx512
+subninja ninja/clang.lsan
+subninja ninja/clang.m32
+subninja ninja/clang.m32-O0
+subninja ninja/clang.msan
+subninja ninja/clang.native
+subninja ninja/clang.portable
+subninja ninja/clang.tiny
+subninja ninja/clang.xsan
+subninja ninja/clang.xsan-portable
+
+subninja ninja/gcc
+subninja ninja/gcc.O0
+subninja ninja/gcc.m32
+subninja ninja/gcc.m32-O0
+subninja ninja/gcc.native
+subninja ninja/gcc.portable
+subninja ninja/gcc.tiny
+subninja ninja/gcc.xsan
+
+subninja ninja/android
+subninja ninja/android.fp16
+subninja ninja/android.nofp16
+subninja ninja/android.lsan
+subninja ninja/android.portable
+subninja ninja/android.tiny
+
+subninja ninja/android-arm
+subninja ninja/android-arm.lsan
+subninja ninja/android-arm.neon-vfpv4
+subninja ninja/android-arm.neon-vfpv4-O3
+subninja ninja/android-arm.portable
+subninja ninja/android-arm.tiny
+subninja ninja/android-arm.vfpv2
+
+subninja ninja/ios
+subninja ninja/ios.portable
+subninja ninja/ios.tiny
+subninja ninja/ios.xsan
+
+subninja ninja/emscripten

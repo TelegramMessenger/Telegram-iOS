@@ -1,0 +1,18 @@
+namespace TelegramCore;
+
+table TelegramPeerAccessHash_Personal {
+    accessHash:int64 (id: 0);
+}
+
+table TelegramPeerAccessHash_GenericPublic {
+    accessHash:int64 (id: 0);
+}
+
+union TelegramPeerAccessHash_Value {
+    TelegramPeerAccessHash_Personal,
+    TelegramPeerAccessHash_GenericPublic
+}
+
+table TelegramPeerAccessHash {
+    value:TelegramPeerAccessHash_Value (id: 1, required);
+}

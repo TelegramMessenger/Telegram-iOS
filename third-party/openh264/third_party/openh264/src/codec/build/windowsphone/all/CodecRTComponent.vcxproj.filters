@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Encoder">
+      <UniqueIdentifier>{c79b8670-dc32-4fcc-9e17-780c1ba6e72e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Decoder">
+      <UniqueIdentifier>{798a0155-92f2-4321-9d5f-47ddb62db8c7}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="CodecRTComponent.cpp" />
+    <ClCompile Include="..\..\..\console\enc\src\welsenc.cpp">
+      <Filter>Encoder</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\console\common\src\read_config.cpp" />
+    <ClCompile Include="..\..\..\console\dec\src\d3d9_utils.cpp">
+      <Filter>Decoder</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\console\dec\src\h264dec.cpp">
+      <Filter>Decoder</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="CodecRTComponent.h" />
+    <ClInclude Include="..\..\..\console\common\inc\read_config.h" />
+  </ItemGroup>
+</Project>

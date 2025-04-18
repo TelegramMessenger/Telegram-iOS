@@ -11,7 +11,13 @@ import AddressBook
 import UserNotifications
 import CoreTelephony
 import TelegramPresentationData
-import LegacyComponents
+import AccountContext
+
+public enum DeviceAccessCameraSubject {
+    case video
+    case videoCall
+    case qrCode
+}
 
 public enum DeviceAccessMicrophoneSubject {
     case audio
@@ -23,16 +29,18 @@ public enum DeviceAccessMediaLibrarySubject {
     case send
     case save
     case wallpaper
+    case qrCode
 }
 
 public enum DeviceAccessLocationSubject {
     case send
     case live
     case tracking
+    case weather
 }
 
 public enum DeviceAccessSubject {
-    case camera
+    case camera(DeviceAccessCameraSubject)
     case microphone(DeviceAccessMicrophoneSubject)
     case mediaLibrary(DeviceAccessMediaLibrarySubject)
     case location(DeviceAccessLocationSubject)
@@ -40,14 +48,6 @@ public enum DeviceAccessSubject {
     case notifications
     case siri
     case cellularData
-}
-
-public enum AccessType {
-    case notDetermined
-    case allowed
-    case denied
-    case restricted
-    case unreachable
 }
 
 private let cachedMediaLibraryAccessStatus = Atomic<Bool?>(value: nil)
@@ -83,10 +83,24 @@ public final class DeviceAccess {
         return self.locationPromise.get()
     }
     
+    private static let cameraPromise = Promise<Bool?>(nil)
+    static var camera: Signal<Bool?, NoError> {
+        return self.cameraPromise.get()
+    }
+    
+    private static let microphonePromise = Promise<Bool?>(nil)
+    static var microphone: Signal<Bool?, NoError> {
+        return self.microphonePromise.get()
+    }
+    
     public static func isMicrophoneAccessAuthorized() -> Bool? {
         return AVAudioSession.sharedInstance().recordPermission == .granted
     }
     
+    public static func isCameraAccessAuthorized() -> Bool {
+        return AVCaptureDevice.authorizationStatus(for: .video) == .authorized
+    }
+        
     public static func authorizationStatus(applicationInForeground: Signal<Bool, NoError>? = nil, siriAuthorization: (() -> AccessType)? = nil, subject: DeviceAccessSubject) -> Signal<AccessType, NoError> {
         switch subject {
             case .notifications:
@@ -183,7 +197,7 @@ public final class DeviceAccess {
                                 case .notRestricted:
                                     return .allowed
                                 default:
-                                    return nil
+                                    return .allowed
                             }
                         }
                         let cellState = CTCellularData.init()
@@ -196,7 +210,7 @@ public final class DeviceAccess {
                             }
                         }
                     } else {
-                        subscriber.putNext(.notDetermined)
+                        subscriber.putNext(.allowed)
                         subscriber.putCompletion()
                     }
                     return EmptyDisposable
@@ -230,6 +244,8 @@ public final class DeviceAccess {
                             subscriber.putNext(.denied)
                         case .notDetermined:
                             subscriber.putNext(.notDetermined)
+                        @unknown default:
+                            fatalError()
                     }
                     subscriber.putCompletion()
                     return EmptyDisposable
@@ -243,39 +259,121 @@ public final class DeviceAccess {
                         }
                     }
                 )
+            case .camera:
+                return Signal { subscriber in
+                    let status = AVCaptureDevice.authorizationStatus(for: .video)
+                    switch status {
+                    case .authorized:
+                        subscriber.putNext(.allowed)
+                    case .denied, .restricted:
+                        subscriber.putNext(.denied)
+                    case .notDetermined:
+                        subscriber.putNext(.notDetermined)
+                    @unknown default:
+                        fatalError()
+                    }
+                    subscriber.putCompletion()
+                    return EmptyDisposable
+                }
+                |> then(self.camera
+                    |> mapToSignal { authorized -> Signal<AccessType, NoError> in
+                        if let authorized = authorized {
+                            return .single(authorized ? .allowed : .denied)
+                        } else {
+                            return .complete()
+                        }
+                    }
+                )
+            case .microphone:
+                return Signal { subscriber in
+                    let status = AVCaptureDevice.authorizationStatus(for: .audio)
+                    switch status {
+                    case .authorized:
+                        subscriber.putNext(.allowed)
+                    case .denied, .restricted:
+                        subscriber.putNext(.denied)
+                    case .notDetermined:
+                        subscriber.putNext(.notDetermined)
+                    @unknown default:
+                        fatalError()
+                    }
+                    subscriber.putCompletion()
+                    return EmptyDisposable
+                }
+                |> then(self.microphone
+                    |> mapToSignal { authorized -> Signal<AccessType, NoError> in
+                        if let authorized = authorized {
+                            return .single(authorized ? .allowed : .denied)
+                        } else {
+                            return .complete()
+                        }
+                    }
+                )
             default:
                 return .single(.notDetermined)
         }
     }
     
-    public static func authorizeAccess(to subject: DeviceAccessSubject, registerForNotifications: ((@escaping (Bool) -> Void) -> Void)? = nil, requestSiriAuthorization: ((@escaping (Bool) -> Void) -> Void)? = nil, presentationData: PresentationData? = nil, present: @escaping (ViewController, Any?) -> Void = { _, _ in }, openSettings: @escaping () -> Void = { }, displayNotificationFromBackground: @escaping (String) -> Void = { _ in }, _ completion: @escaping (Bool) -> Void = { _ in }) {
+    public static func authorizeAccess(
+        to subject: DeviceAccessSubject,
+        onlyCheck: Bool = false,
+        registerForNotifications: ((@escaping (Bool) -> Void) -> Void)? = nil,
+        requestSiriAuthorization: ((@escaping (Bool) -> Void) -> Void)? = nil,
+        locationManager: LocationManager? = nil,
+        presentationData: PresentationData? = nil,
+        present: @escaping (ViewController, Any?) -> Void = { _, _ in },
+        openSettings: @escaping () -> Void = { },
+        displayNotificationFromBackground: @escaping (String) -> Void = { _ in },
+        _ completion: @escaping (Bool) -> Void = { _ in }) {
             switch subject {
-                case .camera:
-                    let status = PGCamera.cameraAuthorizationStatus()
-                    if status == PGCameraAuthorizationStatusNotDetermined {
-                        AVCaptureDevice.requestAccess(for: AVMediaType.video) { response in
-                            Queue.mainQueue().async {
-                                completion(response)
-                                if !response, let presentationData = presentationData {
-                                    let text = presentationData.strings.AccessDenied_Camera
-                                    present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
-                                        openSettings()
-                                    })]), nil)
+                case let .camera(cameraSubject):
+                    let status = AVCaptureDevice.authorizationStatus(for: .video)
+                    if case .notDetermined = status {
+                        if !onlyCheck {
+                            AVCaptureDevice.requestAccess(for: AVMediaType.video) { response in
+                                Queue.mainQueue().async {
+                                    completion(response)
+                                    self.cameraPromise.set(.single(response))
+                                    if !response, let presentationData = presentationData {
+                                        let text: String
+                                        switch cameraSubject {
+                                            case .video:
+                                                text = presentationData.strings.AccessDenied_Camera
+                                            case .videoCall:
+                                                text = presentationData.strings.AccessDenied_VideoCallCamera
+                                            case .qrCode:
+                                                text = presentationData.strings.AccessDenied_QrCamera
+                                        }
+                                        present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
+                                            openSettings()
+                                        })]), nil)
+                                    }
                                 }
                             }
-                        }
-                    } else if status == PGCameraAuthorizationStatusRestricted || status == PGCameraAuthorizationStatusDenied, let presentationData = presentationData {
-                        let text: String
-                        if status == PGCameraAuthorizationStatusRestricted {
-                            text = presentationData.strings.AccessDenied_CameraRestricted
                         } else {
-                            text = presentationData.strings.AccessDenied_Camera
+                            completion(true)
                         }
+                    } else if [.restricted, .denied].contains(status) {
                         completion(false)
-                        present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
-                            openSettings()
-                        })]), nil)
-                    } else if status == PGCameraAuthorizationStatusAuthorized {
+                        if let presentationData = presentationData {
+                            let text: String
+                            if case .restricted = status {
+                                text = presentationData.strings.AccessDenied_CameraRestricted
+                            } else {
+                                switch cameraSubject {
+                                    case .video:
+                                        text = presentationData.strings.AccessDenied_Camera
+                                    case .videoCall:
+                                        text = presentationData.strings.AccessDenied_VideoCallCamera
+                                    case .qrCode:
+                                        text = presentationData.strings.AccessDenied_QrCamera
+                                }
+                            }
+                            present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
+                                openSettings()
+                            })]), nil)
+                        }
+                    } else if case .authorized = status {
                         completion(true)
                     } else {
                         assertionFailure()
@@ -286,25 +384,28 @@ public final class DeviceAccess {
                         completion(true)
                     } else {
                         AVAudioSession.sharedInstance().requestRecordPermission({ granted in
-                            if granted {
-                                completion(true)
-                            } else if let presentationData = presentationData {
-                                completion(false)
-                                let text: String
-                                switch microphoneSubject {
-                                    case .audio:
-                                        text = presentationData.strings.AccessDenied_VoiceMicrophone
-                                    case .video:
-                                        text = presentationData.strings.AccessDenied_VideoMicrophone
-                                    case .voiceCall:
-                                        text = presentationData.strings.AccessDenied_CallMicrophone
+                            Queue.mainQueue().async {
+                                if granted {
+                                    completion(true)
+                                } else if let presentationData = presentationData {
+                                    completion(false)
+                                    let text: String
+                                    switch microphoneSubject {
+                                        case .audio:
+                                            text = presentationData.strings.AccessDenied_VoiceMicrophone
+                                        case .video:
+                                            text = presentationData.strings.AccessDenied_VideoMicrophone
+                                        case .voiceCall:
+                                            text = presentationData.strings.AccessDenied_CallMicrophone
+                                    }
+                                    present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
+                                        openSettings()
+                                    })]), nil)
+                                    if case .voiceCall = microphoneSubject {
+                                        displayNotificationFromBackground(text)
+                                    }
                                 }
-                                present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
-                                    openSettings()
-                                })]), nil)
-                                if case .voiceCall = microphoneSubject {
-                                    displayNotificationFromBackground(text)
-                                }
+                                self.microphonePromise.set(.single(granted))
                             }
                         })
                     }
@@ -323,8 +424,10 @@ public final class DeviceAccess {
                                         text = presentationData.strings.AccessDenied_SaveMedia
                                     case .wallpaper:
                                         text = presentationData.strings.AccessDenied_Wallpapers
+                                    case .qrCode:
+                                        text = presentationData.strings.AccessDenied_QrCode
                                 }
-                                present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
+                                present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
                                     openSettings()
                                 })]), nil)
                             }
@@ -338,8 +441,10 @@ public final class DeviceAccess {
                             switch status {
                                 case .restricted, .denied, .notDetermined:
                                     value = false
-                                case .authorized:
+                                case .authorized, .limited:
                                     value = true
+                                @unknown default:
+                                    fatalError()
                             }
                             let _ = cachedMediaLibraryAccessStatus.swap(value)
                             continueWithValue(value)
@@ -347,18 +452,38 @@ public final class DeviceAccess {
                     }
                 case let .location(locationSubject):
                     let status = CLLocationManager.authorizationStatus()
+                    let hasPreciseLocation: Bool
+                    if #available(iOS 14.0, *) {
+                        if case .fullAccuracy = CLLocationManager().accuracyAuthorization {
+                            hasPreciseLocation = true
+                        } else {
+                            hasPreciseLocation = false
+                        }
+                    } else {
+                        hasPreciseLocation = true
+                    }
                     switch status {
                         case .authorizedAlways:
-                            completion(true)
+                            if case .live = locationSubject, !hasPreciseLocation {
+                                completion(false)
+                                if let presentationData = presentationData {
+                                    let text = presentationData.strings.AccessDenied_LocationPreciseDenied
+                                    present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
+                                        openSettings()
+                                    })]), nil)
+                                }
+                            } else {
+                                completion(true)
+                            }
                         case .authorizedWhenInUse:
                             switch locationSubject {
-                                case .send, .tracking:
+                                case .send, .tracking, .weather:
                                     completion(true)
                                 case .live:
                                     completion(false)
                                     if let presentationData = presentationData {
                                         let text = presentationData.strings.AccessDenied_LocationAlwaysDenied
-                                        present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
+                                        present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
                                             openSettings()
                                         })]), nil)
                                     }
@@ -373,17 +498,30 @@ public final class DeviceAccess {
                                             text = presentationData.strings.AccessDenied_LocationDenied
                                         case .tracking:
                                             text = presentationData.strings.AccessDenied_LocationTracking
+                                        case .weather:
+                                            text = presentationData.strings.AccessDenied_LocationWeather
                                     }
                                 } else {
                                     text = presentationData.strings.AccessDenied_LocationDisabled
                                 }
-                                present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
+                                present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
                                     openSettings()
                                 })]), nil)
                             }
                         case .notDetermined:
-                            completion(true)
-                    }
+                            switch locationSubject {
+                                case .send, .tracking, .weather:
+                                    locationManager?.requestWhenInUseAuthorization(completion: { status in
+                                        completion(status == .authorizedWhenInUse || status == .authorizedAlways)
+                                    })
+                                case .live:
+                                    locationManager?.requestAlwaysAuthorization(completion: { status in
+                                        completion(status == .authorizedAlways)
+                                    })
+                            }
+                        @unknown default:
+                            fatalError()
+                }
                 case .contacts:
                     let _ = (self.contactsPromise.get()
                     |> take(1)
@@ -446,8 +584,12 @@ public final class DeviceAccess {
                             completion(result)
                         }
                     }
-                default:
-                    break
+                case .cellularData:
+                    if let presentationData = presentationData {
+                        present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.Permissions_CellularDataTitle_v0, text: presentationData.strings.Permissions_CellularDataText_v0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
+                            openSettings()
+                        })]), nil)
+                    }
             }
     }
 }

@@ -1,0 +1,27 @@
+cl       = cl.exe
+cflags   = /W4 /wd"4200" /wd"4201" /wd"4204" /wd"4221"
+out      = out/msvs$mode
+exe      = .exe
+builddir = $out
+
+rule run
+    command = cmd /c ""$in" > "$out""
+    description = run $in
+
+rule compile_c
+    command = $cl /c /showIncludes /nologo /Zi /WX /MT /Fo"$out" /Fd"$out.pdb" $
+              $cflags $extra_cflags $in
+    deps = msvc
+    description = compile $out
+
+rule compile_cc
+    command = $cl /c /showIncludes /nologo /Zi /WX /MT /Fo"$out" /Fd"$out.pdb" $
+              $cflags $extra_cflags $in
+    deps = msvc
+    description = compile $out
+
+rule link
+    command = link.exe /nologo /DEBUG $extra_ldflags $in /OUT:"$out" /PDB:"$out.pdb"
+    description = link $out
+
+include ninja/targets

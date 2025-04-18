@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "GalleryShare.svg",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

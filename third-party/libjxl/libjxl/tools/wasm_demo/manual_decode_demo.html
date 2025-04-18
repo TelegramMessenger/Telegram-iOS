@@ -1,0 +1,340 @@
+<html>
+<head>
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <style>
+#log p {
+  margin: 0;
+}
+  </style>
+</head>
+<body>
+<div id="log" style="padding:2px; border: solid 1px #000; background-color: #ccc; margin:2px; height: 8em; font-family: monospace; overflow-y: auto; font-size: 8px;"></div>
+<script>
+// WASM module.
+let jxlModule = null;
+// Flag; if true, then HDR color space / 16 bit output is supported.
+let hdrCanvas = false;
+
+// Add message to "console".
+let addMessage = (text, color) => {
+  let log = document.getElementById('log');
+  let message = document.createElement('p');
+  message.style = 'color: ' + color + ';';
+  message.textContent = text;
+  log.append(message);
+  log.scrollTop = log.scrollHeight;
+}
+
+// Callback from WASM module when it becomes available.
+let onLoadJxlModule = (module) => {
+  jxlModule = module;
+  addMessage('WASM module loaded', 'black');
+  onJxlModuleReady();
+};
+
+// Check if multi-threading is supported (i.e. SharedArrayBuffer is allowed).
+let probeMutlithreading = () => {
+  try {
+    new SharedArrayBuffer();
+    return true;
+  } catch (ex) {
+    addMessage('Installing Service Worker, please wait...', 'orange');
+    return false;
+  }
+};
+
+// Check if HDR features are enabled.
+let probeHdr = () => {
+  addMessage('Probing HDR features', 'black');
+  try {
+    let tmpCanvas = document.createElement('canvas');
+    tmpCanvas.width = 1;
+    tmpCanvas.height = 1;
+    let ctx = tmpCanvas.getContext('2d', {colorSpace: 'rec2100-pq', pixelFormat: 'float16'});
+    // make it fail on firefox...
+    ctx.getContextAttributes();
+    addMessage('HDR canvas supported', 'green');
+    return true;
+  } catch (ex) {
+    addMessage(ex, 'red');
+    addMessage('Are Blink experiments enabled? about://flags/#enable-experimental-web-platform-features', 'blue');
+    return false;
+  }
+};
+
+// "main" method executed after page is loaded; all scripts are "synchronous" elements,
+// so it is guaranted that script elements are loaded and executed.
+let onDomContentLoaded = () => {
+  if (!probeMutlithreading()) return;
+  hdrCanvas = probeHdr();
+  JxlDecoderModule().then(onLoadJxlModule);
+};
+
+// Pass next chunk to decoder and interprets result.
+let processInput = (img, chunkLen) => {
+  let response = {
+    wantFlush: false,
+    copyPixels: false,
+    error: false,
+  }
+  do {
+    let t0 = performance.now();
+    let result = jxlModule._jxlProcessInput(img.decoder, img.buffer, chunkLen);
+    let t1 = performance.now();
+    let tProcessing = t1 - t0;
+    // addMessage('Processed chunk in ' + tProcessing + 'ms', 'blue');
+    img.totalProcessing += tProcessing;
+    // addMessage('Process result: ' + result, 'green');
+    if (result === 2) {
+      addMessage('Needs more input', 'gray');
+    } else if (result === 0) {
+      // addMessage('Image ready', 'gray');
+      response.wantFlush = false;
+      response.copyPixels = true;
+    } else if (result === 1) {
+      if (img.wantProgressive) {
+        addMessage('DC ready', 'gray');
+        response.wantFlush = true;
+        response.copyPixels = true;
+      } else {
+        // addMessage('Skipping DC flush', 'gray');
+        chunkLen = 0;
+        continue;
+      }
+    } else {
+      addMessage('Processing error', 'red');
+      img.broken = true;
+      response.error = true;
+      break;
+    }
+    break;
+  } while (true);
+  return response;
+}
+
+// Decode chunk and present results (dump to canvas).
+let processChunk = (img, chunkLen) => {
+  let result = processInput(img, chunkLen);
+  if (result.error) return;
+
+  if (result.wantFlush) {
+    let t2 = performance.now();
+    let flushResult = jxlModule._jxlFlush(img.decoder);
+    let t3 = performance.now();
+    let tFlushing = t3 - t2;
+    addMessage('Flush result: ' + flushResult, 'gray');
+    img.totalFlushing += tFlushing;
+  }
+
+  if (!result.copyPixels) return;
+
+  let w = jxlModule.HEAP32[img.decoder >> 2];
+  let h = jxlModule.HEAP32[(img.decoder + 4) >> 2];
+  let pixelData = jxlModule.HEAP32[(img.decoder + 8) >> 2];
+  if (!img.canvas) {
+    img.canvas = document.createElement('canvas');
+    img.canvas.width = w;
+    img.canvas.height = h;
+    img.canvas.style = 'width:100%';
+    // TODO: postpone until really flushed
+    document.body.appendChild(img.canvas);
+    let ctxOptions = {colorSpace: img.colorSpace, pixelFormat: 'float16'};
+    let pixelOptions = {colorSpace: img.colorSpace, storageFormat: 'uint16'};
+    if (img.wantSdr) {
+      ctxOptions = null;
+      pixelOptions = null;
+    }
+    img.canvasCtx = img.canvas.getContext('2d', ctxOptions);
+    img.pixels = img.canvasCtx.getImageData(0, 0, w, h, pixelOptions);
+  }
+
+  let src = null;
+  let start = pixelData;
+  if (img.wantSdr) {
+    src = new Uint8Array(jxlModule.HEAP8.buffer);
+  } else {
+    src = new Uint16Array(jxlModule.HEAP8.buffer);
+    start = start >> 1;
+  }
+  let end = start + w * h * 4;
+  img.pixels.data.set(src.slice(start, end));
+  img.canvasCtx.putImageData(img.pixels, 0, 0);
+};
+
+const BUF_LEN = 150 * 1024;
+
+// Image data cache for benchmarking.
+let fullImage = new Uint8Array(0);
+
+// Callback for fetch data.
+let onChunk = (img, chunk) => {
+  if (chunk.done) {
+    addMessage('Read finished | total processing: ' + img.totalProcessing.toFixed(1) + 'ms | total flushing ' + img.totalFlushing.toFixed(1) + 'ms', 'black');
+    cleanup(img);
+    img.onComplete(img);
+    return;
+  }
+  if (img.broken) return;
+
+  if (!img.decoder) {
+    let decoder = jxlModule._jxlCreateInstance(img.wantSdr, img.displayNits);
+    if (decoder < 4) {
+      img.broken = true;
+      cleanup(img);
+      addMessage('Failed to create decoder instance', 'red');
+      return;
+    }
+    img.decoder = decoder;
+    img.buffer = jxlModule._malloc(BUF_LEN);
+  }
+
+  // addMessage('Received chunk: ' + chunk.value.length, 'gray');
+  let newFullImage = new Uint8Array(fullImage.length + chunk.value.length);
+  newFullImage.set(fullImage);
+  newFullImage.set(chunk.value, fullImage.length);
+  fullImage = newFullImage;
+
+  let offset = 0;
+  while (offset < chunk.value.length) {
+    let delta = chunk.value.length - offset;
+    if (delta > BUF_LEN) delta = BUF_LEN;
+    jxlModule.HEAP8.set(chunk.value.slice(offset, offset + delta), img.buffer);
+    offset += delta;
+    processChunk(img, delta);
+    if (img.broken) {
+      return;
+    }
+  }
+
+  // Break the promise chain.
+  setTimeout(img.proceed, 0);
+};
+
+// Read next chunk; NB: used to break promise chain.
+let proceed = (img) => {
+  img.reader.read().then(img.onChunk, img.onReadError);
+};
+
+// Release (in-module) memory resources.
+let cleanup = (img) => {
+  if (img.decoder) {
+    jxlModule._jxlDestroyInstance(img.decoder);
+    img.decoder = 0;
+  }
+  if (img.buffer) {
+    jxlModule._free(img.buffer);
+    img.buffer = 0;
+  }
+};
+
+// Report error and cleanup.
+let onReadError = (img, error) => {
+  img.broken = true;
+  cleanup(img);
+  addMessage('Read failed: ' + error, 'red');
+};
+
+// On successful fetch start.
+let onResponse = (img, response) => {
+  if (!response.ok) {
+    addMessage('Fetch failed: ' + response.status + ' (' + response.statusText + ')');
+    return;
+  }
+  // Alas, not supported by fetch:
+  // let reader = response.body.getReader({mode: "byob"});
+  img.reader = response.body.getReader();
+
+  img.proceed();
+};
+
+// On image decoding completion.
+let onComplete = (img) => {
+  if (!img.runBenchmark) return;
+
+  let buffer = jxlModule._malloc(fullImage.length);
+  jxlModule.HEAP8.set(fullImage, buffer);
+  img.buffer = buffer;
+  let results = [];
+
+  for (let i = 0; i < img.runBenchmark; ++i) {
+    img.totalProcessing = 0;
+    img.decoder = jxlModule._jxlCreateInstance(img.wantSdr, img.displayNits);
+    processChunk(img, fullImage.length);
+    jxlModule._jxlDestroyInstance(img.decoder);
+    results.push(img.totalProcessing);
+    //addMessage('Decoding time: ' + img.totalProcessing + 'ms', 'black');
+  }
+
+  results.sort();
+  addMessage('Min decoding time: ' + results[0].toFixed(3) + 'ms', 'black');
+  addMessage('Median decoding time: ' + results[results.length >> 1].toFixed(3) + 'ms', 'black');
+  addMessage('Max decoding time: ' + results[results.length - 1].toFixed(3) + 'ms', 'black');
+
+  jxlModule._free(buffer);
+};
+
+// Fill cookie object template.
+let makeImg = () => {
+  return {
+    name: '',
+    colorSpace: 'rec2100-pq',
+    wantSdr: false,
+    displayNits: 100,
+    broken: false,
+    decoder: 0,
+    canvas: null,
+    canvasCtx: null,
+    pixels: null,
+    buffer: 0,
+    wantProgressive: false,
+    onlyDecode: false,
+    totalProcessing: 0,
+    totalFlushing: 0,
+    runBenchmark: 0,
+    onChunk: () => {},
+    onReadError: () => {},
+    proceed: () => {},
+    onComplete: () => {},
+  };
+}
+
+// Parse URL query and run image decoding / benchmarking.
+let onJxlModuleReady = () => {
+  let params = (new URL(document.location)).searchParams;
+  const images = ['image00.jxl', 'image01.jxl'];
+  let imgIdx = (params.get('img') | 0) % images.length;
+  let imgName = images[imgIdx];
+
+  let colorSpace = params.get('colorSpace') || 'srgb';
+  let wantSdr = params.get('wantSdr') == 'true';
+  let displayNits = parseInt(params.get('displayNits') || '0');
+  let runBenchmark = parseInt(params.get('runBenchmark') || '0');
+
+  if (!hdrCanvas) {
+    colorSpace = 'srgb-linear';
+    displayNits = displayNits || 100;
+    wantSdr = true;
+  }
+
+  addMessage('Color-space: "' + colorSpace + '", tone-map to SDR: ' + wantSdr + ', displayNits: ' + (displayNits || 'n/a'), 'black');
+
+  let img = makeImg();
+  img.name = imgName;
+  img.colorSpace = colorSpace;
+  img.wantSdr = wantSdr;
+  img.displayNits = displayNits;
+  img.onChunk = onChunk.bind(null, img);
+  img.onReadError = onReadError.bind(null, img);
+  img.proceed = proceed.bind(null, img);
+  img.onComplete = onComplete.bind(null, img);
+  img.runBenchmark = runBenchmark;
+
+  fetch(new Request(imgName, {cache: "no-store"})).then(onResponse.bind(null, img));
+};
+
+document.addEventListener('DOMContentLoaded', onDomContentLoaded);
+</script>
+
+<script src="jxl_decoder.js"></script>
+</body>
+</html>

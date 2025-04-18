@@ -37,7 +37,7 @@ func serializeString(_ value: String, buffer: Buffer, boxed: Bool) {
     let stringBuffer = Buffer()
     let data = value.data(using: .utf8, allowLossyConversion: true) ?? Data()
     data.withUnsafeBytes { bytes in
-        stringBuffer.appendBytes(bytes, length: UInt(data.count))
+        stringBuffer.appendBytes(bytes.baseAddress!, length: UInt(bytes.count))
     }
     serializeBytes(stringBuffer, buffer: buffer, boxed: boxed)
 }
@@ -157,7 +157,7 @@ public func parseBytes(_ reader: BufferReader) -> Buffer? {
 
 func parseString(_ reader: BufferReader) -> String? {
     if let buffer = parseBytes(reader) {
-        return (NSString(data: buffer.makeData() as Data, encoding: String.Encoding.utf8.rawValue) as? String) ?? ""
+        return String(data: buffer.makeData(), encoding: .utf8) ?? ""
     }
     return nil
 }
@@ -197,7 +197,7 @@ public class Buffer: CustomStringConvertible {
         
         if let data = data {
             data.withUnsafeBytes { bytes in
-                self.appendBytes(bytes, length: UInt(data.count))
+                self.appendBytes(bytes.baseAddress!, length: UInt(bytes.count))
             }
         }
     }

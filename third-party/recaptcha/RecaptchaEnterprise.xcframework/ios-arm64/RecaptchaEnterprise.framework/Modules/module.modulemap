@@ -1,0 +1,4 @@
+framework module RecaptchaEnterprise {
+  header "RecaptchaEnterprise.h"
+  requires objc
+}

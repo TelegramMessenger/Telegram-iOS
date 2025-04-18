@@ -1,0 +1,23 @@
+include "MediaId.fbs";
+include "TelegramMediaFile.fbs";
+include "TelegramMediaImage.fbs";
+namespace TelegramCore;
+
+union Media_Value {
+    Media_TelegramMediaFile,
+    Media_TelegramMediaImage
+}
+
+table Media {
+    value:Media_Value (id: 1, required);
+}
+
+table Media_TelegramMediaFile {
+    file:TelegramMediaFile (id: 0, required);
+}
+
+table Media_TelegramMediaImage {
+    image:TelegramMediaImage (id: 0, required);
+}
+
+root_type Media;

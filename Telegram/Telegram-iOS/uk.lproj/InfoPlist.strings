@@ -1,0 +1,12 @@
+/* Localized versions of Info.plist keys */
+
+"NSContactsUsageDescription" = "Telegram завантажуватиме ваші контакти до зашифрованих хмарних серверів,  щоб ви могли зʼєднуватися з друзями на всіх пристроях.";
+"NSLocationWhenInUseUsageDescription" = "Коли ви надсилаєте розташування друзям, Telegram потребує доступу, щоб показати їм мапу.";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "Коли ви захочете поділитися Маячком із друзями у чаті, Telegram потребує фонового доступу до розташування, щоб воно оновлювалося на час трансляції маячка.";
+"NSLocationAlwaysUsageDescription" = "Коли ви захочете поділитися Маячком із друзями у чаті, Telegram потребує фонового доступу до розташування, щоб воно оновлювалося на час трансляції маячка. Також вам це потрібно для надсилання розташувань з Apple Watch.";
+"NSCameraUsageDescription" = "Нам це потрібно, щоб ви могли знімати та ділитися фото й відео.";
+"NSPhotoLibraryUsageDescription" = "Нам це потрібно, щоб ви могли ділитися фото та відео з вашої бібліотеки фото.";
+"NSPhotoLibraryAddUsageDescription" = "Нам це потрібно, щоб ви могли зберігати фото та відео до вашої бібліотеки фото.";
+"NSMicrophoneUsageDescription" = "Нам це потрібно, щоб ви могли записувати та ділитися голосовими повідомленнями та відео зі звуком.";
+"NSSiriUsageDescription" = "Надсилайте повідомлення з Siri.";
+"NSFaceIDUsageDescription" = "Розблоковуйте застосунок із Face ID.";

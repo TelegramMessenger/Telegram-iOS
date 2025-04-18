@@ -1,0 +1,6 @@
+namespace TelegramCore;
+
+struct PeerId {
+    namespace: int32 (id: 0);
+    id: int64 (id: 1);
+}

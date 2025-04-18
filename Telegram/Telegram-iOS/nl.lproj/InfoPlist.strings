@@ -1,0 +1,12 @@
+/* Localized versions of Info.plist keys */
+
+"NSContactsUsageDescription" = "Telegram synchroniseert je contacten continu naar onze zwaar versleutelde Cloud-servers, zodat je contact kunt opnemen met je vrienden vanaf al je apparaten.";
+"NSLocationWhenInUseUsageDescription" = "Als je je locatie met vrienden wilt delen heeft Telegram toegang nodig om ze een kaart te kunnen tonen.";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "Als je ervoor kiest om je huidige locatie te delen met vrienden in een chat heeft Telegram achtergrondtoegang tot je locatie nodig om deze bij te werken tijdens het live-delen.";
+"NSLocationAlwaysUsageDescription" = "Telegram heeft toegang nodig om een kaart aan je vrienden te tonen als je jouw locatie met ze deelt. Je hebt dit ook nodig om locaties te sturen vanaf een Apple Watch.";
+"NSCameraUsageDescription" = "We hebben dit nodig zodat je foto's en video's kunt maken en delen.";
+"NSPhotoLibraryUsageDescription" = "We hebben dit nodig zodat je foto's en video's kunt delen vanuit je fotobibliotheek.";
+"NSPhotoLibraryAddUsageDescription" = "We hebben dit nodig zodat je foto's en video's kunt opslaan in je fotobibliotheek.";
+"NSMicrophoneUsageDescription" = "We hebben dit nodig zodat je spraakberichten en video's met geluid kunt opnemen en delen.";
+"NSSiriUsageDescription" = "Je kunt Siri gebruiken om berichten te sturen";
+"NSFaceIDUsageDescription" = "Je kunt Face ID gebruiken om de app te ontgrendelen.";

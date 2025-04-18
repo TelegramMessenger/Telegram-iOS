@@ -1,0 +1,85 @@
+include "StickerPackReference.fbs";
+
+namespace TelegramCore;
+
+table TelegramMediaFileAttribute_FileName {
+    fileName:string (id: 0, required);
+}
+
+table StickerMaskCoords {
+    n:int32 (id: 0);
+    x:float32 (id: 1); 
+    y:float32 (id: 2);
+    zoom:float32 (id: 3);
+}
+
+table TelegramMediaFileAttribute_Sticker {
+    displayText:string (id: 0, required);
+    packReference:StickerPackReference (id: 1);
+    maskData:StickerMaskCoords (id: 2);
+}
+
+table TelegramMediaFileAttribute_ImageSize {
+    width:int32 (id: 0);
+    height:int32 (id: 1);
+}
+
+table TelegramMediaFileAttribute_Animated {
+}
+
+table TelegramMediaFileAttribute_Video {
+    duration:float32 (id: 0);
+    width:int32 (id: 1);
+    height:int32 (id: 2);
+    flags:int32 (id: 3);
+    preloadSize:int32 (id: 4);
+    coverTime:float32 (id: 5);
+    videoCodec:string (id: 6);
+}
+
+table TelegramMediaFileAttribute_Audio {
+    isVoice:bool (id: 0);
+    duration:int32 (id: 1);
+    title:string (id: 2);
+    performer:string (id: 3);
+    waveform:[ubyte] (id: 4);
+}
+
+table TelegramMediaFileAttribute_HasLinkedStickers {
+}
+
+table TelegramMediaFileAttribute_HintFileIsLarge {
+}
+
+table TelegramMediaFileAttribute_HintIsValidated {
+}
+
+table TelegramMediaFileAttribute_NoPremium {
+}
+
+table TelegramMediaFileAttribute_CustomEmoji {
+    isPremium:bool (id: 0);
+    isSingleColor:bool (id: 1);
+    alt:string (id: 2, required);
+    packReference:StickerPackReference (id: 3);
+}
+
+union TelegramMediaFileAttribute_Value {
+    TelegramMediaFileAttribute_FileName,
+    TelegramMediaFileAttribute_Sticker,
+    TelegramMediaFileAttribute_ImageSize,
+    TelegramMediaFileAttribute_Animated,
+    TelegramMediaFileAttribute_Video,
+    TelegramMediaFileAttribute_Audio,
+    TelegramMediaFileAttribute_HasLinkedStickers,
+    TelegramMediaFileAttribute_HintFileIsLarge,
+    TelegramMediaFileAttribute_HintIsValidated,
+    TelegramMediaFileAttribute_NoPremium,
+    TelegramMediaFileAttribute_CustomEmoji
+}
+
+table TelegramMediaFileAttribute {
+    value:TelegramMediaFileAttribute_Value (id: 1, required);
+}
+
+root_type TelegramMediaFileAttribute;

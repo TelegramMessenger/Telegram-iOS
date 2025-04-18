@@ -1,0 +1,18 @@
+ndk     = ../ndk
+cc      = $ndk/toolchains/llvm/prebuilt/*/bin/armv7a-linux-androideabi24-clang
+cxx     = $ndk/toolchains/llvm/prebuilt/*/bin/armv7a-linux-androideabi24-clang++
+
+cflags  = -fcolor-diagnostics -Weverything -mthumb
+ldflags = -pie -fuse-ld=lld -static-libstdc++
+
+out     = out/android-arm$mode
+
+rule run
+    command = if which adb >/dev/null && adb get-state >/dev/null 2>/dev/null; $
+              then $
+                  adb push --sync profiles /data/local/tmp >/dev/null; $
+                  adb push $in /data/local/tmp/$in >/dev/null; $
+                  adb shell "cd /data/local/tmp; taskset f ./$in" > $out; $
+              else touch $out; fi
+    description = run $in
+include ninja/common

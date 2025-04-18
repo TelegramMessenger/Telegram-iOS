@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "selected_contacts.pdf",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

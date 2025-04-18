@@ -1,0 +1,31 @@
+namespace TelegramCore;
+
+table PeerEmojiStatusContentEmoji {
+    fileId:int64 (id: 0);
+}
+
+table PeerEmojiStatusContentStarGift {
+    id:int64 (id: 0);
+    fileId:int64 (id: 1);
+    title:string (id: 2, required);
+    slug:string (id: 3, required);
+    patternFileId:int64 (id: 4);
+    innerColor:int32 (id: 5);
+    outerColor:int32 (id: 6);
+    patternColor:int32 (id: 7);
+    textColor:int32 (id: 8);
+}
+
+union PeerEmojiStatusContent_Value {
+    PeerEmojiStatusContentEmoji,
+    PeerEmojiStatusContentStarGift
+}
+
+table PeerEmojiStatusContent {
+    value:PeerEmojiStatusContent_Value (id: 1, required);
+}
+
+table PeerEmojiStatus {
+    content:PeerEmojiStatusContent (id: 0, required);
+    expirationDate:int32 (id: 1);
+}

@@ -1,0 +1,5 @@
+mode         = .avx512
+extra_cflags = -march=skylake-avx512
+include ninja/clang
+
+disabled = (uname | grep -q Darwin && sysctl machdep.cpu.leaf7_features | grep -qv AVX512F || grep flags /proc/cpuinfo | grep -vq avx512f)

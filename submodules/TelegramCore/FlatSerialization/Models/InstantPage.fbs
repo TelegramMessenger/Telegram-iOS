@@ -1,0 +1,16 @@
+include "InstantPageBlock.fbs";
+include "MediaId.fbs";
+include "Media.fbs";
+
+namespace TelegramCore;
+
+table InstantPage {
+    blocks:[InstantPageBlock] (id: 0, required);
+    media:[Media] (id: 1, required);
+    isComplete:bool (id: 2);
+    rtl:bool (id: 3);
+    url:string (id: 4, required);
+    views:int32 (id: 5);
+}
+
+root_type InstantPage;

@@ -1,0 +1,5 @@
+//
+// Prefix header for all source files of the 'LittleCMS' target in the 'LittleCMS' project.
+//
+
+#include <Carbon/Carbon.h>

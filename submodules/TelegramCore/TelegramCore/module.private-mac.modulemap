@@ -1,3 +1,0 @@
-module TelegramCoreMac.TelegramCorePrivate {
-    export *
-}
