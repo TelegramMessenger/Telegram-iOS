@@ -653,6 +653,7 @@ public enum ChatListSearchFilter: Equatable {
     case files
     case music
     case voice
+    case instantVideo
     case peer(PeerId, Bool, String, String)
     case date(Int32?, Int32, String)
     case publicPosts
@@ -679,8 +680,10 @@ public enum ChatListSearchFilter: Equatable {
             return 8
         case .voice:
             return 9
-        case .publicPosts:
+        case .instantVideo:
             return 10
+        case .publicPosts:
+            return 11
         case let .peer(peerId, _, _, _):
             return peerId.id._internalGetInt64Value()
         case let .date(_, date, _):
@@ -806,7 +809,7 @@ public protocol MediaEditorScreenResult {
 public protocol TelegramRootControllerInterface: NavigationController {
     @discardableResult
     func openStoryCamera(customTarget: Stories.PendingTarget?, transitionIn: StoryCameraTransitionIn?, transitionedIn: @escaping () -> Void, transitionOut: @escaping (Stories.PendingTarget?, Bool) -> StoryCameraTransitionOut?) -> StoryCameraTransitionInCoordinator?
-    func proceedWithStoryUpload(target: Stories.PendingTarget, result: MediaEditorScreenResult, existingMedia: EngineMedia?, forwardInfo: Stories.PendingForwardInfo?, externalState: MediaEditorTransitionOutExternalState, commit: @escaping (@escaping () -> Void) -> Void)
+    func proceedWithStoryUpload(target: Stories.PendingTarget, results: [MediaEditorScreenResult], existingMedia: EngineMedia?, forwardInfo: Stories.PendingForwardInfo?, externalState: MediaEditorTransitionOutExternalState, commit: @escaping (@escaping () -> Void) -> Void)
     
     func getContactsController() -> ViewController?
     func getChatsController() -> ViewController?
@@ -1133,6 +1136,7 @@ public protocol SharedAccountContext: AnyObject {
     func makeStarsGiftController(context: AccountContext, birthdays: [EnginePeer.Id: TelegramBirthday]?, completion: @escaping (([EnginePeer.Id]) -> Void)) -> ViewController
     func makePremiumGiftController(context: AccountContext, source: PremiumGiftSource, completion: (([EnginePeer.Id]) -> Signal<Never, TransferStarGiftError>)?) -> ViewController
     func makeGiftOptionsController(context: AccountContext, peerId: EnginePeer.Id, premiumOptions: [CachedPremiumGiftOption], hasBirthday: Bool, completion: (() -> Void)?) -> ViewController
+    func makeGiftStoreController(context: AccountContext, peerId: EnginePeer.Id, gift: StarGift.Gift) -> ViewController
     func makePremiumPrivacyControllerController(context: AccountContext, subject: PremiumPrivacySubject, peerId: EnginePeer.Id) -> ViewController
     func makePremiumBoostLevelsController(context: AccountContext, peerId: EnginePeer.Id, subject: BoostSubject, boostStatus: ChannelBoostStatus, myBoostStatus: MyBoostStatus, forceDark: Bool, openStats: (() -> Void)?) -> ViewController
     
@@ -1150,7 +1154,7 @@ public protocol SharedAccountContext: AnyObject {
     
     func makeAvatarMediaPickerScreen(context: AccountContext, getSourceRect: @escaping () -> CGRect?, canDelete: Bool, performDelete: @escaping () -> Void, completion: @escaping (Any?, UIView?, CGRect, UIImage?, Bool, @escaping (Bool?) -> (UIView, CGRect)?, @escaping () -> Void) -> Void, dismissed: @escaping () -> Void) -> ViewController
     
-    func makeStoryMediaPickerScreen(context: AccountContext, isDark: Bool, forCollage: Bool, selectionLimit: Int?, getSourceRect: @escaping () -> CGRect, completion: @escaping (Any, UIView, CGRect, UIImage?, @escaping (Bool?) -> (UIView, CGRect)?, @escaping () -> Void) -> Void, multipleCompletion: @escaping ([Any]) -> Void, dismissed: @escaping () -> Void, groupsPresented: @escaping () -> Void) -> ViewController
+    func makeStoryMediaPickerScreen(context: AccountContext, isDark: Bool, forCollage: Bool, selectionLimit: Int?, getSourceRect: @escaping () -> CGRect, completion: @escaping (Any, UIView, CGRect, UIImage?, @escaping (Bool?) -> (UIView, CGRect)?, @escaping () -> Void) -> Void, multipleCompletion: @escaping ([Any], Bool) -> Void, dismissed: @escaping () -> Void, groupsPresented: @escaping () -> Void) -> ViewController
     
     func makeStickerPickerScreen(context: AccountContext, inputData: Promise<StickerPickerInput>, completion: @escaping (FileMediaReference) -> Void) -> ViewController
     
@@ -1176,6 +1180,7 @@ public protocol SharedAccountContext: AnyObject {
     func makeStarsAmountScreen(context: AccountContext, initialValue: Int64?, completion: @escaping (Int64) -> Void) -> ViewController
     func makeStarsWithdrawalScreen(context: AccountContext, stats: StarsRevenueStats, completion: @escaping (Int64) -> Void) -> ViewController
     func makeStarsWithdrawalScreen(context: AccountContext, completion: @escaping (Int64) -> Void) -> ViewController
+    func makeStarGiftResellScreen(context: AccountContext, update: Bool, completion: @escaping (Int64) -> Void) -> ViewController
     func makeStarsGiftScreen(context: AccountContext, message: EngineMessage) -> ViewController
     func makeStarsGiveawayBoostScreen(context: AccountContext, peerId: EnginePeer.Id, boost: ChannelBoostersContext.State.Boost) -> ViewController
     func makeStarsIntroScreen(context: AccountContext) -> ViewController
@@ -1445,7 +1450,10 @@ public struct StarsSubscriptionConfiguration {
             usdWithdrawRate: 1200,
             paidMessageMaxAmount: 10000,
             paidMessageCommissionPermille: 850,
-            paidMessagesAvailable: false
+            paidMessagesAvailable: false,
+            starGiftResaleMinAmount: 125,
+            starGiftResaleMaxAmount: 3500,
+            starGiftCommissionPermille: 80
         )
     }
         
@@ -1454,19 +1462,28 @@ public struct StarsSubscriptionConfiguration {
     public let paidMessageMaxAmount: Int64
     public let paidMessageCommissionPermille: Int32
     public let paidMessagesAvailable: Bool
+    public let starGiftResaleMinAmount: Int64
+    public let starGiftResaleMaxAmount: Int64
+    public let starGiftCommissionPermille: Int32
     
     fileprivate init(
         maxFee: Int64,
         usdWithdrawRate: Int64,
         paidMessageMaxAmount: Int64,
         paidMessageCommissionPermille: Int32,
-        paidMessagesAvailable: Bool
+        paidMessagesAvailable: Bool,
+        starGiftResaleMinAmount: Int64,
+        starGiftResaleMaxAmount: Int64,
+        starGiftCommissionPermille: Int32
     ) {
         self.maxFee = maxFee
         self.usdWithdrawRate = usdWithdrawRate
         self.paidMessageMaxAmount = paidMessageMaxAmount
         self.paidMessageCommissionPermille = paidMessageCommissionPermille
         self.paidMessagesAvailable = paidMessagesAvailable
+        self.starGiftResaleMinAmount = starGiftResaleMinAmount
+        self.starGiftResaleMaxAmount = starGiftResaleMaxAmount
+        self.starGiftCommissionPermille = starGiftCommissionPermille
     }
     
     public static func with(appConfiguration: AppConfiguration) -> StarsSubscriptionConfiguration {
@@ -1476,13 +1493,19 @@ public struct StarsSubscriptionConfiguration {
             let paidMessageMaxAmount = (data["stars_paid_message_amount_max"] as? Double).flatMap(Int64.init) ?? StarsSubscriptionConfiguration.defaultValue.paidMessageMaxAmount
             let paidMessageCommissionPermille = (data["stars_paid_message_commission_permille"] as? Double).flatMap(Int32.init) ?? StarsSubscriptionConfiguration.defaultValue.paidMessageCommissionPermille
             let paidMessagesAvailable = (data["stars_paid_messages_available"] as? Bool) ?? StarsSubscriptionConfiguration.defaultValue.paidMessagesAvailable
+            let starGiftResaleMinAmount = (data["stars_stargift_resale_amount_min"] as? Double).flatMap(Int64.init) ?? StarsSubscriptionConfiguration.defaultValue.starGiftResaleMinAmount
+            let starGiftResaleMaxAmount = (data["stars_stargift_resale_amount_max"] as? Double).flatMap(Int64.init) ?? StarsSubscriptionConfiguration.defaultValue.starGiftResaleMaxAmount
+            let starGiftCommissionPermille = (data["stars_stargift_resale_commission_permille"] as? Double).flatMap(Int32.init) ?? StarsSubscriptionConfiguration.defaultValue.starGiftCommissionPermille
             
             return StarsSubscriptionConfiguration(
                 maxFee: maxFee,
                 usdWithdrawRate: usdWithdrawRate,
                 paidMessageMaxAmount: paidMessageMaxAmount,
                 paidMessageCommissionPermille: paidMessageCommissionPermille,
-                paidMessagesAvailable: paidMessagesAvailable
+                paidMessagesAvailable: paidMessagesAvailable,
+                starGiftResaleMinAmount: starGiftResaleMinAmount,
+                starGiftResaleMaxAmount: starGiftResaleMaxAmount,
+                starGiftCommissionPermille: starGiftCommissionPermille
             )
         } else {
             return .defaultValue

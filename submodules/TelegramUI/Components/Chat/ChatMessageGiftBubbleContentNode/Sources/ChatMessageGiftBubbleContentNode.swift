@@ -560,7 +560,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                     buttonTitle = item.presentationData.strings.Notification_StarGift_View
                                 }
                             }
-                        case let .starGiftUnique(gift, isUpgrade, _, _, _, _, isRefunded, _, _, _):
+                        case let .starGiftUnique(gift, isUpgrade, _, _, _, _, isRefunded, _, _, _, _):
                             if case let .unique(uniqueGift) = gift {
                                 isStarGift = true
                                 
@@ -594,7 +594,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                     case let .model(name, file, _):
                                         modelValue = name
                                         animationFile = file
-                                    case let .backdrop(name, innerColor, outerColor, patternColor, _, _):
+                                    case let .backdrop(name, _, innerColor, outerColor, patternColor, _, _):
                                         uniqueBackgroundColor = UIColor(rgb: UInt32(bitPattern: outerColor))
                                         uniqueSecondBackgroundColor = UIColor(rgb: UInt32(bitPattern: innerColor))
                                         uniquePatternColor = UIColor(rgb: UInt32(bitPattern: patternColor))

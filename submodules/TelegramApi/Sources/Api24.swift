@@ -628,14 +628,14 @@ public extension Api {
 }
 public extension Api {
     enum StarGift: TypeConstructorDescription {
-        case starGift(flags: Int32, id: Int64, sticker: Api.Document, stars: Int64, availabilityRemains: Int32?, availabilityTotal: Int32?, convertStars: Int64, firstSaleDate: Int32?, lastSaleDate: Int32?, upgradeStars: Int64?)
-        case starGiftUnique(flags: Int32, id: Int64, title: String, slug: String, num: Int32, ownerId: Api.Peer?, ownerName: String?, ownerAddress: String?, attributes: [Api.StarGiftAttribute], availabilityIssued: Int32, availabilityTotal: Int32, giftAddress: String?)
+        case starGift(flags: Int32, id: Int64, sticker: Api.Document, stars: Int64, availabilityRemains: Int32?, availabilityTotal: Int32?, availabilityResale: Int64?, convertStars: Int64, firstSaleDate: Int32?, lastSaleDate: Int32?, upgradeStars: Int64?, resellMinStars: Int64?, title: String?)
+        case starGiftUnique(flags: Int32, id: Int64, title: String, slug: String, num: Int32, ownerId: Api.Peer?, ownerName: String?, ownerAddress: String?, attributes: [Api.StarGiftAttribute], availabilityIssued: Int32, availabilityTotal: Int32, giftAddress: String?, resellStars: Int64?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .starGift(let flags, let id, let sticker, let stars, let availabilityRemains, let availabilityTotal, let convertStars, let firstSaleDate, let lastSaleDate, let upgradeStars):
+                case .starGift(let flags, let id, let sticker, let stars, let availabilityRemains, let availabilityTotal, let availabilityResale, let convertStars, let firstSaleDate, let lastSaleDate, let upgradeStars, let resellMinStars, let title):
                     if boxed {
-                        buffer.appendInt32(46953416)
+                        buffer.appendInt32(-970274264)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(id, buffer: buffer, boxed: false)
@@ -643,14 +643,17 @@ public extension Api {
                     serializeInt64(stars, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(availabilityRemains!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(availabilityTotal!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 4) != 0 {serializeInt64(availabilityResale!, buffer: buffer, boxed: false)}
                     serializeInt64(convertStars, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 1) != 0 {serializeInt32(firstSaleDate!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {serializeInt32(lastSaleDate!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 3) != 0 {serializeInt64(upgradeStars!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 4) != 0 {serializeInt64(resellMinStars!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 5) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
                     break
-                case .starGiftUnique(let flags, let id, let title, let slug, let num, let ownerId, let ownerName, let ownerAddress, let attributes, let availabilityIssued, let availabilityTotal, let giftAddress):
+                case .starGiftUnique(let flags, let id, let title, let slug, let num, let ownerId, let ownerName, let ownerAddress, let attributes, let availabilityIssued, let availabilityTotal, let giftAddress, let resellStars):
                     if boxed {
-                        buffer.appendInt32(1549979985)
+                        buffer.appendInt32(1678891913)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(id, buffer: buffer, boxed: false)
@@ -668,16 +671,17 @@ public extension Api {
                     serializeInt32(availabilityIssued, buffer: buffer, boxed: false)
                     serializeInt32(availabilityTotal, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 3) != 0 {serializeString(giftAddress!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 4) != 0 {serializeInt64(resellStars!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .starGift(let flags, let id, let sticker, let stars, let availabilityRemains, let availabilityTotal, let convertStars, let firstSaleDate, let lastSaleDate, let upgradeStars):
-                return ("starGift", [("flags", flags as Any), ("id", id as Any), ("sticker", sticker as Any), ("stars", stars as Any), ("availabilityRemains", availabilityRemains as Any), ("availabilityTotal", availabilityTotal as Any), ("convertStars", convertStars as Any), ("firstSaleDate", firstSaleDate as Any), ("lastSaleDate", lastSaleDate as Any), ("upgradeStars", upgradeStars as Any)])
-                case .starGiftUnique(let flags, let id, let title, let slug, let num, let ownerId, let ownerName, let ownerAddress, let attributes, let availabilityIssued, let availabilityTotal, let giftAddress):
-                return ("starGiftUnique", [("flags", flags as Any), ("id", id as Any), ("title", title as Any), ("slug", slug as Any), ("num", num as Any), ("ownerId", ownerId as Any), ("ownerName", ownerName as Any), ("ownerAddress", ownerAddress as Any), ("attributes", attributes as Any), ("availabilityIssued", availabilityIssued as Any), ("availabilityTotal", availabilityTotal as Any), ("giftAddress", giftAddress as Any)])
+                case .starGift(let flags, let id, let sticker, let stars, let availabilityRemains, let availabilityTotal, let availabilityResale, let convertStars, let firstSaleDate, let lastSaleDate, let upgradeStars, let resellMinStars, let title):
+                return ("starGift", [("flags", flags as Any), ("id", id as Any), ("sticker", sticker as Any), ("stars", stars as Any), ("availabilityRemains", availabilityRemains as Any), ("availabilityTotal", availabilityTotal as Any), ("availabilityResale", availabilityResale as Any), ("convertStars", convertStars as Any), ("firstSaleDate", firstSaleDate as Any), ("lastSaleDate", lastSaleDate as Any), ("upgradeStars", upgradeStars as Any), ("resellMinStars", resellMinStars as Any), ("title", title as Any)])
+                case .starGiftUnique(let flags, let id, let title, let slug, let num, let ownerId, let ownerName, let ownerAddress, let attributes, let availabilityIssued, let availabilityTotal, let giftAddress, let resellStars):
+                return ("starGiftUnique", [("flags", flags as Any), ("id", id as Any), ("title", title as Any), ("slug", slug as Any), ("num", num as Any), ("ownerId", ownerId as Any), ("ownerName", ownerName as Any), ("ownerAddress", ownerAddress as Any), ("attributes", attributes as Any), ("availabilityIssued", availabilityIssued as Any), ("availabilityTotal", availabilityTotal as Any), ("giftAddress", giftAddress as Any), ("resellStars", resellStars as Any)])
     }
     }
     
@@ -697,25 +701,34 @@ public extension Api {
             var _6: Int32?
             if Int(_1!) & Int(1 << 0) != 0 {_6 = reader.readInt32() }
             var _7: Int64?
-            _7 = reader.readInt64()
-            var _8: Int32?
-            if Int(_1!) & Int(1 << 1) != 0 {_8 = reader.readInt32() }
+            if Int(_1!) & Int(1 << 4) != 0 {_7 = reader.readInt64() }
+            var _8: Int64?
+            _8 = reader.readInt64()
             var _9: Int32?
             if Int(_1!) & Int(1 << 1) != 0 {_9 = reader.readInt32() }
-            var _10: Int64?
-            if Int(_1!) & Int(1 << 3) != 0 {_10 = reader.readInt64() }
+            var _10: Int32?
+            if Int(_1!) & Int(1 << 1) != 0 {_10 = reader.readInt32() }
+            var _11: Int64?
+            if Int(_1!) & Int(1 << 3) != 0 {_11 = reader.readInt64() }
+            var _12: Int64?
+            if Int(_1!) & Int(1 << 4) != 0 {_12 = reader.readInt64() }
+            var _13: String?
+            if Int(_1!) & Int(1 << 5) != 0 {_13 = parseString(reader) }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
-            let _c7 = _7 != nil
-            let _c8 = (Int(_1!) & Int(1 << 1) == 0) || _8 != nil
+            let _c7 = (Int(_1!) & Int(1 << 4) == 0) || _7 != nil
+            let _c8 = _8 != nil
             let _c9 = (Int(_1!) & Int(1 << 1) == 0) || _9 != nil
-            let _c10 = (Int(_1!) & Int(1 << 3) == 0) || _10 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
-                return Api.StarGift.starGift(flags: _1!, id: _2!, sticker: _3!, stars: _4!, availabilityRemains: _5, availabilityTotal: _6, convertStars: _7!, firstSaleDate: _8, lastSaleDate: _9, upgradeStars: _10)
+            let _c10 = (Int(_1!) & Int(1 << 1) == 0) || _10 != nil
+            let _c11 = (Int(_1!) & Int(1 << 3) == 0) || _11 != nil
+            let _c12 = (Int(_1!) & Int(1 << 4) == 0) || _12 != nil
+            let _c13 = (Int(_1!) & Int(1 << 5) == 0) || _13 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 {
+                return Api.StarGift.starGift(flags: _1!, id: _2!, sticker: _3!, stars: _4!, availabilityRemains: _5, availabilityTotal: _6, availabilityResale: _7, convertStars: _8!, firstSaleDate: _9, lastSaleDate: _10, upgradeStars: _11, resellMinStars: _12, title: _13)
             }
             else {
                 return nil
@@ -750,6 +763,8 @@ public extension Api {
             _11 = reader.readInt32()
             var _12: String?
             if Int(_1!) & Int(1 << 3) != 0 {_12 = parseString(reader) }
+            var _13: Int64?
+            if Int(_1!) & Int(1 << 4) != 0 {_13 = reader.readInt64() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -762,8 +777,9 @@ public extension Api {
             let _c10 = _10 != nil
             let _c11 = _11 != nil
             let _c12 = (Int(_1!) & Int(1 << 3) == 0) || _12 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 {
-                return Api.StarGift.starGiftUnique(flags: _1!, id: _2!, title: _3!, slug: _4!, num: _5!, ownerId: _6, ownerName: _7, ownerAddress: _8, attributes: _9!, availabilityIssued: _10!, availabilityTotal: _11!, giftAddress: _12)
+            let _c13 = (Int(_1!) & Int(1 << 4) == 0) || _13 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 {
+                return Api.StarGift.starGiftUnique(flags: _1!, id: _2!, title: _3!, slug: _4!, num: _5!, ownerId: _6, ownerName: _7, ownerAddress: _8, attributes: _9!, availabilityIssued: _10!, availabilityTotal: _11!, giftAddress: _12, resellStars: _13)
             }
             else {
                 return nil
@@ -774,18 +790,19 @@ public extension Api {
 }
 public extension Api {
     enum StarGiftAttribute: TypeConstructorDescription {
-        case starGiftAttributeBackdrop(name: String, centerColor: Int32, edgeColor: Int32, patternColor: Int32, textColor: Int32, rarityPermille: Int32)
+        case starGiftAttributeBackdrop(name: String, backdropId: Int32, centerColor: Int32, edgeColor: Int32, patternColor: Int32, textColor: Int32, rarityPermille: Int32)
         case starGiftAttributeModel(name: String, document: Api.Document, rarityPermille: Int32)
         case starGiftAttributeOriginalDetails(flags: Int32, senderId: Api.Peer?, recipientId: Api.Peer, date: Int32, message: Api.TextWithEntities?)
         case starGiftAttributePattern(name: String, document: Api.Document, rarityPermille: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .starGiftAttributeBackdrop(let name, let centerColor, let edgeColor, let patternColor, let textColor, let rarityPermille):
+                case .starGiftAttributeBackdrop(let name, let backdropId, let centerColor, let edgeColor, let patternColor, let textColor, let rarityPermille):
                     if boxed {
-                        buffer.appendInt32(-1809377438)
+                        buffer.appendInt32(-650279524)
                     }
                     serializeString(name, buffer: buffer, boxed: false)
+                    serializeInt32(backdropId, buffer: buffer, boxed: false)
                     serializeInt32(centerColor, buffer: buffer, boxed: false)
                     serializeInt32(edgeColor, buffer: buffer, boxed: false)
                     serializeInt32(patternColor, buffer: buffer, boxed: false)
@@ -823,8 +840,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .starGiftAttributeBackdrop(let name, let centerColor, let edgeColor, let patternColor, let textColor, let rarityPermille):
-                return ("starGiftAttributeBackdrop", [("name", name as Any), ("centerColor", centerColor as Any), ("edgeColor", edgeColor as Any), ("patternColor", patternColor as Any), ("textColor", textColor as Any), ("rarityPermille", rarityPermille as Any)])
+                case .starGiftAttributeBackdrop(let name, let backdropId, let centerColor, let edgeColor, let patternColor, let textColor, let rarityPermille):
+                return ("starGiftAttributeBackdrop", [("name", name as Any), ("backdropId", backdropId as Any), ("centerColor", centerColor as Any), ("edgeColor", edgeColor as Any), ("patternColor", patternColor as Any), ("textColor", textColor as Any), ("rarityPermille", rarityPermille as Any)])
                 case .starGiftAttributeModel(let name, let document, let rarityPermille):
                 return ("starGiftAttributeModel", [("name", name as Any), ("document", document as Any), ("rarityPermille", rarityPermille as Any)])
                 case .starGiftAttributeOriginalDetails(let flags, let senderId, let recipientId, let date, let message):
@@ -847,14 +864,17 @@ public extension Api {
             _5 = reader.readInt32()
             var _6: Int32?
             _6 = reader.readInt32()
+            var _7: Int32?
+            _7 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             let _c6 = _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.StarGiftAttribute.starGiftAttributeBackdrop(name: _1!, centerColor: _2!, edgeColor: _3!, patternColor: _4!, textColor: _5!, rarityPermille: _6!)
+            let _c7 = _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.StarGiftAttribute.starGiftAttributeBackdrop(name: _1!, backdropId: _2!, centerColor: _3!, edgeColor: _4!, patternColor: _5!, textColor: _6!, rarityPermille: _7!)
             }
             else {
                 return nil
@@ -931,55 +951,39 @@ public extension Api {
     }
 }
 public extension Api {
-    enum StarRefProgram: TypeConstructorDescription {
-        case starRefProgram(flags: Int32, botId: Int64, commissionPermille: Int32, durationMonths: Int32?, endDate: Int32?, dailyRevenuePerUser: Api.StarsAmount?)
+    enum StarGiftAttributeCounter: TypeConstructorDescription {
+        case starGiftAttributeCounter(attribute: Api.StarGiftAttributeId, count: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .starRefProgram(let flags, let botId, let commissionPermille, let durationMonths, let endDate, let dailyRevenuePerUser):
+                case .starGiftAttributeCounter(let attribute, let count):
                     if boxed {
-                        buffer.appendInt32(-586389774)
+                        buffer.appendInt32(783398488)
                     }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt64(botId, buffer: buffer, boxed: false)
-                    serializeInt32(commissionPermille, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(durationMonths!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(endDate!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 2) != 0 {dailyRevenuePerUser!.serialize(buffer, true)}
+                    attribute.serialize(buffer, true)
+                    serializeInt32(count, buffer: buffer, boxed: false)
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .starRefProgram(let flags, let botId, let commissionPermille, let durationMonths, let endDate, let dailyRevenuePerUser):
-                return ("starRefProgram", [("flags", flags as Any), ("botId", botId as Any), ("commissionPermille", commissionPermille as Any), ("durationMonths", durationMonths as Any), ("endDate", endDate as Any), ("dailyRevenuePerUser", dailyRevenuePerUser as Any)])
+                case .starGiftAttributeCounter(let attribute, let count):
+                return ("starGiftAttributeCounter", [("attribute", attribute as Any), ("count", count as Any)])
     }
     }
     
-        public static func parse_starRefProgram(_ reader: BufferReader) -> StarRefProgram? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            var _4: Int32?
-            if Int(_1!) & Int(1 << 0) != 0 {_4 = reader.readInt32() }
-            var _5: Int32?
-            if Int(_1!) & Int(1 << 1) != 0 {_5 = reader.readInt32() }
-            var _6: Api.StarsAmount?
-            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
-                _6 = Api.parse(reader, signature: signature) as? Api.StarsAmount
-            } }
+        public static func parse_starGiftAttributeCounter(_ reader: BufferReader) -> StarGiftAttributeCounter? {
+            var _1: Api.StarGiftAttributeId?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.StarGiftAttributeId
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.StarRefProgram.starRefProgram(flags: _1!, botId: _2!, commissionPermille: _3!, durationMonths: _4, endDate: _5, dailyRevenuePerUser: _6)
+            if _c1 && _c2 {
+                return Api.StarGiftAttributeCounter.starGiftAttributeCounter(attribute: _1!, count: _2!)
             }
             else {
                 return nil
@@ -989,37 +993,73 @@ public extension Api {
     }
 }
 public extension Api {
-    enum StarsAmount: TypeConstructorDescription {
-        case starsAmount(amount: Int64, nanos: Int32)
+    enum StarGiftAttributeId: TypeConstructorDescription {
+        case starGiftAttributeIdBackdrop(backdropId: Int32)
+        case starGiftAttributeIdModel(documentId: Int64)
+        case starGiftAttributeIdPattern(documentId: Int64)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .starsAmount(let amount, let nanos):
+                case .starGiftAttributeIdBackdrop(let backdropId):
                     if boxed {
-                        buffer.appendInt32(-1145654109)
+                        buffer.appendInt32(520210263)
                     }
-                    serializeInt64(amount, buffer: buffer, boxed: false)
-                    serializeInt32(nanos, buffer: buffer, boxed: false)
+                    serializeInt32(backdropId, buffer: buffer, boxed: false)
+                    break
+                case .starGiftAttributeIdModel(let documentId):
+                    if boxed {
+                        buffer.appendInt32(1219145276)
+                    }
+                    serializeInt64(documentId, buffer: buffer, boxed: false)
+                    break
+                case .starGiftAttributeIdPattern(let documentId):
+                    if boxed {
+                        buffer.appendInt32(1242965043)
+                    }
+                    serializeInt64(documentId, buffer: buffer, boxed: false)
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .starsAmount(let amount, let nanos):
-                return ("starsAmount", [("amount", amount as Any), ("nanos", nanos as Any)])
+                case .starGiftAttributeIdBackdrop(let backdropId):
+                return ("starGiftAttributeIdBackdrop", [("backdropId", backdropId as Any)])
+                case .starGiftAttributeIdModel(let documentId):
+                return ("starGiftAttributeIdModel", [("documentId", documentId as Any)])
+                case .starGiftAttributeIdPattern(let documentId):
+                return ("starGiftAttributeIdPattern", [("documentId", documentId as Any)])
     }
     }
     
-        public static func parse_starsAmount(_ reader: BufferReader) -> StarsAmount? {
+        public static func parse_starGiftAttributeIdBackdrop(_ reader: BufferReader) -> StarGiftAttributeId? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.StarGiftAttributeId.starGiftAttributeIdBackdrop(backdropId: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_starGiftAttributeIdModel(_ reader: BufferReader) -> StarGiftAttributeId? {
             var _1: Int64?
             _1 = reader.readInt64()
-            var _2: Int32?
-            _2 = reader.readInt32()
             let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.StarsAmount.starsAmount(amount: _1!, nanos: _2!)
+            if _c1 {
+                return Api.StarGiftAttributeId.starGiftAttributeIdModel(documentId: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_starGiftAttributeIdPattern(_ reader: BufferReader) -> StarGiftAttributeId? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.StarGiftAttributeId.starGiftAttributeIdPattern(documentId: _1!)
             }
             else {
                 return nil

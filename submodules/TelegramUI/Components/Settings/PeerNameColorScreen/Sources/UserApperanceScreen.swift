@@ -456,10 +456,11 @@ final class UserAppearanceScreenComponent: Component {
                                 attributes: [
                                     .model(name: "", file: file, rarity: 0),
                                     .pattern(name: "", file: patternFile, rarity: 0),
-                                    .backdrop(name: "", innerColor: innerColor, outerColor: outerColor, patternColor: patternColor, textColor: textColor, rarity: 0)
+                                    .backdrop(name: "", id: 0, innerColor: innerColor, outerColor: outerColor, patternColor: patternColor, textColor: textColor, rarity: 0)
                                 ],
                                 availability: StarGift.UniqueGift.Availability(issued: 0, total: 0),
-                                giftAddress: nil
+                                giftAddress: nil,
+                                resellStars: nil
                             )
                             signal = component.context.engine.accountData.setStarGiftStatus(starGift: gift, expirationDate: emojiStatus.expirationDate)
                         } else {
@@ -1090,7 +1091,7 @@ final class UserAppearanceScreenComponent: Component {
                                             case let .pattern(_, file, _):
                                                 patternFileId = file.fileId.id
                                                 self.cachedIconFiles[file.fileId.id] = file
-                                            case let .backdrop(_, innerColorValue, outerColorValue, patternColorValue, textColorValue, _):
+                                            case let .backdrop(_, _, innerColorValue, outerColorValue, patternColorValue, textColorValue, _):
                                                 innerColor = innerColorValue
                                                 outerColor = outerColorValue
                                                 patternColor = patternColorValue

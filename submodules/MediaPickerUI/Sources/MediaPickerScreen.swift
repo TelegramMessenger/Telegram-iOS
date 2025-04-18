@@ -184,7 +184,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
     private let bannedSendVideos: (Int32, Bool)?
     private let canBoostToUnrestrict: Bool
     fileprivate let paidMediaAllowed: Bool
-    private let subject: Subject
+    fileprivate let subject: Subject
     fileprivate let forCollage: Bool
     private let saveEditedPhotos: Bool
     
@@ -1823,8 +1823,10 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
     private var isDismissing = false
     
     fileprivate let mainButtonStatePromise = Promise<AttachmentMainButtonState?>(nil)
+    fileprivate let secondaryButtonStatePromise = Promise<AttachmentMainButtonState?>(nil)
 
     private let mainButtonAction: (() -> Void)?
+    private let secondaryButtonAction: (() -> Void)?
     
     public init(
         context: AccountContext,
@@ -1844,7 +1846,8 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         selectionContext: TGMediaSelectionContext? = nil,
         saveEditedPhotos: Bool = false,
         mainButtonState: AttachmentMainButtonState? = nil,
-        mainButtonAction: (() -> Void)? = nil
+        mainButtonAction: (() -> Void)? = nil,
+        secondaryButtonAction: (() -> Void)? = nil
     ) {
         self.context = context
                 
@@ -1864,6 +1867,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         self.saveEditedPhotos = saveEditedPhotos
         self.mainButtonStatePromise.set(.single(mainButtonState))
         self.mainButtonAction = mainButtonAction
+        self.secondaryButtonAction = secondaryButtonAction
         
         let selectionContext = selectionContext ?? TGMediaSelectionContext()
         
@@ -1997,7 +2001,14 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             } else if collection == nil {
                 self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
                 
+                var hasSelect = false
                 if forCollage {
+                    hasSelect = true
+                } else if case .story = mode {
+                    hasSelect = true
+                }
+                
+                if hasSelect {
                     self.navigationItem.rightBarButtonItem = UIBarButtonItem(backButtonAppearanceWithTitle: self.presentationData.strings.Common_Select, target: self, action: #selector(self.selectPressed))
                 } else {
                     if [.createSticker].contains(mode) {
@@ -2337,6 +2348,9 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         let transition = ContainedViewLayoutTransition.animated(duration: 0.25, curve: .easeInOut)
         var moreIsVisible = false
         if case let .assets(_, mode) = self.subject, [.story, .createSticker].contains(mode) {
+            if count == 1 {
+                self.requestAttachmentMenuExpansion()
+            }
             moreIsVisible = true
         } else if case let .media(media) = self.subject {
             self.titleView.title = media.count == 1 ? self.presentationData.strings.Attachment_Pasteboard : self.presentationData.strings.Attachment_SelectedMedia(count)
@@ -2380,9 +2394,23 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         transition.updateAlpha(node: self.moreButtonNode.iconNode, alpha: moreIsVisible ? 1.0 : 0.0)
         transition.updateTransformScale(node: self.moreButtonNode.iconNode, scale: moreIsVisible ? 1.0 : 0.1)
         
-        //if self. {
-            //self.mainButtonStatePromise.set(.single(AttachmentMainButtonState(text: "Add", badge: "\(count)", font: .bold, background: .color(self.presentationData.theme.actionSheet.controlAccentColor), textColor: self.presentationData.theme.list.itemCheckColors.foregroundColor, isVisible: count > 0, progress: .none, isEnabled: true, hasShimmer: false)))
-        //}
+        if case .assets(_, .story) = self.subject, self.selectionCount > 0 {
+            //TODO:localize
+            var text = "Create 1 Story"
+            if self.selectionCount > 1 {
+                text = "Create \(self.selectionCount) Stories"
+            }
+            self.mainButtonStatePromise.set(.single(AttachmentMainButtonState(text: text, badge: nil, font: .bold, background: .color(self.presentationData.theme.actionSheet.controlAccentColor), textColor: self.presentationData.theme.list.itemCheckColors.foregroundColor, isVisible: true, progress: .none, isEnabled: true, hasShimmer: false, position: .top)))
+            
+            if self.selectionCount > 1 && self.selectionCount <= 6 {
+                self.secondaryButtonStatePromise.set(.single(AttachmentMainButtonState(text: "Combine into Collage", badge: nil, font: .regular, background: .color(.clear), textColor: self.presentationData.theme.actionSheet.controlAccentColor, isVisible: true, progress: .none, isEnabled: true, hasShimmer: false, iconName: "Media Editor/Collage", smallSpacing: true, position: .bottom)))
+            } else {
+                self.secondaryButtonStatePromise.set(.single(nil))
+            }
+        } else {
+            self.mainButtonStatePromise.set(.single(nil))
+            self.secondaryButtonStatePromise.set(.single(nil))
+        }
     }
     
     private func updateThemeAndStrings() {
@@ -2410,6 +2438,10 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
     
     func mainButtonPressed() {
         self.mainButtonAction?()
+    }
+    
+    func secondaryButtonPressed() {
+        self.secondaryButtonAction?()
     }
     
     func dismissAllTooltips() {
@@ -2795,7 +2827,7 @@ final class MediaPickerContext: AttachmentMediaPickerContext {
     private weak var controller: MediaPickerScreenImpl?
     
     var selectionCount: Signal<Int, NoError> {
-        if self.controller?.forCollage == true {
+        if let controller = self.controller, case .assets(_, .story) = controller.subject {
             return .single(0)
         } else {
             return Signal { [weak self] subscriber in
@@ -2933,6 +2965,10 @@ final class MediaPickerContext: AttachmentMediaPickerContext {
         return self.controller?.mainButtonStatePromise.get() ?? .single(nil)
     }
     
+    public var secondaryButtonState: Signal<AttachmentMainButtonState?, NoError> {
+        return self.controller?.secondaryButtonStatePromise.get() ?? .single(nil)
+    }
+    
     init(controller: MediaPickerScreenImpl) {
         self.controller = controller
     }
@@ -2951,6 +2987,10 @@ final class MediaPickerContext: AttachmentMediaPickerContext {
     
     func mainButtonAction() {
         self.controller?.mainButtonPressed()
+    }
+    
+    func secondaryButtonAction() {
+        self.controller?.secondaryButtonPressed()
     }
 }
 
@@ -3139,7 +3179,7 @@ public func storyMediaPickerController(
     selectionLimit: Int?,
     getSourceRect: @escaping () -> CGRect,
     completion: @escaping (Any, UIView, CGRect, UIImage?, @escaping (Bool?) -> (UIView, CGRect)?, @escaping () -> Void) -> Void,
-    multipleCompletion: @escaping ([Any]) -> Void,
+    multipleCompletion: @escaping ([Any], Bool) -> Void,
     dismissed: @escaping () -> Void,
     groupsPresented: @escaping () -> Void
 ) -> ViewController {
@@ -3158,9 +3198,18 @@ public func storyMediaPickerController(
         }
     }
     
-    let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: nil, buttons: [.standalone], initialButton: .standalone, fromMenu: false, hasTextInput: false, makeEntityInputView: {
-        return nil
-    })
+    let controller = AttachmentController(
+        context: context,
+        updatedPresentationData: updatedPresentationData,
+        chatLocation: nil,
+        buttons: [.standalone],
+        initialButton: .standalone,
+        fromMenu: false,
+        hasTextInput: false,
+        makeEntityInputView: {
+            return nil
+        }
+    )
     controller.forceSourceRect = true
     controller.getSourceRect = getSourceRect
     controller.requestController = { _, present in
@@ -3184,7 +3233,18 @@ public func storyMediaPickerController(
                             results.append(asset)
                         }
                     }
-                    multipleCompletion(results)
+                    multipleCompletion(results, false)
+                }
+            },
+            secondaryButtonAction: { [weak selectionContext] in
+                if let selectionContext, let selectedItems = selectionContext.selectedItems() {
+                    var results: [Any] = []
+                    for item in selectedItems {
+                        if let item = item as? TGMediaAsset, let asset = item.backingAsset {
+                            results.append(asset)
+                        }
+                    }
+                    multipleCompletion(results, true)
                 }
             }
         )

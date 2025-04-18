@@ -14193,3 +14193,12 @@ Sorry for the inconvenience.";
 "Call.LiveStreamInProgressConferenceMessage" = "Leave live stream in %1$@ and start a conference?";
 
 "VoiceChat.RemoveConferencePeerConfirmation" = "Are you sure you want to remove %@ from this call?";
+
+"Story.Privacy.ShareStories" = "Share Stories";
+"Story.Privacy.PostStoriesAsHeader" = "POST STORIES AS";
+"Story.Privacy.WhoCanViewStoriesHeader" = "WHO CAN VIEW THIS STORIES";
+"Story.Privacy.PostStories_1" = "Post %@ Story";
+"Story.Privacy.PostStories_any" = "Post %@ Stories";
+"Story.Privacy.KeepOnMyPageManyInfo" = "Keep these stories on your profile even after they expire in %@. Privacy settings will apply.";
+"Story.Privacy.KeepOnChannelPageManyInfo" = "Keep these stories on the channel profile even after they expire in %@.";
+"Story.Privacy.KeepOnGroupPageManyInfo" = "Keep these stories on the group page even after they expire in %@.";

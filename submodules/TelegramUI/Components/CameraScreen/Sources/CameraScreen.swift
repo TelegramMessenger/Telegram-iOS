@@ -1651,6 +1651,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
         case videoCollage(VideoCollage)
         case asset(PHAsset)
         case draft(MediaEditorDraft)
+        case assets([PHAsset])
         
         func withPIPPosition(_ position: CameraScreenImpl.PIPPosition) -> Result {
             switch self {
@@ -2726,9 +2727,13 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             self.additionalPreviewView.isEnabled = false
             self.collageView?.isEnabled = false
             
+            #if targetEnvironment(simulator)
+            
+            #else
             Queue.mainQueue().after(0.3) {
                 self.previewBlurPromise.set(true)
             }
+            #endif
             self.camera?.stopCapture()
             
             self.cameraIsActive = false
@@ -3627,7 +3632,11 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             if self.cameraState.isCollageEnabled, let collage = self.node.collage {
                 selectionLimit = collage.grid.count - collage.results.count
             } else {
-                selectionLimit = 6
+                if self.cameraState.isCollageEnabled {
+                    selectionLimit = 6
+                } else {
+                    selectionLimit = 10
+                }
             }
             controller = self.context.sharedContext.makeStoryMediaPickerScreen(
                 context: self.context,
@@ -3698,44 +3707,52 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                             }
                         }
                     }
-                }, multipleCompletion: { [weak self] results in
+                }, multipleCompletion: { [weak self] results, collage in
                     guard let self else {
                         return
                     }
-                                        
-                    if !self.cameraState.isCollageEnabled {
-                        var selectedGrid: Camera.CollageGrid = collageGrids.first!
-                        for grid in collageGrids {
-                            if grid.count == results.count {
-                                selectedGrid = grid
-                                break
+                            
+                    if collage {
+                        if !self.cameraState.isCollageEnabled {
+                            var selectedGrid: Camera.CollageGrid = collageGrids.first!
+                            for grid in collageGrids {
+                                if grid.count == results.count {
+                                    selectedGrid = grid
+                                    break
+                                }
                             }
+                            self.updateCameraState({
+                                $0.updatedIsCollageEnabled(true).updatedCollageProgress(0.0).updatedIsDualCameraEnabled(false).updatedCollageGrid(selectedGrid)
+                            }, transition: .spring(duration: 0.3))
                         }
-                        self.updateCameraState({
-                            $0.updatedIsCollageEnabled(true).updatedCollageProgress(0.0).updatedIsDualCameraEnabled(false).updatedCollageGrid(selectedGrid)
-                        }, transition: .spring(duration: 0.3))
-                    }
-                    
-                    if let assets = results as? [PHAsset] {
-                        var results: [Signal<CameraScreenImpl.Result, NoError>] = []
-                        for asset in assets {
-                            if asset.mediaType == .video && asset.duration > 1.0 {
-                                results.append(.single(.asset(asset)))
-                            } else {
-                                results.append(
-                                    assetImage(asset: asset, targetSize: CGSize(width: 1080, height: 1080), exact: false, deliveryMode: .highQualityFormat)
-                                    |> runOn(Queue.concurrentDefaultQueue())
-                                    |> mapToSignal { image -> Signal<CameraScreenImpl.Result, NoError> in
-                                        if let image {
-                                            return .single(.image(Result.Image(image: image, additionalImage: nil, additionalImagePosition: .topLeft)))
-                                        } else {
-                                            return .complete()
+                        
+                        if let assets = results as? [PHAsset] {
+                            var results: [Signal<CameraScreenImpl.Result, NoError>] = []
+                            for asset in assets {
+                                if asset.mediaType == .video && asset.duration > 1.0 {
+                                    results.append(.single(.asset(asset)))
+                                } else {
+                                    results.append(
+                                        assetImage(asset: asset, targetSize: CGSize(width: 1080, height: 1080), exact: false, deliveryMode: .highQualityFormat)
+                                        |> runOn(Queue.concurrentDefaultQueue())
+                                        |> mapToSignal { image -> Signal<CameraScreenImpl.Result, NoError> in
+                                            if let image {
+                                                return .single(.image(Result.Image(image: image, additionalImage: nil, additionalImagePosition: .topLeft)))
+                                            } else {
+                                                return .complete()
+                                            }
                                         }
-                                    }
-                                )
+                                    )
+                                }
                             }
+                            self.node.collage?.addResults(signals: results)
                         }
-                        self.node.collage?.addResults(signals: results)
+                    } else {
+                        if let assets = results as? [PHAsset] {
+                            self.completion(.single(.assets(assets)), nil, {
+                                
+                            })
+                        }
                     }
                     self.galleryController = nil
                     

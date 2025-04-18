@@ -94,7 +94,7 @@ public extension TelegramEngine {
                     file = fileValue
                 case let .pattern(_, patternFileValue, _):
                     patternFile = patternFileValue
-                case let .backdrop(_, innerColorValue, outerColorValue, patternColorValue, textColorValue, _):
+                case let .backdrop(_, _, innerColorValue, outerColorValue, patternColorValue, textColorValue, _):
                     innerColor = innerColorValue
                     outerColor = outerColorValue
                     patternColor = patternColorValue

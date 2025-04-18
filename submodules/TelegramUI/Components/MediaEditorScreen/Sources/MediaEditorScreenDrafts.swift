@@ -11,7 +11,16 @@ import DrawingUI
 
 extension MediaEditorScreenImpl {
     func isEligibleForDraft() -> Bool {
-        if self.isEditingStory {
+        guard !self.isEditingStory else {
+            return false
+        }
+        if case .avatarEditor = self.mode {
+            return false
+        }
+        if case .coverEditor = self.mode {
+            return false
+        }
+        if case .assets = self.node.actualSubject {
             return false
         }
         guard let mediaEditor = self.node.mediaEditor else {
@@ -20,13 +29,6 @@ extension MediaEditorScreenImpl {
         let entities = self.node.entitiesView.entities.filter { !($0 is DrawingMediaEntity) }
         let codableEntities = DrawingEntitiesView.encodeEntities(entities, entitiesView: self.node.entitiesView)
         mediaEditor.setDrawingAndEntities(data: nil, image: mediaEditor.values.drawing, entities: codableEntities)
-        
-        if case .avatarEditor = self.mode {
-            return false
-        }
-        if case .coverEditor = self.mode {
-            return false
-        }
         
         let filteredEntities = self.node.entitiesView.entities.filter { entity in
             if entity is DrawingMediaEntity {
@@ -44,34 +46,42 @@ extension MediaEditorScreenImpl {
         
         let values = mediaEditor.values
         let filteredValues = values.withUpdatedEntities([])
+        let caption = self.node.getCaption()
         
-        let caption = self.getCaption()
         if let subject = self.node.subject {
-            if case .asset = subject, !values.hasChanges && caption.string.isEmpty {
+            switch subject {
+            case .asset:
+                if !values.hasChanges && caption.string.isEmpty {
+                    return false
+                }
+            case .message, .gift:
+                if !filteredValues.hasChanges && filteredEntities.isEmpty && caption.string.isEmpty {
+                    return false
+                }
+            case .empty:
+                if !self.node.hasAnyChanges && !self.node.drawingView.internalState.canUndo {
+                    return false
+                }
+            case .videoCollage:
                 return false
-            } else if case .message = subject, !filteredValues.hasChanges && filteredEntities.isEmpty && caption.string.isEmpty {
-                return false
-            } else if case .gift = subject, !filteredValues.hasChanges && filteredEntities.isEmpty && caption.string.isEmpty {
-                return false
-            } else if case .empty = subject, !self.node.hasAnyChanges && !self.node.drawingView.internalState.canUndo {
-                return false
-            } else if case .videoCollage = subject {
-                return false
+            default:
+                break
             }
         }
         return true
     }
     
-    func saveDraft(id: Int64?, edit: Bool = false) {
+    func saveDraft(id: Int64?, isEdit: Bool = false, completion: ((MediaEditorDraft) -> Void)? = nil) {
         guard case .storyEditor = self.mode, let subject = self.node.subject, let actualSubject = self.node.actualSubject, let mediaEditor = self.node.mediaEditor else {
             return
         }
+        
         try? FileManager.default.createDirectory(atPath: draftPath(engine: self.context.engine), withIntermediateDirectories: true)
         
         let values = mediaEditor.values
         let privacy = self.state.privacy
         let forwardSource = self.forwardSource
-        let caption = self.getCaption()
+        let caption = self.node.getCaption()
         let duration = mediaEditor.duration ?? 0.0
         
         let currentTimestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
@@ -99,10 +109,19 @@ extension MediaEditorScreenImpl {
         }
         
         if let resultImage = mediaEditor.resultImage {
-            if !edit {
+            if !isEdit {
                 mediaEditor.seek(0.0, andPlay: false)
             }
-            makeEditorImageComposition(context: self.node.ciContext, postbox: self.context.account.postbox, inputImage: resultImage, dimensions: storyDimensions, values: values, time: .zero, textScale: 2.0, completion: { resultImage in
+            
+            makeEditorImageComposition(
+                context: self.node.ciContext,
+                postbox: self.context.account.postbox,
+                inputImage: resultImage,
+                dimensions: storyDimensions,
+                values: values,
+                time: .zero,
+                textScale: 2.0,
+                completion: { resultImage in
                 guard let resultImage else {
                     return
                 }
@@ -148,54 +167,64 @@ extension MediaEditorScreenImpl {
                 }
                 
                 let context = self.context
-                func innerSaveDraft(media: MediaInput) {
+                func innerSaveDraft(media: MediaInput, save: Bool = true) -> MediaEditorDraft? {
                     let fittedSize = resultImage.size.aspectFitted(CGSize(width: 128.0, height: 128.0))
-                    if let thumbnailImage = generateScaledImage(image: resultImage, size: fittedSize) {
-                        let path = "\(Int64.random(in: .min ... .max)).\(media.fileExtension)"
-                        let draft = MediaEditorDraft(
-                            path: path,
-                            isVideo: media.isVideo,
-                            thumbnail: thumbnailImage,
-                            dimensions: media.dimensions,
-                            duration: media.duration,
-                            values: values,
-                            caption: caption,
-                            privacy: privacy,
-                            forwardInfo: forwardSource.flatMap { StoryId(peerId: $0.0.id, id: $0.1.id) },
-                            timestamp: timestamp,
-                            location: location,
-                            expiresOn: expiresOn
-                        )
-                        switch media {
-                        case let .image(image, _):
-                            if let data = image.jpegData(compressionQuality: 0.87) {
-                                try? data.write(to: URL(fileURLWithPath: draft.fullPath(engine: context.engine)))
-                            }
-                        case let .video(path, _, _):
-                            try? FileManager.default.copyItem(atPath: path, toPath: draft.fullPath(engine: context.engine))
+                    guard let thumbnailImage = generateScaledImage(image: resultImage, size: fittedSize) else {
+                        return nil
+                    }
+                    let path = "\(Int64.random(in: .min ... .max)).\(media.fileExtension)"
+                    let draft = MediaEditorDraft(
+                        path: path,
+                        isVideo: media.isVideo,
+                        thumbnail: thumbnailImage,
+                        dimensions: media.dimensions,
+                        duration: media.duration,
+                        values: values,
+                        caption: caption,
+                        privacy: privacy,
+                        forwardInfo: forwardSource.flatMap { StoryId(peerId: $0.0.id, id: $0.1.id) },
+                        timestamp: timestamp,
+                        location: location,
+                        expiresOn: expiresOn
+                    )
+                    switch media {
+                    case let .image(image, _):
+                        if let data = image.jpegData(compressionQuality: 0.87) {
+                            try? data.write(to: URL(fileURLWithPath: draft.fullPath(engine: context.engine)))
                         }
+                    case let .video(path, _, _):
+                        try? FileManager.default.copyItem(atPath: path, toPath: draft.fullPath(engine: context.engine))
+                    }
+                    if save {
                         if let id {
                             saveStorySource(engine: context.engine, item: draft, peerId: context.account.peerId, id: id)
                         } else {
                             addStoryDraft(engine: context.engine, item: draft)
                         }
                     }
+                    return draft
                 }
                 
                 switch subject {
                 case .empty:
                     break
                 case let .image(image, dimensions, _, _):
-                    innerSaveDraft(media: .image(image: image, dimensions: dimensions))
+                    if let draft = innerSaveDraft(media: .image(image: image, dimensions: dimensions)) {
+                        completion?(draft)
+                    }
                 case let .video(path, _, _, _, _, dimensions, _, _, _):
-                    innerSaveDraft(media: .video(path: path, dimensions: dimensions, duration: duration))
+                    if let draft = innerSaveDraft(media: .video(path: path, dimensions: dimensions, duration: duration)) {
+                        completion?(draft)
+                    }
                 case let .videoCollage(items):
                     let _ = items
                 case let .asset(asset):
                     if asset.mediaType == .video {
                         PHImageManager.default().requestAVAsset(forVideo: asset, options: nil) { avAsset, _, _ in
                             if let urlAsset = avAsset as? AVURLAsset {
-                                innerSaveDraft(media: .video(path: urlAsset.url.relativePath, dimensions: PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight)), duration: duration))
+                                if let draft = innerSaveDraft(media: .video(path: urlAsset.url.relativePath, dimensions: PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight)), duration: duration)) {
+                                    completion?(draft)
+                                }
                             }
                         }
                     } else {
@@ -203,21 +232,31 @@ extension MediaEditorScreenImpl {
                         options.deliveryMode = .highQualityFormat
                         PHImageManager.default().requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode: .default, options: options) { image, _ in
                             if let image {
-                                innerSaveDraft(media: .image(image: image, dimensions: PixelDimensions(image.size)))
+                                if let draft = innerSaveDraft(media: .image(image: image, dimensions: PixelDimensions(image.size))) {
+                                    completion?(draft)
+                                }
                             }
                         }
                     }
                 case let .draft(draft, _):
                     if draft.isVideo {
-                        innerSaveDraft(media: .video(path: draft.fullPath(engine: context.engine), dimensions: draft.dimensions, duration: draft.duration ?? 0.0))
+                        if let draft = innerSaveDraft(media: .video(path: draft.fullPath(engine: context.engine), dimensions: draft.dimensions, duration: draft.duration ?? 0.0)) {
+                            completion?(draft)
+                        }
                     } else if let image = UIImage(contentsOfFile: draft.fullPath(engine: context.engine)) {
-                        innerSaveDraft(media: .image(image: image, dimensions: draft.dimensions))
+                        if let draft = innerSaveDraft(media: .image(image: image, dimensions: draft.dimensions)) {
+                            completion?(draft)
+                        }
                     }
                 case .message, .gift:
                     if let pixel = generateSingleColorImage(size: CGSize(width: 1, height: 1), color: .black) {
-                        innerSaveDraft(media: .image(image: pixel, dimensions: PixelDimensions(width: 1080, height: 1920)))
+                        if let draft = innerSaveDraft(media: .image(image: pixel, dimensions: PixelDimensions(width: 1080, height: 1920))) {
+                            completion?(draft)
+                        }
                     }
                 case .sticker:
+                    break
+                case .assets:
                     break
                 }
                 

@@ -148,7 +148,7 @@ private final class GiftWithdrawAlertContentNode: AlertContentNode {
                     theme: self.presentationTheme,
                     strings: self.strings,
                     peer: nil,
-                    subject: .uniqueGift(gift: self.gift),
+                    subject: .uniqueGift(gift: self.gift, price: nil),
                     mode: .thumbnail
                 )
             ),

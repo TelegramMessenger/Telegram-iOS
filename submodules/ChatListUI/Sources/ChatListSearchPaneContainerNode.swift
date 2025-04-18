@@ -61,6 +61,7 @@ public enum ChatListSearchPaneKey {
     case files
     case music
     case voice
+    case instantVideo
 }
 
 extension ChatListSearchPaneKey {
@@ -88,6 +89,8 @@ extension ChatListSearchPaneKey {
             return .music
         case .voice:
             return .voice
+        case .instantVideo:
+            return .instantVideo
         }
     }
 }
