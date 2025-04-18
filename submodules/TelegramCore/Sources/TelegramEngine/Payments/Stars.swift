@@ -1524,10 +1524,10 @@ func _internal_sendStarsPaymentForm(account: Account, formId: Int64, source: Bot
                                                     receiptMessageId = id
                                                 }
                                             }
-                                        case .giftCode, .stars, .starsGift, .starsChatSubscription, .starGift, .starGiftUpgrade, .starGiftTransfer, .premiumGift:
+                                        case .giftCode, .stars, .starsGift, .starsChatSubscription, .starGift, .starGiftUpgrade, .starGiftTransfer, .premiumGift, .starGiftResale:
                                             receiptMessageId = nil
                                         }
-                                    } else if case let .starGiftUnique(gift, _, _, savedToProfile, canExportDate, transferStars, _, peerId, _, savedId) = action.action, case let .Id(messageId) = message.id {
+                                    } else if case let .starGiftUnique(gift, _, _, savedToProfile, canExportDate, transferStars, _, peerId, _, savedId, _) = action.action, case let .Id(messageId) = message.id {
                                         let reference: StarGiftReference
                                         if let peerId, let savedId {
                                             reference = .peer(peerId: peerId, id: savedId)

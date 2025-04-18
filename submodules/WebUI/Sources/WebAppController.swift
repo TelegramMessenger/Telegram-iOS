@@ -1483,7 +1483,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                     externalState.storyTarget = target
                                     
                                     if let rootController = self.context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
-                                        rootController.proceedWithStoryUpload(target: target, result: result, existingMedia: nil, forwardInfo: nil, externalState: externalState, commit: commit)
+                                        rootController.proceedWithStoryUpload(target: target, results: [result], existingMedia: nil, forwardInfo: nil, externalState: externalState, commit: commit)
                                     }
                                 })
                                 if let navigationController = self.controller?.getNavigationController() {

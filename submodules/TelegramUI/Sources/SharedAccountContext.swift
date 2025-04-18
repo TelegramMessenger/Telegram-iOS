@@ -81,7 +81,9 @@ import AccountFreezeInfoScreen
 import JoinSubjectScreen
 import OldChannelsController
 import InviteLinksUI
+import GiftStoreScreen
 import SendInviteLinkScreen
+
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -2985,11 +2987,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         ))
         controller.navigationPresentation = .modal
         
-        let _ = combineLatest(
+        let _ = (combineLatest(
             queue: Queue.mainQueue(),
             controller.result,
-            options.get()
-        ).startStandalone(next: { [weak controller] result, options in
+            options.get())
+        |> take(1)).startStandalone(next: { [weak controller] result, options in
             if let (peers, _, _, _, _, _) = result, let contactPeer = peers.first, case let .peer(peer, _, _) = contactPeer, let starsContext = context.starsContext {
                 if case .starGiftTransfer = source {
                     presentTransferAlertImpl?(EnginePeer(peer))
@@ -3265,6 +3267,14 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }
         let controller = GiftOptionsScreen(context: context, starsContext: starsContext, peerId: peerId, premiumOptions: premiumOptions, hasBirthday: hasBirthday, completion: completion)
         controller.navigationPresentation = .modal
+        return controller
+    }
+    
+    public func makeGiftStoreController(context: AccountContext, peerId: EnginePeer.Id, gift: StarGift.Gift) -> ViewController {
+        guard let starsContext = context.starsContext else {
+            fatalError()
+        }
+        let controller = GiftStoreScreen(context: context, starsContext: starsContext, peerId: peerId, gift: gift)
         return controller
     }
     
@@ -3562,7 +3572,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return mediaPickerController(context: context, hasSearch: hasSearch, completion: completion)
     }
     
-    public func makeStoryMediaPickerScreen(context: AccountContext, isDark: Bool, forCollage: Bool, selectionLimit: Int?, getSourceRect: @escaping () -> CGRect, completion: @escaping (Any, UIView, CGRect, UIImage?, @escaping (Bool?) -> (UIView, CGRect)?, @escaping () -> Void) -> Void, multipleCompletion: @escaping ([Any]) -> Void, dismissed: @escaping () -> Void, groupsPresented: @escaping () -> Void) -> ViewController {
+    public func makeStoryMediaPickerScreen(context: AccountContext, isDark: Bool, forCollage: Bool, selectionLimit: Int?, getSourceRect: @escaping () -> CGRect, completion: @escaping (Any, UIView, CGRect, UIImage?, @escaping (Bool?) -> (UIView, CGRect)?, @escaping () -> Void) -> Void, multipleCompletion: @escaping ([Any], Bool) -> Void, dismissed: @escaping () -> Void, groupsPresented: @escaping () -> Void) -> ViewController {
         return storyMediaPickerController(context: context, isDark: isDark, forCollage: forCollage, selectionLimit: selectionLimit, getSourceRect: getSourceRect, completion: completion, multipleCompletion: multipleCompletion, dismissed: dismissed, groupsPresented: groupsPresented)
     }
     
@@ -3657,6 +3667,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return StarsWithdrawScreen(context: context, mode: .accountWithdraw, completion: completion)
     }
     
+    public func makeStarGiftResellScreen(context: AccountContext, update: Bool, completion: @escaping (Int64) -> Void) -> ViewController {
+        return StarsWithdrawScreen(context: context, mode: .starGiftResell(update), completion: completion)
+    }
+    
     public func makeStarsGiftScreen(context: AccountContext, message: EngineMessage) -> ViewController {
         return StarsTransactionScreen(context: context, subject: .gift(message))
     }
@@ -3674,7 +3688,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func makeGiftViewScreen(context: AccountContext, gift: StarGift.UniqueGift, shareStory: ((StarGift.UniqueGift) -> Void)?, dismissed: (() -> Void)?) -> ViewController {
-        let controller = GiftViewScreen(context: context, subject: .uniqueGift(gift), shareStory: shareStory)
+        let controller = GiftViewScreen(context: context, subject: .uniqueGift(gift, nil), shareStory: shareStory)
         controller.disposed = {
             dismissed?()
         }
@@ -3723,7 +3737,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 externalState.storyTarget = target
                 
                 if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
-                    rootController.proceedWithStoryUpload(target: target, result: result, existingMedia: nil, forwardInfo: nil, externalState: externalState, commit: commit)
+                    rootController.proceedWithStoryUpload(target: target, results: [result], existingMedia: nil, forwardInfo: nil, externalState: externalState, commit: commit)
                 }
                 
                 let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: targetPeerId))

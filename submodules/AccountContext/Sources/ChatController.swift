@@ -608,7 +608,7 @@ public struct ChatTextInputStateText: Codable, Equatable {
         return lhs.text == rhs.text && lhs.attributes == rhs.attributes
     }
     
-    public func attributedText() -> NSAttributedString {
+    public func attributedText(files: [Int64: TelegramMediaFile] = [:]) -> NSAttributedString {
         let result = NSMutableAttributedString(string: self.text)
         for attribute in self.attributes {
             switch attribute.type {
@@ -623,7 +623,7 @@ public struct ChatTextInputStateText: Codable, Equatable {
             case let .textUrl(url):
                 result.addAttribute(ChatTextInputAttributes.textUrl, value: ChatTextInputTextUrlAttribute(url: url), range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
             case let .customEmoji(_, fileId, enableAnimation):
-                result.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: fileId, file: nil, enableAnimation: enableAnimation), range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
+                result.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: fileId, file: files[fileId], enableAnimation: enableAnimation), range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
             case .strikethrough:
                 result.addAttribute(ChatTextInputAttributes.strikethrough, value: true as NSNumber, range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
             case .underline:

@@ -125,7 +125,7 @@ final class GiftListItemComponent: Component {
                                         theme: component.theme,
                                         strings: component.context.sharedContext.currentPresentationData.with { $0 }.strings,
                                         peer: nil,
-                                        subject: .uniqueGift(gift: gift),
+                                        subject: .uniqueGift(gift: gift, price: nil),
                                         ribbon: nil,
                                         isHidden: false,
                                         isSelected: gift.id == component.selectedId,

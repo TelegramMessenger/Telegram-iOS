@@ -500,6 +500,8 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
     func wantsDisplayBelowKeyboard() -> Bool {
         if let reactionContextNode = self.reactionContextNode {
             return reactionContextNode.wantsDisplayBelowKeyboard()
+        } else if case let .reference(source) = self.source {
+            return source.forceDisplayBelowKeyboard
         } else {
             return false
         }

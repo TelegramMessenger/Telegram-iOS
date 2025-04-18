@@ -4867,6 +4867,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                                 }
                                 return profileGifts.upgradeStarGift(formId: formId, reference: reference, keepOriginalInfo: keepOriginalInfo)
                             },
+                            buyGift: { [weak profileGifts] slug, peerId in
+                                guard let profileGifts else {
+                                    return .never()
+                                }
+                                return profileGifts.buyStarGift(slug: slug, peerId: peerId)
+                            },
                             shareStory: { [weak self] uniqueGift in
                                 guard let self, let controller = self.controller else {
                                     return
@@ -10012,7 +10018,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     viewControllers = viewControllers.filter { !($0 is AttachmentController)}
                     rootController.setViewControllers(viewControllers, animated: false)
                     
-                    rootController.proceedWithStoryUpload(target: target, result: result, existingMedia: nil, forwardInfo: nil, externalState: externalState, commit: commit)
+                    rootController.proceedWithStoryUpload(target: target, results: [result], existingMedia: nil, forwardInfo: nil, externalState: externalState, commit: commit)
                 }
             },
             cancelled: {}
@@ -10047,7 +10053,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     
                     self.openBotPreviewEditor(target: .botPreview(id: self.peerId, language: pane.currentBotPreviewLanguage?.id), source: result, transitionIn: (transitionView, transitionRect, transitionImage))
                 },
-                multipleCompletion: { _ in },
+                multipleCompletion: { _, _ in },
                 dismissed: {},
                 groupsPresented: {}
             )

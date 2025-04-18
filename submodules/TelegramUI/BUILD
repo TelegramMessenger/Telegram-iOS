@@ -463,6 +463,7 @@ swift_library(
         "//submodules/TelegramUI/Components/MiniAppListScreen",
         "//submodules/TelegramUI/Components/Stars/StarsIntroScreen",
         "//submodules/TelegramUI/Components/Gifts/GiftOptionsScreen",
+        "//submodules/TelegramUI/Components/Gifts/GiftStoreScreen",
         "//submodules/TelegramUI/Components/ContentReportScreen",
         "//submodules/TelegramUI/Components/PeerInfo/AffiliateProgramSetupScreen",
         "//submodules/TelegramUI/Components/Stars/StarsBalanceOverlayComponent",
@@ -472,6 +473,7 @@ swift_library(
         "//submodules/TelegramUI/Components/ButtonComponent",
         "//submodules/Components/BlurredBackgroundComponent",
         "//submodules/TelegramUI/Components/CheckComponent",
+        "//submodules/TelegramUI/Components/MarqueeComponent",
         "//third-party/recaptcha:RecaptchaEnterprise",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,

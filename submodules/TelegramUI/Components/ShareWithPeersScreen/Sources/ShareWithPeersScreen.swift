@@ -991,10 +991,22 @@ final class ShareWithPeersScreenComponent: Component {
                         }
                         
                         let sectionTitle: String
-                        if section.id == 0, case .stories = component.stateContext.subject {
-                            sectionTitle = component.coverItem == nil ? environment.strings.Story_Privacy_PostStoryAsHeader : ""
+                        if section.id == 0, case let .stories(_, count) = component.stateContext.subject {
+                            if component.coverItem == nil {
+                                if count > 1 {
+                                    sectionTitle = environment.strings.Story_Privacy_PostStoriesAsHeader
+                                } else {
+                                    sectionTitle = environment.strings.Story_Privacy_PostStoryAsHeader
+                                }
+                            } else {
+                                sectionTitle = ""
+                            }
                         } else if section.id == 2 {
-                            sectionTitle = environment.strings.Story_Privacy_WhoCanViewHeader
+                            if case let .stories(_, count) = component.stateContext.subject, count > 1 {
+                                sectionTitle = environment.strings.Story_Privacy_WhoCanViewStoriesHeader
+                            } else {
+                                sectionTitle = environment.strings.Story_Privacy_WhoCanViewHeader
+                            }
                         } else if section.id == 1 {
                             if case let .members(isGroup, _, _) = component.stateContext.subject {
                                 sectionTitle = isGroup ? environment.strings.BoostGift_Members_SectionTitle : environment.strings.BoostGift_Subscribers_SectionTitle
@@ -1637,12 +1649,21 @@ final class ShareWithPeersScreenComponent: Component {
                     }
                     
                     let footerValue = environment.strings.Story_Privacy_KeepOnMyPageHours(Int32(component.timeout / 3600))
-                    var footerText = environment.strings.Story_Privacy_KeepOnMyPageInfo(footerValue).string
-                    
-                    if let sendAsPeerId = self.sendAsPeerId, sendAsPeerId.isGroupOrChannel == true {
-                        footerText = isSendAsGroup ? environment.strings.Story_Privacy_KeepOnGroupPageInfo(footerValue).string : environment.strings.Story_Privacy_KeepOnChannelPageInfo(footerValue).string
+                    var footerText: String
+                    if case let .stories(_, count) = component.stateContext.subject, count > 1 {
+                        if let sendAsPeerId = self.sendAsPeerId, sendAsPeerId.isGroupOrChannel == true {
+                            footerText = isSendAsGroup ? environment.strings.Story_Privacy_KeepOnGroupPageManyInfo(footerValue).string : environment.strings.Story_Privacy_KeepOnChannelPageManyInfo(footerValue).string
+                        } else {
+                            footerText = environment.strings.Story_Privacy_KeepOnMyPageManyInfo(footerValue).string
+                        }
+                    } else {
+                        if let sendAsPeerId = self.sendAsPeerId, sendAsPeerId.isGroupOrChannel == true {
+                            footerText = isSendAsGroup ? environment.strings.Story_Privacy_KeepOnGroupPageInfo(footerValue).string : environment.strings.Story_Privacy_KeepOnChannelPageInfo(footerValue).string
+                        } else {
+                            footerText = environment.strings.Story_Privacy_KeepOnMyPageInfo(footerValue).string
+                        }
                     }
-                    
+                                        
                     let footerSize = sectionFooter.update(
                         transition: sectionFooterTransition,
                         component: AnyComponent(MultilineTextComponent(
@@ -2371,7 +2392,7 @@ final class ShareWithPeersScreenComponent: Component {
             )
                         
             var footersTotalHeight: CGFloat = 0.0
-            if case let .stories(editing) = component.stateContext.subject {
+            if case let .stories(editing, _) = component.stateContext.subject {
                 let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.freeTextColor)
                 let bold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: environment.theme.list.freeTextColor)
                 let link = MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemAccentColor)
@@ -2451,7 +2472,7 @@ final class ShareWithPeersScreenComponent: Component {
                         itemHeight: peerItemSize.height,
                         itemCount: peers.count
                     ))
-                } else if case let .stories(editing) = component.stateContext.subject {
+                } else if case let .stories(editing, _) = component.stateContext.subject {
                     if !editing && hasChannels {
                         sections.append(ItemLayout.Section(
                             id: 0,
@@ -2533,12 +2554,17 @@ final class ShareWithPeersScreenComponent: Component {
             switch component.stateContext.subject {
             case .peers:
                 title = environment.strings.Story_Privacy_PostStoryAs
-            case let .stories(editing):
+            case let .stories(editing, count):
                 if editing {
                     title = environment.strings.Story_Privacy_EditStory
                 } else {
-                    title = environment.strings.Story_Privacy_ShareStory
-                    actionButtonTitle = environment.strings.Story_Privacy_PostStory
+                    if count > 1 {
+                        title = environment.strings.Story_Privacy_ShareStories
+                        actionButtonTitle = environment.strings.Story_Privacy_PostStories(count)
+                    } else {
+                        title = environment.strings.Story_Privacy_ShareStory
+                        actionButtonTitle = environment.strings.Story_Privacy_PostStory
+                    }
                 }
             case let .chats(grayList):
                 if grayList {
@@ -2627,7 +2653,7 @@ final class ShareWithPeersScreenComponent: Component {
                     inset = 1000.0
                 } else if case .channels = component.stateContext.subject {
                     inset = 1000.0
-                } else if case let .stories(editing) = component.stateContext.subject {
+                } else if case let .stories(editing, _) = component.stateContext.subject {
                     if editing {
                         inset = 351.0
                         inset += 10.0 + environment.safeInsets.bottom + 50.0 + footersTotalHeight
@@ -3026,7 +3052,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
         var categoryItems: [ShareWithPeersScreenComponent.CategoryItem] = []
         var optionItems: [ShareWithPeersScreenComponent.OptionItem] = []
         var coverItem: ShareWithPeersScreenComponent.CoverItem?
-        if case let .stories(editing) = stateContext.subject {
+        if case let .stories(editing, _) = stateContext.subject {
             var everyoneSubtitle = presentationData.strings.Story_Privacy_ExcludePeople
             if (stateContext.stateValue?.savedSelectedPeers[.everyone]?.count ?? 0) > 0 {
                 var peerNamesArray: [String] = []

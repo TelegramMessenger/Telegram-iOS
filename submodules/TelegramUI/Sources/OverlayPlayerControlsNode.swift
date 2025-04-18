@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
+import ComponentFlow
 import Postbox
 import TelegramCore
 import SwiftSignalKit
@@ -17,6 +18,7 @@ import TelegramBaseController
 import ContextUI
 import SliderContextItem
 import UndoUI
+import MarqueeComponent
 
 private func normalizeValue(_ value: CGFloat) -> CGFloat {
     return round(value * 10.0) / 10.0
@@ -147,6 +149,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     private let albumArtNode: TransformImageNode
     private var largeAlbumArtNode: TransformImageNode?
     private let titleNode: TextNode
+    private let title: ComponentView<Empty>
     private let descriptionNode: TextNode
     private let shareNode: HighlightableButtonNode
     private let artistButton: HighlightTrackingButtonNode
@@ -236,6 +239,8 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = false
         
+        self.title = ComponentView<Empty>()
+        
         self.descriptionNode = TextNode()
         self.descriptionNode.isUserInteractionEnabled = false
         self.descriptionNode.displaysAsynchronously = false
@@ -295,7 +300,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         self.addSubnode(self.collapseNode)
         
         self.addSubnode(self.albumArtNode)
-        self.addSubnode(self.titleNode)
+        //self.addSubnode(self.titleNode)
         self.addSubnode(self.descriptionNode)
         self.addSubnode(self.artistButton)
         self.addSubnode(self.shareNode)
@@ -725,8 +730,25 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         }
         
         self.artistButton.isUserInteractionEnabled = hasArtist
+        
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: width - sideInset * 2.0 - leftInset - rightInset - infoLabelsLeftInset - infoLabelsRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
+        
+        let titleSize = self.title.update(
+            transition: .immediate,
+            component: AnyComponent(
+                MarqueeComponent(attributedText: titleString ?? NSAttributedString())
+            ),
+            environment: {},
+            containerSize: CGSize(width: width - sideInset * 2.0 - leftInset - rightInset - infoLabelsLeftInset - infoLabelsRightInset + MarqueeComponent.innerPadding, height: CGFloat.greatestFiniteMagnitude)
+        )
+        if let titleView = self.title.view {
+            if titleView.superview == nil {
+                self.view.addSubview(titleView)
+            }
+            transition.updateFrame(view: titleView, frame: CGRect(origin: CGPoint(x: self.isExpanded ? floor((width - titleSize.width) / 2.0) : (leftInset + sideInset + infoLabelsLeftInset) - MarqueeComponent.innerPadding, y: infoVerticalOrigin + 1.0), size: titleSize))
+        }
+        
         let makeDescriptionLayout = TextNode.asyncLayout(self.descriptionNode)
         let (descriptionLayout, descriptionApply) = makeDescriptionLayout(TextNodeLayoutArguments(attributedString: descriptionString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: width - sideInset * 2.0 - leftInset - rightInset - infoLabelsLeftInset - infoLabelsRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
         

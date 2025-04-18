@@ -105,7 +105,8 @@ private final class SheetContent: CombinedComponent {
             let minAmount: StarsAmount?
             let maxAmount: StarsAmount?
             
-            let configuration = StarsWithdrawConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
+            let withdrawConfiguration = StarsWithdrawConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
+            let resaleConfiguration = StarsSubscriptionConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
             
             switch component.mode {
             case let .withdraw(status):
@@ -113,7 +114,7 @@ private final class SheetContent: CombinedComponent {
                 amountTitle = environment.strings.Stars_Withdraw_AmountTitle
                 amountPlaceholder = environment.strings.Stars_Withdraw_AmountPlaceholder
                 
-                minAmount = configuration.minWithdrawAmount.flatMap { StarsAmount(value: $0, nanos: 0) }
+                minAmount = withdrawConfiguration.minWithdrawAmount.flatMap { StarsAmount(value: $0, nanos: 0) }
                 maxAmount = status.balances.availableBalance
                 amountLabel = nil
             case .accountWithdraw:
@@ -121,7 +122,7 @@ private final class SheetContent: CombinedComponent {
                 amountTitle = environment.strings.Stars_Withdraw_AmountTitle
                 amountPlaceholder = environment.strings.Stars_Withdraw_AmountPlaceholder
                 
-                minAmount = configuration.minWithdrawAmount.flatMap { StarsAmount(value: $0, nanos: 0) }
+                minAmount = withdrawConfiguration.minWithdrawAmount.flatMap { StarsAmount(value: $0, nanos: 0) }
                 maxAmount = state.balance
                 amountLabel = nil
             case .paidMedia:
@@ -130,9 +131,9 @@ private final class SheetContent: CombinedComponent {
                 amountPlaceholder = environment.strings.Stars_PaidContent_AmountPlaceholder
                
                 minAmount = StarsAmount(value: 1, nanos: 0)
-                maxAmount = configuration.maxPaidMediaAmount.flatMap { StarsAmount(value: $0, nanos: 0) }
+                maxAmount = withdrawConfiguration.maxPaidMediaAmount.flatMap { StarsAmount(value: $0, nanos: 0) }
                 
-                if let usdWithdrawRate = configuration.usdWithdrawRate, let amount = state.amount, amount > StarsAmount.zero {
+                if let usdWithdrawRate = withdrawConfiguration.usdWithdrawRate, let amount = state.amount, amount > StarsAmount.zero {
                     let usdRate = Double(usdWithdrawRate) / 1000.0 / 100.0
                     amountLabel = "≈\(formatTonUsdValue(amount.value, divide: false, rate: usdRate, dateTimeFormat: environment.dateTimeFormat))"
                 } else {
@@ -144,7 +145,16 @@ private final class SheetContent: CombinedComponent {
                 amountPlaceholder = environment.strings.Stars_SendStars_AmountPlaceholder
                 
                 minAmount = StarsAmount(value: 1, nanos: 0)
-                maxAmount = configuration.maxPaidMediaAmount.flatMap { StarsAmount(value: $0, nanos: 0) }
+                maxAmount = withdrawConfiguration.maxPaidMediaAmount.flatMap { StarsAmount(value: $0, nanos: 0) }
+                amountLabel = nil
+            case let .starGiftResell(update):
+                //TODO:localize
+                titleString = update ? "Edit Price" : "Sell Gift"
+                amountTitle = "PRICE IN STARS"
+                amountPlaceholder = "Enter Price"
+                
+                minAmount = StarsAmount(value: resaleConfiguration.starGiftResaleMinAmount, nanos: 0)
+                maxAmount = StarsAmount(value: resaleConfiguration.starGiftResaleMaxAmount, nanos: 0)
                 amountLabel = nil
             }
             
@@ -214,10 +224,16 @@ private final class SheetContent: CombinedComponent {
             }
             
             let amountFont = Font.regular(13.0)
+            let boldAmountFont = Font.semibold(13.0)
             let amountTextColor = theme.list.freeTextColor
-            let amountMarkdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: amountFont, textColor: amountTextColor), bold: MarkdownAttributeSet(font: amountFont, textColor: amountTextColor), link: MarkdownAttributeSet(font: amountFont, textColor: theme.list.itemAccentColor), linkAttribute: { contents in
+            let amountMarkdownAttributes = MarkdownAttributes(
+                body: MarkdownAttributeSet(font: amountFont, textColor: amountTextColor),
+                bold: MarkdownAttributeSet(font: boldAmountFont, textColor: amountTextColor),
+                link: MarkdownAttributeSet(font: amountFont, textColor: theme.list.itemAccentColor),
+                linkAttribute: { contents in
                 return (TelegramTextAttributes.URL, contents)
-            })
+                }
+            )
             if state.cachedChevronImage == nil || state.cachedChevronImage?.1 !== environment.theme {
                 state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Contact List/SubtitleArrow"), color: environment.theme.list.itemAccentColor)!, environment.theme)
             }
@@ -248,6 +264,18 @@ private final class SheetContent: CombinedComponent {
                 ))
             case let .reaction(starsToTop):
                 let amountInfoString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(environment.strings.Stars_SendStars_AmountInfo("\(starsToTop ?? 0)").string, attributes: amountMarkdownAttributes, textAlignment: .natural))
+                amountFooter = AnyComponent(MultilineTextComponent(
+                    text: .plain(amountInfoString),
+                    maximumNumberOfLines: 0
+                ))
+            case .starGiftResell:
+                //TODO:localize
+                let amountInfoString: NSAttributedString
+                if let value = state.amount?.value, value > 0 {
+                    amountInfoString = NSAttributedString(attributedString: parseMarkdownIntoAttributedString("You will receive **\(Int32(floor(Float(value) * 0.8))) Stars**.", attributes: amountMarkdownAttributes, textAlignment: .natural))
+                } else {
+                    amountInfoString = NSAttributedString(attributedString: parseMarkdownIntoAttributedString("You will receive **80%**.", attributes: amountMarkdownAttributes, textAlignment: .natural))
+                }
                 amountFooter = AnyComponent(MultilineTextComponent(
                     text: .plain(amountInfoString),
                     maximumNumberOfLines: 0
@@ -305,8 +333,15 @@ private final class SheetContent: CombinedComponent {
             let buttonString: String
             if case .paidMedia = component.mode {
                 buttonString = environment.strings.Stars_PaidContent_Create
+            } else if case .starGiftResell = component.mode {
+                //TODO:localize
+                if let amount = state.amount, amount.value > 0 {
+                    buttonString = "Sell for  # \(presentationStringsFormattedNumber(amount, environment.dateTimeFormat.groupingSeparator))"
+                } else {
+                    buttonString = "Sell"
+                }
             } else if let amount = state.amount {
-                buttonString = "\(environment.strings.Stars_Withdraw_Withdraw)   #  \(presentationStringsFormattedNumber(amount, environment.dateTimeFormat.groupingSeparator))"
+                buttonString = "\(environment.strings.Stars_Withdraw_Withdraw)  # \(presentationStringsFormattedNumber(amount, environment.dateTimeFormat.groupingSeparator))"
             } else {
                 buttonString = environment.strings.Stars_Withdraw_Withdraw
             }
@@ -318,8 +353,9 @@ private final class SheetContent: CombinedComponent {
             let buttonAttributedString = NSMutableAttributedString(string: buttonString, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
             if let range = buttonAttributedString.string.range(of: "#"), let starImage = state.cachedStarImage?.0 {
                 buttonAttributedString.addAttribute(.attachment, value: starImage, range: NSRange(range, in: buttonAttributedString.string))
-                buttonAttributedString.addAttribute(.foregroundColor, value: UIColor(rgb: 0xffffff), range: NSRange(range, in: buttonAttributedString.string))
-                buttonAttributedString.addAttribute(.baselineOffset, value: 1.0, range: NSRange(range, in: buttonAttributedString.string))
+                buttonAttributedString.addAttribute(.foregroundColor, value: theme.list.itemCheckColors.foregroundColor, range: NSRange(range, in: buttonAttributedString.string))
+                buttonAttributedString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: buttonAttributedString.string))
+                buttonAttributedString.addAttribute(.kern, value: 2.0, range: NSRange(range, in: buttonAttributedString.string))
             }
             
             let button = button.update(
@@ -393,6 +429,8 @@ private final class SheetContent: CombinedComponent {
             case let .paidMedia(initialValue):
                 amount = initialValue.flatMap { StarsAmount(value: $0, nanos: 0) }
             case .reaction:
+                amount = nil
+            case .starGiftResell:
                 amount = nil
             }
             
@@ -514,9 +552,11 @@ public final class StarsWithdrawScreen: ViewControllerComponentContainer {
         case accountWithdraw
         case paidMedia(Int64?)
         case reaction(Int64?)
+        case starGiftResell(Bool)
     }
     
     private let context: AccountContext
+    private let mode: StarsWithdrawScreen.Mode
     fileprivate let completion: (Int64) -> Void
         
     public init(
@@ -525,6 +565,7 @@ public final class StarsWithdrawScreen: ViewControllerComponentContainer {
         completion: @escaping (Int64) -> Void
     ) {
         self.context = context
+        self.mode = mode
         self.completion = completion
         
         super.init(
@@ -558,12 +599,17 @@ public final class StarsWithdrawScreen: ViewControllerComponentContainer {
     
     func presentMinAmountTooltip(_ minAmount: Int64) {
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        var text = presentationData.strings.Stars_Withdraw_Withdraw_ErrorMinimum(presentationData.strings.Stars_Withdraw_Withdraw_ErrorMinimum_Stars(Int32(minAmount))).string
+        if case .starGiftResell = self.mode {
+            text = "You cannot sell gift for less than \(presentationData.strings.Stars_Withdraw_Withdraw_ErrorMinimum_Stars(Int32(minAmount)))."
+        }
+        
         let resultController = UndoOverlayController(
             presentationData: presentationData,
             content: .image(
                 image: UIImage(bundleImageName: "Premium/Stars/StarLarge")!,
                 title: nil,
-                text: presentationData.strings.Stars_Withdraw_Withdraw_ErrorMinimum(presentationData.strings.Stars_Withdraw_Withdraw_ErrorMinimum_Stars(Int32(minAmount))).string,
+                text: text,
                 round: false,
                 undoText: nil
             ),
