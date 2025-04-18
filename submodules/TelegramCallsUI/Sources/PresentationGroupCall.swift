@@ -3394,6 +3394,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
     
     private func updateProximityMonitoring() {
+        if self.sharedAudioContext != nil {
+            return
+        }
+        
         var shouldMonitorProximity = false
         switch self.currentSelectedAudioOutputValue {
         case .builtin:

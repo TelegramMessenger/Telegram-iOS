@@ -298,6 +298,8 @@ extension VideoChatScreenComponent.View {
                                 let nameDisplayOrder = presentationData.nameDisplayOrder
                                 if let chatPeer {
                                     items.append(DeleteChatPeerActionSheetItem(context: groupCall.accountContext, peer: peer, chatPeer: chatPeer, action: .removeFromGroup, strings: environment.strings, nameDisplayOrder: nameDisplayOrder))
+                                } else {
+                                    items.append(ActionSheetTextItem(title: environment.strings.VoiceChat_RemoveConferencePeerConfirmation(peer.displayTitle(strings: environment.strings, displayOrder: nameDisplayOrder)).string, parseMarkdown: true))
                                 }
 
                                 items.append(ActionSheetButtonItem(title: environment.strings.VoiceChat_RemovePeerRemove, color: .destructive, action: { [weak self, weak actionSheet] in

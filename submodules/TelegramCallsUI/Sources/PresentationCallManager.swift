@@ -1084,35 +1084,83 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         initialCall: EngineGroupCallDescription,
         reference: InternalGroupCallReference,
         beginWithVideo: Bool,
-        invitePeerIds: [EnginePeer.Id]
-    ) {
-        let keyPair: TelegramKeyPair
-        guard let keyPairValue = TelegramE2EEncryptionProviderImpl.shared.generateKeyPair() else {
-            return
+        invitePeerIds: [EnginePeer.Id],
+        endCurrentIfAny: Bool
+    ) -> JoinGroupCallManagerResult {
+        let begin: () -> Void = { [weak self] in
+            guard let self else {
+                return
+            }
+            
+            let keyPair: TelegramKeyPair
+            guard let keyPairValue = TelegramE2EEncryptionProviderImpl.shared.generateKeyPair() else {
+                return
+            }
+            keyPair = keyPairValue
+            
+            let call = PresentationGroupCallImpl(
+                accountContext: accountContext,
+                audioSession: self.audioSession,
+                callKitIntegration: nil,
+                getDeviceAccessData: self.getDeviceAccessData,
+                initialCall: (initialCall, reference),
+                internalId: CallSessionInternalId(),
+                peerId: nil,
+                isChannel: false,
+                invite: nil,
+                joinAsPeerId: nil,
+                isStream: false,
+                keyPair: keyPair,
+                conferenceSourceId: nil,
+                isConference: true,
+                beginWithVideo: beginWithVideo,
+                sharedAudioContext: nil
+            )
+            for peerId in invitePeerIds {
+                let _ = call.invitePeer(peerId, isVideo: beginWithVideo)
+            }
+            self.updateCurrentGroupCall(.group(call))
         }
-        keyPair = keyPairValue
         
-        let call = PresentationGroupCallImpl(
-            accountContext: accountContext,
-            audioSession: self.audioSession,
-            callKitIntegration: nil,
-            getDeviceAccessData: self.getDeviceAccessData,
-            initialCall: (initialCall, reference),
-            internalId: CallSessionInternalId(),
-            peerId: nil,
-            isChannel: false,
-            invite: nil,
-            joinAsPeerId: nil,
-            isStream: false,
-            keyPair: keyPair,
-            conferenceSourceId: nil,
-            isConference: true,
-            beginWithVideo: beginWithVideo,
-            sharedAudioContext: nil
-        )
-        for peerId in invitePeerIds {
-            let _ = call.invitePeer(peerId, isVideo: beginWithVideo)
+        if let currentGroupCall = self.currentGroupCallValue {
+            if endCurrentIfAny {
+                switch currentGroupCall {
+                case let .conferenceSource(conferenceSource):
+                    self.startCallDisposable.set((conferenceSource.hangUp()
+                    |> filter { $0 }
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { _ in
+                        begin()
+                    }))
+                case let .group(groupCall):
+                    self.startCallDisposable.set((groupCall.leave(terminateIfPossible: false)
+                    |> filter { $0 }
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { _ in
+                        begin()
+                    }))
+                }
+            } else {
+                switch currentGroupCall {
+                case let .conferenceSource(conferenceSource):
+                    return .alreadyInProgress(conferenceSource.peerId)
+                case let .group(groupCall):
+                    return .alreadyInProgress(groupCall.peerId)
+                }
+            }
+        } else if let currentCall = self.currentCall {
+            if endCurrentIfAny {
+                self.callKitIntegration?.dropCall(uuid: currentCall.internalId)
+                self.startCallDisposable.set((currentCall.hangUp()
+                |> deliverOnMainQueue).start(next: { _ in
+                    begin()
+                }))
+            } else {
+                return .alreadyInProgress(currentCall.peerId)
+            }
+        } else {
+            begin()
         }
-        self.updateCurrentGroupCall(.group(call))
+        return .joined
     }
 }

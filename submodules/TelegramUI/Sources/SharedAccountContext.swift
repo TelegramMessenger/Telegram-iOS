@@ -2048,7 +2048,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }
             
             let openCall: () -> Void = {
-                context.sharedContext.callManager?.joinConferenceCall(
+                let _ = context.sharedContext.callManager?.joinConferenceCall(
                     accountContext: context,
                     initialCall: EngineGroupCallDescription(
                         id: call.callInfo.id,
@@ -2060,7 +2060,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     ),
                     reference: .id(id: call.callInfo.id, accessHash: call.callInfo.accessHash),
                     beginWithVideo: isVideo,
-                    invitePeerIds: peerIds
+                    invitePeerIds: peerIds,
+                    endCurrentIfAny: true
                 )
                 completion?()
             }

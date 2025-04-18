@@ -85,7 +85,6 @@ public protocol ValueBox {
     func exists(_ table: ValueBoxTable, key: ValueBoxKey) -> Bool
     func set(_ table: ValueBoxTable, key: ValueBoxKey, value: MemoryBuffer)
     func remove(_ table: ValueBoxTable, key: ValueBoxKey, secure: Bool)
-    func move(_ table: ValueBoxTable, from previousKey: ValueBoxKey, to updatedKey: ValueBoxKey)
     func copy(fromTable: ValueBoxTable, fromKey: ValueBoxKey, toTable: ValueBoxTable, toKey: ValueBoxKey)
     func removeRange(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey)
     func fullTextSet(_ table: ValueBoxFullTextTable, collectionId: String, itemId: String, contents: String, tags: String)

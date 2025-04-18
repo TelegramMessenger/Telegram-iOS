@@ -143,13 +143,15 @@ func _internal_joinLinkInformation(_ hash: String, account: Account) -> Signal<E
 }
 
 public final class JoinCallLinkInformation {
+    public let reference: InternalGroupCallReference
     public let id: Int64
     public let accessHash: Int64
     public let inviter: EnginePeer?
     public let members: [EnginePeer]
     public let totalMemberCount: Int
     
-    public init(id: Int64, accessHash: Int64, inviter: EnginePeer?, members: [EnginePeer], totalMemberCount: Int) {
+    public init(reference: InternalGroupCallReference, id: Int64, accessHash: Int64, inviter: EnginePeer?, members: [EnginePeer], totalMemberCount: Int) {
+        self.reference = reference
         self.id = id
         self.accessHash = accessHash
         self.inviter = inviter
@@ -176,7 +178,7 @@ func _internal_joinCallLinkInformation(_ hash: String, account: Account) -> Sign
                 members.append(peer)
             }
         }
-        return .single(JoinCallLinkInformation(id: call.info.id, accessHash: call.info.accessHash, inviter: nil, members: members, totalMemberCount: call.info.participantCount))
+        return .single(JoinCallLinkInformation(reference: .link(slug: hash), id: call.info.id, accessHash: call.info.accessHash, inviter: nil, members: members, totalMemberCount: call.info.participantCount))
     }
 }
 
@@ -204,6 +206,6 @@ func _internal_joinCallInvitationInformation(account: Account, messageId: Messag
                 members.append(peer)
             }
         }
-        return .single(JoinCallLinkInformation(id: call.info.id, accessHash: call.info.accessHash, inviter: nil, members: members, totalMemberCount: call.info.participantCount))
+        return .single(JoinCallLinkInformation(reference: .message(id: messageId), id: call.info.id, accessHash: call.info.accessHash, inviter: nil, members: members, totalMemberCount: call.info.participantCount))
     }
 }

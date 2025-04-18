@@ -25,12 +25,16 @@ final class VideoChatParticipantsComponent: Component {
             }
         }
         
+        var leftInset: CGFloat
+        var rightInset: CGFloat
         var videoColumn: Column?
         var mainColumn: Column
         var columnSpacing: CGFloat
         var isMainColumnHidden: Bool
         
-        init(videoColumn: Column?, mainColumn: Column, columnSpacing: CGFloat, isMainColumnHidden: Bool) {
+        init(leftInset: CGFloat, rightInset: CGFloat, videoColumn: Column?, mainColumn: Column, columnSpacing: CGFloat, isMainColumnHidden: Bool) {
+            self.leftInset = leftInset
+            self.rightInset = rightInset
             self.videoColumn = videoColumn
             self.mainColumn = mainColumn
             self.columnSpacing = columnSpacing
@@ -509,13 +513,13 @@ final class VideoChatParticipantsComponent: Component {
             
             if let videoColumn = layout.videoColumn {
                 let columnsWidth: CGFloat = videoColumn.width + layout.columnSpacing + layout.mainColumn.width
-                let columnsSideInset: CGFloat = floorToScreenPixels((containerSize.width - columnsWidth) * 0.5)
+                let columnsLeftInset: CGFloat = layout.leftInset
                 
-                var separateVideoGridFrame = CGRect(origin: CGPoint(x: floor((containerSize.width - columnsWidth) * 0.5), y: 0.0), size: CGSize(width: gridWidth, height: containerSize.height))
+                var separateVideoGridFrame = CGRect(origin: CGPoint(x: columnsLeftInset, y: 0.0), size: CGSize(width: gridWidth, height: containerSize.height))
                 
                 var listFrame = CGRect(origin: CGPoint(x: separateVideoGridFrame.maxX + layout.columnSpacing, y: 0.0), size: CGSize(width: listWidth, height: containerSize.height))
                 if isUIHidden || layout.isMainColumnHidden {
-                    listFrame.origin.x = containerSize.width + columnsSideInset
+                    listFrame.origin.x = containerSize.width + columnsLeftInset
                     separateVideoGridFrame = CGRect(origin: CGPoint(x: floor((containerSize.width - columnsWidth) * 0.5), y: 0.0), size: CGSize(width: columnsWidth, height: containerSize.height))
                 }
                 

@@ -405,7 +405,8 @@ func openResolvedUrlImpl(
                     slug: link,
                     inviter: resolvedCallLink.inviter,
                     members: resolvedCallLink.members,
-                    totalMemberCount: resolvedCallLink.totalMemberCount
+                    totalMemberCount: resolvedCallLink.totalMemberCount,
+                    info: resolvedCallLink
                 ))))
             }, error: { _ in
                 var elevatedLayout = true
