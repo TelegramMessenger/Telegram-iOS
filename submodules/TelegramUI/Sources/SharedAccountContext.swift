@@ -3572,7 +3572,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return mediaPickerController(context: context, hasSearch: hasSearch, completion: completion)
     }
     
-    public func makeStoryMediaPickerScreen(context: AccountContext, isDark: Bool, forCollage: Bool, selectionLimit: Int?, getSourceRect: @escaping () -> CGRect, completion: @escaping (Any, UIView, CGRect, UIImage?, @escaping (Bool?) -> (UIView, CGRect)?, @escaping () -> Void) -> Void, multipleCompletion: @escaping ([Any]) -> Void, dismissed: @escaping () -> Void, groupsPresented: @escaping () -> Void) -> ViewController {
+    public func makeStoryMediaPickerScreen(context: AccountContext, isDark: Bool, forCollage: Bool, selectionLimit: Int?, getSourceRect: @escaping () -> CGRect, completion: @escaping (Any, UIView, CGRect, UIImage?, @escaping (Bool?) -> (UIView, CGRect)?, @escaping () -> Void) -> Void, multipleCompletion: @escaping ([Any], Bool) -> Void, dismissed: @escaping () -> Void, groupsPresented: @escaping () -> Void) -> ViewController {
         return storyMediaPickerController(context: context, isDark: isDark, forCollage: forCollage, selectionLimit: selectionLimit, getSourceRect: getSourceRect, completion: completion, multipleCompletion: multipleCompletion, dismissed: dismissed, groupsPresented: groupsPresented)
     }
     
@@ -3737,7 +3737,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 externalState.storyTarget = target
                 
                 if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
-                    rootController.proceedWithStoryUpload(target: target, result: result, existingMedia: nil, forwardInfo: nil, externalState: externalState, commit: commit)
+                    rootController.proceedWithStoryUpload(target: target, results: [result], existingMedia: nil, forwardInfo: nil, externalState: externalState, commit: commit)
                 }
                 
                 let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: targetPeerId))

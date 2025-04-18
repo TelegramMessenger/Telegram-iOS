@@ -44,7 +44,7 @@ public extension ShareWithPeersScreen {
     final class StateContext {
         public enum Subject: Equatable {
             case peers(peers: [EnginePeer], peerId: EnginePeer.Id?)
-            case stories(editing: Bool)
+            case stories(editing: Bool, count: Int32)
             case chats(blocked: Bool)
             case contacts(base: EngineStoryPrivacy.Base)
             case contactsSearch(query: String, onlyContacts: Bool)

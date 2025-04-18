@@ -790,6 +790,7 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
                 iconNode = ASImageNode()
                 iconNode.displaysAsynchronously = false
                 iconNode.image = generateTintedImage(image: UIImage(bundleImageName: iconName), color: state.textColor)
+                self.iconNode = iconNode
                 self.addSubnode(iconNode)
             }
             if let iconSize = iconNode.image?.size {
@@ -1806,7 +1807,9 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
             } else {
                 height = bounds.height + 8.0
             }
-            if !isNarrowButton {
+            if isTwoVerticalButtons && self.secondaryButtonState.smallSpacing {
+                
+            } else if !isNarrowButton {
                 height += 9.0
             }
             if isTwoVerticalButtons {
@@ -1896,7 +1899,8 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
                     mainButtonFrame = CGRect(origin: CGPoint(x: buttonOriginX, y: buttonOriginY + sideInset + buttonSize.height), size: buttonSize)
                 case .bottom:
                     mainButtonFrame = CGRect(origin: CGPoint(x: buttonOriginX, y: buttonOriginY), size: buttonSize)
-                    secondaryButtonFrame = CGRect(origin: CGPoint(x: buttonOriginX, y: buttonOriginY + sideInset + buttonSize.height), size: buttonSize)
+                    let buttonSpacing = self.secondaryButtonState.smallSpacing ? 8.0 : sideInset
+                    secondaryButtonFrame = CGRect(origin: CGPoint(x: buttonOriginX, y: buttonOriginY + buttonSpacing + buttonSize.height), size: buttonSize)
                 case .left:
                     secondaryButtonFrame = CGRect(origin: CGPoint(x: buttonOriginX, y: buttonOriginY), size: buttonSize)
                     mainButtonFrame = CGRect(origin: CGPoint(x: buttonOriginX + buttonSize.width + sideInset, y: buttonOriginY), size: buttonSize)

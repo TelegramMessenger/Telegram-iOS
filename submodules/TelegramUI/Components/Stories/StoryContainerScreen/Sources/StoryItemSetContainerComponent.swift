@@ -5068,7 +5068,7 @@ public final class StoryItemSetContainerComponent: Component {
             
             let stateContext = ShareWithPeersScreen.StateContext(
                 context: context,
-                subject: .stories(editing: true),
+                subject: .stories(editing: true, count: 1),
                 editing: true,
                 initialSelectedPeers: selectedPeers,
                 closeFriends: component.closeFriends.get(),

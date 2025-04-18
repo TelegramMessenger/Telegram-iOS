@@ -14188,3 +14188,12 @@ Sorry for the inconvenience.";
 "SendInviteLink.TextCallsRestrictedMultipleUsers_1" = "{user_list}, and **%d** more person do not accept calls.";
 "SendInviteLink.TextCallsRestrictedMultipleUsers_any" = "{user_list}, and **%d** more people do not accept calls.";
 "SendInviteLink.TextCallsRestrictedSendInviteLink" = "You can try to send an invite link instead.";
+
+"Story.Privacy.ShareStories" = "Share Stories";
+"Story.Privacy.PostStoriesAsHeader" = "POST STORIES AS";
+"Story.Privacy.WhoCanViewStoriesHeader" = "WHO CAN VIEW THIS STORIES";
+"Story.Privacy.PostStories_1" = "Post %@ Story";
+"Story.Privacy.PostStories_any" = "Post %@ Stories";
+"Story.Privacy.KeepOnMyPageManyInfo" = "Keep these stories on your profile even after they expire in %@. Privacy settings will apply.";
+"Story.Privacy.KeepOnChannelPageManyInfo" = "Keep these stories on the channel profile even after they expire in %@.";
+"Story.Privacy.KeepOnGroupPageManyInfo" = "Keep these stories on the group page even after they expire in %@.";

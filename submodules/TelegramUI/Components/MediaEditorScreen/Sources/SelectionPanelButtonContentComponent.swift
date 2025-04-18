@@ -34,7 +34,7 @@ final class SelectionPanelButtonContentComponent: Component {
             return false
         }
         
-        private let backgroundView: BlurredBackgroundView
+        let backgroundView: BlurredBackgroundView
         private let outline = SimpleLayer()
         private let icon = SimpleLayer()
         private let label = ComponentView<Empty>()
