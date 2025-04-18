@@ -2010,7 +2010,8 @@ final class MediaEditorScreenComponent: Component {
                                 self.isSelectionPanelOpen = !self.isSelectionPanelOpen
                                 self.state?.updated()
                             }
-                        }
+                        },
+                        animateAlpha: false
                     )),
                     environment: {},
                     containerSize: CGSize(width: 33.0, height: 33.0)

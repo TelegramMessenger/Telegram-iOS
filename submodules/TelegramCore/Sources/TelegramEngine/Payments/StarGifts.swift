@@ -1459,23 +1459,26 @@ private final class ProfileGiftsContextImpl {
         return _internal_transferStarGift(account: self.account, prepaid: prepaid, reference: reference, peerId: peerId)
     }
     
-    func buyStarGift(gift inputGift: TelegramCore.StarGift, peerId: EnginePeer.Id) -> Signal<Never, BuyStarGiftError> {
-        var gift = self.gifts.first(where: { $0.gift == inputGift })
-        if gift == nil {
-            gift = self.filteredGifts.first(where: { $0.gift == inputGift })
-        }
-        guard case let .unique(uniqueGift) = gift?.gift else {
-            return .complete()
-        }
-        
+    func buyStarGift(slug: String, peerId: EnginePeer.Id) -> Signal<Never, BuyStarGiftError> {
         if let count = self.count {
             self.count = max(0, count - 1)
         }
-        self.gifts.removeAll(where: { $0.gift == inputGift })
-        self.filteredGifts.removeAll(where: { $0.gift == inputGift })
+        self.gifts.removeAll(where: { gift in
+            if case let .unique(uniqueGift) = gift.gift, uniqueGift.slug == slug {
+                return true
+            }
+            return false
+        })
+        self.filteredGifts.removeAll(where: { gift in
+            if case let .unique(uniqueGift) = gift.gift, uniqueGift.slug == slug {
+                return true
+            }
+            return false
+        })
+
         self.pushState()
         
-        return _internal_buyStarGift(account: self.account, slug: uniqueGift.slug, peerId: peerId)
+        return _internal_buyStarGift(account: self.account, slug: slug, peerId: peerId)
     }
     
     func removeStarGift(gift: TelegramCore.StarGift) {
@@ -1899,11 +1902,11 @@ public final class ProfileGiftsContext {
         }
     }
     
-    public func buyStarGift(gift: TelegramCore.StarGift, peerId: EnginePeer.Id) -> Signal<Never, BuyStarGiftError> {
+    public func buyStarGift(slug: String, peerId: EnginePeer.Id) -> Signal<Never, BuyStarGiftError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.impl.with { impl in
-                disposable.set(impl.buyStarGift(gift: gift, peerId: peerId).start(error: { error in
+                disposable.set(impl.buyStarGift(slug: slug, peerId: peerId).start(error: { error in
                     subscriber.putError(error)
                 }, completed: {
                     subscriber.putCompletion()
@@ -2308,7 +2311,7 @@ private final class ResaleGiftsContextImpl {
     
     private let disposable = MetaDisposable()
     
-    private var sorting: ResaleGiftsContext.Sorting = .date
+    private var sorting: ResaleGiftsContext.Sorting = .value
     private var filterAttributes: [ResaleGiftsContext.Attribute] = []
     
     private var gifts: [StarGift] = []
@@ -2431,7 +2434,15 @@ private final class ResaleGiftsContextImpl {
                         
                         let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                         updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
-                        return (gifts.compactMap { StarGift(apiStarGift: $0) }, resultAttributes, attributeCount, count, nextOffset)
+                        
+                        var mappedGifts: [StarGift] = []
+                        for gift in gifts {
+                            if let mappedGift = StarGift(apiStarGift: gift), case let .unique(uniqueGift) = mappedGift, let resellStars = uniqueGift.resellStars, resellStars > 0 {
+                                mappedGifts.append(mappedGift)
+                            }
+                        }
+
+                        return (mappedGifts, resultAttributes, attributeCount, count, nextOffset)
                     }
                 }
             }
@@ -2444,9 +2455,7 @@ private final class ResaleGiftsContextImpl {
                 if initialNextOffset == nil || reload {
                     self.gifts = gifts
                 } else {
-                    for gift in gifts {
-                        self.gifts.append(gift)
-                    }
+                    self.gifts.append(contentsOf: gifts)
                 }
                 
                 let updatedCount = max(Int32(self.gifts.count), count)
@@ -2471,6 +2480,11 @@ private final class ResaleGiftsContextImpl {
         self.pushState()
         
         self.loadMore()
+    }
+    
+    func removeStarGift(gift: TelegramCore.StarGift) {
+        self.gifts.removeAll(where: { $0 == gift })
+        self.pushState()
     }
     
     func updateSorting(_ sorting: ResaleGiftsContext.Sorting) {
@@ -2569,6 +2583,12 @@ public final class ResaleGiftsContext {
     public func updateFilterAttributes(_ attributes: [ResaleGiftsContext.Attribute]) {
         self.impl.with { impl in
             impl.updateFilterAttributes(attributes)
+        }
+    }
+    
+    public func removeStarGift(gift: TelegramCore.StarGift) {
+        self.impl.with { impl in
+            impl.removeStarGift(gift: gift)
         }
     }
 

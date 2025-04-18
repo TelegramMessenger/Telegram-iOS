@@ -147,9 +147,9 @@ private final class SheetContent: CombinedComponent {
                 minAmount = StarsAmount(value: 1, nanos: 0)
                 maxAmount = withdrawConfiguration.maxPaidMediaAmount.flatMap { StarsAmount(value: $0, nanos: 0) }
                 amountLabel = nil
-            case .starGiftResell:
+            case let .starGiftResell(update):
                 //TODO:localize
-                titleString = "Sell Gift"
+                titleString = update ? "Edit Price" : "Sell Gift"
                 amountTitle = "PRICE IN STARS"
                 amountPlaceholder = "Enter Price"
                 
@@ -358,12 +358,6 @@ private final class SheetContent: CombinedComponent {
                 buttonAttributedString.addAttribute(.kern, value: 2.0, range: NSRange(range, in: buttonAttributedString.string))
             }
             
-//            if let range = buttonAttributedString.string.range(of: "#"), let starImage = state.cachedStarImage?.0 {
-//                buttonAttributedString.addAttribute(.attachment, value: starImage, range: NSRange(range, in: buttonAttributedString.string))
-//                buttonAttributedString.addAttribute(.foregroundColor, value: UIColor(rgb: 0xffffff), range: NSRange(range, in: buttonAttributedString.string))
-//                buttonAttributedString.addAttribute(.baselineOffset, value: 1.0, range: NSRange(range, in: buttonAttributedString.string))
-//            }
-            
             let button = button.update(
                 component: ButtonComponent(
                     background: ButtonComponent.Background(
@@ -558,10 +552,11 @@ public final class StarsWithdrawScreen: ViewControllerComponentContainer {
         case accountWithdraw
         case paidMedia(Int64?)
         case reaction(Int64?)
-        case starGiftResell
+        case starGiftResell(Bool)
     }
     
     private let context: AccountContext
+    private let mode: StarsWithdrawScreen.Mode
     fileprivate let completion: (Int64) -> Void
         
     public init(
@@ -570,6 +565,7 @@ public final class StarsWithdrawScreen: ViewControllerComponentContainer {
         completion: @escaping (Int64) -> Void
     ) {
         self.context = context
+        self.mode = mode
         self.completion = completion
         
         super.init(
@@ -603,12 +599,17 @@ public final class StarsWithdrawScreen: ViewControllerComponentContainer {
     
     func presentMinAmountTooltip(_ minAmount: Int64) {
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        var text = presentationData.strings.Stars_Withdraw_Withdraw_ErrorMinimum(presentationData.strings.Stars_Withdraw_Withdraw_ErrorMinimum_Stars(Int32(minAmount))).string
+        if case .starGiftResell = self.mode {
+            text = "You cannot sell gift for less than \(presentationData.strings.Stars_Withdraw_Withdraw_ErrorMinimum_Stars(Int32(minAmount)))."
+        }
+        
         let resultController = UndoOverlayController(
             presentationData: presentationData,
             content: .image(
                 image: UIImage(bundleImageName: "Premium/Stars/StarLarge")!,
                 title: nil,
-                text: presentationData.strings.Stars_Withdraw_Withdraw_ErrorMinimum(presentationData.strings.Stars_Withdraw_Withdraw_ErrorMinimum_Stars(Int32(minAmount))).string,
+                text: text,
                 round: false,
                 undoText: nil
             ),

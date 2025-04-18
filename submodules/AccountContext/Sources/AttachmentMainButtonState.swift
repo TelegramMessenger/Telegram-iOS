@@ -41,6 +41,7 @@ public struct AttachmentMainButtonState {
     public let progress: Progress
     public let isEnabled: Bool
     public let hasShimmer: Bool
+    public let iconName: String?
     public let position: Position?
     
     public init(
@@ -53,6 +54,7 @@ public struct AttachmentMainButtonState {
         progress: Progress,
         isEnabled: Bool,
         hasShimmer: Bool,
+        iconName: String? = nil,
         position: Position? = nil
     ) {
         self.text = text
@@ -64,6 +66,7 @@ public struct AttachmentMainButtonState {
         self.progress = progress
         self.isEnabled = isEnabled
         self.hasShimmer = hasShimmer
+        self.iconName = iconName
         self.position = position
     }
     

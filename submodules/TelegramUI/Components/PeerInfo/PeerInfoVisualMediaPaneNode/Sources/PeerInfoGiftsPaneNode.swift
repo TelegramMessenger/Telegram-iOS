@@ -600,6 +600,12 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                                 }
                                                 return self.profileGifts.upgradeStarGift(formId: formId, reference: reference, keepOriginalInfo: keepOriginalInfo)
                                             },
+                                            buyGift: { [weak self] slug, peerId in
+                                                guard let self else {
+                                                    return .never()
+                                                }
+                                                return self.profileGifts.buyStarGift(slug: slug, peerId: peerId)
+                                            },
                                             updateResellStars: { [weak self] price in
                                                 guard let self, case let .unique(uniqueGift) = product.gift else {
                                                     return

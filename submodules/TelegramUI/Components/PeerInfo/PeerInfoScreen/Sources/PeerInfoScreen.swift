@@ -4867,6 +4867,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                                 }
                                 return profileGifts.upgradeStarGift(formId: formId, reference: reference, keepOriginalInfo: keepOriginalInfo)
                             },
+                            buyGift: { [weak profileGifts] slug, peerId in
+                                guard let profileGifts else {
+                                    return .never()
+                                }
+                                return profileGifts.buyStarGift(slug: slug, peerId: peerId)
+                            },
                             shareStory: { [weak self] uniqueGift in
                                 guard let self, let controller = self.controller else {
                                     return
@@ -11118,7 +11124,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 giftsContext?.updateSorting(sorting == .date ? .value : .date)
             })))
             
-            if hasPinnedGifts {
+            if hasPinnedGifts && hasVisibility {
                 items.append(.action(ContextMenuActionItem(text: strings.PeerInfo_Gifts_Reorder, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReorderItems"), color: theme.contextMenu.primaryColor)
                 }, action: { _, f in

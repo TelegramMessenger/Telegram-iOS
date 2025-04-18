@@ -134,6 +134,7 @@ final class LoadingShimmerNode: ASDisplayNode {
         
         super.init()
         
+        self.allowsGroupOpacity = true
         self.isUserInteractionEnabled = false
         
         self.addSubnode(self.backgroundColorNode)
