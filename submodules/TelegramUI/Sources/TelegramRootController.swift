@@ -444,7 +444,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                         } else {
                             return nil
                         }
-                    }, completion: { [weak self] result, commit in
+                    }, completion: { [weak self] results, commit in
                         guard let self else {
                             dismissCameraImpl?()
                             commit({})
@@ -453,7 +453,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                         
                         if let customTarget, case .botPreview = customTarget {
                             externalState.storyTarget = customTarget
-                            self.proceedWithStoryUpload(target: customTarget, results: [result], existingMedia: nil, forwardInfo: nil, externalState: externalState, commit: commit)
+                            self.proceedWithStoryUpload(target: customTarget, results: results, existingMedia: nil, forwardInfo: nil, externalState: externalState, commit: commit)
                             
                             dismissCameraImpl?()
                             return
@@ -464,7 +464,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                  target = .peer(id)
                                  targetPeerId = id
                              } else {
-                                 if let sendAsPeerId = result.options.sendAsPeerId {
+                                 if let sendAsPeerId = results.first?.options.sendAsPeerId {
                                      target = .peer(sendAsPeerId)
                                      targetPeerId = sendAsPeerId
                                  } else {
@@ -486,12 +486,12 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                     externalState.isPeerArchived = channel.storiesHidden ?? false
                                 }
                                  
-                                self.proceedWithStoryUpload(target: target, results: [result], existingMedia: nil, forwardInfo: nil, externalState: externalState, commit: commit)
+                                self.proceedWithStoryUpload(target: target, results: results, existingMedia: nil, forwardInfo: nil, externalState: externalState, commit: commit)
                                 
                                 dismissCameraImpl?()
                             })
                         }
-                    } as (MediaEditorScreenImpl.Result, @escaping (@escaping () -> Void) -> Void) -> Void
+                    } as ([MediaEditorScreenImpl.Result], @escaping (@escaping () -> Void) -> Void) -> Void
                 )
                 controller.cancelled = { showDraftTooltip in
                     if showDraftTooltip {

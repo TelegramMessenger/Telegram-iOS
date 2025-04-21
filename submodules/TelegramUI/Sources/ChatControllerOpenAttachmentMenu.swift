@@ -1315,13 +1315,13 @@ extension ChatControllerImpl {
                                 )
                             }
                             return nil
-                        }, completion: { result, commit in
-                            if case let .image(image, _) = result.media {
+                        }, completion: { results, commit in
+                            if case let .image(image, _) = results.first?.media {
                                 completion(image)
                                 commit({})
                             }
                             dismissImpl?()
-                        } as (MediaEditorScreenImpl.Result, @escaping (@escaping () -> Void) -> Void) -> Void
+                        } as ([MediaEditorScreenImpl.Result], @escaping (@escaping () -> Void) -> Void) -> Void
                     )
                     editorController.cancelled = { _ in
                         cancelled()
@@ -1930,17 +1930,17 @@ extension ChatControllerImpl {
                             )
                         }
                         return nil
-                    }, completion: { [weak self] result, commit in
+                    }, completion: { [weak self] results, commit in
                         dismissImpl?()
                         self?.chatDisplayNode.dismissInput()
                         
                         Queue.mainQueue().after(0.1) {
                             commit({})
-                            if case let .sticker(file, _) = result.media {
+                            if case let .sticker(file, _) = results.first?.media {
                                 self?.enqueueStickerFile(file)
                             }
                         }
-                    } as (MediaEditorScreenImpl.Result, @escaping (@escaping () -> Void) -> Void) -> Void
+                    } as ([MediaEditorScreenImpl.Result], @escaping (@escaping () -> Void) -> Void) -> Void
                 )
                 editorController.cancelled = { _ in
                     cancelled()

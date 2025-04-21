@@ -72,7 +72,7 @@ final class GiftStoreScreenComponent: Component {
         private let loadingNode: LoadingShimmerNode
         private let emptyResultsAnimation = ComponentView<Empty>()
         private let emptyResultsTitle = ComponentView<Empty>()
-        private let emptyResultsAction = ComponentView<Empty>()
+        private let clearFilters = ComponentView<Empty>()
         
         private let topPanel = ComponentView<Empty>()
         private let topSeparator = ComponentView<Empty>()
@@ -139,10 +139,21 @@ final class GiftStoreScreenComponent: Component {
             self.updateScrolling(interactive: true, transition: self.nextScrollTransition ?? .immediate)
         }
         
+        private var removedStarGifts = Set<String>()
         private var currentGifts: ([StarGift], Set<String>, Set<String>, Set<String>)?
         private var effectiveGifts: [StarGift]? {
             if let gifts = self.state?.starGiftsState?.gifts {
-                return gifts
+                if !self.removedStarGifts.isEmpty {
+                    return gifts.filter { gift in
+                        if case let .unique(uniqueGift) = gift {
+                            return !self.removedStarGifts.contains(uniqueGift.slug)
+                        } else {
+                            return true
+                        }
+                    }
+                } else {
+                    return gifts
+                }
             } else {
                 return nil
             }
@@ -154,6 +165,7 @@ final class GiftStoreScreenComponent: Component {
             }
                
             let availableWidth = self.scrollView.bounds.width
+            let availableHeight = self.scrollView.bounds.height
             let contentOffset = self.scrollView.contentOffset.y
                         
             let topPanelAlpha = min(20.0, max(0.0, contentOffset)) / 20.0
@@ -213,8 +225,8 @@ final class GiftStoreScreenComponent: Component {
                             font: .monospaced,
                             color: ribbonColor
                         )
-                        
-                        let subject: GiftItemComponent.Subject = .uniqueGift(gift: uniqueGift, price: "⭐️\(uniqueGift.resellStars ?? 0)")
+                                                
+                        let subject: GiftItemComponent.Subject = .uniqueGift(gift: uniqueGift, price: "⭐️\(presentationStringsFormattedNumber(Int32(uniqueGift.resellStars ?? 0), environment.dateTimeFormat.groupingSeparator))")
                         let _ = visibleItem.update(
                             transition: itemTransition,
                             component: AnyComponent(
@@ -243,6 +255,13 @@ final class GiftStoreScreenComponent: Component {
                                                     context: component.context,
                                                     subject: .uniqueGift(uniqueGift, state.peerId)
                                                 )
+                                                giftController.onBuySuccess = { [weak self] in
+                                                    guard let self else {
+                                                        return
+                                                    }
+                                                    self.removedStarGifts.insert(uniqueGift.slug)
+                                                    self.state?.updated(transition: .spring(duration: 0.3))
+                                                }
                                                 mainController.push(giftController)
                                             }
                                         }
@@ -285,6 +304,138 @@ final class GiftStoreScreenComponent: Component {
                 }
                 for id in removeIds {
                     self.starsItems.removeValue(forKey: id)
+                }
+            }
+            
+            let fadeTransition = ComponentTransition.easeInOut(duration: 0.25)
+            let emptyResultsActionSize = self.clearFilters.update(
+                transition: .immediate,
+                component: AnyComponent(
+                    PlainButtonComponent(
+                        content: AnyComponent(
+                            MultilineTextComponent(
+                                text: .plain(NSAttributedString(string: "Clear Filters", font: Font.regular(17.0), textColor: environment.theme.list.itemAccentColor)),
+                                horizontalAlignment: .center,
+                                maximumNumberOfLines: 0
+                            )
+                        ),
+                        effectAlignment: .center,
+                        action: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.state?.starGiftsContext.updateFilterAttributes([])
+                        },
+                        animateScale: false
+                    )
+                ),
+                environment: {},
+                containerSize: CGSize(width: availableWidth - 44.0 * 2.0, height: 100.0)
+            )
+            
+            var showClearFilters = false
+            if let filterAttributes = self.state?.starGiftsState?.filterAttributes, !filterAttributes.isEmpty {
+                showClearFilters = true
+            }
+            
+            let topInset: CGFloat = environment.navigationHeight + 39.0
+            let bottomInset: CGFloat = environment.safeInsets.bottom
+            
+            var emptyResultsActionFrame = CGRect(
+                origin: CGPoint(
+                    x: floorToScreenPixels((availableWidth - emptyResultsActionSize.width) / 2.0),
+                    y: max(self.scrollView.contentSize.height - 8.0, availableHeight - bottomInset - emptyResultsActionSize.height - 16.0)
+                ),
+                size: emptyResultsActionSize
+            )
+            
+            if let effectiveGifts = self.effectiveGifts, effectiveGifts.isEmpty && self.state?.starGiftsState?.dataState != .loading {
+                showClearFilters = true
+                
+                let emptyAnimationHeight = 148.0
+                let visibleHeight = availableHeight
+                let emptyAnimationSpacing: CGFloat = 20.0
+                let emptyTextSpacing: CGFloat = 18.0
+                                                                
+                let emptyResultsTitleSize = self.emptyResultsTitle.update(
+                    transition: .immediate,
+                    component: AnyComponent(
+                        MultilineTextComponent(
+                            text: .plain(NSAttributedString(string: "No Matching Gifts", font: Font.semibold(17.0), textColor: environment.theme.list.itemPrimaryTextColor)),
+                            horizontalAlignment: .center
+                        )
+                    ),
+                    environment: {},
+                    containerSize: CGSize(width: availableWidth, height: 100.0)
+                )
+               
+                let emptyResultsAnimationSize = self.emptyResultsAnimation.update(
+                    transition: .immediate,
+                    component: AnyComponent(LottieComponent(
+                        content: LottieComponent.AppBundleContent(name: "ChatListNoResults")
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: emptyAnimationHeight, height: emptyAnimationHeight)
+                )
+      
+                let emptyTotalHeight = emptyAnimationHeight + emptyAnimationSpacing + emptyResultsTitleSize.height + emptyResultsActionSize.height + emptyTextSpacing
+                let emptyAnimationY = topInset + floorToScreenPixels((visibleHeight - topInset - bottomInset - emptyTotalHeight) / 2.0)
+                
+                let emptyResultsAnimationFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableWidth - emptyResultsAnimationSize.width) / 2.0), y: emptyAnimationY), size: emptyResultsAnimationSize)
+                
+                let emptyResultsTitleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableWidth - emptyResultsTitleSize.width) / 2.0), y: emptyResultsAnimationFrame.maxY + emptyAnimationSpacing), size: emptyResultsTitleSize)
+                
+                emptyResultsActionFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableWidth - emptyResultsActionSize.width) / 2.0), y: emptyResultsTitleFrame.maxY + emptyTextSpacing), size: emptyResultsActionSize)
+                
+                if let view = self.emptyResultsAnimation.view as? LottieComponent.View {
+                    if view.superview == nil {
+                        view.alpha = 0.0
+                        fadeTransition.setAlpha(view: view, alpha: 1.0)
+                        self.insertSubview(view, belowSubview: self.loadingNode.view)
+                        view.playOnce()
+                    }
+                    view.bounds = CGRect(origin: .zero, size: emptyResultsAnimationFrame.size)
+                    ComponentTransition.immediate.setPosition(view: view, position: emptyResultsAnimationFrame.center)
+                }
+                if let view = self.emptyResultsTitle.view {
+                    if view.superview == nil {
+                        view.alpha = 0.0
+                        fadeTransition.setAlpha(view: view, alpha: 1.0)
+                        self.insertSubview(view, belowSubview: self.loadingNode.view)
+                    }
+                    view.bounds = CGRect(origin: .zero, size: emptyResultsTitleFrame.size)
+                    ComponentTransition.immediate.setPosition(view: view, position: emptyResultsTitleFrame.center)
+                }
+            } else {
+                if let view = self.emptyResultsAnimation.view {
+                    fadeTransition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                        view.removeFromSuperview()
+                    })
+                }
+                if let view = self.emptyResultsTitle.view {
+                    fadeTransition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                        view.removeFromSuperview()
+                    })
+                }
+            }
+            
+            if showClearFilters {
+                if let view = self.clearFilters.view {
+                    if view.superview == nil {
+                        view.alpha = 0.0
+                        fadeTransition.setAlpha(view: view, alpha: 1.0)
+                        self.insertSubview(view, belowSubview: self.loadingNode.view)
+                    }
+                    view.bounds = CGRect(origin: .zero, size: emptyResultsActionFrame.size)
+                    ComponentTransition.immediate.setPosition(view: view, position: emptyResultsActionFrame.center)
+                    
+                    view.alpha = self.state?.starGiftsState?.attributes.isEmpty == true ? 0.0 : 1.0
+                }
+            } else {
+                if let view = self.clearFilters.view {
+                    fadeTransition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                        view.removeFromSuperview()
+                    })
                 }
             }
             
@@ -966,118 +1117,7 @@ final class GiftStoreScreenComponent: Component {
                 loadingTransition.setAlpha(view: self.loadingNode.view, alpha: 0.0)
             }
             transition.setFrame(view: self.loadingNode.view, frame: CGRect(origin: CGPoint(x: 0.0, y: environment.navigationHeight + 39.0 + 7.0), size: availableSize))
-            
-            let fadeTransition = ComponentTransition.easeInOut(duration: 0.25)
-            if let effectiveGifts = self.effectiveGifts, effectiveGifts.isEmpty && self.state?.starGiftsState?.dataState != .loading {
-                let sideInset: CGFloat = 44.0
-                let emptyAnimationHeight = 148.0
-                let topInset: CGFloat = environment.navigationHeight + 39.0
-                let bottomInset: CGFloat = environment.safeInsets.bottom
-                let visibleHeight = availableSize.height
-                let emptyAnimationSpacing: CGFloat = 20.0
-                let emptyTextSpacing: CGFloat = 18.0
-                                                                
-                let emptyResultsTitleSize = self.emptyResultsTitle.update(
-                    transition: .immediate,
-                    component: AnyComponent(
-                        MultilineTextComponent(
-                            text: .plain(NSAttributedString(string: "No Matching Gifts", font: Font.semibold(17.0), textColor: theme.list.itemPrimaryTextColor)),
-                            horizontalAlignment: .center
-                        )
-                    ),
-                    environment: {},
-                    containerSize: availableSize
-                )
-                let emptyResultsActionSize = self.emptyResultsAction.update(
-                    transition: .immediate,
-                    component: AnyComponent(
-                        PlainButtonComponent(
-                            content: AnyComponent(
-                                MultilineTextComponent(
-                                    text: .plain(NSAttributedString(string: "Clear Filters", font: Font.regular(17.0), textColor: theme.list.itemAccentColor)),
-                                    horizontalAlignment: .center,
-                                    maximumNumberOfLines: 0
-                                )
-                            ),
-                            effectAlignment: .center,
-                            action: { [weak self] in
-                                guard let self else {
-                                    return
-                                }
-                                self.state?.starGiftsContext.updateFilterAttributes([])
-                            },
-                            animateScale: false
-                        )
-                    ),
-                    environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: visibleHeight)
-                )
-                let emptyResultsAnimationSize = self.emptyResultsAnimation.update(
-                    transition: .immediate,
-                    component: AnyComponent(LottieComponent(
-                        content: LottieComponent.AppBundleContent(name: "ChatListNoResults")
-                    )),
-                    environment: {},
-                    containerSize: CGSize(width: emptyAnimationHeight, height: emptyAnimationHeight)
-                )
-      
-                let emptyTotalHeight = emptyAnimationHeight + emptyAnimationSpacing + emptyResultsTitleSize.height + emptyResultsActionSize.height + emptyTextSpacing
-                let emptyAnimationY = topInset + floorToScreenPixels((visibleHeight - topInset - bottomInset - emptyTotalHeight) / 2.0)
                 
-                let emptyResultsAnimationFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - emptyResultsAnimationSize.width) / 2.0), y: emptyAnimationY), size: emptyResultsAnimationSize)
-                
-                let emptyResultsTitleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - emptyResultsTitleSize.width) / 2.0), y: emptyResultsAnimationFrame.maxY + emptyAnimationSpacing), size: emptyResultsTitleSize)
-                
-                let emptyResultsActionFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - emptyResultsActionSize.width) / 2.0), y: emptyResultsTitleFrame.maxY + emptyTextSpacing), size: emptyResultsActionSize)
-                
-                if let view = self.emptyResultsAnimation.view as? LottieComponent.View {
-                    if view.superview == nil {
-                        view.alpha = 0.0
-                        fadeTransition.setAlpha(view: view, alpha: 1.0)
-                        self.insertSubview(view, belowSubview: self.loadingNode.view)
-                        view.playOnce()
-                    }
-                    view.bounds = CGRect(origin: .zero, size: emptyResultsAnimationFrame.size)
-                    ComponentTransition.immediate.setPosition(view: view, position: emptyResultsAnimationFrame.center)
-                }
-                if let view = self.emptyResultsTitle.view {
-                    if view.superview == nil {
-                        view.alpha = 0.0
-                        fadeTransition.setAlpha(view: view, alpha: 1.0)
-                        self.insertSubview(view, belowSubview: self.loadingNode.view)
-                    }
-                    view.bounds = CGRect(origin: .zero, size: emptyResultsTitleFrame.size)
-                    ComponentTransition.immediate.setPosition(view: view, position: emptyResultsTitleFrame.center)
-                }
-                if let view = self.emptyResultsAction.view {
-                    if view.superview == nil {
-                        view.alpha = 0.0
-                        fadeTransition.setAlpha(view: view, alpha: 1.0)
-                        self.insertSubview(view, belowSubview: self.loadingNode.view)
-                    }
-                    view.bounds = CGRect(origin: .zero, size: emptyResultsActionFrame.size)
-                    ComponentTransition.immediate.setPosition(view: view, position: emptyResultsActionFrame.center)
-                    
-                    view.alpha = self.state?.starGiftsState?.attributes.isEmpty == true ? 0.0 : 1.0
-                }
-            } else {
-                if let view = self.emptyResultsAnimation.view {
-                    fadeTransition.setAlpha(view: view, alpha: 0.0, completion: { _ in
-                        view.removeFromSuperview()
-                    })
-                }
-                if let view = self.emptyResultsTitle.view {
-                    fadeTransition.setAlpha(view: view, alpha: 0.0, completion: { _ in
-                        view.removeFromSuperview()
-                    })
-                }
-                if let view = self.emptyResultsAction.view {
-                    fadeTransition.setAlpha(view: view, alpha: 0.0, completion: { _ in
-                        view.removeFromSuperview()
-                    })
-                }
-            }
-            
             return availableSize
         }
     }

@@ -530,10 +530,11 @@ public final class MediaEditor {
         }
     }
     
-    public init(context: AccountContext, mode: Mode, subject: Subject, values: MediaEditorValues? = nil, hasHistogram: Bool = false) {
+    public init(context: AccountContext, mode: Mode, subject: Subject, values: MediaEditorValues? = nil, hasHistogram: Bool = false, isStandalone: Bool = false) {
         self.context = context
         self.mode = mode
         self.subject = subject
+    
         if let values {
             self.values = values
             self.updateRenderChain()
@@ -581,6 +582,9 @@ public final class MediaEditor {
         }
         self.valuesPromise.set(.single(self.values))
 
+        if isStandalone, let device = MTLCreateSystemDefaultDevice() {
+            self.renderer.setupForStandaloneDevice(device: device)
+        }
         self.renderer.addRenderChain(self.renderChain)
         if hasHistogram {
             self.renderer.addRenderPass(self.histogramCalculationPass)
@@ -611,7 +615,7 @@ public final class MediaEditor {
     }
     
     public func replaceSource(_ image: UIImage, additionalImage: UIImage?, time: CMTime, mirror: Bool) {
-        guard let renderTarget = self.previewView, let device = renderTarget.mtlDevice, let texture = loadTexture(image: image, device: device) else {
+        guard let device = self.renderer.effectiveDevice, let texture = loadTexture(image: image, device: device) else {
             return
         }
         let additionalTexture = additionalImage.flatMap { loadTexture(image: $0, device: device) }

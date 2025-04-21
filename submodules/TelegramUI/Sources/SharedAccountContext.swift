@@ -3461,9 +3461,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     )
                 }
                 return nil
-            }, completion: { result, commit in
-                completion(result, commit)
-            } as (MediaEditorScreenImpl.Result, @escaping (@escaping () -> Void) -> Void) -> Void
+            }, completion: { results, commit in
+                completion(results.first!, commit)
+            } as ([MediaEditorScreenImpl.Result], @escaping (@escaping () -> Void) -> Void) -> Void
         )
         editorController.cancelled = { _ in
             cancelled()
@@ -3525,13 +3525,13 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     )
                 }
                 return nil
-            }, completion: { result, commit in
-                if case let .sticker(file, emoji) = result.media {
+            }, completion: { results, commit in
+                if case let .sticker(file, emoji) = results.first?.media {
                     completion(file, emoji, {
                         commit({})
                     })
                 }
-            } as (MediaEditorScreenImpl.Result, @escaping (@escaping () -> Void) -> Void) -> Void
+            } as ([MediaEditorScreenImpl.Result], @escaping (@escaping () -> Void) -> Void) -> Void
         )
         editorController.cancelled = { _ in
             cancelled()
@@ -3558,13 +3558,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             transitionIn: nil,
             transitionOut: { finished, isNew in
                 return nil
-            }, completion: { result, commit in
-                completion(result, commit)
-            } as (MediaEditorScreenImpl.Result, @escaping (@escaping () -> Void) -> Void) -> Void
+            }, completion: { results, commit in
+                completion(results.first!, commit)
+            } as ([MediaEditorScreenImpl.Result], @escaping (@escaping () -> Void) -> Void) -> Void
         )
-//        editorController.cancelled = { _ in
-//            cancelled()
-//        }
         return editorController
     }
     
@@ -3724,7 +3721,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             transitionOut: { _, _ in
                 return nil
             },
-            completion: { [weak parentController] result, commit in
+            completion: { [weak parentController] results, commit in
+                guard let result = results.first else {
+                    return
+                }
                 let targetPeerId: EnginePeer.Id
                 let target: Stories.PendingTarget
                 if let sendAsPeerId = result.options.sendAsPeerId {

@@ -122,7 +122,10 @@ public extension MediaEditorScreenImpl {
                     return transitionOut
                 }
             },
-            completion: { result, commit in
+            completion: { results, commit in
+                guard let result = results.first else {
+                    return
+                }
                 let entities = generateChatInputTextEntities(result.caption)
                 
                 if repost {

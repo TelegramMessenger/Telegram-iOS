@@ -866,7 +866,8 @@ public final class GiftItemComponent: Component {
                         return (TelegramTextAttributes.URL, contents)
                     }
                 )
-                let labelText = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString("#\(resellPrice)", attributes: attributes))
+                let dateTimeFormat = component.context.sharedContext.currentPresentationData.with { $0 }.dateTimeFormat
+                let labelText = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString("#\(presentationStringsFormattedNumber(Int32(resellPrice), dateTimeFormat.groupingSeparator))", attributes: attributes))
                 if let range = labelText.string.range(of: "#") {
                     labelText.addAttribute(NSAttributedString.Key.font, value: Font.semibold(10.0), range: NSRange(range, in: labelText.string))
                     labelText.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: true)), range: NSRange(range, in: labelText.string))

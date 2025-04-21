@@ -467,6 +467,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[583071445] = { return Api.InputReplyTo.parse_inputReplyToMessage($0) }
     dict[1484862010] = { return Api.InputReplyTo.parse_inputReplyToStory($0) }
     dict[-251549057] = { return Api.InputSavedStarGift.parse_inputSavedStarGiftChat($0) }
+    dict[545636920] = { return Api.InputSavedStarGift.parse_inputSavedStarGiftSlug($0) }
     dict[1764202389] = { return Api.InputSavedStarGift.parse_inputSavedStarGiftUser($0) }
     dict[1399317950] = { return Api.InputSecureFile.parse_inputSecureFile($0) }
     dict[859091184] = { return Api.InputSecureFile.parse_inputSecureFileUploaded($0) }

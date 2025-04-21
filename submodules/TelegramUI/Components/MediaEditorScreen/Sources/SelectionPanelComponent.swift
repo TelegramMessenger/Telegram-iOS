@@ -145,23 +145,11 @@ final class SelectionPanelComponent: Component {
                         selectionLayer.lineWidth = lineWidth
                         selectionLayer.frame = selectionFrame
                         selectionLayer.path = CGPath(roundedRect: CGRect(origin: .zero, size: selectionFrame.size).insetBy(dx: lineWidth / 2.0, dy: lineWidth / 2.0), cornerWidth: 6.0, cornerHeight: 6.0, transform: nil)
-                        
-//                        if !transition.animation.isImmediate {
-//                            let initialPath = CGPath(roundedRect: CGRect(origin: .zero, size: selectionFrame.size).insetBy(dx: 0.0, dy: 0.0), cornerWidth: 6.0, cornerHeight: 6.0, transform: nil)
-//                            selectionLayer.animate(from: initialPath, to: selectionLayer.path as AnyObject, keyPath: "path", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.2)
-//                            selectionLayer.animateShapeLineWidth(from: 0.0, to: lineWidth, duration: 0.2)
-//                        }
                     }
                     
                 } else if let selectionLayer = self.selectionLayer {
                     self.selectionLayer = nil
                     selectionLayer.removeFromSuperlayer()
-                    
-//                    let targetPath = CGPath(roundedRect: CGRect(origin: .zero, size: selectionFrame.size).insetBy(dx: 0.0, dy: 0.0), cornerWidth: 6.0, cornerHeight: 6.0, transform: nil)
-//                    selectionLayer.animate(from: selectionLayer.path, to: targetPath, keyPath: "path", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.2, removeOnCompletion: false)
-//                    selectionLayer.animateShapeLineWidth(from: selectionLayer.lineWidth, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
-//                        selectionLayer.removeFromSuperlayer()
-//                    })
                 }
             }
         }
@@ -373,11 +361,96 @@ final class SelectionPanelComponent: Component {
         }
         
         func animateIn(from buttonView: SelectionPanelButtonContentComponent.View) {
+            guard let component = self.component else {
+                return
+            }
             
+            self.scrollView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+            
+            let buttonFrame = buttonView.convert(buttonView.bounds, to: self)
+            let fromPoint = CGPoint(x: buttonFrame.center.x - self.scrollView.center.x, y: buttonFrame.center.y - self.scrollView.center.y)
+            
+            self.scrollView.layer.animatePosition(from: fromPoint, to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+            
+            self.scrollView.layer.animateBounds(from: CGRect(origin: CGPoint(x: buttonFrame.minX - self.scrollView.frame.minX, y: buttonFrame.minY - self.scrollView.frame.minY), size: buttonFrame.size), to: self.scrollView.bounds, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+                        
+            self.backgroundMaskPanelView.layer.animatePosition(from: fromPoint, to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+            self.backgroundMaskPanelView.layer.animate(from: NSNumber(value: Float(16.5)), to: NSNumber(value: Float(self.backgroundMaskPanelView.layer.cornerRadius)), keyPath: "cornerRadius", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.4)
+            self.backgroundMaskPanelView.layer.animateBounds(from: CGRect(origin: .zero, size: CGSize(width: 33.0, height: 33.0)), to: self.backgroundMaskPanelView.bounds, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+            
+            let mainCircleDelay: Double = 0.02
+            let backgroundWidth = self.backgroundMaskPanelView.frame.width
+            for item in component.items {
+                guard let itemView = self.itemViews[item.asset.localIdentifier] else {
+                    continue
+                }
+                
+                let distance = abs(itemView.frame.center.x - backgroundWidth)
+                let distanceNorm = distance / backgroundWidth
+                let adjustedDistanceNorm = distanceNorm
+                let itemDelay = mainCircleDelay + adjustedDistanceNorm * 0.14
+                
+                itemView.isHidden = true
+                Queue.mainQueue().after(itemDelay * UIView.animationDurationFactor()) { [weak itemView] in
+                    guard let itemView else {
+                        return
+                    }
+                    itemView.isHidden = false
+                    itemView.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4)
+                }
+            }
         }
         
         func animateOut(to buttonView: SelectionPanelButtonContentComponent.View, completion: @escaping () -> Void) {
-            completion()
+            guard let component = self.component else {
+                completion()
+                return
+            }
+            
+            self.scrollView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
+            
+            let buttonFrame = buttonView.convert(buttonView.bounds, to: self)
+            let scrollButtonFrame = buttonView.convert(buttonView.bounds, to: self.scrollView)
+            let toPoint = CGPoint(x: buttonFrame.center.x - self.scrollView.center.x, y: buttonFrame.center.y - self.scrollView.center.y)
+            
+            self.scrollView.layer.animatePosition(from: .zero, to: toPoint, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+            
+            self.scrollView.layer.animateBounds(from: self.scrollView.bounds, to: CGRect(origin: CGPoint(x: (buttonFrame.minX - self.scrollView.frame.minX) / 2.0, y: (buttonFrame.minY - self.scrollView.frame.minY) / 2.0), size: buttonFrame.size), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+            
+            self.backgroundMaskPanelView.layer.animatePosition(from: .zero, to: toPoint, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+            self.backgroundMaskPanelView.layer.animate(from: NSNumber(value: Float(self.backgroundMaskPanelView.layer.cornerRadius)), to: NSNumber(value: Float(16.5)), keyPath: "cornerRadius", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.4, removeOnCompletion: false)
+            self.backgroundMaskPanelView.layer.animateBounds(from: self.backgroundMaskPanelView.bounds, to: CGRect(origin: .zero, size: CGSize(width: 33.0, height: 33.0)), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { finished in
+                if finished {
+                    completion()
+                    self.backgroundMaskPanelView.layer.removeAllAnimations()
+                    for (_, itemView) in self.itemViews {
+                        itemView.layer.removeAllAnimations()
+                    }
+                }
+            })
+            
+            let mainCircleDelay: Double = 0.0
+            let backgroundWidth = self.backgroundMaskPanelView.frame.width
+            
+            for item in component.items {
+                guard let itemView = self.itemViews[item.asset.localIdentifier] else {
+                    continue
+                }
+                let distance = abs(itemView.frame.center.x - backgroundWidth)
+                let distanceNorm = distance / backgroundWidth
+                let adjustedDistanceNorm = distanceNorm
+                
+                let itemDelay = mainCircleDelay + adjustedDistanceNorm * 0.05
+                
+                Queue.mainQueue().after(itemDelay * UIView.animationDurationFactor()) { [weak itemView] in
+                    guard let itemView else {
+                        return
+                    }
+                    
+                    itemView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                }
+                itemView.layer.animatePosition(from: itemView.center, to: scrollButtonFrame.center, duration: 0.4)
+            }
         }
         
         func update(component: SelectionPanelComponent, availableSize: CGSize, state: EmptyComponentState, transition: ComponentTransition) -> CGSize {

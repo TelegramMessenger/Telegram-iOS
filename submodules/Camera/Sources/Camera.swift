@@ -173,8 +173,11 @@ private final class CameraContext {
         self.positionValue = configuration.position
         self._positionPromise = ValuePromise<Camera.Position>(configuration.position)
         
+#if targetEnvironment(simulator)
+#else
         self.setDualCameraEnabled(configuration.isDualEnabled, change: false)
-                        
+#endif
+        
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(self.sessionRuntimeError),

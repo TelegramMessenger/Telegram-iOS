@@ -67,6 +67,7 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
     public let externalState: ExternalState?
     public let animateOut: ActionSlot<Action<()>>
     public let onPan: () -> Void
+    public let willDismiss: () -> Void
     
     public init(
         content: AnyComponent<ChildEnvironmentType>,
@@ -76,7 +77,8 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
         isScrollEnabled: Bool = true,
         externalState: ExternalState? = nil,
         animateOut: ActionSlot<Action<()>>,
-        onPan: @escaping () -> Void = {}
+        onPan: @escaping () -> Void = {},
+        willDismiss: @escaping () -> Void = {}
     ) {
         self.content = content
         self.backgroundColor = backgroundColor
@@ -86,6 +88,7 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
         self.externalState = externalState
         self.animateOut = animateOut
         self.onPan = onPan
+        self.willDismiss = willDismiss
     }
     
     public static func ==(lhs: SheetComponent, rhs: SheetComponent) -> Bool {
@@ -222,6 +225,7 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
             let currentContentOffset = scrollView.contentOffset
             targetContentOffset.pointee = currentContentOffset
             if velocity.y > 300.0 {
+                self.component?.willDismiss()
                 self.animateOut(initialVelocity: initialVelocity, completion: {
                     self.dismiss?(false)
                 })
@@ -233,6 +237,7 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
                         scrollView.setContentOffset(CGPoint(x: 0.0, y: scrollView.contentSize.height - scrollView.contentInset.top), animated: true)
                     }
                 } else {
+                    self.component?.willDismiss()
                     self.animateOut(initialVelocity: initialVelocity, completion: {
                         self.dismiss?(false)
                     })

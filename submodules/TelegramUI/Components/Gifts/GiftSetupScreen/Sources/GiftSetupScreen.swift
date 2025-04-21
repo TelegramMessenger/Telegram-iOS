@@ -465,7 +465,6 @@ final class GiftSetupScreenComponent: Component {
                     self.inProgress = false
                     self.state?.updated()
                     
-                    let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
                     var errorText: String?
                     switch error {
                     case .starGiftOutOfStock:

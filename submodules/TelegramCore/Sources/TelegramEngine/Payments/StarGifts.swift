@@ -1509,14 +1509,14 @@ private final class ProfileGiftsContextImpl {
         }
     }
     
-    func updateStarGiftResellPrice(slug: String, price: Int64?) {
+    func updateStarGiftResellPrice(reference: StarGiftReference, price: Int64?) {
         self.actionDisposable.set(
-            _internal_updateStarGiftResalePrice(account: self.account, slug: slug, price: price).startStrict()
+            _internal_updateStarGiftResalePrice(account: self.account, reference: reference, price: price).startStrict()
         )
        
         
         if let index = self.gifts.firstIndex(where: { gift in
-            if case let .unique(uniqueGift) = gift.gift, uniqueGift.slug == slug {
+            if gift.reference == reference {
                 return true
             }
             return false
@@ -1529,7 +1529,7 @@ private final class ProfileGiftsContextImpl {
         }
         
         if let index = self.filteredGifts.firstIndex(where: { gift in
-            if case let .unique(uniqueGift) = gift.gift, uniqueGift.slug == slug {
+            if gift.reference == reference {
                 return true
             }
             return false
@@ -1939,9 +1939,9 @@ public final class ProfileGiftsContext {
         }
     }
     
-    public func updateStarGiftResellPrice(slug: String, price: Int64?) {
+    public func updateStarGiftResellPrice(reference: StarGiftReference, price: Int64?) {
         self.impl.with { impl in
-            impl.updateStarGiftResellPrice(slug: slug, price: price)
+            impl.updateStarGiftResellPrice(reference: reference, price: price)
         }
     }
     
@@ -2082,10 +2082,12 @@ public enum StarGiftReference: Equatable, Hashable, Codable {
         case messageId
         case peerId
         case id
+        case slug
     }
     
     case message(messageId: EngineMessage.Id)
     case peer(peerId: EnginePeer.Id, id: Int64)
+    case slug(slug: String)
     
     public enum DecodingError: Error {
         case generic
@@ -2100,6 +2102,8 @@ public enum StarGiftReference: Equatable, Hashable, Codable {
             self = .message(messageId: try container.decode(EngineMessage.Id.self, forKey: .messageId))
         case 1:
             self = .peer(peerId: try container.decode(EnginePeer.Id.self, forKey: .peerId), id: try container.decode(Int64.self, forKey: .id))
+        case 2:
+            self = .slug(slug: try container.decode(String.self, forKey: .slug))
         default:
             throw DecodingError.generic
         }
@@ -2116,6 +2120,9 @@ public enum StarGiftReference: Equatable, Hashable, Codable {
             try container.encode(1 as Int32, forKey: .type)
             try container.encode(peerId, forKey: .peerId)
             try container.encode(id, forKey: .id)
+        case let .slug(slug):
+            try container.encode(2 as Int32, forKey: .type)
+            try container.encode(slug, forKey: .slug)
         }
     }
 }
@@ -2130,6 +2137,8 @@ extension StarGiftReference {
                 return nil
             }
             return .inputSavedStarGiftChat(peer: inputPeer, savedId: id)
+        case let .slug(slug):
+            return .inputSavedStarGiftSlug(slug: slug)
         }
     }
 }
@@ -2265,19 +2274,27 @@ func _internal_toggleStarGiftsNotifications(account: Account, peerId: EnginePeer
     }
 }
 
-func _internal_updateStarGiftResalePrice(account: Account, slug: String, price: Int64?) -> Signal<Never, NoError> {
-    return account.network.request(Api.functions.payments.updateStarGiftPrice(slug: slug, resellStars: price ?? 0))
-    |> map(Optional.init)
-    |> `catch` { _ -> Signal<Api.Updates?, NoError> in
-        return .single(nil)
+func _internal_updateStarGiftResalePrice(account: Account, reference: StarGiftReference, price: Int64?) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction in
+        return reference.apiStarGiftReference(transaction: transaction)
     }
-    |> mapToSignal { updates -> Signal<Void, NoError> in
-        if let updates {
-            account.stateManager.addUpdates(updates)
+    |> mapToSignal { starGift in
+        guard let starGift else {
+            return .complete()
         }
-        return .complete()
+        return account.network.request(Api.functions.payments.updateStarGiftPrice(stargift: starGift, resellStars: price ?? 0))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { updates -> Signal<Void, NoError> in
+            if let updates {
+                account.stateManager.addUpdates(updates)
+            }
+            return .complete()
+        }
+        |> ignoreValues
     }
-    |> ignoreValues
 }
 
 public extension StarGift.UniqueGift {
