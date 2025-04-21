@@ -579,6 +579,7 @@ public protocol PresentationCallManager: AnyObject {
         initialCall: EngineGroupCallDescription,
         reference: InternalGroupCallReference,
         beginWithVideo: Bool,
-        invitePeerIds: [EnginePeer.Id]
-    )
+        invitePeerIds: [EnginePeer.Id],
+        endCurrentIfAny: Bool
+    ) -> JoinGroupCallManagerResult
 }

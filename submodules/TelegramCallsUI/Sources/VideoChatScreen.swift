@@ -387,7 +387,6 @@ final class VideoChatScreenComponent: Component {
                 
                 let targetContainer = SimpleLayer()
                 targetContainer.masksToBounds = true
-                targetContainer.backgroundColor = UIColor.blue.cgColor
                 targetContainer.cornerRadius = 10.0
                 
                 self.containerView.layer.insertSublayer(targetContainer, above: participantsView.layer)
@@ -1276,9 +1275,59 @@ final class VideoChatScreenComponent: Component {
                                 )
                             }
                             
+                            var firstMemberWithPresentation: VideoChatParticipantsComponent.VideoParticipantKey?
+                            if let members {
+                                for participant in members.participants {
+                                    if participant.presentationDescription != nil {
+                                        firstMemberWithPresentation = VideoChatParticipantsComponent.VideoParticipantKey(id: participant.id, isPresentation: true)
+                                        break
+                                    }
+                                }
+                            }
+                            if let previousMembers = self.members, let firstMemberWithPresentationValue = firstMemberWithPresentation {
+                                for participant in previousMembers.participants {
+                                    if participant.id == firstMemberWithPresentationValue.id && participant.presentationDescription != nil {
+                                        firstMemberWithPresentation = nil
+                                        break
+                                    }
+                                }
+                            } else {
+                                firstMemberWithPresentation = nil
+                            }
+                            
+                            if let expandedParticipantsVideoState = self.expandedParticipantsVideoState {
+                                if expandedParticipantsVideoState.isMainParticipantPinned {
+                                    firstMemberWithPresentation = nil
+                                }
+                            } else {
+                                firstMemberWithPresentation = nil
+                            }
+                            
+                            if let members, firstMemberWithPresentation != nil {
+                                var videoCount = 0
+                                for participant in members.participants {
+                                    if participant.presentationDescription != nil {
+                                        videoCount += 1
+                                    }
+                                    if participant.videoDescription != nil {
+                                        videoCount += 1
+                                    }
+                                }
+                                if videoCount <= 1 {
+                                    firstMemberWithPresentation = nil
+                                }
+                            } else {
+                                firstMemberWithPresentation = nil
+                            }
+                            
                             self.members = members
+                            
                             if let members {
                                 self.invitedPeers.removeAll(where: { invitedPeer in members.participants.contains(where: { $0.id == .peer(invitedPeer.peer.id) }) })
+                            }
+                            
+                            if let firstMemberWithPresentation {
+                                self.expandedParticipantsVideoState = VideoChatParticipantsComponent.ExpandedVideoState(mainParticipant: firstMemberWithPresentation, isMainParticipantPinned: true, isUIHidden: self.expandedParticipantsVideoState?.isUIHidden ?? false)
                             }
                             
                             if let members, let expandedParticipantsVideoState = self.expandedParticipantsVideoState, !expandedParticipantsVideoState.isUIHidden {
@@ -1886,7 +1935,18 @@ final class VideoChatScreenComponent: Component {
                 }
             })
             
-            let sideInset: CGFloat = max(environment.safeInsets.left, 14.0)
+            let landscapeControlsWidth: CGFloat = 88.0
+            let landscapeControlsOffsetX: CGFloat = 18.0
+            let landscapeControlsSpacing: CGFloat = 30.0
+            
+            let leftInset: CGFloat = max(environment.safeInsets.left, 14.0)
+            
+            var rightInset: CGFloat = max(environment.safeInsets.right, 14.0)
+            var buttonsOnTheSide = false
+            if availableSize.width > maxSingleColumnWidth && !environment.metrics.isTablet {
+                buttonsOnTheSide = true
+                rightInset += landscapeControlsWidth
+            }
             
             let topInset: CGFloat = environment.statusBarHeight + 2.0
             let navigationBarHeight: CGFloat = 61.0
@@ -1944,7 +2004,7 @@ final class VideoChatScreenComponent: Component {
                 containerSize: CGSize(width: navigationButtonDiameter, height: navigationButtonDiameter)
             )
             
-            let navigationLeftButtonFrame = CGRect(origin: CGPoint(x: sideInset + floor((navigationButtonAreaWidth - navigationLeftButtonSize.width) * 0.5), y: topInset + floor((navigationBarHeight - navigationLeftButtonSize.height) * 0.5)), size: navigationLeftButtonSize)
+            let navigationLeftButtonFrame = CGRect(origin: CGPoint(x: leftInset + floor((navigationButtonAreaWidth - navigationLeftButtonSize.width) * 0.5), y: topInset + floor((navigationBarHeight - navigationLeftButtonSize.height) * 0.5)), size: navigationLeftButtonSize)
             if let navigationLeftButtonView = self.navigationLeftButton.view {
                 if navigationLeftButtonView.superview == nil {
                     self.containerView.addSubview(navigationLeftButtonView)
@@ -1953,7 +2013,7 @@ final class VideoChatScreenComponent: Component {
                 alphaTransition.setAlpha(view: navigationLeftButtonView, alpha: self.isAnimatedOutFromPrivateCall ? 0.0 : 1.0)
             }
             
-            let navigationRightButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - sideInset - navigationButtonAreaWidth + floor((navigationButtonAreaWidth - navigationRightButtonSize.width) * 0.5), y: topInset + floor((navigationBarHeight - navigationRightButtonSize.height) * 0.5)), size: navigationRightButtonSize)
+            let navigationRightButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - rightInset - navigationButtonAreaWidth + floor((navigationButtonAreaWidth - navigationRightButtonSize.width) * 0.5), y: topInset + floor((navigationBarHeight - navigationRightButtonSize.height) * 0.5)), size: navigationRightButtonSize)
             if let navigationRightButtonView = self.navigationRightButton.view {
                 if navigationRightButtonView.superview == nil {
                     self.containerView.addSubview(navigationRightButtonView)
@@ -2037,7 +2097,7 @@ final class VideoChatScreenComponent: Component {
             
             let canManageCall = self.callState?.canManageCall ?? false
             
-            var maxTitleWidth: CGFloat = availableSize.width - sideInset * 2.0 - navigationButtonAreaWidth * 2.0 - 4.0 * 2.0
+            var maxTitleWidth: CGFloat = availableSize.width - leftInset - rightInset - navigationButtonAreaWidth * 2.0 - 4.0 * 2.0
             if isTwoColumnLayout {
                 maxTitleWidth -= 110.0
             }
@@ -2086,7 +2146,7 @@ final class VideoChatScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: maxTitleWidth, height: 100.0)
             )
-            let titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5), y: topInset + floor((navigationBarHeight - titleSize.height) * 0.5)), size: titleSize)
+            let titleFrame = CGRect(origin: CGPoint(x: leftInset + floor((availableSize.width - leftInset - rightInset - titleSize.width) * 0.5), y: topInset + floor((navigationBarHeight - titleSize.height) * 0.5)), size: titleSize)
             if let titleView = self.title.view {
                 if titleView.superview == nil {
                     self.containerView.addSubview(titleView)
@@ -2132,9 +2192,9 @@ final class VideoChatScreenComponent: Component {
                         }
                     )),
                     environment: {},
-                    containerSize: CGSize(width: min(400.0, availableSize.width - sideInset * 2.0 - 16.0 * 2.0), height: 10000.0)
+                    containerSize: CGSize(width: min(400.0, availableSize.width - leftInset - rightInset - 16.0 * 2.0), height: 10000.0)
                 )
-                let encryptionKeyFrameValue = CGRect(origin: CGPoint(x: floor((availableSize.width - encryptionKeySize.width) * 0.5), y: navigationHeight), size: encryptionKeySize)
+                let encryptionKeyFrameValue = CGRect(origin: CGPoint(x: leftInset + floor((availableSize.width - leftInset - rightInset - encryptionKeySize.width) * 0.5), y: navigationHeight), size: encryptionKeySize)
                 encryptionKeyFrame = encryptionKeyFrameValue
              
                 navigationHeight += encryptionKeySize.height
@@ -2164,7 +2224,7 @@ final class VideoChatScreenComponent: Component {
                     mainColumnSideInset = 0.0
                 } else {
                     mainColumnWidth = availableSize.width
-                    mainColumnSideInset = sideInset
+                    mainColumnSideInset = max(leftInset, rightInset)
                 }
             }
             
@@ -2181,7 +2241,9 @@ final class VideoChatScreenComponent: Component {
             }
             
             let microphoneButtonDiameter: CGFloat
-            if isTwoColumnLayout {
+            if buttonsOnTheSide {
+                microphoneButtonDiameter = actionButtonDiameter
+            } else if isTwoColumnLayout {
                 microphoneButtonDiameter = collapsedMicrophoneButtonDiameter
             } else {
                 if areButtonsCollapsed {
@@ -2221,11 +2283,21 @@ final class VideoChatScreenComponent: Component {
                 }
             }
             
-            if isTwoColumnLayout {
+            if buttonsOnTheSide {
+                collapsedMicrophoneButtonFrame.origin.y = floor((availableSize.height - actionButtonDiameter) * 0.5)
+                collapsedMicrophoneButtonFrame.origin.x = availableSize.width - environment.safeInsets.right - landscapeControlsWidth + landscapeControlsOffsetX
+                
                 if isMainColumnHidden {
-                    collapsedMicrophoneButtonFrame.origin.x = availableSize.width - sideInset - mainColumnWidth + floor((mainColumnWidth - collapsedMicrophoneButtonDiameter) * 0.5) + sideInset + mainColumnWidth
+                    collapsedMicrophoneButtonFrame.origin.x += mainColumnWidth + landscapeControlsWidth
+                }
+                
+                collapsedMicrophoneButtonFrame.size = CGSize(width: actionButtonDiameter, height: actionButtonDiameter)
+                expandedMicrophoneButtonFrame = collapsedMicrophoneButtonFrame
+            } else if isTwoColumnLayout {
+                if isMainColumnHidden {
+                    collapsedMicrophoneButtonFrame.origin.x = availableSize.width - rightInset - mainColumnWidth + floor((mainColumnWidth - collapsedMicrophoneButtonDiameter) * 0.5) + leftInset + mainColumnWidth
                 } else {
-                    collapsedMicrophoneButtonFrame.origin.x = availableSize.width - sideInset - mainColumnWidth + floor((mainColumnWidth - collapsedMicrophoneButtonDiameter) * 0.5)
+                    collapsedMicrophoneButtonFrame.origin.x = availableSize.width - rightInset - mainColumnWidth + floor((mainColumnWidth - collapsedMicrophoneButtonDiameter) * 0.5)
                 }
                 expandedMicrophoneButtonFrame = collapsedMicrophoneButtonFrame
             } else {
@@ -2242,7 +2314,11 @@ final class VideoChatScreenComponent: Component {
             }
             
             let collapsedParticipantsClippingY: CGFloat
-            collapsedParticipantsClippingY = collapsedMicrophoneButtonFrame.minY - 16.0
+            if buttonsOnTheSide {
+                collapsedParticipantsClippingY = availableSize.height
+            } else {
+                collapsedParticipantsClippingY = collapsedMicrophoneButtonFrame.minY - 16.0
+            }
             
             let expandedParticipantsClippingY: CGFloat
             if let expandedParticipantsVideoState = self.expandedParticipantsVideoState, expandedParticipantsVideoState.isUIHidden {
@@ -2255,8 +2331,16 @@ final class VideoChatScreenComponent: Component {
                 expandedParticipantsClippingY = expandedMicrophoneButtonFrame.minY - 24.0
             }
             
-            let leftActionButtonFrame = CGRect(origin: CGPoint(x: microphoneButtonFrame.minX - actionMicrophoneButtonSpacing - actionButtonDiameter, y: microphoneButtonFrame.minY + floor((microphoneButtonFrame.height - actionButtonDiameter) * 0.5)), size: CGSize(width: actionButtonDiameter, height: actionButtonDiameter))
-            let rightActionButtonFrame = CGRect(origin: CGPoint(x: microphoneButtonFrame.maxX + actionMicrophoneButtonSpacing, y: microphoneButtonFrame.minY + floor((microphoneButtonFrame.height - actionButtonDiameter) * 0.5)), size: CGSize(width: actionButtonDiameter, height: actionButtonDiameter))
+            var leftActionButtonFrame = CGRect(origin: CGPoint(x: microphoneButtonFrame.minX - actionMicrophoneButtonSpacing - actionButtonDiameter, y: microphoneButtonFrame.minY + floor((microphoneButtonFrame.height - actionButtonDiameter) * 0.5)), size: CGSize(width: actionButtonDiameter, height: actionButtonDiameter))
+            var rightActionButtonFrame = CGRect(origin: CGPoint(x: microphoneButtonFrame.maxX + actionMicrophoneButtonSpacing, y: microphoneButtonFrame.minY + floor((microphoneButtonFrame.height - actionButtonDiameter) * 0.5)), size: CGSize(width: actionButtonDiameter, height: actionButtonDiameter))
+            
+            if buttonsOnTheSide {
+                leftActionButtonFrame.origin.x = microphoneButtonFrame.minX
+                leftActionButtonFrame.origin.y = microphoneButtonFrame.minY - landscapeControlsSpacing - actionButtonDiameter
+                
+                rightActionButtonFrame.origin.x = microphoneButtonFrame.minX
+                rightActionButtonFrame.origin.y = microphoneButtonFrame.maxY + landscapeControlsSpacing
+            }
             
             let participantsSize = availableSize
             
@@ -2264,8 +2348,10 @@ final class VideoChatScreenComponent: Component {
             let participantsLayout: VideoChatParticipantsComponent.Layout
             if isTwoColumnLayout {
                 let mainColumnInsets: UIEdgeInsets = UIEdgeInsets(top: navigationHeight, left: mainColumnSideInset, bottom: availableSize.height - collapsedParticipantsClippingY, right: mainColumnSideInset)
-                let videoColumnWidth: CGFloat = max(10.0, availableSize.width - sideInset * 2.0 - mainColumnWidth - columnSpacing)
+                let videoColumnWidth: CGFloat = max(10.0, availableSize.width - leftInset - rightInset - mainColumnWidth - columnSpacing)
                 participantsLayout = VideoChatParticipantsComponent.Layout(
+                    leftInset: leftInset,
+                    rightInset: rightInset,
                     videoColumn: VideoChatParticipantsComponent.Layout.Column(
                         width: videoColumnWidth,
                         insets: UIEdgeInsets(top: navigationHeight, left: 0.0, bottom: max(14.0, environment.safeInsets.bottom), right: 0.0)
@@ -2280,6 +2366,8 @@ final class VideoChatScreenComponent: Component {
             } else {
                 let mainColumnInsets: UIEdgeInsets = UIEdgeInsets(top: navigationHeight, left: mainColumnSideInset, bottom: availableSize.height - collapsedParticipantsClippingY, right: mainColumnSideInset)
                 participantsLayout = VideoChatParticipantsComponent.Layout(
+                    leftInset: leftInset,
+                    rightInset: rightInset,
                     videoColumn: nil,
                     mainColumn: VideoChatParticipantsComponent.Layout.Column(
                         width: mainColumnWidth,
@@ -2354,7 +2442,7 @@ final class VideoChatScreenComponent: Component {
                                 isUIHidden = alsoSetIsUIHidden
                             }
                             
-                            self.expandedParticipantsVideoState = VideoChatParticipantsComponent.ExpandedVideoState(mainParticipant: key, isMainParticipantPinned: false, isUIHidden: isUIHidden)
+                            self.expandedParticipantsVideoState = VideoChatParticipantsComponent.ExpandedVideoState(mainParticipant: key, isMainParticipantPinned: self.expandedParticipantsVideoState == nil && key.isPresentation, isUIHidden: isUIHidden)
                             self.focusedSpeakerAutoSwitchDeadline = CFAbsoluteTimeGetCurrent() + 3.0
                             self.state?.updated(transition: .spring(duration: 0.4))
                         } else if self.expandedParticipantsVideoState != nil {
@@ -2585,7 +2673,7 @@ final class VideoChatScreenComponent: Component {
                     call: call,
                     strings: environment.strings,
                     content: micButtonContent,
-                    isCollapsed: areButtonsCollapsed,
+                    isCollapsed: areButtonsCollapsed || buttonsOnTheSide,
                     updateUnmutedStateIsPushToTalk: { [weak self] unmutedStateIsPushToTalk in
                         guard let self, let currentCall = self.currentCall else {
                             return
@@ -2654,7 +2742,7 @@ final class VideoChatScreenComponent: Component {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: microphoneButtonDiameter, height: microphoneButtonDiameter)
+                containerSize: microphoneButtonFrame.size
             )
             if let microphoneButtonView = self.microphoneButton.view {
                 if microphoneButtonView.superview == nil {
@@ -2709,14 +2797,14 @@ final class VideoChatScreenComponent: Component {
             }
 
             var displayVideoControlButton = true
-            if areButtonsCollapsed {
+            if areButtonsCollapsed || buttonsOnTheSide {
                 displayVideoControlButton = false
             } else if let expandedParticipantsVideoState = self.expandedParticipantsVideoState, !expandedParticipantsVideoState.isUIHidden {
                 displayVideoControlButton = false
             }
             if case .audio = videoControlButtonContent {
                 if let (availableOutputs, _) = self.audioOutputState {
-                    if availableOutputs.count <= 0 {
+                    if availableOutputs.count <= 1 {
                         displayVideoControlButton = false
                     }
                 } else {
@@ -2762,7 +2850,7 @@ final class VideoChatScreenComponent: Component {
                         strings: environment.strings,
                         content: videoButtonContent,
                         microphoneState: actionButtonMicrophoneState,
-                        isCollapsed: areButtonsCollapsed
+                        isCollapsed: areButtonsCollapsed || buttonsOnTheSide
                     )),
                     effectAlignment: .center,
                     action: { [weak self] in
@@ -2816,7 +2904,7 @@ final class VideoChatScreenComponent: Component {
                         strings: environment.strings,
                         content: .leave,
                         microphoneState: actionButtonMicrophoneState,
-                        isCollapsed: areButtonsCollapsed
+                        isCollapsed: areButtonsCollapsed || buttonsOnTheSide
                     )),
                     effectAlignment: .center,
                     action: { [weak self] in

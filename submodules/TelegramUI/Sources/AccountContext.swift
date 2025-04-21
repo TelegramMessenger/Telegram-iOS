@@ -684,6 +684,106 @@ public final class AccountContextImpl: AccountContext {
         }
     }
     
+    public func joinConferenceCall(call: JoinCallLinkInformation, isVideo: Bool) {
+        guard let callManager = self.sharedContext.callManager else {
+            return
+        }
+        let result = callManager.joinConferenceCall(
+            accountContext: self,
+            initialCall: EngineGroupCallDescription(
+                id: call.id,
+                accessHash: call.accessHash,
+                title: nil,
+                scheduleTimestamp: nil,
+                subscribedToScheduled: false,
+                isStream: false
+            ),
+            reference: call.reference,
+            beginWithVideo: isVideo,
+            invitePeerIds: [],
+            endCurrentIfAny: false
+        )
+        if case let .alreadyInProgress(currentPeerId) = result {
+            let dataInput: Signal<EnginePeer?, NoError>
+            if let currentPeerId {
+                dataInput = self.engine.data.get(
+                    TelegramEngine.EngineData.Item.Peer.Peer(id: currentPeerId)
+                )
+            } else {
+                dataInput = .single(nil)
+            }
+            
+            let _ = (dataInput
+            |> deliverOnMainQueue).start(next: { [weak self] current in
+                guard let strongSelf = self else {
+                    return
+                }
+                let presentationData = strongSelf.sharedContext.currentPresentationData.with { $0 }
+                if let current = current {
+                    switch current {
+                    case .channel, .legacyGroup:
+                        let title: String
+                        let text: String
+                        if case let .channel(channel) = current, case .broadcast = channel.info {
+                            title = presentationData.strings.Call_LiveStreamInProgressTitle
+                            text = presentationData.strings.Call_LiveStreamInProgressConferenceMessage(current.compactDisplayTitle).string
+                        } else {
+                            title = presentationData.strings.Call_VoiceChatInProgressTitle
+                            text = presentationData.strings.Call_VoiceChatInProgressConferenceMessage(current.compactDisplayTitle).string
+                        }
+
+                        strongSelf.sharedContext.mainWindow?.present(textAlertController(context: strongSelf, title: title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                            guard let self else {
+                                return
+                            }
+                            let _ = callManager.joinConferenceCall(
+                                accountContext: self,
+                                initialCall: EngineGroupCallDescription(
+                                    id: call.id,
+                                    accessHash: call.accessHash,
+                                    title: nil,
+                                    scheduleTimestamp: nil,
+                                    subscribedToScheduled: false,
+                                    isStream: false
+                                ),
+                                reference: call.reference,
+                                beginWithVideo: isVideo,
+                                invitePeerIds: [],
+                                endCurrentIfAny: true
+                            )
+                        })]), on: .root)
+                    default:
+                        let text: String
+                        text = presentationData.strings.Call_VoiceChatInProgressConferenceMessage(current.compactDisplayTitle).string
+                        strongSelf.sharedContext.mainWindow?.present(textAlertController(context: strongSelf, title: presentationData.strings.Call_CallInProgressTitle, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                            guard let self else {
+                                return
+                            }
+                            let _ = callManager.joinConferenceCall(
+                                accountContext: self,
+                                initialCall: EngineGroupCallDescription(
+                                    id: call.id,
+                                    accessHash: call.accessHash,
+                                    title: nil,
+                                    scheduleTimestamp: nil,
+                                    subscribedToScheduled: false,
+                                    isStream: false
+                                ),
+                                reference: call.reference,
+                                beginWithVideo: isVideo,
+                                invitePeerIds: [],
+                                endCurrentIfAny: true
+                            )
+                        })]), on: .root)
+                    }
+                } else {
+                    strongSelf.sharedContext.mainWindow?.present(textAlertController(context: strongSelf, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_ExternalCallInProgressMessage, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                    })]), on: .root)
+                }
+            })
+        }
+    }
+    
     public func requestCall(peerId: PeerId, isVideo: Bool, completion: @escaping () -> Void) {
         guard let callResult = self.sharedContext.callManager?.requestCall(context: self, peerId: peerId, isVideo: isVideo, endCurrentIfAny: false) else {
             return

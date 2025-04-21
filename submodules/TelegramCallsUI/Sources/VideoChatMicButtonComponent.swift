@@ -566,7 +566,7 @@ final class VideoChatMicButtonComponent: Component {
             
             transition.setPosition(view: self.icon.view, position: iconFrame.center)
             transition.setBounds(view: self.icon.view, bounds: CGRect(origin: CGPoint(), size: iconFrame.size))
-            transition.setScale(view: self.icon.view, scale: component.isCollapsed ? ((iconSize.width - 24.0) / iconSize.width) : 1.0)
+            transition.setScale(view: self.icon.view, scale: component.isCollapsed ? ((iconSize.width - 32.0) / iconSize.width) : 1.0)
             
             switch component.content {
             case .connecting:

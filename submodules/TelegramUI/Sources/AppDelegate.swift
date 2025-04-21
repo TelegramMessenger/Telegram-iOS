@@ -2235,15 +2235,43 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                         if context.account.id == accountId {
                             context.account.callSessionManager.addConferenceInvitationMessages(ids: [(messageId, IncomingConferenceTermporaryExternalInfo(callId: groupCallId, isVideo: isVideo))])
                             
-                            /*disposable.set((context.account.callSessionManager.callState(internalId: internalId)
-                            |> deliverOnMainQueue).start(next: { state in
-                                switch state.state {
-                                case .terminated:
-                                    callKitIntegration.dropCall(uuid: internalId)
-                                default:
-                                    break
+                            let disposable = MetaDisposable()
+                            self.watchedCallsDisposables.add(disposable)
+                            
+                            if let callManager = context.sharedContext.callManager {
+                                let signal = combineLatest(queue: .mainQueue(), context.account.callSessionManager.ringingStates()
+                                    |> map { ringingStates -> Bool in
+                                        for state in ringingStates {
+                                            if state.id == internalId {
+                                                return true
+                                            }
+                                        }
+                                        return false
+                                    },
+                                    callManager.currentGroupCallSignal
+                                    |> map { currentGroupCall -> Bool in
+                                        if case let .group(groupCall) = currentGroupCall {
+                                            if groupCall.internalId == internalId {
+                                                return true
+                                            }
+                                        }
+                                        return false
+                                    }
+                                )
+                                |> mapToSignal { exists0, exists1 -> Signal<Void, NoError> in
+                                    if !(exists0 || exists1) {
+                                        return .single(Void())
+                                        |> delay(1.0, queue: .mainQueue())
+                                    }
+                                    return .never()
                                 }
-                            }))*/
+                                
+                                disposable.set((signal
+                                |> take(1)
+                                |> deliverOnMainQueue).startStrict(next: { _ in
+                                    callKitIntegration.dropCall(uuid: internalId)
+                                }))
+                            }
                             
                             processed = true
                             
@@ -2266,6 +2294,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         } else {
             guard var updateString = payloadJson["updates"] as? String else {
                 Logger.shared.log("App \(self.episodeId) PushRegistry", "updates is nil")
+                self.reportFailedIncomingCallKitCall()
                 completion()
                 return
             }
@@ -2277,11 +2306,13 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             }
             guard let updateData = Data(base64Encoded: updateString) else {
                 Logger.shared.log("App \(self.episodeId) PushRegistry", "Couldn't decode updateData")
+                self.reportFailedIncomingCallKitCall()
                 completion()
                 return
             }
             guard let callUpdate = AccountStateManager.extractIncomingCallUpdate(data: updateData) else {
                 Logger.shared.log("App \(self.episodeId) PushRegistry", "Couldn't extract call update")
+                self.reportFailedIncomingCallKitCall()
                 completion()
                 return
             }
@@ -2366,6 +2397,33 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     
     public func pushRegistry(_ registry: PKPushRegistry, didInvalidatePushTokenFor type: PKPushType) {
         Logger.shared.log("App \(self.episodeId)", "invalidated token for \(type)")
+    }
+    
+    private func reportFailedIncomingCallKitCall() {
+        guard let callKitIntegration = CallKitIntegration.shared else {
+            return
+        }
+        let uuid = CallSessionInternalId()
+        callKitIntegration.reportIncomingCall(
+            uuid: uuid,
+            stableId: Int64.random(in: Int64.min ... Int64.max),
+            handle: "Unknown",
+            phoneNumber: nil,
+            isVideo: false,
+            displayTitle: "Unknown",
+            completion: { error in
+                if let error = error {
+                    if error.domain == "com.apple.CallKit.error.incomingcall" && (error.code == -3 || error.code == 3) {
+                        Logger.shared.log("PresentationCall", "reportFailedIncomingCallKitCall device in DND mode")
+                    } else {
+                        Logger.shared.log("PresentationCall", "reportFailedIncomingCallKitCall error \(error)")
+                    }
+                }
+            }
+        )
+        Queue.mainQueue().after(1.0, {
+            callKitIntegration.dropCall(uuid: uuid)
+        })
     }
     
     private func authorizedContext() -> Signal<AuthorizedApplicationContext, NoError> {

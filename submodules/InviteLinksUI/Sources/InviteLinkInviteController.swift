@@ -589,6 +589,8 @@ public final class InviteLinkInviteController: ViewController {
                                     }
                                     return false
                                 }), in: .window(.root))
+                                
+                                strongSelf.controller?.dismiss()
                             }
                         })
                     }

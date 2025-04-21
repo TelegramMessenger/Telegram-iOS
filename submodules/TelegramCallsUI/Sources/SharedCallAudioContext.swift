@@ -2,6 +2,7 @@ import Foundation
 import SwiftSignalKit
 import TelegramVoip
 import TelegramAudio
+import DeviceProximity
 
 public final class SharedCallAudioContext {
     private static weak var current: SharedCallAudioContext? 
@@ -33,6 +34,8 @@ public final class SharedCallAudioContext {
     
     private let audioSessionShouldBeActive = Promise<Bool>(true)
     private var initialSetupTimer: Foundation.Timer?
+    
+    private var proximityManagerIndex: Int?
 
     static func get(audioSession: ManagedAudioSession, callKitIntegration: CallKitIntegration?, defaultToSpeaker: Bool = false, reuseCurrent: Bool = false) -> SharedCallAudioContext {
         if let current = self.current, reuseCurrent {
@@ -105,6 +108,8 @@ public final class SharedCallAudioContext {
                                 audioSessionControl.setOutputMode(.custom(self.currentAudioOutputValue))
                                 audioSessionControl.setup(synchronous: true)
                             }
+                            
+                            self.updateProximityMonitoring()
                         }
                     })
                 }
@@ -129,6 +134,7 @@ public final class SharedCallAudioContext {
                 if let currentOutput = currentOutput {
                     self.currentAudioOutputValue = currentOutput
                     self.didSetCurrentAudioOutputValue = true
+                    self.updateProximityMonitoring()
                 }
                 
                 var signal: Signal<([AudioSessionOutput], AudioSessionOutput?), NoError> = .single((availableOutputs, currentOutput))
@@ -186,6 +192,7 @@ public final class SharedCallAudioContext {
             self.audioOutputStateValue = value
             if let currentOutput = value.1 {
                 self.currentAudioOutputValue = currentOutput
+                self.updateProximityMonitoring()
             }
         })
     }
@@ -196,6 +203,10 @@ public final class SharedCallAudioContext {
         self.isAudioSessionActiveDisposable?.dispose()
         self.audioOutputStateDisposable?.dispose()
         self.initialSetupTimer?.invalidate()
+        
+        if let proximityManagerIndex = self.proximityManagerIndex {
+            DeviceProximityManager.shared().remove(proximityManagerIndex)
+        }
     }
     
     func setCurrentAudioOutput(_ output: AudioSessionOutput) {
@@ -226,6 +237,28 @@ public final class SharedCallAudioContext {
     public func switchToSpeakerIfBuiltin() {
         if case .builtin = self.currentAudioOutputValue {
             self.setCurrentAudioOutput(.speaker)
+        }
+    }
+    
+    private func updateProximityMonitoring() {
+        var shouldMonitorProximity = false
+        switch self.currentAudioOutputValue {
+        case .builtin:
+            shouldMonitorProximity = true
+        default:
+            break
+        }
+        
+        if shouldMonitorProximity {
+            if self.proximityManagerIndex == nil {
+                self.proximityManagerIndex = DeviceProximityManager.shared().add { _ in
+                }
+            }
+        } else {
+            if let proximityManagerIndex = self.proximityManagerIndex {
+                self.proximityManagerIndex = nil
+                DeviceProximityManager.shared().remove(proximityManagerIndex)
+            }
         }
     }
 }

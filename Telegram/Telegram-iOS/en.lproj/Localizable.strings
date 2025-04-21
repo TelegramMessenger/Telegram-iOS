@@ -14189,6 +14189,11 @@ Sorry for the inconvenience.";
 "SendInviteLink.TextCallsRestrictedMultipleUsers_any" = "{user_list}, and **%d** more people do not accept calls.";
 "SendInviteLink.TextCallsRestrictedSendInviteLink" = "You can try to send an invite link instead.";
 
+"Call.VoiceChatInProgressConferenceMessage" = "Leave voice chat in %1$@ and start a conference?";
+"Call.LiveStreamInProgressConferenceMessage" = "Leave live stream in %1$@ and start a conference?";
+
+"VoiceChat.RemoveConferencePeerConfirmation" = "Are you sure you want to remove %@ from this call?";
+
 "Story.Privacy.ShareStories" = "Share Stories";
 "Story.Privacy.PostStoriesAsHeader" = "POST STORIES AS";
 "Story.Privacy.WhoCanViewStoriesHeader" = "WHO CAN VIEW THIS STORIES";

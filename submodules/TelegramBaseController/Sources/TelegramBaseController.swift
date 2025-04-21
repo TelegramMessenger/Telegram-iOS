@@ -1065,4 +1065,42 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
             })
         }, activeCall: activeCall)
     }
+    
+    open func joinConferenceCall(message: EngineMessage) {
+        var action: TelegramMediaAction?
+        for media in message.media {
+            if let media = media as? TelegramMediaAction {
+                action = media
+                break
+            }
+        }
+        guard case let .conferenceCall(conferenceCall) = action?.action else {
+            return
+        }
+        
+        if let currentGroupCallController = self.context.sharedContext.currentGroupCallController as? VoiceChatController, case let .group(groupCall) = currentGroupCallController.call, let currentCallId = groupCall.callId, currentCallId == conferenceCall.callId {
+            self.context.sharedContext.navigateToCurrentCall()
+            return
+        }
+        
+        let signal = self.context.engine.peers.joinCallInvitationInformation(messageId: message.id)
+        let _ = (signal
+        |> deliverOnMainQueue).startStandalone(next: { [weak self] resolvedCallLink in
+            guard let self else {
+                return
+            }
+            self.context.joinConferenceCall(call: resolvedCallLink, isVideo: conferenceCall.flags.contains(.isVideo))
+        }, error: { [weak self] error in
+            guard let self else {
+                return
+            }
+            switch error {
+            case .doesNotExist:
+                self.context.sharedContext.openCreateGroupCallUI(context: self.context, peerIds: conferenceCall.otherParticipants, parentController: self)
+            default:
+                let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+                self.present(textAlertController(context: self.context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+            }
+        })
+    }
 }

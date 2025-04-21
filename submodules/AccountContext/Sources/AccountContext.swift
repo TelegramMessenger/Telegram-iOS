@@ -967,14 +967,16 @@ public enum JoinSubjectScreenMode {
         public let inviter: EnginePeer?
         public let members: [EnginePeer]
         public let totalMemberCount: Int
+        public let info: JoinCallLinkInformation
         
-        public init(id: Int64, accessHash: Int64, slug: String, inviter: EnginePeer?, members: [EnginePeer], totalMemberCount: Int) {
+        public init(id: Int64, accessHash: Int64, slug: String, inviter: EnginePeer?, members: [EnginePeer], totalMemberCount: Int, info: JoinCallLinkInformation) {
             self.id = id
             self.accessHash = accessHash
             self.slug = slug
             self.inviter = inviter
             self.members = members
             self.totalMemberCount = totalMemberCount
+            self.info = info
         }
     }
     
@@ -1330,6 +1332,7 @@ public protocol AccountContext: AnyObject {
     
     func scheduleGroupCall(peerId: PeerId, parentController: ViewController)
     func joinGroupCall(peerId: PeerId, invite: String?, requestJoinAsPeerId: ((@escaping (PeerId?) -> Void) -> Void)?, activeCall: EngineGroupCallDescription)
+    func joinConferenceCall(call: JoinCallLinkInformation, isVideo: Bool)
     func requestCall(peerId: PeerId, isVideo: Bool, completion: @escaping () -> Void)
 }
 
