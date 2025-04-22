@@ -3469,7 +3469,11 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             }
             self.postingAvailabilityDisposable = (self.postingAvailabilityPromise.get()
             |> deliverOnMainQueue).start(next: { [weak self] availability in
-                guard let self, availability != .available else {
+                guard let self else {
+                    return
+                }
+                if case let .available(remainingCount) = availability {
+                    let _ = remainingCount
                     return
                 }
                 self.node.postingAvailable = false

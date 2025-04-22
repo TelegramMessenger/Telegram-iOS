@@ -352,6 +352,8 @@ public final class MediaEditor {
             return state.position
         }
     }
+    
+    public var maxDuration: Double = 60.0
    
     public var duration: Double? {
         if let stickerEntity = self.stickerEntity {
@@ -360,7 +362,7 @@ public final class MediaEditor {
             if let trimRange = self.values.videoTrimRange {
                 return trimRange.upperBound - trimRange.lowerBound
             } else {
-                return min(60.0, self.playerPlaybackState.duration)
+                return min(self.maxDuration, self.playerPlaybackState.duration)
             }
         } else {
             return nil
@@ -369,7 +371,7 @@ public final class MediaEditor {
     
     public var mainVideoDuration: Double? {
         if self.player != nil {
-            return min(60.0, self.playerPlaybackState.duration)
+            return min(self.maxDuration, self.playerPlaybackState.duration)
         } else {
             return nil
         }
@@ -377,7 +379,7 @@ public final class MediaEditor {
     
     public var additionalVideoDuration: Double? {
         if let additionalPlayer = self.additionalPlayers.first {
-            return min(60.0, additionalPlayer.currentItem?.asset.duration.seconds ?? 0.0)
+            return min(self.maxDuration, additionalPlayer.currentItem?.asset.duration.seconds ?? 0.0)
         } else {
             return nil
         }
@@ -385,7 +387,15 @@ public final class MediaEditor {
     
     public var originalDuration: Double? {
         if self.player != nil || !self.additionalPlayers.isEmpty {
-            return min(60.0, self.playerPlaybackState.duration)
+            return self.playerPlaybackState.duration
+        } else {
+            return nil
+        }
+    }
+    
+    public var originalCappedDuration: Double? {
+        if self.player != nil || !self.additionalPlayers.isEmpty {
+            return min(self.maxDuration, self.playerPlaybackState.duration)
         } else {
             return nil
         }

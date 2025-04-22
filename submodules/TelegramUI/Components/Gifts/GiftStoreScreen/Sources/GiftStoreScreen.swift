@@ -139,21 +139,10 @@ final class GiftStoreScreenComponent: Component {
             self.updateScrolling(interactive: true, transition: self.nextScrollTransition ?? .immediate)
         }
         
-        private var removedStarGifts = Set<String>()
         private var currentGifts: ([StarGift], Set<String>, Set<String>, Set<String>)?
         private var effectiveGifts: [StarGift]? {
             if let gifts = self.state?.starGiftsState?.gifts {
-                if !self.removedStarGifts.isEmpty {
-                    return gifts.filter { gift in
-                        if case let .unique(uniqueGift) = gift {
-                            return !self.removedStarGifts.contains(uniqueGift.slug)
-                        } else {
-                            return true
-                        }
-                    }
-                } else {
-                    return gifts
-                }
+                return gifts
             } else {
                 return nil
             }
@@ -253,15 +242,14 @@ final class GiftStoreScreenComponent: Component {
                                                 }
                                                 let giftController = GiftViewScreen(
                                                     context: component.context,
-                                                    subject: .uniqueGift(uniqueGift, state.peerId)
-                                                )
-                                                giftController.onBuySuccess = { [weak self] in
-                                                    guard let self else {
-                                                        return
+                                                    subject: .uniqueGift(uniqueGift, state.peerId),
+                                                    buyGift: { slug, peerId in
+                                                        return self.state?.starGiftsContext.buyStarGift(slug: slug, peerId: peerId) ?? .complete()
+                                                    },
+                                                    updateResellStars: { price in
+                                                        return self.state?.starGiftsContext.updateStarGiftResellPrice(slug: uniqueGift.slug, price: price) ?? .complete()
                                                     }
-                                                    self.removedStarGifts.insert(uniqueGift.slug)
-                                                    self.state?.updated(transition: .spring(duration: 0.3))
-                                                }
+                                                )
                                                 mainController.push(giftController)
                                             }
                                         }
@@ -507,15 +495,17 @@ final class GiftStoreScreenComponent: Component {
             
             //TODO:localize
             var items: [ContextMenuItem] = []
-            items.append(.custom(SearchContextItem(
-                context: component.context,
-                placeholder: "Search",
-                value: "",
-                valueChanged: { value in
-                    searchQueryPromise.set(value)
-                }
-            ), false))
-            items.append(.separator)
+            if modelAttributes.count >= 8 {
+                items.append(.custom(SearchContextItem(
+                    context: component.context,
+                    placeholder: "Search",
+                    value: "",
+                    valueChanged: { value in
+                        searchQueryPromise.set(value)
+                    }
+                ), false))
+                items.append(.separator)
+            }
             items.append(.custom(GiftAttributeListContextItem(
                 context: component.context,
                 attributes: modelAttributes,
@@ -597,15 +587,17 @@ final class GiftStoreScreenComponent: Component {
             
             //TODO:localize
             var items: [ContextMenuItem] = []
-            items.append(.custom(SearchContextItem(
-                context: component.context,
-                placeholder: "Search",
-                value: "",
-                valueChanged: { value in
-                    searchQueryPromise.set(value)
-                }
-            ), false))
-            items.append(.separator)
+            if backdropAttributes.count >= 8 {
+                items.append(.custom(SearchContextItem(
+                    context: component.context,
+                    placeholder: "Search",
+                    value: "",
+                    valueChanged: { value in
+                        searchQueryPromise.set(value)
+                    }
+                ), false))
+                items.append(.separator)
+            }
             items.append(.custom(GiftAttributeListContextItem(
                 context: component.context,
                 attributes: backdropAttributes,
@@ -687,15 +679,17 @@ final class GiftStoreScreenComponent: Component {
             
             //TODO:localize
             var items: [ContextMenuItem] = []
-            items.append(.custom(SearchContextItem(
-                context: component.context,
-                placeholder: "Search",
-                value: "",
-                valueChanged: { value in
-                    searchQueryPromise.set(value)
-                }
-            ), false))
-            items.append(.separator)
+            if patternAttributes.count >= 8 {
+                items.append(.custom(SearchContextItem(
+                    context: component.context,
+                    placeholder: "Search",
+                    value: "",
+                    valueChanged: { value in
+                        searchQueryPromise.set(value)
+                    }
+                ), false))
+                items.append(.separator)
+            }
             items.append(.custom(GiftAttributeListContextItem(
                 context: component.context,
                 attributes: patternAttributes,

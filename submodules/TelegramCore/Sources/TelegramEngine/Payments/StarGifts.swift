@@ -847,7 +847,13 @@ public enum TransferStarGiftError {
 
 public enum BuyStarGiftError {
     case generic
+    case starGiftResellTooEarly(Int32)
 }
+
+public enum UpdateStarGiftPriceError {
+    case generic
+}
+
 
 public enum UpgradeStarGiftError {
     case generic
@@ -858,7 +864,12 @@ func _internal_buyStarGift(account: Account, slug: String, peerId: EnginePeer.Id
     return _internal_fetchBotPaymentForm(accountPeerId: account.peerId, postbox: account.postbox, network: account.network, source: source, themeParams: nil)
     |> map(Optional.init)
     |> `catch` { error -> Signal<BotPaymentForm?, BuyStarGiftError> in
-        return .fail(.generic)
+        switch error {
+        case let .starGiftResellTooEarly(value):
+            return .fail(.starGiftResellTooEarly(value))
+        default:
+            return .fail(.generic)
+        }
     }
     |> mapToSignal { paymentForm in
         if let paymentForm {
@@ -1487,7 +1498,13 @@ private final class ProfileGiftsContextImpl {
             }
             let disposable = MetaDisposable()
             disposable.set(
-                _internal_upgradeStarGift(account: self.account, formId: formId, reference: reference, keepOriginalInfo: keepOriginalInfo).startStrict(next: { [weak self] result in
+                (_internal_upgradeStarGift(
+                    account: self.account,
+                    formId: formId,
+                    reference: reference,
+                    keepOriginalInfo: keepOriginalInfo
+                )
+                |> deliverOn(self.queue)).startStrict(next: { [weak self] result in
                     guard let self else {
                         return
                     }
@@ -1509,39 +1526,54 @@ private final class ProfileGiftsContextImpl {
         }
     }
     
-    func updateStarGiftResellPrice(reference: StarGiftReference, price: Int64?) {
-        self.actionDisposable.set(
-            _internal_updateStarGiftResalePrice(account: self.account, reference: reference, price: price).startStrict()
-        )
-       
-        
-        if let index = self.gifts.firstIndex(where: { gift in
-            if gift.reference == reference {
-                return true
+    func updateStarGiftResellPrice(reference: StarGiftReference, price: Int64?) -> Signal<Never, UpdateStarGiftPriceError> {
+        return Signal { [weak self] subscriber in
+            guard let self else {
+                return EmptyDisposable
             }
-            return false
-        }) {
-            if case let .unique(uniqueGift) = self.gifts[index].gift {
-                let updatedUniqueGift = uniqueGift.withResellStars(price)
-                let updatedGift = self.gifts[index].withGift(.unique(updatedUniqueGift))
-                self.gifts[index] = updatedGift
-            }
+            let disposable = MetaDisposable()
+            disposable.set(
+                (_internal_updateStarGiftResalePrice(
+                    account: self.account,
+                    reference: reference,
+                    price: price
+                )
+                |> deliverOn(self.queue)).startStrict(error: { error in
+                    subscriber.putError(error)
+                }, completed: {
+                    if let index = self.gifts.firstIndex(where: { gift in
+                        if gift.reference == reference {
+                            return true
+                        }
+                        return false
+                    }) {
+                        if case let .unique(uniqueGift) = self.gifts[index].gift {
+                            let updatedUniqueGift = uniqueGift.withResellStars(price)
+                            let updatedGift = self.gifts[index].withGift(.unique(updatedUniqueGift))
+                            self.gifts[index] = updatedGift
+                        }
+                    }
+                    
+                    if let index = self.filteredGifts.firstIndex(where: { gift in
+                        if gift.reference == reference {
+                            return true
+                        }
+                        return false
+                    }) {
+                        if case let .unique(uniqueGift) = self.filteredGifts[index].gift {
+                            let updatedUniqueGift = uniqueGift.withResellStars(price)
+                            let updatedGift = self.filteredGifts[index].withGift(.unique(updatedUniqueGift))
+                            self.filteredGifts[index] = updatedGift
+                        }
+                    }
+                    
+                    self.pushState()
+                    
+                    subscriber.putCompletion()
+                })
+            )
+            return disposable
         }
-        
-        if let index = self.filteredGifts.firstIndex(where: { gift in
-            if gift.reference == reference {
-                return true
-            }
-            return false
-        }) {
-            if case let .unique(uniqueGift) = self.filteredGifts[index].gift {
-                let updatedUniqueGift = uniqueGift.withResellStars(price)
-                let updatedGift = self.filteredGifts[index].withGift(.unique(updatedUniqueGift))
-                self.filteredGifts[index] = updatedGift
-            }
-        }
-        
-        self.pushState()
     }
     
     func toggleStarGiftsNotifications(enabled: Bool) {
@@ -1939,9 +1971,17 @@ public final class ProfileGiftsContext {
         }
     }
     
-    public func updateStarGiftResellPrice(reference: StarGiftReference, price: Int64?) {
-        self.impl.with { impl in
-            impl.updateStarGiftResellPrice(reference: reference, price: price)
+    public func updateStarGiftResellPrice(reference: StarGiftReference, price: Int64?) -> Signal<Never, UpdateStarGiftPriceError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.updateStarGiftResellPrice(reference: reference, price: price).start(error: { error in
+                    subscriber.putError(error)
+                }, completed: {
+                    subscriber.putCompletion()
+                }))
+            }
+            return disposable
         }
     }
     
@@ -2274,23 +2314,21 @@ func _internal_toggleStarGiftsNotifications(account: Account, peerId: EnginePeer
     }
 }
 
-func _internal_updateStarGiftResalePrice(account: Account, reference: StarGiftReference, price: Int64?) -> Signal<Never, NoError> {
+func _internal_updateStarGiftResalePrice(account: Account, reference: StarGiftReference, price: Int64?) -> Signal<Never, UpdateStarGiftPriceError> {
     return account.postbox.transaction { transaction in
         return reference.apiStarGiftReference(transaction: transaction)
     }
+    |> castError(UpdateStarGiftPriceError.self)
     |> mapToSignal { starGift in
         guard let starGift else {
             return .complete()
         }
         return account.network.request(Api.functions.payments.updateStarGiftPrice(stargift: starGift, resellStars: price ?? 0))
-        |> map(Optional.init)
-        |> `catch` { _ -> Signal<Api.Updates?, NoError> in
-            return .single(nil)
+        |> mapError { error -> UpdateStarGiftPriceError in
+            return .generic
         }
-        |> mapToSignal { updates -> Signal<Void, NoError> in
-            if let updates {
-                account.stateManager.addUpdates(updates)
-            }
+        |> mapToSignal { updates -> Signal<Void, UpdateStarGiftPriceError> in
+            account.stateManager.addUpdates(updates)
             return .complete()
         }
         |> ignoreValues
@@ -2496,6 +2534,66 @@ private final class ResaleGiftsContextImpl {
         
         self.loadMore()
     }
+    
+    func buyStarGift(slug: String, peerId: EnginePeer.Id) -> Signal<Never, BuyStarGiftError> {
+        return _internal_buyStarGift(account: self.account, slug: slug, peerId: peerId)
+        |> afterCompleted { [weak self] in
+            guard let self else {
+                return
+            }
+            self.queue.async {
+                if let count = self.count {
+                    self.count = max(0, count - 1)
+                }
+                self.gifts.removeAll(where: { gift in
+                    if case let .unique(uniqueGift) = gift, uniqueGift.slug == slug {
+                        return true
+                    }
+                    return false
+                })
+                self.pushState()
+            }
+        }
+    }
+    
+    func updateStarGiftResellPrice(slug: String, price: Int64?) -> Signal<Never, UpdateStarGiftPriceError> {
+        return Signal { [weak self] subscriber in
+            guard let self else {
+                return EmptyDisposable
+            }
+            let disposable = MetaDisposable()
+            disposable.set(
+                (_internal_updateStarGiftResalePrice(
+                    account: self.account,
+                    reference: .slug(slug: slug),
+                    price: price
+                )
+                |> deliverOn(self.queue)).startStrict(error: { error in
+                    subscriber.putError(error)
+                }, completed: {
+                    if let index = self.gifts.firstIndex(where: { gift in
+                        if case let .unique(uniqueGift) = gift, uniqueGift.slug == slug {
+                            return true
+                        }
+                        return false
+                    }) {
+                        if let price {
+                            if case let .unique(uniqueGift) = self.gifts[index] {
+                                self.gifts[index] = .unique(uniqueGift.withResellStars(price))
+                            }
+                        } else {
+                            self.gifts.remove(at: index)
+                        }
+                    }
+                    
+                    self.pushState()
+                    
+                    subscriber.putCompletion()
+                })
+            )
+            return disposable
+        }
+    }
         
     private func pushState() {
         let state = ResaleGiftsContext.State(
@@ -2582,6 +2680,34 @@ public final class ResaleGiftsContext {
     public func updateFilterAttributes(_ attributes: [ResaleGiftsContext.Attribute]) {
         self.impl.with { impl in
             impl.updateFilterAttributes(attributes)
+        }
+    }
+    
+    public func buyStarGift(slug: String, peerId: EnginePeer.Id) -> Signal<Never, BuyStarGiftError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.buyStarGift(slug: slug, peerId: peerId).start(error: { error in
+                    subscriber.putError(error)
+                }, completed: {
+                    subscriber.putCompletion()
+                }))
+            }
+            return disposable
+        }
+    }
+    
+    public func updateStarGiftResellPrice(slug: String, price: Int64?) -> Signal<Never, UpdateStarGiftPriceError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.updateStarGiftResellPrice(slug: slug, price: price).start(error: { error in
+                    subscriber.putError(error)
+                }, completed: {
+                    subscriber.putCompletion()
+                }))
+            }
+            return disposable
         }
     }
 

@@ -608,9 +608,9 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                             },
                                             updateResellStars: { [weak self] price in
                                                 guard let self, let reference = product.reference else {
-                                                    return
+                                                    return .never()
                                                 }
-                                                self.profileGifts.updateStarGiftResellPrice(reference: reference, price: price)
+                                                return self.profileGifts.updateStarGiftResellPrice(reference: reference, price: price)
                                             },
                                             togglePinnedToTop: { [weak self] pinnedToTop in
                                                 guard let self else {

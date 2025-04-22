@@ -327,7 +327,7 @@ final class MediaEditorScreenComponent: Component {
         private let switchCameraButton = ComponentView<Empty>()
         
         private let selectionButton = ComponentView<Empty>()
-        private let selectionPanel = ComponentView<Empty>()
+        private var selectionPanel: ComponentView<Empty>?
         
         private let textCancelButton = ComponentView<Empty>()
         private let textDoneButton = ComponentView<Empty>()
@@ -577,6 +577,11 @@ final class MediaEditorScreenComponent: Component {
                     view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                     view.layer.animateScale(from: 0.6, to: 1.0, duration: 0.2)
                 }
+                
+                if let view = self.selectionButton.view {
+                    view.layer.animateAlpha(from: 0.0, to: view.alpha, duration: 0.2)
+                    view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
+                }
             }
         }
         
@@ -589,14 +594,14 @@ final class MediaEditorScreenComponent: Component {
                 transition.setScale(view: view, scale: 0.1)
             }
             
-            let buttons = [
+            let toolbarButtons = [
                 self.drawButton,
                 self.textButton,
                 self.stickerButton,
                 self.toolsButton
             ]
             
-            for button in buttons {
+            for button in toolbarButtons {
                 if let view = button.view {
                     view.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: 64.0), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
                     view.layer.animateAlpha(from: view.alpha, to: 0.0, duration: 0.15, removeOnCompletion: false)
@@ -617,19 +622,17 @@ final class MediaEditorScreenComponent: Component {
                 }
             }
             
-            if let view = self.saveButton.view {
-                transition.setAlpha(view: view, alpha: 0.0)
-                transition.setScale(view: view, scale: 0.1)
-            }
+            let topButtons = [
+                self.saveButton,
+                self.muteButton,
+                self.playbackButton
+            ]
             
-            if let view = self.muteButton.view {
-                transition.setAlpha(view: view, alpha: 0.0)
-                transition.setScale(view: view, scale: 0.1)
-            }
-            
-            if let view = self.playbackButton.view {
-                transition.setAlpha(view: view, alpha: 0.0)
-                transition.setScale(view: view, scale: 0.1)
+            for button in topButtons {
+                if let view = button.view {
+                    transition.setAlpha(view: view, alpha: 0.0)
+                    transition.setScale(view: view, scale: 0.1)
+                }
             }
             
             if let view = self.scrubber?.view {
@@ -638,32 +641,27 @@ final class MediaEditorScreenComponent: Component {
                 view.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2)
             }
             
-            if let view = self.undoButton.view {
-                transition.setAlpha(view: view, alpha: 0.0)
-                transition.setScale(view: view, scale: 0.1)
-            }
+            let stickerButtons = [
+                self.undoButton,
+                self.eraseButton,
+                self.restoreButton,
+                self.outlineButton,
+                self.cutoutButton
+            ]
             
-            if let view = self.eraseButton.view {
-                transition.setAlpha(view: view, alpha: 0.0)
-                transition.setScale(view: view, scale: 0.1)
-            }
-            
-            if let view = self.restoreButton.view {
-                transition.setAlpha(view: view, alpha: 0.0)
-                transition.setScale(view: view, scale: 0.1)
-            }
-            
-            if let view = self.outlineButton.view {
-                transition.setAlpha(view: view, alpha: 0.0)
-                transition.setScale(view: view, scale: 0.1)
-            }
-            
-            if let view = self.cutoutButton.view {
-                transition.setAlpha(view: view, alpha: 0.0)
-                transition.setScale(view: view, scale: 0.1)
+            for button in stickerButtons {
+                if let view = button.view {
+                    transition.setAlpha(view: view, alpha: 0.0)
+                    transition.setScale(view: view, scale: 0.1)
+                }
             }
             
             if let view = self.textSize.view {
+                transition.setAlpha(view: view, alpha: 0.0)
+                transition.setScale(view: view, scale: 0.1)
+            }
+            
+            if let view = self.selectionButton.view {
                 transition.setAlpha(view: view, alpha: 0.0)
                 transition.setScale(view: view, scale: 0.1)
             }
@@ -2000,135 +1998,6 @@ final class MediaEditorScreenComponent: Component {
                     transition.setScale(view: switchCameraButtonView, scale: isRecordingAdditionalVideo ? 1.0 : 0.01)
                     transition.setAlpha(view: switchCameraButtonView, alpha: isRecordingAdditionalVideo ? 1.0 : 0.0)
                 }
-                
-                if controller.node.items.count > 1 {
-                    let selectionButtonSize = self.selectionButton.update(
-                        transition: transition,
-                        component: AnyComponent(PlainButtonComponent(
-                            content: AnyComponent(
-                                SelectionPanelButtonContentComponent(
-                                    count: Int32(controller.node.items.count(where: { $0.isEnabled })),
-                                    isSelected: self.isSelectionPanelOpen,
-                                    tag: nil
-                                )
-                            ),
-                            effectAlignment: .center,
-                            action: { [weak self, weak controller] in
-                                if let self, let controller {
-                                    self.isSelectionPanelOpen = !self.isSelectionPanelOpen
-                                    if let mediaEditor = controller.node.mediaEditor {
-                                        if self.isSelectionPanelOpen {
-                                            mediaEditor.maybePauseVideo()
-                                        } else {
-                                            Queue.mainQueue().after(0.1) {
-                                                mediaEditor.maybeUnpauseVideo()
-                                            }
-                                        }
-                                    }
-                                    self.state?.updated()
-                                    
-                                    controller.hapticFeedback.impact(.light)
-                                }
-                            },
-                            animateAlpha: false
-                        )),
-                        environment: {},
-                        containerSize: CGSize(width: 33.0, height: 33.0)
-                    )
-                    let selectionButtonFrame = CGRect(
-                        origin: CGPoint(x: availableSize.width - selectionButtonSize.width - 12.0, y: inputPanelFrame.minY - selectionButtonSize.height - 3.0),
-                        size: selectionButtonSize
-                    )
-                    if let selectionButtonView = self.selectionButton.view as? PlainButtonComponent.View {
-                        if selectionButtonView.superview == nil {
-                            self.addSubview(selectionButtonView)
-                        }
-                        transition.setPosition(view: selectionButtonView, position: selectionButtonFrame.center)
-                        transition.setBounds(view: selectionButtonView, bounds: CGRect(origin: .zero, size: selectionButtonFrame.size))
-                        transition.setScale(view: selectionButtonView, scale: displayTopButtons && !isRecordingAdditionalVideo ? 1.0 : 0.01)
-                        transition.setAlpha(view: selectionButtonView, alpha: displayTopButtons && !component.isDismissing && !component.isInteractingWithEntities && !isRecordingAdditionalVideo ? 1.0 : 0.0)
-                        
-                        if self.isSelectionPanelOpen {
-                            let selectionPanelFrame = CGRect(
-                                origin: CGPoint(x: 12.0, y: inputPanelFrame.minY - selectionButtonSize.height - 3.0 - 130.0),
-                                size: CGSize(width: availableSize.width - 24.0, height: 120.0)
-                            )
-                            
-                            var selectedItemId = ""
-                            if case let .asset(asset) = controller.node.subject {
-                                selectedItemId = asset.localIdentifier
-                            }
-                            
-                            let _ = self.selectionPanel.update(
-                                transition: transition,
-                                component: AnyComponent(
-                                    SelectionPanelComponent(
-                                        previewContainerView: controller.node.previewContentContainerView,
-                                        frame: selectionPanelFrame,
-                                        items: controller.node.items,
-                                        selectedItemId: selectedItemId,
-                                        itemTapped: { [weak self, weak controller] id in
-                                            guard let self, let controller else {
-                                                return
-                                            }
-                                            self.isSelectionPanelOpen = false
-                                            self.state?.updated(transition: id == nil ? .spring(duration: 0.3) : .immediate)
-                                            
-                                            if let id {
-                                                controller.node.switchToItem(id)
-                                                
-                                                controller.hapticFeedback.impact(.light)
-                                            }
-                                        },
-                                        itemSelectionToggled: { [weak self, weak controller] id in
-                                            guard let self, let controller else {
-                                                return
-                                            }
-                                            if let itemIndex = controller.node.items.firstIndex(where: { $0.asset.localIdentifier == id }) {
-                                                controller.node.items[itemIndex].isEnabled = !controller.node.items[itemIndex].isEnabled
-                                            }
-                                            self.state?.updated(transition: .spring(duration: 0.3))
-                                        },
-                                        itemReordered: { [weak self, weak controller] fromId, toId in
-                                            guard let self, let controller else {
-                                                return
-                                            }
-                                            guard let fromIndex = controller.node.items.firstIndex(where: { $0.asset.localIdentifier == fromId }), let toIndex = controller.node.items.firstIndex(where: { $0.asset.localIdentifier == toId }), toIndex < controller.node.items.count else {
-                                                return
-                                            }
-                                            let fromItem = controller.node.items[fromIndex]
-                                            let toItem = controller.node.items[toIndex]
-                                            controller.node.items[fromIndex] = toItem
-                                            controller.node.items[toIndex] = fromItem
-                                            self.state?.updated(transition: .spring(duration: 0.3))
-                                            
-                                            controller.hapticFeedback.tap()
-                                        }
-                                    )
-                                ),
-                                environment: {},
-                                containerSize: availableSize
-                            )
-                            if let selectionPanelView = self.selectionPanel.view as? SelectionPanelComponent.View {
-                                if selectionPanelView.superview == nil {
-                                    self.insertSubview(selectionPanelView, belowSubview: selectionButtonView)
-                                    if let buttonView = selectionButtonView.contentView as? SelectionPanelButtonContentComponent.View {
-                                        selectionPanelView.animateIn(from: buttonView)
-                                    }
-                                }
-                                selectionPanelView.frame = CGRect(origin: .zero, size: availableSize)
-                            }
-                        } else if let selectionPanelView = self.selectionPanel.view as? SelectionPanelComponent.View {
-                            if !transition.animation.isImmediate, let buttonView = selectionButtonView.contentView as? SelectionPanelButtonContentComponent.View {
-                                selectionPanelView.animateOut(to: buttonView, completion: { [weak selectionPanelView] in
-                                    selectionPanelView?.removeFromSuperview()
-                                })
-                            } else {
-                                selectionPanelView.removeFromSuperview()
-                            }
-                        }
-                    }
-                }
             } else {
                 inputPanelSize = CGSize(width: 0.0, height: 12.0)
             }
@@ -2136,20 +2005,24 @@ final class MediaEditorScreenComponent: Component {
             if case .stickerEditor = controller.mode {
                 
             } else {
+                var selectionButtonInset: CGFloat = 0.0
+                
                 if let playerState = state.playerState {
                     let scrubberInset: CGFloat = 9.0
                     
                     let minDuration: Double
                     let maxDuration: Double
+                    var segmentDuration: Double?
                     if playerState.isAudioOnly {
                         minDuration = 5.0
                         maxDuration = 15.0
                     } else {
                         minDuration = 1.0
                         if case .avatarEditor = controller.mode {
-                            maxDuration = 10.0
+                            maxDuration = 9.9
                         } else {
-                            maxDuration = storyMaxVideoDuration
+                            maxDuration = storyMaxCombinedVideoDuration
+                            segmentDuration = storyMaxVideoDuration
                         }
                     }
                     
@@ -2224,6 +2097,7 @@ final class MediaEditorScreenComponent: Component {
                             position: playerState.position,
                             minDuration: minDuration,
                             maxDuration: maxDuration,
+                            segmentDuration: segmentDuration,
                             isPlaying: playerState.isPlaying,
                             tracks: visibleTracks,
                             isCollage: isCollage,
@@ -2363,6 +2237,7 @@ final class MediaEditorScreenComponent: Component {
                     }
                     
                     let scrubberFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - scrubberSize.width) / 2.0), y: availableSize.height - environment.safeInsets.bottom - scrubberSize.height + controlsBottomInset - inputPanelSize.height + 3.0 - scrubberBottomOffset), size: scrubberSize)
+                    selectionButtonInset = scrubberSize.height + 11.0
                     if let scrubberView = scrubber.view {
                         var animateIn = false
                         if scrubberView.superview == nil {
@@ -2404,6 +2279,146 @@ final class MediaEditorScreenComponent: Component {
                                 scrubberView.removeFromSuperview()
                             })
                             scrubberView.layer.animateScale(from: 1.0, to: 0.6, duration: 0.2, removeOnCompletion: false)
+                        }
+                    }
+                }
+                
+                if controller.node.items.count > 1 {
+                    let selectionButtonSize = self.selectionButton.update(
+                        transition: transition,
+                        component: AnyComponent(PlainButtonComponent(
+                            content: AnyComponent(
+                                SelectionPanelButtonContentComponent(
+                                    count: Int32(controller.node.items.count(where: { $0.isEnabled })),
+                                    isSelected: self.isSelectionPanelOpen,
+                                    tag: nil
+                                )
+                            ),
+                            effectAlignment: .center,
+                            action: { [weak self, weak controller] in
+                                if let self, let controller {
+                                    self.isSelectionPanelOpen = !self.isSelectionPanelOpen
+                                    if let mediaEditor = controller.node.mediaEditor {
+                                        if self.isSelectionPanelOpen {
+                                            mediaEditor.maybePauseVideo()
+                                        } else {
+                                            Queue.mainQueue().after(0.1) {
+                                                mediaEditor.maybeUnpauseVideo()
+                                            }
+                                        }
+                                    }
+                                    self.state?.updated(transition: .spring(duration: 0.3))
+                                    
+                                    controller.hapticFeedback.impact(.light)
+                                }
+                            },
+                            animateAlpha: false
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: 33.0, height: 33.0)
+                    )
+                    let selectionButtonFrame = CGRect(
+                        origin: CGPoint(x: availableSize.width - selectionButtonSize.width - 12.0, y: availableSize.height - environment.safeInsets.bottom - selectionButtonSize.height + controlsBottomInset - inputPanelSize.height - 3.0 - selectionButtonInset),
+                        size: selectionButtonSize
+                    )
+                    if let selectionButtonView = self.selectionButton.view as? PlainButtonComponent.View {
+                        if selectionButtonView.superview == nil {
+                            self.addSubview(selectionButtonView)
+                        }
+                        transition.setPosition(view: selectionButtonView, position: selectionButtonFrame.center)
+                        transition.setBounds(view: selectionButtonView, bounds: CGRect(origin: .zero, size: selectionButtonFrame.size))
+                        transition.setScale(view: selectionButtonView, scale: displayTopButtons && !isRecordingAdditionalVideo ? 1.0 : 0.01)
+                        transition.setAlpha(view: selectionButtonView, alpha: displayTopButtons && !component.isDismissing && !component.isInteractingWithEntities && !isRecordingAdditionalVideo ? 1.0 : 0.0)
+                        
+                        if self.isSelectionPanelOpen {
+                            let selectionPanelFrame = CGRect(
+                                origin: CGPoint(x: 12.0, y: selectionButtonFrame.minY - 130.0),
+                                size: CGSize(width: availableSize.width - 24.0, height: 120.0)
+                            )
+                            
+                            var selectedItemId = ""
+                            if case let .asset(asset) = controller.node.subject {
+                                selectedItemId = asset.localIdentifier
+                            }
+                            
+                            let selectionPanel: ComponentView<Empty>
+                            if let current = self.selectionPanel {
+                                selectionPanel = current
+                            } else {
+                                selectionPanel = ComponentView<Empty>()
+                                self.selectionPanel = selectionPanel
+                            }
+                            
+                            let _ = selectionPanel.update(
+                                transition: transition,
+                                component: AnyComponent(
+                                    SelectionPanelComponent(
+                                        previewContainerView: controller.node.previewContentContainerView,
+                                        frame: selectionPanelFrame,
+                                        items: controller.node.items,
+                                        selectedItemId: selectedItemId,
+                                        itemTapped: { [weak self, weak controller] id in
+                                            guard let self, let controller else {
+                                                return
+                                            }
+                                            self.isSelectionPanelOpen = false
+                                            self.state?.updated(transition: id == nil ? .spring(duration: 0.3) : .immediate)
+                                            
+                                            if let id {
+                                                controller.node.switchToItem(id)
+                                                
+                                                controller.hapticFeedback.impact(.light)
+                                            }
+                                        },
+                                        itemSelectionToggled: { [weak self, weak controller] id in
+                                            guard let self, let controller else {
+                                                return
+                                            }
+                                            if let itemIndex = controller.node.items.firstIndex(where: { $0.asset.localIdentifier == id }) {
+                                                controller.node.items[itemIndex].isEnabled = !controller.node.items[itemIndex].isEnabled
+                                            }
+                                            self.state?.updated(transition: .spring(duration: 0.3))
+                                        },
+                                        itemReordered: { [weak self, weak controller] fromId, toId in
+                                            guard let self, let controller else {
+                                                return
+                                            }
+                                            guard let fromIndex = controller.node.items.firstIndex(where: { $0.asset.localIdentifier == fromId }), let toIndex = controller.node.items.firstIndex(where: { $0.asset.localIdentifier == toId }), toIndex < controller.node.items.count else {
+                                                return
+                                            }
+                                            let fromItem = controller.node.items[fromIndex]
+                                            let toItem = controller.node.items[toIndex]
+                                            controller.node.items[fromIndex] = toItem
+                                            controller.node.items[toIndex] = fromItem
+                                            self.state?.updated(transition: .spring(duration: 0.3))
+                                            
+                                            controller.hapticFeedback.tap()
+                                        }
+                                    )
+                                ),
+                                environment: {},
+                                containerSize: availableSize
+                            )
+                            if let selectionPanelView = selectionPanel.view as? SelectionPanelComponent.View {
+                                if selectionPanelView.superview == nil {
+                                    self.insertSubview(selectionPanelView, belowSubview: selectionButtonView)
+                                    if let buttonView = selectionButtonView.contentView as? SelectionPanelButtonContentComponent.View {
+                                        selectionPanelView.animateIn(from: buttonView)
+                                    }
+                                }
+                                selectionPanelView.frame = CGRect(origin: .zero, size: availableSize)
+                            }
+                        } else if let selectionPanel = self.selectionPanel {
+                            self.selectionPanel = nil
+                            if let selectionPanelView = selectionPanel.view as? SelectionPanelComponent.View {
+                                if !transition.animation.isImmediate, let buttonView = selectionButtonView.contentView as? SelectionPanelButtonContentComponent.View {
+                                    selectionPanelView.animateOut(to: buttonView, completion: { [weak selectionPanelView] in
+                                        selectionPanelView?.removeFromSuperview()
+                                    })
+                                } else {
+                                    selectionPanelView.removeFromSuperview()
+                                }
+                            }
                         }
                     }
                 }
@@ -2821,6 +2836,8 @@ final class MediaEditorScreenComponent: Component {
 
 let storyDimensions = CGSize(width: 1080.0, height: 1920.0)
 let storyMaxVideoDuration: Double = 60.0
+let storyMaxCombinedVideoCount: Int = 3
+let storyMaxCombinedVideoDuration: Double = storyMaxVideoDuration * Double(storyMaxCombinedVideoCount)
 
 public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UIDropInteractionDelegate {
     public enum Mode {
@@ -3489,6 +3506,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 values: initialValues,
                 hasHistogram: true
             )
+            mediaEditor.maxDuration = storyMaxCombinedVideoDuration
             if case .avatarEditor = controller.mode {
                 mediaEditor.setVideoIsMuted(true)
             } else if case let .coverEditor(dimensions) = controller.mode {
@@ -5075,7 +5093,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                                 var audioTrimRange: Range<Double>?
                                 var audioOffset: Double?
                                 
-                                if let videoDuration = mediaEditor.originalDuration {
+                                if let videoDuration = mediaEditor.originalCappedDuration {
                                     if let videoStart = mediaEditor.values.videoTrimRange?.lowerBound {
                                         audioOffset = -videoStart
                                     } else if let _ = mediaEditor.values.additionalVideoPath, let videoStart = mediaEditor.values.additionalVideoTrimRange?.lowerBound {
@@ -6694,7 +6712,10 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         }
         self.postingAvailabilityDisposable = (self.postingAvailabilityPromise.get()
         |> deliverOnMainQueue).start(next: { [weak self] availability in
-            guard let self, availability != .available else {
+            guard let self else {
+                return
+            }
+            if case .available = availability {
                 return
             }
             
@@ -7341,36 +7362,21 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         return true
     }
     
-    private func completeWithMultipleResults(results: [MediaEditorScreenImpl.Result]) {
-        // Send all results to completion handler
-        self.completion(results, { [weak self] finished in
-            self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
-                self?.dismiss()
-                Queue.mainQueue().justDispatch {
-                    finished()
-                }
-            })
-        })
-    }
-    
-    private func processMultipleItems() {
-        guard !self.node.items.isEmpty else {
+    private func processMultipleItems(items: [EditingItem]) {
+        guard !items.isEmpty else {
             return
         }
         
-        if let mediaEditor = self.node.mediaEditor, case let .asset(asset) = self.node.subject, let currentItemIndex = self.node.items.firstIndex(where: { $0.asset.localIdentifier == asset.localIdentifier }) {
-            let entities = self.node.entitiesView.entities.filter { !($0 is DrawingMediaEntity) }
-            let codableEntities = DrawingEntitiesView.encodeEntities(entities, entitiesView: self.node.entitiesView)
-            mediaEditor.setDrawingAndEntities(data: nil, image: mediaEditor.values.drawing, entities: codableEntities)
-            
-            var updatedCurrentItem = self.node.items[currentItemIndex]
+        var items = items
+        if let mediaEditor = self.node.mediaEditor, case let .asset(asset) = self.node.subject, let currentItemIndex = items.firstIndex(where: { $0.asset.localIdentifier == asset.localIdentifier }) {
+            var updatedCurrentItem = items[currentItemIndex]
             updatedCurrentItem.caption = self.node.getCaption()
             updatedCurrentItem.values = mediaEditor.values
-            self.node.items[currentItemIndex] = updatedCurrentItem
+            items[currentItemIndex] = updatedCurrentItem
         }
         
         let multipleResults = Atomic<[MediaEditorScreenImpl.Result]>(value: [])
-        let totalItems = self.node.items.count
+        let totalItems = items.count
         
         let dispatchGroup = DispatchGroup()
         
@@ -7387,7 +7393,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         }
         
         var order: [Int64] = []
-        for (index, item) in self.node.items.enumerated() {
+        for (index, item) in items.enumerated() {
             guard item.isEnabled else {
                 continue
             }
@@ -7431,7 +7437,14 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                         orderedResults.append(item)
                     }
                 }
-                self.completeWithMultipleResults(results: orderedResults)
+                self.completion(results, { [weak self] finished in
+                    self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
+                        self?.dismiss()
+                        Queue.mainQueue().justDispatch {
+                            finished()
+                        }
+                    })
+                })
             }
         }
     }
@@ -7452,13 +7465,10 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 if let mediaArea = entity.mediaArea {
                     mediaAreas.append(mediaArea)
                 }
-                
-                // Extract stickers from entities
                 extractStickersFromEntity(entity, into: &stickers)
             }
         }
         
-        // Process video
         let firstFrameTime: CMTime
         if let coverImageTimestamp = item.values?.coverImageTimestamp {
             firstFrameTime = CMTime(seconds: coverImageTimestamp, preferredTimescale: CMTimeScale(60))
@@ -7476,7 +7486,6 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 return
             }
             
-            // Calculate duration
             let duration: Double
             if let videoTrimRange = item.values?.videoTrimRange {
                 duration = videoTrimRange.upperBound - videoTrimRange.lowerBound
@@ -7484,7 +7493,6 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 duration = min(asset.duration, storyMaxVideoDuration)
             }
             
-            // Generate thumbnail frame
             let avAssetGenerator = AVAssetImageGenerator(asset: avAsset)
             avAssetGenerator.appliesPreferredTrackTransform = true
             avAssetGenerator.generateCGImagesAsynchronously(forTimes: [NSValue(time: firstFrameTime)]) { [weak self] _, cgImage, _, _, _ in
@@ -7541,14 +7549,11 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
     private func processImageItem(item: EditingItem, index: Int, randomId: Int64, completion: @escaping (MediaEditorScreenImpl.Result) -> Void) {
         let asset = item.asset
         
-        // Setup temporary media editor for this item
         let itemMediaEditor = setupMediaEditorForItem(item: item)
         
-        // Get caption for this item
         var caption = item.caption
         caption = convertMarkdownToAttributes(caption)
         
-        // Media areas and stickers
         var mediaAreas: [MediaArea] = []
         var stickers: [TelegramMediaFile] = []
         
@@ -7557,13 +7562,10 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 if let mediaArea = entity.mediaArea {
                     mediaAreas.append(mediaArea)
                 }
-                
-                // Extract stickers from entities
                 extractStickersFromEntity(entity, into: &stickers)
             }
         }
         
-        // Request full-size image
         let options = PHImageRequestOptions()
         options.deliveryMode = .highQualityFormat
         options.isNetworkAccessAllowed = true
@@ -7664,10 +7666,6 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         guard let mediaEditor = self.node.mediaEditor, let subject = self.node.subject, let actualSubject = self.node.actualSubject else {
             return
         }
-                
-        let entities = self.node.entitiesView.entities.filter { !($0 is DrawingMediaEntity) }
-        let codableEntities = DrawingEntitiesView.encodeEntities(entities, entitiesView: self.node.entitiesView)
-        mediaEditor.setDrawingAndEntities(data: nil, image: mediaEditor.values.drawing, entities: codableEntities)
         
         var caption = self.node.getCaption()
         caption = convertMarkdownToAttributes(caption)
@@ -7680,6 +7678,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             randomId = Int64.random(in: .min ... .max)
         }
         
+        let codableEntities = mediaEditor.values.entities
         var mediaAreas: [MediaArea] = []
         if case let .draft(draft, _) = actualSubject {
             if draft.values.entities != codableEntities {
@@ -8108,6 +8107,15 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             })
         }
     }
+    
+    private func updateMediaEditorEntities() {
+        guard let mediaEditor = self.node.mediaEditor else {
+            return
+        }
+        let entities = self.node.entitiesView.entities.filter { !($0 is DrawingMediaEntity) }
+        let codableEntities = DrawingEntitiesView.encodeEntities(entities, entitiesView: self.node.entitiesView)
+        mediaEditor.setDrawingAndEntities(data: nil, image: mediaEditor.values.drawing, entities: codableEntities)
+    }
         
     private var didComplete = false
     func requestStoryCompletion(animated: Bool) {
@@ -8117,7 +8125,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         
         self.didComplete = true
         
-        self.dismissAllTooltips()
+        self.updateMediaEditorEntities()
         
         mediaEditor.stop()
         mediaEditor.invalidate()
@@ -8127,11 +8135,42 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             navigationController.updateRootContainerTransitionOffset(0.0, transition: .immediate)
         }
                 
-        if self.node.items.count(where: { $0.isEnabled }) > 1 {
-            self.processMultipleItems()
+        var multipleItems: [EditingItem] = []
+        if self.node.items.count > 1 {
+            multipleItems = self.node.items.filter({ $0.isEnabled })
+        } else if case let .asset(asset) = self.node.subject {
+            let duration: Double
+            if let playerDuration = mediaEditor.duration {
+                duration = playerDuration
+            } else {
+                duration = asset.duration
+            }
+            if duration > storyMaxVideoDuration {
+                let originalDuration = mediaEditor.originalDuration ?? asset.duration
+                let values = mediaEditor.values
+                
+                let storyCount = min(storyMaxCombinedVideoCount, Int(ceil(duration / storyMaxVideoDuration)))
+                var start = values.videoTrimRange?.lowerBound ?? 0
+                for _ in 0 ..< storyCount {
+                    let trimmedValues = values.withUpdatedVideoTrimRange(start ..< min(start + storyMaxVideoDuration, originalDuration))
+                    
+                    var editingItem = EditingItem(asset: asset)
+                    editingItem.caption = self.node.getCaption()
+                    editingItem.values = trimmedValues
+                    multipleItems.append(editingItem)
+                    
+                    start += storyMaxVideoDuration
+                }
+            }
+        }
+        
+        if multipleItems.count > 1 {
+            self.processMultipleItems(items: multipleItems)
         } else {
             self.processSingleItem()
         }
+        
+        self.dismissAllTooltips()
     }
     
     func requestStickerCompletion(animated: Bool) {
@@ -8157,10 +8196,8 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             navigationController.updateRootContainerTransitionOffset(0.0, transition: .immediate)
         }
             
-        let entities = self.node.entitiesView.entities.filter { !($0 is DrawingMediaEntity) }
-        let codableEntities = DrawingEntitiesView.encodeEntities(entities, entitiesView: self.node.entitiesView)
-        mediaEditor.setDrawingAndEntities(data: nil, image: mediaEditor.values.drawing, entities: codableEntities)
-                
+        self.updateMediaEditorEntities()
+    
         if let image = mediaEditor.resultImage {
             let values = mediaEditor.values.withUpdatedQualityPreset(.sticker)
             makeEditorImageComposition(context: self.node.ciContext, postbox: self.context.account.postbox, inputImage: image, dimensions: storyDimensions, outputDimensions: CGSize(width: 512, height: 512), values: values, time: .zero, textScale: 2.0, completion: { [weak self] resultImage in
@@ -8181,11 +8218,9 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         if let navigationController = self.navigationController as? NavigationController {
             navigationController.updateRootContainerTransitionOffset(0.0, transition: .immediate)
         }
-            
-        let entities = self.node.entitiesView.entities.filter { !($0 is DrawingMediaEntity) }
-        let codableEntities = DrawingEntitiesView.encodeEntities(entities, entitiesView: self.node.entitiesView)
-        mediaEditor.setDrawingAndEntities(data: nil, image: mediaEditor.values.drawing, entities: codableEntities)
-                
+         
+        self.updateMediaEditorEntities()
+        
         if let image = mediaEditor.resultImage {
             let values = mediaEditor.values.withUpdatedCoverDimensions(dimensions)
             makeEditorImageComposition(context: self.node.ciContext, postbox: self.context.account.postbox, inputImage: image, dimensions: storyDimensions, outputDimensions: dimensions.aspectFitted(CGSize(width: 1080, height: 1080)), values: values, time: .zero, textScale: 2.0, completion: { [weak self] resultImage in
@@ -8786,12 +8821,8 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             return
         }
         
-        let context = self.context
+        self.updateMediaEditorEntities()
         
-        let entities = self.node.entitiesView.entities.filter { !($0 is DrawingMediaEntity) }
-        let codableEntities = DrawingEntitiesView.encodeEntities(entities, entitiesView: self.node.entitiesView)
-        mediaEditor.setDrawingAndEntities(data: nil, image: mediaEditor.values.drawing, entities: codableEntities)
-                
         let isSticker = toStickerResource != nil
         if !isSticker {
             self.previousSavedValues = mediaEditor.values
@@ -8820,6 +8851,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             })
         }
         
+        let context = self.context
         if mediaEditor.resultIsVideo {
             if !isSticker {
                 mediaEditor.maybePauseVideo()

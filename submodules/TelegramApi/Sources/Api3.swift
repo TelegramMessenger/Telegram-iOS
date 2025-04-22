@@ -605,6 +605,7 @@ public extension Api {
         case channelAdminLogEventActionStartGroupCall(call: Api.InputGroupCall)
         case channelAdminLogEventActionStopPoll(message: Api.Message)
         case channelAdminLogEventActionToggleAntiSpam(newValue: Api.Bool)
+        case channelAdminLogEventActionToggleAutotranslation(newValue: Api.Bool)
         case channelAdminLogEventActionToggleForum(newValue: Api.Bool)
         case channelAdminLogEventActionToggleGroupCallSetting(joinMuted: Api.Bool)
         case channelAdminLogEventActionToggleInvites(newValue: Api.Bool)
@@ -897,6 +898,12 @@ public extension Api {
                     }
                     newValue.serialize(buffer, true)
                     break
+                case .channelAdminLogEventActionToggleAutotranslation(let newValue):
+                    if boxed {
+                        buffer.appendInt32(-988285058)
+                    }
+                    newValue.serialize(buffer, true)
+                    break
                 case .channelAdminLogEventActionToggleForum(let newValue):
                     if boxed {
                         buffer.appendInt32(46949251)
@@ -1039,6 +1046,8 @@ public extension Api {
                 return ("channelAdminLogEventActionStopPoll", [("message", message as Any)])
                 case .channelAdminLogEventActionToggleAntiSpam(let newValue):
                 return ("channelAdminLogEventActionToggleAntiSpam", [("newValue", newValue as Any)])
+                case .channelAdminLogEventActionToggleAutotranslation(let newValue):
+                return ("channelAdminLogEventActionToggleAutotranslation", [("newValue", newValue as Any)])
                 case .channelAdminLogEventActionToggleForum(let newValue):
                 return ("channelAdminLogEventActionToggleForum", [("newValue", newValue as Any)])
                 case .channelAdminLogEventActionToggleGroupCallSetting(let joinMuted):
@@ -1672,6 +1681,19 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.ChannelAdminLogEventAction.channelAdminLogEventActionToggleAntiSpam(newValue: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_channelAdminLogEventActionToggleAutotranslation(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Api.Bool?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Bool
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionToggleAutotranslation(newValue: _1!)
             }
             else {
                 return nil

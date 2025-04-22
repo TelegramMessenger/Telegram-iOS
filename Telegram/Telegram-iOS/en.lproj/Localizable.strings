@@ -14202,3 +14202,21 @@ Sorry for the inconvenience.";
 "Story.Privacy.KeepOnMyPageManyInfo" = "Keep these stories on your profile even after they expire in %@. Privacy settings will apply.";
 "Story.Privacy.KeepOnChannelPageManyInfo" = "Keep these stories on the channel profile even after they expire in %@.";
 "Story.Privacy.KeepOnGroupPageManyInfo" = "Keep these stories on the group page even after they expire in %@.";
+
+"Gift.Options.Gift.Filter.Resale" = "Resale";
+"Gift.Options.Gift.Resale" = "resale";
+
+"Stars.Intro.Transaction.GiftPurchase" = "Gift Purchase";
+"Stars.Intro.Transaction.GiftSale" = "Gift Sale";
+
+"Stars.Transaction.GiftPurchase" = "Gift Purchase";
+"Stars.Transaction.GiftSale" = "Gift Sale";
+
+"Channel.Info.AutoTranslate" = "Auto-Translate Messages";
+
+"ChannelBoost.Table.AutoTranslate" = "Autotranslation of Messages";
+"ChannelBoost.AutoTranslate" = "Autotranslation of Messages";
+"ChannelBoost.AutoTranslateLevelText" = "Your channel needs **Level %1$@** to enable autotranslation of messages.";
+
+"Channel.AdminLog.MessageToggleAutoTranslateOn" = "%@ enabled autotranslation of messages";
+"Channel.AdminLog.MessageToggleAutoTranslateOff" = "%@ disabled autotranslation of messages";

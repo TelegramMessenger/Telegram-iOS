@@ -460,8 +460,6 @@ private final class GiftViewSheetContent: CombinedComponent {
                         guard let self, let controller = self.getController() as? GiftViewScreen else {
                             return
                         }
-                        controller.onBuySuccess()
-                        
                         self.inProgress = false
                         
                         var animationFile: TelegramMediaFile?
@@ -2902,7 +2900,6 @@ public class GiftViewScreen: ViewControllerComponentContainer {
     let updateSubject = ActionSlot<GiftViewScreen.Subject>()
     
     public var disposed: () -> Void = {}
-    public var onBuySuccess: () -> Void = {}
     
     fileprivate var showBalance = false {
         didSet {
@@ -2922,7 +2919,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         transferGift: ((Bool, EnginePeer.Id) -> Signal<Never, TransferStarGiftError>)? = nil,
         upgradeGift: ((Int64?, Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError>)? = nil,
         buyGift: ((String, EnginePeer.Id) -> Signal<Never, BuyStarGiftError>)? = nil,
-        updateResellStars: ((Int64?) -> Void)? = nil,
+        updateResellStars: ((Int64?) -> Signal<Never, UpdateStarGiftPriceError>)? = nil,
         togglePinnedToTop: ((Bool) -> Bool)? = nil,
         shareStory: ((StarGift.UniqueGift) -> Void)? = nil
     ) {
@@ -3413,6 +3410,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
             
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let giftTitle = "\(gift.title) #\(presentationStringsFormattedNumber(gift.number, presentationData.dateTimeFormat.groupingSeparator))"
+            let reference = arguments.reference ?? .slug(slug: gift.slug)
             
             //TODO:localize
             if let resellStars = gift.resellStars, resellStars > 0, !update {
@@ -3425,44 +3423,39 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                             guard let self else {
                                 return
                             }
-                            
-                            switch self.subject {
-                            case let .profileGift(peerId, currentSubject):
-                                self.subject = .profileGift(peerId, currentSubject.withGift(.unique(gift.withResellStars(nil))))
-                            case let .uniqueGift(_, recipientPeerId):
-                                self.subject = .uniqueGift(gift.withResellStars(nil), recipientPeerId)
-                            default:
-                                break
-                            }
-                            self.onBuySuccess()
-                            
-                            let text = "\(giftTitle) is removed from sale."
-                            let tooltipController = UndoOverlayController(
-                                presentationData: presentationData,
-                                content: .universalImage(
-                                    image: generateTintedImage(image: UIImage(bundleImageName: "Premium/Collectible/Unlist"), color: .white)!,
-                                    size: nil,
-                                    title: nil,
-                                    text: text,
-                                    customUndoText: nil,
-                                    timeout: 3.0
-                                ),
-                                position: .bottom,
-                                animateInAsReplacement: false,
-                                appearance: UndoOverlayController.Appearance(sideInset: 16.0, bottomInset: 62.0),
-                                action: { action in
-                                    return false
+                            let _ = ((updateResellStars?(nil) ?? context.engine.payments.updateStarGiftResalePrice(reference: reference, price: nil))
+                            |> deliverOnMainQueue).startStandalone(error: { error in
+                                
+                            }, completed: {
+                                switch self.subject {
+                                case let .profileGift(peerId, currentSubject):
+                                    self.subject = .profileGift(peerId, currentSubject.withGift(.unique(gift.withResellStars(nil))))
+                                case let .uniqueGift(_, recipientPeerId):
+                                    self.subject = .uniqueGift(gift.withResellStars(nil), recipientPeerId)
+                                default:
+                                    break
                                 }
-                            )
-                            self.present(tooltipController, in: .window(.root))
-                            
-                            if let updateResellStars {
-                                updateResellStars(nil)
-                            } else {
-                                let reference = arguments.reference ?? .slug(slug: gift.slug)
-                                let _ = (context.engine.payments.updateStarGiftResalePrice(reference: reference, price: nil)
-                                |> deliverOnMainQueue).startStandalone()
-                            }
+                                
+                                let text = "\(giftTitle) is removed from sale."
+                                let tooltipController = UndoOverlayController(
+                                    presentationData: presentationData,
+                                    content: .universalImage(
+                                        image: generateTintedImage(image: UIImage(bundleImageName: "Premium/Collectible/Unlist"), color: .white)!,
+                                        size: nil,
+                                        title: nil,
+                                        text: text,
+                                        customUndoText: nil,
+                                        timeout: 3.0
+                                    ),
+                                    position: .bottom,
+                                    animateInAsReplacement: false,
+                                    appearance: UndoOverlayController.Appearance(sideInset: 16.0, bottomInset: 62.0),
+                                    action: { action in
+                                        return false
+                                    }
+                                )
+                                self.present(tooltipController, in: .window(.root))
+                            })
                         }),
                         TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
                         })
@@ -3476,46 +3469,47 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                         return
                     }
                 
-                    switch self.subject {
-                    case let .profileGift(peerId, currentSubject):
-                        self.subject = .profileGift(peerId, currentSubject.withGift(.unique(gift.withResellStars(price))))
-                    case let .uniqueGift(_, recipientPeerId):
-                        self.subject = .uniqueGift(gift.withResellStars(price), recipientPeerId)
-                    default:
-                        break
-                    }
-                                        
-                    var text = "\(giftTitle) is now for sale!"
-                    if update {
-                        text = "\(giftTitle) is relisted for \(presentationStringsFormattedNumber(Int32(price), presentationData.dateTimeFormat.groupingSeparator)) Stars."
-                    }
-                                     
-                    let tooltipController = UndoOverlayController(
-                        presentationData: presentationData,
-                        content: .universalImage(
-                            image: generateTintedImage(image: UIImage(bundleImageName: "Premium/Collectible/Sell"), color: .white)!,
-                            size: nil,
-                            title: nil,
-                            text: text,
-                            customUndoText: nil,
-                            timeout: 3.0
-                        ),
-                        position: .bottom,
-                        animateInAsReplacement: false,
-                        appearance: UndoOverlayController.Appearance(sideInset: 16.0, bottomInset: 62.0),
-                        action: { action in
-                            return false
+                    let _ = ((updateResellStars?(price) ?? context.engine.payments.updateStarGiftResalePrice(reference: reference, price: price))
+                    |> deliverOnMainQueue).startStandalone(error: { error in
+                        
+                    }, completed: { [weak self] in
+                        guard let self else {
+                            return
                         }
-                    )
-                    self.present(tooltipController, in: .window(.root))
-                    
-                    if let updateResellStars {
-                        updateResellStars(price)
-                    } else {
-                        let reference = arguments.reference ?? .slug(slug: gift.slug)
-                        let _ = (context.engine.payments.updateStarGiftResalePrice(reference: reference, price: price)
-                        |> deliverOnMainQueue).startStandalone()
-                    }
+                        
+                        switch self.subject {
+                        case let .profileGift(peerId, currentSubject):
+                            self.subject = .profileGift(peerId, currentSubject.withGift(.unique(gift.withResellStars(price))))
+                        case let .uniqueGift(_, recipientPeerId):
+                            self.subject = .uniqueGift(gift.withResellStars(price), recipientPeerId)
+                        default:
+                            break
+                        }
+                                                
+                        var text = "\(giftTitle) is now for sale!"
+                        if update {
+                            text = "\(giftTitle) is relisted for \(presentationStringsFormattedNumber(Int32(price), presentationData.dateTimeFormat.groupingSeparator)) Stars."
+                        }
+                                         
+                        let tooltipController = UndoOverlayController(
+                            presentationData: presentationData,
+                            content: .universalImage(
+                                image: generateTintedImage(image: UIImage(bundleImageName: "Premium/Collectible/Sell"), color: .white)!,
+                                size: nil,
+                                title: nil,
+                                text: text,
+                                customUndoText: nil,
+                                timeout: 3.0
+                            ),
+                            position: .bottom,
+                            animateInAsReplacement: false,
+                            appearance: UndoOverlayController.Appearance(sideInset: 16.0, bottomInset: 62.0),
+                            action: { action in
+                                return false
+                            }
+                        )
+                        self.present(tooltipController, in: .window(.root))
+                    })
                 })
                 self.push(resellController)
             }

@@ -317,9 +317,18 @@ final class StarsTransactionsListPanelComponent: Component {
                                 uniqueGift = gift
                             } else {
                                 itemTitle = peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)
-                                itemSubtitle = item.count > StarsAmount.zero ? environment.strings.Stars_Intro_Transaction_ConvertedGift : environment.strings.Stars_Intro_Transaction_Gift
-                                if case let .generic(gift) = starGift {
+                                switch starGift {
+                                case let .generic(gift):
                                     itemFile = gift.file
+                                    itemSubtitle = item.count > StarsAmount.zero ? environment.strings.Stars_Intro_Transaction_ConvertedGift : environment.strings.Stars_Intro_Transaction_Gift
+                                case let .unique(gift):
+                                    for attribute in gift.attributes {
+                                        if case let .model(_, file, _) = attribute {
+                                            itemFile = file
+                                            break
+                                        }
+                                    }
+                                    itemSubtitle = item.count > StarsAmount.zero ? environment.strings.Stars_Intro_Transaction_GiftSale : environment.strings.Stars_Intro_Transaction_GiftPurchase
                                 }
                             }
                         } else if let _ = item.giveawayMessageId {

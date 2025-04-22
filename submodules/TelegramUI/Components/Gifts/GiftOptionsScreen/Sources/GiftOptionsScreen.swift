@@ -370,18 +370,10 @@ final class GiftOptionsScreenComponent: Component {
                         var isSoldOut = false
                         switch gift {
                         case let .generic(gift):
-                            if let availability = gift.availability, availability.resale > 0 {
-                                //TODO:localize
-                                //TODO:unmock
-                                ribbon = GiftItemComponent.Ribbon(
-                                    text: "resale",
-                                    color: .green
-                                )
-                            } else if let _ = gift.soldOut {
+                            if let _ = gift.soldOut {
                                 if let availability = gift.availability, availability.resale > 0 {
-                                    //TODO:localize
                                     ribbon = GiftItemComponent.Ribbon(
-                                        text: "resale",
+                                        text: environment.strings.Gift_Options_Gift_Resale,
                                         color: .green
                                     )
                                 } else {
@@ -415,7 +407,7 @@ final class GiftOptionsScreenComponent: Component {
                         let subject: GiftItemComponent.Subject
                         switch gift {
                         case let .generic(gift):
-                            if let availability = gift.availability, let minResaleStars = availability.minResaleStars {
+                            if let availability = gift.availability, availability.remains == 0, let minResaleStars = availability.minResaleStars {
                                 subject = .starGift(gift: gift, price: "⭐️ \(minResaleStars)+")
                             } else {
                                 subject = .starGift(gift: gift, price: "⭐️ \(gift.price)")
@@ -450,7 +442,7 @@ final class GiftOptionsScreenComponent: Component {
                                                     mainController = controller
                                                 }
                                                 if case let .generic(gift) = gift {
-                                                    if let availability = gift.availability, availability.remains == 0 || (availability.resale > 0) {
+                                                    if let availability = gift.availability, availability.remains == 0 {
                                                         if availability.resale > 0 {
                                                             let storeController = component.context.sharedContext.makeGiftStoreController(
                                                                 context: component.context,
@@ -1296,7 +1288,7 @@ final class GiftOptionsScreenComponent: Component {
                             starsAmountsSet.insert(gift.price)
                             if let availability = gift.availability {
                                 hasLimited = true
-                                if availability.resale > 0 {
+                                if availability.remains == 0 && availability.resale > 0 {
                                     hasResale = true
                                 }
                             }
@@ -1317,10 +1309,9 @@ final class GiftOptionsScreenComponent: Component {
                 ))
                 
                 if hasResale {
-                    //TODO:localize
                     tabSelectorItems.append(TabSelectorComponent.Item(
                         id: AnyHashable(StarsFilter.resale.rawValue),
-                        title: "Resale"
+                        title: strings.Gift_Options_Gift_Filter_Resale
                     ))
                 }
                 

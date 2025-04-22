@@ -84,6 +84,7 @@ public final class MediaScrubberComponent: Component {
     let position: Double
     let minDuration: Double
     let maxDuration: Double
+    let segmentDuration: Double?
     let isPlaying: Bool
     
     let tracks: [Track]
@@ -112,6 +113,7 @@ public final class MediaScrubberComponent: Component {
         position: Double,
         minDuration: Double,
         maxDuration: Double,
+        segmentDuration: Double? = nil,
         isPlaying: Bool,
         tracks: [Track],
         isCollage: Bool,
@@ -135,6 +137,7 @@ public final class MediaScrubberComponent: Component {
         self.position = position
         self.minDuration = minDuration
         self.maxDuration = maxDuration
+        self.segmentDuration = segmentDuration
         self.isPlaying = isPlaying
         self.tracks = tracks
         self.isCollage = isCollage
@@ -169,6 +172,9 @@ public final class MediaScrubberComponent: Component {
             return false
         }
         if lhs.maxDuration != rhs.maxDuration {
+            return false
+        }
+        if lhs.segmentDuration != rhs.segmentDuration {
             return false
         }
         if lhs.isPlaying != rhs.isPlaying {
@@ -624,6 +630,7 @@ public final class MediaScrubberComponent: Component {
                     isSelected: isSelected,
                     availableSize: availableSize,
                     duration: self.duration,
+                    segmentDuration: lowestVideoId == track.id ? component.segmentDuration : nil,
                     transition: trackTransition
                 )
                 trackLayout[id] = (CGRect(origin: CGPoint(x: 0.0, y: totalHeight), size: trackSize), trackTransition, animateTrackIn)
@@ -675,6 +682,7 @@ public final class MediaScrubberComponent: Component {
                     isSelected: false,
                     availableSize: availableSize,
                     duration: self.duration,
+                    segmentDuration: nil,
                     transition: trackTransition
                 )
                 trackTransition.setFrame(view: trackView, frame: CGRect(origin: .zero, size: trackSize))
@@ -955,6 +963,9 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
     fileprivate let audioContentMaskView: UIImageView
     fileprivate let audioIconView: UIImageView
     fileprivate let audioTitle = ComponentView<Empty>()
+    
+    fileprivate var segmentTitles: [Int32: ComponentView<Empty>] = [:]
+    fileprivate var segmentLayers: [Int32: SimpleLayer] = [:]
 
     fileprivate let videoTransparentFramesContainer = UIView()
     fileprivate var videoTransparentFrameLayers: [VideoFrameLayer] = []
@@ -1142,6 +1153,7 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
         isSelected: Bool,
         availableSize: CGSize,
         duration: Double,
+        segmentDuration: Double?,
         transition: ComponentTransition
     ) -> CGSize {
         let previousParams = self.params
@@ -1476,6 +1488,86 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
         self.backgroundView.update(size: containerFrame.size, transition: transition.containedViewLayoutTransition)
         transition.setFrame(view: self.vibrancyView, frame: CGRect(origin: .zero, size: containerFrame.size))
         transition.setFrame(view: self.vibrancyContainer, frame: CGRect(origin: .zero, size: containerFrame.size))
+        
+        var segmentCount = 0
+        var segmentOrigin: CGFloat = 0.0
+        var segmentWidth: CGFloat = 0.0
+        if let segmentDuration {
+            if duration > segmentDuration {
+                let fraction = segmentDuration / duration
+                segmentCount = Int(ceil(duration / segmentDuration)) - 1
+                segmentWidth = floorToScreenPixels(containerFrame.width * fraction)
+            }
+            if let trimRange = track.trimRange {
+                if trimRange.lowerBound > 0.0 {
+                    let fraction = trimRange.lowerBound / duration
+                    segmentOrigin = floorToScreenPixels(containerFrame.width * fraction)
+                }
+                let actualSegmentCount = Int(ceil((trimRange.upperBound - trimRange.lowerBound) / segmentDuration)) - 1
+                segmentCount = min(actualSegmentCount, segmentCount)
+            }
+        }
+        
+        var validIds = Set<Int32>()
+        var segmentFrame = CGRect(x: segmentOrigin + segmentWidth, y: 0.0, width: 1.0, height: containerFrame.size.height)
+        for i in 0 ..< segmentCount {
+            let id = Int32(i)
+            validIds.insert(id)
+            
+            let segmentLayer: SimpleLayer
+            let segmentTitle: ComponentView<Empty>
+            
+            var segmentTransition = transition
+            if let currentLayer = self.segmentLayers[id], let currentTitle = self.segmentTitles[id] {
+                segmentLayer = currentLayer
+                segmentTitle = currentTitle
+            } else {
+                segmentTransition = .immediate
+                segmentLayer = SimpleLayer()
+                segmentLayer.backgroundColor = UIColor.white.cgColor
+                segmentTitle = ComponentView<Empty>()
+                
+                self.segmentLayers[id] = segmentLayer
+                self.segmentTitles[id] = segmentTitle
+                
+                self.containerView.layer.addSublayer(segmentLayer)
+            }
+            
+            transition.setFrame(layer: segmentLayer, frame: segmentFrame)
+            
+            let segmentTitleSize = segmentTitle.update(
+                transition: .immediate,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: "#\(i + 2)", font: Font.semibold(11.0), textColor: .white)),
+                    textShadowColor: UIColor(rgb: 0x000000, alpha: 0.4),
+                    textShadowBlur: 1.0
+                )),
+                environment: {},
+                containerSize: containerFrame.size
+            )
+            if let view = segmentTitle.view {
+                if view.superview == nil {
+                    self.containerView.addSubview(view)
+                }
+                segmentTransition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: segmentFrame.maxX + 2.0, y: 2.0), size: segmentTitleSize))
+            }
+            segmentFrame.origin.x += segmentWidth
+        }
+
+        var removeIds: [Int32] = []
+        for (id, segmentLayer) in self.segmentLayers {
+            if !validIds.contains(id) {
+                removeIds.append(id)
+                segmentLayer.removeFromSuperlayer()
+                if let segmentTitle = self.segmentTitles[id] {
+                    segmentTitle.view?.removeFromSuperview()
+                }
+            }
+        }
+        for id in removeIds {
+            self.segmentLayers.removeValue(forKey: id)
+            self.segmentTitles.removeValue(forKey: id)
+        }
         
         return scrubberSize
     }
