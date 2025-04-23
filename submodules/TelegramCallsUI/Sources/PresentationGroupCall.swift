@@ -335,6 +335,15 @@ private final class ConferenceCallE2EContextStateImpl: ConferenceCallE2EContextS
     func getParticipants() -> [ConferenceCallE2EContext.BlockchainParticipant] {
         return self.call.participants().map { ConferenceCallE2EContext.BlockchainParticipant(userId: $0.userId, internalId: $0.internalId) }
     }
+    
+    func getParticipantLatencies() -> [Int64: Double] {
+        let dict = self.call.participantLatencies()
+        var result: [Int64: Double] = [:]
+        for (k, v) in dict {
+            result[k.int64Value] = v.doubleValue
+        }
+        return result
+    }
 
     func getParticipantIds() -> [Int64] {
         return self.call.participants().map { $0.userId }

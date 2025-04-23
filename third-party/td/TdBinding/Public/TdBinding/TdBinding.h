@@ -37,6 +37,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (NSData *)emojiState;
 - (NSArray<TdCallParticipant *> *)participants;
 
+- (NSDictionary<NSNumber *, NSNumber *> *)participantLatencies;
+
 - (void)applyBlock:(NSData *)block;
 - (void)applyBroadcastBlock:(NSData *)block;
 
