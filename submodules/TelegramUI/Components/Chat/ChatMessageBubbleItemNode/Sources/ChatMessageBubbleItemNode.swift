@@ -618,6 +618,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     private let shadowNode: ChatMessageShadowNode
     private var clippingNode: ChatMessageBubbleClippingNode
     
+    private var suggestedPostInfoNode: ChatMessageSuggestedPostInfoNode?
+    
     override public var extractedBackgroundNode: ASDisplayNode? {
         return self.shadowNode
     }
@@ -1422,6 +1424,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         
         let weakSelf = Weak(self)
         
+        let makeSuggestedPostInfoNodeLayout: ChatMessageSuggestedPostInfoNode.AsyncLayout = ChatMessageSuggestedPostInfoNode.asyncLayout(self.suggestedPostInfoNode)
+        
         return { item, params, mergedTop, mergedBottom, dateHeaderAtBottom in
             let layoutConstants = chatMessageItemLayoutConstants(layoutConstants, params: params, presentationData: item.presentationData)
             return ChatMessageBubbleItemNode.beginLayout(selfReference: weakSelf, item, params, mergedTop, mergedBottom, dateHeaderAtBottom,
@@ -1438,6 +1442,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 unlockButtonLayout: unlockButtonLayout,
                 mediaInfoLayout: mediaInfoLayout,
                 mosaicStatusLayout: mosaicStatusLayout,
+                makeSuggestedPostInfoNodeLayout: makeSuggestedPostInfoNodeLayout,
                 layoutConstants: layoutConstants,
                 currentItem: currentItem,
                 currentForwardInfo: currentForwardInfo,
@@ -1466,6 +1471,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         unlockButtonLayout: (ChatMessageUnlockMediaNode.Arguments) -> (CGSize, (Bool) -> ChatMessageUnlockMediaNode),
         mediaInfoLayout: (ChatMessageStarsMediaInfoNode.Arguments) -> (CGSize, (Bool) -> ChatMessageStarsMediaInfoNode),
         mosaicStatusLayout: (ChatMessageDateAndStatusNode.Arguments) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageDateAndStatusNode)),
+        makeSuggestedPostInfoNodeLayout: ChatMessageSuggestedPostInfoNode.AsyncLayout,
         layoutConstants: ChatMessageItemLayoutConstants,
         currentItem: ChatMessageItem?,
         currentForwardInfo: (Peer?, String?)?,
@@ -2935,6 +2941,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         var totalContentNodesHeight: CGFloat = 0.0
         var currentContainerGroupOverlap: CGFloat = 0.0
         var detachedContentNodesHeight: CGFloat = 0.0
+        var additionalTopHeight: CGFloat = 0.0
         
         var mosaicStatusOrigin: CGPoint?
         var unlockButtonPosition: CGPoint?
@@ -3110,6 +3117,19 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
             reactionButtonsSizeAndApply = reactionButtonsFinalize(maxContentWidth)
         }
+        
+        var suggestedPostInfoNodeLayout: (CGSize, () -> ChatMessageSuggestedPostInfoNode)?
+        for attribute in item.message.attributes {
+            if let attribute = attribute as? OutgoingSuggestedPostMessageAttribute {
+                let _ = attribute
+                let suggestedPostInfoNodeLayoutValue = makeSuggestedPostInfoNodeLayout(item, baseWidth)
+                suggestedPostInfoNodeLayout = suggestedPostInfoNodeLayoutValue
+            }
+        }
+        
+        if let suggestedPostInfoNodeLayout {
+            additionalTopHeight += 4.0 + suggestedPostInfoNodeLayout.0.height + 8.0
+        }
                 
         let minimalContentSize: CGSize
         if hideBackground {
@@ -3130,7 +3150,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         let contentUpperRightCorner: CGPoint
         switch alignment {
             case .none:
-                backgroundFrame = CGRect(origin: CGPoint(x: incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset) : (params.width - params.rightInset - layoutBubbleSize.width - layoutConstants.bubble.edgeInset - deliveryFailedInset), y: detachedContentNodesHeight), size: layoutBubbleSize)
+                backgroundFrame = CGRect(origin: CGPoint(x: incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset) : (params.width - params.rightInset - layoutBubbleSize.width - layoutConstants.bubble.edgeInset - deliveryFailedInset), y: detachedContentNodesHeight + additionalTopHeight), size: layoutBubbleSize)
                 contentOrigin = CGPoint(x: backgroundFrame.origin.x + (incoming ? layoutConstants.bubble.contentInsets.left : layoutConstants.bubble.contentInsets.right), y: backgroundFrame.origin.y + layoutConstants.bubble.contentInsets.top + headerSize.height + contentVerticalOffset)
                 contentUpperRightCorner = CGPoint(x: backgroundFrame.maxX - (incoming ? layoutConstants.bubble.contentInsets.right : layoutConstants.bubble.contentInsets.left), y: backgroundFrame.origin.y + layoutConstants.bubble.contentInsets.top + headerSize.height)
             case .center:
@@ -3147,7 +3167,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         
         let bubbleContentWidth = maxContentWidth - layoutConstants.bubble.edgeInset * 2.0 - (layoutConstants.bubble.contentInsets.right + layoutConstants.bubble.contentInsets.left)
 
-        var layoutSize = CGSize(width: params.width, height: layoutBubbleSize.height + detachedContentNodesHeight)
+        var layoutSize = CGSize(width: params.width, height: layoutBubbleSize.height + detachedContentNodesHeight + additionalTopHeight)
+        
         if let reactionButtonsSizeAndApply = reactionButtonsSizeAndApply {
             layoutSize.height += 4.0 + reactionButtonsSizeAndApply.0.height + 2.0
         }
@@ -3207,7 +3228,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 nameNodeSizeApply: nameNodeSizeApply,
                 viaWidth: viaWidth,
                 contentOrigin: contentOrigin,
-                nameNodeOriginY: nameNodeOriginY + detachedContentNodesHeight,
+                nameNodeOriginY: nameNodeOriginY + detachedContentNodesHeight + additionalTopHeight,
                 authorNameColor: authorNameColor,
                 layoutConstants: layoutConstants,
                 currentCredibilityIcon: currentCredibilityIcon,
@@ -3215,11 +3236,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 boostNodeSizeApply: boostNodeSizeApply,
                 contentUpperRightCorner: contentUpperRightCorner,
                 threadInfoSizeApply: threadInfoSizeApply,
-                threadInfoOriginY: threadInfoOriginY + detachedContentNodesHeight,
+                threadInfoOriginY: threadInfoOriginY + detachedContentNodesHeight + additionalTopHeight,
                 forwardInfoSizeApply: forwardInfoSizeApply,
-                forwardInfoOriginY: forwardInfoOriginY + detachedContentNodesHeight,
+                forwardInfoOriginY: forwardInfoOriginY + detachedContentNodesHeight + additionalTopHeight,
                 replyInfoSizeApply: replyInfoSizeApply,
-                replyInfoOriginY: replyInfoOriginY + detachedContentNodesHeight,
+                replyInfoOriginY: replyInfoOriginY + detachedContentNodesHeight + additionalTopHeight,
                 removedContentNodeIndices: removedContentNodeIndices,
                 updatedContentNodeOrder: updatedContentNodeOrder,
                 addedContentNodes: addedContentNodes,
@@ -3237,6 +3258,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 avatarOffset: avatarOffset,
                 hidesHeaders: hidesHeaders,
                 disablesComments: disablesComments,
+                suggestedPostInfoNodeLayout: suggestedPostInfoNodeLayout,
                 alignment: alignment
             )
         })
@@ -3297,6 +3319,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         avatarOffset: CGFloat?,
         hidesHeaders: Bool,
         disablesComments: Bool,
+        suggestedPostInfoNodeLayout: (CGSize, () -> ChatMessageSuggestedPostInfoNode)?,
         alignment: ChatMessageBubbleContentAlignment
     ) -> Void {
         guard let strongSelf = selfReference.value else {
@@ -3378,6 +3401,22 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         strongSelf.backgroundType = backgroundType
         
         strongSelf.backgroundNode.backgroundFrame = backgroundFrame
+        
+        if let (suggestedPostInfoSize, suggestedPostInfoApply) = suggestedPostInfoNodeLayout {
+            let suggestedPostInfoNode = suggestedPostInfoApply()
+            if suggestedPostInfoNode !== strongSelf.suggestedPostInfoNode {
+                strongSelf.suggestedPostInfoNode?.removeFromSupernode()
+                strongSelf.suggestedPostInfoNode = suggestedPostInfoNode
+                strongSelf.mainContextSourceNode.contentNode.addSubnode(suggestedPostInfoNode)
+                
+                let suggestedPostInfoFrame = CGRect(origin: CGPoint(x: floor((params.width - suggestedPostInfoSize.width) * 0.5), y: 4.0), size: suggestedPostInfoSize)
+                suggestedPostInfoNode.frame = suggestedPostInfoFrame
+                //animation.animator.updateFrame(layer: suggestedPostInfoNode.layer, frame: suggestedPostInfoFrame, completion: nil)
+            }
+        } else if let suggestedPostInfoNode = strongSelf.suggestedPostInfoNode {
+            strongSelf.suggestedPostInfoNode = nil
+            suggestedPostInfoNode.removeFromSupernode()
+        }
         
         if let avatarOffset = avatarOffset {
             strongSelf.updateAttachedAvatarNodeOffset(offset: avatarOffset, transition: .animated(duration: 0.3, curve: .spring))

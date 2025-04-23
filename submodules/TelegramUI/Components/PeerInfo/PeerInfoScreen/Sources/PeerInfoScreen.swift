@@ -411,6 +411,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, joinGroupCall: { _ in
         }, presentInviteMembers: {
         }, presentGigagroupHelp: {
+        }, openSuggestPost: {
         }, editMessageMedia: { _, _ in
         }, updateShowCommands: { _ in
         }, updateShowSendAsPeers: { _ in
@@ -566,6 +567,7 @@ private final class PeerInfoInteraction {
     let editingOpenNameColorSetup: () -> Void
     let editingOpenInviteLinksSetup: () -> Void
     let editingOpenDiscussionGroupSetup: () -> Void
+    let editingOpenPostSuggestionsSetup: () -> Void
     let editingOpenRevenue: () -> Void
     let editingOpenStars: () -> Void
     let openParticipantsSection: (PeerInfoParticipantsSection) -> Void
@@ -636,6 +638,7 @@ private final class PeerInfoInteraction {
         editingOpenNameColorSetup: @escaping () -> Void,
         editingOpenInviteLinksSetup: @escaping () -> Void,
         editingOpenDiscussionGroupSetup: @escaping () -> Void,
+        editingOpenPostSuggestionsSetup: @escaping () -> Void,
         editingOpenRevenue: @escaping () -> Void,
         editingOpenStars: @escaping () -> Void,
         openParticipantsSection: @escaping (PeerInfoParticipantsSection) -> Void,
@@ -705,6 +708,7 @@ private final class PeerInfoInteraction {
         self.editingOpenNameColorSetup = editingOpenNameColorSetup
         self.editingOpenInviteLinksSetup = editingOpenInviteLinksSetup
         self.editingOpenDiscussionGroupSetup = editingOpenDiscussionGroupSetup
+        self.editingOpenPostSuggestionsSetup = editingOpenPostSuggestionsSetup
         self.editingOpenRevenue = editingOpenRevenue
         self.editingOpenStars = editingOpenStars
         self.openParticipantsSection = openParticipantsSection
@@ -2154,6 +2158,7 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                 let ItemBanned = 11
                 let ItemRecentActions = 12
                 let ItemAffiliatePrograms = 13
+                let ItemPostSuggestionsSettings = 14
                 
                 let isCreator = channel.flags.contains(.isCreator)
                 
@@ -2199,6 +2204,11 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                     
                     items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemDiscussionGroup, label: .text(discussionGroupTitle), text: presentationData.strings.Channel_DiscussionGroup, icon: UIImage(bundleImageName: "Chat/Info/GroupDiscussionIcon"), action: {
                         interaction.editingOpenDiscussionGroupSetup()
+                    }))
+                    
+                    //TODO:localize
+                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPostSuggestionsSettings, label: .text("Off"), additionalBadgeLabel: presentationData.strings.Settings_New, text: "Post Suggestions", icon: UIImage(bundleImageName: "Chat/Info/GroupDiscussionIcon"), action: {
+                        interaction.editingOpenPostSuggestionsSetup()
                     }))
                 }
                 
@@ -2995,6 +3005,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             },
             editingOpenDiscussionGroupSetup: { [weak self] in
                 self?.editingOpenDiscussionGroupSetup()
+            },
+            editingOpenPostSuggestionsSetup: { [weak self] in
+                self?.editingOpenPostSuggestionsSetup()
             },
             editingOpenRevenue: { [weak self] in
                 self?.editingOpenRevenue()
@@ -9091,6 +9104,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             return
         }
         self.controller?.push(channelDiscussionGroupSetupController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id))
+    }
+    
+    private func editingOpenPostSuggestionsSetup() {
+        guard let data = self.data, let peer = data.peer else {
+            return
+        }
+        let _ = peer
+        self.controller?.push(self.context.sharedContext.makePostSuggestionsSettingsScreen(context: self.context))
     }
     
     private func editingOpenRevenue() {

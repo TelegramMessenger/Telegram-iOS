@@ -1212,8 +1212,9 @@ public protocol SharedAccountContext: AnyObject {
     func makeGalleryController(context: AccountContext, source: GalleryControllerItemSource, streamSingleVideo: Bool, isPreview: Bool) -> ViewController
     
     func makeAccountFreezeInfoScreen(context: AccountContext) -> ViewController
-    
     func makeSendInviteLinkScreen(context: AccountContext, subject: SendInviteLinkScreenSubject, peers: [TelegramForbiddenInvitePeer], theme: PresentationTheme?) -> ViewController
+    
+    func makePostSuggestionsSettingsScreen(context: AccountContext) -> ViewController
     
     func makeDebugSettingsController(context: AccountContext?) -> ViewController?
     

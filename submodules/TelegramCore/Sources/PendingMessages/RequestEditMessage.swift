@@ -179,6 +179,9 @@ private func requestEditMessageInternal(accountPeerId: PeerId, postbox: Postbox,
                 if messageId.namespace == Namespaces.Message.QuickReplyCloud {
                     quickReplyShortcutId = Int32(clamping: message.threadId ?? 0)
                     flags |= Int32(1 << 17)
+                } else if messageId.namespace == Namespaces.Message.SuggestedPostLocal {
+                    //TODO:release
+                    preconditionFailure()
                 }
                 
                 return network.request(Api.functions.messages.editMessage(flags: flags, peer: inputPeer, id: messageId.id, message: text, media: inputMedia, replyMarkup: nil, entities: apiEntities, scheduleDate: effectiveScheduleTime, quickReplyShortcutId: quickReplyShortcutId))

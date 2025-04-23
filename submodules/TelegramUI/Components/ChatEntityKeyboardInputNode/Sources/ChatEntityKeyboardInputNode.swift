@@ -1816,6 +1816,8 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             case .businessLinkSetup:
                 stickerContent = nil
                 gifContent = nil
+            case .postSuggestions:
+                break
             }
         }
         

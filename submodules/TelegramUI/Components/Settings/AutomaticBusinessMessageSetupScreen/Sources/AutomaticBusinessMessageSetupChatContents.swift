@@ -95,12 +95,6 @@ final class AutomaticBusinessMessageSetupChatContents: ChatCustomContentsProtoco
                     
                     self.updateHistoryView(updateType: nextUpdateIsHoleFill ? .FillHole : .Generic)
                 })
-                
-                /*if self.sourceHistoryView == nil {
-                    let sourceHistoryView = MessageHistoryView(tag: nil, namespaces: .just(Namespaces.Message.allQuickReply), entries: [], holeEarlier: false, holeLater: false, isLoading: false)
-                    self.sourceHistoryView = sourceHistoryView
-                    self.updateHistoryView(updateType: .Initial)
-                }*/
             }
         }
         
@@ -217,6 +211,8 @@ final class AutomaticBusinessMessageSetupChatContents: ChatCustomContentsProtoco
             initialShortcut = ""
         case .hashTagSearch:
             initialShortcut = ""
+        case .postSuggestions:
+            initialShortcut = ""
         }
         
         let queue = Queue()
@@ -254,6 +250,8 @@ final class AutomaticBusinessMessageSetupChatContents: ChatCustomContentsProtoco
         case .businessLinkSetup:
             break
         case .hashTagSearch:
+            break
+        case .postSuggestions:
             break
         }
     }

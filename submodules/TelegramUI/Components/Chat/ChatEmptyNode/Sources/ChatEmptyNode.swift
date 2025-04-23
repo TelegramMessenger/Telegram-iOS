@@ -780,6 +780,10 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
                 insets.top = -9.0
                 imageSpacing = 4.0
                 titleSpacing = 5.0
+            case .postSuggestions:
+                insets.top = 10.0
+                imageSpacing = 5.0
+                titleSpacing = 5.0
             case .hashTagSearch:
                 break
             }
@@ -841,7 +845,7 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
                     }
                     
                     self.businessLink = link
-                case .hashTagSearch:
+                case .hashTagSearch, .postSuggestions:
                     titleString = ""
                     strings = []
                 }
@@ -1297,7 +1301,11 @@ public final class ChatEmptyNodePremiumRequiredChatContent: ASDisplayNode, ChatE
         if let amount = self.stars {
             let starsString = presentationStringsFormattedNumber(Int32(amount), interfaceState.dateTimeFormat.groupingSeparator)
             let rawText: String
-            if self.isPremiumDisabled {
+            
+            if case let .customChatContents(customChatContents) = interfaceState.subject, case .postSuggestions = customChatContents.kind {
+                //TODO:localize
+                rawText = "\(peerTitle) charges  $ \(starsString) per message suggestion."
+            } else if self.isPremiumDisabled {
                 rawText = interfaceState.strings.Chat_EmptyStatePaidMessagingDisabled_Text(peerTitle, " $ \(starsString)").string
             } else {
                 rawText = interfaceState.strings.Chat_EmptyStatePaidMessaging_Text(peerTitle, " $ \(starsString)").string
@@ -1427,6 +1435,7 @@ private enum ChatEmptyNodeContentType: Equatable {
     case topic
     case premiumRequired
     case starsRequired(Int64)
+    case postSuggestions(Int64)
 }
 
 private final class EmptyAttachedDescriptionNode: HighlightTrackingButtonNode {
@@ -1795,8 +1804,12 @@ public final class ChatEmptyNode: ASDisplayNode {
         case let .emptyChat(emptyType):
             if case .customGreeting = emptyType {
                 contentType = .greeting
-            } else if case .customChatContents = interfaceState.subject {
-                contentType = .cloud
+            } else if case let .customChatContents(customChatContents) = interfaceState.subject {
+                if case let .postSuggestions(postSuggestions) = customChatContents.kind {
+                    contentType = .postSuggestions(postSuggestions.value)
+                } else {
+                    contentType = .cloud
+                }
             } else if case .replyThread = interfaceState.chatLocation {
                 if case .topic = emptyType {
                     contentType = .topic
@@ -1883,6 +1896,8 @@ public final class ChatEmptyNode: ASDisplayNode {
                 node = ChatEmptyNodePremiumRequiredChatContent(context: self.context, interaction: self.interaction, stars: nil)
             case let .starsRequired(stars):
                 node = ChatEmptyNodePremiumRequiredChatContent(context: self.context, interaction: self.interaction, stars: stars)
+            case let .postSuggestions(stars):
+                node = ChatEmptyNodePremiumRequiredChatContent(context: self.context, interaction: self.interaction, stars: stars)
             }
             self.content = (contentType, node)
             self.addSubnode(node)
@@ -1894,7 +1909,7 @@ public final class ChatEmptyNode: ASDisplayNode {
             }
         }
         switch contentType {
-        case .peerNearby, .greeting, .premiumRequired, .starsRequired, .cloud:
+        case .peerNearby, .greeting, .premiumRequired, .starsRequired, .cloud, .postSuggestions:
             self.isUserInteractionEnabled = true
         default:
             self.isUserInteractionEnabled = false

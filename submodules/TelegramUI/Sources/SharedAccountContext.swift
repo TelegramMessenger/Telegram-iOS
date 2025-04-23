@@ -83,7 +83,7 @@ import OldChannelsController
 import InviteLinksUI
 import GiftStoreScreen
 import SendInviteLinkScreen
-
+import PostSuggestionsSettingsScreen
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -3838,6 +3838,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
 
     public func makeSendInviteLinkScreen(context: AccountContext, subject: SendInviteLinkScreenSubject, peers: [TelegramForbiddenInvitePeer], theme: PresentationTheme?) -> ViewController {
         return SendInviteLinkScreen(context: context, subject: subject, peers: peers, theme: theme)
+    }
+    
+    public func makePostSuggestionsSettingsScreen(context: AccountContext) -> ViewController {
+        return PostSuggestionsSettingsScreen(context: context, completion: {})
     }
 }
 

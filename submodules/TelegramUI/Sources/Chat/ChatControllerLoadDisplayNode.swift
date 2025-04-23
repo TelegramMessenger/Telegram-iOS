@@ -123,6 +123,8 @@ import PeerNameColorScreen
 import ChatEmptyNode
 import ChatMediaInputStickerGridItem
 import AdsInfoScreen
+import PostSuggestionsSettingsScreen
+import ChatSendStarsScreen
 
 extension ChatControllerImpl {
     func loadDisplayNodeImpl() {
@@ -1417,6 +1419,46 @@ extension ChatControllerImpl {
                     }
                     
                     strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .succeed(text: strongSelf.presentationData.strings.Business_Links_EditLinkToastSaved, timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
+                case let .postSuggestions(postSuggestions):
+                    if let customChatContents = customChatContents as? PostSuggestionsChatContents {
+                        //TODO:release
+                        strongSelf.chatDisplayNode.dismissInput()
+                        
+                        let _ = (ChatSendStarsScreen.initialData(context: strongSelf.context, peerId: customChatContents.peerId, suggestMessageAmount: postSuggestions, completion: { [weak strongSelf] amount, timestamp in
+                            guard let strongSelf else {
+                                return
+                            }
+                            guard case let .customChatContents(customChatContents) = strongSelf.subject else {
+                                return
+                            }
+                            if amount == 0 {
+                                return
+                            }
+                            let messages = messages.map { message in
+                                return message.withUpdatedAttributes { attributes in
+                                    var attributes = attributes
+                                    attributes.removeAll(where: { $0 is OutgoingSuggestedPostMessageAttribute })
+                                    attributes.append(OutgoingSuggestedPostMessageAttribute(
+                                        price: StarsAmount(value: amount, nanos: 0),
+                                        timestamp: timestamp
+                                    ))
+                                    return attributes
+                                }
+                            }
+                            customChatContents.enqueueMessages(messages: messages)
+                            strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
+                        })
+                        |> deliverOnMainQueue).startStandalone(next: { [weak strongSelf] initialData in
+                            guard let strongSelf, let initialData else {
+                                return
+                            }
+                            let sendStarsScreen = ChatSendStarsScreen(
+                                context: strongSelf.context,
+                                initialData: initialData
+                            )
+                            strongSelf.push(sendStarsScreen)
+                        })
+                    }
                 }
             }
             strongSelf.updateChatPresentationInterfaceState(interactive: true, { $0.updatedShowCommands(false) })
@@ -4082,6 +4124,29 @@ extension ChatControllerImpl {
             if let strongSelf = self {
                 strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(title: nil, text: strongSelf.presentationData.strings.Conversation_GigagroupDescription, timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return true }), in: .current)
             }
+        }, openSuggestPost: { [weak self] in
+             guard let self else {
+                return
+             }
+             guard let peerId = self.chatLocation.peerId else {
+                return
+             }
+
+             let contents = PostSuggestionsChatContents(
+                context: self.context,
+                peerId: peerId
+            )
+            let chatController = self.context.sharedContext.makeChatController(
+                context: self.context,
+                chatLocation: .customChatContents,
+                subject: .customChatContents(contents: contents),
+                botStart: nil,
+                mode: .standard(.default),
+                params: nil
+            )
+            chatController.navigationPresentation = .modal
+            
+            self.push(chatController)
         }, editMessageMedia: { [weak self] messageId, draw in
             if let strongSelf = self {
                 strongSelf.controllerInteraction?.editMessageMedia(messageId, draw)

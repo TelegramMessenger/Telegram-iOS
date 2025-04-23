@@ -15,14 +15,16 @@ public final class ListItemSliderSelectorComponent: Component {
         public let selectedIndex: Int
         public let minSelectedIndex: Int?
         public let title: String?
+        public let secondaryTitle: String?
         public let selectedIndexUpdated: (Int) -> Void
         
-        public init(values: [String], markPositions: Bool, selectedIndex: Int, minSelectedIndex: Int? = nil, title: String?, selectedIndexUpdated: @escaping (Int) -> Void) {
+        public init(values: [String], markPositions: Bool, selectedIndex: Int, minSelectedIndex: Int? = nil, title: String?, secondaryTitle: String? = nil, selectedIndexUpdated: @escaping (Int) -> Void) {
             self.values = values
             self.markPositions = markPositions
             self.selectedIndex = selectedIndex
             self.minSelectedIndex = minSelectedIndex
             self.title = title
+            self.secondaryTitle = secondaryTitle
             self.selectedIndexUpdated = selectedIndexUpdated
         }
         
@@ -40,6 +42,9 @@ public final class ListItemSliderSelectorComponent: Component {
                 return false
             }
             if lhs.title != rhs.title {
+                return false
+            }
+            if lhs.secondaryTitle != rhs.secondaryTitle {
                 return false
             }
             return true
@@ -112,6 +117,7 @@ public final class ListItemSliderSelectorComponent: Component {
     public final class View: UIView, ListSectionComponent.ChildView {
         private var titles: [Int: ComponentView<Empty>] = [:]
         private var mainTitle: ComponentView<Empty>?
+        private var secondaryTitle: ComponentView<Empty>?
         private var slider = ComponentView<Empty>()
         
         private var component: ListItemSliderSelectorComponent?
@@ -140,10 +146,12 @@ public final class ListItemSliderSelectorComponent: Component {
             
             var validIds: [Int] = []
             var mainTitleValue: String?
+            var secondaryTitleValue: String?
             
             switch component.content {
             case let .discrete(discrete):
                 mainTitleValue = discrete.title
+                secondaryTitleValue = discrete.secondaryTitle
                 
                 for i in 0 ..< discrete.values.count {
                     if discrete.title != nil {
@@ -254,7 +262,44 @@ public final class ListItemSliderSelectorComponent: Component {
                     environment: {},
                     containerSize: CGSize(width: 100.0, height: 100.0)
                 )
-                let mainTitleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - mainTitleSize.width) * 0.5), y: 10.0), size: mainTitleSize)
+                
+                var secondaryTitleView: ComponentView<Empty>?
+                var secondaryTitleSize: CGSize?
+                if let secondaryTitleValue {
+                    let secondaryTitle: ComponentView<Empty>
+                    if let current = self.secondaryTitle {
+                        secondaryTitle = current
+                    } else {
+                        secondaryTitle = ComponentView()
+                        mainTitleTransition = mainTitleTransition.withAnimation(.none)
+                        self.secondaryTitle = secondaryTitle
+                    }
+                    secondaryTitleView = secondaryTitle
+                    
+                    secondaryTitleSize = secondaryTitle.update(
+                        transition: .immediate,
+                        component: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(string: secondaryTitleValue, font: Font.regular(12.0), textColor: component.theme.list.itemSecondaryTextColor))
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: 100.0, height: 100.0)
+                    )
+                } else {
+                    mainTitleTransition = mainTitleTransition.withAnimation(.none)
+                    
+                    if let secondaryTitle = self.secondaryTitle {
+                        self.secondaryTitle = nil
+                        secondaryTitle.view?.removeFromSuperview()
+                    }
+                }
+                
+                var mainTitleContentWidth = mainTitleSize.width
+                let secondaryTitleSpacing: CGFloat = 2.0
+                if let secondaryTitleSize {
+                    mainTitleContentWidth += secondaryTitleSpacing + secondaryTitleSize.width
+                }
+                
+                let mainTitleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - mainTitleContentWidth) * 0.5), y: 10.0), size: mainTitleSize)
                 if let mainTitleView = mainTitle.view {
                     if mainTitleView.superview == nil {
                         self.addSubview(mainTitleView)
@@ -262,10 +307,25 @@ public final class ListItemSliderSelectorComponent: Component {
                     mainTitleView.bounds = CGRect(origin: CGPoint(), size: mainTitleFrame.size)
                     mainTitleTransition.setPosition(view: mainTitleView, position: mainTitleFrame.center)
                 }
+                
+                if let secondaryTitleView, let secondaryTitleSize {
+                    let secondaryTitleFrame = CGRect(origin: CGPoint(x: mainTitleFrame.maxX + secondaryTitleSpacing, y: mainTitleFrame.minY + floorToScreenPixels((mainTitleFrame.height - secondaryTitleSize.height) * 0.5)), size: secondaryTitleSize)
+                    if let secondaryTitleComponentView = secondaryTitleView.view {
+                        if secondaryTitleComponentView.superview == nil {
+                            self.addSubview(secondaryTitleComponentView)
+                        }
+                        secondaryTitleComponentView.bounds = CGRect(origin: CGPoint(), size: secondaryTitleFrame.size)
+                        mainTitleTransition.setPosition(view: secondaryTitleComponentView, position: secondaryTitleFrame.center)
+                    }
+                }
             } else {
                 if let mainTitle = self.mainTitle {
                     self.mainTitle = nil
                     mainTitle.view?.removeFromSuperview()
+                }
+                if let secondaryTitle = self.secondaryTitle {
+                    self.secondaryTitle = nil
+                    secondaryTitle.view?.removeFromSuperview()
                 }
             }
             

@@ -2108,6 +2108,9 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 }
             case .businessLinkSetup:
                 actions.removeAll()
+            case .postSuggestions:
+                //TODO:release
+                actions.removeAll()
             }
         }
         

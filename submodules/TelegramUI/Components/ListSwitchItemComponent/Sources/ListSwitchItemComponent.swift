@@ -6,13 +6,13 @@ import ComponentFlow
 import ComponentDisplayAdapters
 import SwitchComponent
 
-final class ListSwitchItemComponent: Component {
+public final class ListSwitchItemComponent: Component {
     let theme: PresentationTheme
     let title: String
     let value: Bool
     let valueUpdated: (Bool) -> Void
     
-    init(
+    public init(
         theme: PresentationTheme,
         title: String,
         value: Bool,
@@ -24,7 +24,7 @@ final class ListSwitchItemComponent: Component {
         self.valueUpdated = valueUpdated
     }
     
-    static func ==(lhs: ListSwitchItemComponent, rhs: ListSwitchItemComponent) -> Bool {
+    public static func ==(lhs: ListSwitchItemComponent, rhs: ListSwitchItemComponent) -> Bool {
         if lhs.theme !== rhs.theme {
             return false
         }
@@ -37,7 +37,7 @@ final class ListSwitchItemComponent: Component {
         return true
     }
     
-    final class View: UIView {
+    public final class View: UIView {
         private let title = ComponentView<Empty>()
         private let switchView = ComponentView<Empty>()
         
@@ -106,11 +106,11 @@ final class ListSwitchItemComponent: Component {
         }
     }
     
-    func makeView() -> View {
+    public func makeView() -> View {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

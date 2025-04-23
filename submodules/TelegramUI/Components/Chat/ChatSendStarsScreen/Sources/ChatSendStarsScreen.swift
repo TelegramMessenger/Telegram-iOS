@@ -23,6 +23,8 @@ import TextFormat
 import CheckComponent
 import ContextUI
 import StarsBalanceOverlayComponent
+import TelegramStringFormatting
+import ChatScheduleTimeController
 
 private final class BalanceComponent: CombinedComponent {
     let context: AccountContext
@@ -166,6 +168,7 @@ private final class BadgeComponent: Component {
         private var badgeShapeArguments: (Double, Double, CGSize, CGFloat, CGFloat)?
         
         private var component: BadgeComponent?
+        private var isUpdating: Bool = false
         
         private var previousAvailableSize: CGSize?
         
@@ -230,6 +233,11 @@ private final class BadgeComponent: Component {
         }
                 
         func update(component: BadgeComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+            self.isUpdating = true
+            defer {
+                self.isUpdating = false
+            }
+            
             if self.component == nil {
                 self.badgeIcon.image = UIImage(bundleImageName: "Premium/SendStarsStarSliderIcon")?.withRenderingMode(.alwaysTemplate)
             }
@@ -821,74 +829,17 @@ private final class ChatSendStarsScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
-    let peer: EnginePeer
-    let myPeer: EnginePeer
-    let defaultPrivacyPeer: ChatSendStarsScreenComponent.PrivacyPeer
-    let channelsForPublicReaction: [EnginePeer]
-    let messageId: EngineMessage.Id
-    let maxAmount: Int
-    let balance: StarsAmount?
-    let currentSentAmount: Int?
-    let topPeers: [ChatSendStarsScreen.TopPeer]
-    let myTopPeer: ChatSendStarsScreen.TopPeer?
-    let completion: (Int64, TelegramPaidReactionPrivacy, Bool, ChatSendStarsScreen.TransitionOut) -> Void
+    let initialData: ChatSendStarsScreen.InitialData
     
     init(
         context: AccountContext,
-        peer: EnginePeer,
-        myPeer: EnginePeer,
-        defaultPrivacyPeer: ChatSendStarsScreenComponent.PrivacyPeer,
-        channelsForPublicReaction: [EnginePeer],
-        messageId: EngineMessage.Id,
-        maxAmount: Int,
-        balance: StarsAmount?,
-        currentSentAmount: Int?,
-        topPeers: [ChatSendStarsScreen.TopPeer],
-        myTopPeer: ChatSendStarsScreen.TopPeer?,
-        completion: @escaping (Int64, TelegramPaidReactionPrivacy, Bool, ChatSendStarsScreen.TransitionOut) -> Void
+        initialData: ChatSendStarsScreen.InitialData
     ) {
         self.context = context
-        self.peer = peer
-        self.myPeer = myPeer
-        self.defaultPrivacyPeer = defaultPrivacyPeer
-        self.channelsForPublicReaction = channelsForPublicReaction
-        self.messageId = messageId
-        self.maxAmount = maxAmount
-        self.balance = balance
-        self.currentSentAmount = currentSentAmount
-        self.topPeers = topPeers
-        self.myTopPeer = myTopPeer
-        self.completion = completion
+        self.initialData = initialData
     }
     
     static func ==(lhs: ChatSendStarsScreenComponent, rhs: ChatSendStarsScreenComponent) -> Bool {
-        if lhs.context !== rhs.context {
-            return false
-        }
-        if lhs.peer != rhs.peer {
-            return false
-        }
-        if lhs.myPeer != rhs.myPeer {
-            return false
-        }
-        if lhs.channelsForPublicReaction != rhs.channelsForPublicReaction {
-            return false
-        }
-        if lhs.maxAmount != rhs.maxAmount {
-            return false
-        }
-        if lhs.balance != rhs.balance {
-            return false
-        }
-        if lhs.currentSentAmount != rhs.currentSentAmount {
-            return false
-        }
-        if lhs.topPeers != rhs.topPeers {
-            return false
-        }
-        if lhs.myTopPeer != rhs.myTopPeer {
-            return false
-        }
         return true
     }
     
@@ -1013,6 +964,7 @@ private final class ChatSendStarsScreenComponent: Component {
         private let title = ComponentView<Empty>()
         private let subtitle = ComponentView<Empty>()
         private let descriptionText = ComponentView<Empty>()
+        private let timeSelectorButton = ComponentView<Empty>()
         
         private let badgeStars = BadgeStarsView()
         private let sliderBackground = ComponentView<Empty>()
@@ -1038,6 +990,7 @@ private final class ChatSendStarsScreenComponent: Component {
         
         private var component: ChatSendStarsScreenComponent?
         private weak var state: EmptyComponentState?
+        private var isUpdating: Bool = false
         private var environment: ViewControllerComponentContainer.Environment?
         private var itemLayout: ItemLayout?
         
@@ -1061,6 +1014,8 @@ private final class ChatSendStarsScreenComponent: Component {
         private var currentMyPeer: EnginePeer?
         private var channelsForPublicReaction: [EnginePeer] = []
         private var channelsForPublicReactionDisposable: Disposable?
+        
+        private var currentSuggestPostTimestamp: Int32?
         
         override init(frame: CGRect) {
             self.bottomOverscrollLimit = 200.0
@@ -1337,12 +1292,15 @@ private final class ChatSendStarsScreenComponent: Component {
             guard let component = self.component, let environment = self.environment, let controller = environment.controller() else {
                 return
             }
+            guard case let .react(reactData) = component.initialData.subjectInitialData else {
+                return
+            }
             
             var items: [ContextMenuItem] = []
             
             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
             
-            var peers: [EnginePeer] = [component.myPeer]
+            var peers: [EnginePeer] = [reactData.myPeer]
             peers.append(contentsOf: self.channelsForPublicReaction)
             
             let avatarSize = CGSize(width: 30.0, height: 30.0)
@@ -1396,6 +1354,9 @@ private final class ChatSendStarsScreenComponent: Component {
                     guard let self, let component = self.component else {
                         return
                     }
+                    guard case let .react(reactData) = component.initialData.subjectInitialData else {
+                        return
+                    }
                     if self.currentMyPeer?.id == peer.id {
                         return
                     }
@@ -1409,7 +1370,7 @@ private final class ChatSendStarsScreenComponent: Component {
                             self.privacyPeer = .peer(peer)
                         }
                         
-                        if component.myTopPeer != nil {
+                        if reactData.myTopPeer != nil {
                             let mappedPrivacy: TelegramPaidReactionPrivacy
                             switch self.privacyPeer {
                             case .account:
@@ -1420,7 +1381,7 @@ private final class ChatSendStarsScreenComponent: Component {
                                 mappedPrivacy = .peer(peer.id)
                             }
                             
-                            let _ = component.context.engine.messages.updateStarsReactionPrivacy(id: component.messageId, privacy: mappedPrivacy).startStandalone()
+                            let _ = component.context.engine.messages.updateStarsReactionPrivacy(id: reactData.messageId, privacy: mappedPrivacy).startStandalone()
                         }
                     }
                     
@@ -1432,7 +1393,37 @@ private final class ChatSendStarsScreenComponent: Component {
             controller.presentInGlobalOverlay(contextController)
         }
         
+        private func displaySuggestTimeSelectionMenu(sourceView: UIView) {
+            guard let component = self.component else {
+                return
+            }
+            guard let environment = self.environment else {
+                return
+            }
+            guard case let .suggestPost(suggestPostData) = component.initialData.subjectInitialData else {
+                return
+            }
+            
+            let mode: ChatScheduleTimeControllerMode = .suggestPost
+            let theme = environment.theme
+            let controller = ChatScheduleTimeController(context: component.context, updatedPresentationData: (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) }), peerId: suggestPostData.peer.id, mode: mode, style: .default, currentTime: self.currentSuggestPostTimestamp, minimalTime: nil, dismissByTapOutside: true, completion: { [weak self] time in
+                guard let self else {
+                    return
+                }
+                self.currentSuggestPostTimestamp = time == 0 ? nil : time
+                if !self.isUpdating {
+                    self.state?.updated(transition: .immediate)
+                }
+            })
+            environment.controller()?.present(controller, in: .window(.root))
+        }
+        
         func update(component: ChatSendStarsScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
+            self.isUpdating = true
+            defer {
+                self.isUpdating = false
+            }
+            
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
             let themeUpdated = self.environment?.theme !== environment.theme
             
@@ -1460,8 +1451,8 @@ private final class ChatSendStarsScreenComponent: Component {
                             self.environment?.controller()?.dismiss()
                             
                             let _ = (context.engine.payments.starsTopUpOptions()
-                            |> take(1)
-                            |> deliverOnMainQueue).startStandalone(next: { options in
+                                     |> take(1)
+                                     |> deliverOnMainQueue).startStandalone(next: { options in
                                 let controller = context.sharedContext.makeStarsPurchaseScreen(
                                     context: context,
                                     starsContext: starsContext,
@@ -1489,33 +1480,49 @@ private final class ChatSendStarsScreenComponent: Component {
             }
             
             if self.component == nil {
-                self.currentMyPeer = component.myPeer
+                self.balance = component.initialData.balance
                 
-                self.balance = component.balance
-                var isLogarithmic = true
-                if let data = component.context.currentAppConfiguration.with({ $0 }).data, let value = data["ios_stars_reaction_logarithmic_scale"] as? Double {
-                    isLogarithmic = Int(value) != 0
-                }
-                self.amount = Amount(realValue: 50, maxRealValue: component.maxAmount, maxSliderValue: 999, isLogarithmic: isLogarithmic)
-                if let myTopPeer = component.myTopPeer {
-                    if myTopPeer.isAnonymous {
-                        self.privacyPeer = .anonymous
-                    } else if myTopPeer.peer?.id == component.context.account.peerId {
-                        self.privacyPeer = .account
-                    } else if let peer = myTopPeer.peer {
-                        self.privacyPeer = .peer(peer)
-                        self.currentMyPeer = peer
+                switch component.initialData.subjectInitialData {
+                case let .react(reactData):
+                    self.currentMyPeer = reactData.myPeer
+                    self.amount = Amount(realValue: 50, maxRealValue: reactData.maxAmount, maxSliderValue: 999, isLogarithmic: true)
+                    
+                    if let myTopPeer = reactData.myTopPeer {
+                        if myTopPeer.isAnonymous {
+                            self.privacyPeer = .anonymous
+                        } else if myTopPeer.peer?.id == component.context.account.peerId {
+                            self.privacyPeer = .account
+                        } else if let peer = myTopPeer.peer {
+                            self.privacyPeer = .peer(peer)
+                            self.currentMyPeer = peer
+                        } else {
+                            self.privacyPeer = .account
+                        }
                     } else {
-                        self.privacyPeer = .account
+                        self.privacyPeer = reactData.defaultPrivacyPeer
+                        switch self.privacyPeer {
+                        case .anonymous, .account:
+                            break
+                        case let .peer(peer):
+                            self.currentMyPeer = peer
+                        }
                     }
-                } else {
-                    self.privacyPeer = component.defaultPrivacyPeer
-                    switch self.privacyPeer {
-                    case .anonymous, .account:
-                        break
-                    case let .peer(peer):
-                        self.currentMyPeer = peer
-                    }
+                    
+                    self.channelsForPublicReactionDisposable = (component.context.engine.peers.channelsForPublicReaction(useLocalCache: false)
+                    |> deliverOnMainQueue).startStrict(next: { [weak self] peers in
+                        guard let self else {
+                            return
+                        }
+                        if self.channelsForPublicReaction != peers {
+                            self.channelsForPublicReaction = peers
+                            if !self.isUpdating {
+                                self.state?.updated(transition: .immediate)
+                            }
+                        }
+                    })
+                case let .suggestPost(suggestPostData):
+                    self.currentSuggestPostTimestamp = suggestPostData.initialTimestamp
+                    self.amount = Amount(realValue: 50, maxRealValue: 10000, maxSliderValue: 999, isLogarithmic: true)
                 }
                 
                 if let starsContext = component.context.starsContext {
@@ -1532,17 +1539,6 @@ private final class ChatSendStarsScreenComponent: Component {
                         }
                     })
                 }
-                
-                self.channelsForPublicReactionDisposable = (component.context.engine.peers.channelsForPublicReaction(useLocalCache: false)
-                |> deliverOnMainQueue).startStrict(next: { [weak self] peers in
-                    guard let self else {
-                        return
-                    }
-                    if self.channelsForPublicReaction != peers {
-                        self.channelsForPublicReaction = peers
-                        self.state?.updated(transition: .immediate)
-                    }
-                })
             }
             
             self.component = component
@@ -1579,12 +1575,21 @@ private final class ChatSendStarsScreenComponent: Component {
                             guard let self, let component = self.component else {
                                 return
                             }
+                            
+                            let maxAmount: Int
+                            switch component.initialData.subjectInitialData {
+                            case let .react(reactData):
+                                maxAmount = reactData.maxAmount
+                            case let .suggestPost(suggestPostData):
+                                maxAmount = suggestPostData.maxAmount
+                            }
+                            
                             self.amount = self.amount.withSliderValue(value)
                             self.didChangeAmount = true
                             
                             self.state?.updated(transition: ComponentTransition(animation: .none).withUserData(IsAdjustingAmountHint()))
                             
-                            let sliderValue = Float(value) / Float(component.maxAmount)
+                            let sliderValue = Float(value) / Float(maxAmount)
                             let currentTimestamp = CACurrentMediaTime()
                             
                             if let previousTimestamp {
@@ -1627,31 +1632,37 @@ private final class ChatSendStarsScreenComponent: Component {
             
             let progressFraction: CGFloat = CGFloat(self.amount.sliderValue) / CGFloat(self.amount.maxSliderValue)
             
-            let topOthersCount: Int? = component.topPeers.filter({ !$0.isMy }).max(by: { $0.count < $1.count })?.count
-            var topCount: Int?
-            if let topOthersCount {
-                if let myTopPeer = component.myTopPeer {
-                    topCount = max(0, topOthersCount - myTopPeer.count + 1)
-                } else {
-                    topCount = topOthersCount
-                }
-                if topCount == 0 {
-                    topCount = nil
-                }
-            }
-            
             var topCutoffFraction: CGFloat?
-            if let topCount {
-                let topCutoffFractionValue = CGFloat(topCount) / CGFloat(component.maxAmount - 1)
-                topCutoffFraction = topCutoffFractionValue
-                
-                let isPastCutoff = progressFraction >= topCutoffFractionValue
-                if let isPastTopCutoff = self.isPastTopCutoff, isPastTopCutoff != isPastCutoff {
-                    HapticFeedback().tap()
+            
+            var topCount: Int?
+            switch component.initialData.subjectInitialData {
+            case let .react(reactData):
+                let topOthersCount: Int? = reactData.topPeers.filter({ !$0.isMy }).max(by: { $0.count < $1.count })?.count
+                if let topOthersCount {
+                    if let myTopPeer = reactData.myTopPeer {
+                        topCount = max(0, topOthersCount - myTopPeer.count + 1)
+                    } else {
+                        topCount = topOthersCount
+                    }
+                    if topCount == 0 {
+                        topCount = nil
+                    }
                 }
-                self.isPastTopCutoff = isPastCutoff
-            } else {
-                self.isPastTopCutoff = nil
+                
+                if let topCount {
+                    let topCutoffFractionValue = CGFloat(topCount) / CGFloat(reactData.maxAmount - 1)
+                    topCutoffFraction = topCutoffFractionValue
+                    
+                    let isPastCutoff = progressFraction >= topCutoffFractionValue
+                    if let isPastTopCutoff = self.isPastTopCutoff, isPastTopCutoff != isPastCutoff {
+                        HapticFeedback().tap()
+                    }
+                    self.isPastTopCutoff = isPastCutoff
+                } else {
+                    self.isPastTopCutoff = nil
+                }
+            case .suggestPost:
+                break
             }
             
             let _ = self.sliderBackground.update(
@@ -1679,7 +1690,7 @@ private final class ChatSendStarsScreenComponent: Component {
                 let badgeSize = self.badge.update(
                     transition: transition,
                     component: AnyComponent(BadgeComponent(
-                        theme: environment.theme, 
+                        theme: environment.theme,
                         title: "\(self.amount.realValue)"
                     )),
                     environment: {},
@@ -1721,55 +1732,62 @@ private final class ChatSendStarsScreenComponent: Component {
             
             contentHeight += 123.0
             
-            var sendAsPeers: [EnginePeer] = [component.myPeer]
-            sendAsPeers.append(contentsOf: self.channelsForPublicReaction)
-            
-            let leftButtonSize = self.leftButton.update(
-                transition: transition,
-                component: AnyComponent(BalanceComponent(
-                    context: component.context,
-                    theme: environment.theme,
-                    strings: environment.strings,
-                    balance: self.balance
-                )),
-                environment: {},
-                containerSize: CGSize(width: 120.0, height: 100.0)
-            )
-            let leftButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: floor((56.0 - leftButtonSize.height) * 0.5)), size: leftButtonSize)
-            if let leftButtonView = self.leftButton.view {
-                if leftButtonView.superview == nil {
-                    self.navigationBarContainer.addSubview(leftButtonView)
-                }
-                transition.setFrame(view: leftButtonView, frame: leftButtonFrame)
-                leftButtonView.isHidden = sendAsPeers.count > 1
-            }
-            
-            let currentMyPeer = self.currentMyPeer ?? component.myPeer
-            
-            let peerSelectorButtonSize = self.peerSelectorButton.update(
-                transition: transition,
-                component: AnyComponent(PeerSelectorBadgeComponent(
-                    context: component.context,
-                    theme: environment.theme,
-                    strings: environment.strings,
-                    peer: currentMyPeer,
-                    action: { [weak self] sourceView in
-                        guard let self else {
-                            return
-                        }
-                        self.displayTargetSelectionMenu(sourceView: sourceView)
+            var leftButtonFrameValue: CGRect?
+            switch component.initialData.subjectInitialData {
+            case let .react(reactData):
+                var sendAsPeers: [EnginePeer] = [reactData.myPeer]
+                sendAsPeers.append(contentsOf: self.channelsForPublicReaction)
+                
+                let leftButtonSize = self.leftButton.update(
+                    transition: transition,
+                    component: AnyComponent(BalanceComponent(
+                        context: component.context,
+                        theme: environment.theme,
+                        strings: environment.strings,
+                        balance: self.balance
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 120.0, height: 100.0)
+                )
+                let leftButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: floor((56.0 - leftButtonSize.height) * 0.5)), size: leftButtonSize)
+                if let leftButtonView = self.leftButton.view {
+                    if leftButtonView.superview == nil {
+                        self.navigationBarContainer.addSubview(leftButtonView)
                     }
-                )),
-                environment: {},
-                containerSize: CGSize(width: 120.0, height: 100.0)
-            )
-            let peerSelectorButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: 1.0 + floor((56.0 - peerSelectorButtonSize.height) * 0.5)), size: peerSelectorButtonSize)
-            if let peerSelectorButtonView = self.peerSelectorButton.view {
-                if peerSelectorButtonView.superview == nil {
-                    self.navigationBarContainer.addSubview(peerSelectorButtonView)
+                    transition.setFrame(view: leftButtonView, frame: leftButtonFrame)
+                    leftButtonView.isHidden = sendAsPeers.count > 1
                 }
-                transition.setFrame(view: peerSelectorButtonView, frame: peerSelectorButtonFrame)
-                peerSelectorButtonView.isHidden = sendAsPeers.count <= 1
+                leftButtonFrameValue = leftButtonFrame
+                
+                let currentMyPeer = self.currentMyPeer ?? reactData.myPeer
+                
+                let peerSelectorButtonSize = self.peerSelectorButton.update(
+                    transition: transition,
+                    component: AnyComponent(PeerSelectorBadgeComponent(
+                        context: component.context,
+                        theme: environment.theme,
+                        strings: environment.strings,
+                        peer: currentMyPeer,
+                        action: { [weak self] sourceView in
+                            guard let self else {
+                                return
+                            }
+                            self.displayTargetSelectionMenu(sourceView: sourceView)
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 120.0, height: 100.0)
+                )
+                let peerSelectorButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: 1.0 + floor((56.0 - peerSelectorButtonSize.height) * 0.5)), size: peerSelectorButtonSize)
+                if let peerSelectorButtonView = self.peerSelectorButton.view {
+                    if peerSelectorButtonView.superview == nil {
+                        self.navigationBarContainer.addSubview(peerSelectorButtonView)
+                    }
+                    transition.setFrame(view: peerSelectorButtonView, frame: peerSelectorButtonFrame)
+                    peerSelectorButtonView.isHidden = sendAsPeers.count <= 1
+                }
+            case .suggestPost:
+                break
             }
             
             if themeUpdated {
@@ -1797,7 +1815,7 @@ private final class ChatSendStarsScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: 30.0, height: 30.0)
             )
-            let closeButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - sideInset - closeButtonSize.width, y: floor((56.0 - leftButtonSize.height) * 0.5)), size: closeButtonSize)
+            let closeButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - sideInset - closeButtonSize.width, y: floor((56.0 - 34.0) * 0.5)), size: closeButtonSize)
             if let closeButtonView = self.closeButton.view {
                 if closeButtonView.superview == nil {
                     self.navigationBarContainer.addSubview(closeButtonView)
@@ -1816,25 +1834,51 @@ private final class ChatSendStarsScreenComponent: Component {
             
             let titleSubtitleSpacing: CGFloat = 1.0
             
-            let subtitleSize = self.subtitle.update(
-                transition: .immediate,
-                component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: environment.strings.SendStarReactions_SubtitleFrom(currentMyPeer.compactDisplayTitle).string, font: Font.regular(12.0), textColor: environment.theme.list.itemSecondaryTextColor))
-                )),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width - leftButtonFrame.maxX * 2.0, height: 100.0)
-            )
-                
+            let subtitleText: String?
+            switch component.initialData.subjectInitialData {
+            case let .react(reactData):
+                let currentMyPeer = self.currentMyPeer ?? reactData.myPeer
+                subtitleText = environment.strings.SendStarReactions_SubtitleFrom(currentMyPeer.compactDisplayTitle).string
+            case .suggestPost:
+                subtitleText = nil
+            }
+            
+            var subtitleSize: CGSize?
+            if let subtitleText {
+                subtitleSize = self.subtitle.update(
+                    transition: .immediate,
+                    component: AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: subtitleText, font: Font.regular(12.0), textColor: environment.theme.list.itemSecondaryTextColor))
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - (leftButtonFrameValue?.maxX ?? sideInset) * 2.0, height: 100.0)
+                )
+            }
+            
+            let titleText: String
+            switch component.initialData.subjectInitialData {
+            case .react:
+                titleText = environment.strings.SendStarReactions_Title
+            case .suggestPost:
+                //TODO:localize
+                titleText = "Suggest a Message"
+            }
+            
             let titleSize = title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: environment.strings.SendStarReactions_Title, font: Font.semibold(17.0), textColor: environment.theme.list.itemPrimaryTextColor))
+                    text: .plain(NSAttributedString(string: titleText, font: Font.semibold(17.0), textColor: environment.theme.list.itemPrimaryTextColor))
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - leftButtonFrame.maxX * 2.0, height: 100.0)
+                containerSize: CGSize(width: availableSize.width - (leftButtonFrameValue?.maxX ?? sideInset) * 2.0, height: 100.0)
             )
             
-            let titleSubtitleHeight = titleSize.height + titleSubtitleSpacing + subtitleSize.height
+            let titleSubtitleHeight: CGFloat
+            if let subtitleSize {
+                titleSubtitleHeight = titleSize.height + titleSubtitleSpacing + subtitleSize.height
+            } else {
+                titleSubtitleHeight = titleSize.height
+            }
             
             let titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5), y: floor((56.0 - titleSubtitleHeight) * 0.5)), size: titleSize)
             if let titleView = title.view {
@@ -1844,24 +1888,32 @@ private final class ChatSendStarsScreenComponent: Component {
                 transition.setFrame(view: titleView, frame: titleFrame)
             }
             
-            let subtitleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - subtitleSize.width) * 0.5), y: titleFrame.maxY + titleSubtitleSpacing), size: subtitleSize)
-            if let subtitleView = subtitle.view {
-                if subtitleView.superview == nil {
-                    self.navigationBarContainer.addSubview(subtitleView)
+            if let subtitleSize {
+                let subtitleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - subtitleSize.width) * 0.5), y: titleFrame.maxY + titleSubtitleSpacing), size: subtitleSize)
+                if let subtitleView = self.subtitle.view {
+                    if subtitleView.superview == nil {
+                        self.navigationBarContainer.addSubview(subtitleView)
+                    }
+                    transition.setFrame(view: subtitleView, frame: subtitleFrame)
                 }
-                transition.setFrame(view: subtitleView, frame: subtitleFrame)
             }
-                
+            
             contentHeight += 56.0
             contentHeight += 8.0
             
             let text: String
-            if let currentSentAmount = component.currentSentAmount {
-                text = environment.strings.SendStarReactions_TextSentStars(Int32(currentSentAmount))
-            } else {
-                text = environment.strings.SendStarReactions_TextGeneric(component.peer.debugDisplayTitle).string
+            switch component.initialData.subjectInitialData {
+            case let .react(reactData):
+                if let currentSentAmount = reactData.currentSentAmount {
+                    text = environment.strings.SendStarReactions_TextSentStars(Int32(currentSentAmount))
+                } else {
+                    text = environment.strings.SendStarReactions_TextGeneric(reactData.peer.debugDisplayTitle).string
+                }
+            case let .suggestPost(suggestPostData):
+                //TODO:localize
+                text = "Choose how many stars you want to offer **\(suggestPostData.peer.compactDisplayTitle)** to publish this message."
             }
-                
+            
             let body = MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.itemPrimaryTextColor)
             let bold = MarkdownAttributeSet(font: Font.semibold(15.0), textColor: environment.theme.list.itemPrimaryTextColor)
             
@@ -1875,7 +1927,8 @@ private final class ChatSendStarsScreenComponent: Component {
                         linkAttribute: { _ in nil }
                     )),
                     horizontalAlignment: .center,
-                    maximumNumberOfLines: 0
+                    maximumNumberOfLines: 0,
+                    lineSpacing: 0.2
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - 16.0 * 2.0, height: 1000.0)
@@ -1887,262 +1940,292 @@ private final class ChatSendStarsScreenComponent: Component {
                 }
                 transition.setFrame(view: descriptionTextView, frame: descriptionTextFrame)
             }
-                
+            
             contentHeight += descriptionTextFrame.height
             contentHeight += 22.0
             contentHeight += 2.0
             
-            if !component.topPeers.isEmpty {
+            if case .suggestPost = component.initialData.subjectInitialData {
                 contentHeight += 3.0
                 
-                let topPeersLeftSeparator: SimpleLayer
-                if let current = self.topPeersLeftSeparator {
-                    topPeersLeftSeparator = current
-                } else {
-                    topPeersLeftSeparator = SimpleLayer()
-                    self.topPeersLeftSeparator = topPeersLeftSeparator
-                    self.scrollContentView.layer.addSublayer(topPeersLeftSeparator)
-                }
-                
-                let topPeersRightSeparator: SimpleLayer
-                if let current = self.topPeersRightSeparator {
-                    topPeersRightSeparator = current
-                } else {
-                    topPeersRightSeparator = SimpleLayer()
-                    self.topPeersRightSeparator = topPeersRightSeparator
-                    self.scrollContentView.layer.addSublayer(topPeersRightSeparator)
-                }
-                
-                let topPeersTitleBackground: SimpleLayer
-                if let current = self.topPeersTitleBackground {
-                    topPeersTitleBackground = current
-                } else {
-                    topPeersTitleBackground = SimpleLayer()
-                    self.topPeersTitleBackground = topPeersTitleBackground
-                    self.scrollContentView.layer.addSublayer(topPeersTitleBackground)
-                }
-                
-                let topPeersTitle: ComponentView<Empty>
-                if let current = self.topPeersTitle {
-                    topPeersTitle = current
-                } else {
-                    topPeersTitle = ComponentView()
-                    self.topPeersTitle = topPeersTitle
-                }
-                
-                topPeersLeftSeparator.backgroundColor = environment.theme.list.itemPlainSeparatorColor.cgColor
-                topPeersRightSeparator.backgroundColor = environment.theme.list.itemPlainSeparatorColor.cgColor
-                
-                let topPeersTitleSize = topPeersTitle.update(
-                    transition: .immediate,
-                    component: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: environment.strings.SendStarReactions_SectionTop, font: Font.semibold(15.0), textColor: .white))
+                let timeSelectorButtonSize = self.timeSelectorButton.update(
+                    transition: transition,
+                    component: AnyComponent(TimeSelectorBadgeComponent(
+                        context: component.context,
+                        theme: environment.theme,
+                        strings: environment.strings,
+                        timestamp: self.currentSuggestPostTimestamp,
+                        action: { [weak self] sourceView in
+                            guard let self else {
+                                return
+                            }
+                            self.displaySuggestTimeSelectionMenu(sourceView: sourceView)
+                        }
                     )),
                     environment: {},
-                    containerSize: CGSize(width: 300.0, height: 100.0)
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
                 )
-                let topPeersBackgroundSize = CGSize(width: topPeersTitleSize.width + 16.0 * 2.0, height: topPeersTitleSize.height + 9.0 * 2.0)
-                let topPeersBackgroundFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - topPeersBackgroundSize.width) * 0.5), y: contentHeight), size: topPeersBackgroundSize)
-                
-                topPeersTitleBackground.backgroundColor = UIColor(rgb: 0xFFB10D).cgColor
-                topPeersTitleBackground.cornerRadius = topPeersBackgroundFrame.height * 0.5
-                transition.setFrame(layer: topPeersTitleBackground, frame: topPeersBackgroundFrame)
-                
-                let topPeersTitleFrame = CGRect(origin: CGPoint(x: topPeersBackgroundFrame.minX + floor((topPeersBackgroundFrame.width - topPeersTitleSize.width) * 0.5), y: topPeersBackgroundFrame.minY + floor((topPeersBackgroundFrame.height - topPeersTitleSize.height) * 0.5)), size: topPeersTitleSize)
-                if let topPeersTitleView = topPeersTitle.view {
-                    if topPeersTitleView.superview == nil {
-                        self.scrollContentView.addSubview(topPeersTitleView)
+                let timeSelectorButtonFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - timeSelectorButtonSize.width) * 0.5), y: contentHeight), size: timeSelectorButtonSize)
+                if let timeSelectorButtonView = self.timeSelectorButton.view {
+                    if timeSelectorButtonView.superview == nil {
+                        self.navigationBarContainer.addSubview(timeSelectorButtonView)
                     }
-                    transition.setFrame(view: topPeersTitleView, frame: topPeersTitleFrame)
+                    transition.setFrame(view: timeSelectorButtonView, frame: timeSelectorButtonFrame)
                 }
+                contentHeight += timeSelectorButtonSize.height
                 
-                let separatorY = topPeersBackgroundFrame.midY
-                let separatorSpacing: CGFloat = 10.0
-                transition.setFrame(layer: topPeersLeftSeparator, frame: CGRect(origin: CGPoint(x: sideInset, y: separatorY), size: CGSize(width: max(0.0, topPeersBackgroundFrame.minX - separatorSpacing - sideInset), height: UIScreenPixel)))
-                transition.setFrame(layer: topPeersRightSeparator, frame: CGRect(origin: CGPoint(x: topPeersBackgroundFrame.maxX + separatorSpacing, y: separatorY), size: CGSize(width: max(0.0, availableSize.width - sideInset - (topPeersBackgroundFrame.maxX + separatorSpacing)), height: UIScreenPixel)))
-                
-                var mappedTopPeers = component.topPeers
-                if let index = mappedTopPeers.firstIndex(where: { $0.isMy }) {
-                    mappedTopPeers.remove(at: index)
-                }
-                
-                var myCount = 0
-                if let myTopPeer = component.myTopPeer {
-                    myCount += myTopPeer.count
-                }
-                var myCountAddition = 0
-                if self.didChangeAmount {
-                    myCountAddition = Int(self.amount.realValue)
-                }
-                myCount += myCountAddition
-                if myCount != 0 {
-                    var topPeer: EnginePeer?
-                    switch self.privacyPeer {
-                    case .anonymous:
-                        topPeer = nil
-                    case .account:
-                        topPeer = component.myPeer
-                    case let .peer(peer):
-                        topPeer = peer
-                    }
-                    
-                    mappedTopPeers.append(ChatSendStarsScreen.TopPeer(
-                        randomIndex: -1,
-                        peer: topPeer,
-                        isMy: true,
-                        count: myCount
-                    ))
-                }
-                mappedTopPeers.sort(by: { $0.count > $1.count })
-                if mappedTopPeers.count > 3 {
-                    mappedTopPeers = Array(mappedTopPeers.prefix(3))
-                }
-                
-                var animateItems = false
-                var itemPositionTransition = transition
-                var itemAlphaTransition = transition
-                if transition.userData(IsAdjustingAmountHint.self) != nil {
-                    animateItems = true
-                    itemPositionTransition = .spring(duration: 0.3)
-                    itemAlphaTransition = .easeInOut(duration: 0.15)
-                }
-                
-                var validIds: [ChatSendStarsScreen.TopPeer.Id] = []
-                var items: [(itemView: ComponentView<Empty>, size: CGSize)] = []
-                for topPeer in mappedTopPeers {
-                    validIds.append(topPeer.id)
-                    
-                    let itemView: ComponentView<Empty>
-                    if let current = self.topPeerItems[topPeer.id] {
-                        itemView = current
-                    } else {
-                        itemView = ComponentView()
-                        self.topPeerItems[topPeer.id] = itemView
-                    }
-                    
-                    let itemCountString = presentationStringsFormattedNumber(Int32(topPeer.count), environment.dateTimeFormat.groupingSeparator)
-                    /*if topPeer.isMy && myCountAddition != 0 && topPeer.count > myCountAddition {
-                        itemCountString = "\(topPeer.count - myCountAddition) +\(myCountAddition)"
-                    }*/
-                    
-                    let itemSize = itemView.update(
-                        transition: .immediate,
-                        component: AnyComponent(PlainButtonComponent(
-                            content: AnyComponent(PeerComponent(
-                                context: component.context,
-                                theme: environment.theme,
-                                strings: environment.strings,
-                                peer: topPeer.peer,
-                                count: itemCountString
-                            )),
-                            effectAlignment: .center,
-                            action: { [weak self] in
-                                guard let self, let component = self.component, let peer = topPeer.peer else {
-                                    return
-                                }
-                                guard let controller = self.environment?.controller() else {
-                                    return
-                                }
-                                guard let navigationController = controller.navigationController as? NavigationController else {
-                                    return
-                                }
-                                var viewControllers = navigationController.viewControllers
-                                guard let index = viewControllers.firstIndex(where: { $0 === controller }) else {
-                                    return
-                                }
-                                
-                                let context = component.context
-                                
-                                if case .user = peer {
-                                    if let peerInfoController = context.sharedContext.makePeerInfoController(
-                                        context: context,
-                                        updatedPresentationData: nil,
-                                        peer: peer._asPeer(),
-                                        mode: .generic,
-                                        avatarInitiallyExpanded: false,
-                                        fromChat: false,
-                                        requestsContext: nil
-                                    ) {
-                                        viewControllers.insert(peerInfoController, at: index)
-                                    }
-                                } else {
-                                    let chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
-                                    viewControllers.insert(chatController, at: index)
-                                }
-                                navigationController.setViewControllers(viewControllers, animated: true)
-                                controller.dismiss()
-                            },
-                            isEnabled: topPeer.peer != nil && topPeer.peer?.id != component.context.account.peerId,
-                            animateAlpha: false
-                        )),
-                        environment: {},
-                        containerSize: CGSize(width: 200.0, height: 200.0)
-                    )
-                    items.append((itemView, itemSize))
-                }
-                var removedIds: [ChatSendStarsScreen.TopPeer.Id] = []
-                for (id, itemView) in self.topPeerItems {
-                    if !validIds.contains(id) {
-                        removedIds.append(id)
-                        
-                        if animateItems {
-                            if let itemComponentView = itemView.view {
-                                itemPositionTransition.setScale(view: itemComponentView, scale: 0.001)
-                                itemAlphaTransition.setAlpha(view: itemComponentView, alpha: 0.0, completion: { [weak itemComponentView] _ in
-                                    itemComponentView?.removeFromSuperview()
-                                })
-                            }
-                        } else {
-                            itemView.view?.removeFromSuperview()
-                        }
-                    }
-                }
-                for id in removedIds {
-                    self.topPeerItems.removeValue(forKey: id)
-                }
-                
-                var itemsWidth: CGFloat = 0.0
-                for (_, itemSize) in items {
-                    itemsWidth += itemSize.width
-                }
-                
-                let maxItemSpacing = 48.0
-                var itemSpacing = floor((availableSize.width - itemsWidth) / CGFloat(items.count + 1))
-                itemSpacing = min(itemSpacing, maxItemSpacing)
-                
-                let totalWidth = itemsWidth + itemSpacing * CGFloat(items.count + 1)
-                var itemX: CGFloat = floor((availableSize.width - totalWidth) * 0.5) + itemSpacing
-                for (itemView, itemSize) in items {
-                    if let itemComponentView = itemView.view {
-                        var animateItem = animateItems
-                        if itemComponentView.superview == nil {
-                            self.scrollContentView.addSubview(itemComponentView)
-                            animateItem = false
-                            ComponentTransition.immediate.setScale(view: itemComponentView, scale: 0.001)
-                            itemComponentView.alpha = 0.0
-                        }
-                        
-                        let itemFrame = CGRect(origin: CGPoint(x: itemX, y: contentHeight + 56.0), size: itemSize)
-                        
-                        if animateItem {
-                            itemPositionTransition.setPosition(view: itemComponentView, position: itemFrame.center)
-                            itemPositionTransition.setBounds(view: itemComponentView, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
-                        } else {
-                            itemComponentView.center = itemFrame.center
-                            itemComponentView.bounds = CGRect(origin: CGPoint(), size: itemFrame.size)
-                        }
-                        
-                        itemPositionTransition.setScale(view: itemComponentView, scale: 1.0)
-                        itemAlphaTransition.setAlpha(view: itemComponentView, alpha: 1.0)
-                    }
-                    itemX += itemSize.width + itemSpacing
-                }
-                
-                contentHeight += 161.0
+                contentHeight += 32.0
             }
             
-            do {
-                if !component.topPeers.isEmpty {
+            switch component.initialData.subjectInitialData {
+            case let .react(reactData):
+                if !reactData.topPeers.isEmpty {
+                    contentHeight += 3.0
+                    
+                    let topPeersLeftSeparator: SimpleLayer
+                    if let current = self.topPeersLeftSeparator {
+                        topPeersLeftSeparator = current
+                    } else {
+                        topPeersLeftSeparator = SimpleLayer()
+                        self.topPeersLeftSeparator = topPeersLeftSeparator
+                        self.scrollContentView.layer.addSublayer(topPeersLeftSeparator)
+                    }
+                    
+                    let topPeersRightSeparator: SimpleLayer
+                    if let current = self.topPeersRightSeparator {
+                        topPeersRightSeparator = current
+                    } else {
+                        topPeersRightSeparator = SimpleLayer()
+                        self.topPeersRightSeparator = topPeersRightSeparator
+                        self.scrollContentView.layer.addSublayer(topPeersRightSeparator)
+                    }
+                    
+                    let topPeersTitleBackground: SimpleLayer
+                    if let current = self.topPeersTitleBackground {
+                        topPeersTitleBackground = current
+                    } else {
+                        topPeersTitleBackground = SimpleLayer()
+                        self.topPeersTitleBackground = topPeersTitleBackground
+                        self.scrollContentView.layer.addSublayer(topPeersTitleBackground)
+                    }
+                    
+                    let topPeersTitle: ComponentView<Empty>
+                    if let current = self.topPeersTitle {
+                        topPeersTitle = current
+                    } else {
+                        topPeersTitle = ComponentView()
+                        self.topPeersTitle = topPeersTitle
+                    }
+                    
+                    topPeersLeftSeparator.backgroundColor = environment.theme.list.itemPlainSeparatorColor.cgColor
+                    topPeersRightSeparator.backgroundColor = environment.theme.list.itemPlainSeparatorColor.cgColor
+                    
+                    let topPeersTitleSize = topPeersTitle.update(
+                        transition: .immediate,
+                        component: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(string: environment.strings.SendStarReactions_SectionTop, font: Font.semibold(15.0), textColor: .white))
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: 300.0, height: 100.0)
+                    )
+                    let topPeersBackgroundSize = CGSize(width: topPeersTitleSize.width + 16.0 * 2.0, height: topPeersTitleSize.height + 9.0 * 2.0)
+                    let topPeersBackgroundFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - topPeersBackgroundSize.width) * 0.5), y: contentHeight), size: topPeersBackgroundSize)
+                    
+                    topPeersTitleBackground.backgroundColor = UIColor(rgb: 0xFFB10D).cgColor
+                    topPeersTitleBackground.cornerRadius = topPeersBackgroundFrame.height * 0.5
+                    transition.setFrame(layer: topPeersTitleBackground, frame: topPeersBackgroundFrame)
+                    
+                    let topPeersTitleFrame = CGRect(origin: CGPoint(x: topPeersBackgroundFrame.minX + floor((topPeersBackgroundFrame.width - topPeersTitleSize.width) * 0.5), y: topPeersBackgroundFrame.minY + floor((topPeersBackgroundFrame.height - topPeersTitleSize.height) * 0.5)), size: topPeersTitleSize)
+                    if let topPeersTitleView = topPeersTitle.view {
+                        if topPeersTitleView.superview == nil {
+                            self.scrollContentView.addSubview(topPeersTitleView)
+                        }
+                        transition.setFrame(view: topPeersTitleView, frame: topPeersTitleFrame)
+                    }
+                    
+                    let separatorY = topPeersBackgroundFrame.midY
+                    let separatorSpacing: CGFloat = 10.0
+                    transition.setFrame(layer: topPeersLeftSeparator, frame: CGRect(origin: CGPoint(x: sideInset, y: separatorY), size: CGSize(width: max(0.0, topPeersBackgroundFrame.minX - separatorSpacing - sideInset), height: UIScreenPixel)))
+                    transition.setFrame(layer: topPeersRightSeparator, frame: CGRect(origin: CGPoint(x: topPeersBackgroundFrame.maxX + separatorSpacing, y: separatorY), size: CGSize(width: max(0.0, availableSize.width - sideInset - (topPeersBackgroundFrame.maxX + separatorSpacing)), height: UIScreenPixel)))
+                    
+                    var mappedTopPeers = reactData.topPeers
+                    if let index = mappedTopPeers.firstIndex(where: { $0.isMy }) {
+                        mappedTopPeers.remove(at: index)
+                    }
+                    
+                    var myCount = 0
+                    if let myTopPeer = reactData.myTopPeer {
+                        myCount += myTopPeer.count
+                    }
+                    var myCountAddition = 0
+                    if self.didChangeAmount {
+                        myCountAddition = Int(self.amount.realValue)
+                    }
+                    myCount += myCountAddition
+                    if myCount != 0 {
+                        var topPeer: EnginePeer?
+                        switch self.privacyPeer {
+                        case .anonymous:
+                            topPeer = nil
+                        case .account:
+                            topPeer = reactData.myPeer
+                        case let .peer(peer):
+                            topPeer = peer
+                        }
+                        
+                        mappedTopPeers.append(ChatSendStarsScreen.TopPeer(
+                            randomIndex: -1,
+                            peer: topPeer,
+                            isMy: true,
+                            count: myCount
+                        ))
+                    }
+                    mappedTopPeers.sort(by: { $0.count > $1.count })
+                    if mappedTopPeers.count > 3 {
+                        mappedTopPeers = Array(mappedTopPeers.prefix(3))
+                    }
+                    
+                    var animateItems = false
+                    var itemPositionTransition = transition
+                    var itemAlphaTransition = transition
+                    if transition.userData(IsAdjustingAmountHint.self) != nil {
+                        animateItems = true
+                        itemPositionTransition = .spring(duration: 0.3)
+                        itemAlphaTransition = .easeInOut(duration: 0.15)
+                    }
+                    
+                    var validIds: [ChatSendStarsScreen.TopPeer.Id] = []
+                    var items: [(itemView: ComponentView<Empty>, size: CGSize)] = []
+                    for topPeer in mappedTopPeers {
+                        validIds.append(topPeer.id)
+                        
+                        let itemView: ComponentView<Empty>
+                        if let current = self.topPeerItems[topPeer.id] {
+                            itemView = current
+                        } else {
+                            itemView = ComponentView()
+                            self.topPeerItems[topPeer.id] = itemView
+                        }
+                        
+                        let itemCountString = presentationStringsFormattedNumber(Int32(topPeer.count), environment.dateTimeFormat.groupingSeparator)
+                        
+                        let itemSize = itemView.update(
+                            transition: .immediate,
+                            component: AnyComponent(PlainButtonComponent(
+                                content: AnyComponent(PeerComponent(
+                                    context: component.context,
+                                    theme: environment.theme,
+                                    strings: environment.strings,
+                                    peer: topPeer.peer,
+                                    count: itemCountString
+                                )),
+                                effectAlignment: .center,
+                                action: { [weak self] in
+                                    guard let self, let component = self.component, let peer = topPeer.peer else {
+                                        return
+                                    }
+                                    guard let controller = self.environment?.controller() else {
+                                        return
+                                    }
+                                    guard let navigationController = controller.navigationController as? NavigationController else {
+                                        return
+                                    }
+                                    var viewControllers = navigationController.viewControllers
+                                    guard let index = viewControllers.firstIndex(where: { $0 === controller }) else {
+                                        return
+                                    }
+                                    
+                                    let context = component.context
+                                    
+                                    if case .user = peer {
+                                        if let peerInfoController = context.sharedContext.makePeerInfoController(
+                                            context: context,
+                                            updatedPresentationData: nil,
+                                            peer: peer._asPeer(),
+                                            mode: .generic,
+                                            avatarInitiallyExpanded: false,
+                                            fromChat: false,
+                                            requestsContext: nil
+                                        ) {
+                                            viewControllers.insert(peerInfoController, at: index)
+                                        }
+                                    } else {
+                                        let chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
+                                        viewControllers.insert(chatController, at: index)
+                                    }
+                                    navigationController.setViewControllers(viewControllers, animated: true)
+                                    controller.dismiss()
+                                },
+                                isEnabled: topPeer.peer != nil && topPeer.peer?.id != component.context.account.peerId,
+                                animateAlpha: false
+                            )),
+                            environment: {},
+                            containerSize: CGSize(width: 200.0, height: 200.0)
+                        )
+                        items.append((itemView, itemSize))
+                    }
+                    var removedIds: [ChatSendStarsScreen.TopPeer.Id] = []
+                    for (id, itemView) in self.topPeerItems {
+                        if !validIds.contains(id) {
+                            removedIds.append(id)
+                            
+                            if animateItems {
+                                if let itemComponentView = itemView.view {
+                                    itemPositionTransition.setScale(view: itemComponentView, scale: 0.001)
+                                    itemAlphaTransition.setAlpha(view: itemComponentView, alpha: 0.0, completion: { [weak itemComponentView] _ in
+                                        itemComponentView?.removeFromSuperview()
+                                    })
+                                }
+                            } else {
+                                itemView.view?.removeFromSuperview()
+                            }
+                        }
+                    }
+                    for id in removedIds {
+                        self.topPeerItems.removeValue(forKey: id)
+                    }
+                    
+                    var itemsWidth: CGFloat = 0.0
+                    for (_, itemSize) in items {
+                        itemsWidth += itemSize.width
+                    }
+                    
+                    let maxItemSpacing = 48.0
+                    var itemSpacing = floor((availableSize.width - itemsWidth) / CGFloat(items.count + 1))
+                    itemSpacing = min(itemSpacing, maxItemSpacing)
+                    
+                    let totalWidth = itemsWidth + itemSpacing * CGFloat(items.count + 1)
+                    var itemX: CGFloat = floor((availableSize.width - totalWidth) * 0.5) + itemSpacing
+                    for (itemView, itemSize) in items {
+                        if let itemComponentView = itemView.view {
+                            var animateItem = animateItems
+                            if itemComponentView.superview == nil {
+                                self.scrollContentView.addSubview(itemComponentView)
+                                animateItem = false
+                                ComponentTransition.immediate.setScale(view: itemComponentView, scale: 0.001)
+                                itemComponentView.alpha = 0.0
+                            }
+                            
+                            let itemFrame = CGRect(origin: CGPoint(x: itemX, y: contentHeight + 56.0), size: itemSize)
+                            
+                            if animateItem {
+                                itemPositionTransition.setPosition(view: itemComponentView, position: itemFrame.center)
+                                itemPositionTransition.setBounds(view: itemComponentView, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
+                            } else {
+                                itemComponentView.center = itemFrame.center
+                                itemComponentView.bounds = CGRect(origin: CGPoint(), size: itemFrame.size)
+                            }
+                            
+                            itemPositionTransition.setScale(view: itemComponentView, scale: 1.0)
+                            itemAlphaTransition.setAlpha(view: itemComponentView, alpha: 1.0)
+                        }
+                        itemX += itemSize.width + itemSpacing
+                    }
+                    
+                    contentHeight += 161.0
+                }
+                
+                if !reactData.topPeers.isEmpty {
                     contentHeight += 2.0
                 }
                 
@@ -2163,7 +2246,7 @@ private final class ChatSendStarsScreenComponent: Component {
                 let anonymousContentsSize = self.anonymousContents.update(
                     transition: transition,
                     component: AnyComponent(PlainButtonComponent(
-                            content: AnyComponent(HStack([
+                        content: AnyComponent(HStack([
                             AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(CheckComponent(
                                 theme: checkTheme,
                                 selected: self.privacyPeer != .anonymous
@@ -2171,9 +2254,7 @@ private final class ChatSendStarsScreenComponent: Component {
                             AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
                                 text: .plain(NSAttributedString(string: environment.strings.SendStarReactions_ShowMyselfInTop, font: Font.regular(16.0), textColor: environment.theme.list.itemPrimaryTextColor))
                             )))
-                            ],
-                            spacing: 10.0
-                        )),
+                        ], spacing: 10.0)),
                         effectAlignment: .center,
                         action: { [weak self] in
                             guard let self, let component = self.component else {
@@ -2194,7 +2275,7 @@ private final class ChatSendStarsScreenComponent: Component {
                             }
                             self.state?.updated(transition: .easeInOut(duration: 0.2))
                             
-                            if component.myTopPeer != nil {
+                            if reactData.myTopPeer != nil {
                                 let mappedPrivacy: TelegramPaidReactionPrivacy
                                 switch self.privacyPeer {
                                 case .account:
@@ -2205,7 +2286,7 @@ private final class ChatSendStarsScreenComponent: Component {
                                     mappedPrivacy = .peer(peer.id)
                                 }
                                 
-                                let _ = component.context.engine.messages.updateStarsReactionPrivacy(id: component.messageId, privacy: mappedPrivacy).startStandalone()
+                                let _ = component.context.engine.messages.updateStarsReactionPrivacy(id: reactData.messageId, privacy: mappedPrivacy).startStandalone()
                             }
                         },
                         animateAlpha: false,
@@ -2228,6 +2309,8 @@ private final class ChatSendStarsScreenComponent: Component {
                 }
                 
                 contentHeight += anonymousContentsSize.height + 27.0
+            case .suggestPost:
+                break
             }
             
             initialContentHeight = contentHeight
@@ -2236,7 +2319,13 @@ private final class ChatSendStarsScreenComponent: Component {
                 self.cachedStarImage = (generateTintedImage(image: UIImage(bundleImageName: "Item List/PremiumIcon"), color: .white)!, environment.theme)
             }
             
-            let buttonString = environment.strings.SendStarReactions_SendButtonTitle("\(self.amount.realValue)").string
+            let buttonString: String
+            switch component.initialData.subjectInitialData {
+            case .react:
+                buttonString = environment.strings.SendStarReactions_SendButtonTitle("\(self.amount.realValue)").string
+            case .suggestPost:
+                buttonString = "Offer  # \(self.amount.realValue)"
+            }
             let buttonAttributedString = NSMutableAttributedString(string: buttonString, font: Font.semibold(17.0), textColor: .white, paragraphAlignment: .center)
             if let range = buttonAttributedString.string.range(of: "#"), let starImage = self.cachedStarImage?.0 {
                 buttonAttributedString.addAttribute(.attachment, value: starImage, range: NSRange(range, in: buttonAttributedString.string))
@@ -2278,7 +2367,16 @@ private final class ChatSendStarsScreenComponent: Component {
                                     return
                                 }
                                 
-                                let purchaseScreen = component.context.sharedContext.makeStarsPurchaseScreen(context: component.context, starsContext: starsContext, options: options, purpose: .reactions(peerId: component.peer.id, requiredStars: Int64(self.amount.realValue)), completion: { result in
+                                let purchasePurpose: StarsPurchasePurpose
+                                switch component.initialData.subjectInitialData {
+                                case let .react(reactData):
+                                    purchasePurpose = .reactions(peerId: reactData.peer.id, requiredStars: Int64(self.amount.realValue))
+                                case let .suggestPost(suggestPost):
+                                    //TODO:release
+                                    purchasePurpose = .reactions(peerId: suggestPost.peer.id, requiredStars: Int64(self.amount.realValue))
+                                }
+                                
+                                let purchaseScreen = component.context.sharedContext.makeStarsPurchaseScreen(context: component.context, starsContext: starsContext, options: options, purpose: purchasePurpose, completion: { result in
                                     let _ = result
                                     //TODO:release
                                 })
@@ -2309,14 +2407,19 @@ private final class ChatSendStarsScreenComponent: Component {
                             mappedPrivacy = .peer(peer.id)
                         }
                         
-                        component.completion(
-                            Int64(self.amount.realValue),
-                            mappedPrivacy,
-                            isBecomingTop,
-                            ChatSendStarsScreen.TransitionOut(
-                                sourceView: badgeView.badgeIcon
+                        switch component.initialData.subjectInitialData {
+                        case let .react(reactData):
+                            reactData.completion(
+                                Int64(self.amount.realValue),
+                                mappedPrivacy,
+                                isBecomingTop,
+                                ChatSendStarsScreen.TransitionOut(
+                                    sourceView: badgeView.badgeIcon
+                                )
                             )
-                        )
+                        case let .suggestPost(suggestPostData):
+                            suggestPostData.completion(Int64(self.amount.realValue), self.currentSuggestPostTimestamp)
+                        }
                         self.environment?.controller()?.dismiss()
                     }
                 )),
@@ -2324,40 +2427,48 @@ private final class ChatSendStarsScreenComponent: Component {
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 50.0)
             )
             
-            let buttonDescriptionTextSize = self.buttonDescriptionText.update(
-                transition: .immediate,
-                component: AnyComponent(MultilineTextComponent(
-                    text: .markdown(text: environment.strings.SendStarReactions_TermsOfServiceFooter, attributes: MarkdownAttributes(
-                        body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemSecondaryTextColor),
-                        bold: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: environment.theme.list.itemSecondaryTextColor),
-                        link: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemAccentColor),
-                        linkAttribute: { contents in
-                            return (TelegramTextAttributes.URL, contents)
+            var buttonDescriptionTextSize: CGSize?
+            if case .react = component.initialData.subjectInitialData {
+                buttonDescriptionTextSize = self.buttonDescriptionText.update(
+                    transition: .immediate,
+                    component: AnyComponent(MultilineTextComponent(
+                        text: .markdown(text: environment.strings.SendStarReactions_TermsOfServiceFooter, attributes: MarkdownAttributes(
+                            body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemSecondaryTextColor),
+                            bold: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: environment.theme.list.itemSecondaryTextColor),
+                            link: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemAccentColor),
+                            linkAttribute: { contents in
+                                return (TelegramTextAttributes.URL, contents)
+                            }
+                        )),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 0,
+                        highlightColor: environment.theme.list.itemAccentColor.withAlphaComponent(0.2),
+                        highlightAction: { attributes in
+                            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                                return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+                            } else {
+                                return nil
+                            }
+                        },
+                        tapAction: { [weak self] attributes, _ in
+                            if let controller = self?.environment?.controller(), let navigationController = controller.navigationController as? NavigationController, let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
+                                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                                component.context.sharedContext.openExternalUrl(context: component.context, urlContext: .generic, url: url, forceExternal: false, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
+                            }
                         }
                     )),
-                    horizontalAlignment: .center,
-                    maximumNumberOfLines: 0,
-                    highlightColor: environment.theme.list.itemAccentColor.withAlphaComponent(0.2),
-                    highlightAction: { attributes in
-                        if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
-                            return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
-                        } else {
-                            return nil
-                        }
-                    },
-                    tapAction: { [weak self] attributes, _ in
-                        if let controller = self?.environment?.controller(), let navigationController = controller.navigationController as? NavigationController, let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
-                            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                            component.context.sharedContext.openExternalUrl(context: component.context, urlContext: .generic, url: url, forceExternal: false, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
-                        }
-                    }
-                )),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset, height: 1000.0)
-            )
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset, height: 1000.0)
+                )
+            }
             let buttonDescriptionSpacing: CGFloat = 14.0
             
-            let bottomPanelHeight = 13.0 + environment.safeInsets.bottom + actionButtonSize.height + buttonDescriptionSpacing + buttonDescriptionTextSize.height
+            var bottomPanelHeight = 13.0 + environment.safeInsets.bottom + actionButtonSize.height
+            if let buttonDescriptionTextSize {
+                bottomPanelHeight += buttonDescriptionSpacing + buttonDescriptionTextSize.height
+            } else {
+                bottomPanelHeight -= 1.0
+            }
             let actionButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: availableSize.height - bottomPanelHeight), size: actionButtonSize)
             if let actionButtonView = actionButton.view {
                 if actionButtonView.superview == nil {
@@ -2366,12 +2477,14 @@ private final class ChatSendStarsScreenComponent: Component {
                 transition.setFrame(view: actionButtonView, frame: actionButtonFrame)
             }
             
-            let buttonDescriptionTextFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - buttonDescriptionTextSize.width) * 0.5), y: actionButtonFrame.maxY + buttonDescriptionSpacing), size: buttonDescriptionTextSize)
-            if let buttonDescriptionTextView = buttonDescriptionText.view {
-                if buttonDescriptionTextView.superview == nil {
-                    self.addSubview(buttonDescriptionTextView)
+            if let buttonDescriptionTextSize {
+                let buttonDescriptionTextFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - buttonDescriptionTextSize.width) * 0.5), y: actionButtonFrame.maxY + buttonDescriptionSpacing), size: buttonDescriptionTextSize)
+                if let buttonDescriptionTextView = buttonDescriptionText.view {
+                    if buttonDescriptionTextView.superview == nil {
+                        self.addSubview(buttonDescriptionTextView)
+                    }
+                    transition.setFrame(view: buttonDescriptionTextView, frame: buttonDescriptionTextFrame)
                 }
-                transition.setFrame(view: buttonDescriptionTextView, frame: buttonDescriptionTextFrame)
             }
             
             contentHeight += bottomPanelHeight
@@ -2422,37 +2535,61 @@ private final class ChatSendStarsScreenComponent: Component {
 }
 
 public class ChatSendStarsScreen: ViewControllerComponentContainer {
+    fileprivate enum SubjectInitialData {
+        final class React {
+            let peer: EnginePeer
+            let myPeer: EnginePeer
+            let defaultPrivacyPeer: ChatSendStarsScreenComponent.PrivacyPeer
+            let channelsForPublicReaction: [EnginePeer]
+            let messageId: EngineMessage.Id
+            let currentSentAmount: Int?
+            let topPeers: [ChatSendStarsScreen.TopPeer]
+            let myTopPeer: ChatSendStarsScreen.TopPeer?
+            let maxAmount: Int
+            let completion: (Int64, TelegramPaidReactionPrivacy, Bool, ChatSendStarsScreen.TransitionOut) -> Void
+            
+            init(peer: EnginePeer, myPeer: EnginePeer, defaultPrivacyPeer: ChatSendStarsScreenComponent.PrivacyPeer, channelsForPublicReaction: [EnginePeer], messageId: EngineMessage.Id, currentSentAmount: Int?, topPeers: [ChatSendStarsScreen.TopPeer], myTopPeer: ChatSendStarsScreen.TopPeer?, maxAmount: Int, completion: @escaping (Int64, TelegramPaidReactionPrivacy, Bool, ChatSendStarsScreen.TransitionOut) -> Void) {
+                self.peer = peer
+                self.myPeer = myPeer
+                self.defaultPrivacyPeer = defaultPrivacyPeer
+                self.channelsForPublicReaction = channelsForPublicReaction
+                self.messageId = messageId
+                self.currentSentAmount = currentSentAmount
+                self.topPeers = topPeers
+                self.myTopPeer = myTopPeer
+                self.maxAmount = maxAmount
+                self.completion = completion
+            }
+        }
+        
+        class SuggestPost {
+            let peer: EnginePeer
+            let initialTimestamp: Int32?
+            let maxAmount: Int
+            let completion: (Int64, Int32?) -> Void
+            
+            init(peer: EnginePeer, initialTimestamp: Int32?, maxAmount: Int, completion: @escaping (Int64, Int32?) -> Void) {
+                self.peer = peer
+                self.initialTimestamp = initialTimestamp
+                self.maxAmount = maxAmount
+                self.completion = completion
+            }
+        }
+        
+        case react(React)
+        case suggestPost(SuggestPost)
+    }
+    
     public final class InitialData {
-        fileprivate let peer: EnginePeer
-        fileprivate let myPeer: EnginePeer
-        fileprivate let defaultPrivacyPeer: ChatSendStarsScreenComponent.PrivacyPeer
-        fileprivate let channelsForPublicReaction: [EnginePeer]
-        fileprivate let messageId: EngineMessage.Id
+        fileprivate let subjectInitialData: SubjectInitialData
         fileprivate let balance: StarsAmount?
-        fileprivate let currentSentAmount: Int?
-        fileprivate let topPeers: [ChatSendStarsScreen.TopPeer]
-        fileprivate let myTopPeer: ChatSendStarsScreen.TopPeer?
         
         fileprivate init(
-            peer: EnginePeer,
-            myPeer: EnginePeer,
-            defaultPrivacyPeer: ChatSendStarsScreenComponent.PrivacyPeer,
-            channelsForPublicReaction: [EnginePeer],
-            messageId: EngineMessage.Id,
-            balance: StarsAmount?,
-            currentSentAmount: Int?,
-            topPeers: [ChatSendStarsScreen.TopPeer],
-            myTopPeer: ChatSendStarsScreen.TopPeer?
+            subjectInitialData: SubjectInitialData,
+            balance: StarsAmount?
         ) {
-            self.peer = peer
-            self.myPeer = myPeer
-            self.defaultPrivacyPeer = defaultPrivacyPeer
-            self.channelsForPublicReaction = channelsForPublicReaction
-            self.messageId = messageId
+            self.subjectInitialData = subjectInitialData
             self.balance = balance
-            self.currentSentAmount = currentSentAmount
-            self.topPeers = topPeers
-            self.myTopPeer = myTopPeer
         }
     }
     
@@ -2521,27 +2658,12 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
     
     private var presenceDisposable: Disposable?
     
-    public init(context: AccountContext, initialData: InitialData, completion: @escaping (Int64, TelegramPaidReactionPrivacy, Bool, TransitionOut) -> Void) {
+    public init(context: AccountContext, initialData: InitialData) {
         self.context = context
-        
-        var maxAmount = 2500
-        if let data = context.currentAppConfiguration.with({ $0 }).data, let value = data["stars_paid_reaction_amount_max"] as? Double {
-            maxAmount = Int(value)
-        }
         
         super.init(context: context, component: ChatSendStarsScreenComponent(
             context: context,
-            peer: initialData.peer,
-            myPeer: initialData.myPeer,
-            defaultPrivacyPeer: initialData.defaultPrivacyPeer,
-            channelsForPublicReaction: initialData.channelsForPublicReaction,
-            messageId: initialData.messageId,
-            maxAmount: maxAmount,
-            balance: initialData.balance,
-            currentSentAmount: initialData.currentSentAmount,
-            topPeers: initialData.topPeers,
-            myTopPeer: initialData.myTopPeer,
-            completion: completion
+            initialData: initialData
         ), navigationBarAppearance: .none)
         
         self.statusBar.statusBarStyle = .Ignore
@@ -2571,7 +2693,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
         }
     }
     
-    public static func initialData(context: AccountContext, peerId: EnginePeer.Id, messageId: EngineMessage.Id, topPeers: [ReactionsMessageAttribute.TopPeer]) -> Signal<InitialData?, NoError> {
+    public static func initialData(context: AccountContext, peerId: EnginePeer.Id, messageId: EngineMessage.Id, topPeers: [ReactionsMessageAttribute.TopPeer], completion: @escaping (Int64, TelegramPaidReactionPrivacy, Bool, TransitionOut) -> Void) -> Signal<InitialData?, NoError> {
         let balance: Signal<StarsAmount?, NoError>
         if let starsContext = context.starsContext {
             balance = starsContext.state
@@ -2622,6 +2744,11 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
             }
         }
         
+        var maxAmount = 2500
+        if let data = context.currentAppConfiguration.with({ $0 }).data, let value = data["stars_paid_reaction_amount_max"] as? Double {
+            maxAmount = Int(value)
+        }
+        
         return combineLatest(
             context.engine.data.get(
                 TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
@@ -2640,61 +2767,105 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
             
             var nextRandomIndex = 0
             return InitialData(
-                peer: peer,
-                myPeer: myPeer,
-                defaultPrivacyPeer: defaultPrivacyPeer,
-                channelsForPublicReaction: channelsForPublicReaction,
-                messageId: messageId,
-                balance: balance,
-                currentSentAmount: currentSentAmount,
-                topPeers: topPeers.compactMap { topPeer -> ChatSendStarsScreen.TopPeer? in
-                    guard let topPeerId = topPeer.peerId else {
+                subjectInitialData: .react(SubjectInitialData.React(
+                    peer: peer,
+                    myPeer: myPeer,
+                    defaultPrivacyPeer: defaultPrivacyPeer,
+                    channelsForPublicReaction: channelsForPublicReaction,
+                    messageId: messageId,
+                    currentSentAmount: currentSentAmount,
+                    topPeers: topPeers.compactMap { topPeer -> ChatSendStarsScreen.TopPeer? in
+                        guard let topPeerId = topPeer.peerId else {
+                            let randomIndex = nextRandomIndex
+                            nextRandomIndex += 1
+                            return ChatSendStarsScreen.TopPeer(
+                                randomIndex: randomIndex,
+                                peer: nil,
+                                isMy: topPeer.isMy,
+                                count: Int(topPeer.count)
+                            )
+                        }
+                        guard let topPeerValue = topPeerMap[topPeerId] else {
+                            return nil
+                        }
+                        guard let topPeerValue else {
+                            return nil
+                        }
                         let randomIndex = nextRandomIndex
                         nextRandomIndex += 1
                         return ChatSendStarsScreen.TopPeer(
                             randomIndex: randomIndex,
-                            peer: nil,
+                            peer: topPeer.isAnonymous ? nil : topPeerValue,
                             isMy: topPeer.isMy,
                             count: Int(topPeer.count)
                         )
-                    }
-                    guard let topPeerValue = topPeerMap[topPeerId] else {
-                        return nil
-                    }
-                    guard let topPeerValue else {
-                        return nil
-                    }
-                    let randomIndex = nextRandomIndex
-                    nextRandomIndex += 1
-                    return ChatSendStarsScreen.TopPeer(
-                        randomIndex: randomIndex,
-                        peer: topPeer.isAnonymous ? nil : topPeerValue,
-                        isMy: topPeer.isMy,
-                        count: Int(topPeer.count)
-                    )
-                },
-                myTopPeer: myTopPeer.flatMap { topPeer -> ChatSendStarsScreen.TopPeer? in
-                    guard let topPeerId = topPeer.peerId else {
+                    },
+                    myTopPeer: myTopPeer.flatMap { topPeer -> ChatSendStarsScreen.TopPeer? in
+                        guard let topPeerId = topPeer.peerId else {
+                            return ChatSendStarsScreen.TopPeer(
+                                randomIndex: -1,
+                                peer: nil,
+                                isMy: topPeer.isMy,
+                                count: Int(topPeer.count)
+                            )
+                        }
+                        guard let topPeerValue = topPeerMap[topPeerId] else {
+                            return nil
+                        }
+                        guard let topPeerValue else {
+                            return nil
+                        }
                         return ChatSendStarsScreen.TopPeer(
                             randomIndex: -1,
-                            peer: nil,
+                            peer: topPeer.isAnonymous ? nil : topPeerValue,
                             isMy: topPeer.isMy,
                             count: Int(topPeer.count)
                         )
-                    }
-                    guard let topPeerValue = topPeerMap[topPeerId] else {
-                        return nil
-                    }
-                    guard let topPeerValue else {
-                        return nil
-                    }
-                    return ChatSendStarsScreen.TopPeer(
-                        randomIndex: -1,
-                        peer: topPeer.isAnonymous ? nil : topPeerValue,
-                        isMy: topPeer.isMy,
-                        count: Int(topPeer.count)
-                    )
-                }
+                    },
+                    maxAmount: maxAmount,
+                    completion: completion
+                )),
+                balance: balance
+            )
+        }
+    }
+    
+    public static func initialData(context: AccountContext, peerId: EnginePeer.Id, suggestMessageAmount: StarsAmount, completion: @escaping (Int64, Int32?) -> Void) -> Signal<InitialData?, NoError> {
+        let balance: Signal<StarsAmount?, NoError>
+        if let starsContext = context.starsContext {
+            balance = starsContext.state
+            |> map { state in
+                return state?.balance
+            }
+            |> take(1)
+        } else {
+            balance = .single(nil)
+        }
+        
+        var maxAmount = 2500
+        if let data = context.currentAppConfiguration.with({ $0 }).data, let value = data["stars_suggest_post_amount_max"] as? Double {
+            maxAmount = Int(value)
+        }
+        
+        return combineLatest(
+            context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+            ),
+            balance
+        )
+        |> map { peer, balance -> InitialData? in
+            guard let peer else {
+                return nil
+            }
+            
+            return InitialData(
+                subjectInitialData: .suggestPost(SubjectInitialData.SuggestPost(
+                    peer: peer,
+                    initialTimestamp: nil,
+                    maxAmount: maxAmount,
+                    completion: completion
+                )),
+                balance: balance
             )
         }
     }
@@ -3023,6 +3194,166 @@ private final class PeerSelectorBadgeComponent: Component {
             avatarNode.setPeer(context: component.context, theme: component.theme, peer: component.peer, synchronousLoad: true)
             
             let size = CGSize(width: avatarPadding + avatarDiameter + avatarTextSpacing + rightTextInset, height: height)
+            
+            if component.action != nil {
+                let selectorIcon: ComponentView<Empty>
+                if let current = self.selectorIcon {
+                    selectorIcon = current
+                } else {
+                    selectorIcon = ComponentView()
+                    self.selectorIcon = selectorIcon
+                }
+                let selectorIconSize = selectorIcon.update(
+                    transition: transition,
+                    component: AnyComponent(BundleIconComponent(
+                        name: "Item List/ExpandableSelectorArrows", tintColor: component.theme.list.itemInputField.primaryColor.withMultipliedAlpha(0.5))),
+                    environment: {},
+                    containerSize: CGSize(width: 100.0, height: 100.0)
+                )
+                let selectorIconFrame = CGRect(origin: CGPoint(x: size.width - 8.0 - selectorIconSize.width, y: floorToScreenPixels((size.height - selectorIconSize.height) * 0.5)), size: selectorIconSize)
+                if let selectorIconView = selectorIcon.view {
+                    if selectorIconView.superview == nil {
+                        selectorIconView.isUserInteractionEnabled = false
+                        self.addSubview(selectorIconView)
+                    }
+                    transition.setFrame(view: selectorIconView, frame: selectorIconFrame)
+                }
+            } else if let selectorIcon = self.selectorIcon {
+                self.selectorIcon = nil
+                selectorIcon.view?.removeFromSuperview()
+            }
+            
+            let _ = self.background.update(
+                transition: transition,
+                component: AnyComponent(FilledRoundedRectangleComponent(
+                    color: component.theme.list.itemInputField.backgroundColor,
+                    cornerRadius: .minEdge,
+                    smoothCorners: false
+                )),
+                environment: {},
+                containerSize: size
+            )
+            if let backgroundView = self.background.view {
+                if backgroundView.superview == nil {
+                    backgroundView.isUserInteractionEnabled = false
+                    self.insertSubview(backgroundView, at: 0)
+                }
+                transition.setFrame(view: backgroundView, frame: CGRect(origin: CGPoint(), size: size))
+            }
+            
+            return size
+        }
+    }
+    
+    func makeView() -> View {
+        return View(frame: CGRect())
+    }
+    
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
+private final class TimeSelectorBadgeComponent: Component {
+    let context: AccountContext
+    let theme: PresentationTheme
+    let strings: PresentationStrings
+    let timestamp: Int32?
+    let action: ((UIView) -> Void)?
+    
+    init(
+        context: AccountContext,
+        theme: PresentationTheme,
+        strings: PresentationStrings,
+        timestamp: Int32?,
+        action: ((UIView) -> Void)?
+    ) {
+        self.context = context
+        self.theme = theme
+        self.strings = strings
+        self.timestamp = timestamp
+        self.action = action
+    }
+    
+    static func ==(lhs: TimeSelectorBadgeComponent, rhs: TimeSelectorBadgeComponent) -> Bool {
+        if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.strings !== rhs.strings {
+            return false
+        }
+        if lhs.timestamp != rhs.timestamp {
+            return false
+        }
+        if (lhs.action == nil) != (rhs.action == nil) {
+            return false
+        }
+        return true
+    }
+    
+    final class View: HighlightableButton {
+        private let background = ComponentView<Empty>()
+        private let title = ComponentView<Empty>()
+        private var selectorIcon: ComponentView<Empty>?
+        
+        private var component: TimeSelectorBadgeComponent?
+        
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+            
+            self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        @objc private func pressed() {
+            guard let component = self.component else {
+                return
+            }
+            component.action?(self)
+        }
+        
+        func update(component: TimeSelectorBadgeComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+            self.component = component
+            
+            self.isEnabled = component.action != nil
+            
+            let height: CGFloat = 32.0
+            let leftTextInset: CGFloat = 12.0
+            let rightTextInset: CGFloat = component.action != nil ? (leftTextInset + 14.0) : leftTextInset
+            
+            var titleString: String
+            //TODO:localize
+            if let timestamp = component.timestamp {
+                titleString = humanReadableStringForTimestamp(strings: component.strings, dateTimeFormat: PresentationDateTimeFormat(), timestamp: timestamp, alwaysShowTime: true).string
+                if titleString.count > 1 {
+                    titleString = String(titleString[titleString.startIndex]).capitalized + titleString[titleString.index(after: titleString.startIndex)...]
+                }
+            } else {
+                titleString = "Anytime"
+            }
+            let titleSize = self.title.update(
+                transition: .immediate,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: titleString, font: Font.medium(15.0), textColor: component.theme.list.itemPrimaryTextColor))
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - leftTextInset - rightTextInset, height: 100.0)
+            )
+            if let titleView = self.title.view {
+                if titleView.superview == nil {
+                    titleView.isUserInteractionEnabled = false
+                    self.addSubview(titleView)
+                }
+                titleView.frame = CGRect(origin: CGPoint(x: leftTextInset, y: floorToScreenPixels((height - titleSize.height) * 0.5)), size: titleSize)
+            }
+            
+            let size = CGSize(width: leftTextInset + rightTextInset + titleSize.width, height: height)
             
             if component.action != nil {
                 let selectorIcon: ComponentView<Empty>

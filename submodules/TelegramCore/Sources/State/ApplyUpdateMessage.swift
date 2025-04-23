@@ -198,6 +198,14 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                         }
                     }
                 }
+                if Namespaces.Message.allSuggestedPost.contains(message.id.namespace) {
+                    for i in 0 ..< updatedAttributes.count {
+                        if updatedAttributes[i] is OutgoingSuggestedPostMessageAttribute {
+                            updatedAttributes.remove(at: i)
+                            break
+                        }
+                    }
+                }
                 
                 attributes = updatedAttributes
                 text = currentMessage.text
@@ -220,6 +228,8 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                 }
                 if Namespaces.Message.allQuickReply.contains(message.id.namespace) {
                     namespace = Namespaces.Message.QuickReplyCloud
+                } else if Namespaces.Message.allSuggestedPost.contains(message.id.namespace) {
+                    namespace = Namespaces.Message.SuggestedPostCloud
                 } else if let updatedTimestamp = updatedTimestamp {
                     if attributes.contains(where: { $0 is PendingProcessingMessageAttribute }) {
                         namespace = Namespaces.Message.ScheduledCloud
@@ -243,6 +253,8 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                     if let threadId {
                         _internal_applySentQuickReplyMessage(transaction: transaction, shortcut: attribute.shortcut, quickReplyId: Int32(clamping: threadId))
                     }
+                } else if attribute is OutgoingSuggestedPostMessageAttribute {
+                    //TODO:release
                 }
             }
             
@@ -397,6 +409,8 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
         var namespace = Namespaces.Message.Cloud
         if Namespaces.Message.allQuickReply.contains(messages[0].id.namespace) {
             namespace = Namespaces.Message.QuickReplyCloud
+        } else if Namespaces.Message.allSuggestedPost.contains(messages[0].id.namespace) {
+            namespace = Namespaces.Message.SuggestedPostCloud
         } else if let message = messages.first, let apiMessage = result.messages.first {
             if message.scheduleTime != nil && message.scheduleTime == apiMessage.timestamp {
                 namespace = Namespaces.Message.ScheduledCloud
@@ -474,6 +488,8 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
                     if let threadId = updatedMessage.threadId {
                         _internal_applySentQuickReplyMessage(transaction: transaction, shortcut: attribute.shortcut, quickReplyId: Int32(clamping: threadId))
                     }
+                } else if attribute is OutgoingSuggestedPostMessageAttribute {
+                    //TODO:release
                 }
             }
         }

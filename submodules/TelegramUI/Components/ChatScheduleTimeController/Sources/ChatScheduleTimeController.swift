@@ -11,6 +11,7 @@ import TelegramPresentationData
 public enum ChatScheduleTimeControllerMode {
     case scheduledMessages(sendWhenOnlineAvailable: Bool)
     case reminders
+    case suggestPost
 }
 
 public enum ChatScheduleTimeControllerStyle {
@@ -82,7 +83,11 @@ public final class ChatScheduleTimeController: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.completion(time == scheduleWhenOnlineTimestamp ? time : time + 5)
+            if time == 0 {
+                strongSelf.completion(time)
+            } else {
+                strongSelf.completion(time == scheduleWhenOnlineTimestamp ? time : time + 5)
+            }
             strongSelf.dismiss()
         }
         self.controllerNode.dismiss = { [weak self] in

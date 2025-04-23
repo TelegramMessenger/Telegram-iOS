@@ -94,10 +94,13 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, ASScrollViewDel
         
         let title: String
         switch mode {
-            case .scheduledMessages:
-                title = self.presentationData.strings.Conversation_ScheduleMessage_Title
-            case .reminders:
-                title = self.presentationData.strings.Conversation_SetReminder_Title
+        case .scheduledMessages:
+            title = self.presentationData.strings.Conversation_ScheduleMessage_Title
+        case .reminders:
+            title = self.presentationData.strings.Conversation_SetReminder_Title
+        case .suggestPost:
+            //TODO:localize
+            title = "Time"
         }
         
         self.titleNode = ASTextNode()
@@ -113,7 +116,13 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, ASScrollViewDel
         self.doneButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(theme: self.presentationData.theme), height: 52.0, cornerRadius: 11.0, gloss: false)
         
         self.onlineButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: buttonColor, foregroundColor: buttonTextColor), font: .regular, height: 52.0, cornerRadius: 11.0, gloss: false)
-        self.onlineButton.title = self.presentationData.strings.Conversation_ScheduleMessage_SendWhenOnline
+        switch mode {
+        case .suggestPost:
+            //TODO:localize
+            self.onlineButton.title = "Send Anytime"
+        default:
+            self.onlineButton.title = self.presentationData.strings.Conversation_ScheduleMessage_SendWhenOnline
+        }
 
         self.dateFormatter = DateFormatter()
         self.dateFormatter.timeStyle = .none
@@ -141,6 +150,8 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, ASScrollViewDel
         self.contentContainerNode.addSubnode(self.doneButton)
         if case .scheduledMessages(true) = self.mode {
             self.contentContainerNode.addSubnode(self.onlineButton)
+        } else if case .suggestPost = self.mode {
+            self.contentContainerNode.addSubnode(self.onlineButton)
         }
         
         self.cancelButton.addTarget(self, action: #selector(self.cancelButtonPressed), forControlEvents: .touchUpInside)
@@ -159,7 +170,12 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, ASScrollViewDel
         self.onlineButton.pressed = { [weak self] in
             if let strongSelf = self {
                 strongSelf.onlineButton.isUserInteractionEnabled = false
-                strongSelf.completion?(scheduleWhenOnlineTimestamp)
+                switch strongSelf.mode {
+                case .suggestPost:
+                    strongSelf.completion?(0)
+                default:
+                    strongSelf.completion?(scheduleWhenOnlineTimestamp)
+                }
             }
         }
         
@@ -273,22 +289,30 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, ASScrollViewDel
         
         let time = stringForMessageTimestamp(timestamp: Int32(date.timeIntervalSince1970), dateTimeFormat: self.presentationData.dateTimeFormat)
         switch mode {
-            case .scheduledMessages:
-                if calendar.isDateInToday(date) {
-                    self.doneButton.title = self.presentationData.strings.Conversation_ScheduleMessage_SendToday(time).string
-                } else if calendar.isDateInTomorrow(date) {
-                    self.doneButton.title = self.presentationData.strings.Conversation_ScheduleMessage_SendTomorrow(time).string
-                } else {
-                    self.doneButton.title = self.presentationData.strings.Conversation_ScheduleMessage_SendOn(self.dateFormatter.string(from: date), time).string
-                }
-            case .reminders:
-                if calendar.isDateInToday(date) {
-                    self.doneButton.title = self.presentationData.strings.Conversation_SetReminder_RemindToday(time).string
-                } else if calendar.isDateInTomorrow(date) {
-                    self.doneButton.title = self.presentationData.strings.Conversation_SetReminder_RemindTomorrow(time).string
-                } else {
-                    self.doneButton.title = self.presentationData.strings.Conversation_SetReminder_RemindOn(self.dateFormatter.string(from: date), time).string
-                }
+        case .scheduledMessages:
+            if calendar.isDateInToday(date) {
+                self.doneButton.title = self.presentationData.strings.Conversation_ScheduleMessage_SendToday(time).string
+            } else if calendar.isDateInTomorrow(date) {
+                self.doneButton.title = self.presentationData.strings.Conversation_ScheduleMessage_SendTomorrow(time).string
+            } else {
+                self.doneButton.title = self.presentationData.strings.Conversation_ScheduleMessage_SendOn(self.dateFormatter.string(from: date), time).string
+            }
+        case .reminders:
+            if calendar.isDateInToday(date) {
+                self.doneButton.title = self.presentationData.strings.Conversation_SetReminder_RemindToday(time).string
+            } else if calendar.isDateInTomorrow(date) {
+                self.doneButton.title = self.presentationData.strings.Conversation_SetReminder_RemindTomorrow(time).string
+            } else {
+                self.doneButton.title = self.presentationData.strings.Conversation_SetReminder_RemindOn(self.dateFormatter.string(from: date), time).string
+            }
+        case .suggestPost:
+            if calendar.isDateInToday(date) {
+                self.doneButton.title = self.presentationData.strings.Conversation_ScheduleMessage_SendToday(time).string
+            } else if calendar.isDateInTomorrow(date) {
+                self.doneButton.title = self.presentationData.strings.Conversation_ScheduleMessage_SendTomorrow(time).string
+            } else {
+                self.doneButton.title = self.presentationData.strings.Conversation_ScheduleMessage_SendOn(self.dateFormatter.string(from: date), time).string
+            }
         }
     }
     
@@ -381,6 +405,8 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, ASScrollViewDel
         
         var buttonOffset: CGFloat = 0.0
         if case .scheduledMessages(true) = self.mode {
+            buttonOffset += 64.0
+        } else if case .suggestPost = self.mode {
             buttonOffset += 64.0
         }
         

@@ -63,6 +63,8 @@ func inputContextQueriesForChatPresentationIntefaceState(_ chatPresentationInter
             break
         case .businessLinkSetup:
             return []
+        case .postSuggestions:
+            return []
         }
     }
     
@@ -241,6 +243,8 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                         break
                     case .businessLinkSetup:
                         stickersEnabled = false
+                    case .postSuggestions:
+                        break
                     }
                 }
                 

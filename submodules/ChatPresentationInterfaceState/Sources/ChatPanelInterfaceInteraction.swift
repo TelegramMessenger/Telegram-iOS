@@ -151,6 +151,7 @@ public final class ChatPanelInterfaceInteraction {
     public let joinGroupCall: (CachedChannelData.ActiveCall) -> Void
     public let presentInviteMembers: () -> Void
     public let presentGigagroupHelp: () -> Void
+    public let openSuggestPost: () -> Void
     public let updateShowCommands: ((Bool) -> Bool) -> Void
     public let updateShowSendAsPeers: ((Bool) -> Bool) -> Void
     public let openInviteRequests: () -> Void
@@ -267,6 +268,7 @@ public final class ChatPanelInterfaceInteraction {
         joinGroupCall: @escaping (CachedChannelData.ActiveCall) -> Void,
         presentInviteMembers: @escaping () -> Void,
         presentGigagroupHelp: @escaping () -> Void,
+        openSuggestPost: @escaping () -> Void,
         editMessageMedia: @escaping (MessageId, Bool) -> Void,
         updateShowCommands: @escaping ((Bool) -> Bool) -> Void,
         updateShowSendAsPeers: @escaping ((Bool) -> Bool) -> Void,
@@ -384,6 +386,7 @@ public final class ChatPanelInterfaceInteraction {
         self.joinGroupCall = joinGroupCall
         self.presentInviteMembers = presentInviteMembers
         self.presentGigagroupHelp = presentGigagroupHelp
+        self.openSuggestPost = openSuggestPost
         self.updateShowCommands = updateShowCommands
         self.updateShowSendAsPeers = updateShowSendAsPeers
         self.openInviteRequests = openInviteRequests
@@ -507,6 +510,7 @@ public final class ChatPanelInterfaceInteraction {
         }, joinGroupCall: { _ in
         }, presentInviteMembers: {
         }, presentGigagroupHelp: {
+        }, openSuggestPost: {
         }, editMessageMedia: { _, _ in
         }, updateShowCommands: { _ in
         }, updateShowSendAsPeers: { _ in

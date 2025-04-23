@@ -72,6 +72,8 @@ private func fetchWebpage(account: Account, messageId: MessageId, threadId: Int6
                 targetMessageNamespace = Namespaces.Message.ScheduledCloud
             } else if Namespaces.Message.allQuickReply.contains(messageId.namespace) {
                 targetMessageNamespace = Namespaces.Message.QuickReplyCloud
+            } else if Namespaces.Message.allSuggestedPost.contains(messageId.namespace) {
+                targetMessageNamespace = Namespaces.Message.SuggestedPostCloud
             } else {
                 targetMessageNamespace = Namespaces.Message.Cloud
             }
@@ -1071,6 +1073,10 @@ public final class AccountViewTracker {
                                 } else {
                                     fetchSignal = .never()
                                 }
+                            } else if let messageId = messageIds.first, messageId.namespace == Namespaces.Message.SuggestedPostCloud {
+                                //TODO:release
+                                assertionFailure()
+                                fetchSignal = .never()
                             } else if peerIdAndThreadId.peerId.namespace == Namespaces.Peer.CloudUser || peerIdAndThreadId.peerId.namespace == Namespaces.Peer.CloudGroup {
                                 fetchSignal = account.network.request(Api.functions.messages.getMessages(id: messageIds.map { Api.InputMessage.inputMessageID(id: $0.id) }))
                             } else if peerIdAndThreadId.peerId.namespace == Namespaces.Peer.CloudChannel {
@@ -2119,6 +2125,36 @@ public final class AccountViewTracker {
             return (mappedView, update, initialData)
         }
         return signal
+    }
+
+    public func postSuggestionsViewForLocation(peerId: EnginePeer.Id, additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+        guard let account = self.account else {
+            return .never()
+        }
+        let chatLocation: ChatLocationInput = .peer(peerId: peerId, threadId: nil)
+        let signal = account.postbox.aroundMessageHistoryViewForLocation(chatLocation, anchor: .upperBound, ignoreMessagesInTimestampRange: nil, ignoreMessageIds: Set(), count: 200, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tag: nil, appendMessagesFromTheSameGroup: false, namespaces: .just(Namespaces.Message.allSuggestedPost), orderStatistics: [], additionalData: additionalData)
+        return withState(signal, { [weak self] () -> Int32 in
+            if let strongSelf = self {
+                return OSAtomicIncrement32(&strongSelf.nextViewId)
+            } else {
+                return -1
+            }
+        }, next: { [weak self] next, viewId in
+            if let strongSelf = self {
+                strongSelf.queue.async {
+                    let (messageIds, localWebpages) = pendingWebpages(entries: next.0.entries)
+                    strongSelf.updatePendingWebpages(viewId: viewId, threadId: nil, messageIds: messageIds, localWebpages: localWebpages)
+                    strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: next.0, location: chatLocation)
+                }
+            }
+        }, disposed: { [weak self] viewId in
+            if let strongSelf = self {
+                strongSelf.queue.async {
+                    strongSelf.updatePendingWebpages(viewId: viewId, threadId: nil, messageIds: [], localWebpages: [:])
+                    strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: nil, location: nil)
+                }
+            }
+        })
     }
     
     public func aroundMessageOfInterestHistoryViewForLocation(_ chatLocation: ChatLocationInput, ignoreMessagesInTimestampRange: ClosedRange<Int32>? = nil, ignoreMessageIds: Set<MessageId> = Set(), count: Int, tag: HistoryViewInputTag? = nil, appendMessagesFromTheSameGroup: Bool = false, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = [], useRootInterfaceStateForThread: Bool = false) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
