@@ -179,7 +179,6 @@ public enum BotPaymentFormRequestError {
     case alreadyActive
     case noPaymentNeeded
     case disallowedStarGift
-    case starGiftResellTooEarly(Int32)
 }
 
 extension BotPaymentInvoice {
@@ -483,11 +482,6 @@ func _internal_fetchBotPaymentForm(accountPeerId: PeerId, postbox: Postbox, netw
                 return .fail(.noPaymentNeeded)
             } else if error.errorDescription == "USER_DISALLOWED_STARGIFTS" {
                 return .fail(.disallowedStarGift)
-            } else if error.errorDescription.hasPrefix("STARGIFT_RESELL_TOO_EARLY_") {
-                let timeout = String(error.errorDescription[error.errorDescription.index(error.errorDescription.startIndex, offsetBy: "STARGIFT_RESELL_TOO_EARLY_".count)...])
-                if let value = Int32(timeout) {
-                    return .fail(.starGiftResellTooEarly(value))
-                }
             }
             return .fail(.generic)
         }

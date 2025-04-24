@@ -675,17 +675,22 @@ extension ChatControllerImpl {
                 
                 let isHidden = self.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.TranslationHidden(id: peerId))
                 |> distinctUntilChanged
+                
+                let hasAutoTranslate = self.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.AutoTranslateEnabled(id: peerId))
+                |> distinctUntilChanged
+                
                 self.translationStateDisposable = (combineLatest(
                     queue: .concurrentDefaultQueue(),
                     isPremium,
                     isHidden,
+                    hasAutoTranslate,
                     ApplicationSpecificNotice.translationSuggestion(accountManager: self.context.sharedContext.accountManager)
-                ) |> mapToSignal { isPremium, isHidden, counterAndTimestamp -> Signal<ChatPresentationTranslationState?, NoError> in
+                ) |> mapToSignal { isPremium, isHidden, hasAutoTranslate, counterAndTimestamp -> Signal<ChatPresentationTranslationState?, NoError> in
                     var maybeSuggestPremium = false
                     if counterAndTimestamp.0 >= 3 {
                         maybeSuggestPremium = true
                     }
-                    if (isPremium || maybeSuggestPremium) && !isHidden {
+                    if (isPremium || maybeSuggestPremium || hasAutoTranslate) && !isHidden {
                         return chatTranslationState(context: context, peerId: peerId)
                         |> map { translationState -> ChatPresentationTranslationState? in
                             if let translationState, !translationState.fromLang.isEmpty && (translationState.fromLang != baseLanguageCode || translationState.isEnabled) {

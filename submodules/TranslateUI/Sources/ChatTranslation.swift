@@ -180,10 +180,17 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id)
             baseLang = String(baseLang.dropLast(rawSuffix.count))
         }
         
-        return context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings])
-        |> mapToSignal { sharedData in
-            let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.translationSettings]?.get(TranslationSettings.self) ?? TranslationSettings.defaultSettings
-            if !settings.translateChats {
+        
+        
+        return combineLatest(
+            context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings])
+            |> map { sharedData -> TranslationSettings in
+                return sharedData.entries[ApplicationSpecificSharedDataKeys.translationSettings]?.get(TranslationSettings.self) ?? TranslationSettings.defaultSettings
+            },
+            context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.AutoTranslateEnabled(id: peerId))
+        )
+        |> mapToSignal { settings, autoTranslateEnabled in
+            if !settings.translateChats && !autoTranslateEnabled {
                 return .single(nil)
             }
             
@@ -286,12 +293,22 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id)
                             if loggingEnabled {
                                 Logger.shared.log("ChatTranslation", "Ended with: \(fromLang)")
                             }
+                            
+                            let isEnabled: Bool
+                            if let currentIsEnabled = cached?.isEnabled {
+                                isEnabled = currentIsEnabled
+                            } else if autoTranslateEnabled {
+                                isEnabled = true
+                            } else {
+                                isEnabled = false
+                            }
+                            
                             let state = ChatTranslationState(
                                 baseLang: baseLang,
                                 fromLang: fromLang,
                                 timestamp: currentTime,
                                 toLang: cached?.toLang,
-                                isEnabled: cached?.isEnabled ?? false
+                                isEnabled: isEnabled
                             )
                             let _ = updateChatTranslationState(engine: context.engine, peerId: peerId, state: state).start()
                             if !dontTranslateLanguages.contains(fromLang) {

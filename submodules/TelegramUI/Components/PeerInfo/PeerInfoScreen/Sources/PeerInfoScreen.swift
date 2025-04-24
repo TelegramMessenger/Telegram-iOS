@@ -2007,7 +2007,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
     return result
 }
 
-private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatLocation: ChatLocation, context: AccountContext, presentationData: PresentationData, interaction: PeerInfoInteraction) -> [(AnyHashable, [PeerInfoScreenItem])] {
+private func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostStatus?, state: PeerInfoState, chatLocation: ChatLocation, context: AccountContext, presentationData: PresentationData, interaction: PeerInfoInteraction) -> [(AnyHashable, [PeerInfoScreenItem])] {
     enum Section: Int, CaseIterable {
         case notifications
         case groupLocation
@@ -2276,11 +2276,12 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                         interaction.editingOpenNameColorSetup()
                     }))
                     
+                    let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
                     var isLocked = true
-                    if let approximateBoostLevel = channel.approximateBoostLevel, approximateBoostLevel >= 3 {
+                    if let boostLevel = boostStatus?.level, boostLevel >= BoostSubject.autoTranslate.requiredLevel(group: false, context: context, configuration: premiumConfiguration) {
                         isLocked = false
                     }
-                    items[.peerSettings]!.append(PeerInfoScreenSwitchItem(id: ItemPeerAutoTranslate, text: presentationData.strings.Channel_Info_AutoTranslate, value: false, icon: UIImage(bundleImageName: "Settings/Menu/AutoTranslate"), isLocked: isLocked, toggled: { value in
+                    items[.peerSettings]!.append(PeerInfoScreenSwitchItem(id: ItemPeerAutoTranslate, text: presentationData.strings.Channel_Info_AutoTranslate, value: channel.flags.contains(.autoTranslateEnabled), icon: UIImage(bundleImageName: "Settings/Menu/AutoTranslate"), isLocked: isLocked, toggled: { value in
                         if isLocked {
                             interaction.displayAutoTranslateLocked()
                         } else {
@@ -9157,7 +9158,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
     
     private func toggleAutoTranslate(isEnabled: Bool) {
-        
+        self.activeActionDisposable.set(self.context.engine.peers.toggleAutoTranslation(peerId: self.peerId, enabled: isEnabled).start())
     }
     
     private func displayAutoTranslateLocked() {
@@ -11918,7 +11919,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
             
             var validEditingSections: [AnyHashable] = []
-            let editItems = (self.isSettings || self.isMyProfile) ? settingsEditingItems(data: self.data, state: self.state, context: self.context, presentationData: self.presentationData, interaction: self.interaction, isMyProfile: self.isMyProfile) : editingItems(data: self.data, state: self.state, chatLocation: self.chatLocation, context: self.context, presentationData: self.presentationData, interaction: self.interaction)
+            let editItems = (self.isSettings || self.isMyProfile) ? settingsEditingItems(data: self.data, state: self.state, context: self.context, presentationData: self.presentationData, interaction: self.interaction, isMyProfile: self.isMyProfile) : editingItems(data: self.data, boostStatus: self.boostStatus, state: self.state, chatLocation: self.chatLocation, context: self.context, presentationData: self.presentationData, interaction: self.interaction)
 
             for (sectionId, sectionItems) in editItems {
                 var insets = UIEdgeInsets()
