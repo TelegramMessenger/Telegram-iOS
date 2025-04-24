@@ -2021,8 +2021,12 @@ final class MediaEditorScreenComponent: Component {
                         if case .avatarEditor = controller.mode {
                             maxDuration = 9.9
                         } else {
-                            maxDuration = storyMaxCombinedVideoDuration
-                            segmentDuration = storyMaxVideoDuration
+                            if controller.node.items.count > 0 {
+                                maxDuration = storyMaxVideoDuration
+                            } else {
+                                maxDuration = storyMaxCombinedVideoDuration
+                                segmentDuration = storyMaxVideoDuration
+                            }
                         }
                     }
                     
@@ -3506,7 +3510,10 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 values: initialValues,
                 hasHistogram: true
             )
-            mediaEditor.maxDuration = storyMaxCombinedVideoDuration
+            if case .storyEditor = controller.mode, self.items.isEmpty {
+                mediaEditor.maxDuration = storyMaxCombinedVideoDuration
+            }
+            
             if case .avatarEditor = controller.mode {
                 mediaEditor.setVideoIsMuted(true)
             } else if case let .coverEditor(dimensions) = controller.mode {
@@ -6801,9 +6808,26 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             coverImage = nil
         }
         
+        var storyCount: Int32 = 0
+        if self.node.items.count > 0 {
+            storyCount = Int32(self.node.items.count(where: { $0.isEnabled }))
+        } else {
+            if case let .asset(asset) = self.node.subject {
+                let duration: Double
+                if let playerDuration = mediaEditor.duration {
+                    duration = playerDuration
+                } else {
+                    duration = asset.duration
+                }
+                if duration > storyMaxVideoDuration {
+                    storyCount = Int32(min(storyMaxCombinedVideoCount, Int(ceil(duration / storyMaxVideoDuration))))
+                }
+            }
+        }
+        
         let stateContext = ShareWithPeersScreen.StateContext(
             context: self.context,
-            subject: .stories(editing: false, count: Int32(self.node.items.count(where: { $0.isEnabled }))),
+            subject: .stories(editing: false, count: storyCount),
             editing: false,
             initialPeerIds: Set(privacy.privacy.additionallyIncludePeers),
             closeFriends: self.closeFriends.get(),
@@ -8151,7 +8175,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 
                 let storyCount = min(storyMaxCombinedVideoCount, Int(ceil(duration / storyMaxVideoDuration)))
                 var start = values.videoTrimRange?.lowerBound ?? 0
-                for _ in 0 ..< storyCount {
+                for i in 0 ..< storyCount {
                     let trimmedValues = values.withUpdatedVideoTrimRange(start ..< min(start + storyMaxVideoDuration, originalDuration))
                     
                     var editingItem = EditingItem(asset: asset)

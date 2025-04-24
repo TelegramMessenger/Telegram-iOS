@@ -1510,7 +1510,7 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
         
         var validIds = Set<Int32>()
         var segmentFrame = CGRect(x: segmentOrigin + segmentWidth, y: 0.0, width: 1.0, height: containerFrame.size.height)
-        for i in 0 ..< segmentCount {
+        for i in 0 ..< min(segmentCount, 2) {
             let id = Int32(i)
             validIds.insert(id)
             
