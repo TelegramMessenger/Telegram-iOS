@@ -847,14 +847,12 @@ public enum TransferStarGiftError {
 
 public enum BuyStarGiftError {
     case generic
-    case starGiftResellTooEarly(Int32)
 }
 
 public enum UpdateStarGiftPriceError {
     case generic
     case starGiftResellTooEarly(Int32)
 }
-
 
 public enum UpgradeStarGiftError {
     case generic
@@ -865,12 +863,7 @@ func _internal_buyStarGift(account: Account, slug: String, peerId: EnginePeer.Id
     return _internal_fetchBotPaymentForm(accountPeerId: account.peerId, postbox: account.postbox, network: account.network, source: source, themeParams: nil)
     |> map(Optional.init)
     |> `catch` { error -> Signal<BotPaymentForm?, BuyStarGiftError> in
-        switch error {
-        case let .starGiftResellTooEarly(value):
-            return .fail(.starGiftResellTooEarly(value))
-        default:
-            return .fail(.generic)
-        }
+        return .fail(.generic)
     }
     |> mapToSignal { paymentForm in
         if let paymentForm {
@@ -2360,10 +2353,10 @@ func _internal_updateStarGiftResalePrice(account: Account, reference: StarGiftRe
         return account.network.request(Api.functions.payments.updateStarGiftPrice(stargift: starGift, resellStars: price ?? 0))
         |> mapError { error -> UpdateStarGiftPriceError in
             if error.errorDescription.hasPrefix("STARGIFT_RESELL_TOO_EARLY_") {
-               let timeout = String(error.errorDescription[error.errorDescription.index(error.errorDescription.startIndex, offsetBy: "STARGIFT_RESELL_TOO_EARLY_".count)...])
-               if let value = Int32(timeout) {
-                   return .starGiftResellTooEarly(value)
-               }
+                let timeout = String(error.errorDescription[error.errorDescription.index(error.errorDescription.startIndex, offsetBy: "STARGIFT_RESELL_TOO_EARLY_".count)...])
+                if let value = Int32(timeout) {
+                    return .starGiftResellTooEarly(value)
+                }
             }
             return .generic
         }

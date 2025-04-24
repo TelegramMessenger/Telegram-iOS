@@ -8155,7 +8155,9 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                     let trimmedValues = values.withUpdatedVideoTrimRange(start ..< min(start + storyMaxVideoDuration, originalDuration))
                     
                     var editingItem = EditingItem(asset: asset)
-                    editingItem.caption = self.node.getCaption()
+                    if i == 0 {
+                        editingItem.caption = self.node.getCaption()
+                    }
                     editingItem.values = trimmedValues
                     multipleItems.append(editingItem)
                     

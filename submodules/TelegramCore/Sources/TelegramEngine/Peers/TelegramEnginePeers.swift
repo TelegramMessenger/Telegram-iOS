@@ -1693,6 +1693,10 @@ public extension TelegramEngine {
             let _ = _internal_removeChatManagingBot(account: self.account, chatId: chatId).startStandalone()
         }
         
+        public func toggleAutoTranslation(peerId: EnginePeer.Id, enabled: Bool) -> Signal<Never, NoError> {
+            return _internal_toggleAutoTranslation(account: self.account, peerId: peerId, enabled: enabled)
+        }
+        
         public func resolveMessageLink(slug: String) -> Signal<TelegramResolvedMessageLink?, NoError> {
             return self.account.network.request(Api.functions.account.resolveBusinessChatLink(slug: slug))
             |> map(Optional.init)
