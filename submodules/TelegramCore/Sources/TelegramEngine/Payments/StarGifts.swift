@@ -852,6 +852,7 @@ public enum BuyStarGiftError {
 
 public enum UpdateStarGiftPriceError {
     case generic
+    case starGiftResellTooEarly(Int32)
 }
 
 
@@ -1486,9 +1487,16 @@ private final class ProfileGiftsContextImpl {
             }
             return false
         })
+
         self.pushState()
         
         return _internal_buyStarGift(account: self.account, slug: slug, peerId: peerId)
+    }
+    
+    func removeStarGift(gift: TelegramCore.StarGift) {
+        self.gifts.removeAll(where: { $0.gift == gift })
+        self.filteredGifts.removeAll(where: { $0.gift == gift })
+        self.pushState()
     }
     
     func upgradeStarGift(formId: Int64?, reference: StarGiftReference, keepOriginalInfo: Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError> {
@@ -1526,7 +1534,7 @@ private final class ProfileGiftsContextImpl {
         }
     }
     
-    func updateStarGiftResellPrice(reference: StarGiftReference, price: Int64?) -> Signal<Never, UpdateStarGiftPriceError> {
+    func updateStarGiftResellPrice(reference: StarGiftReference, price: Int64?, id: Int64?) -> Signal<Never, UpdateStarGiftPriceError> {
         return Signal { [weak self] subscriber in
             guard let self else {
                 return EmptyDisposable
@@ -1545,6 +1553,16 @@ private final class ProfileGiftsContextImpl {
                         if gift.reference == reference {
                             return true
                         }
+                        switch gift.gift {
+                        case .generic(let gift):
+                            if gift.id == id {
+                                return true
+                            }
+                        case .unique(let uniqueGift):
+                            if uniqueGift.id == id {
+                                return true
+                            }
+                        }
                         return false
                     }) {
                         if case let .unique(uniqueGift) = self.gifts[index].gift {
@@ -1557,6 +1575,16 @@ private final class ProfileGiftsContextImpl {
                     if let index = self.filteredGifts.firstIndex(where: { gift in
                         if gift.reference == reference {
                             return true
+                        }
+                        switch gift.gift {
+                        case .generic(let gift):
+                            if gift.id == id {
+                                return true
+                            }
+                        case .unique(let uniqueGift):
+                            if uniqueGift.id == id {
+                                return true
+                            }
                         }
                         return false
                     }) {
@@ -1941,6 +1969,12 @@ public final class ProfileGiftsContext {
         }
     }
     
+    public func removeStarGift(gift: TelegramCore.StarGift) {
+        self.impl.with { impl in
+            impl.removeStarGift(gift: gift)
+        }
+    }
+    
     public func transferStarGift(prepaid: Bool, reference: StarGiftReference, peerId: EnginePeer.Id) -> Signal<Never, TransferStarGiftError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
@@ -1971,11 +2005,11 @@ public final class ProfileGiftsContext {
         }
     }
     
-    public func updateStarGiftResellPrice(reference: StarGiftReference, price: Int64?) -> Signal<Never, UpdateStarGiftPriceError> {
+    public func updateStarGiftResellPrice(reference: StarGiftReference, price: Int64?, id: Int64? = nil) -> Signal<Never, UpdateStarGiftPriceError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.impl.with { impl in
-                disposable.set(impl.updateStarGiftResellPrice(reference: reference, price: price).start(error: { error in
+                disposable.set(impl.updateStarGiftResellPrice(reference: reference, price: price, id: id).start(error: { error in
                     subscriber.putError(error)
                 }, completed: {
                     subscriber.putCompletion()
@@ -2325,6 +2359,12 @@ func _internal_updateStarGiftResalePrice(account: Account, reference: StarGiftRe
         }
         return account.network.request(Api.functions.payments.updateStarGiftPrice(stargift: starGift, resellStars: price ?? 0))
         |> mapError { error -> UpdateStarGiftPriceError in
+            if error.errorDescription.hasPrefix("STARGIFT_RESELL_TOO_EARLY_") {
+               let timeout = String(error.errorDescription[error.errorDescription.index(error.errorDescription.startIndex, offsetBy: "STARGIFT_RESELL_TOO_EARLY_".count)...])
+               if let value = Int32(timeout) {
+                   return .starGiftResellTooEarly(value)
+               }
+            }
             return .generic
         }
         |> mapToSignal { updates -> Signal<Void, UpdateStarGiftPriceError> in
@@ -2524,6 +2564,11 @@ private final class ResaleGiftsContextImpl {
         self.loadMore()
     }
     
+    func removeStarGift(gift: TelegramCore.StarGift) {
+        self.gifts.removeAll(where: { $0 == gift })
+        self.pushState()
+    }
+    
     func updateSorting(_ sorting: ResaleGiftsContext.Sorting) {
         guard self.sorting != sorting else {
             return
@@ -2710,6 +2755,13 @@ public final class ResaleGiftsContext {
             return disposable
         }
     }
+    
+    public func removeStarGift(gift: TelegramCore.StarGift) {
+        self.impl.with { impl in
+            impl.removeStarGift(gift: gift)
+        }
+    }
+  
 
     public var currentState: ResaleGiftsContext.State? {
         var state: ResaleGiftsContext.State?
