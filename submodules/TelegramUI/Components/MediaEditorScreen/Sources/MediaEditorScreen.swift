@@ -3647,7 +3647,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                     }
                 } else if case let .gift(gift) = subject {
                     isGift = true
-                    let media: [Media] = [TelegramMediaAction(action: .starGiftUnique(gift: .unique(gift), isUpgrade: false, isTransferred: false, savedToProfile: false, canExportDate: nil, transferStars: nil, isRefunded: false, peerId: nil, senderId: nil, savedId: nil, resaleStars: nil))]
+                    let media: [Media] = [TelegramMediaAction(action: .starGiftUnique(gift: .unique(gift), isUpgrade: false, isTransferred: false, savedToProfile: false, canExportDate: nil, transferStars: nil, isRefunded: false, peerId: nil, senderId: nil, savedId: nil, resaleStars: nil, canTransferDate: nil, canResaleDate: nil))]
                     let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: self.context.account.peerId, namespace: Namespaces.Message.Cloud, id: -1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: media, peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
                     messages = .single([message])
                 } else {

@@ -968,7 +968,7 @@ func _internal_upgradeStarGift(account: Account, formId: Int64?, reference: Star
                     case let .updateNewMessage(message, _, _):
                         if let message = StoreMessage(apiMessage: message, accountPeerId: account.peerId, peerIsForum: false) {
                             for media in message.media {
-                                if let action = media as? TelegramMediaAction, case let .starGiftUnique(gift, _, _, savedToProfile, canExportDate, transferStars, _, peerId, _, savedId, _) = action.action, case let .Id(messageId) = message.id {
+                                if let action = media as? TelegramMediaAction, case let .starGiftUnique(gift, _, _, savedToProfile, canExportDate, transferStars, _, peerId, _, savedId, _, canTransferDate, canResaleDate) = action.action, case let .Id(messageId) = message.id {
                                     let reference: StarGiftReference
                                     if let peerId, let savedId {
                                         reference = .peer(peerId: peerId, id: savedId)
@@ -989,7 +989,9 @@ func _internal_upgradeStarGift(account: Account, formId: Int64?, reference: Star
                                         canUpgrade: false,
                                         canExportDate: canExportDate,
                                         upgradeStars: nil,
-                                        transferStars: transferStars
+                                        transferStars: transferStars,
+                                        canTransferDate: canTransferDate,
+                                        canResaleDate: canResaleDate
                                     ))
                                 }
                             }
@@ -1691,6 +1693,8 @@ public final class ProfileGiftsContext {
                 case upgradeStars
                 case transferStars
                 case giftAddress
+                case canTransferDate
+                case canResaleDate
             }
             
             public let gift: TelegramCore.StarGift
@@ -1707,6 +1711,8 @@ public final class ProfileGiftsContext {
             public let canExportDate: Int32?
             public let upgradeStars: Int64?
             public let transferStars: Int64?
+            public let canTransferDate: Int32?
+            public let canResaleDate: Int32?
             
             fileprivate let _fromPeerId: EnginePeer.Id?
             
@@ -1728,7 +1734,9 @@ public final class ProfileGiftsContext {
                 canUpgrade: Bool,
                 canExportDate: Int32?,
                 upgradeStars: Int64?,
-                transferStars: Int64?
+                transferStars: Int64?,
+                canTransferDate: Int32?,
+                canResaleDate: Int32?
             ) {
                 self.gift = gift
                 self.reference = reference
@@ -1745,6 +1753,8 @@ public final class ProfileGiftsContext {
                 self.canExportDate = canExportDate
                 self.upgradeStars = upgradeStars
                 self.transferStars = transferStars
+                self.canTransferDate = canTransferDate
+                self.canResaleDate = canResaleDate
             }
             
             public init(from decoder: Decoder) throws {
@@ -1771,6 +1781,8 @@ public final class ProfileGiftsContext {
                 self.canExportDate = try container.decodeIfPresent(Int32.self, forKey: .canExportDate)
                 self.upgradeStars = try container.decodeIfPresent(Int64.self, forKey: .upgradeStars)
                 self.transferStars = try container.decodeIfPresent(Int64.self, forKey: .transferStars)
+                self.canTransferDate = try container.decodeIfPresent(Int32.self, forKey: .canTransferDate)
+                self.canResaleDate = try container.decodeIfPresent(Int32.self, forKey: .canResaleDate)
             }
             
             public func encode(to encoder: Encoder) throws {
@@ -1790,6 +1802,8 @@ public final class ProfileGiftsContext {
                 try container.encodeIfPresent(self.canExportDate, forKey: .canExportDate)
                 try container.encodeIfPresent(self.upgradeStars, forKey: .upgradeStars)
                 try container.encodeIfPresent(self.transferStars, forKey: .transferStars)
+                try container.encodeIfPresent(self.canTransferDate, forKey: .canTransferDate)
+                try container.encodeIfPresent(self.canResaleDate, forKey: .canResaleDate)
             }
             
             public func withGift(_ gift: TelegramCore.StarGift) -> StarGift {
@@ -1807,7 +1821,9 @@ public final class ProfileGiftsContext {
                     canUpgrade: self.canUpgrade,
                     canExportDate: self.canExportDate,
                     upgradeStars: self.upgradeStars,
-                    transferStars: self.transferStars
+                    transferStars: self.transferStars,
+                    canTransferDate: self.canTransferDate,
+                    canResaleDate: self.canResaleDate
                 )
             }
             
@@ -1826,7 +1842,9 @@ public final class ProfileGiftsContext {
                     canUpgrade: self.canUpgrade,
                     canExportDate: self.canExportDate,
                     upgradeStars: self.upgradeStars,
-                    transferStars: self.transferStars
+                    transferStars: self.transferStars,
+                    canTransferDate: self.canTransferDate,
+                    canResaleDate: self.canResaleDate
                 )
             }
             
@@ -1845,7 +1863,9 @@ public final class ProfileGiftsContext {
                     canUpgrade: self.canUpgrade,
                     canExportDate: self.canExportDate,
                     upgradeStars: self.upgradeStars,
-                    transferStars: self.transferStars
+                    transferStars: self.transferStars,
+                    canTransferDate: self.canTransferDate,
+                    canResaleDate: self.canResaleDate
                 )
             }
             fileprivate func withFromPeer(_ fromPeer: EnginePeer?) -> StarGift {
@@ -1863,7 +1883,9 @@ public final class ProfileGiftsContext {
                     canUpgrade: self.canUpgrade,
                     canExportDate: self.canExportDate,
                     upgradeStars: self.upgradeStars,
-                    transferStars: self.transferStars
+                    transferStars: self.transferStars,
+                    canTransferDate: self.canTransferDate,
+                    canResaleDate: self.canResaleDate
                 )
             }
         }
@@ -2042,7 +2064,7 @@ public final class ProfileGiftsContext {
 extension ProfileGiftsContext.State.StarGift {
     init?(apiSavedStarGift: Api.SavedStarGift, peerId: EnginePeer.Id, transaction: Transaction) {
         switch apiSavedStarGift {
-        case let .savedStarGift(flags, fromId, date, apiGift, message, msgId, savedId, convertStars, upgradeStars, canExportDate, transferStars):
+        case let .savedStarGift(flags, fromId, date, apiGift, message, msgId, savedId, convertStars, upgradeStars, canExportDate, transferStars, canTransferAt, canResaleAt):
             guard let gift = StarGift(apiStarGift: apiGift) else {
                 return nil
             }
@@ -2086,6 +2108,8 @@ extension ProfileGiftsContext.State.StarGift {
             self.canExportDate = canExportDate
             self.upgradeStars = upgradeStars
             self.transferStars = transferStars
+            self.canTransferDate = canTransferAt
+            self.canResaleDate = canResaleAt
         }
     }
 }

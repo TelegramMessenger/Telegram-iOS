@@ -14220,3 +14220,8 @@ Sorry for the inconvenience.";
 
 "Channel.AdminLog.MessageToggleAutoTranslateOn" = "%@ enabled autotranslation of messages";
 "Channel.AdminLog.MessageToggleAutoTranslateOff" = "%@ disabled autotranslation of messages";
+
+"Notification.StarsGift.Bought" = "%1$@ gifted you %2$@ for %3$@";
+"Notification.StarsGift.Bought.Stars_1" = "%@ Star";
+"Notification.StarsGift.Bought.Stars_any" = "%@ Stars";
+"Notification.StarsGift.BoughtYou" = "You gifted %1$@ for %2$@";
