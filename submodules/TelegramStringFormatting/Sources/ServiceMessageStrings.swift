@@ -1190,8 +1190,12 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                             } else if message.author?.id == accountPeerId {
                                 if let resaleStars {
                                     let starsString = strings.Notification_StarsGift_Bought_Stars(Int32(resaleStars))
-                                    let giftTitle = "\(gift.title) #\(presentationStringsFormattedNumber(gift.number, dateTimeFormat.groupingSeparator))"
-                                    attributedString = addAttributesToStringWithRanges(strings.Notification_StarsGift_BoughtYou(giftTitle, starsString)._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes, 1: boldAttributes])
+                                    if message.id.peerId == accountPeerId {
+                                        attributedString = addAttributesToStringWithRanges(strings.Notification_StarsGift_BoughtForYouself(starsString)._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+                                    } else {
+                                        let giftTitle = "\(gift.title) #\(presentationStringsFormattedNumber(gift.number, dateTimeFormat.groupingSeparator))"
+                                        attributedString = addAttributesToStringWithRanges(strings.Notification_StarsGift_BoughtYou(giftTitle, starsString)._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes, 1: boldAttributes])
+                                    }
                                 } else {
                                     attributedString = NSAttributedString(string: strings.Notification_StarsGift_TransferYou, font: titleFont, textColor: primaryTextColor)
                                 }

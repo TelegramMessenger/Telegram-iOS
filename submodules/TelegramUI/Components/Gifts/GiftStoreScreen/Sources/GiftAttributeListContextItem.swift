@@ -218,8 +218,7 @@ private final class GiftAttributeListContextItemNode: ASDisplayNode, ContextMenu
         
         let selectedAttributes = Set(item.selectedAttributes)
         
-        //TODO:localize
-        let selectAllAction = ContextMenuActionItem(text: "Select All", icon: { theme in
+        let selectAllAction = ContextMenuActionItem(text: presentationData.strings.Gift_Store_SelectAll, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor)
         }, iconPosition: .left, action: { _, f in
             getController()?.dismiss(result: .dismissWithoutContent, completion: nil)
@@ -248,7 +247,7 @@ private final class GiftAttributeListContextItemNode: ASDisplayNode, ContextMenu
         }
         
         let nopAction: ((ContextControllerProtocol?, @escaping (ContextMenuActionResult) -> Void) -> Void)? = nil
-        let emptyResultsAction = ContextMenuActionItem(text: "No Results", textFont: .small, icon: { _ in return nil }, action: nopAction)
+        let emptyResultsAction = ContextMenuActionItem(text: presentationData.strings.Gift_Store_NoResults, textFont: .small, icon: { _ in return nil }, action: nopAction)
         let emptyResultsActionNode = ContextControllerActionsListActionItemNode(context: item.context, getController: getController, requestDismiss: actionSelected, requestUpdateAction: { _, _ in }, item: emptyResultsAction)
         actionNodes.append(emptyResultsActionNode)
         
@@ -412,12 +411,6 @@ private final class GiftAttributeListContextItemNode: ASDisplayNode, ContextMenu
     }
     
     func actionNode(at point: CGPoint) -> ContextActionNodeProtocol {
-//        for actionNode in self.actionNodes {
-//            let frame = actionNode.convert(actionNode.bounds, to: self)
-//            if frame.contains(point) {
-//                return actionNode
-//            }
-//        }
         return self
     }
     

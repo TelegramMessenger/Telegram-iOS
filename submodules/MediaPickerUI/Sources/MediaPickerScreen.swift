@@ -2395,15 +2395,11 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         transition.updateTransformScale(node: self.moreButtonNode.iconNode, scale: moreIsVisible ? 1.0 : 0.1)
         
         if case .assets(_, .story) = self.subject, self.selectionCount > 0 {
-            //TODO:localize
-            var text = "Create 1 Story"
-            if self.selectionCount > 1 {
-                text = "Create \(self.selectionCount) Stories"
-            }
+            let text = self.presentationData.strings.MediaPicker_CreateStory(self.selectionCount)
             self.mainButtonStatePromise.set(.single(AttachmentMainButtonState(text: text, badge: nil, font: .bold, background: .color(self.presentationData.theme.actionSheet.controlAccentColor), textColor: self.presentationData.theme.list.itemCheckColors.foregroundColor, isVisible: true, progress: .none, isEnabled: true, hasShimmer: false, position: .top)))
             
             if self.selectionCount > 1 && self.selectionCount <= 6 {
-                self.secondaryButtonStatePromise.set(.single(AttachmentMainButtonState(text: "Combine into Collage", badge: nil, font: .regular, background: .color(.clear), textColor: self.presentationData.theme.actionSheet.controlAccentColor, isVisible: true, progress: .none, isEnabled: true, hasShimmer: false, iconName: "Media Editor/Collage", smallSpacing: true, position: .bottom)))
+                self.secondaryButtonStatePromise.set(.single(AttachmentMainButtonState(text: self.presentationData.strings.MediaPicker_CombineIntoCollage, badge: nil, font: .regular, background: .color(.clear), textColor: self.presentationData.theme.actionSheet.controlAccentColor, isVisible: true, progress: .none, isEnabled: true, hasShimmer: false, iconName: "Media Editor/Collage", smallSpacing: true, position: .bottom)))
             } else {
                 self.secondaryButtonStatePromise.set(.single(nil))
             }

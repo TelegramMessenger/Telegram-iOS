@@ -407,7 +407,6 @@ private final class GiftViewSheetContent: CombinedComponent {
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             let mode = ContactSelectionControllerMode.starsGifting(birthdays: nil, hasActions: false, showSelf: true, selfSubtitle: presentationData.strings.Premium_Gift_ContactSelection_BuySelf)
             
-            //TODO:localize
             let controller = self.context.sharedContext.makeContactSelectionController(ContactSelectionControllerParams(
                 context: context,
                 mode: mode,
@@ -476,14 +475,13 @@ private final class GiftViewSheetContent: CombinedComponent {
                                 controllers = controllers.filter({ !($0 is GiftViewScreen) })
                                 navigationController.setViewControllers(controllers, animated: true)
                                 
-                                //TODO:localize
                                 navigationController.view.addSubview(ConfettiView(frame: navigationController.view.bounds))
                                 
                                 Queue.mainQueue().after(0.5, {
                                     if let lastController = navigationController.viewControllers.last as? ViewController, let animationFile {
                                         let resultController = UndoOverlayController(
                                             presentationData: presentationData,
-                                            content: .sticker(context: context, file: animationFile, loop: false, title: "Gift Acquired", text: "\(giftTitle) is now yours.", undoText: nil, customAction: nil),
+                                            content: .sticker(context: context, file: animationFile, loop: false, title: presentationData.strings.Gift_View_Resale_SuccessYou_Title, text: presentationData.strings.Gift_View_Resale_SuccessYou_Text(giftTitle).string, undoText: nil, customAction: nil),
                                             elevatedLayout: lastController is ChatController,
                                             action: {  _ in
                                                 return true
@@ -505,7 +503,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                                         if let peer, let lastController = navigationController?.viewControllers.last as? ViewController, let animationFile {
                                             let resultController = UndoOverlayController(
                                                 presentationData: presentationData,
-                                                content: .sticker(context: context, file: animationFile, loop: false, title: "Gift Sent", text: "\(peer.compactDisplayTitle) has been notified about your gift.", undoText: nil, customAction: nil),
+                                                content: .sticker(context: context, file: animationFile, loop: false, title: presentationData.strings.Gift_View_Resale_Success_Title, text: presentationData.strings.Gift_View_Resale_Success_Text(peer.compactDisplayTitle).string, undoText: nil, customAction: nil),
                                                 elevatedLayout: lastController is ChatController,
                                                 action: {  _ in
                                                     return true
@@ -1848,12 +1846,11 @@ private final class GiftViewSheetContent: CombinedComponent {
                         )
                         buttonOriginX += buttonWidth + buttonSpacing
                         
-                        //TODO:localize
                         let resellButton = resellButton.update(
                             component: PlainButtonComponent(
                                 content: AnyComponent(
                                     HeaderButtonComponent(
-                                        title: uniqueGift.resellStars == nil ? "sell" : "unlist",
+                                        title: uniqueGift.resellStars == nil ? strings.Gift_View_Sell : strings.Gift_View_Unlist,
                                         iconName: uniqueGift.resellStars == nil ? "Premium/Collectible/Sell" : "Premium/Collectible/Unlist"
                                     )
                                 ),
@@ -2250,7 +2247,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                         )
                     }
                     if case let .uniqueGift(_, recipientPeerId) = component.subject, recipientPeerId != nil {
-                    } else {
+                    } else if ownerPeerId != component.context.account.peerId {
                         selling = true
                     }
                 }
@@ -2264,14 +2261,13 @@ private final class GiftViewSheetContent: CombinedComponent {
                 var addressToOpen: String?
                 var descriptionText: String
                 if let uniqueGift, selling {
-                    //TODO:localize
                     let ownerName: String
                     if case let .peerId(peerId) = uniqueGift.owner {
                         ownerName = state.peerMap[peerId]?.compactDisplayTitle ?? ""
                     } else {
                         ownerName = ""
                     }
-                    descriptionText = "\(ownerName) is selling this gift and you can buy it."
+                    descriptionText = strings.Gift_View_SellingGiftInfo(ownerName).string
                 } else if let uniqueGift, let address = uniqueGift.giftAddress, case .address = uniqueGift.owner {
                     addressToOpen = address
                     descriptionText = strings.Gift_View_TonGiftAddressInfo
@@ -2568,8 +2564,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                 if state.cachedStarImage == nil || state.cachedStarImage?.1 !== theme {
                     state.cachedStarImage = (generateTintedImage(image: UIImage(bundleImageName: "Item List/PremiumIcon"), color: theme.list.itemCheckColors.foregroundColor)!, theme)
                 }
-                //TODO:localize
-                var upgradeString = "Buy for"
+                var upgradeString = strings.Gift_View_BuyFor
                 upgradeString += "  # \(presentationStringsFormattedNumber(Int32(resellStars), environment.dateTimeFormat.groupingSeparator))"
                 
                 let buttonTitle = subject.arguments?.upgradeStars != nil ? strings.Gift_Upgrade_Confirm : upgradeString
@@ -3412,14 +3407,13 @@ public class GiftViewScreen: ViewControllerComponentContainer {
             let giftTitle = "\(gift.title) #\(presentationStringsFormattedNumber(gift.number, presentationData.dateTimeFormat.groupingSeparator))"
             let reference = arguments.reference ?? .slug(slug: gift.slug)
             
-            //TODO:localize
             if let resellStars = gift.resellStars, resellStars > 0, !update {
                 let alertController = textAlertController(
                     context: context,
-                    title: "Unlist This Item?",
-                    text: "It will no longer be for sale.",
+                    title: presentationData.strings.Gift_View_Resale_Unlist_Title,
+                    text: presentationData.strings.Gift_View_Resale_Unlist_Text,
                     actions: [
-                        TextAlertAction(type: .defaultAction, title: "Unlist", action: { [weak self] in
+                        TextAlertAction(type: .defaultAction, title: presentationData.strings.Gift_View_Resale_Unlist_Unlist, action: { [weak self] in
                             guard let self else {
                                 return
                             }
@@ -3436,7 +3430,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                                     break
                                 }
                                 
-                                let text = "\(giftTitle) is removed from sale."
+                                let text = presentationData.strings.Gift_View_Resale_Unlist_Success(giftTitle).string
                                 let tooltipController = UndoOverlayController(
                                     presentationData: presentationData,
                                     content: .universalImage(
@@ -3486,9 +3480,10 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                             break
                         }
                                                 
-                        var text = "\(giftTitle) is now for sale!"
+                        var text = presentationData.strings.Gift_View_Resale_List_Success(giftTitle).string
                         if update {
-                            text = "\(giftTitle) is relisted for \(presentationStringsFormattedNumber(Int32(price), presentationData.dateTimeFormat.groupingSeparator)) Stars."
+                            let starsString = presentationData.strings.Gift_View_Resale_Relist_Success_Stars(Int32(price))
+                            text = presentationData.strings.Gift_View_Resale_Relist_Success(giftTitle, starsString).string
                         }
                                          
                         let tooltipController = UndoOverlayController(
@@ -3588,6 +3583,16 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                     })))
                 }
                 
+                if case let .unique(gift) = arguments.gift, let resellStars = gift.resellStars, resellStars > 0 {
+                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_View_Context_ChangePrice, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Media Grid/Paid"), color: theme.contextMenu.primaryColor)
+                    }, action: { c, _ in
+                        c?.dismiss(completion: nil)
+                        
+                        resellGiftImpl?(true)
+                    })))
+                }
+                
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_View_Context_CopyLink, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] c, _ in
@@ -3625,8 +3630,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                 }
                 
                 if let _ = arguments.resellStars, case let .uniqueGift(uniqueGift, recipientPeerId) = subject, let _ = recipientPeerId {
-                    //TODO:localize
-                    items.append(.action(ContextMenuActionItem(text: "View in Profile", icon: { theme in
+                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_View_Context_ViewInProfile, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Peer Info/ShowIcon"), color: theme.contextMenu.primaryColor)
                     }, action: { c, _ in
                         c?.dismiss(completion: nil)

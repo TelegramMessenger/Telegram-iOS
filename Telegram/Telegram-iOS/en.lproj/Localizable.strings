@@ -14225,3 +14225,68 @@ Sorry for the inconvenience.";
 "Notification.StarsGift.Bought.Stars_1" = "%@ Star";
 "Notification.StarsGift.Bought.Stars_any" = "%@ Stars";
 "Notification.StarsGift.BoughtYou" = "You gifted %1$@ for %2$@";
+"Notification.StarsGift.BoughtForYouself" = "You bought this gift for %1$@";
+
+"Gift.View.Context.ChangePrice" = "Change Price";
+"Gift.View.Context.ViewInProfile" = "View in Profile";
+
+"Gift.View.Sell" = "sell";
+"Gift.View.Unlist" = "unlist";
+
+"Gift.View.BuyFor" = "Buy for";
+"Gift.View.SellingGiftInfo" = "%@ is selling this gift and you can buy it.";
+
+"Gift.View.Resale.Success.Title" = "Gift Sent";
+"Gift.View.Resale.Success.Text" = "%@ has been notified about your gift.";
+"Gift.View.Resale.SuccessYou.Title" = "Gift Acquired";
+"Gift.View.Resale.SuccessYou.Text" = "%@ is now yours.";
+
+"Gift.View.Resale.Unlist.Title" = "Unlist This Item?";
+"Gift.View.Resale.Unlist.Text" = "It will no longer be for sale.";
+"Gift.View.Resale.Unlist.Unlist" = "Unlist";
+"Gift.View.Resale.Unlist.Success" = "%@ is removed from sale.";
+"Gift.View.Resale.List.Success" = "%@ is now for sale!";
+"Gift.View.Resale.Relist.Success" = "%1$@ is relisted for %2$@.";
+"Gift.View.Resale.Relist.Success.Stars_1" = "%@ Star";
+"Gift.View.Resale.Relist.Success.Stars_any" = "%@ Stars";
+
+"Stars.SellGift.Title" = "Sell Gift";
+"Stars.SellGift.EditTitle" = "Edit Price";
+"Stars.SellGift.AmountTitle" = "PRICE IN STARS";
+"Stars.SellGift.AmountPlaceholder" = "Enter Price";
+"Stars.SellGift.AmountInfo" = "You will receive **%@**.";
+"Stars.SellGift.AmountInfo.Stars_1" = "%@ Star";
+"Stars.SellGift.AmountInfo.Stars_any" = "%@ Stars";
+"Stars.SellGift.Sell" = "Sell";
+"Stars.SellGift.SellFor" = "Sell for";
+
+"PeerInfo.Gifts.Sale" = "sale";
+
+"Gift.Store.ForResale_1" = "%@ for resale";
+"Gift.Store.ForResale_any" = "%@ for resale";
+"Gift.Store.Sort.Price" = "Price";
+"Gift.Store.Sort.Date" = "Date";
+"Gift.Store.Sort.Number" = "Number";
+"Gift.Store.SortByPrice" = "Sort By Price";
+"Gift.Store.SortByDate" = "Sort By Date";
+"Gift.Store.SortByNumber" = "Sort By Number";
+"Gift.Store.Filter.Model" = "Model";
+"Gift.Store.Filter.Backdrop" = "Backdrop";
+"Gift.Store.Filter.Symbol" = "Symbol";
+"Gift.Store.Filter.Selected.Model_1" = "%@ Model";
+"Gift.Store.Filter.Selected.Model_any" = "%@ Models";
+"Gift.Store.Filter.Selected.Backdrop_1" = "%@ Backdrop";
+"Gift.Store.Filter.Selected.Backdrop_any" = "%@ Backdrops";
+"Gift.Store.Filter.Selected.Symbol_1" = "%@ Symbol";
+"Gift.Store.Filter.Selected.Symbol_any" = "%@ Symbols";
+"Gift.Store.Search" = "Search";
+"Gift.Store.SelectAll" = "Select All";
+"Gift.Store.NoResults" = "No Results";
+"Gift.Store.EmptyResults" = "No Matching Gifts";
+"Gift.Store.ClearFilters" = "Clear Filters";
+
+"Gift.Send.AvailableForResale" = "Available for Resale";
+
+"MediaPicker.CreateStory_1" = "Create %@ Story";
+"MediaPicker.CreateStory_any" = "Create %@ Stories";
+"MediaPicker.CombineIntoCollage" = "Combine into Collage";

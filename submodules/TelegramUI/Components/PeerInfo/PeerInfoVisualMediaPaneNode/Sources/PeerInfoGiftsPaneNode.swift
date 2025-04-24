@@ -502,8 +502,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         resellPrice = gift.resellStars
                         
                         if let _ = resellPrice {
-                            //TODO:localize
-                            ribbonText = "sale"
+                            ribbonText = params.presentationData.strings.PeerInfo_Gifts_Sale
                             ribbonFont = .larger
                             ribbonColor = .green
                             ribbonOutline =  params.presentationData.theme.list.blocksBackgroundColor

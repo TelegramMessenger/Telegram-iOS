@@ -801,7 +801,7 @@ final class GiftSetupScreenComponent: Component {
                                 title: AnyComponent(VStack([
                                     AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(
                                         MultilineTextComponent(
-                                            text: .plain(NSAttributedString(string: "Available for Resale", font: Font.regular(presentationData.listsFontSize.baseDisplaySize), textColor: environment.theme.list.itemPrimaryTextColor))
+                                            text: .plain(NSAttributedString(string: environment.strings.Gift_Send_AvailableForResale, font: Font.regular(presentationData.listsFontSize.baseDisplaySize), textColor: environment.theme.list.itemPrimaryTextColor))
                                         )
                                     )),
                                 ], alignment: .left, spacing: 2.0)),
@@ -1769,6 +1769,8 @@ public final class GiftSetupScreen: ViewControllerComponentContainer {
         ), navigationBarAppearance: .default, theme: .default, updatedPresentationData: nil)
         
         self.title = ""
+        
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.context.sharedContext.currentPresentationData.with { $0 }.strings.Common_Back, style: .plain, target: nil, action: nil)
         
         self.scrollToTop = { [weak self] in
             guard let self, let componentView = self.node.hostView.componentView as? GiftSetupScreenComponent.View else {

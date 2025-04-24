@@ -148,10 +148,9 @@ private final class SheetContent: CombinedComponent {
                 maxAmount = withdrawConfiguration.maxPaidMediaAmount.flatMap { StarsAmount(value: $0, nanos: 0) }
                 amountLabel = nil
             case let .starGiftResell(update):
-                //TODO:localize
-                titleString = update ? "Edit Price" : "Sell Gift"
-                amountTitle = "PRICE IN STARS"
-                amountPlaceholder = "Enter Price"
+                titleString = update ? environment.strings.Stars_SellGift_EditTitle : environment.strings.Stars_SellGift_Title
+                amountTitle = environment.strings.Stars_SellGift_AmountTitle
+                amountPlaceholder = environment.strings.Stars_SellGift_AmountPlaceholder
                 
                 minAmount = StarsAmount(value: resaleConfiguration.starGiftResaleMinAmount, nanos: 0)
                 maxAmount = StarsAmount(value: resaleConfiguration.starGiftResaleMaxAmount, nanos: 0)
@@ -269,12 +268,13 @@ private final class SheetContent: CombinedComponent {
                     maximumNumberOfLines: 0
                 ))
             case .starGiftResell:
-                //TODO:localize
                 let amountInfoString: NSAttributedString
                 if let value = state.amount?.value, value > 0 {
-                    amountInfoString = NSAttributedString(attributedString: parseMarkdownIntoAttributedString("You will receive **\(Int32(floor(Float(value) * 0.8))) Stars**.", attributes: amountMarkdownAttributes, textAlignment: .natural))
+                    let starsValue = Int32(floor(Float(value) * Float(resaleConfiguration.paidMessageCommissionPermille) / 1000.0))
+                    let starsString = environment.strings.Stars_SellGift_AmountInfo_Stars(starsValue)
+                    amountInfoString = NSAttributedString(attributedString: parseMarkdownIntoAttributedString(environment.strings.Stars_SellGift_AmountInfo(starsString).string, attributes: amountMarkdownAttributes, textAlignment: .natural))
                 } else {
-                    amountInfoString = NSAttributedString(attributedString: parseMarkdownIntoAttributedString("You will receive **80%**.", attributes: amountMarkdownAttributes, textAlignment: .natural))
+                    amountInfoString = NSAttributedString(attributedString: parseMarkdownIntoAttributedString(environment.strings.Stars_SellGift_AmountInfo("\(resaleConfiguration.paidMessageCommissionPermille / 10)%").string, attributes: amountMarkdownAttributes, textAlignment: .natural))
                 }
                 amountFooter = AnyComponent(MultilineTextComponent(
                     text: .plain(amountInfoString),
@@ -334,11 +334,10 @@ private final class SheetContent: CombinedComponent {
             if case .paidMedia = component.mode {
                 buttonString = environment.strings.Stars_PaidContent_Create
             } else if case .starGiftResell = component.mode {
-                //TODO:localize
                 if let amount = state.amount, amount.value > 0 {
-                    buttonString = "Sell for  # \(presentationStringsFormattedNumber(amount, environment.dateTimeFormat.groupingSeparator))"
+                    buttonString = "\(environment.strings.Stars_SellGift_SellFor)  # \(presentationStringsFormattedNumber(amount, environment.dateTimeFormat.groupingSeparator))"
                 } else {
-                    buttonString = "Sell"
+                    buttonString = environment.strings.Stars_SellGift_Sell
                 }
             } else if let amount = state.amount {
                 buttonString = "\(environment.strings.Stars_Withdraw_Withdraw)  # \(presentationStringsFormattedNumber(amount, environment.dateTimeFormat.groupingSeparator))"

@@ -542,6 +542,8 @@ NSString *suffix = @"";
         return @"iPhone 16 Pro";
     if ([platform isEqualToString:@"iPhone17,2"])
         return @"iPhone 16 Pro Max";
+    if ([platform isEqualToString:@"iPhone17,5"])
+        return @"iPhone 16e";
     
     if ([platform hasPrefix:@"iPod1"])
         return @"iPod touch 1G";

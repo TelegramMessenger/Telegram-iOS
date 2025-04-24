@@ -302,7 +302,7 @@ final class GiftStoreScreenComponent: Component {
                     PlainButtonComponent(
                         content: AnyComponent(
                             MultilineTextComponent(
-                                text: .plain(NSAttributedString(string: "Clear Filters", font: Font.regular(17.0), textColor: environment.theme.list.itemAccentColor)),
+                                text: .plain(NSAttributedString(string: environment.strings.Gift_Store_ClearFilters, font: Font.regular(17.0), textColor: environment.theme.list.itemAccentColor)),
                                 horizontalAlignment: .center,
                                 maximumNumberOfLines: 0
                             )
@@ -349,7 +349,7 @@ final class GiftStoreScreenComponent: Component {
                     transition: .immediate,
                     component: AnyComponent(
                         MultilineTextComponent(
-                            text: .plain(NSAttributedString(string: "No Matching Gifts", font: Font.semibold(17.0), textColor: environment.theme.list.itemPrimaryTextColor)),
+                            text: .plain(NSAttributedString(string: environment.strings.Gift_Store_EmptyResults, font: Font.semibold(17.0), textColor: environment.theme.list.itemPrimaryTextColor)),
                             horizontalAlignment: .center
                         )
                     ),
@@ -441,21 +441,21 @@ final class GiftStoreScreenComponent: Component {
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             
             var items: [ContextMenuItem] = []
-            items.append(.action(ContextMenuActionItem(text: "Sort by Price", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_Store_SortByPrice, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Peer Info/SortValue"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] _, f in
                 f(.default)
                 
                 self?.state?.starGiftsContext.updateSorting(.value)
             })))
-            items.append(.action(ContextMenuActionItem(text: "Sort by Date", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_Store_SortByDate, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Peer Info/SortDate"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] _, f in
                 f(.default)
                 
                 self?.state?.starGiftsContext.updateSorting(.date)
             })))
-            items.append(.action(ContextMenuActionItem(text: "Sort by Number", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_Store_SortByNumber, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Peer Info/SortNumber"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] _, f in
                 f(.default)
@@ -493,12 +493,11 @@ final class GiftStoreScreenComponent: Component {
                 }
             }
             
-            //TODO:localize
             var items: [ContextMenuItem] = []
             if modelAttributes.count >= 8 {
                 items.append(.custom(SearchContextItem(
                     context: component.context,
-                    placeholder: "Search",
+                    placeholder: presentationData.strings.Gift_Store_Search,
                     value: "",
                     valueChanged: { value in
                         searchQueryPromise.set(value)
@@ -585,12 +584,11 @@ final class GiftStoreScreenComponent: Component {
                 }
             }
             
-            //TODO:localize
             var items: [ContextMenuItem] = []
             if backdropAttributes.count >= 8 {
                 items.append(.custom(SearchContextItem(
                     context: component.context,
-                    placeholder: "Search",
+                    placeholder: presentationData.strings.Gift_Store_Search,
                     value: "",
                     valueChanged: { value in
                         searchQueryPromise.set(value)
@@ -677,12 +675,11 @@ final class GiftStoreScreenComponent: Component {
                 }
             }
             
-            //TODO:localize
             var items: [ContextMenuItem] = []
             if patternAttributes.count >= 8 {
                 items.append(.custom(SearchContextItem(
                     context: component.context,
-                    placeholder: "Search",
+                    placeholder: presentationData.strings.Gift_Store_Search,
                     value: "",
                     valueChanged: { value in
                         searchQueryPromise.set(value)
@@ -814,35 +811,7 @@ final class GiftStoreScreenComponent: Component {
                 transition.setFrame(view: topPanelView, frame: topPanelFrame)
                 transition.setFrame(view: topSeparatorView, frame: topSeparatorFrame)
             }
-            
-//            let cancelButtonSize = self.cancelButton.update(
-//                transition: transition,
-//                component: AnyComponent(
-//                    PlainButtonComponent(
-//                        content: AnyComponent(
-//                            MultilineTextComponent(
-//                                text: .plain(NSAttributedString(string: strings.Common_Cancel, font: Font.regular(17.0), textColor: theme.rootController.navigationBar.accentTextColor)),
-//                                horizontalAlignment: .center
-//                            )
-//                        ),
-//                        effectAlignment: .center,
-//                        action: {
-//                            controller()?.dismiss()
-//                        },
-//                        animateScale: false
-//                    )
-//                ),
-//                environment: {},
-//                containerSize: CGSize(width: availableSize.width, height: 100.0)
-//            )
-//            let cancelButtonFrame = CGRect(origin: CGPoint(x: environment.safeInsets.left + 16.0, y: environment.statusBarHeight + (environment.navigationHeight - environment.statusBarHeight) / 2.0 - cancelButtonSize.height / 2.0), size: cancelButtonSize)
-//            if let cancelButtonView = self.cancelButton.view {
-//                if cancelButtonView.superview == nil {
-//                    self.addSubview(cancelButtonView)
-//                }
-//                transition.setFrame(view: cancelButtonView, frame: cancelButtonFrame)
-//            }
-                        
+                                    
             let balanceTitleSize = self.balanceTitle.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
@@ -922,7 +891,7 @@ final class GiftStoreScreenComponent: Component {
             let subtitleSize = self.subtitle.update(
                 transition: transition,
                 component: AnyComponent(BalancedTextComponent(
-                    text: .plain(NSAttributedString(string: "\(effectiveCount) for resale", font: Font.regular(13.0), textColor: theme.rootController.navigationBar.secondaryTextColor)),
+                    text: .plain(NSAttributedString(string: environment.strings.Gift_Store_ForResale(effectiveCount), font: Font.regular(13.0), textColor: theme.rootController.navigationBar.secondaryTextColor)),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 1
                 )),
@@ -940,18 +909,18 @@ final class GiftStoreScreenComponent: Component {
             let optionSpacing: CGFloat = 10.0
             let optionWidth = (availableSize.width - sideInset * 2.0 - optionSpacing * 2.0) / 3.0
                          
-            var sortingTitle = "Date"
+            var sortingTitle = environment.strings.Gift_Store_Sort_Date
             var sortingIcon: String = "Peer Info/SortDate"
             if let sorting = self.state?.starGiftsState?.sorting {
                 switch sorting {
                 case .date:
-                    sortingTitle = "Date"
+                    sortingTitle = environment.strings.Gift_Store_Sort_Date
                     sortingIcon = "Peer Info/SortDate"
                 case .value:
-                    sortingTitle = "Price"
+                    sortingTitle = environment.strings.Gift_Store_Sort_Price
                     sortingIcon = "Peer Info/SortValue"
                 case .number:
-                    sortingTitle = "Number"
+                    sortingTitle = environment.strings.Gift_Store_Sort_Number
                     sortingIcon = "Peer Info/SortNumber"
                 }
             }
@@ -968,13 +937,13 @@ final class GiftStoreScreenComponent: Component {
                 }
             ))
             
-            var modelTitle = "Model"
-            var backdropTitle = "Backdrop"
-            var symbolTitle = "Symbol"
+            var modelTitle = environment.strings.Gift_Store_Filter_Model
+            var backdropTitle = environment.strings.Gift_Store_Filter_Backdrop
+            var symbolTitle = environment.strings.Gift_Store_Filter_Symbol
             if let filterAttributes = self.state?.starGiftsState?.filterAttributes {
-                var modelCount = 0
-                var backdropCount = 0
-                var symbolCount = 0
+                var modelCount: Int32 = 0
+                var backdropCount: Int32 = 0
+                var symbolCount: Int32 = 0
                 
                 for attribute in filterAttributes {
                     switch attribute {
@@ -988,25 +957,13 @@ final class GiftStoreScreenComponent: Component {
                 }
                 
                 if modelCount > 0 {
-                    if modelCount > 1 {
-                        modelTitle = "\(modelCount) Models"
-                    } else {
-                        modelTitle = "1 Model"
-                    }
+                    modelTitle = environment.strings.Gift_Store_Filter_Selected_Model(modelCount)
                 }
                 if backdropCount > 0 {
-                    if backdropCount > 1 {
-                        backdropTitle = "\(backdropCount) Backdrops"
-                    } else {
-                        backdropTitle = "1 Backdrop"
-                    }
+                    backdropTitle = environment.strings.Gift_Store_Filter_Selected_Backdrop(modelCount)
                 }
                 if symbolCount > 0 {
-                    if symbolCount > 1 {
-                        symbolTitle = "\(symbolCount) Symbols"
-                    } else {
-                        symbolTitle = "1 Symbol"
-                    }
+                    symbolTitle = environment.strings.Gift_Store_Filter_Selected_Symbol(modelCount)
                 }
             }
             

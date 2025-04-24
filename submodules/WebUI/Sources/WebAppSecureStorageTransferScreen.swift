@@ -103,7 +103,6 @@ private final class SheetContent: CombinedComponent {
                 .position(CGPoint(x: environment.safeInsets.left + 16.0 + closeButton.size.width / 2.0, y: 28.0))
             )
             
-            //TODO:localize
             let title = title.update(
                 component: MultilineTextComponent(
                     text: .plain(NSAttributedString(string: strings.WebApp_ImportData_Title, font: titleFont, textColor: textColor)),
