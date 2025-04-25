@@ -190,6 +190,52 @@ static NSString *hexStringFromData(NSData *data) {
     return participants;
 }
 
+- (NSDictionary<NSNumber *, NSNumber *> *)participantLatencies {
+    auto describeResult = tde2e_api::call_describe(_callId);
+    if (describeResult.is_ok()) {
+        NSString *string = [[NSString alloc] initWithData:[NSData dataWithBytes:describeResult.value().data() length:describeResult.value().size()] encoding:NSASCIIStringEncoding];
+        
+        NSRegularExpression *pairRe = [NSRegularExpression regularExpressionWithPattern:@"(\\d+):(\\d+\\.\\d+)s" options:0 error:NULL];
+        
+        NSMutableDictionary<NSNumber*, NSNumber*> *commitTimes = [NSMutableDictionary dictionary];
+        NSMutableDictionary<NSNumber*, NSNumber*> *revealTimes = [NSMutableDictionary dictionary];
+        
+        // split into lines and look for the two lines
+        [string enumerateLinesUsingBlock:^(NSString * _Nonnull line, BOOL * _Nonnull stop) {
+            if ([line containsString:@"commit ="]) {
+                [pairRe enumerateMatchesInString:line options:0 range:NSMakeRange(0, line.length) usingBlock:^(NSTextCheckingResult * _Nullable match, NSMatchingFlags flags, BOOL * _Nonnull stop) {
+                    NSString *userIdStr = [line substringWithRange:[match rangeAtIndex:1]];
+                    NSString *durStr    = [line substringWithRange:[match rangeAtIndex:2]];
+                    NSNumber *uid = @([userIdStr longLongValue]);
+                    NSNumber *dur = @([durStr doubleValue]);
+                    commitTimes[uid] = dur;
+                }];
+            }
+            else if ([line containsString:@"reveal ="]) {
+                [pairRe enumerateMatchesInString:line options:0 range:NSMakeRange(0, line.length) usingBlock:^(NSTextCheckingResult * _Nullable match, NSMatchingFlags flags, BOOL * _Nonnull stop) {
+                    NSString *userIdStr = [line substringWithRange:[match rangeAtIndex:1]];
+                    NSString *durStr    = [line substringWithRange:[match rangeAtIndex:2]];
+                    NSNumber *uid = @([userIdStr longLongValue]);
+                    NSNumber *dur = @([durStr doubleValue]);
+                    revealTimes[uid] = dur;
+                }];
+            }
+        }];
+        
+        // build final result = commit+reveal
+        NSMutableDictionary<NSNumber*, NSNumber*> *result = [NSMutableDictionary dictionary];
+        for (NSNumber *uid in commitTimes) {
+            double commit = commitTimes[uid].doubleValue;
+            double reveal = revealTimes[uid].doubleValue; // will be 0 if missing
+            result[uid] = @(commit + reveal);
+        }
+        
+        return result;
+    }
+    
+    return @{};
+}
+
 - (void)applyBlock:(NSData *)block {
     std::string mappedBlock((uint8_t *)block.bytes, ((uint8_t *)block.bytes) + block.length);
     

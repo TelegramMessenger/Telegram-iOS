@@ -5,15 +5,40 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "type": "sweetpad-lldb",
-            "request": "attach",
-            "name": "Attach to running app (SweetPad)",
-            "preLaunchTask": "sweetpad: launch",
-            "codelldbAttributes": {
-                "initCommands": [
-                    "command source ~/.lldbinit-Xcode"
-                ]
-            }
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:telegram-ios}",
+            "name": "Debug Telegram",
+            "program": "${workspaceFolder:telegram-ios}/.build/debug/Telegram",
+            "preLaunchTask": "swift: Build Debug Telegram"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:telegram-ios}",
+            "name": "Release Telegram",
+            "program": "${workspaceFolder:telegram-ios}/.build/release/Telegram",
+            "preLaunchTask": "swift: Build Release Telegram"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:telegram-ios}",
+            "name": "Debug telegram-ios",
+            "program": "${workspaceFolder:telegram-ios}/.build/debug/telegram-ios",
+            "preLaunchTask": "swift: Build Debug telegram-ios"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:telegram-ios}",
+            "name": "Release telegram-ios",
+            "program": "${workspaceFolder:telegram-ios}/.build/release/telegram-ios",
+            "preLaunchTask": "swift: Build Release telegram-ios"
         }
     ]
 }

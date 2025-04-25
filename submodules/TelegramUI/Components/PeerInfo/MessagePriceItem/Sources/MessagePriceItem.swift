@@ -26,9 +26,10 @@ public final class MessagePriceItem: ListViewItem, ItemListItem {
     let price: String
     public let sectionId: ItemListSectionId
     let updated: (Int64, Bool) -> Void
+    let openSetCustom: (() -> Void)?
     let openPremiumInfo: (() -> Void)?
     
-    public init(theme: PresentationTheme, strings: PresentationStrings, isEnabled: Bool, minValue: Int64, maxValue: Int64, value: Int64, price: String, sectionId: ItemListSectionId, updated: @escaping (Int64, Bool) -> Void, openPremiumInfo: (() -> Void)? = nil) {
+    public init(theme: PresentationTheme, strings: PresentationStrings, isEnabled: Bool, minValue: Int64, maxValue: Int64, value: Int64, price: String, sectionId: ItemListSectionId, updated: @escaping (Int64, Bool) -> Void, openSetCustom: (() -> Void)? = nil, openPremiumInfo: (() -> Void)? = nil) {
         self.theme = theme
         self.strings = strings
         self.isEnabled = isEnabled
@@ -38,6 +39,7 @@ public final class MessagePriceItem: ListViewItem, ItemListItem {
         self.price = price
         self.sectionId = sectionId
         self.updated = updated
+        self.openSetCustom = openSetCustom
         self.openPremiumInfo = openPremiumInfo
     }
     
@@ -161,6 +163,8 @@ private class MessagePriceItemNode: ListViewItemNode {
     private var sliderView: TGPhotoEditorSliderView?
     private let leftTextNode: ImmediateTextNode
     private let rightTextNode: ImmediateTextNode
+    private let centerTextButtonNode: HighlightableButtonNode
+    private let centerTextButtonBackground: UIImageView
     private let centerLeftTextNode: ImmediateTextNode
     private let centerRightTextNode: ImmediateTextNode
     private let lockIconNode: ASImageNode
@@ -186,8 +190,13 @@ private class MessagePriceItemNode: ListViewItemNode {
         
         self.leftTextNode = ImmediateTextNode()
         self.rightTextNode = ImmediateTextNode()
+        
+        self.centerTextButtonNode = HighlightableButtonNode()
+        self.centerTextButtonBackground = UIImageView()
         self.centerLeftTextNode = ImmediateTextNode()
+        self.centerLeftTextNode.isUserInteractionEnabled = false
         self.centerRightTextNode = ImmediateTextNode()
+        self.centerRightTextNode.isUserInteractionEnabled = false
         
         self.lockIconNode = ASImageNode()
         self.lockIconNode.displaysAsynchronously = false
@@ -198,9 +207,13 @@ private class MessagePriceItemNode: ListViewItemNode {
         
         self.addSubnode(self.leftTextNode)
         self.addSubnode(self.rightTextNode)
-        self.addSubnode(self.centerLeftTextNode)
-        self.addSubnode(self.centerRightTextNode)
+        self.addSubnode(self.centerTextButtonNode)
+        self.centerTextButtonNode.view.addSubview(self.centerTextButtonBackground)
+        self.centerTextButtonNode.addSubnode(self.centerLeftTextNode)
+        self.centerTextButtonNode.addSubnode(self.centerRightTextNode)
         self.addSubnode(self.lockIconNode)
+        
+        self.centerTextButtonNode.addTarget(self, action: #selector(self.centerTextButtonPressed), forControlEvents: .touchUpInside)
     }
     
     override func didLoad() {
@@ -231,7 +244,11 @@ private class MessagePriceItemNode: ListViewItemNode {
         sliderView.addTarget(self, action: #selector(self.sliderValueChanged), for: .valueChanged)
         self.sliderView = sliderView
     }
-        
+    
+    @objc private func centerTextButtonPressed() {
+        self.item?.openSetCustom?()
+    }
+    
     func asyncLayout() -> (_ item: MessagePriceItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let currentItem = self.item
         
@@ -312,8 +329,8 @@ private class MessagePriceItemNode: ListViewItemNode {
                     strongSelf.rightTextNode.attributedText = NSAttributedString(string: "\(item.maxValue)", font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor)
                     
                     let centralLeftText = item.strings.Privacy_Messages_Stars(Int32(item.value))
-                    strongSelf.centerLeftTextNode.attributedText = NSAttributedString(string: centralLeftText, font: textFont, textColor: item.theme.list.itemPrimaryTextColor)
-                    strongSelf.centerRightTextNode.attributedText = NSAttributedString(string: item.price, font: smallTextFont, textColor: item.theme.list.itemSecondaryTextColor)
+                    strongSelf.centerLeftTextNode.attributedText = NSAttributedString(string: centralLeftText, font: textFont, textColor: item.openSetCustom != nil ? item.theme.list.itemAccentColor : item.theme.list.itemPrimaryTextColor)
+                    strongSelf.centerRightTextNode.attributedText = NSAttributedString(string: item.price, font: smallTextFont, textColor: item.openSetCustom != nil ? item.theme.list.itemAccentColor.withMultipliedAlpha(0.5) : item.theme.list.itemSecondaryTextColor)
                     
                     let leftTextSize = strongSelf.leftTextNode.updateLayout(CGSize(width: 100.0, height: 100.0))
                     let rightTextSize = strongSelf.rightTextNode.updateLayout(CGSize(width: 100.0, height: 100.0))
@@ -328,10 +345,28 @@ private class MessagePriceItemNode: ListViewItemNode {
                     
                     let totalCenterWidth = centerLeftTextSize.width + centerSpacing + centerRightTextSize.width
                     let centerLeftFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((params.width - totalCenterWidth) / 2.0), y: 11.0), size: centerLeftTextSize)
-                    strongSelf.centerLeftTextNode.frame = centerLeftFrame
-                    
                     let centerRightFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((params.width - totalCenterWidth) / 2.0) + totalCenterWidth - centerRightTextSize.width, y: 14.0 - UIScreenPixel), size: centerRightTextSize)
-                    strongSelf.centerRightTextNode.frame = centerRightFrame
+                    
+                    let centerButtonFrame = CGRect(origin: CGPoint(x: centerLeftFrame.minX, y: centerLeftFrame.minY), size: CGSize(width: centerRightFrame.maxX - centerLeftFrame.minX, height: centerLeftFrame.height)).insetBy(dx: -8.0, dy: -4.0)
+                    
+                    strongSelf.centerTextButtonNode.frame = centerButtonFrame
+                    
+                    strongSelf.centerTextButtonBackground.frame = CGRect(origin: CGPoint(x: 0.0, y: UIScreenPixel), size: centerButtonFrame.size)
+                    if strongSelf.centerTextButtonBackground.image == nil {
+                        strongSelf.centerTextButtonBackground.image = generateStretchableFilledCircleImage(diameter: 16.0, color: .white)?.withRenderingMode(.alwaysTemplate)
+                    }
+                    strongSelf.centerTextButtonBackground.tintColor = item.theme.list.itemAccentColor.withMultipliedAlpha(0.1)
+                    
+                    if item.openSetCustom != nil {
+                        strongSelf.centerTextButtonNode.isEnabled = true
+                        strongSelf.centerTextButtonBackground.isHidden = false
+                    } else {
+                        strongSelf.centerTextButtonNode.isEnabled = false
+                        strongSelf.centerTextButtonBackground.isHidden = true
+                    }
+                    
+                    strongSelf.centerLeftTextNode.frame = centerLeftFrame.offsetBy(dx: -centerButtonFrame.minX, dy: -centerButtonFrame.minY)
+                    strongSelf.centerRightTextNode.frame = centerRightFrame.offsetBy(dx: -centerButtonFrame.minX, dy: -centerButtonFrame.minY)
                     
                     if let sliderView = strongSelf.sliderView {
                         if themeUpdated {
@@ -343,11 +378,16 @@ private class MessagePriceItemNode: ListViewItemNode {
                         
                         sliderView.frame = CGRect(origin: CGPoint(x: params.leftInset + 18.0, y: 36.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 18.0 * 2.0, height: 44.0))
                         
-                        sliderView.interactionEnded = { [weak self] in
+                        sliderView.interactionEnded = {
                             guard let self else {
                                 return
                             }
                             self.item?.updated(Int64(self.amount.realValue), true)
+                        }
+                        
+                        if !sliderView.isTracking {
+                            strongSelf.amount = Amount(realValue: Int(item.value), maxRealValue: Int(item.maxValue), maxSliderValue: 999, isLogarithmic: true)
+                            sliderView.value = CGFloat(strongSelf.amount.sliderValue)
                         }
                     }
                     

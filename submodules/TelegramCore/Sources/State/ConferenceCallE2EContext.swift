@@ -5,6 +5,7 @@ public protocol ConferenceCallE2EContextState: AnyObject {
     func getEmojiState() -> Data?
     func getParticipantIds() -> [Int64]
     func getParticipants() -> [ConferenceCallE2EContext.BlockchainParticipant]
+    func getParticipantLatencies() -> [Int64: Double]
 
     func applyBlock(block: Data)
     func applyBroadcastBlock(block: Data)
@@ -166,7 +167,7 @@ public final class ConferenceCallE2EContext {
             let keyPair = self.keyPair
             let userId = self.userId
             let initializeState = self.initializeState
-            let (outBlocks, outEmoji, outBlockchainParticipants) = self.state.with({ callState -> ([Data], Data, [BlockchainParticipant]) in
+            let (outBlocks, outEmoji, outBlockchainParticipants, participantLatencies) = self.state.with({ callState -> ([Data], Data, [BlockchainParticipant], [Int64: Double]) in
                 if let state = callState.state {
                     for block in blocks {
                         if subChainId == 0 {
@@ -175,26 +176,26 @@ public final class ConferenceCallE2EContext {
                             state.applyBroadcastBlock(block: block)
                         }
                     }
-                    return (state.takeOutgoingBroadcastBlocks(), state.getEmojiState() ?? Data(), state.getParticipants())
+                    return (state.takeOutgoingBroadcastBlocks(), state.getEmojiState() ?? Data(), state.getParticipants(), state.getParticipantLatencies())
                 } else {
                     if subChainId == 0 {
                         guard let block = blocks.last else {
-                            return ([], Data(), [])
+                            return ([], Data(), [], [:])
                         }
                         guard let state = initializeState(keyPair, userId, block) else {
-                            return ([], Data(), [])
+                            return ([], Data(), [], [:])
                         }
                         callState.state = state
                         for block in callState.pendingIncomingBroadcastBlocks {
                             state.applyBroadcastBlock(block: block)
                         }
                         callState.pendingIncomingBroadcastBlocks.removeAll()
-                        return (state.takeOutgoingBroadcastBlocks(), state.getEmojiState() ?? Data(), state.getParticipants())
+                        return (state.takeOutgoingBroadcastBlocks(), state.getEmojiState() ?? Data(), state.getParticipants(), state.getParticipantLatencies())
                     } else if subChainId == 1 {
                         callState.pendingIncomingBroadcastBlocks.append(contentsOf: blocks)
-                        return ([], Data(), [])
+                        return ([], Data(), [], [:])
                     } else {
-                        return ([], Data(), [])
+                        return ([], Data(), [], [:])
                     }
                 }
             })
@@ -204,6 +205,10 @@ public final class ConferenceCallE2EContext {
             for outBlock in outBlocks {
                 let _ = self.engine.calls.sendConferenceCallBroadcast(callId: self.callId, accessHash: self.accessHash, block: outBlock).startStandalone()
             }
+            
+            #if DEBUG
+            print("Latencies: \(participantLatencies)")
+            #endif
         }
     
         private func e2ePoll(subChainId: Int) {
