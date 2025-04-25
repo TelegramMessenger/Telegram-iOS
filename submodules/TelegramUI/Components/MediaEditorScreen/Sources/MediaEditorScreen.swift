@@ -7386,7 +7386,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         return true
     }
     
-    private func processMultipleItems(items: [EditingItem]) {
+    private func processMultipleItems(items: [EditingItem], isLongVideo: Bool) {
         guard !items.isEmpty else {
             return
         }
@@ -7428,7 +7428,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             order.append(randomId)
             
             if item.asset.mediaType == .video {
-                processVideoItem(item: item, index: index, randomId: randomId) { result in
+                processVideoItem(item: item, index: index, randomId: randomId, isLongVideo: isLongVideo) { result in
                     let _ = multipleResults.modify { results in
                         var updatedResults = results
                         updatedResults.append(result)
@@ -7473,7 +7473,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         }
     }
     
-    private func processVideoItem(item: EditingItem, index: Int, randomId: Int64, completion: @escaping (MediaEditorScreenImpl.Result) -> Void) {
+    private func processVideoItem(item: EditingItem, index: Int, randomId: Int64, isLongVideo: Bool, completion: @escaping (MediaEditorScreenImpl.Result) -> Void) {
         let asset = item.asset
         
         let itemMediaEditor = setupMediaEditorForItem(item: item)
@@ -7494,10 +7494,10 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         }
         
         let firstFrameTime: CMTime
-        if let coverImageTimestamp = item.values?.coverImageTimestamp {
+        if let coverImageTimestamp = item.values?.coverImageTimestamp, !isLongVideo || index == 0 {
             firstFrameTime = CMTime(seconds: coverImageTimestamp, preferredTimescale: CMTimeScale(60))
         } else {
-            firstFrameTime = .zero
+            firstFrameTime = CMTime(seconds: item.values?.videoTrimRange?.lowerBound ?? 0.0, preferredTimescale: CMTimeScale(60))
         }
         
         PHImageManager.default().requestAVAsset(forVideo: asset, options: nil) { [weak self] avAsset, _, _ in
@@ -7641,11 +7641,15 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
     }
 
     private func setupMediaEditorForItem(item: EditingItem) -> MediaEditor {
+        var values = item.values
+        if values?.videoTrimRange == nil {
+            values = values?.withUpdatedVideoTrimRange(0 ..< storyMaxVideoDuration)
+        }
         return MediaEditor(
             context: self.context,
             mode: .default,
             subject: .asset(item.asset),
-            values: item.values,
+            values: values,
             hasHistogram: false,
             isStandalone: true
         )
@@ -8160,6 +8164,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         }
                 
         var multipleItems: [EditingItem] = []
+        var isLongVideo = false
         if self.node.items.count > 1 {
             multipleItems = self.node.items.filter({ $0.isEnabled })
         } else if case let .asset(asset) = self.node.subject {
@@ -8187,11 +8192,12 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                     
                     start += storyMaxVideoDuration
                 }
+                isLongVideo = true
             }
         }
         
         if multipleItems.count > 1 {
-            self.processMultipleItems(items: multipleItems)
+            self.processMultipleItems(items: multipleItems, isLongVideo: isLongVideo)
         } else {
             self.processSingleItem()
         }

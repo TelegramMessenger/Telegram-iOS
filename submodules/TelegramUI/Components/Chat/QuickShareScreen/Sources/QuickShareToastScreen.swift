@@ -101,7 +101,7 @@ private final class QuickShareToastScreenComponent: Component {
         }
         
         func animateIn() {
-            guard let component = self.component else {
+            guard let component = self.component, let environment = self.environment else {
                 return
             }
             func generateAvatarParabollicMotionKeyframes(from sourcePoint: CGPoint, to targetPosition: CGPoint, elevation: CGFloat) -> [CGPoint] {
@@ -153,7 +153,7 @@ private final class QuickShareToastScreenComponent: Component {
                 playIconAnimation(0.2)
             }
             
-            let offset = self.bounds.height - self.backgroundView.frame.minY
+            let offset = self.bounds.height - environment.inputHeight - self.backgroundView.frame.minY
             self.backgroundView.layer.animatePosition(from: CGPoint(x: 0.0, y: offset), to: CGPoint(), duration: 0.35, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: { _ in
                 if component.peer.id != component.context.account.peerId {
                     playIconAnimation(0.1)
@@ -203,12 +203,8 @@ private final class QuickShareToastScreenComponent: Component {
             
             let contentInsets = UIEdgeInsets(top: 10.0, left: 12.0, bottom: 10.0, right: 10.0)
             
-            let tabBarHeight: CGFloat
-            if !environment.safeInsets.left.isZero {
-                tabBarHeight = 34.0 + environment.safeInsets.bottom
-            } else {
-                tabBarHeight = 49.0 + environment.safeInsets.bottom
-            }
+            let tabBarHeight = 49.0 + max(environment.safeInsets.bottom, environment.inputHeight)
+            
             let containerInsets = UIEdgeInsets(
                 top: environment.safeInsets.top,
                 left: environment.safeInsets.left + 12.0,
@@ -394,8 +390,12 @@ public final class QuickShareToastScreen: ViewControllerComponentContainer {
         super.dismiss()
     }
     
+    private var didCommit = false
     public func dismissWithCommitAction() {
-        self.action(.commit)
+        if !self.didCommit {
+            self.didCommit = true
+            self.action(.commit)
+        }
         self.dismiss()
     }
     

@@ -470,10 +470,8 @@ private final class GiftViewSheetContent: CombinedComponent {
                         }
                         
                         if let navigationController = controller.navigationController as? NavigationController {
-                            if recipientPeerId == self.context.account.peerId {               
-                                var controllers = navigationController.viewControllers
-                                controllers = controllers.filter({ !($0 is GiftViewScreen) })
-                                navigationController.setViewControllers(controllers, animated: true)
+                            if recipientPeerId == self.context.account.peerId {
+                                controller.dismissAnimated()
                                 
                                 navigationController.view.addSubview(ConfettiView(frame: navigationController.view.bounds))
                                 
@@ -516,7 +514,6 @@ private final class GiftViewSheetContent: CombinedComponent {
                             }
                         }
                         
-                        controller.animateSuccess()
                         self.updated(transition: .spring(duration: 0.4))
                         
                         Queue.mainQueue().after(0.5) {

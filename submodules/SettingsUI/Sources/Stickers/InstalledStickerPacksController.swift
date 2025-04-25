@@ -1062,7 +1062,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
                 } else {
                     rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
                         updateState {
-                            $0.withUpdatedEditing(true).withUpdatedSelectedPackIds(Set())
+                            $0.withUpdatedEditing(true).withUpdatedPackIdWithRevealedOptions(nil).withUpdatedSelectedPackIds(Set())
                         }
                     })
                 }
