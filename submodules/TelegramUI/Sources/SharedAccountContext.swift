@@ -3551,7 +3551,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }
         let editorController = MediaEditorScreenImpl(
             context: context,
-            mode: .storyEditor,
+            mode: .storyEditor(remainingCount: 1),
             subject: subject,
             customTarget: nil,
             initialCaption: text.flatMap { NSAttributedString(string: $0) },
@@ -3716,7 +3716,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let controller = MediaEditorScreenImpl(
             context: context,
-            mode: .storyEditor,
+            mode: .storyEditor(remainingCount: 1),
             subject: editorSubject,
             transitionIn: nil,
             transitionOut: { _, _ in

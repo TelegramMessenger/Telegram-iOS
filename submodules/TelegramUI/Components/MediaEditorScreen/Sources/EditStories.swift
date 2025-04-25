@@ -97,7 +97,7 @@ public extension MediaEditorScreenImpl {
         var updateProgressImpl: ((Float) -> Void)?
         let controller = MediaEditorScreenImpl(
             context: context,
-            mode: .storyEditor,
+            mode: .storyEditor(remainingCount: 1),
             subject: subject,
             isEditing: !repost,
             isEditingCover: cover,

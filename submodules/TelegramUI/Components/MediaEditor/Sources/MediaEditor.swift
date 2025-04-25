@@ -988,6 +988,8 @@ public final class MediaEditor {
                     if let trimRange = self.values.videoTrimRange {
                         player.currentItem?.forwardPlaybackEndTime = CMTime(seconds: trimRange.upperBound, preferredTimescale: CMTimeScale(1000))
 //                        additionalPlayer?.currentItem?.forwardPlaybackEndTime = CMTime(seconds: trimRange.upperBound, preferredTimescale: CMTimeScale(1000))
+                    } else if let duration = player.currentItem?.duration.seconds, duration > self.maxDuration {
+                        player.currentItem?.forwardPlaybackEndTime = CMTime(seconds: self.maxDuration, preferredTimescale: CMTimeScale(1000))
                     }
 
                     if let initialSeekPosition = self.initialSeekPosition {

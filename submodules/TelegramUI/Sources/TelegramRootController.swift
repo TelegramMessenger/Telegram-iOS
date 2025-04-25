@@ -346,7 +346,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                     return nil
                 }
             },
-            completion: { result, resultTransition, dismissed in
+            completion: { result, resultTransition, storyRemainingCount, dismissed in
                 let subject: Signal<MediaEditorScreenImpl.Subject?, NoError> = result
                 |> map { value -> MediaEditorScreenImpl.Subject? in
                     func editorPIPPosition(_ position: CameraScreenImpl.PIPPosition) -> MediaEditorScreenImpl.PIPPosition {
@@ -422,7 +422,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                 
                 let controller = MediaEditorScreenImpl(
                     context: context,
-                    mode: .storyEditor,
+                    mode: .storyEditor(remainingCount: storyRemainingCount ?? 1),
                     subject: subject,
                     customTarget: mediaEditorCustomTarget,
                     transitionIn: transitionIn,

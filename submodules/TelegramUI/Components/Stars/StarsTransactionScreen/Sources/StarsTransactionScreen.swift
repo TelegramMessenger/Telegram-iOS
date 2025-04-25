@@ -1099,7 +1099,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     }
                 }
                 if let starRefPeerId = transaction.starrefPeerId, let starRefPeer = state.peerMap[starRefPeerId] {
-                    if !transaction.flags.contains(.isPaidMessage) {
+                    if !transaction.flags.contains(.isPaidMessage) && !transaction.flags.contains(.isStarGiftResale) {
                         tableItems.append(.init(
                             id: "to",
                             title: strings.StarsTransaction_StarRefReason_Affiliate,
@@ -1130,7 +1130,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                         ))
                     }
                     
-                    if let toPeer {
+                    if let toPeer, !transaction.flags.contains(.isStarGiftResale) {
                         tableItems.append(.init(
                             id: "referred",
                             title: transaction.flags.contains(.isPaidMessage) ? strings.Stars_Transaction_From : strings.StarsTransaction_StarRefReason_Referred,
@@ -1162,7 +1162,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     }
                 }
                 if let starrefCommissionPermille = transaction.starrefCommissionPermille, transaction.starrefPeerId != nil {
-                    if transaction.flags.contains(.isPaidMessage) {
+                    if transaction.flags.contains(.isPaidMessage) || transaction.flags.contains(.isStarGiftResale) {
                         var totalStars = transaction.count
                         if let starrefCount = transaction.starrefAmount {
                             totalStars = totalStars + starrefCount

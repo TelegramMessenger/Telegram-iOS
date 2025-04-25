@@ -2004,7 +2004,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                 var hasSelect = false
                 if forCollage {
                     hasSelect = true
-                } else if case .story = mode {
+                } else if case .story = mode, selectionContext.selectionLimit > 1 {
                     hasSelect = true
                 }
                 
@@ -3402,7 +3402,7 @@ public func stickerMediaPickerController(
                         destinationCornerRadius: 0.0
                     )
                 },
-                completion: { result, _, commit in
+                completion: { result, _, _, commit in
                     completion(result, nil, .zero, nil, true, { _ in return nil }, {
                         returnToCameraImpl?()
                     })
@@ -3520,7 +3520,7 @@ public func avatarMediaPickerController(
                         destinationCornerRadius: 0.0
                     )
                 },
-                completion: { result, _, commit in
+                completion: { result, _, _, commit in
                     completion(result, nil, .zero, nil, true, { _ in return nil }, {
                         returnToCameraImpl?()
                     })

@@ -338,8 +338,6 @@ final class GiftStoreScreenComponent: Component {
             )
             
             if let effectiveGifts = self.effectiveGifts, effectiveGifts.isEmpty && self.state?.starGiftsState?.dataState != .loading {
-                showClearFilters = true
-                
                 let emptyAnimationHeight = 148.0
                 let visibleHeight = availableHeight
                 let emptyAnimationSpacing: CGFloat = 20.0
