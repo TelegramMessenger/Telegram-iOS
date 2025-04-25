@@ -53,9 +53,6 @@ func closeButtonImage(dark: Bool) -> UIImage? {
     return generateImage(CGSize(width: 28.0, height: 28.0), contextGenerator: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         
-        context.setFillColor(UIColor(rgb: dark ? 0x1c1c1e : 0x2c2c2e).cgColor)
-        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-        
         context.setLineWidth(2.0)
         context.setLineCap(.round)
         context.setStrokeColor(UIColor.white.cgColor)

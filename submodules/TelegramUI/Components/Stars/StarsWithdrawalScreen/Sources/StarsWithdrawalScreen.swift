@@ -156,6 +156,15 @@ private final class SheetContent: CombinedComponent {
                 minAmount = StarsAmount(value: resaleConfiguration.starGiftResaleMinAmount, nanos: 0)
                 maxAmount = StarsAmount(value: resaleConfiguration.starGiftResaleMaxAmount, nanos: 0)
                 amountLabel = nil
+            case .paidMessages:
+                //TODO:localize
+                titleString = "Price per Message"
+                amountTitle = "PRICE IN STARS"
+                amountPlaceholder = "Enter Price"
+                
+                minAmount = StarsAmount(value: 1, nanos: 0)
+                maxAmount = StarsAmount(value: resaleConfiguration.paidMessageMaxAmount, nanos: 0)
+                amountLabel = nil
             }
             
             let title = title.update(
@@ -280,6 +289,19 @@ private final class SheetContent: CombinedComponent {
                     text: .plain(amountInfoString),
                     maximumNumberOfLines: 0
                 ))
+            case .paidMessages:
+                let amountInfoString: NSAttributedString
+                if let value = state.amount?.value, value > 0 {
+                    let fullValue: Int64 = Int64(value) * 1_000_000_000 * 80 / 100
+                    let amountValue = StarsAmount(value: fullValue / 1_000_000_000, nanos: Int32(fullValue % 1_000_000_000))
+                    amountInfoString = NSAttributedString(attributedString: parseMarkdownIntoAttributedString("You will receive **\(amountValue) Stars**.", attributes: amountMarkdownAttributes, textAlignment: .natural))
+                } else {
+                    amountInfoString = NSAttributedString(attributedString: parseMarkdownIntoAttributedString("You will receive **80%**.", attributes: amountMarkdownAttributes, textAlignment: .natural))
+                }
+                amountFooter = AnyComponent(MultilineTextComponent(
+                    text: .plain(amountInfoString),
+                    maximumNumberOfLines: 0
+                ))
             default:
                 amountFooter = nil
             }
@@ -340,6 +362,9 @@ private final class SheetContent: CombinedComponent {
                 } else {
                     buttonString = "Sell"
                 }
+            } else if case .paidMessages = component.mode {
+                //TODO:localize
+                buttonString = "OK"
             } else if let amount = state.amount {
                 buttonString = "\(environment.strings.Stars_Withdraw_Withdraw)  # \(presentationStringsFormattedNumber(amount, environment.dateTimeFormat.groupingSeparator))"
             } else {
@@ -432,6 +457,8 @@ private final class SheetContent: CombinedComponent {
                 amount = nil
             case .starGiftResell:
                 amount = nil
+            case let .paidMessages(initialValue):
+                amount = StarsAmount(value: initialValue, nanos: 0)
             }
             
             self.amount = amount
@@ -553,6 +580,7 @@ public final class StarsWithdrawScreen: ViewControllerComponentContainer {
         case paidMedia(Int64?)
         case reaction(Int64?)
         case starGiftResell(Bool)
+        case paidMessages(Int64)
     }
     
     private let context: AccountContext

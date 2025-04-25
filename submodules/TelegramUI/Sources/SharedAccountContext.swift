@@ -3664,8 +3664,15 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return StarsWithdrawScreen(context: context, mode: .withdraw(stats), completion: completion)
     }
     
-    public func makeStarsWithdrawalScreen(context: AccountContext, completion: @escaping (Int64) -> Void) -> ViewController {
-        return StarsWithdrawScreen(context: context, mode: .accountWithdraw, completion: completion)
+    public func makeStarsWithdrawalScreen(context: AccountContext, subject: StarsWithdrawalScreenSubject, completion: @escaping (Int64) -> Void) -> ViewController {
+        let mode: StarsWithdrawScreen.Mode
+        switch subject {
+        case .withdraw:
+            mode = .accountWithdraw
+        case let .enterAmount(current):
+            mode = .paidMessages(current.value)
+        }
+        return StarsWithdrawScreen(context: context, mode: mode, completion: completion)
     }
     
     public func makeStarGiftResellScreen(context: AccountContext, update: Bool, completion: @escaping (Int64) -> Void) -> ViewController {
