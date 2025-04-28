@@ -144,13 +144,13 @@ public extension Api {
 }
 public extension Api {
     enum SavedStarGift: TypeConstructorDescription {
-        case savedStarGift(flags: Int32, fromId: Api.Peer?, date: Int32, gift: Api.StarGift, message: Api.TextWithEntities?, msgId: Int32?, savedId: Int64?, convertStars: Int64?, upgradeStars: Int64?, canExportAt: Int32?, transferStars: Int64?)
+        case savedStarGift(flags: Int32, fromId: Api.Peer?, date: Int32, gift: Api.StarGift, message: Api.TextWithEntities?, msgId: Int32?, savedId: Int64?, convertStars: Int64?, upgradeStars: Int64?, canExportAt: Int32?, transferStars: Int64?, canTransferAt: Int32?, canResellAt: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .savedStarGift(let flags, let fromId, let date, let gift, let message, let msgId, let savedId, let convertStars, let upgradeStars, let canExportAt, let transferStars):
+                case .savedStarGift(let flags, let fromId, let date, let gift, let message, let msgId, let savedId, let convertStars, let upgradeStars, let canExportAt, let transferStars, let canTransferAt, let canResellAt):
                     if boxed {
-                        buffer.appendInt32(1616305061)
+                        buffer.appendInt32(-539360103)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 1) != 0 {fromId!.serialize(buffer, true)}
@@ -163,14 +163,16 @@ public extension Api {
                     if Int(flags) & Int(1 << 6) != 0 {serializeInt64(upgradeStars!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 7) != 0 {serializeInt32(canExportAt!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 8) != 0 {serializeInt64(transferStars!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 13) != 0 {serializeInt32(canTransferAt!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 14) != 0 {serializeInt32(canResellAt!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .savedStarGift(let flags, let fromId, let date, let gift, let message, let msgId, let savedId, let convertStars, let upgradeStars, let canExportAt, let transferStars):
-                return ("savedStarGift", [("flags", flags as Any), ("fromId", fromId as Any), ("date", date as Any), ("gift", gift as Any), ("message", message as Any), ("msgId", msgId as Any), ("savedId", savedId as Any), ("convertStars", convertStars as Any), ("upgradeStars", upgradeStars as Any), ("canExportAt", canExportAt as Any), ("transferStars", transferStars as Any)])
+                case .savedStarGift(let flags, let fromId, let date, let gift, let message, let msgId, let savedId, let convertStars, let upgradeStars, let canExportAt, let transferStars, let canTransferAt, let canResellAt):
+                return ("savedStarGift", [("flags", flags as Any), ("fromId", fromId as Any), ("date", date as Any), ("gift", gift as Any), ("message", message as Any), ("msgId", msgId as Any), ("savedId", savedId as Any), ("convertStars", convertStars as Any), ("upgradeStars", upgradeStars as Any), ("canExportAt", canExportAt as Any), ("transferStars", transferStars as Any), ("canTransferAt", canTransferAt as Any), ("canResellAt", canResellAt as Any)])
     }
     }
     
@@ -203,6 +205,10 @@ public extension Api {
             if Int(_1!) & Int(1 << 7) != 0 {_10 = reader.readInt32() }
             var _11: Int64?
             if Int(_1!) & Int(1 << 8) != 0 {_11 = reader.readInt64() }
+            var _12: Int32?
+            if Int(_1!) & Int(1 << 13) != 0 {_12 = reader.readInt32() }
+            var _13: Int32?
+            if Int(_1!) & Int(1 << 14) != 0 {_13 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 1) == 0) || _2 != nil
             let _c3 = _3 != nil
@@ -214,8 +220,10 @@ public extension Api {
             let _c9 = (Int(_1!) & Int(1 << 6) == 0) || _9 != nil
             let _c10 = (Int(_1!) & Int(1 << 7) == 0) || _10 != nil
             let _c11 = (Int(_1!) & Int(1 << 8) == 0) || _11 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
-                return Api.SavedStarGift.savedStarGift(flags: _1!, fromId: _2, date: _3!, gift: _4!, message: _5, msgId: _6, savedId: _7, convertStars: _8, upgradeStars: _9, canExportAt: _10, transferStars: _11)
+            let _c12 = (Int(_1!) & Int(1 << 13) == 0) || _12 != nil
+            let _c13 = (Int(_1!) & Int(1 << 14) == 0) || _13 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 {
+                return Api.SavedStarGift.savedStarGift(flags: _1!, fromId: _2, date: _3!, gift: _4!, message: _5, msgId: _6, savedId: _7, convertStars: _8, upgradeStars: _9, canExportAt: _10, transferStars: _11, canTransferAt: _12, canResellAt: _13)
             }
             else {
                 return nil

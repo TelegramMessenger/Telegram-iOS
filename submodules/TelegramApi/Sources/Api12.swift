@@ -367,6 +367,7 @@ public extension Api {
 public extension Api {
     indirect enum InputSavedStarGift: TypeConstructorDescription {
         case inputSavedStarGiftChat(peer: Api.InputPeer, savedId: Int64)
+        case inputSavedStarGiftSlug(slug: String)
         case inputSavedStarGiftUser(msgId: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -377,6 +378,12 @@ public extension Api {
                     }
                     peer.serialize(buffer, true)
                     serializeInt64(savedId, buffer: buffer, boxed: false)
+                    break
+                case .inputSavedStarGiftSlug(let slug):
+                    if boxed {
+                        buffer.appendInt32(545636920)
+                    }
+                    serializeString(slug, buffer: buffer, boxed: false)
                     break
                 case .inputSavedStarGiftUser(let msgId):
                     if boxed {
@@ -391,6 +398,8 @@ public extension Api {
         switch self {
                 case .inputSavedStarGiftChat(let peer, let savedId):
                 return ("inputSavedStarGiftChat", [("peer", peer as Any), ("savedId", savedId as Any)])
+                case .inputSavedStarGiftSlug(let slug):
+                return ("inputSavedStarGiftSlug", [("slug", slug as Any)])
                 case .inputSavedStarGiftUser(let msgId):
                 return ("inputSavedStarGiftUser", [("msgId", msgId as Any)])
     }
@@ -407,6 +416,17 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.InputSavedStarGift.inputSavedStarGiftChat(peer: _1!, savedId: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputSavedStarGiftSlug(_ reader: BufferReader) -> InputSavedStarGift? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputSavedStarGift.inputSavedStarGiftSlug(slug: _1!)
             }
             else {
                 return nil

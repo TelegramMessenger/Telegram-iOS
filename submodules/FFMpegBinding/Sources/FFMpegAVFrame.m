@@ -1,6 +1,6 @@
 #import <FFMpegBinding/FFMpegAVFrame.h>
 
-#import "libavformat/avformat.h"
+#import <third_party/ffmpeg/libavformat/avformat.h>
 
 @interface FFMpegAVFrame () {
     AVFrame *_impl;

@@ -706,18 +706,31 @@ public extension Api.help {
 }
 public extension Api.help {
     enum PromoData: TypeConstructorDescription {
-        case promoData(flags: Int32, expires: Int32, peer: Api.Peer, chats: [Api.Chat], users: [Api.User], psaType: String?, psaMessage: String?)
+        case promoData(flags: Int32, expires: Int32, peer: Api.Peer?, psaType: String?, psaMessage: String?, pendingSuggestions: [String], dismissedSuggestions: [String], customPendingSuggestion: Api.PendingSuggestion?, chats: [Api.Chat], users: [Api.User])
         case promoDataEmpty(expires: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .promoData(let flags, let expires, let peer, let chats, let users, let psaType, let psaMessage):
+                case .promoData(let flags, let expires, let peer, let psaType, let psaMessage, let pendingSuggestions, let dismissedSuggestions, let customPendingSuggestion, let chats, let users):
                     if boxed {
-                        buffer.appendInt32(-1942390465)
+                        buffer.appendInt32(145021050)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(expires, buffer: buffer, boxed: false)
-                    peer.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 3) != 0 {peer!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(psaType!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeString(psaMessage!, buffer: buffer, boxed: false)}
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(pendingSuggestions.count))
+                    for item in pendingSuggestions {
+                        serializeString(item, buffer: buffer, boxed: false)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(dismissedSuggestions.count))
+                    for item in dismissedSuggestions {
+                        serializeString(item, buffer: buffer, boxed: false)
+                    }
+                    if Int(flags) & Int(1 << 4) != 0 {customPendingSuggestion!.serialize(buffer, true)}
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(chats.count))
                     for item in chats {
@@ -728,8 +741,6 @@ public extension Api.help {
                     for item in users {
                         item.serialize(buffer, true)
                     }
-                    if Int(flags) & Int(1 << 1) != 0 {serializeString(psaType!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 2) != 0 {serializeString(psaMessage!, buffer: buffer, boxed: false)}
                     break
                 case .promoDataEmpty(let expires):
                     if boxed {
@@ -742,8 +753,8 @@ public extension Api.help {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .promoData(let flags, let expires, let peer, let chats, let users, let psaType, let psaMessage):
-                return ("promoData", [("flags", flags as Any), ("expires", expires as Any), ("peer", peer as Any), ("chats", chats as Any), ("users", users as Any), ("psaType", psaType as Any), ("psaMessage", psaMessage as Any)])
+                case .promoData(let flags, let expires, let peer, let psaType, let psaMessage, let pendingSuggestions, let dismissedSuggestions, let customPendingSuggestion, let chats, let users):
+                return ("promoData", [("flags", flags as Any), ("expires", expires as Any), ("peer", peer as Any), ("psaType", psaType as Any), ("psaMessage", psaMessage as Any), ("pendingSuggestions", pendingSuggestions as Any), ("dismissedSuggestions", dismissedSuggestions as Any), ("customPendingSuggestion", customPendingSuggestion as Any), ("chats", chats as Any), ("users", users as Any)])
                 case .promoDataEmpty(let expires):
                 return ("promoDataEmpty", [("expires", expires as Any)])
     }
@@ -755,30 +766,45 @@ public extension Api.help {
             var _2: Int32?
             _2 = reader.readInt32()
             var _3: Api.Peer?
-            if let signature = reader.readInt32() {
+            if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
                 _3 = Api.parse(reader, signature: signature) as? Api.Peer
-            }
-            var _4: [Api.Chat]?
+            } }
+            var _4: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_4 = parseString(reader) }
+            var _5: String?
+            if Int(_1!) & Int(1 << 2) != 0 {_5 = parseString(reader) }
+            var _6: [String]?
             if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+                _6 = Api.parseVector(reader, elementSignature: -1255641564, elementType: String.self)
             }
-            var _5: [Api.User]?
+            var _7: [String]?
             if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                _7 = Api.parseVector(reader, elementSignature: -1255641564, elementType: String.self)
             }
-            var _6: String?
-            if Int(_1!) & Int(1 << 1) != 0 {_6 = parseString(reader) }
-            var _7: String?
-            if Int(_1!) & Int(1 << 2) != 0 {_7 = parseString(reader) }
+            var _8: Api.PendingSuggestion?
+            if Int(_1!) & Int(1 << 4) != 0 {if let signature = reader.readInt32() {
+                _8 = Api.parse(reader, signature: signature) as? Api.PendingSuggestion
+            } }
+            var _9: [Api.Chat]?
+            if let _ = reader.readInt32() {
+                _9 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+            }
+            var _10: [Api.User]?
+            if let _ = reader.readInt32() {
+                _10 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
-            let _c7 = (Int(_1!) & Int(1 << 2) == 0) || _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.help.PromoData.promoData(flags: _1!, expires: _2!, peer: _3!, chats: _4!, users: _5!, psaType: _6, psaMessage: _7)
+            let _c3 = (Int(_1!) & Int(1 << 3) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
+            let _c6 = _6 != nil
+            let _c7 = _7 != nil
+            let _c8 = (Int(_1!) & Int(1 << 4) == 0) || _8 != nil
+            let _c9 = _9 != nil
+            let _c10 = _10 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
+                return Api.help.PromoData.promoData(flags: _1!, expires: _2!, peer: _3, psaType: _4, psaMessage: _5, pendingSuggestions: _6!, dismissedSuggestions: _7!, customPendingSuggestion: _8, chats: _9!, users: _10!)
             }
             else {
                 return nil

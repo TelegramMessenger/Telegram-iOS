@@ -87,7 +87,6 @@ objc_library(
     hdrs = [":Public/mozjpeg/" + x for x in headers] + [":Public/mozjpeg/jconfig.h"],
     includes = [
         "Public",
-        "Public/mozjpeg",
     ],
     deps = [
         ":mozjpeg_lib",

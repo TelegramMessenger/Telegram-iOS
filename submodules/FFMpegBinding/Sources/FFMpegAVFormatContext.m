@@ -4,8 +4,8 @@
 #import <FFMpegBinding/FFMpegPacket.h>
 #import <FFMpegBinding/FFMpegAVCodecContext.h>
 
-#import "libavcodec/avcodec.h"
-#import "libavformat/avformat.h"
+#import <third_party/ffmpeg/libavcodec/avcodec.h>
+#import <third_party/ffmpeg/libavformat/avformat.h>
 
 int FFMpegCodecIdH264 = AV_CODEC_ID_H264;
 int FFMpegCodecIdHEVC = AV_CODEC_ID_HEVC;

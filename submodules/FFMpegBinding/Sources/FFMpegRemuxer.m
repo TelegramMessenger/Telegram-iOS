@@ -2,9 +2,9 @@
 
 #import <FFMpegBinding/FFMpegAVIOContext.h>
 
-#include "libavutil/timestamp.h"
-#include "libavformat/avformat.h"
-#include "libavcodec/avcodec.h"
+#include <third_party/ffmpeg/libavutil/timestamp.h>
+#include <third_party/ffmpeg/libavformat/avformat.h>
+#include <third_party/ffmpeg/libavcodec/avcodec.h>
 
 #define MOV_TIMESCALE 1000
 

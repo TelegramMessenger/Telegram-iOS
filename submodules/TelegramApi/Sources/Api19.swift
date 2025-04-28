@@ -1091,6 +1091,58 @@ public extension Api {
     }
 }
 public extension Api {
+    enum PendingSuggestion: TypeConstructorDescription {
+        case pendingSuggestion(suggestion: String, title: Api.TextWithEntities, description: Api.TextWithEntities, url: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .pendingSuggestion(let suggestion, let title, let description, let url):
+                    if boxed {
+                        buffer.appendInt32(-404214254)
+                    }
+                    serializeString(suggestion, buffer: buffer, boxed: false)
+                    title.serialize(buffer, true)
+                    description.serialize(buffer, true)
+                    serializeString(url, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .pendingSuggestion(let suggestion, let title, let description, let url):
+                return ("pendingSuggestion", [("suggestion", suggestion as Any), ("title", title as Any), ("description", description as Any), ("url", url as Any)])
+    }
+    }
+    
+        public static func parse_pendingSuggestion(_ reader: BufferReader) -> PendingSuggestion? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Api.TextWithEntities?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.TextWithEntities
+            }
+            var _3: Api.TextWithEntities?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.TextWithEntities
+            }
+            var _4: String?
+            _4 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.PendingSuggestion.pendingSuggestion(suggestion: _1!, title: _2!, description: _3!, url: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum PhoneCall: TypeConstructorDescription {
         case phoneCall(flags: Int32, id: Int64, accessHash: Int64, date: Int32, adminId: Int64, participantId: Int64, gAOrB: Buffer, keyFingerprint: Int64, protocol: Api.PhoneCallProtocol, connections: [Api.PhoneConnection], startDate: Int32, customParameters: Api.DataJSON?)
         case phoneCallAccepted(flags: Int32, id: Int64, accessHash: Int64, date: Int32, adminId: Int64, participantId: Int64, gB: Buffer, protocol: Api.PhoneCallProtocol)
