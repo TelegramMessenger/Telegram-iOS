@@ -97,7 +97,7 @@ public extension MediaEditorScreenImpl {
         var updateProgressImpl: ((Float) -> Void)?
         let controller = MediaEditorScreenImpl(
             context: context,
-            mode: .storyEditor,
+            mode: .storyEditor(remainingCount: 1),
             subject: subject,
             isEditing: !repost,
             isEditingCover: cover,
@@ -122,7 +122,10 @@ public extension MediaEditorScreenImpl {
                     return transitionOut
                 }
             },
-            completion: { result, commit in
+            completion: { results, commit in
+                guard let result = results.first else {
+                    return
+                }
                 let entities = generateChatInputTextEntities(result.caption)
                 
                 if repost {

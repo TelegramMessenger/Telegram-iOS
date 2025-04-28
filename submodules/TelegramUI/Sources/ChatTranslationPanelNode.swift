@@ -187,19 +187,27 @@ final class ChatTranslationPanelNode: ASDisplayNode {
         }
         
         let isPremium = self.chatInterfaceState?.isPremium ?? false
-        if isPremium {
+        
+        var translationAvailable = isPremium
+        if let channel = self.chatInterfaceState?.renderedPeer?.chatMainPeer as? TelegramChannel, channel.flags.contains(.autoTranslateEnabled) {
+            translationAvailable = true
+        }
+        
+        if translationAvailable {
             self.interfaceInteraction?.toggleTranslation(translationState.isEnabled ? .original : .translated)
         } else if !translationState.isEnabled {
-            let context = self.context
-            var replaceImpl: ((ViewController) -> Void)?
-            let controller = PremiumDemoScreen(context: context, subject: .translation, action: {
-                let controller = PremiumIntroScreen(context: context, source: .translation)
-                replaceImpl?(controller)
-            })
-            replaceImpl = { [weak controller] c in
-                controller?.replace(with: c)
+            if !isPremium {
+                let context = self.context
+                var replaceImpl: ((ViewController) -> Void)?
+                let controller = PremiumDemoScreen(context: context, subject: .translation, action: {
+                    let controller = PremiumIntroScreen(context: context, source: .translation)
+                    replaceImpl?(controller)
+                })
+                replaceImpl = { [weak controller] c in
+                    controller?.replace(with: c)
+                }
+                self.interfaceInteraction?.chatController()?.push(controller)
             }
-            self.interfaceInteraction?.chatController()?.push(controller)
         }
     }
     

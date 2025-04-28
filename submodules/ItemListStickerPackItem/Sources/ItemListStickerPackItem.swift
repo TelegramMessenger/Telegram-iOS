@@ -370,7 +370,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             }
             
             let packRevealOptions: [ItemListRevealOption]
-            if item.editing.editable && item.enabled {
+            if item.editing.editable && item.enabled && !item.editing.editing {
                 packRevealOptions = [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor)]
             } else {
                 packRevealOptions = []
@@ -564,7 +564,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                     }
                     
-                    let revealOffset = strongSelf.revealOffset
+                    let revealOffset = !packRevealOptions.isEmpty ? strongSelf.revealOffset : 0.0
                     
                     let transition: ContainedViewLayoutTransition
                     if animated {

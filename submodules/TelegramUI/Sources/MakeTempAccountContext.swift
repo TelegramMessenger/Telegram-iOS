@@ -39,7 +39,7 @@ public func makeTempContext(
         firebaseSecretStream: .never(),
         setNotificationCall: { _ in
         },
-        navigateToChat: { _, _, _ in
+        navigateToChat: { _, _, _, _ in
         }, displayUpgradeProgress: { _ in
         },
         appDelegate: nil

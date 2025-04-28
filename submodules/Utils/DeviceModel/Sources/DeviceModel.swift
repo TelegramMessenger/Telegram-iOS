@@ -124,6 +124,7 @@ public enum DeviceModel: CaseIterable, Equatable {
     case iPhone16Plus
     case iPhone16Pro
     case iPhone16ProMax
+    case iPhone16e
     
     case unknown(String)
     
@@ -235,6 +236,8 @@ public enum DeviceModel: CaseIterable, Equatable {
             return ["iPhone17,1"]
         case .iPhone16ProMax:
             return ["iPhone17,2"]
+        case .iPhone16e:
+            return ["iPhone17,5"]
         case let .unknown(modelId):
             return [modelId]
         }
@@ -348,6 +351,8 @@ public enum DeviceModel: CaseIterable, Equatable {
             return "iPhone 16 Pro"
         case .iPhone16ProMax:
             return "iPhone 16 Pro Max"
+        case .iPhone16e:
+            return "iPhone 16e"
         case let .unknown(modelId):
             if modelId.hasPrefix("iPhone") {
                 return "Unknown iPhone"

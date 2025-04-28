@@ -1165,7 +1165,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         attributedString = addAttributesToStringWithRanges(strings.Notification_StarsGift_Sent(authorName, starsPrice)._tuple, body: bodyAttributes, argumentAttributes: attributes)
                     }
                 }
-            case let .starGiftUnique(gift, isUpgrade, _, _, _, _, _, peerId, senderId, _, _):
+            case let .starGiftUnique(gift, isUpgrade, _, _, _, _, _, peerId, senderId, _, resaleStars, _, _):
                 if case let .unique(gift) = gift {
                     if !forAdditionalServiceMessage && !"".isEmpty {
                         attributedString = NSAttributedString(string: "\(gift.title) #\(presentationStringsFormattedNumber(gift.number, dateTimeFormat.groupingSeparator))", font: titleFont, textColor: primaryTextColor)
@@ -1188,7 +1188,17 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                             if message.id.peerId.isTelegramNotifications && senderId == nil {
                                 attributedString = NSAttributedString(string: strings.Notification_StarsGift_SentSomeone, font: titleFont, textColor: primaryTextColor)
                             } else if message.author?.id == accountPeerId {
-                                attributedString = NSAttributedString(string: strings.Notification_StarsGift_TransferYou, font: titleFont, textColor: primaryTextColor)
+                                if let resaleStars {
+                                    let starsString = strings.Notification_StarsGift_Bought_Stars(Int32(resaleStars))
+                                    if message.id.peerId == accountPeerId {
+                                        attributedString = addAttributesToStringWithRanges(strings.Notification_StarsGift_BoughtForYouself(starsString)._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+                                    } else {
+                                        let giftTitle = "\(gift.title) #\(presentationStringsFormattedNumber(gift.number, dateTimeFormat.groupingSeparator))"
+                                        attributedString = addAttributesToStringWithRanges(strings.Notification_StarsGift_BoughtYou(giftTitle, starsString)._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes, 1: boldAttributes])
+                                    }
+                                } else {
+                                    attributedString = NSAttributedString(string: strings.Notification_StarsGift_TransferYou, font: titleFont, textColor: primaryTextColor)
+                                }
                             } else if let senderId, let peer = message.peers[senderId] {
                                 if let peerId, let targetPeer = message.peers[peerId] {
                                     if senderId == accountPeerId {
@@ -1210,8 +1220,16 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                                     attributedString = addAttributesToStringWithRanges(strings.Notification_StarsGift_Transfer(peerName)._tuple, body: bodyAttributes, argumentAttributes: attributes)
                                 }
                             } else {
-                                let attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: peerIds)
-                                attributedString = addAttributesToStringWithRanges(strings.Notification_StarsGift_Transfer(peerName)._tuple, body: bodyAttributes, argumentAttributes: attributes)
+                                var attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: peerIds)
+                                if let resaleStars {
+                                    let starsString = strings.Notification_StarsGift_Bought_Stars(Int32(resaleStars))
+                                    let giftTitle = "\(gift.title) #\(presentationStringsFormattedNumber(gift.number, dateTimeFormat.groupingSeparator))"
+                                    attributes[1] = boldAttributes
+                                    attributes[2] = boldAttributes
+                                    attributedString = addAttributesToStringWithRanges(strings.Notification_StarsGift_Bought(peerName, giftTitle, starsString)._tuple, body: bodyAttributes, argumentAttributes: attributes)
+                                } else {
+                                    attributedString = addAttributesToStringWithRanges(strings.Notification_StarsGift_Transfer(peerName)._tuple, body: bodyAttributes, argumentAttributes: attributes)
+                                }
                             }
                         }
                     }

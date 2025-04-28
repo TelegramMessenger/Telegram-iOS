@@ -10,10 +10,10 @@ import AccountContext
 import TelegramPresentationData
 
 final class PriceButtonComponent: Component {
-    let price: Int64
+    let price: String
 
     init(
-        price: Int64
+        price: String
     ) {
         self.price = price
     }
@@ -54,7 +54,7 @@ final class PriceButtonComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
                     text: .plain(NSAttributedString(
-                        string: "\(component.price)",
+                        string: component.price,
                         font: Font.semibold(11.0),
                         textColor: UIColor(rgb: 0xffffff)
                     ))

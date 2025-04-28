@@ -1702,7 +1702,7 @@ func _internal_editStoryPrivacy(account: Account, id: Int32, privacy: EngineStor
 }
 
 public enum StoriesUploadAvailability {
-    case available
+    case available(remainingCount: Int32)
     case weeklyLimit
     case monthlyLimit
     case expiringLimit
@@ -1729,10 +1729,9 @@ func _internal_checkStoriesUploadAvailability(account: Account, target: Stories.
         
         return account.network.request(Api.functions.stories.canSendStory(peer: inputPeer))
         |> map { result -> StoriesUploadAvailability in
-            if result == .boolTrue {
-                return .available
-            } else {
-                return .unknownLimit
+            switch result {
+            case let .canSendStoryCount(countRemains):
+                return .available(remainingCount: countRemains)
             }
         }
         |> `catch` { error -> Signal<StoriesUploadAvailability, NoError> in

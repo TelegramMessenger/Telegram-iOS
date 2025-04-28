@@ -133,7 +133,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }
     }
     
-    private let navigateToChatImpl: (AccountRecordId, PeerId, MessageId?) -> Void
+    private let navigateToChatImpl: (AccountRecordId, PeerId, MessageId?, Bool) -> Void
     
     private let apsNotificationToken: Signal<Data?, NoError>
     private let voipNotificationToken: Signal<Data?, NoError>
@@ -268,7 +268,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     private let energyUsageAutomaticDisposable = MetaDisposable()
     
-    init(mainWindow: Window1?, sharedContainerPath: String, basePath: String, encryptionParameters: ValueBoxEncryptionParameters, accountManager: AccountManager<TelegramAccountManagerTypes>, appLockContext: AppLockContext, notificationController: NotificationContainerController?, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, hasInAppPurchases: Bool, rootPath: String, legacyBasePath: String?, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, firebaseSecretStream: Signal<[String: String], NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?) -> Void, displayUpgradeProgress: @escaping (Float?) -> Void = { _ in }, appDelegate: AppDelegate?) {
+    init(mainWindow: Window1?, sharedContainerPath: String, basePath: String, encryptionParameters: ValueBoxEncryptionParameters, accountManager: AccountManager<TelegramAccountManagerTypes>, appLockContext: AppLockContext, notificationController: NotificationContainerController?, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, hasInAppPurchases: Bool, rootPath: String, legacyBasePath: String?, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, firebaseSecretStream: Signal<[String: String], NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?, Bool) -> Void, displayUpgradeProgress: @escaping (Float?) -> Void = { _ in }, appDelegate: AppDelegate?) {
         assert(Queue.mainQueue().isCurrent())
         
         precondition(!testHasInstance)
@@ -1760,7 +1760,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func navigateToChat(accountId: AccountRecordId, peerId: PeerId, messageId: MessageId?) {
-        self.navigateToChatImpl(accountId, peerId, messageId)
+        self.navigateToChatImpl(accountId, peerId, messageId, true)
     }
     
     public func messageFromPreloadedChatHistoryViewForLocation(id: MessageId, location: ChatHistoryLocationInput, context: AccountContext, chatLocation: ChatLocation, subject: ChatControllerSubject?, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tag: HistoryViewInputTag?) -> Signal<(MessageIndex?, Bool), NoError> {
@@ -2991,8 +2991,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         let _ = (combineLatest(
             queue: Queue.mainQueue(),
             controller.result,
-            options.get())
-        |> take(1)).startStandalone(next: { [weak controller] result, options in
+            options.get() |> distinctUntilChanged
+        )).startStandalone(next: { [weak controller] result, options in
             if let (peers, _, _, _, _, _) = result, let contactPeer = peers.first, case let .peer(peer, _, _) = contactPeer, let starsContext = context.starsContext {
                 if case .starGiftTransfer = source {
                     presentTransferAlertImpl?(EnginePeer(peer))
@@ -3462,9 +3462,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     )
                 }
                 return nil
-            }, completion: { result, commit in
-                completion(result, commit)
-            } as (MediaEditorScreenImpl.Result, @escaping (@escaping () -> Void) -> Void) -> Void
+            }, completion: { results, commit in
+                completion(results.first!, commit)
+            } as ([MediaEditorScreenImpl.Result], @escaping (@escaping () -> Void) -> Void) -> Void
         )
         editorController.cancelled = { _ in
             cancelled()
@@ -3526,13 +3526,13 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     )
                 }
                 return nil
-            }, completion: { result, commit in
-                if case let .sticker(file, emoji) = result.media {
+            }, completion: { results, commit in
+                if case let .sticker(file, emoji) = results.first?.media {
                     completion(file, emoji, {
                         commit({})
                     })
                 }
-            } as (MediaEditorScreenImpl.Result, @escaping (@escaping () -> Void) -> Void) -> Void
+            } as ([MediaEditorScreenImpl.Result], @escaping (@escaping () -> Void) -> Void) -> Void
         )
         editorController.cancelled = { _ in
             cancelled()
@@ -3551,7 +3551,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }
         let editorController = MediaEditorScreenImpl(
             context: context,
-            mode: .storyEditor,
+            mode: .storyEditor(remainingCount: 1),
             subject: subject,
             customTarget: nil,
             initialCaption: text.flatMap { NSAttributedString(string: $0) },
@@ -3559,13 +3559,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             transitionIn: nil,
             transitionOut: { finished, isNew in
                 return nil
-            }, completion: { result, commit in
-                completion(result, commit)
-            } as (MediaEditorScreenImpl.Result, @escaping (@escaping () -> Void) -> Void) -> Void
+            }, completion: { results, commit in
+                completion(results.first!, commit)
+            } as ([MediaEditorScreenImpl.Result], @escaping (@escaping () -> Void) -> Void) -> Void
         )
-//        editorController.cancelled = { _ in
-//            cancelled()
-//        }
         return editorController
     }
     
@@ -3726,13 +3723,16 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let controller = MediaEditorScreenImpl(
             context: context,
-            mode: .storyEditor,
+            mode: .storyEditor(remainingCount: 1),
             subject: editorSubject,
             transitionIn: nil,
             transitionOut: { _, _ in
                 return nil
             },
-            completion: { [weak parentController] result, commit in
+            completion: { [weak parentController] results, commit in
+                guard let result = results.first else {
+                    return
+                }
                 let targetPeerId: EnginePeer.Id
                 let target: Stories.PendingTarget
                 if let sendAsPeerId = result.options.sendAsPeerId {

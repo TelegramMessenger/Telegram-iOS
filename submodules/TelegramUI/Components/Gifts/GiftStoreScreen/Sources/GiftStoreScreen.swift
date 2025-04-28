@@ -72,7 +72,7 @@ final class GiftStoreScreenComponent: Component {
         private let loadingNode: LoadingShimmerNode
         private let emptyResultsAnimation = ComponentView<Empty>()
         private let emptyResultsTitle = ComponentView<Empty>()
-        private let emptyResultsAction = ComponentView<Empty>()
+        private let clearFilters = ComponentView<Empty>()
         
         private let topPanel = ComponentView<Empty>()
         private let topSeparator = ComponentView<Empty>()
@@ -154,6 +154,7 @@ final class GiftStoreScreenComponent: Component {
             }
                
             let availableWidth = self.scrollView.bounds.width
+            let availableHeight = self.scrollView.bounds.height
             let contentOffset = self.scrollView.contentOffset.y
                         
             let topPanelAlpha = min(20.0, max(0.0, contentOffset)) / 20.0
@@ -213,8 +214,8 @@ final class GiftStoreScreenComponent: Component {
                             font: .monospaced,
                             color: ribbonColor
                         )
-                        
-                        let subject: GiftItemComponent.Subject = .uniqueGift(gift: uniqueGift, price: "⭐️\(uniqueGift.resellStars ?? 0)")
+                                                
+                        let subject: GiftItemComponent.Subject = .uniqueGift(gift: uniqueGift, price: "⭐️\(presentationStringsFormattedNumber(Int32(uniqueGift.resellStars ?? 0), environment.dateTimeFormat.groupingSeparator))")
                         let _ = visibleItem.update(
                             transition: itemTransition,
                             component: AnyComponent(
@@ -241,7 +242,13 @@ final class GiftStoreScreenComponent: Component {
                                                 }
                                                 let giftController = GiftViewScreen(
                                                     context: component.context,
-                                                    subject: .uniqueGift(uniqueGift, state.peerId)
+                                                    subject: .uniqueGift(uniqueGift, state.peerId),
+                                                    buyGift: { slug, peerId in
+                                                        return self.state?.starGiftsContext.buyStarGift(slug: slug, peerId: peerId) ?? .complete()
+                                                    },
+                                                    updateResellStars: { price in
+                                                        return self.state?.starGiftsContext.updateStarGiftResellPrice(slug: uniqueGift.slug, price: price) ?? .complete()
+                                                    }
                                                 )
                                                 mainController.push(giftController)
                                             }
@@ -288,6 +295,136 @@ final class GiftStoreScreenComponent: Component {
                 }
             }
             
+            let fadeTransition = ComponentTransition.easeInOut(duration: 0.25)
+            let emptyResultsActionSize = self.clearFilters.update(
+                transition: .immediate,
+                component: AnyComponent(
+                    PlainButtonComponent(
+                        content: AnyComponent(
+                            MultilineTextComponent(
+                                text: .plain(NSAttributedString(string: environment.strings.Gift_Store_ClearFilters, font: Font.regular(17.0), textColor: environment.theme.list.itemAccentColor)),
+                                horizontalAlignment: .center,
+                                maximumNumberOfLines: 0
+                            )
+                        ),
+                        effectAlignment: .center,
+                        action: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.state?.starGiftsContext.updateFilterAttributes([])
+                        },
+                        animateScale: false
+                    )
+                ),
+                environment: {},
+                containerSize: CGSize(width: availableWidth - 44.0 * 2.0, height: 100.0)
+            )
+            
+            var showClearFilters = false
+            if let filterAttributes = self.state?.starGiftsState?.filterAttributes, !filterAttributes.isEmpty {
+                showClearFilters = true
+            }
+            
+            let topInset: CGFloat = environment.navigationHeight + 39.0
+            let bottomInset: CGFloat = environment.safeInsets.bottom
+            
+            var emptyResultsActionFrame = CGRect(
+                origin: CGPoint(
+                    x: floorToScreenPixels((availableWidth - emptyResultsActionSize.width) / 2.0),
+                    y: max(self.scrollView.contentSize.height - 8.0, availableHeight - bottomInset - emptyResultsActionSize.height - 16.0)
+                ),
+                size: emptyResultsActionSize
+            )
+            
+            if let effectiveGifts = self.effectiveGifts, effectiveGifts.isEmpty && self.state?.starGiftsState?.dataState != .loading {
+                let emptyAnimationHeight = 148.0
+                let visibleHeight = availableHeight
+                let emptyAnimationSpacing: CGFloat = 20.0
+                let emptyTextSpacing: CGFloat = 18.0
+                                                                
+                let emptyResultsTitleSize = self.emptyResultsTitle.update(
+                    transition: .immediate,
+                    component: AnyComponent(
+                        MultilineTextComponent(
+                            text: .plain(NSAttributedString(string: environment.strings.Gift_Store_EmptyResults, font: Font.semibold(17.0), textColor: environment.theme.list.itemPrimaryTextColor)),
+                            horizontalAlignment: .center
+                        )
+                    ),
+                    environment: {},
+                    containerSize: CGSize(width: availableWidth, height: 100.0)
+                )
+               
+                let emptyResultsAnimationSize = self.emptyResultsAnimation.update(
+                    transition: .immediate,
+                    component: AnyComponent(LottieComponent(
+                        content: LottieComponent.AppBundleContent(name: "ChatListNoResults")
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: emptyAnimationHeight, height: emptyAnimationHeight)
+                )
+      
+                let emptyTotalHeight = emptyAnimationHeight + emptyAnimationSpacing + emptyResultsTitleSize.height + emptyResultsActionSize.height + emptyTextSpacing
+                let emptyAnimationY = topInset + floorToScreenPixels((visibleHeight - topInset - bottomInset - emptyTotalHeight) / 2.0)
+                
+                let emptyResultsAnimationFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableWidth - emptyResultsAnimationSize.width) / 2.0), y: emptyAnimationY), size: emptyResultsAnimationSize)
+                
+                let emptyResultsTitleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableWidth - emptyResultsTitleSize.width) / 2.0), y: emptyResultsAnimationFrame.maxY + emptyAnimationSpacing), size: emptyResultsTitleSize)
+                
+                emptyResultsActionFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableWidth - emptyResultsActionSize.width) / 2.0), y: emptyResultsTitleFrame.maxY + emptyTextSpacing), size: emptyResultsActionSize)
+                
+                if let view = self.emptyResultsAnimation.view as? LottieComponent.View {
+                    if view.superview == nil {
+                        view.alpha = 0.0
+                        fadeTransition.setAlpha(view: view, alpha: 1.0)
+                        self.insertSubview(view, belowSubview: self.loadingNode.view)
+                        view.playOnce()
+                    }
+                    view.bounds = CGRect(origin: .zero, size: emptyResultsAnimationFrame.size)
+                    ComponentTransition.immediate.setPosition(view: view, position: emptyResultsAnimationFrame.center)
+                }
+                if let view = self.emptyResultsTitle.view {
+                    if view.superview == nil {
+                        view.alpha = 0.0
+                        fadeTransition.setAlpha(view: view, alpha: 1.0)
+                        self.insertSubview(view, belowSubview: self.loadingNode.view)
+                    }
+                    view.bounds = CGRect(origin: .zero, size: emptyResultsTitleFrame.size)
+                    ComponentTransition.immediate.setPosition(view: view, position: emptyResultsTitleFrame.center)
+                }
+            } else {
+                if let view = self.emptyResultsAnimation.view {
+                    fadeTransition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                        view.removeFromSuperview()
+                    })
+                }
+                if let view = self.emptyResultsTitle.view {
+                    fadeTransition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                        view.removeFromSuperview()
+                    })
+                }
+            }
+            
+            if showClearFilters {
+                if let view = self.clearFilters.view {
+                    if view.superview == nil {
+                        view.alpha = 0.0
+                        fadeTransition.setAlpha(view: view, alpha: 1.0)
+                        self.insertSubview(view, belowSubview: self.loadingNode.view)
+                    }
+                    view.bounds = CGRect(origin: .zero, size: emptyResultsActionFrame.size)
+                    ComponentTransition.immediate.setPosition(view: view, position: emptyResultsActionFrame.center)
+                    
+                    view.alpha = self.state?.starGiftsState?.attributes.isEmpty == true ? 0.0 : 1.0
+                }
+            } else {
+                if let view = self.clearFilters.view {
+                    fadeTransition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                        view.removeFromSuperview()
+                    })
+                }
+            }
+            
             let bottomContentOffset = max(0.0, self.scrollView.contentSize.height - self.scrollView.contentOffset.y - self.scrollView.frame.height)
             if interactive, bottomContentOffset < 320.0 {
                 self.state?.starGiftsContext.loadMore()
@@ -302,21 +439,21 @@ final class GiftStoreScreenComponent: Component {
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             
             var items: [ContextMenuItem] = []
-            items.append(.action(ContextMenuActionItem(text: "Sort by Price", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_Store_SortByPrice, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Peer Info/SortValue"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] _, f in
                 f(.default)
                 
                 self?.state?.starGiftsContext.updateSorting(.value)
             })))
-            items.append(.action(ContextMenuActionItem(text: "Sort by Date", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_Store_SortByDate, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Peer Info/SortDate"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] _, f in
                 f(.default)
                 
                 self?.state?.starGiftsContext.updateSorting(.date)
             })))
-            items.append(.action(ContextMenuActionItem(text: "Sort by Number", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_Store_SortByNumber, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Peer Info/SortNumber"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] _, f in
                 f(.default)
@@ -354,17 +491,18 @@ final class GiftStoreScreenComponent: Component {
                 }
             }
             
-            //TODO:localize
             var items: [ContextMenuItem] = []
-            items.append(.custom(SearchContextItem(
-                context: component.context,
-                placeholder: "Search",
-                value: "",
-                valueChanged: { value in
-                    searchQueryPromise.set(value)
-                }
-            ), false))
-            items.append(.separator)
+            if modelAttributes.count >= 8 {
+                items.append(.custom(SearchContextItem(
+                    context: component.context,
+                    placeholder: presentationData.strings.Gift_Store_Search,
+                    value: "",
+                    valueChanged: { value in
+                        searchQueryPromise.set(value)
+                    }
+                ), false))
+                items.append(.separator)
+            }
             items.append(.custom(GiftAttributeListContextItem(
                 context: component.context,
                 attributes: modelAttributes,
@@ -444,17 +582,18 @@ final class GiftStoreScreenComponent: Component {
                 }
             }
             
-            //TODO:localize
             var items: [ContextMenuItem] = []
-            items.append(.custom(SearchContextItem(
-                context: component.context,
-                placeholder: "Search",
-                value: "",
-                valueChanged: { value in
-                    searchQueryPromise.set(value)
-                }
-            ), false))
-            items.append(.separator)
+            if backdropAttributes.count >= 8 {
+                items.append(.custom(SearchContextItem(
+                    context: component.context,
+                    placeholder: presentationData.strings.Gift_Store_Search,
+                    value: "",
+                    valueChanged: { value in
+                        searchQueryPromise.set(value)
+                    }
+                ), false))
+                items.append(.separator)
+            }
             items.append(.custom(GiftAttributeListContextItem(
                 context: component.context,
                 attributes: backdropAttributes,
@@ -534,17 +673,18 @@ final class GiftStoreScreenComponent: Component {
                 }
             }
             
-            //TODO:localize
             var items: [ContextMenuItem] = []
-            items.append(.custom(SearchContextItem(
-                context: component.context,
-                placeholder: "Search",
-                value: "",
-                valueChanged: { value in
-                    searchQueryPromise.set(value)
-                }
-            ), false))
-            items.append(.separator)
+            if patternAttributes.count >= 8 {
+                items.append(.custom(SearchContextItem(
+                    context: component.context,
+                    placeholder: presentationData.strings.Gift_Store_Search,
+                    value: "",
+                    valueChanged: { value in
+                        searchQueryPromise.set(value)
+                    }
+                ), false))
+                items.append(.separator)
+            }
             items.append(.custom(GiftAttributeListContextItem(
                 context: component.context,
                 attributes: patternAttributes,
@@ -669,35 +809,7 @@ final class GiftStoreScreenComponent: Component {
                 transition.setFrame(view: topPanelView, frame: topPanelFrame)
                 transition.setFrame(view: topSeparatorView, frame: topSeparatorFrame)
             }
-            
-//            let cancelButtonSize = self.cancelButton.update(
-//                transition: transition,
-//                component: AnyComponent(
-//                    PlainButtonComponent(
-//                        content: AnyComponent(
-//                            MultilineTextComponent(
-//                                text: .plain(NSAttributedString(string: strings.Common_Cancel, font: Font.regular(17.0), textColor: theme.rootController.navigationBar.accentTextColor)),
-//                                horizontalAlignment: .center
-//                            )
-//                        ),
-//                        effectAlignment: .center,
-//                        action: {
-//                            controller()?.dismiss()
-//                        },
-//                        animateScale: false
-//                    )
-//                ),
-//                environment: {},
-//                containerSize: CGSize(width: availableSize.width, height: 100.0)
-//            )
-//            let cancelButtonFrame = CGRect(origin: CGPoint(x: environment.safeInsets.left + 16.0, y: environment.statusBarHeight + (environment.navigationHeight - environment.statusBarHeight) / 2.0 - cancelButtonSize.height / 2.0), size: cancelButtonSize)
-//            if let cancelButtonView = self.cancelButton.view {
-//                if cancelButtonView.superview == nil {
-//                    self.addSubview(cancelButtonView)
-//                }
-//                transition.setFrame(view: cancelButtonView, frame: cancelButtonFrame)
-//            }
-                        
+                                    
             let balanceTitleSize = self.balanceTitle.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
@@ -777,7 +889,7 @@ final class GiftStoreScreenComponent: Component {
             let subtitleSize = self.subtitle.update(
                 transition: transition,
                 component: AnyComponent(BalancedTextComponent(
-                    text: .plain(NSAttributedString(string: "\(effectiveCount) for resale", font: Font.regular(13.0), textColor: theme.rootController.navigationBar.secondaryTextColor)),
+                    text: .plain(NSAttributedString(string: environment.strings.Gift_Store_ForResale(effectiveCount), font: Font.regular(13.0), textColor: theme.rootController.navigationBar.secondaryTextColor)),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 1
                 )),
@@ -795,18 +907,18 @@ final class GiftStoreScreenComponent: Component {
             let optionSpacing: CGFloat = 10.0
             let optionWidth = (availableSize.width - sideInset * 2.0 - optionSpacing * 2.0) / 3.0
                          
-            var sortingTitle = "Date"
+            var sortingTitle = environment.strings.Gift_Store_Sort_Date
             var sortingIcon: String = "Peer Info/SortDate"
             if let sorting = self.state?.starGiftsState?.sorting {
                 switch sorting {
                 case .date:
-                    sortingTitle = "Date"
+                    sortingTitle = environment.strings.Gift_Store_Sort_Date
                     sortingIcon = "Peer Info/SortDate"
                 case .value:
-                    sortingTitle = "Price"
+                    sortingTitle = environment.strings.Gift_Store_Sort_Price
                     sortingIcon = "Peer Info/SortValue"
                 case .number:
-                    sortingTitle = "Number"
+                    sortingTitle = environment.strings.Gift_Store_Sort_Number
                     sortingIcon = "Peer Info/SortNumber"
                 }
             }
@@ -823,13 +935,13 @@ final class GiftStoreScreenComponent: Component {
                 }
             ))
             
-            var modelTitle = "Model"
-            var backdropTitle = "Backdrop"
-            var symbolTitle = "Symbol"
+            var modelTitle = environment.strings.Gift_Store_Filter_Model
+            var backdropTitle = environment.strings.Gift_Store_Filter_Backdrop
+            var symbolTitle = environment.strings.Gift_Store_Filter_Symbol
             if let filterAttributes = self.state?.starGiftsState?.filterAttributes {
-                var modelCount = 0
-                var backdropCount = 0
-                var symbolCount = 0
+                var modelCount: Int32 = 0
+                var backdropCount: Int32 = 0
+                var symbolCount: Int32 = 0
                 
                 for attribute in filterAttributes {
                     switch attribute {
@@ -843,25 +955,13 @@ final class GiftStoreScreenComponent: Component {
                 }
                 
                 if modelCount > 0 {
-                    if modelCount > 1 {
-                        modelTitle = "\(modelCount) Models"
-                    } else {
-                        modelTitle = "1 Model"
-                    }
+                    modelTitle = environment.strings.Gift_Store_Filter_Selected_Model(modelCount)
                 }
                 if backdropCount > 0 {
-                    if backdropCount > 1 {
-                        backdropTitle = "\(backdropCount) Backdrops"
-                    } else {
-                        backdropTitle = "1 Backdrop"
-                    }
+                    backdropTitle = environment.strings.Gift_Store_Filter_Selected_Backdrop(modelCount)
                 }
                 if symbolCount > 0 {
-                    if symbolCount > 1 {
-                        symbolTitle = "\(symbolCount) Symbols"
-                    } else {
-                        symbolTitle = "1 Symbol"
-                    }
+                    symbolTitle = environment.strings.Gift_Store_Filter_Selected_Symbol(modelCount)
                 }
             }
             
@@ -966,118 +1066,7 @@ final class GiftStoreScreenComponent: Component {
                 loadingTransition.setAlpha(view: self.loadingNode.view, alpha: 0.0)
             }
             transition.setFrame(view: self.loadingNode.view, frame: CGRect(origin: CGPoint(x: 0.0, y: environment.navigationHeight + 39.0 + 7.0), size: availableSize))
-            
-            let fadeTransition = ComponentTransition.easeInOut(duration: 0.25)
-            if let effectiveGifts = self.effectiveGifts, effectiveGifts.isEmpty && self.state?.starGiftsState?.dataState != .loading {
-                let sideInset: CGFloat = 44.0
-                let emptyAnimationHeight = 148.0
-                let topInset: CGFloat = environment.navigationHeight + 39.0
-                let bottomInset: CGFloat = environment.safeInsets.bottom
-                let visibleHeight = availableSize.height
-                let emptyAnimationSpacing: CGFloat = 20.0
-                let emptyTextSpacing: CGFloat = 18.0
-                                                                
-                let emptyResultsTitleSize = self.emptyResultsTitle.update(
-                    transition: .immediate,
-                    component: AnyComponent(
-                        MultilineTextComponent(
-                            text: .plain(NSAttributedString(string: "No Matching Gifts", font: Font.semibold(17.0), textColor: theme.list.itemPrimaryTextColor)),
-                            horizontalAlignment: .center
-                        )
-                    ),
-                    environment: {},
-                    containerSize: availableSize
-                )
-                let emptyResultsActionSize = self.emptyResultsAction.update(
-                    transition: .immediate,
-                    component: AnyComponent(
-                        PlainButtonComponent(
-                            content: AnyComponent(
-                                MultilineTextComponent(
-                                    text: .plain(NSAttributedString(string: "Clear Filters", font: Font.regular(17.0), textColor: theme.list.itemAccentColor)),
-                                    horizontalAlignment: .center,
-                                    maximumNumberOfLines: 0
-                                )
-                            ),
-                            effectAlignment: .center,
-                            action: { [weak self] in
-                                guard let self else {
-                                    return
-                                }
-                                self.state?.starGiftsContext.updateFilterAttributes([])
-                            },
-                            animateScale: false
-                        )
-                    ),
-                    environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: visibleHeight)
-                )
-                let emptyResultsAnimationSize = self.emptyResultsAnimation.update(
-                    transition: .immediate,
-                    component: AnyComponent(LottieComponent(
-                        content: LottieComponent.AppBundleContent(name: "ChatListNoResults")
-                    )),
-                    environment: {},
-                    containerSize: CGSize(width: emptyAnimationHeight, height: emptyAnimationHeight)
-                )
-      
-                let emptyTotalHeight = emptyAnimationHeight + emptyAnimationSpacing + emptyResultsTitleSize.height + emptyResultsActionSize.height + emptyTextSpacing
-                let emptyAnimationY = topInset + floorToScreenPixels((visibleHeight - topInset - bottomInset - emptyTotalHeight) / 2.0)
                 
-                let emptyResultsAnimationFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - emptyResultsAnimationSize.width) / 2.0), y: emptyAnimationY), size: emptyResultsAnimationSize)
-                
-                let emptyResultsTitleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - emptyResultsTitleSize.width) / 2.0), y: emptyResultsAnimationFrame.maxY + emptyAnimationSpacing), size: emptyResultsTitleSize)
-                
-                let emptyResultsActionFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - emptyResultsActionSize.width) / 2.0), y: emptyResultsTitleFrame.maxY + emptyTextSpacing), size: emptyResultsActionSize)
-                
-                if let view = self.emptyResultsAnimation.view as? LottieComponent.View {
-                    if view.superview == nil {
-                        view.alpha = 0.0
-                        fadeTransition.setAlpha(view: view, alpha: 1.0)
-                        self.insertSubview(view, belowSubview: self.loadingNode.view)
-                        view.playOnce()
-                    }
-                    view.bounds = CGRect(origin: .zero, size: emptyResultsAnimationFrame.size)
-                    ComponentTransition.immediate.setPosition(view: view, position: emptyResultsAnimationFrame.center)
-                }
-                if let view = self.emptyResultsTitle.view {
-                    if view.superview == nil {
-                        view.alpha = 0.0
-                        fadeTransition.setAlpha(view: view, alpha: 1.0)
-                        self.insertSubview(view, belowSubview: self.loadingNode.view)
-                    }
-                    view.bounds = CGRect(origin: .zero, size: emptyResultsTitleFrame.size)
-                    ComponentTransition.immediate.setPosition(view: view, position: emptyResultsTitleFrame.center)
-                }
-                if let view = self.emptyResultsAction.view {
-                    if view.superview == nil {
-                        view.alpha = 0.0
-                        fadeTransition.setAlpha(view: view, alpha: 1.0)
-                        self.insertSubview(view, belowSubview: self.loadingNode.view)
-                    }
-                    view.bounds = CGRect(origin: .zero, size: emptyResultsActionFrame.size)
-                    ComponentTransition.immediate.setPosition(view: view, position: emptyResultsActionFrame.center)
-                    
-                    view.alpha = self.state?.starGiftsState?.attributes.isEmpty == true ? 0.0 : 1.0
-                }
-            } else {
-                if let view = self.emptyResultsAnimation.view {
-                    fadeTransition.setAlpha(view: view, alpha: 0.0, completion: { _ in
-                        view.removeFromSuperview()
-                    })
-                }
-                if let view = self.emptyResultsTitle.view {
-                    fadeTransition.setAlpha(view: view, alpha: 0.0, completion: { _ in
-                        view.removeFromSuperview()
-                    })
-                }
-                if let view = self.emptyResultsAction.view {
-                    fadeTransition.setAlpha(view: view, alpha: 0.0, completion: { _ in
-                        view.removeFromSuperview()
-                    })
-                }
-            }
-            
             return availableSize
         }
     }

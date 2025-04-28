@@ -502,8 +502,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         resellPrice = gift.resellStars
                         
                         if let _ = resellPrice {
-                            //TODO:localize
-                            ribbonText = "sale"
+                            ribbonText = params.presentationData.strings.PeerInfo_Gifts_Sale
                             ribbonFont = .larger
                             ribbonColor = .green
                             ribbonOutline =  params.presentationData.theme.list.blocksBackgroundColor
@@ -607,10 +606,10 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                                 return self.profileGifts.buyStarGift(slug: slug, peerId: peerId)
                                             },
                                             updateResellStars: { [weak self] price in
-                                                guard let self, case let .unique(uniqueGift) = product.gift else {
-                                                    return
+                                                guard let self, let reference = product.reference else {
+                                                    return .never()
                                                 }
-                                                self.profileGifts.updateStarGiftResellPrice(slug: uniqueGift.slug, price: price)
+                                                return self.profileGifts.updateStarGiftResellPrice(reference: reference, price: price)
                                             },
                                             togglePinnedToTop: { [weak self] pinnedToTop in
                                                 guard let self else {
@@ -1479,6 +1478,8 @@ private extension StarGiftReference {
             return "m_\(messageId.id)"
         case let .peer(peerId, id):
             return "p_\(peerId.toInt64())_\(id)"
+        case let .slug(slug):
+            return "s_\(slug)"
         }
     }
 }

@@ -153,8 +153,8 @@ public extension TelegramEngine {
             return _internal_toggleStarGiftsNotifications(account: self.account, peerId: peerId, enabled: enabled)
         }
         
-        public func updateStarGiftResalePrice(slug: String, price: Int64?) -> Signal<Never, NoError> {
-            return _internal_updateStarGiftResalePrice(account: self.account, slug: slug, price: price)
+        public func updateStarGiftResalePrice(reference: StarGiftReference, price: Int64?) -> Signal<Never, UpdateStarGiftPriceError> {
+            return _internal_updateStarGiftResalePrice(account: self.account, reference: reference, price: price)
         }
     }
 }

@@ -653,6 +653,9 @@ private extension StarsContext.State.Transaction {
             if (apiFlags & (1 << 21)) != 0 {
                 flags.insert(.isBusinessTransfer)
             }
+            if (apiFlags & (1 << 22)) != 0 {
+                flags.insert(.isStarGiftResale)
+            }
             
             let media = extendedMedia.flatMap({ $0.compactMap { textMediaAndExpirationTimerFromApiMedia($0, PeerId(0)).media } }) ?? []
             let _ = subscriptionPeriod
@@ -706,6 +709,7 @@ public final class StarsContext {
                 public static let isStarGiftUpgrade = Flags(rawValue: 1 << 6)
                 public static let isPaidMessage = Flags(rawValue: 1 << 7)
                 public static let isBusinessTransfer = Flags(rawValue: 1 << 8)
+                public static let isStarGiftResale = Flags(rawValue: 1 << 9)
             }
             
             public enum Peer: Equatable {
@@ -1527,7 +1531,7 @@ func _internal_sendStarsPaymentForm(account: Account, formId: Int64, source: Bot
                                         case .giftCode, .stars, .starsGift, .starsChatSubscription, .starGift, .starGiftUpgrade, .starGiftTransfer, .premiumGift, .starGiftResale:
                                             receiptMessageId = nil
                                         }
-                                    } else if case let .starGiftUnique(gift, _, _, savedToProfile, canExportDate, transferStars, _, peerId, _, savedId, _) = action.action, case let .Id(messageId) = message.id {
+                                    } else if case let .starGiftUnique(gift, _, _, savedToProfile, canExportDate, transferStars, _, peerId, _, savedId, _, canTransferDate, canResaleDate) = action.action, case let .Id(messageId) = message.id {
                                         let reference: StarGiftReference
                                         if let peerId, let savedId {
                                             reference = .peer(peerId: peerId, id: savedId)
@@ -1548,7 +1552,9 @@ func _internal_sendStarsPaymentForm(account: Account, formId: Int64, source: Bot
                                             canUpgrade: false,
                                             canExportDate: canExportDate,
                                             upgradeStars: nil,
-                                            transferStars: transferStars
+                                            transferStars: transferStars,
+                                            canTransferDate: canTransferDate,
+                                            canResaleDate: canResaleDate
                                         )
                                     }
                                 }

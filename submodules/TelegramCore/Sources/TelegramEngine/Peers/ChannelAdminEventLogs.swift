@@ -94,6 +94,7 @@ public enum AdminLogEventAction {
     case changeStatus(prev: PeerEmojiStatus?, new: PeerEmojiStatus?)
     case changeEmojiPack(prev: StickerPackReference?, new: StickerPackReference?)
     case participantSubscriptionExtended(prev: RenderedChannelParticipant, new: RenderedChannelParticipant)
+    case toggleAutoTranslation(Bool)
 }
 
 public enum ChannelAdminLogEventError {
@@ -457,6 +458,8 @@ func channelAdminLogEvents(accountPeerId: PeerId, postbox: Postbox, network: Net
                                     if let prevPeer = peers[prevParticipant.peerId], let newPeer = peers[newParticipant.peerId] {
                                         action = .participantSubscriptionExtended(prev: RenderedChannelParticipant(participant: prevParticipant, peer: prevPeer), new: RenderedChannelParticipant(participant: newParticipant, peer: newPeer))
                                     }
+                                case let .channelAdminLogEventActionToggleAutotranslation(newValue):
+                                    action = .toggleAutoTranslation(boolFromApiValue(newValue))
                                 }
                                 let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
                                 if let action = action {

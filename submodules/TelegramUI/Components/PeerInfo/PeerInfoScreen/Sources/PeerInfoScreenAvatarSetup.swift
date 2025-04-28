@@ -201,7 +201,10 @@ extension PeerInfoScreenImpl {
                             commit()
                         }
                     },
-                    completion: { [weak self] result, commit in
+                    completion: { [weak self] results, commit in
+                        guard let result = results.first else {
+                            return
+                        }
                         switch result.media {
                         case let .image(image, _):
                             resultImage = image
@@ -217,7 +220,7 @@ extension PeerInfoScreenImpl {
                             break
                         }
                         dismissImpl?()
-                    } as (MediaEditorScreenImpl.Result, @escaping (@escaping () -> Void) -> Void) -> Void
+                    } as ([MediaEditorScreenImpl.Result], @escaping (@escaping () -> Void) -> Void) -> Void
                 )
                 editorController.cancelled = { _ in
                     cancelled()
