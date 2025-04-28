@@ -3669,8 +3669,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         switch subject {
         case .withdraw:
             mode = .accountWithdraw
-        case let .enterAmount(current):
-            mode = .paidMessages(current.value)
+        case let .enterAmount(current, minValue, fractionAfterCommission, kind):
+            mode = .paidMessages(current: current.value, minValue: minValue.value, fractionAfterCommission: fractionAfterCommission, kind: kind)
         }
         return StarsWithdrawScreen(context: context, mode: mode, completion: completion)
     }
