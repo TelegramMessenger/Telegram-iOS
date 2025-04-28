@@ -189,6 +189,7 @@ public final class LoadingOverlayNode: ASDisplayNode {
             }, openPhotoSetup: {
             }, openAdInfo: { _, _ in
             }, openAccountFreezeInfo: {
+            }, openUrl: { _ in
             })
             
             let items = (0 ..< 1).map { _ -> ChatListItem in
@@ -551,6 +552,8 @@ private final class PeerInfoScreenPersonalChannelItemNode: PeerInfoScreenItemNod
             openAdInfo: { _, _ in
             },
             openAccountFreezeInfo: {
+            },
+            openUrl: { _ in
             }
         )
         

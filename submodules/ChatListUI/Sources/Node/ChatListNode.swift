@@ -116,6 +116,7 @@ public final class ChatListNodeInteraction {
     let openPhotoSetup: () -> Void
     let openAdInfo: (ASDisplayNode, AdPeer) -> Void
     let openAccountFreezeInfo: () -> Void
+    let openUrl: (String) -> Void
     
     public var searchTextHighightState: String?
     var highlightedChatLocation: ChatListHighlightedLocation?
@@ -175,7 +176,8 @@ public final class ChatListNodeInteraction {
         openWebApp: @escaping (TelegramUser) -> Void,
         openPhotoSetup: @escaping () -> Void,
         openAdInfo: @escaping (ASDisplayNode, AdPeer) -> Void,
-        openAccountFreezeInfo: @escaping () -> Void
+        openAccountFreezeInfo: @escaping () -> Void,
+        openUrl: @escaping (String) -> Void
     ) {
         self.activateSearch = activateSearch
         self.peerSelected = peerSelected
@@ -223,6 +225,7 @@ public final class ChatListNodeInteraction {
         self.openPhotoSetup = openPhotoSetup
         self.openAdInfo = openAdInfo
         self.openAccountFreezeInfo = openAccountFreezeInfo
+        self.openUrl = openUrl
     }
 }
 
@@ -775,6 +778,8 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             nodeInteraction?.openPhotoSetup()
                         case .accountFreeze:
                             nodeInteraction?.openAccountFreezeInfo()
+                        case let .link(url, _, _):
+                            nodeInteraction?.openUrl(url)
                         }
                     case .hide:
                         nodeInteraction?.dismissNotice(notice)
@@ -1123,6 +1128,8 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             nodeInteraction?.openPhotoSetup()
                         case .accountFreeze:
                             nodeInteraction?.openAccountFreezeInfo()
+                        case let .link(url, _, _):
+                            nodeInteraction?.openUrl(url)
                         }
                     case .hide:
                         nodeInteraction?.dismissNotice(notice)
@@ -1906,6 +1913,12 @@ public final class ChatListNode: ListView {
             self?.openAdInfo?(node, adPeer)
         }, openAccountFreezeInfo: { [weak self] in
             self?.openAccountFreezeInfo?()
+        }, openUrl: { [weak self] url in
+            guard let self else {
+                return
+            }
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            context.sharedContext.openExternalUrl(context: self.context, urlContext: .generic, url: url, forceExternal: false, presentationData: presentationData, navigationController: self.context.sharedContext.mainWindow?.viewController as? NavigationController, dismissInput: {})
         })
         nodeInteraction.isInlineMode = isInlineMode
         
@@ -2134,6 +2147,8 @@ public final class ChatListNode: ListView {
                         }
                         return .birthdayPremiumGift(peers: todayBirthdayPeers, birthdays: birthdays)
                     }
+                } else if case let .link(url, title, subtitle) = suggestions.first(where: { if case .link = $0 { return true } else { return false} }) {
+                    return .single(.link(url: url, title: title, subtitle: subtitle))
                 } else {
                     return .single(nil)
                 }

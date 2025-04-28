@@ -185,6 +185,8 @@ private struct CommandChatInputContextPanelEntry: Comparable, Identifiable {
                     openAdInfo: { _, _ in
                     },
                     openAccountFreezeInfo: {
+                    },
+                    openUrl: { _ in
                     }
                 )
                 

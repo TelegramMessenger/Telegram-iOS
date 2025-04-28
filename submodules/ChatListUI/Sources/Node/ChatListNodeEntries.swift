@@ -93,6 +93,7 @@ public enum ChatListNotice: Equatable {
     case starsSubscriptionLowBalance(amount: StarsAmount, peers: [EnginePeer])
     case setupPhoto(EnginePeer)
     case accountFreeze
+    case link(url: String, title: String, subtitle: String)
 }
 
 enum ChatListNodeEntry: Comparable, Identifiable {

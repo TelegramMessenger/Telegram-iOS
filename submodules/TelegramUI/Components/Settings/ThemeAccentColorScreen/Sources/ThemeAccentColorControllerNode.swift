@@ -877,6 +877,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, ASScrollViewDelegate 
         }, openPhotoSetup: {
         }, openAdInfo: { _, _ in
         }, openAccountFreezeInfo: {
+        }, openUrl: { _ in
         })
         let chatListPresentationData = ChatListPresentationData(theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: true)
 

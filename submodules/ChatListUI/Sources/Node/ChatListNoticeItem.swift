@@ -291,6 +291,9 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
             case .accountFreeze:
                 titleString = NSAttributedString(string: item.strings.ChatList_FrozenAccount_Title, font: titleFont, textColor: item.theme.list.itemDestructiveColor)
                 textString = NSAttributedString(string: item.strings.ChatList_FrozenAccount_Text, font: smallTextFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
+            case let .link(_, title, subtitle):
+                titleString = NSAttributedString(string: title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor)
+                textString = NSAttributedString(string: subtitle, font: smallTextFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
             }
             
             var leftInset: CGFloat = sideInset
@@ -383,7 +386,7 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
                     
                     let hasCloseButton: Bool
                     switch item.notice {
-                    case .xmasPremiumGift, .setupBirthday, .birthdayPremiumGift, .premiumGrace, .starsSubscriptionLowBalance, .setupPhoto:
+                    case .xmasPremiumGift, .setupBirthday, .birthdayPremiumGift, .premiumGrace, .starsSubscriptionLowBalance, .setupPhoto, .link:
                         hasCloseButton = true
                     default:
                         hasCloseButton = false

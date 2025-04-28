@@ -236,6 +236,8 @@ final class QuickReplySetupScreenComponent: Component {
                     openAdInfo: { _, _ in
                     },
                     openAccountFreezeInfo: {
+                    },
+                    openUrl: { _ in
                     }
                 )
                 

@@ -3,21 +3,124 @@ import Postbox
 import SwiftSignalKit
 import TelegramApi
 
-public enum ServerProvidedSuggestion: String {
-    case autoarchivePopular = "AUTOARCHIVE_POPULAR"
-    case newcomerTicks = "NEWCOMER_TICKS"
-    case validatePhoneNumber = "VALIDATE_PHONE_NUMBER"
-    case validatePassword = "VALIDATE_PASSWORD"
-    case setupPassword = "SETUP_PASSWORD"
-    case upgradePremium = "PREMIUM_UPGRADE"
-    case annualPremium = "PREMIUM_ANNUAL"
-    case restorePremium = "PREMIUM_RESTORE"
-    case xmasPremiumGift = "PREMIUM_CHRISTMAS"
-    case setupBirthday = "BIRTHDAY_SETUP"
-    case todayBirthdays = "BIRTHDAY_CONTACTS_TODAY"
-    case gracePremium = "PREMIUM_GRACE"
-    case starsSubscriptionLowBalance = "STARS_SUBSCRIPTION_LOW_BALANCE"
-    case setupPhoto = "USERPIC_SETUP"
+public enum ServerProvidedSuggestion: Hashable {
+    case autoarchivePopular
+    case newcomerTicks
+    case validatePhoneNumber
+    case validatePassword
+    case setupPassword
+    case upgradePremium
+    case annualPremium
+    case restorePremium
+    case xmasPremiumGift
+    case setupBirthday
+    case todayBirthdays
+    case gracePremium
+    case starsSubscriptionLowBalance
+    case setupPhoto
+    case link(url: String, title: String, subtitle: String)
+    
+    public init?(string: String) {
+        switch string {
+        case "AUTOARCHIVE_POPULAR":
+            self = .autoarchivePopular
+        case "NEWCOMER_TICKS":
+            self = .newcomerTicks
+        case "VALIDATE_PHONE_NUMBER":
+            self = .validatePhoneNumber
+        case "VALIDATE_PASSWORD":
+            self = .validatePassword
+        case "SETUP_PASSWORD":
+            self = .setupPassword
+        case "PREMIUM_UPGRADE":
+            self = .upgradePremium
+        case "PREMIUM_ANNUAL":
+            self = .annualPremium
+        case "PREMIUM_RESTORE":
+            self = .restorePremium
+        case "PREMIUM_CHRISTMAS":
+            self = .xmasPremiumGift
+        case "BIRTHDAY_SETUP":
+            self = .setupBirthday
+        case "BIRTHDAY_CONTACTS_TODAY":
+            self = .todayBirthdays
+        case "PREMIUM_GRACE":
+            self = .gracePremium
+        case "STARS_SUBSCRIPTION_LOW_BALANCE":
+            self = .starsSubscriptionLowBalance
+        case "USERPIC_SETUP":
+            self = .setupPhoto
+        default:
+            if string.hasPrefix("LINK_") {
+                let rawString = string.dropFirst(Int("LINK_".count))
+                if let dict = try? JSONSerialization.jsonObject(with: rawString.data(using: .utf8) ?? Data()) as? [String: Any] {
+                    var url: String?
+                    var title: String?
+                    var subtitle: String?
+
+                    if let urlValue = dict["url"] as? String {
+                        url = urlValue
+                    }
+                    if let titleValue = dict["title"] as? String {
+                        title = titleValue
+                    }
+                    if let subtitleValue = dict["subtitle"] as? String {
+                        subtitle = subtitleValue
+                    }
+                    if let url = url, let title = title, let subtitle = subtitle {
+                        self = .link(url: url, title: title, subtitle: subtitle)
+                        return
+                    }
+                }
+            }
+            return nil
+        }
+    }
+
+    var stringValue: String {
+        switch self {
+        case .autoarchivePopular:
+            return "AUTOARCHIVE_POPULAR"
+        case .newcomerTicks:
+            return "NEWCOMER_TICKS"
+        case .validatePhoneNumber:
+            return "VALIDATE_PHONE_NUMBER"
+        case .validatePassword:
+            return "VALIDATE_PASSWORD"
+        case .setupPassword:
+            return "SETUP_PASSWORD"
+        case .upgradePremium:
+            return "PREMIUM_UPGRADE"
+        case .annualPremium:
+            return "PREMIUM_ANNUAL"
+        case .restorePremium:
+            return "PREMIUM_RESTORE"
+        case .xmasPremiumGift:
+            return "PREMIUM_CHRISTMAS"
+        case .setupBirthday:
+            return "BIRTHDAY_SETUP"
+        case .todayBirthdays:
+            return "BIRTHDAY_CONTACTS_TODAY"
+        case .gracePremium:
+            return "PREMIUM_GRACE"
+        case .starsSubscriptionLowBalance:
+            return "STARS_SUBSCRIPTION_LOW_BALANCE"
+        case .setupPhoto:
+            return "USERPIC_SETUP"
+        case let .link(url, title, subtitle):
+            let dict: [String: String] = [
+                "url": url,
+                "title": title,
+                "subtitle": subtitle
+            ]
+            if let data = try? JSONSerialization.data(withJSONObject: dict, options: []), let string = String(data: data, encoding: .utf8) {
+                return "LINK_\(string)"
+            } else {
+                // Fallback or error handling, though unlikely to fail with basic strings
+                return "LINK_{}" 
+            }
+        }
+    }
 }
 
 private var dismissedSuggestionsPromise = ValuePromise<[AccountRecordId: Set<ServerProvidedSuggestion>]>([:])
@@ -38,11 +141,20 @@ func _internal_getServerProvidedSuggestions(account: Account) -> Signal<[ServerP
         guard let appConfiguration = view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) else {
             return []
         }
+
+        #if DEBUG
+        guard let data = appConfiguration.data, var listItems = data["pending_suggestions"] as? [String] else {
+            return []
+        }
+        listItems.insert("LINK_{\"url\": \"https://t.me/durov\", \"title\": \"📣 Stay updated!\", \"subtitle\": \"Subscribe to the channel of Telegram's founder.\"}", at: 0)
+        #else
         guard let data = appConfiguration.data, let listItems = data["pending_suggestions"] as? [String] else {
             return []
         }
+        #endif
+
         return listItems.compactMap { item -> ServerProvidedSuggestion? in
-            return ServerProvidedSuggestion(rawValue: item)
+            return ServerProvidedSuggestion(string: item)
         }.filter { !dismissedSuggestions.contains($0) }
     }
     |> distinctUntilChanged
@@ -64,7 +176,7 @@ func _internal_getServerDismissedSuggestions(account: Account) -> Signal<[Server
             listItems.append(contentsOf: listItemsValues)
         }
         var items = listItems.compactMap { item -> ServerProvidedSuggestion? in
-            return ServerProvidedSuggestion(rawValue: item)
+            return ServerProvidedSuggestion(string: item)
         }
         items.append(contentsOf: dismissedSuggestions)
         return items
@@ -78,7 +190,7 @@ func _internal_dismissServerProvidedSuggestion(account: Account, suggestion: Ser
     } else {
         dismissedSuggestions[account.id] = Set([suggestion])
     }
-    return account.network.request(Api.functions.help.dismissSuggestion(peer: .inputPeerEmpty, suggestion: suggestion.rawValue))
+    return account.network.request(Api.functions.help.dismissSuggestion(peer: .inputPeerEmpty, suggestion: suggestion.stringValue))
     |> `catch` { _ -> Signal<Api.Bool, NoError> in
         return .single(.boolFalse)
     }
