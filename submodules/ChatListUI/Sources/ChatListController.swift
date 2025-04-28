@@ -2501,13 +2501,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         guard let strongSelf = self else {
                             return
                         }
-                        strongSelf.dismissAutoarchiveDisposable.set(strongSelf.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .autoarchivePopular).startStrict())
+                        strongSelf.dismissAutoarchiveDisposable.set(strongSelf.context.engine.notices.dismissServerProvidedSuggestion(suggestion: ServerProvidedSuggestion.autoarchivePopular.id).startStrict())
                     }),
                     TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.ChatList_AutoarchiveSuggestion_OpenSettings, action: {
                         guard let strongSelf = self else {
                             return
                         }
-                        strongSelf.dismissAutoarchiveDisposable.set(strongSelf.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .autoarchivePopular).startStrict())
+                        strongSelf.dismissAutoarchiveDisposable.set(strongSelf.context.engine.notices.dismissServerProvidedSuggestion(suggestion: ServerProvidedSuggestion.autoarchivePopular.id).startStrict())
                         strongSelf.push(strongSelf.context.sharedContext.makePrivacyAndSecurityController(context: strongSelf.context))
                     })
                 ], actionLayout: .vertical, parseMarkdown: true), in: .window(.root))
@@ -6114,7 +6114,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     func openBirthdaySetup() {
         let context = self.context
-        let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: .setupBirthday).startStandalone()
+        let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: ServerProvidedSuggestion.setupBirthday.id).startStandalone()
                 
         let settingsPromise: Promise<AccountPrivacySettings?>
         if let rootController = self.context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface, let current = rootController.getPrivacySettings() {

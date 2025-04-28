@@ -4815,7 +4815,7 @@ extension ChatControllerImpl {
                             self?.displayChecksTooltip()
                         }
                         self.shouldDisplayChecksTooltip = false
-                        self.checksTooltipDisposable.set(self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .newcomerTicks).startStrict())
+                        self.checksTooltipDisposable.set(self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: ServerProvidedSuggestion.newcomerTicks.id).startStrict())
                     }
                     
                     if let shouldDisplayProcessingVideoTooltip = self.shouldDisplayProcessingVideoTooltip {

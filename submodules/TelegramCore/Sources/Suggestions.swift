@@ -3,7 +3,7 @@ import Postbox
 import SwiftSignalKit
 import TelegramApi
 
-public enum ServerProvidedSuggestion: Hashable {
+public enum ServerProvidedSuggestion: Equatable {
     case autoarchivePopular
     case newcomerTicks
     case validatePhoneNumber
@@ -18,9 +18,9 @@ public enum ServerProvidedSuggestion: Hashable {
     case gracePremium
     case starsSubscriptionLowBalance
     case setupPhoto
-    case link(url: String, title: String, subtitle: String)
+    case link(id: String, url: String, title: ServerSuggestionInfo.Item.Text, subtitle: ServerSuggestionInfo.Item.Text)
     
-    public init?(string: String) {
+    init?(string: String) {
         switch string {
         case "AUTOARCHIVE_POPULAR":
             self = .autoarchivePopular
@@ -51,33 +51,11 @@ public enum ServerProvidedSuggestion: Hashable {
         case "USERPIC_SETUP":
             self = .setupPhoto
         default:
-            if string.hasPrefix("LINK_") {
-                let rawString = string.dropFirst(Int("LINK_".count))
-                if let dict = try? JSONSerialization.jsonObject(with: rawString.data(using: .utf8) ?? Data()) as? [String: Any] {
-                    var url: String?
-                    var title: String?
-                    var subtitle: String?
-
-                    if let urlValue = dict["url"] as? String {
-                        url = urlValue
-                    }
-                    if let titleValue = dict["title"] as? String {
-                        title = titleValue
-                    }
-                    if let subtitleValue = dict["subtitle"] as? String {
-                        subtitle = subtitleValue
-                    }
-                    if let url = url, let title = title, let subtitle = subtitle {
-                        self = .link(url: url, title: title, subtitle: subtitle)
-                        return
-                    }
-                }
-            }
             return nil
         }
     }
 
-    var stringValue: String {
+    public var id: String {
         switch self {
         case .autoarchivePopular:
             return "AUTOARCHIVE_POPULAR"
@@ -107,90 +85,79 @@ public enum ServerProvidedSuggestion: Hashable {
             return "STARS_SUBSCRIPTION_LOW_BALANCE"
         case .setupPhoto:
             return "USERPIC_SETUP"
-        case let .link(url, title, subtitle):
-            let dict: [String: String] = [
-                "url": url,
-                "title": title,
-                "subtitle": subtitle
-            ]
-            if let data = try? JSONSerialization.data(withJSONObject: dict, options: []), let string = String(data: data, encoding: .utf8) {
-                return "LINK_\(string)"
-            } else {
-                // Fallback or error handling, though unlikely to fail with basic strings
-                return "LINK_{}" 
-            }
+        case let .link(id, _, _, _):
+            return id
         }
     }
 }
 
-private var dismissedSuggestionsPromise = ValuePromise<[AccountRecordId: Set<ServerProvidedSuggestion>]>([:])
-private var dismissedSuggestions: [AccountRecordId: Set<ServerProvidedSuggestion>] = [:] {
+private var dismissedSuggestionsPromise = ValuePromise<[AccountRecordId: Set<String>]>([:])
+private var dismissedSuggestions: [AccountRecordId: Set<String>] = [:] {
     didSet {
         dismissedSuggestionsPromise.set(dismissedSuggestions)
     }
 }
 
 func _internal_getServerProvidedSuggestions(account: Account) -> Signal<[ServerProvidedSuggestion], NoError> {
-    let key: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.appConfiguration]))
+    let key: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.serverSuggestionInfo()]))
     return combineLatest(account.postbox.combinedView(keys: [key]), dismissedSuggestionsPromise.get())
     |> map { views, dismissedSuggestionsValue -> [ServerProvidedSuggestion] in
         let dismissedSuggestions = dismissedSuggestionsValue[account.id] ?? Set()
         guard let view = views.views[key] as? PreferencesView else {
             return []
         }
-        guard let appConfiguration = view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) else {
+        guard let serverSuggestionInfo = view.values[PreferencesKeys.serverSuggestionInfo()]?.get(ServerSuggestionInfo.self) else {
             return []
         }
-
-        #if DEBUG
-        guard let data = appConfiguration.data, var listItems = data["pending_suggestions"] as? [String] else {
-            return []
+        
+        var items: [ServerProvidedSuggestion] = []
+        for item in serverSuggestionInfo.legacyItems {
+            if let value = ServerProvidedSuggestion(string: item) {
+                items.append(value)
+            }
         }
-        listItems.insert("LINK_{\"url\": \"https://t.me/durov\", \"title\": \"📣 Stay updated!\", \"subtitle\": \"Subscribe to the channel of Telegram's founder.\"}", at: 0)
-        #else
-        guard let data = appConfiguration.data, let listItems = data["pending_suggestions"] as? [String] else {
-            return []
+        for item in serverSuggestionInfo.items {
+            switch item.action {
+            case let .link(url):
+                items.append(.link(
+                    id: item.id,
+                    url: url,
+                    title: item.title,
+                    subtitle: item.text
+                ))
+            }
         }
-        #endif
-
-        return listItems.compactMap { item -> ServerProvidedSuggestion? in
-            return ServerProvidedSuggestion(string: item)
-        }.filter { !dismissedSuggestions.contains($0) }
+        
+        return items.filter({ !dismissedSuggestions.contains($0.id) })
     }
     |> distinctUntilChanged
 }
 
-func _internal_getServerDismissedSuggestions(account: Account) -> Signal<[ServerProvidedSuggestion], NoError> {
-    let key: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.appConfiguration]))
+func _internal_getServerDismissedSuggestions(account: Account) -> Signal<[String], NoError> {
+    let key: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.serverSuggestionInfo()]))
     return combineLatest(account.postbox.combinedView(keys: [key]), dismissedSuggestionsPromise.get())
-    |> map { views, dismissedSuggestionsValue -> [ServerProvidedSuggestion] in
+    |> map { views, dismissedSuggestionsValue -> [String] in
         let dismissedSuggestions = dismissedSuggestionsValue[account.id] ?? Set()
         guard let view = views.views[key] as? PreferencesView else {
             return []
         }
-        guard let appConfiguration = view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) else {
+        guard let serverSuggestionInfo = view.values[PreferencesKeys.serverSuggestionInfo()]?.get(ServerSuggestionInfo.self) else {
             return []
         }
-        var listItems: [String] = []
-        if let data = appConfiguration.data, let listItemsValues = data["dismissed_suggestions"] as? [String] {
-            listItems.append(contentsOf: listItemsValues)
-        }
-        var items = listItems.compactMap { item -> ServerProvidedSuggestion? in
-            return ServerProvidedSuggestion(string: item)
-        }
+        var items: [String] = serverSuggestionInfo.dismissedIds
         items.append(contentsOf: dismissedSuggestions)
         return items
     }
     |> distinctUntilChanged
 }
 
-func _internal_dismissServerProvidedSuggestion(account: Account, suggestion: ServerProvidedSuggestion) -> Signal<Never, NoError> {
+func _internal_dismissServerProvidedSuggestion(account: Account, suggestion: String) -> Signal<Never, NoError> {
     if let _ = dismissedSuggestions[account.id] {
         dismissedSuggestions[account.id]?.insert(suggestion)
     } else {
         dismissedSuggestions[account.id] = Set([suggestion])
     }
-    return account.network.request(Api.functions.help.dismissSuggestion(peer: .inputPeerEmpty, suggestion: suggestion.stringValue))
+    return account.network.request(Api.functions.help.dismissSuggestion(peer: .inputPeerEmpty, suggestion: suggestion))
     |> `catch` { _ -> Signal<Api.Bool, NoError> in
         return .single(.boolFalse)
     }

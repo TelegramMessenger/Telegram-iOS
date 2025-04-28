@@ -106,6 +106,14 @@ public final class ServerSuggestionInfo: Codable, Equatable {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
                 self = .link(url: try container.decode(String.self, forKey: .link))
             }
+            
+            public func encode(to encoder: any Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                switch self {
+                case let .link(url):
+                    try container.encode(url, forKey: .link)
+                }
+            }
         }
         
         public let id: String

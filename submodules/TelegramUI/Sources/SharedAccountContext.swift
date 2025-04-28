@@ -2856,7 +2856,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             guard let controller else {
                 return
             }
-            let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: .setupBirthday).startStandalone()
+            let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: ServerProvidedSuggestion.setupBirthday.id).startStandalone()
                     
             let settingsPromise: Promise<AccountPrivacySettings?>
             if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface, let current = rootController.getPrivacySettings() {
@@ -3047,7 +3047,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             guard let controller else {
                 return
             }
-            let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: .setupBirthday).startStandalone()
+            let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: ServerProvidedSuggestion.setupBirthday.id).startStandalone()
                     
             let settingsPromise: Promise<AccountPrivacySettings?>
             if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface, let current = rootController.getPrivacySettings() {

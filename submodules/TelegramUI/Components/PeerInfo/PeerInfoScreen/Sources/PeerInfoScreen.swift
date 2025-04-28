@@ -849,7 +849,7 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
                 }
             }))
             items[.phone]!.append(PeerInfoScreenActionItem(id: 1, text: presentationData.strings.Settings_KeepPhoneNumber(phoneNumber).string, action: {
-                let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: .validatePhoneNumber).startStandalone()
+                let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: ServerProvidedSuggestion.validatePhoneNumber.id).startStandalone()
             }))
             items[.phone]!.append(PeerInfoScreenActionItem(id: 2, text: presentationData.strings.Settings_ChangePhoneNumber, action: {
                 interaction.openSettings(.phoneNumber)
@@ -858,7 +858,7 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
             items[.phone]!.append(PeerInfoScreenInfoItem(id: 0, title: presentationData.strings.Settings_CheckPasswordTitle, text: .markdown(presentationData.strings.Settings_CheckPasswordText), linkAction: { _ in
             }))
             items[.phone]!.append(PeerInfoScreenActionItem(id: 1, text: presentationData.strings.Settings_KeepPassword, action: {
-                let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: .validatePassword).startStandalone()
+                let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: ServerProvidedSuggestion.validatePassword.id).startStandalone()
             }))
             items[.phone]!.append(PeerInfoScreenActionItem(id: 2, text: presentationData.strings.Settings_TryEnterPassword, action: {
                 interaction.openSettings(.rememberPassword)
@@ -10370,7 +10370,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 guard let self else {
                     return
                 }
-                let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .setupPassword).startStandalone()
+                let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: ServerProvidedSuggestion.setupPassword.id).startStandalone()
             })
             
             let controller = self.context.sharedContext.makeSetupTwoFactorAuthController(context: self.context)
@@ -10498,7 +10498,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 return twoStepVerificationUnlockSettingsController(context: context, mode: .access(intro: false, data: .single(TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: configuration, password: nil)))))
             }
             controller.passwordRemembered = {
-                let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: .validatePassword).startStandalone()
+                let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: ServerProvidedSuggestion.validatePassword.id).startStandalone()
             }
             push(controller)
         case .emojiStatus:

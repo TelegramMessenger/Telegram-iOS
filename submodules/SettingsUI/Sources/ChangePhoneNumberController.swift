@@ -84,7 +84,7 @@ public func ChangePhoneNumberController(context: AccountContext) -> ViewControll
                 }, completed: { [weak codeController] in
                     codeController?.present(OverlayStatusController(theme: presentationData.theme, type: .success), in: .window(.root))
                     
-                    let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: .validatePhoneNumber).start()
+                    let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: ServerProvidedSuggestion.validatePhoneNumber.id).start()
                     
                     if let navigationController = codeController?.navigationController as? NavigationController {
                         var viewControllers = navigationController.viewControllers
