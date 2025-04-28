@@ -3253,6 +3253,24 @@ public class GiftViewScreen: ViewControllerComponentContainer {
             guard let self, let arguments = self.subject.arguments, let navigationController = self.navigationController as? NavigationController, case let .unique(gift) = arguments.gift, let reference = arguments.reference, let transferStars = arguments.transferStars else {
                 return
             }
+            
+            let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+            if let canTransferDate = arguments.canTransferDate, currentTime < canTransferDate {
+                let dateString = stringForFullDate(timestamp: canTransferDate, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
+                let controller = textAlertController(
+                    context: self.context,
+                    title: presentationData.strings.Gift_Transfer_Unavailable_Title,
+                    text: presentationData.strings.Gift_Transfer_Unavailable_Text(dateString).string,
+                    actions: [
+                        TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
+                    ],
+                    parseMarkdown: true
+                )
+                self.present(controller, in: .window(.root))
+                return
+            }
+            
+            
             let _ = (context.account.stateManager.contactBirthdays
             |> take(1)
             |> deliverOnMainQueue).start(next: { birthdays in
@@ -3477,8 +3495,33 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                     }
                 
                     let _ = ((updateResellStars?(price) ?? context.engine.payments.updateStarGiftResalePrice(reference: reference, price: price))
-                    |> deliverOnMainQueue).startStandalone(error: { error in
+                    |> deliverOnMainQueue).startStandalone(error: { [weak self] error in
+                        guard let self else {
+                            return
+                        }
                         
+                        let title: String?
+                        let text: String
+                        switch error {
+                        case .generic:
+                            title = nil
+                            text = presentationData.strings.Gift_Send_ErrorUnknown
+                        case let .starGiftResellTooEarly(canResaleDate):
+                            let dateString = stringForFullDate(timestamp: canResaleDate, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
+                            title = presentationData.strings.Gift_Resale_Unavailable_Title
+                            text = presentationData.strings.Gift_Resale_Unavailable_Text(dateString).string
+                        }
+                        
+                        let controller = textAlertController(
+                            context: self.context,
+                            title: title,
+                            text: text,
+                            actions: [
+                                TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
+                            ],
+                            parseMarkdown: true
+                        )
+                        self.present(controller, in: .window(.root))
                     }, completed: { [weak self] in
                         guard let self else {
                             return
@@ -3597,13 +3640,15 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                 }
                 
                 if case let .unique(gift) = arguments.gift, let resellStars = gift.resellStars, resellStars > 0 {
-                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_View_Context_ChangePrice, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/PriceTag"), color: theme.contextMenu.primaryColor)
-                    }, action: { c, _ in
-                        c?.dismiss(completion: nil)
-                        
-                        resellGiftImpl?(true)
-                    })))
+                    if arguments.reference != nil || gift.owner.peerId == context.account.peerId {
+                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_View_Context_ChangePrice, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/PriceTag"), color: theme.contextMenu.primaryColor)
+                        }, action: { c, _ in
+                            c?.dismiss(completion: nil)
+                            
+                            resellGiftImpl?(true)
+                        })))
+                    }
                 }
                 
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_View_Context_CopyLink, icon: { theme in

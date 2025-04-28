@@ -14293,3 +14293,6 @@ Sorry for the inconvenience.";
 
 "Gift.Resale.Unavailable.Title" = "Resell Gift";
 "Gift.Resale.Unavailable.Text" = "Sorry, you can't list this gift yet.\n\Reselling will be available on %@.";
+
+"Gift.Transfer.Unavailable.Title" = "Transfer Gift";
+"Gift.Transfer.Unavailable.Text" = "Sorry, you can't transfer this gift yet.\n\Transferring will be available on %@.";

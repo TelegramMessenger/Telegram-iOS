@@ -2803,6 +2803,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSubject = .channels
         case .expiringStories:
             mappedSubject = .expiringStories
+        case .multiStories:
+            mappedSubject = .multiStories
         case .storiesWeekly:
             mappedSubject = .storiesWeekly
         case .storiesMonthly:

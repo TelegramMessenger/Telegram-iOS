@@ -2,9 +2,10 @@ import Foundation
 import UIKit
 import Display
 import ComponentFlow
+import SwiftSignalKit
 
-private let animationDuration: TimeInterval = 12.0
-private let animationDelay: TimeInterval = 2.0
+private let animationSpeed: TimeInterval = 50.0
+private let animationDelay: TimeInterval = 2.5
 private let spacing: CGFloat = 20.0
 
 public final class MarqueeComponent: Component {
@@ -43,6 +44,8 @@ public final class MarqueeComponent: Component {
         private let gradientMaskLayer = SimpleGradientLayer()
         private var isAnimating = false
         private var isOverflowing = false
+        
+        private var component: MarqueeComponent?
                 
         override init(frame: CGRect) {
             super.init(frame: frame)
@@ -60,6 +63,9 @@ public final class MarqueeComponent: Component {
         }
                 
         public func update(component: MarqueeComponent, availableSize: CGSize) -> CGSize {
+            let previousComponent = self.component
+            self.component = component
+            
             let attributedText = component.attributedText
             if let measureState = self.measureState {
                 if measureState.attributedText.isEqual(to: attributedText) && measureState.availableSize == availableSize {
@@ -88,7 +94,7 @@ public final class MarqueeComponent: Component {
             if isOverflowing {
                 self.setupMarqueeTextLayers(textImage: image.cgImage!, textWidth: boundingRect.width, containerWidth: availableSize.width)
                 self.setupGradientMask(size: CGSize(width: availableSize.width, height: boundingRect.height))
-                self.startAnimation()
+                self.startAnimation(force: previousComponent?.attributedText != attributedText)
             } else {
                 self.stopAnimation()
                 self.textLayer.frame = CGRect(origin: CGPoint(x: innerPadding, y: 0.0), size: boundingRect.size)
@@ -137,17 +143,26 @@ public final class MarqueeComponent: Component {
             self.layer.mask = self.gradientMaskLayer
         }
         
-        private func startAnimation() {
-            guard !self.isAnimating else {
+        private func startAnimation(force: Bool = false) {
+            guard !self.isAnimating || force else {
                 return
             }
             self.isAnimating = true
 
             self.containerLayer.removeAllAnimations()
             
-            self.containerLayer.animateBoundsOriginXAdditive(from: 0.0, to: self.textLayer.frame.width + spacing, duration: animationDuration, delay: animationDelay, timingFunction: CAMediaTimingFunctionName.linear.rawValue, completion: { _ in
-                self.isAnimating = false
-                self.startAnimation()
+            let distance = self.textLayer.frame.width + spacing
+            let duration = distance / animationSpeed
+            Queue.mainQueue().after(animationDelay, {
+                guard self.isAnimating else {
+                    return
+                }
+                self.containerLayer.animateBoundsOriginXAdditive(from: 0.0, to: distance, duration: duration, delay: 0.0, timingFunction: CAMediaTimingFunctionName.linear.rawValue, completion: { finished in
+                    if finished {
+                        self.isAnimating = false
+                        self.startAnimation()
+                    }
+                })
             })
         }
         

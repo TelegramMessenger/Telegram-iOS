@@ -484,6 +484,13 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
             case peerId(EnginePeer.Id)
             case name(String)
             case address(String)
+            
+            public var peerId: EnginePeer.Id? {
+                if case let .peerId(peerId) = self {
+                    return peerId
+                }
+                return nil
+            }
         }
                 
         public enum DecodingError: Error {
