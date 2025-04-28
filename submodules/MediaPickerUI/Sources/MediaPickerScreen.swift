@@ -388,10 +388,10 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             
             self.itemsDisposable = (updatedState
             |> deliverOnMainQueue).start(next: { [weak self] state in
-                guard let strongSelf = self else {
+                guard let self else {
                     return
                 }
-                strongSelf.updateState(state)
+                self.updateState(state)
             })
             
             self.gridNode.scrollingInitiated = { [weak self] in
@@ -404,15 +404,16 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             
             self.hiddenMediaDisposable = (self.hiddenMediaId.get()
             |> deliverOnMainQueue).start(next: { [weak self] id in
-                if let strongSelf = self {
-                    strongSelf.controller?.interaction?.hiddenMediaId = id
-                    strongSelf.gridNode.forEachItemNode { itemNode in
-                        if let itemNode = itemNode as? MediaPickerGridItemNode {
-                            itemNode.updateHiddenMedia()
-                        }
-                    }
-                    strongSelf.selectionNode?.updateHiddenMedia()
+                guard let self else {
+                    return
                 }
+                self.controller?.interaction?.hiddenMediaId = id
+                self.gridNode.forEachItemNode { itemNode in
+                    if let itemNode = itemNode as? MediaPickerGridItemNode {
+                        itemNode.updateHiddenMedia()
+                    }
+                }
+                self.selectionNode?.updateHiddenMedia()
             })
             
             if let selectionState = self.controller?.interaction?.selectionState {
@@ -431,8 +432,8 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                 
                 self.selectionChangedDisposable = (selectionChangedSignal(selectionState: selectionState)
                 |> deliverOnMainQueue).start(next: { [weak self] animated in
-                    if let strongSelf = self {
-                        strongSelf.updateSelectionState(animated: animated)
+                    if let self {
+                        self.updateSelectionState(animated: animated)
                     }
                 })
             }
@@ -451,8 +452,8 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                 
                 self.itemsDimensionsUpdatedDisposable = (itemsDimensionsUpdatedSignal(editingState: editingState)
                 |> deliverOnMainQueue).start(next: { [weak self] _ in
-                    if let strongSelf = self {
-                        strongSelf.updateSelectionState()
+                    if let self {
+                        self.updateSelectionState()
                     }
                 })
             }
@@ -536,8 +537,8 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                     self?.gridNode.scrollView.isScrollEnabled = isEnabled
                 }
                 selectionGesture.itemAt = { [weak self] point in
-                    if let strongSelf = self, let itemNode = strongSelf.gridNode.itemNodeAtPoint(point) as? MediaPickerGridItemNode, let selectableItem = itemNode.selectableItem {
-                        return (selectableItem, strongSelf.controller?.interaction?.selectionState?.isIdentifierSelected(selectableItem.uniqueIdentifier) ?? false)
+                    if let self, let itemNode = self.gridNode.itemNodeAtPoint(point) as? MediaPickerGridItemNode, let selectableItem = itemNode.selectableItem {
+                        return (selectableItem, self.controller?.interaction?.selectionState?.isIdentifierSelected(selectableItem.uniqueIdentifier) ?? false)
                     } else {
                         return nil
                     }
@@ -2004,8 +2005,11 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                 var hasSelect = false
                 if forCollage {
                     hasSelect = true
-                } else if case .story = mode, selectionContext.selectionLimit > 1 {
-                    hasSelect = true
+                } else if case .story = mode {
+                    if selectionContext.selectionLimit == 1 && context.isPremium {
+                    } else {
+                        hasSelect = true
+                    }
                 }
                 
                 if hasSelect {
@@ -2584,6 +2588,34 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
     }
     
     @objc private func selectPressed() {
+        let context = self.context
+        if let selectionState = self.interaction?.selectionState, selectionState.selectionLimit == 1, !context.isPremium {
+            var replaceImpl: ((ViewController) -> Void)?
+            let controller = context.sharedContext.makePremiumLimitController(
+                context: self.context,
+                subject: .multiStories,
+                count: 1,
+                forceDark: true,
+                cancel: {},
+                action: {
+                    let controller = context.sharedContext.makePremiumIntroController(
+                        context: context,
+                        source: .stories,
+                        forceDark: true,
+                        dismissed: nil
+                    )
+                    replaceImpl?(controller)
+                    return true
+                })
+            replaceImpl = { [weak controller] c in
+                controller?.replace(with: c)
+            }
+            self.requestDismiss {
+                self.parentController()?.push(controller)
+            }
+            return
+        }
+        
         self.navigationItem.setRightBarButton(nil, animated: true)
         self.explicitMultipleSelection = true
         
@@ -2724,11 +2756,10 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                                 loop: true
                             ), action: { [weak self]  _, f in
                                 f(.default)
-                                guard let strongSelf = self else {
+                                guard let self else {
                                     return
                                 }
-                                
-                                if let selectionContext = strongSelf.interaction?.selectionState, let editingContext = strongSelf.interaction?.editingState {
+                                if let selectionContext = self.interaction?.selectionState, let editingContext = self.interaction?.editingState {
                                     for case let item as TGMediaEditableItem in selectionContext.selectedItems() {
                                         editingContext.setSpoiler(hasGeneric, for: item)
                                     }
@@ -2754,10 +2785,10 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                                 }
                                 
                                 let controller = self.context.sharedContext.makeStarsAmountScreen(context: self.context, initialValue: price, completion: { [weak self] amount in
-                                    guard let strongSelf = self else {
+                                    guard let self else {
                                         return
                                     }
-                                    if let selectionContext = strongSelf.interaction?.selectionState, let editingContext = strongSelf.interaction?.editingState {
+                                    if let selectionContext = self.interaction?.selectionState, let editingContext = self.interaction?.editingState {
                                         selectionContext.selectionLimit = 10
                                         for case let item as TGMediaEditableItem in selectionContext.selectedItems() {
                                             editingContext.setPrice(NSNumber(value: amount), for: item)

@@ -179,9 +179,7 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id)
         if baseLang.hasSuffix(rawSuffix) {
             baseLang = String(baseLang.dropLast(rawSuffix.count))
         }
-        
-        
-        
+
         return combineLatest(
             context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings])
             |> map { sharedData -> TranslationSettings in

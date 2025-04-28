@@ -101,6 +101,7 @@ public enum PremiumLimitSubject {
     case membershipInSharedFolders
     case channels
     case expiringStories
+    case multiStories
     case storiesWeekly
     case storiesMonthly
     case storiesChannelBoost(peer: EnginePeer, isCurrent: Bool, level: Int32, currentLevelBoosts: Int32, nextLevelBoosts: Int32?, link: String?, myBoostCount: Int32, canBoostAgain: Bool)

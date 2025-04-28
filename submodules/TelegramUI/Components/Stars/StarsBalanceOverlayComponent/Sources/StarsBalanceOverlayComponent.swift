@@ -62,8 +62,10 @@ public final class StarsBalanceOverlayComponent: Component {
             self.balanceDisposable?.dispose()
         }
         
+        private var didTap = false
         @objc private func tapped() {
-            if let component = self.component {
+            if let component = self.component, !self.didTap {
+                self.didTap = true
                 component.action()
             }
         }

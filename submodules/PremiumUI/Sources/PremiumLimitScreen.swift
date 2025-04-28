@@ -1107,6 +1107,30 @@ private final class LimitSheetContent: CombinedComponent {
                     string = strings.Premium_MaxExpiringStoriesNoPremiumTextFormat(numberString).string
                 }
                 buttonAnimationName = nil
+            case .multiStories:
+                let limit = state.limits.maxExpiringStoriesCount
+                let premiumLimit = state.premiumLimits.maxExpiringStoriesCount
+                iconName = "Premium/Stories"
+                badgeText = "\(limit)"
+                if component.count >= premiumLimit {
+                    let limitNumberString = strings.Premium_MaxExpiringStoriesFinalTextNumberFormat(Int32(premiumLimit))
+                    string = strings.Premium_MaxExpiringStoriesFinalTextFormat(limitNumberString).string
+                } else {
+                    let limitNumberString = strings.Premium_MaxExpiringStoriesTextNumberFormat(Int32(limit))
+                    let premiumLimitNumberString = strings.Premium_MaxExpiringStoriesTextPremiumNumberFormat(Int32(premiumLimit))
+                    string = strings.Premium_MaxExpiringStoriesTextFormat(limitNumberString, premiumLimitNumberString).string
+                }
+                defaultValue = ""
+                premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
+                badgePosition = max(0.32, CGFloat(component.count) / CGFloat(premiumLimit))
+                badgeGraphPosition = badgePosition
+            
+                if isPremiumDisabled {
+                    badgeText = "\(limit)"
+                    let numberString = strings.Premium_MaxExpiringStoriesNoPremiumTextNumberFormat(Int32(limit))
+                    string = strings.Premium_MaxExpiringStoriesNoPremiumTextFormat(numberString).string
+                }
+                buttonAnimationName = nil
             case .storiesWeekly:
                 let limit = state.limits.maxStoriesWeeklyCount
                 let premiumLimit = state.premiumLimits.maxStoriesWeeklyCount
@@ -1209,7 +1233,6 @@ private final class LimitSheetContent: CombinedComponent {
                 if let nextLevelBoosts {
                     remaining = nextLevelBoosts - component.count
                 }
-                
                 
                 if let _ = link {
                     if let remaining {
@@ -1813,6 +1836,7 @@ public class PremiumLimitScreen: ViewControllerComponentContainer {
         case membershipInSharedFolders
         case channels
         case expiringStories
+        case multiStories
         case storiesWeekly
         case storiesMonthly
         
