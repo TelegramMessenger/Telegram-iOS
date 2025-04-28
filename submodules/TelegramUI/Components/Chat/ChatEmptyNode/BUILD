@@ -32,6 +32,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatMediaInputStickerGridItem",
         "//submodules/PremiumUI",
         "//submodules/TelegramUI/Components/LottieComponent",
+        "//submodules/Components/BundleIconComponent",
     ],
     visibility = [
         "//visibility:public",

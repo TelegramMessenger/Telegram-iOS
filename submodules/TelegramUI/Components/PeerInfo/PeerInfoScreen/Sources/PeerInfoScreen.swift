@@ -2207,7 +2207,7 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                     }))
                     
                     //TODO:localize
-                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPostSuggestionsSettings, label: .text("Off"), additionalBadgeLabel: presentationData.strings.Settings_New, text: "Post Suggestions", icon: UIImage(bundleImageName: "Chat/Info/GroupDiscussionIcon"), action: {
+                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPostSuggestionsSettings, label: .text("Off"), additionalBadgeLabel: presentationData.strings.Settings_New, text: "Post Suggestions", icon: UIImage(bundleImageName: "Chat/Info/PostSuggestionsIcon"), action: {
                         interaction.editingOpenPostSuggestionsSetup()
                     }))
                 }

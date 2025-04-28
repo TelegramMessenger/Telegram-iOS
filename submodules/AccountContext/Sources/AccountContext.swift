@@ -996,8 +996,13 @@ public enum SendInviteLinkScreenSubject {
 }
 
 public enum StarsWithdrawalScreenSubject {
+    public enum PaidMessageKind {
+        case privacy
+        case postSuggestion
+    }
+    
     case withdraw
-    case enterAmount(current: StarsAmount)
+    case enterAmount(current: StarsAmount, minValue: StarsAmount, fractionAfterCommission: Int, kind: PaidMessageKind)
 }
 
 public protocol SharedAccountContext: AnyObject {

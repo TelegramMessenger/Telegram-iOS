@@ -23,6 +23,7 @@ import ChatMediaInputStickerGridItem
 import UndoUI
 import PremiumUI
 import LottieComponent
+import BundleIconComponent
 
 private protocol ChatEmptyNodeContent {
     func updateLayout(interfaceState: ChatPresentationInterfaceState, subject: ChatEmptyNode.Subject, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize
@@ -1367,16 +1368,27 @@ public final class ChatEmptyNodePremiumRequiredChatContent: ASDisplayNode, ChatE
         contentsHeight += iconBackgroundSize
         contentsHeight += iconTextSpacing
         
-        let iconSize = self.icon.update(
-            transition: .immediate,
-            component: AnyComponent(
+        let iconComponent: AnyComponent<Empty>
+        if case let .customChatContents(customChatContents) = interfaceState.subject, case .postSuggestions = customChatContents.kind {
+            iconComponent = AnyComponent(
+                BundleIconComponent(
+                    name: "Chat/Empty Chat/PostSuggestions",
+                    tintColor: serviceColor.primaryText
+                )
+            )
+        } else {
+            iconComponent = AnyComponent(
                 LottieComponent(
                     content: LottieComponent.AppBundleContent(name: "PremiumRequired"),
                     color: serviceColor.primaryText,
                     size: CGSize(width: 120.0, height: 120.0),
                     loop: true
                 )
-            ),
+            )
+        }
+        let iconSize = self.icon.update(
+            transition: .immediate,
+            component: iconComponent,
             environment: {},
             containerSize: CGSize(width: maxWidth - sideInset * 2.0, height: 500.0)
         )

@@ -321,48 +321,88 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         return self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, additionalSideInsets: additionalSideInsets, maxHeight: maxHeight, isSecondary: isSecondary, transition: transition, interfaceState: interfaceState, metrics: metrics, force: false)
     }
     
-    private var displayedGiftTooltip = false
-    private func presentGiftTooltip() {
-        guard let context = self.context, !self.displayedGiftTooltip, let parentController = self.interfaceInteraction?.chatController() else {
+    private var displayedGiftOrSuggestTooltip = false
+    private func presentGiftOrSuggestTooltip() {
+        guard let context = self.context, !self.displayedGiftOrSuggestTooltip, let parentController = self.interfaceInteraction?.chatController() else {
             return
         }
-        self.displayedGiftTooltip = true
+        self.displayedGiftOrSuggestTooltip = true
 
-        let _ = (ApplicationSpecificNotice.getChannelSendGiftTooltip(accountManager: context.sharedContext.accountManager)
-        |> deliverOnMainQueue).start(next: { [weak self] count in
+        let _ = (combineLatest(queue: .mainQueue(),
+            ApplicationSpecificNotice.getChannelSendGiftTooltip(accountManager: context.sharedContext.accountManager),
+            ApplicationSpecificNotice.getChannelSuggestTooltip(accountManager: context.sharedContext.accountManager)
+        |> deliverOnMainQueue)).start(next: { [weak self] giftCount, suggestCount in
             guard let self else {
                 return
             }
-            guard count < 2 else {
-                return
+            
+            /*#if DEBUG
+            var giftCount = giftCount
+            var suggestCount = suggestCount
+            if "".isEmpty {
+                giftCount = 2
+                suggestCount = 0
             }
+            #endif*/
             
-            let _ = ApplicationSpecificNotice.incrementChannelSendGiftTooltip(accountManager: context.sharedContext.accountManager).start()
-            
-            Queue.mainQueue().after(0.4, {
-                let absoluteFrame = self.giftButton.view.convert(self.giftButton.bounds, to: parentController.view)
-                let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY + 11.0), size: CGSize())
+            if giftCount < 2 && !self.giftButton.isHidden {
+                let _ = ApplicationSpecificNotice.incrementChannelSendGiftTooltip(accountManager: context.sharedContext.accountManager).start()
                 
-                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                let text: String = presentationData.strings.Chat_SendGiftTooltip
-              
-                let tooltipController = TooltipScreen(
-                    account: context.account,
-                    sharedContext: context.sharedContext,
-                    text: .plain(text: text),
-                    balancedTextLayout: false,
-                    style: .wide,
-                    arrowStyle: .small,
-                    icon: nil,
-                    location: .point(location, .bottom),
-                    displayDuration: .default,
-                    inset: 8.0,
-                    shouldDismissOnTouch: { _, _ in
-                        return .ignore
-                    }
-                )
-                self.interfaceInteraction?.presentControllerInCurrent(tooltipController, nil)
-            })
+                Queue.mainQueue().after(0.4, {
+                    let absoluteFrame = self.giftButton.view.convert(self.giftButton.bounds, to: parentController.view)
+                    let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY + 11.0), size: CGSize())
+                    
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    let text: String = presentationData.strings.Chat_SendGiftTooltip
+                    
+                    let tooltipController = TooltipScreen(
+                        account: context.account,
+                        sharedContext: context.sharedContext,
+                        text: .plain(text: text),
+                        balancedTextLayout: false,
+                        style: .wide,
+                        arrowStyle: .small,
+                        icon: nil,
+                        location: .point(location, .bottom),
+                        displayDuration: .default,
+                        inset: 8.0,
+                        shouldDismissOnTouch: { _, _ in
+                            return .ignore
+                        }
+                    )
+                    self.interfaceInteraction?.presentControllerInCurrent(tooltipController, nil)
+                })
+            } else if suggestCount < 2 && !self.suggestedPostButton.isHidden {
+                let _ = ApplicationSpecificNotice.incrementChannelSuggestTooltip(accountManager: context.sharedContext.accountManager).start()
+                
+                Queue.mainQueue().after(0.4, {
+                    let absoluteFrame = self.suggestedPostButton.view.convert(self.suggestedPostButton.bounds, to: parentController.view)
+                    let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY + 11.0), size: CGSize())
+                    
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    let _ = presentationData
+                    //TODO:localize
+                    let text: String = "Tap here to suggest a message"
+                    
+                    let tooltipController = TooltipScreen(
+                        account: context.account,
+                        sharedContext: context.sharedContext,
+                        text: .plain(text: text),
+                        textBadge: "NEW",
+                        balancedTextLayout: false,
+                        style: .wide,
+                        arrowStyle: .small,
+                        icon: nil,
+                        location: .point(location, .bottom),
+                        displayDuration: .default,
+                        inset: 8.0,
+                        shouldDismissOnTouch: { _, _ in
+                            return .ignore
+                        }
+                    )
+                    self.interfaceInteraction?.presentControllerInCurrent(tooltipController, nil)
+                })
+            }
         })
     }
     
@@ -377,7 +417,7 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
             if previousState?.theme !== interfaceState.theme {
                 self.badgeBackground.image = PresentationResourcesChatList.badgeBackgroundActive(interfaceState.theme, diameter: 20.0)
                 self.helpButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/Help"), color: interfaceState.theme.chat.inputPanel.panelControlAccentColor), for: .normal)
-                self.suggestedPostButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/Gift"), color: interfaceState.theme.chat.inputPanel.panelControlAccentColor), for: .normal)
+                self.suggestedPostButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/SuggestPost"), color: interfaceState.theme.chat.inputPanel.panelControlAccentColor), for: .normal)
                 self.giftButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/Gift"), color: interfaceState.theme.chat.inputPanel.panelControlAccentColor), for: .normal)
             }
             
@@ -431,11 +471,12 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                     self.helpButton.isHidden = true
                     //TODO:release
                     self.suggestedPostButton.isHidden = false
-                    self.presentGiftTooltip()
+                    self.presentGiftOrSuggestTooltip()
                 } else if case .broadcast = peer.info {
                     self.giftButton.isHidden = true
                     self.helpButton.isHidden = true
                     self.suggestedPostButton.isHidden = false
+                    self.presentGiftOrSuggestTooltip()
                 } else if peer.flags.contains(.isGigagroup), self.action == .muteNotifications || self.action == .unmuteNotifications {
                     self.giftButton.isHidden = true
                     self.helpButton.isHidden = false

@@ -156,13 +156,18 @@ private final class SheetContent: CombinedComponent {
                 minAmount = StarsAmount(value: resaleConfiguration.starGiftResaleMinAmount, nanos: 0)
                 maxAmount = StarsAmount(value: resaleConfiguration.starGiftResaleMaxAmount, nanos: 0)
                 amountLabel = nil
-            case .paidMessages:
+            case let .paidMessages(_, minAmountValue, _, kind):
                 //TODO:localize
-                titleString = "Price per Message"
+                switch kind {
+                case .privacy:
+                    titleString = "Price per Message"
+                case .postSuggestion:
+                    titleString = "Price for each Suggestion"
+                }
                 amountTitle = "PRICE IN STARS"
                 amountPlaceholder = "Enter Price"
                 
-                minAmount = StarsAmount(value: 1, nanos: 0)
+                minAmount = StarsAmount(value: minAmountValue, nanos: 0)
                 maxAmount = StarsAmount(value: resaleConfiguration.paidMessageMaxAmount, nanos: 0)
                 amountLabel = nil
             }
@@ -289,10 +294,10 @@ private final class SheetContent: CombinedComponent {
                     text: .plain(amountInfoString),
                     maximumNumberOfLines: 0
                 ))
-            case .paidMessages:
+            case let .paidMessages(_, _, fractionAfterCommission, _):
                 let amountInfoString: NSAttributedString
                 if let value = state.amount?.value, value > 0 {
-                    let fullValue: Int64 = Int64(value) * 1_000_000_000 * 80 / 100
+                    let fullValue: Int64 = Int64(value) * 1_000_000_000 * Int64(fractionAfterCommission) / 100
                     let amountValue = StarsAmount(value: fullValue / 1_000_000_000, nanos: Int32(fullValue % 1_000_000_000))
                     amountInfoString = NSAttributedString(attributedString: parseMarkdownIntoAttributedString("You will receive **\(amountValue) Stars**.", attributes: amountMarkdownAttributes, textAlignment: .natural))
                 } else {
@@ -457,7 +462,7 @@ private final class SheetContent: CombinedComponent {
                 amount = nil
             case .starGiftResell:
                 amount = nil
-            case let .paidMessages(initialValue):
+            case let .paidMessages(initialValue, _, _, _):
                 amount = StarsAmount(value: initialValue, nanos: 0)
             }
             
@@ -580,7 +585,7 @@ public final class StarsWithdrawScreen: ViewControllerComponentContainer {
         case paidMedia(Int64?)
         case reaction(Int64?)
         case starGiftResell(Bool)
-        case paidMessages(Int64)
+        case paidMessages(current: Int64, minValue: Int64, fractionAfterCommission: Int, kind: StarsWithdrawalScreenSubject.PaidMessageKind)
     }
     
     private let context: AccountContext

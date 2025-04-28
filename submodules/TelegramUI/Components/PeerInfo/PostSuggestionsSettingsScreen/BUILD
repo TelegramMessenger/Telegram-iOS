@@ -27,10 +27,11 @@ swift_library(
         "//submodules/Components/BundleIconComponent",
         "//submodules/TextFormat",
         "//submodules/TelegramUI/Components/ListSectionComponent",
-        "//submodules/TelegramUI/Components/ListItemSliderSelectorComponent",
         "//submodules/TelegramUI/Components/ListSwitchItemComponent",
         "//submodules/TelegramUI/Components/ListActionItemComponent",
         "//submodules/TelegramStringFormatting",
+        "//submodules/TelegramUI/Components/ListItemComponentAdaptor",
+        "//submodules/TelegramUI/Components/PeerInfo/MessagePriceItem",
     ],
     visibility = [
         "//visibility:public",

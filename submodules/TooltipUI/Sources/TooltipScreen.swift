@@ -17,6 +17,7 @@ import AvatarStoryIndicatorComponent
 import AccountContext
 import Markdown
 import BalancedTextComponent
+import MultilineTextComponent
 import MultilineTextWithEntitiesComponent
 import ShimmerEffect
 
@@ -113,6 +114,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
     private let context: AccountContext?
     
     private let text: TooltipScreen.Text
+    private let textBadge: String?
     private let textAlignment: TooltipScreen.Alignment
     private let balancedTextLayout: Bool
     private let constrainWidth: CGFloat?
@@ -148,6 +150,8 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
     private var avatarNode: AvatarNode?
     private var avatarStoryIndicator: ComponentView<Empty>?
     private let textView = ComponentView<Empty>()
+    private var textBadgeView: ComponentView<Empty>?
+    private var textBadgeBackgroundView: ComponentView<Empty>?
     private var closeButtonNode: HighlightableButtonNode?
     private var actionButtonNode: HighlightableButtonNode?
     
@@ -166,6 +170,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         account: Account,
         sharedContext: SharedAccountContext,
         text: TooltipScreen.Text,
+        textBadge: String?,
         textAlignment: TooltipScreen.Alignment,
         balancedTextLayout: Bool,
         constrainWidth: CGFloat?,
@@ -390,6 +395,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         
         self.fontSize = fontSize
         self.text = text
+        self.textBadge = textBadge
         self.textAlignment = textAlignment
         self.balancedTextLayout = balancedTextLayout
         self.constrainWidth = constrainWidth
@@ -658,18 +664,48 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             )
         }
         
+        let textBadgeSpacing: CGFloat = 9.0
+        let textBadgeRightInset: CGFloat = 5.0
+        
+        var textContentSize = textSize
+        var textBadgeSize: CGSize?
+        if let textBadge = self.textBadge {
+            let textBadgeView: ComponentView<Empty>
+            if let current = self.textBadgeView {
+                textBadgeView = current
+            } else {
+                textBadgeView = ComponentView()
+                self.textBadgeView = textBadgeView
+            }
+            let textBadgeSizeValue = textBadgeView.update(
+                transition: .immediate,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: textBadge, font: Font.semibold(floor(self.fontSize * 0.8)), textColor: textColor))
+                )),
+                environment: {},
+                containerSize: CGSize(width: 100.0, height: 100.0)
+            )
+            textBadgeSize = textBadgeSizeValue
+            textContentSize.width += textBadgeSpacing + textBadgeSizeValue.width + textBadgeRightInset
+        } else {
+            if let textBadgeView = self.textBadgeView {
+                self.textBadgeView = nil
+                textBadgeView.view?.removeFromSuperview()
+            }
+        }
+        
         var backgroundFrame: CGRect
         
         var backgroundHeight: CGFloat
         switch self.tooltipStyle {
         case .default, .gradient:
-            backgroundHeight = max(animationSize.height, textSize.height) + contentVerticalInset * 2.0
+            backgroundHeight = max(animationSize.height, textContentSize.height) + contentVerticalInset * 2.0
         case .wide:
-            backgroundHeight = max(animationSize.height, textSize.height) + contentVerticalInset * 2.0 + 4.0
+            backgroundHeight = max(animationSize.height, textContentSize.height) + contentVerticalInset * 2.0 + 4.0
         case let .customBlur(_, inset):
-            backgroundHeight = max(animationSize.height, textSize.height) + contentVerticalInset * 2.0 + inset * 2.0
+            backgroundHeight = max(animationSize.height, textContentSize.height) + contentVerticalInset * 2.0 + inset * 2.0
         case .light:
-            backgroundHeight = max(28.0, max(animationSize.height, textSize.height) + 4.0 * 2.0)
+            backgroundHeight = max(28.0, max(animationSize.height, textContentSize.height) + 4.0 * 2.0)
         }
         if self.actionButtonNode != nil {
             backgroundHeight += 4.0
@@ -678,7 +714,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         var invertArrow = false
         switch self.location {
         case let .point(rect, arrowPosition):
-            var backgroundWidth = textSize.width + contentInset * 2.0 + animationSize.width + animationSpacing
+            var backgroundWidth = textContentSize.width + contentInset * 2.0 + animationSize.width + animationSpacing
             if self.closeButtonNode != nil || self.actionButtonNode != nil {
                 backgroundWidth += buttonInset
             }
@@ -769,7 +805,6 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         }
         
         let textFrame = CGRect(origin: CGPoint(x: contentInset + animationSize.width + animationSpacing, y: floor((backgroundHeight - textSize.height) / 2.0)), size: textSize)
-        
         if let textComponentView = self.textView.view {
             if textComponentView.superview == nil {
                 textComponentView.layer.anchorPoint = CGPoint()
@@ -777,6 +812,49 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             }
             transition.updatePosition(layer: textComponentView.layer, position: textFrame.origin)
             transition.updateBounds(layer: textComponentView.layer, bounds: CGRect(origin: CGPoint(), size: textFrame.size))
+        }
+        
+        if let textBadgeView = self.textBadgeView, let textBadgeSize {
+            let textBadgeFrame = CGRect(origin: CGPoint(x: textFrame.maxX + textBadgeSpacing, y: textFrame.minY + 2.0), size: textBadgeSize)
+            if let textBadgeComponentView = textBadgeView.view {
+                if textBadgeComponentView.superview == nil {
+                    textBadgeComponentView.layer.anchorPoint = CGPoint()
+                    self.containerNode.view.addSubview(textBadgeComponentView)
+                }
+                transition.updatePosition(layer: textBadgeComponentView.layer, position: textBadgeFrame.origin)
+                transition.updateBounds(layer: textBadgeComponentView.layer, bounds: CGRect(origin: CGPoint(), size: textBadgeFrame.size))
+            }
+            
+            var textBadgeBackgroundFrame = textBadgeFrame.insetBy(dx: -4.0, dy: -3.0)
+            textBadgeBackgroundFrame.size.height -= UIScreenPixel
+            textBadgeBackgroundFrame.size.width -= UIScreenPixel
+            
+            let textBadgeBackgroundView: ComponentView<Empty>
+            if let current = self.textBadgeBackgroundView {
+                textBadgeBackgroundView = current
+            } else {
+                textBadgeBackgroundView = ComponentView()
+                self.textBadgeBackgroundView = textBadgeBackgroundView
+            }
+            let _ = textBadgeBackgroundView.update(
+                transition: .immediate,
+                component: AnyComponent(FilledRoundedRectangleComponent(
+                    color: UIColor(white: 1.0, alpha: 0.1),
+                    cornerRadius: .value(5.0),
+                    smoothCorners: true
+                )),
+                environment: {},
+                containerSize: textBadgeBackgroundFrame.size
+            )
+            if let textBadgeBackgroundComponentView = textBadgeBackgroundView.view {
+                if textBadgeBackgroundComponentView.superview == nil, let textBadgeComponentView = textBadgeView.view {
+                    self.containerNode.view.insertSubview(textBadgeBackgroundComponentView, belowSubview: textBadgeComponentView)
+                }
+                textBadgeBackgroundComponentView.frame = textBadgeBackgroundFrame
+            }
+        } else if let textBadgeBackgroundView = self.textBadgeBackgroundView {
+            self.textBadgeBackgroundView = nil
+            textBadgeBackgroundView.view?.removeFromSuperview()
         }
         
         if let closeButtonNode = self.closeButtonNode {
@@ -1120,6 +1198,7 @@ public final class TooltipScreen: ViewController {
     private let account: Account
     private let sharedContext: SharedAccountContext
     public let text: TooltipScreen.Text
+    private let textBadge: String?
     public let textAlignment: TooltipScreen.Alignment
     private let balancedTextLayout: Bool
     private let constrainWidth: CGFloat?
@@ -1160,6 +1239,7 @@ public final class TooltipScreen: ViewController {
         account: Account,
         sharedContext: SharedAccountContext,
         text: TooltipScreen.Text,
+        textBadge: String? = nil,
         textAlignment: TooltipScreen.Alignment = .natural,
         balancedTextLayout: Bool = false,
         constrainWidth: CGFloat? = nil,
@@ -1179,6 +1259,7 @@ public final class TooltipScreen: ViewController {
         self.account = account
         self.sharedContext = sharedContext
         self.text = text
+        self.textBadge = textBadge
         self.textAlignment = textAlignment
         self.balancedTextLayout = balancedTextLayout
         self.constrainWidth = constrainWidth
@@ -1250,7 +1331,7 @@ public final class TooltipScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = TooltipScreenNode(context: self.context, account: self.account, sharedContext: self.sharedContext, text: self.text, textAlignment: self.textAlignment, balancedTextLayout: self.balancedTextLayout, constrainWidth: self.constrainWidth, style: self.style, arrowStyle: self.arrowStyle, icon: self.icon, action: self.action, location: self.location, displayDuration: self.displayDuration, inset: self.inset, cornerRadius: self.cornerRadius, isShimmering: self.isShimmering, shouldDismissOnTouch: self.shouldDismissOnTouch, requestDismiss: { [weak self] in
+        self.displayNode = TooltipScreenNode(context: self.context, account: self.account, sharedContext: self.sharedContext, text: self.text, textBadge: self.textBadge, textAlignment: self.textAlignment, balancedTextLayout: self.balancedTextLayout, constrainWidth: self.constrainWidth, style: self.style, arrowStyle: self.arrowStyle, icon: self.icon, action: self.action, location: self.location, displayDuration: self.displayDuration, inset: self.inset, cornerRadius: self.cornerRadius, isShimmering: self.isShimmering, shouldDismissOnTouch: self.shouldDismissOnTouch, requestDismiss: { [weak self] in
             guard let strongSelf = self else {
                 return
             }

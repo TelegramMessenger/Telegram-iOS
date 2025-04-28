@@ -26,6 +26,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, ASScrollViewDel
     private let backgroundNode: ASDisplayNode
     private let contentBackgroundNode: ASDisplayNode
     private let titleNode: ASTextNode
+    private let textNode: ASTextNode?
     private let cancelButton: HighlightableButtonNode
     private let doneButton: SolidRoundedButtonNode
     private let onlineButton: SolidRoundedButtonNode
@@ -93,6 +94,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, ASScrollViewDel
         self.contentBackgroundNode.backgroundColor = backgroundColor
         
         let title: String
+        var text: String?
         switch mode {
         case .scheduledMessages:
             title = self.presentationData.strings.Conversation_ScheduleMessage_Title
@@ -101,12 +103,26 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, ASScrollViewDel
         case .suggestPost:
             //TODO:localize
             title = "Time"
+            text = "Set the date and time you want\nyour message to be published."
         }
         
         self.titleNode = ASTextNode()
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.bold(17.0), textColor: textColor)
         self.titleNode.accessibilityLabel = title
         self.titleNode.accessibilityTraits = [.staticText]
+        
+        if let text {
+            let textNode = ASTextNode()
+            textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: textColor)
+            textNode.maximumNumberOfLines = 0
+            textNode.textAlignment = .center
+            textNode.lineSpacing = 0.2
+            textNode.accessibilityLabel = text
+            textNode.accessibilityTraits = [.staticText]
+            self.textNode = textNode
+        } else {
+            self.textNode = nil
+        }
         
         self.cancelButton = HighlightableButtonNode()
         self.cancelButton.setTitle(self.presentationData.strings.Common_Cancel, with: Font.regular(17.0), with: accentColor, for: .normal)
@@ -146,6 +162,9 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, ASScrollViewDel
         self.backgroundNode.addSubnode(self.effectNode)
         self.backgroundNode.addSubnode(self.contentBackgroundNode)
         self.contentContainerNode.addSubnode(self.titleNode)
+        if let textNode = self.textNode {
+            self.contentContainerNode.addSubnode(textNode)
+        }
         self.contentContainerNode.addSubnode(self.cancelButton)
         self.contentContainerNode.addSubnode(self.doneButton)
         if case .scheduledMessages(true) = self.mode {
@@ -422,6 +441,13 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, ASScrollViewDel
         }
         let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
         
+        let textControlSpacing: CGFloat = -8.0
+        let textDoneSpacing: CGFloat = 21.0
+        let textSize = self.textNode?.measure(CGSize(width: width, height: 1000.0))
+        if let textSize {
+            contentHeight += textSize.height + textControlSpacing + textDoneSpacing
+        }
+        
         let sideInset = floor((layout.size.width - width) / 2.0)
         let contentContainerFrame = CGRect(origin: CGPoint(x: sideInset, y: layout.size.height - contentHeight), size: CGSize(width: width, height: contentHeight))
         let contentFrame = contentContainerFrame
@@ -446,7 +472,13 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, ASScrollViewDel
         
         let buttonInset: CGFloat = 16.0
         let doneButtonHeight = self.doneButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
-        transition.updateFrame(node: self.doneButton, frame: CGRect(x: buttonInset, y: contentHeight - doneButtonHeight - insets.bottom - 16.0 - buttonOffset, width: contentFrame.width, height: doneButtonHeight))
+        let doneButtonFrame = CGRect(x: buttonInset, y: contentHeight - doneButtonHeight - insets.bottom - 16.0 - buttonOffset, width: contentFrame.width, height: doneButtonHeight)
+        transition.updateFrame(node: self.doneButton, frame: doneButtonFrame)
+        
+        if let textNode = self.textNode, let textSize {
+            let textFrame = CGRect(origin: CGPoint(x: floor((contentFrame.width - textSize.width) / 2.0), y: doneButtonFrame.minY - textDoneSpacing - textSize.height), size: textSize)
+            transition.updateFrame(node: textNode, frame: textFrame)
+        }
         
         let onlineButtonHeight = self.onlineButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
         transition.updateFrame(node: self.onlineButton, frame: CGRect(x: buttonInset, y: contentHeight - onlineButtonHeight - cleanInsets.bottom - 16.0, width: contentFrame.width, height: onlineButtonHeight))

@@ -17,23 +17,27 @@ import ListSectionComponent
 import BundleIconComponent
 import LottieComponent
 import ListSwitchItemComponent
-import ListItemSliderSelectorComponent
 import ListSwitchItemComponent
 import ListActionItemComponent
 import Markdown
 import TelegramStringFormatting
+import MessagePriceItem
+import ListItemComponentAdaptor
 
 final class PostSuggestionsSettingsScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let usdWithdrawRate: Int64
     let completion: () -> Void
 
     init(
         context: AccountContext,
+        usdWithdrawRate: Int64,
         completion: @escaping () -> Void
     ) {
         self.context = context
+        self.usdWithdrawRate = usdWithdrawRate
         self.completion = completion
     }
 
@@ -315,26 +319,50 @@ final class PostSuggestionsSettingsScreenComponent: Component {
             
             var contentSectionItems: [AnyComponentWithIdentity<Empty>] = []
             
-            let sliderValueList = (0 ... 10000).map { i -> String in
-                return "\(i)"
-            }
-            //TODO:localize
-            let sliderTitle: String
-            let sliderSecondaryTitle: String?
-            let usdAmount = Double(self.starCount) * 0.013
-            let usdAmountString = formatCurrencyAmount(Int64(usdAmount * 100.0), currency: "USD")
-            if self.starCount == 0 {
-                sliderTitle = "Free"
-                sliderSecondaryTitle = nil
-            } else if self.starCount == 1 {
-                sliderTitle = "\(self.starCount) Star"
-                sliderSecondaryTitle = "~\(usdAmountString)"
-            } else {
-                sliderTitle = "\(self.starCount) Stars"
-                sliderSecondaryTitle = "~\(usdAmountString)"
-            }
+            let usdRate = Double(component.usdWithdrawRate) / 1000.0 / 100.0
+            let price = self.starCount == 0 ? "" : "≈\(formatTonUsdValue(Int64(self.starCount), divide: false, rate: usdRate, dateTimeFormat: presentationData.dateTimeFormat))"
             
-            contentSectionItems.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(ListItemSliderSelectorComponent(
+            contentSectionItems.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(ListItemComponentAdaptor(
+                itemGenerator: MessagePriceItem(
+                    theme: environment.theme,
+                    strings: environment.strings,
+                    isEnabled: true, minValue: 0, maxValue: 10000,
+                    value: Int64(self.starCount),
+                    price: price,
+                    sectionId: 0,
+                    updated: { [weak self] value, _ in
+                        guard let self else {
+                            return
+                        }
+                        
+                        self.starCount = Int(value)
+                        if !self.isUpdating {
+                            self.state?.updated(transition: .immediate)
+                        }
+                    },
+                    openSetCustom: { [weak self] in
+                        guard let self, let component = self.component, let environment = self.environment else {
+                            return
+                        }
+                        
+                        let currentAmount: StarsAmount = StarsAmount(value: Int64(self.starCount), nanos: 0)
+                        let starsScreen = component.context.sharedContext.makeStarsWithdrawalScreen(context: component.context, subject: .enterAmount(current: currentAmount, minValue: StarsAmount(value: 0, nanos: 0), fractionAfterCommission: 85, kind: .postSuggestion), completion: { [weak self] amount in
+                            guard let self else {
+                                return
+                            }
+                            
+                            self.starCount = Int(amount)
+                            if !self.isUpdating {
+                                self.state?.updated(transition: .immediate)
+                            }
+                        })
+                        environment.controller()?.push(starsScreen)
+                    },
+                    openPremiumInfo: nil
+                ),
+                params: ListViewItemLayoutParams(width: availableSize.width - sideInset * 2.0, leftInset: 0.0, rightInset: 0.0, availableHeight: 10000.0, isStandalone: true)
+            ))))
+            /*contentSectionItems.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(ListItemSliderSelectorComponent(
                 theme: environment.theme,
                 content: .discrete(ListItemSliderSelectorComponent.Discrete(
                     values: sliderValueList.map { item in
@@ -353,7 +381,7 @@ final class PostSuggestionsSettingsScreenComponent: Component {
                         self.state?.updated(transition: .immediate)
                     }
                 ))
-            ))))
+            ))))*/
             
             let contentSectionSize = self.contentSection.update(
                 transition: transition,
@@ -445,8 +473,11 @@ public final class PostSuggestionsSettingsScreen: ViewControllerComponentContain
     ) {
         self.context = context
         
+        let configuration = StarsSubscriptionConfiguration.with(appConfiguration: context.currentAppConfiguration.with({ $0 }))
+        
         super.init(context: context, component: PostSuggestionsSettingsScreenComponent(
             context: context,
+            usdWithdrawRate: configuration.usdWithdrawRate,
             completion: completion
         ), navigationBarAppearance: .default, theme: .default, updatedPresentationData: nil)
         
