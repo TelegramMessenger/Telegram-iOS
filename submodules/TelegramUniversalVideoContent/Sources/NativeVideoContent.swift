@@ -520,7 +520,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         } else {
             let mediaPlayer = ChunkMediaPlayerV2(
                 params: ChunkMediaPlayerV2.MediaDataReaderParams(context: context),
-                audioSessionManager: audioSessionManager,
+                audioContext: ChunkMediaPlayerV2.AudioContext(audioSessionManager: audioSessionManager),
                 source: .directFetch(ChunkMediaPlayerV2.SourceDescription.ResourceDescription(
                     postbox: postbox,
                     size: selectedFile.size ?? 0,

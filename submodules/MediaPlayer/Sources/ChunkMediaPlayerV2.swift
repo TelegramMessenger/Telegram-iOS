@@ -33,6 +33,101 @@ private final class ChunkMediaPlayerExternalSourceImpl: ChunkMediaPlayerSourceIm
 }
 
 public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
+    public final class AudioContext {
+        fileprivate let audioSessionManager: ManagedAudioSession
+        private var audioSessionDisposable: Disposable?
+        private(set) var hasAudioSession: Bool = false
+        private(set) var isAmbientMode: Bool = false
+        private(set) var isInitialized: Bool = false
+        
+        private var updatedListeners = Bag<() -> Void>()
+        
+        public init(
+            audioSessionManager: ManagedAudioSession
+        ) {
+            self.audioSessionManager = audioSessionManager
+        }
+        
+        deinit {
+            self.audioSessionDisposable?.dispose()
+        }
+        
+        func onUpdated(_ f: @escaping () -> Void) -> Disposable {
+            let index = self.updatedListeners.add(f)
+            return ActionDisposable { [weak self] in
+                Queue.mainQueue().async {
+                    guard let self else {
+                        return
+                    }
+                    self.updatedListeners.remove(index)
+                }
+            }
+        }
+        
+        func setIsAmbient(isAmbient: Bool) {
+            self.hasAudioSession = false
+            
+            for f in self.updatedListeners.copyItems() {
+                f()
+            }
+            
+            self.audioSessionDisposable?.dispose()
+            self.audioSessionDisposable = nil
+        }
+        
+        func update(type: ManagedAudioSessionType?) {
+            if let type {
+                if self.audioSessionDisposable == nil {
+                    self.isInitialized = true
+                    
+                    self.audioSessionDisposable = self.audioSessionManager.push(params: ManagedAudioSessionClientParams(
+                        audioSessionType: type,
+                        activateImmediately: false,
+                        manualActivate: { [weak self] control in
+                            control.setupAndActivate(synchronous: false, { state in
+                                Queue.mainQueue().async {
+                                    guard let self else {
+                                        return
+                                    }
+                                    self.hasAudioSession = true
+                                    for f in self.updatedListeners.copyItems() {
+                                        f()
+                                    }
+                                }
+                            })
+                        },
+                        deactivate: { [weak self] _ in
+                            return Signal { subscriber in
+                                guard let self else {
+                                    subscriber.putCompletion()
+                                    return EmptyDisposable
+                                }
+                                
+                                self.hasAudioSession = false
+                                for f in self.updatedListeners.copyItems() {
+                                    f()
+                                }
+                                subscriber.putCompletion()
+                                
+                                return EmptyDisposable
+                            }
+                            |> runOn(.mainQueue())
+                        },
+                        headsetConnectionStatusChanged: { _ in },
+                        availableOutputsChanged: { _, _ in }
+                    ))
+                }
+            } else {
+                if let audioSessionDisposable = self.audioSessionDisposable {
+                    self.audioSessionDisposable = nil
+                    audioSessionDisposable.dispose()
+                }
+                
+                self.hasAudioSession = false
+            }
+        }
+    }
+    
     public enum SourceDescription {
         public final class ResourceDescription {
             public let postbox: Postbox
@@ -166,10 +261,10 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
     private let dataQueue: Queue
     
     private let mediaDataReaderParams: MediaDataReaderParams
-    private let audioSessionManager: ManagedAudioSession
     private let onSeeked: (() -> Void)?
     private weak var playerNode: MediaPlayerNode?
     
+    private let audioContext: AudioContext
     private let renderSynchronizer: AVSampleBufferRenderSynchronizer
     private var videoRenderer: AVSampleBufferDisplayLayer
     private var audioRenderer: AVSampleBufferAudioRenderer?
@@ -198,13 +293,20 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
     }
 
     public var actionAtEnd: MediaPlayerActionAtEnd = .stop
+    public weak var migrateToNextPlayerOnEnd: ChunkMediaPlayerV2? {
+        didSet {
+            if self.migrateToNextPlayerOnEnd !== oldValue {
+                self.updateInternalState()
+            }
+        }
+    }
     
     private var didSeekOnce: Bool = false
     private var isPlaying: Bool = false
     private var baseRate: Double = 1.0
     private var isSoundEnabled: Bool
     private var isMuted: Bool
-    private var isAmbientMode: Bool
+    private var initialIsAmbient: Bool
      
     private var seekId: Int = 0
     private var seekTimestamp: Double = 0.0
@@ -223,12 +325,11 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
     private var partsStateDisposable: Disposable?
     private var updateTimer: Foundation.Timer?
     
-    private var audioSessionDisposable: Disposable?
-    private var hasAudioSession: Bool = false
+    private var audioContextUpdatedDisposable: Disposable?
 
     public init(
         params: MediaDataReaderParams,
-        audioSessionManager: ManagedAudioSession,
+        audioContext: AudioContext,
         source: SourceDescription,
         video: Bool,
         playAutomatically: Bool = false,
@@ -247,7 +348,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
         self.dataQueue = ChunkMediaPlayerV2.sharedDataQueue
         
         self.mediaDataReaderParams = params
-        self.audioSessionManager = audioSessionManager
+        self.audioContext = audioContext
         self.onSeeked = onSeeked
         self.playerNode = playerNode
         
@@ -257,7 +358,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
         
         self.isSoundEnabled = enableSound
         self.isMuted = soundMuted
-        self.isAmbientMode = ambient
+        self.initialIsAmbient = ambient
         self.baseRate = baseRate
         
         self.renderSynchronizer = AVSampleBufferRenderSynchronizer()
@@ -296,12 +397,19 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
         } else {
             self.renderSynchronizer.addRenderer(self.videoRenderer)
         }
+        
+        self.audioContextUpdatedDisposable = self.audioContext.onUpdated({ [weak self] in
+            guard let self else {
+                return
+            }
+            self.updateInternalState()
+        })
     }
     
     deinit {
         self.partsStateDisposable?.dispose()
         self.updateTimer?.invalidate()
-        self.audioSessionDisposable?.dispose()
+        self.audioContextUpdatedDisposable?.dispose()
         
         if #available(iOS 17.0, *) {
             self.videoRenderer.sampleBufferRenderer.stopRequestingMediaData()
@@ -321,51 +429,19 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
     }
     
     private func updateInternalState() {
+        var audioSessionType: ManagedAudioSessionType?
         if self.isSoundEnabled && self.hasSound {
-            if self.audioSessionDisposable == nil {
-                self.audioSessionDisposable = self.audioSessionManager.push(params: ManagedAudioSessionClientParams(
-                    audioSessionType: self.isAmbientMode ? .ambient : .play(mixWithOthers: false),
-                    activateImmediately: false,
-                    manualActivate: { [weak self] control in
-                        control.setupAndActivate(synchronous: false, { state in
-                            Queue.mainQueue().async {
-                                guard let self else {
-                                    return
-                                }
-                                self.hasAudioSession = true
-                                self.updateInternalState()
-                            }
-                        })
-                    },
-                    deactivate: { [weak self] _ in
-                        return Signal { subscriber in
-                            guard let self else {
-                                subscriber.putCompletion()
-                                return EmptyDisposable
-                            }
-                            
-                            self.hasAudioSession = false
-                            self.updateInternalState()
-                            subscriber.putCompletion()
-                            
-                            return EmptyDisposable
-                        }
-                        |> runOn(.mainQueue())
-                    },
-                    headsetConnectionStatusChanged: { _ in },
-                    availableOutputsChanged: { _, _ in }
-                ))
+            let isAmbient: Bool
+            if self.audioContext.isInitialized {
+                isAmbient = self.audioContext.isAmbientMode
+            } else {
+                isAmbient = self.initialIsAmbient
             }
-        } else {
-            if let audioSessionDisposable = self.audioSessionDisposable {
-                self.audioSessionDisposable = nil
-                audioSessionDisposable.dispose()
-            }
-            
-            self.hasAudioSession = false
+            audioSessionType = isAmbient ? .ambient : .play(mixWithOthers: false)
         }
+        self.audioContext.update(type: audioSessionType)
         
-        if self.isSoundEnabled && self.hasSound && self.hasAudioSession {
+        if self.isSoundEnabled && self.hasSound && self.audioContext.hasAudioSession {
             if self.audioRenderer == nil {
                 let audioRenderer = AVSampleBufferAudioRenderer()
                 audioRenderer.isMuted = self.isMuted
@@ -799,13 +875,9 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
     }
 
     public func continueWithOverridingAmbientMode(isAmbient: Bool) {
-        if self.isAmbientMode != isAmbient {
-            self.isAmbientMode = isAmbient
-            
-            self.hasAudioSession = false
-            self.updateInternalState()
-            self.audioSessionDisposable?.dispose()
-            self.audioSessionDisposable = nil
+        if self.audioContext.isAmbientMode != isAmbient {
+            self.initialIsAmbient = isAmbient
+            self.audioContext.setIsAmbient(isAmbient: isAmbient)
             
             let currentTimestamp: CMTime
             if let pendingSeekTimestamp = self.pendingSeekTimestamp {

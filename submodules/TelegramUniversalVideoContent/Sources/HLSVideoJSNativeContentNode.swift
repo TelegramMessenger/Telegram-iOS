@@ -1093,7 +1093,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
         var onSeeked: (() -> Void)?
         self.player = ChunkMediaPlayerV2(
             params: ChunkMediaPlayerV2.MediaDataReaderParams(context: context),
-            audioSessionManager: audioSessionManager,
+            audioContext: ChunkMediaPlayerV2.AudioContext(audioSessionManager: audioSessionManager),
             source: .externalParts(self.chunkPlayerPartsState.get()),
             video: true,
             enableSound: self.enableSound,
