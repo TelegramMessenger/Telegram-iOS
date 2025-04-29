@@ -749,6 +749,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1721619444] = { return Api.PeerNotifySettings.parse_peerNotifySettings($0) }
     dict[-193510921] = { return Api.PeerSettings.parse_peerSettings($0) }
     dict[-1707742823] = { return Api.PeerStories.parse_peerStories($0) }
+    dict[-404214254] = { return Api.PendingSuggestion.parse_pendingSuggestion($0) }
     dict[810769141] = { return Api.PhoneCall.parse_phoneCall($0) }
     dict[912311057] = { return Api.PhoneCall.parse_phoneCallAccepted($0) }
     dict[1355435489] = { return Api.PhoneCall.parse_phoneCallDiscarded($0) }
@@ -1299,7 +1300,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[16313608] = { return Api.help.PeerColors.parse_peerColors($0) }
     dict[732034510] = { return Api.help.PeerColors.parse_peerColorsNotModified($0) }
     dict[1395946908] = { return Api.help.PremiumPromo.parse_premiumPromo($0) }
-    dict[-1942390465] = { return Api.help.PromoData.parse_promoData($0) }
+    dict[145021050] = { return Api.help.PromoData.parse_promoData($0) }
     dict[-1728664459] = { return Api.help.PromoData.parse_promoDataEmpty($0) }
     dict[235081943] = { return Api.help.RecentMeUrls.parse_recentMeUrls($0) }
     dict[398898678] = { return Api.help.Support.parse_support($0) }
@@ -2003,6 +2004,8 @@ public extension Api {
             case let _1 as Api.PeerSettings:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PeerStories:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.PendingSuggestion:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PhoneCall:
                 _1.serialize(buffer, boxed)

@@ -1,9 +1,9 @@
 #import <FFMpegBinding/FFMpegVideoWriter.h>
 #import <FFMpegBinding/FFMpegAVFrame.h>
 
-#include "libavformat/avformat.h"
-#include "libavcodec/avcodec.h"
-#include "libavutil/imgutils.h"
+#include <third_party/ffmpeg/libavformat/avformat.h>
+#include <third_party/ffmpeg/libavcodec/avcodec.h>
+#include <third_party/ffmpeg/libavutil/imgutils.h>
 
 @interface FFMpegVideoWriter ()
 

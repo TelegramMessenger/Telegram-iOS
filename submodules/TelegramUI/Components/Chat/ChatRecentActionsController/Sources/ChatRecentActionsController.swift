@@ -147,6 +147,7 @@ public final class ChatRecentActionsController: TelegramBaseController {
         }, joinGroupCall: { _ in
         }, presentInviteMembers: {
         }, presentGigagroupHelp: {
+        }, openSuggestPost: {
         }, editMessageMedia: { _, _ in
         }, updateShowCommands: { _ in
         }, updateShowSendAsPeers: { _ in

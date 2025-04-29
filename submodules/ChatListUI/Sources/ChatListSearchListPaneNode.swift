@@ -3368,6 +3368,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         }, openAdInfo: { node, adPeer in
             interaction.openAdInfo(node, adPeer)
         }, openAccountFreezeInfo: {
+        }, openUrl: { _ in
         })
         chatListInteraction.isSearchMode = true
         
@@ -5363,6 +5364,7 @@ public final class ChatListSearchShimmerNode: ASDisplayNode {
             }, openPhotoSetup: {
             }, openAdInfo: { _, _ in
             }, openAccountFreezeInfo: {
+            }, openUrl: { _ in
             })
             var isInlineMode = false
             if case .topics = key {

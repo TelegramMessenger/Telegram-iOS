@@ -383,6 +383,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }, openPhotoSetup: {
         }, openAdInfo: { _, _ in
         }, openAccountFreezeInfo: {
+        }, openUrl: { _ in
         })
 
         func makeChatListItem(

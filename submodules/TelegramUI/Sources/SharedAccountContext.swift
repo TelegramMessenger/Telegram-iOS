@@ -83,7 +83,7 @@ import OldChannelsController
 import InviteLinksUI
 import GiftStoreScreen
 import SendInviteLinkScreen
-
+import PostSuggestionsSettingsScreen
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -2858,7 +2858,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             guard let controller else {
                 return
             }
-            let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: .setupBirthday).startStandalone()
+            let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: ServerProvidedSuggestion.setupBirthday.id).startStandalone()
                     
             let settingsPromise: Promise<AccountPrivacySettings?>
             if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface, let current = rootController.getPrivacySettings() {
@@ -3049,7 +3049,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             guard let controller else {
                 return
             }
-            let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: .setupBirthday).startStandalone()
+            let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: ServerProvidedSuggestion.setupBirthday.id).startStandalone()
                     
             let settingsPromise: Promise<AccountPrivacySettings?>
             if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface, let current = rootController.getPrivacySettings() {
@@ -3663,8 +3663,15 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return StarsWithdrawScreen(context: context, mode: .withdraw(stats), completion: completion)
     }
     
-    public func makeStarsWithdrawalScreen(context: AccountContext, completion: @escaping (Int64) -> Void) -> ViewController {
-        return StarsWithdrawScreen(context: context, mode: .accountWithdraw, completion: completion)
+    public func makeStarsWithdrawalScreen(context: AccountContext, subject: StarsWithdrawalScreenSubject, completion: @escaping (Int64) -> Void) -> ViewController {
+        let mode: StarsWithdrawScreen.Mode
+        switch subject {
+        case .withdraw:
+            mode = .accountWithdraw
+        case let .enterAmount(current, minValue, fractionAfterCommission, kind):
+            mode = .paidMessages(current: current.value, minValue: minValue.value, fractionAfterCommission: fractionAfterCommission, kind: kind)
+        }
+        return StarsWithdrawScreen(context: context, mode: mode, completion: completion)
     }
     
     public func makeStarGiftResellScreen(context: AccountContext, update: Bool, completion: @escaping (Int64) -> Void) -> ViewController {
@@ -3840,6 +3847,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
 
     public func makeSendInviteLinkScreen(context: AccountContext, subject: SendInviteLinkScreenSubject, peers: [TelegramForbiddenInvitePeer], theme: PresentationTheme?) -> ViewController {
         return SendInviteLinkScreen(context: context, subject: subject, peers: peers, theme: theme)
+    }
+    
+    public func makePostSuggestionsSettingsScreen(context: AccountContext) -> ViewController {
+        return PostSuggestionsSettingsScreen(context: context, completion: {})
     }
 }
 

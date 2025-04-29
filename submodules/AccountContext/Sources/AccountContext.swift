@@ -995,6 +995,16 @@ public enum SendInviteLinkScreenSubject {
     case groupCall(link: String)
 }
 
+public enum StarsWithdrawalScreenSubject {
+    public enum PaidMessageKind {
+        case privacy
+        case postSuggestion
+    }
+    
+    case withdraw
+    case enterAmount(current: StarsAmount, minValue: StarsAmount, fractionAfterCommission: Int, kind: PaidMessageKind)
+}
+
 public protocol SharedAccountContext: AnyObject {
     var sharedContainerPath: String { get }
     var basePath: String { get }
@@ -1179,7 +1189,7 @@ public protocol SharedAccountContext: AnyObject {
     func makeStarsStatisticsScreen(context: AccountContext, peerId: EnginePeer.Id, revenueContext: StarsRevenueStatsContext) -> ViewController
     func makeStarsAmountScreen(context: AccountContext, initialValue: Int64?, completion: @escaping (Int64) -> Void) -> ViewController
     func makeStarsWithdrawalScreen(context: AccountContext, stats: StarsRevenueStats, completion: @escaping (Int64) -> Void) -> ViewController
-    func makeStarsWithdrawalScreen(context: AccountContext, completion: @escaping (Int64) -> Void) -> ViewController
+    func makeStarsWithdrawalScreen(context: AccountContext, subject: StarsWithdrawalScreenSubject, completion: @escaping (Int64) -> Void) -> ViewController
     func makeStarGiftResellScreen(context: AccountContext, update: Bool, completion: @escaping (Int64) -> Void) -> ViewController
     func makeStarsGiftScreen(context: AccountContext, message: EngineMessage) -> ViewController
     func makeStarsGiveawayBoostScreen(context: AccountContext, peerId: EnginePeer.Id, boost: ChannelBoostersContext.State.Boost) -> ViewController
@@ -1212,8 +1222,9 @@ public protocol SharedAccountContext: AnyObject {
     func makeGalleryController(context: AccountContext, source: GalleryControllerItemSource, streamSingleVideo: Bool, isPreview: Bool) -> ViewController
     
     func makeAccountFreezeInfoScreen(context: AccountContext) -> ViewController
-    
     func makeSendInviteLinkScreen(context: AccountContext, subject: SendInviteLinkScreenSubject, peers: [TelegramForbiddenInvitePeer], theme: PresentationTheme?) -> ViewController
+    
+    func makePostSuggestionsSettingsScreen(context: AccountContext) -> ViewController
     
     func makeDebugSettingsController(context: AccountContext?) -> ViewController?
     

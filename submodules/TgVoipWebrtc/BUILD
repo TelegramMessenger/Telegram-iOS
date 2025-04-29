@@ -163,7 +163,7 @@ objc_library(
         "PublicHeaders",
     ],
     deps = [
-        "//third-party/webrtc:webrtc_lib",
+        "//third-party/webrtc:webrtc",
         "//submodules/MtProtoKit:MtProtoKit",
         "//third-party/boringssl:crypto",
         "//third-party/boringssl:ssl",

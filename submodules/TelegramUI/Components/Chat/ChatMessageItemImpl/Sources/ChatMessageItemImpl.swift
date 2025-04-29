@@ -367,6 +367,10 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
                 }
             }
             
+            if let subject = associatedData.subject, case let .customChatContents(contents) = subject, case .postSuggestions = contents.kind {
+                hasAvatar = false
+            }
+            
             if hasAvatar {
                 if let effectiveAuthor = effectiveAuthor {
                     var storyStats: PeerStoryStats?

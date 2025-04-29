@@ -24,11 +24,9 @@ objc_library(
     ],
     hdrs = glob([
         "lottiecpp/PublicHeaders/**/*.h",
-        "lottiecpp/PlatformSpecific/Darwin/PublicHeaders/**/*.h",
     ]),
     includes = [
         "lottiecpp/PublicHeaders",
-        "lottiecpp/PlatformSpecific/Darwin/PublicHeaders",
     ],
     deps = [
     ],

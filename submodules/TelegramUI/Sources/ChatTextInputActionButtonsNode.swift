@@ -272,10 +272,9 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode, ChatSendMessageAction
         self.validLayout = size
         
         var innerSize = size
+        
+        var starsAmount: Int64?
         if let sendPaidMessageStars = interfaceState.sendPaidMessageStars, interfaceState.interfaceState.editMessage == nil {
-            self.sendButton.imageNode.alpha = 0.0
-            self.textNode.isHidden = false
-            
             var amount: Int64
             if let forwardedCount = interfaceState.interfaceState.forwardMessageIds?.count, forwardedCount > 0 {
                 amount = sendPaidMessageStars.value * Int64(forwardedCount)
@@ -290,7 +289,19 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode, ChatSendMessageAction
                     amount = sendPaidMessageStars.value
                 }
             }
-            
+            starsAmount = amount
+        } else if case let .customChatContents(customChatContents) = interfaceState.subject {
+            switch customChatContents.kind {
+            case let .postSuggestions(postSuggestions):
+                starsAmount = postSuggestions.value
+            default:
+                break
+            }
+        }
+        
+        if let amount = starsAmount {
+            self.sendButton.imageNode.alpha = 0.0
+            self.textNode.isHidden = false
             let text = "\(amount)"
             let font = Font.with(size: 17.0, design: .round, weight: .semibold, traits: .monospacedNumbers)
             let badgeString = NSMutableAttributedString(string: "⭐️ ", font: font, textColor: interfaceState.theme.chat.inputPanel.actionControlForegroundColor)

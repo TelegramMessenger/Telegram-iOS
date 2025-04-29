@@ -84,7 +84,6 @@ objc_library(
     hdrs = [":Public/webp/" + x for x in headers],
     includes = [
         "Public",
-        "Public/webp",
     ],
     deps = [
         ":webp_lib",

@@ -70,7 +70,6 @@ objc_library(
     hdrs = [":Public/opus/" + x for x in headers],
     includes = [
         "Public",
-        "Public/opus",
     ],
     deps = [
         ":opus_lib",

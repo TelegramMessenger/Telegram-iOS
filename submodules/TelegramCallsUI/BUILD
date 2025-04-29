@@ -121,6 +121,7 @@ swift_library(
         "//submodules/FastBlur",
         "//submodules/InviteLinksUI",
         "//third-party/td:TdBinding",
+        "//submodules/TelegramUI/Components/AnimatedTextComponent",
     ],
     visibility = [
         "//visibility:public",

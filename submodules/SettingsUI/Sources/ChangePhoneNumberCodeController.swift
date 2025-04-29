@@ -285,7 +285,7 @@ func changePhoneNumberCodeController(context: AccountContext, phoneNumber: Strin
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .success), nil)
                 
-                let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: .validatePhoneNumber).start()
+                let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: ServerProvidedSuggestion.validatePhoneNumber.id).start()
                 
                 dismissImpl?()
             }))

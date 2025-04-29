@@ -2,9 +2,9 @@
 
 #import <FFMpegBinding/FFMpegAVFrame.h>
 
-#import "libavformat/avformat.h"
-#import "libavcodec/avcodec.h"
-#import "libswresample/swresample.h"
+#import <third_party/ffmpeg/libavformat/avformat.h>
+#import <third_party/ffmpeg/libavcodec/avcodec.h>
+#import <third_party/ffmpeg/libswresample/swresample.h>
 
 @interface FFMpegSWResample () {
     int _sourceSampleRate;

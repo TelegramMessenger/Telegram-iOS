@@ -1,6 +1,6 @@
 #import <FFMpegBinding/FFMpegAVCodec.h>
 
-#import "libavcodec/avcodec.h"
+#import <third_party/ffmpeg/libavcodec/avcodec.h>
 
 @interface FFMpegAVCodec () {
     AVCodec const *_impl;

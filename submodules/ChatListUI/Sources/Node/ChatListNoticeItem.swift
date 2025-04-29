@@ -85,13 +85,21 @@ class ChatListNoticeItem: ListViewItem {
 private let separatorHeight = 1.0 / UIScreen.main.scale
 
 private let titleFont = Font.semibold(15.0)
+private let titleBoldFont = Font.bold(15.0)
+private let titleItalicFont = Font.semiboldItalic(15.0)
+private let titleBoldItalicFont = Font.semiboldItalic(15.0)
+
 private let textFont = Font.regular(15.0)
+private let textBoldFont = Font.semibold(15.0)
+private let textItalicFont = Font.italic(15.0)
+private let textBoldItalicFont = Font.semiboldItalic(15.0)
+
 private let smallTextFont = Font.regular(14.0)
 
 final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
     private let contentContainer: ASDisplayNode
     private let titleNode: TextNodeWithEntities
-    private let textNode: TextNode
+    private let textNode: TextNodeWithEntities
     private let arrowNode: ASImageNode
     private let separatorNode: ASDisplayNode
     
@@ -118,7 +126,7 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
         self.contentContainer = ASDisplayNode()
         
         self.titleNode = TextNodeWithEntities()
-        self.textNode = TextNode()
+        self.textNode = TextNodeWithEntities()
         self.arrowNode = ASImageNode()
         self.separatorNode = ASDisplayNode()
         
@@ -128,7 +136,7 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
         self.clipsToBounds = true
         
         self.contentContainer.addSubnode(self.titleNode.textNode)
-        self.contentContainer.addSubnode(self.textNode)
+        self.contentContainer.addSubnode(self.textNode.textNode)
         self.contentContainer.addSubnode(self.arrowNode)
         
         self.addSubnode(self.contentContainer)
@@ -154,7 +162,7 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
         let previousItem = self.item
         
         let makeTitleLayout = TextNodeWithEntities.asyncLayout(self.titleNode)
-        let makeTextLayout = TextNode.asyncLayout(self.textNode)
+        let makeTextLayout = TextNodeWithEntities.asyncLayout(self.textNode)
         
         let makeOkButtonTextLayout = TextNode.asyncLayout(self.okButtonText)
         let makeCancelButtonTextLayout = TextNode.asyncLayout(self.cancelButtonText)
@@ -291,6 +299,9 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
             case .accountFreeze:
                 titleString = NSAttributedString(string: item.strings.ChatList_FrozenAccount_Title, font: titleFont, textColor: item.theme.list.itemDestructiveColor)
                 textString = NSAttributedString(string: item.strings.ChatList_FrozenAccount_Text, font: smallTextFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
+            case let .link(_, _, title, subtitle):
+                titleString = stringWithAppliedEntities(title.string, entities: title.entities, baseColor: item.theme.list.itemPrimaryTextColor, linkColor: item.theme.list.itemAccentColor, baseFont: titleFont, linkFont: titleFont, boldFont: titleBoldFont, italicFont: titleItalicFont, boldItalicFont: titleBoldItalicFont, fixedFont: titleFont, blockQuoteFont: titleFont, message: nil)
+                textString = stringWithAppliedEntities(subtitle.string, entities: subtitle.entities, baseColor: item.theme.list.itemPrimaryTextColor, linkColor: item.theme.list.itemAccentColor, baseFont: textFont, linkFont: textFont, boldFont: textBoldFont, italicFont: textItalicFont, boldItalicFont: textBoldItalicFont, fixedFont: textFont, blockQuoteFont: textFont, message: nil)
             }
             
             var leftInset: CGFloat = sideInset
@@ -330,12 +341,15 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.titleNode.textNode.frame = CGRect(origin: CGPoint(x: leftInset, y: verticalInset), size: titleLayout.0.size)
                     }
                     
-                    let _ = textLayout.1()
+                    let _ = textLayout.1(TextNodeWithEntities.Arguments(context: item.context, cache: item.context.animationCache, renderer: item.context.animationRenderer, placeholderColor: .white, attemptSynchronous: true))
+                    
+                    strongSelf.titleNode.visibilityRect = CGRect(origin: CGPoint(), size: CGSize(width: 1000000.0, height: 1000000.0))
+                    strongSelf.textNode.visibilityRect = CGRect(origin: CGPoint(), size: CGSize(width: 1000000.0, height: 1000000.0))
                     
                     if case .center = alignment {
-                        strongSelf.textNode.frame = CGRect(origin: CGPoint(x: floor((params.width - textLayout.0.size.width) * 0.5), y: strongSelf.titleNode.textNode.frame.maxY + spacing), size: textLayout.0.size)
+                        strongSelf.textNode.textNode.frame = CGRect(origin: CGPoint(x: floor((params.width - textLayout.0.size.width) * 0.5), y: strongSelf.titleNode.textNode.frame.maxY + spacing), size: textLayout.0.size)
                     } else {
-                        strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset, y: strongSelf.titleNode.textNode.frame.maxY + spacing), size: textLayout.0.size)
+                        strongSelf.textNode.textNode.frame = CGRect(origin: CGPoint(x: leftInset, y: strongSelf.titleNode.textNode.frame.maxY + spacing), size: textLayout.0.size)
                     }
                     
                     if !avatarPeers.isEmpty {
@@ -383,7 +397,7 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
                     
                     let hasCloseButton: Bool
                     switch item.notice {
-                    case .xmasPremiumGift, .setupBirthday, .birthdayPremiumGift, .premiumGrace, .starsSubscriptionLowBalance, .setupPhoto:
+                    case .xmasPremiumGift, .setupBirthday, .birthdayPremiumGift, .premiumGrace, .starsSubscriptionLowBalance, .setupPhoto, .link:
                         hasCloseButton = true
                     default:
                         hasCloseButton = false
@@ -431,8 +445,8 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
                         let buttonWidth: CGFloat = floor(buttonsWidth * 0.5)
                         let buttonHeight: CGFloat = 32.0
                         
-                        let okButtonFrame = CGRect(origin: CGPoint(x: floor((params.width - buttonsWidth) * 0.5), y: strongSelf.textNode.frame.maxY + 6.0), size: CGSize(width: buttonWidth, height: buttonHeight))
-                        let cancelButtonFrame = CGRect(origin: CGPoint(x: okButtonFrame.maxX, y: strongSelf.textNode.frame.maxY + 6.0), size: CGSize(width: buttonWidth, height: buttonHeight))
+                        let okButtonFrame = CGRect(origin: CGPoint(x: floor((params.width - buttonsWidth) * 0.5), y: strongSelf.textNode.textNode.frame.maxY + 6.0), size: CGSize(width: buttonWidth, height: buttonHeight))
+                        let cancelButtonFrame = CGRect(origin: CGPoint(x: okButtonFrame.maxX, y: strongSelf.textNode.textNode.frame.maxY + 6.0), size: CGSize(width: buttonWidth, height: buttonHeight))
                         
                         okButton.frame = okButtonFrame
                         cancelButton.frame = cancelButtonFrame

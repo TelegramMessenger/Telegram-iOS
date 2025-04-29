@@ -59,7 +59,7 @@ func leftNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Cha
         switch customChatContents.kind {
         case .hashTagSearch:
             break
-        case .quickReplyMessageInput, .businessLinkSetup:
+        case .quickReplyMessageInput, .businessLinkSetup, .postSuggestions:
             if let currentButton = currentButton, currentButton.action == .dismiss {
                 return currentButton
             } else {
@@ -149,6 +149,8 @@ func rightNavigationButtonForChatInterfaceState(context: AccountContext, present
                 buttonItem.accessibilityLabel = strings.Common_Done
                 return ChatNavigationButton(action: .edit, buttonItem: buttonItem)
             }
+        case .postSuggestions:
+            return chatInfoNavigationButton
         }
     }
     

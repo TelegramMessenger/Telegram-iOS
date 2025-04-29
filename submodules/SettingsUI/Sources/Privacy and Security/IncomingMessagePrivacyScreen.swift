@@ -20,6 +20,7 @@ private final class IncomingMessagePrivacyScreenArguments {
     let infoLinkAction: () -> Void
     let openExceptions: () -> Void
     let openPremiumInfo: () -> Void
+    let openSetCustomStarsAmount: () -> Void
     
     init(
         context: AccountContext,
@@ -27,7 +28,8 @@ private final class IncomingMessagePrivacyScreenArguments {
         disabledValuePressed: @escaping () -> Void,
         infoLinkAction: @escaping () -> Void,
         openExceptions: @escaping () -> Void,
-        openPremiumInfo: @escaping () -> Void
+        openPremiumInfo: @escaping () -> Void,
+        openSetCustomStarsAmount: @escaping () -> Void
     ) {
         self.context = context
         self.updateValue = updateValue
@@ -35,6 +37,7 @@ private final class IncomingMessagePrivacyScreenArguments {
         self.infoLinkAction = infoLinkAction
         self.openExceptions = openExceptions
         self.openPremiumInfo = openPremiumInfo
+        self.openSetCustomStarsAmount = openSetCustomStarsAmount
     }
 }
 
@@ -151,6 +154,8 @@ private enum GlobalAutoremoveEntry: ItemListNodeEntry {
         case let .price(value, maxValue, price, isEnabled):
             return MessagePriceItem(theme: presentationData.theme, strings: presentationData.strings, isEnabled: isEnabled, minValue: 1, maxValue: maxValue, value: value, price: price, sectionId: self.section, updated: { value, _ in
                 arguments.updateValue(.paidMessages(StarsAmount(value: value, nanos: 0)))
+            }, openSetCustom: {
+                arguments.openSetCustomStarsAmount()
             }, openPremiumInfo: {
                 arguments.openPremiumInfo()
             })
@@ -365,6 +370,20 @@ public func incomingMessagePrivacyScreen(context: AccountContext, value: GlobalP
                 controller?.replace(with: c)
             }
             pushControllerImpl?(controller)
+        },
+        openSetCustomStarsAmount: {
+            var currentAmount: StarsAmount = StarsAmount(value: 1, nanos: 0)
+            if case let .paidMessages(value) = stateValue.with({ $0 }).updatedValue {
+                currentAmount = value
+            }
+            let starsScreen = context.sharedContext.makeStarsWithdrawalScreen(context: context, subject: .enterAmount(current: currentAmount, minValue: StarsAmount(value: 1, nanos: 0), fractionAfterCommission: 80, kind: .privacy), completion: { amount in
+                updateState { state in
+                    var state = state
+                    state.updatedValue = .paidMessages(StarsAmount(value: amount, nanos: 0))
+                    return state
+                }
+            })
+            pushControllerImpl?(starsScreen)
         }
     )
     

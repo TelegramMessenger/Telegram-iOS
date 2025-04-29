@@ -88,6 +88,7 @@ swift_library(
         "//submodules/AnimatedStickerNode",
         "//submodules/TelegramAnimatedStickerNode",
         "//submodules/TelegramUI/Components/LottieMetal",
+        "//submodules/TelegramStringFormatting",
     ],
     visibility = [
         "//visibility:public",

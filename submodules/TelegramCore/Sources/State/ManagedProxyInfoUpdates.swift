@@ -72,6 +72,120 @@ public final class PromoChatListItem: AdditionalChatListItem {
     }
 }
 
+
+public final class ServerSuggestionInfo: Codable, Equatable {
+    public final class Item: Codable, Equatable {
+        public final class Text: Codable, Equatable {
+            public let string: String
+            public let entities: [MessageTextEntity]
+            
+            public init(string: String, entities: [MessageTextEntity]) {
+                self.string = string
+                self.entities = entities
+            }
+            
+            public static func ==(lhs: Text, rhs: Text) -> Bool {
+                if lhs.string != rhs.string {
+                    return false
+                }
+                if lhs.entities != rhs.entities {
+                    return false
+                }
+                return true
+            }
+        }
+        
+        public enum Action: Codable, Equatable {
+            private enum CodingKeys: String, CodingKey {
+                case link
+            }
+            
+            case link(url: String)
+            
+            public init(from decoder: any Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                self = .link(url: try container.decode(String.self, forKey: .link))
+            }
+            
+            public func encode(to encoder: any Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                switch self {
+                case let .link(url):
+                    try container.encode(url, forKey: .link)
+                }
+            }
+        }
+        
+        public let id: String
+        public let title: Text
+        public let text: Text
+        public let action: Action
+        
+        public init(id: String, title: Text, text: Text, action: Action) {
+            self.id = id
+            self.title = title
+            self.text = text
+            self.action = action
+        }
+        
+        public static func ==(lhs: Item, rhs: Item) -> Bool {
+            if lhs.id != rhs.id {
+                return false
+            }
+            if lhs.title != rhs.title {
+                return false
+            }
+            if lhs.text != rhs.text {
+                return false
+            }
+            if lhs.action != rhs.action {
+                return false
+            }
+            return true
+        }
+    }
+    
+    public let legacyItems: [String]
+    public let items: [Item]
+    public let dismissedIds: [String]
+    
+    public init(legacyItems: [String], items: [Item], dismissedIds: [String]) {
+        self.legacyItems = legacyItems
+        self.items = items
+        self.dismissedIds = dismissedIds
+    }
+    
+    public static func ==(lhs: ServerSuggestionInfo, rhs: ServerSuggestionInfo) -> Bool {
+        if lhs.items != rhs.items {
+            return false
+        }
+        return true
+    }
+}
+
+extension ServerSuggestionInfo.Item.Text {
+    convenience init(_ apiText: Api.TextWithEntities) {
+        switch apiText {
+        case let .textWithEntities(text, entities):
+            self.init(string: text, entities: messageTextEntitiesFromApiEntities(entities))
+        }
+    }
+}
+
+extension ServerSuggestionInfo.Item {
+    convenience init(_ apiItem: Api.PendingSuggestion) {
+        switch apiItem {
+        case let .pendingSuggestion(suggestion, title, description, url):
+            self.init(
+                id: suggestion,
+                title: ServerSuggestionInfo.Item.Text(title),
+                text: ServerSuggestionInfo.Item.Text(description),
+                action: .link(url: url)
+            )
+        }
+    }
+}
+
 func managedPromoInfoUpdates(accountPeerId: PeerId, postbox: Postbox, network: Network, viewTracker: AccountViewTracker) -> Signal<Void, NoError> {
     return Signal { subscriber in
         let queue = Queue()
@@ -88,24 +202,38 @@ func managedPromoInfoUpdates(accountPeerId: PeerId, postbox: Postbox, network: N
                     switch data {
                     case .promoDataEmpty:
                         transaction.replaceAdditionalChatListItems([])
-                    case let .promoData(_, _, peer, chats, users, psaType, psaMessage):
-                        let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
+                    case let .promoData(flags, expires, peer, psaType, psaMessage, pendingSuggestions, dismissedSuggestions, customPendingSuggestion, chats, users):
+                        let _ = expires
                         
+                        let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                         updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                         
-                        let kind: PromoChatListItem.Kind
-                        if let psaType = psaType {
+                        var kind: PromoChatListItem.Kind?
+                        if let psaType {
                             kind = .psa(type: psaType, message: psaMessage)
-                        } else {
+                        } else if ((flags & 1) << 0) != 0 {
                             kind = .proxy
                         }
                         
                         var additionalChatListItems: [AdditionalChatListItem] = []
-                        if let parsedPeer = transaction.getPeer(peer.peerId) {
+                        if let kind, let peer, let parsedPeer = transaction.getPeer(peer.peerId) {
                             additionalChatListItems.append(PromoChatListItem(peerId: parsedPeer.id, kind: kind))
                         }
-                        
                         transaction.replaceAdditionalChatListItems(additionalChatListItems)
+                        
+                        var customItems: [ServerSuggestionInfo.Item] = []
+                        if let customPendingSuggestion {
+                            customItems.append(ServerSuggestionInfo.Item(customPendingSuggestion))
+                        }
+                        let suggestionInfo = ServerSuggestionInfo(
+                            legacyItems: pendingSuggestions,
+                            items: customItems,
+                            dismissedIds: dismissedSuggestions
+                        )
+                        
+                        transaction.updatePreferencesEntry(key: PreferencesKeys.serverSuggestionInfo(), { _ in
+                            return PreferencesEntry(suggestionInfo)
+                        })
                     }
                 }
             }

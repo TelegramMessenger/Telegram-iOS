@@ -1558,6 +1558,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                 break
             case .businessLinkSetup:
                 displayMediaButton = false
+            case .postSuggestions:
+                break
             }
         }
         
@@ -1944,6 +1946,10 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                         }
                     case .businessLinkSetup:
                         placeholder = interfaceState.strings.Chat_Placeholder_BusinessLinkPreset
+                    case let .postSuggestions(postSuggestions):
+                        //TODO:localize
+                        placeholder = "Suggest for # \(postSuggestions)"
+                        placeholderHasStar = true
                     }
                 }
 
@@ -1971,6 +1977,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                         break
                     case .businessLinkSetup:
                         sendButtonHasApplyIcon = true
+                    case .postSuggestions:
+                        break
                     }
                 }
             }
@@ -2493,8 +2501,17 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         var actionButtonsSize = CGSize(width: 44.0, height: minimalHeight)
         if let presentationInterfaceState = self.presentationInterfaceState {
             var showTitle = false
-            if let _ = presentationInterfaceState.sendPaidMessageStars, !self.actionButtons.sendContainerNode.alpha.isZero {
-                showTitle = true
+            if !self.actionButtons.sendContainerNode.alpha.isZero {
+                if let _ = presentationInterfaceState.sendPaidMessageStars {
+                    showTitle = true
+                } else if case let .customChatContents(customChatContents) = interfaceState.subject {
+                    switch customChatContents.kind {
+                    case .postSuggestions:
+                        showTitle = true
+                    default:
+                        break
+                    }
+                }
             }
             actionButtonsSize = self.actionButtons.updateLayout(size: CGSize(width: 44.0, height: minimalHeight), isMediaInputExpanded: isMediaInputExpanded, showTitle: showTitle, currentMessageEffectId: presentationInterfaceState.interfaceState.sendMessageEffect, transition: transition, interfaceState: presentationInterfaceState)
         }
@@ -3768,6 +3785,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                     break
                 case .businessLinkSetup:
                     keepSendButtonEnabled = true
+                case .postSuggestions:
+                    break
                 }
             }
         }
@@ -3888,6 +3907,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                     break
                 case .businessLinkSetup:
                     hideMicButton = true
+                case .postSuggestions:
+                    break
                 }
             }
         }
@@ -3993,6 +4014,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                     break
                 case .businessLinkSetup:
                     sendButtonHasApplyIcon = true
+                case .postSuggestions:
+                    break
                 }
             }
             

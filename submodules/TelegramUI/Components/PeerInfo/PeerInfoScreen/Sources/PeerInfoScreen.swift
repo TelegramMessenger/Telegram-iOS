@@ -411,6 +411,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, joinGroupCall: { _ in
         }, presentInviteMembers: {
         }, presentGigagroupHelp: {
+        }, openSuggestPost: {
         }, editMessageMedia: { _, _ in
         }, updateShowCommands: { _ in
         }, updateShowSendAsPeers: { _ in
@@ -566,6 +567,7 @@ private final class PeerInfoInteraction {
     let editingOpenNameColorSetup: () -> Void
     let editingOpenInviteLinksSetup: () -> Void
     let editingOpenDiscussionGroupSetup: () -> Void
+    let editingOpenPostSuggestionsSetup: () -> Void
     let editingOpenRevenue: () -> Void
     let editingOpenStars: () -> Void
     let openParticipantsSection: (PeerInfoParticipantsSection) -> Void
@@ -638,6 +640,7 @@ private final class PeerInfoInteraction {
         editingOpenNameColorSetup: @escaping () -> Void,
         editingOpenInviteLinksSetup: @escaping () -> Void,
         editingOpenDiscussionGroupSetup: @escaping () -> Void,
+        editingOpenPostSuggestionsSetup: @escaping () -> Void,
         editingOpenRevenue: @escaping () -> Void,
         editingOpenStars: @escaping () -> Void,
         openParticipantsSection: @escaping (PeerInfoParticipantsSection) -> Void,
@@ -709,6 +712,7 @@ private final class PeerInfoInteraction {
         self.editingOpenNameColorSetup = editingOpenNameColorSetup
         self.editingOpenInviteLinksSetup = editingOpenInviteLinksSetup
         self.editingOpenDiscussionGroupSetup = editingOpenDiscussionGroupSetup
+        self.editingOpenPostSuggestionsSetup = editingOpenPostSuggestionsSetup
         self.editingOpenRevenue = editingOpenRevenue
         self.editingOpenStars = editingOpenStars
         self.openParticipantsSection = openParticipantsSection
@@ -845,7 +849,7 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
                 }
             }))
             items[.phone]!.append(PeerInfoScreenActionItem(id: 1, text: presentationData.strings.Settings_KeepPhoneNumber(phoneNumber).string, action: {
-                let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: .validatePhoneNumber).startStandalone()
+                let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: ServerProvidedSuggestion.validatePhoneNumber.id).startStandalone()
             }))
             items[.phone]!.append(PeerInfoScreenActionItem(id: 2, text: presentationData.strings.Settings_ChangePhoneNumber, action: {
                 interaction.openSettings(.phoneNumber)
@@ -854,7 +858,7 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
             items[.phone]!.append(PeerInfoScreenInfoItem(id: 0, title: presentationData.strings.Settings_CheckPasswordTitle, text: .markdown(presentationData.strings.Settings_CheckPasswordText), linkAction: { _ in
             }))
             items[.phone]!.append(PeerInfoScreenActionItem(id: 1, text: presentationData.strings.Settings_KeepPassword, action: {
-                let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: .validatePassword).startStandalone()
+                let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: ServerProvidedSuggestion.validatePassword.id).startStandalone()
             }))
             items[.phone]!.append(PeerInfoScreenActionItem(id: 2, text: presentationData.strings.Settings_TryEnterPassword, action: {
                 interaction.openSettings(.rememberPassword)
@@ -2160,7 +2164,8 @@ private func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostSt
                 let ItemBanned = 11
                 let ItemRecentActions = 12
                 let ItemAffiliatePrograms = 13
-                let ItemPeerAutoTranslate = 14
+                let ItemPostSuggestionsSettings = 14
+                let ItemPeerAutoTranslate = 15
                 
                 let isCreator = channel.flags.contains(.isCreator)
                 
@@ -2206,6 +2211,11 @@ private func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostSt
                     
                     items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemDiscussionGroup, label: .text(discussionGroupTitle), text: presentationData.strings.Channel_DiscussionGroup, icon: UIImage(bundleImageName: "Chat/Info/GroupDiscussionIcon"), action: {
                         interaction.editingOpenDiscussionGroupSetup()
+                    }))
+                    
+                    //TODO:localize
+                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPostSuggestionsSettings, label: .text("Off"), additionalBadgeLabel: presentationData.strings.Settings_New, text: "Post Suggestions", icon: UIImage(bundleImageName: "Chat/Info/PostSuggestionsIcon"), action: {
+                        interaction.editingOpenPostSuggestionsSetup()
                     }))
                 }
                 
@@ -3015,6 +3025,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             },
             editingOpenDiscussionGroupSetup: { [weak self] in
                 self?.editingOpenDiscussionGroupSetup()
+            },
+            editingOpenPostSuggestionsSetup: { [weak self] in
+                self?.editingOpenPostSuggestionsSetup()
             },
             editingOpenRevenue: { [weak self] in
                 self?.editingOpenRevenue()
@@ -9123,6 +9136,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         self.controller?.push(channelDiscussionGroupSetupController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id))
     }
     
+    private func editingOpenPostSuggestionsSetup() {
+        guard let data = self.data, let peer = data.peer else {
+            return
+        }
+        let _ = peer
+        self.controller?.push(self.context.sharedContext.makePostSuggestionsSettingsScreen(context: self.context))
+    }
+    
     private func editingOpenRevenue() {
         guard let revenueContext = self.data?.revenueStatsContext else {
             return
@@ -10349,7 +10370,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 guard let self else {
                     return
                 }
-                let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .setupPassword).startStandalone()
+                let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: ServerProvidedSuggestion.setupPassword.id).startStandalone()
             })
             
             let controller = self.context.sharedContext.makeSetupTwoFactorAuthController(context: self.context)
@@ -10477,7 +10498,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 return twoStepVerificationUnlockSettingsController(context: context, mode: .access(intro: false, data: .single(TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: configuration, password: nil)))))
             }
             controller.passwordRemembered = {
-                let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: .validatePassword).startStandalone()
+                let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: ServerProvidedSuggestion.validatePassword.id).startStandalone()
             }
             push(controller)
         case .emojiStatus:

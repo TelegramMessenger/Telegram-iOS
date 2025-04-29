@@ -7,12 +7,14 @@
 
 #import <Accelerate/Accelerate.h>
 
+#ifdef USE_JPEGXL
 #include <jxl/encode.h>
 #include <jxl/encode_cxx.h>
 #include <jxl/decode.h>
 #include <jxl/decode_cxx.h>
 //#include <jxl/thread_parallel_runner.h>
 //#include <jxl/thread_parallel_runner_cxx.h>
+#endif
 
 #include <limits.h>
 #include <string.h>
@@ -31,6 +33,7 @@ static inline float JXLGetDistance(int32_t quality) {
 }
 
 NSData * _Nullable compressJPEGXLData(UIImage * _Nonnull sourceImage, int quality) {
+    #ifdef USE_JPEGXL
     int width = (int)(sourceImage.size.width * sourceImage.scale);
     int height = (int)(sourceImage.size.height * sourceImage.scale);
     
@@ -140,9 +143,13 @@ NSData * _Nullable compressJPEGXLData(UIImage * _Nonnull sourceImage, int qualit
     fprintf(stderr, "JxlEncoderSetParallelRunner failed\n");
     return false;
   }*/
+    #else
+    return nil;
+    #endif
 }
 
 UIImage * _Nullable decompressJPEGXLData(NSData * _Nonnull data) {
+    #ifdef USE_JPEGXL
     //const uint8_t* jxl, size_t size, std::vector<float>* pixels, size_t* xsize, size_t* ysize, std::vector<uint8_t>* icc_profile
     
     auto dec = JxlDecoderMake(nullptr);
@@ -266,6 +273,9 @@ UIImage * _Nullable decompressJPEGXLData(NSData * _Nonnull data) {
     }
     
     return nil;
+    #else
+    return nil;
+    #endif
 }
 
 static NSData *getHeaderPattern() {

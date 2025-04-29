@@ -116,6 +116,7 @@ public final class ChatListNodeInteraction {
     let openPhotoSetup: () -> Void
     let openAdInfo: (ASDisplayNode, AdPeer) -> Void
     let openAccountFreezeInfo: () -> Void
+    let openUrl: (String) -> Void
     
     public var searchTextHighightState: String?
     var highlightedChatLocation: ChatListHighlightedLocation?
@@ -175,7 +176,8 @@ public final class ChatListNodeInteraction {
         openWebApp: @escaping (TelegramUser) -> Void,
         openPhotoSetup: @escaping () -> Void,
         openAdInfo: @escaping (ASDisplayNode, AdPeer) -> Void,
-        openAccountFreezeInfo: @escaping () -> Void
+        openAccountFreezeInfo: @escaping () -> Void,
+        openUrl: @escaping (String) -> Void
     ) {
         self.activateSearch = activateSearch
         self.peerSelected = peerSelected
@@ -223,6 +225,7 @@ public final class ChatListNodeInteraction {
         self.openPhotoSetup = openPhotoSetup
         self.openAdInfo = openAdInfo
         self.openAccountFreezeInfo = openAccountFreezeInfo
+        self.openUrl = openUrl
     }
 }
 
@@ -775,6 +778,8 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             nodeInteraction?.openPhotoSetup()
                         case .accountFreeze:
                             nodeInteraction?.openAccountFreezeInfo()
+                        case let .link(_, url, _, _):
+                            nodeInteraction?.openUrl(url)
                         }
                     case .hide:
                         nodeInteraction?.dismissNotice(notice)
@@ -1123,6 +1128,8 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             nodeInteraction?.openPhotoSetup()
                         case .accountFreeze:
                             nodeInteraction?.openAccountFreezeInfo()
+                        case let .link(_, url, _, _):
+                            nodeInteraction?.openUrl(url)
                         }
                     case .hide:
                         nodeInteraction?.dismissNotice(notice)
@@ -1724,7 +1731,7 @@ public final class ChatListNode: ListView {
             }
             Queue.mainQueue().after(0.6) { [weak self] in
                 if let self {
-                    let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .setupPassword).startStandalone()
+                    let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: ServerProvidedSuggestion.setupPassword.id).startStandalone()
                 }
             }
             let controller = self.context.sharedContext.makeSetupTwoFactorAuthController(context: self.context)
@@ -1735,9 +1742,9 @@ public final class ChatListNode: ListView {
             }
             Queue.mainQueue().after(0.6) { [weak self] in
                 if let self {
-                    let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .annualPremium).startStandalone()
-                    let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .upgradePremium).startStandalone()
-                    let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .restorePremium).startStandalone()
+                    let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: ServerProvidedSuggestion.annualPremium.id).startStandalone()
+                    let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: ServerProvidedSuggestion.upgradePremium.id).startStandalone()
+                    let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: ServerProvidedSuggestion.restorePremium.id).startStandalone()
                 }
             }
             let controller = self.context.sharedContext.makePremiumIntroController(context: self.context, source: .ads, forceDark: false, dismissed: nil)
@@ -1868,26 +1875,28 @@ public final class ChatListNode: ListView {
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             switch notice {
             case .xmasPremiumGift:
-                let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .xmasPremiumGift).startStandalone()
+                let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: ServerProvidedSuggestion.xmasPremiumGift.id).startStandalone()
                 self.present?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.ChatList_PremiumGiftInSettingsInfo, timeout: 5.0, customUndoText: nil), elevatedLayout: false, action: { _ in
                     return true
                 }))
             case .setupBirthday:
-                let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .setupBirthday).startStandalone()
+                let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: ServerProvidedSuggestion.setupBirthday.id).startStandalone()
                 self.present?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.ChatList_BirthdayInSettingsInfo, timeout: 5.0, customUndoText: nil), elevatedLayout: false, action: { _ in
                     return true
                 }))
             case .birthdayPremiumGift:
-                let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .todayBirthdays).startStandalone()
+                let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: ServerProvidedSuggestion.todayBirthdays.id).startStandalone()
                 self.present?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.ChatList_PremiumGiftInSettingsInfo, timeout: 5.0, customUndoText: nil), elevatedLayout: false, action: { _ in
                     return true
                 }))
             case .premiumGrace:
-                let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .gracePremium).startStandalone()
+                let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: ServerProvidedSuggestion.gracePremium.id).startStandalone()
             case .setupPhoto:
-                let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .setupPhoto).startStandalone()
+                let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: ServerProvidedSuggestion.setupPhoto.id).startStandalone()
             case .starsSubscriptionLowBalance:
-                let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .starsSubscriptionLowBalance).startStandalone()
+                let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: ServerProvidedSuggestion.starsSubscriptionLowBalance.id).startStandalone()
+            case let .link(id, _, _, _):
+                let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: id).startStandalone()
             default:
                 break
             }
@@ -1906,6 +1915,12 @@ public final class ChatListNode: ListView {
             self?.openAdInfo?(node, adPeer)
         }, openAccountFreezeInfo: { [weak self] in
             self?.openAccountFreezeInfo?()
+        }, openUrl: { [weak self] url in
+            guard let self else {
+                return
+            }
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            context.sharedContext.openExternalUrl(context: self.context, urlContext: .generic, url: url, forceExternal: false, presentationData: presentationData, navigationController: self.context.sharedContext.mainWindow?.viewController as? NavigationController, dismissInput: {})
         })
         nodeInteraction.isInlineMode = isInlineMode
         
@@ -2050,7 +2065,7 @@ public final class ChatListNode: ListView {
                     return lhs < rhs
                 }
                 
-                if dismissedSuggestions.contains(.todayBirthdays) {
+                if dismissedSuggestions.contains(ServerProvidedSuggestion.todayBirthdays.id) {
                     todayBirthdayPeerIds = []
                 }
                      
@@ -2134,6 +2149,8 @@ public final class ChatListNode: ListView {
                         }
                         return .birthdayPremiumGift(peers: todayBirthdayPeers, birthdays: birthdays)
                     }
+                } else if case let .link(id, url, title, subtitle) = suggestions.first(where: { if case .link = $0 { return true } else { return false} }) {
+                    return .single(.link(id: id, url: url, title: title, subtitle: subtitle))
                 } else {
                     return .single(nil)
                 }
@@ -2141,11 +2158,6 @@ public final class ChatListNode: ListView {
             |> distinctUntilChanged
             
             self.suggestedChatListNotice.set(suggestedChatListNoticeSignal)
-            
-            /*#if DEBUG
-            let testNotice: Signal<ChatListNotice?, NoError> = Signal<ChatListNotice?, NoError>.single(.setupPassword) |> then(Signal<ChatListNotice?, NoError>.complete() |> delay(1.0, queue: .mainQueue())) |> then(Signal<ChatListNotice?, NoError>.single(.xmasPremiumGift)) |> then(Signal<ChatListNotice?, NoError>.complete() |> delay(1.0, queue: .mainQueue())) |> restart
-            self.suggestedChatListNotice.set(testNotice)
-            #endif*/
         }).strict()
         
         let storageInfo: Signal<Double?, NoError>

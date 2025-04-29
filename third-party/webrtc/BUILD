@@ -3563,7 +3563,7 @@ cc_library(
 )
 
 objc_library(
-    name = "webrtc_lib",
+    name = "webrtc",
     enable_modules = True,
     module_name = "webrtc",
     srcs = combined_sources,

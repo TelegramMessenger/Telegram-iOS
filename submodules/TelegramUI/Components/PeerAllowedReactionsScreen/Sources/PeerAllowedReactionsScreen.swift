@@ -23,6 +23,7 @@ import AudioToolbox
 import PremiumLockButtonSubtitleComponent
 import ListSectionComponent
 import ListItemSliderSelectorComponent
+import ListSwitchItemComponent
 
 final class PeerAllowedReactionsScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment

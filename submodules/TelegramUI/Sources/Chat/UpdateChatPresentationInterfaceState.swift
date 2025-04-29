@@ -230,6 +230,8 @@ func updateChatPresentationInterfaceStateImpl(
             break
         case .businessLinkSetup:
             canHaveUrlPreview = false
+        case .postSuggestions:
+            break
         }
     }
     

@@ -109,7 +109,6 @@ objc_library(
     enable_modules = True,
     hdrs = [":Public/td/" + x for x in headers],
     includes = [
-        "Public",
         "Public/td",
     ],
     deps = [

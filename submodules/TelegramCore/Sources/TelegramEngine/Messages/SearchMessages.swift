@@ -701,6 +701,9 @@ func fetchRemoteMessage(accountPeerId: PeerId, postbox: Postbox, source: FetchMe
         } else {
             signal = .never()
         }
+    } else if id.namespace == Namespaces.Message.SuggestedPostCloud {
+        //TODO:release
+        signal = .never()
     } else if id.peerId.namespace == Namespaces.Peer.CloudChannel {
         if let channel = peer.inputChannel {
             signal = source.request(Api.functions.channels.getMessages(channel: channel, id: [Api.InputMessage.inputMessageID(id: id.id)]))

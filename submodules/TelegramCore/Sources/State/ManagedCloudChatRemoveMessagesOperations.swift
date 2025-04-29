@@ -128,12 +128,16 @@ func managedCloudChatRemoveMessagesOperations(postbox: Postbox, network: Network
 private func removeMessages(postbox: Postbox, network: Network, stateManager: AccountStateManager, peer: Peer, operation: CloudChatRemoveMessagesOperation) -> Signal<Void, NoError> {
     var isScheduled = false
     var isQuickReply = false
+    var isSuggestedPost = false
     for id in operation.messageIds {
         if id.namespace == Namespaces.Message.ScheduledCloud {
             isScheduled = true
             break
         } else if id.namespace == Namespaces.Message.QuickReplyCloud {
             isQuickReply = true
+            break
+        } else if id.namespace == Namespaces.Message.SuggestedPostCloud {
+            isSuggestedPost = true
             break
         }
     }
@@ -190,6 +194,10 @@ private func removeMessages(postbox: Postbox, network: Network, stateManager: Ac
         } else {
             return .complete()
         }
+    } else if isSuggestedPost {
+        //TODO:release
+        assertionFailure()
+        return .complete()
     } else if peer.id.namespace == Namespaces.Peer.CloudChannel {
         if let inputChannel = apiInputChannel(peer) {
             var signal: Signal<Void, NoError> = .complete()
