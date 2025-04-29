@@ -44,8 +44,10 @@ extension MediaEditorScreenImpl {
                 
                 let storyCount = min(storyMaxCombinedVideoCount, Int(ceil(duration / storyMaxVideoDuration)))
                 var start = values.videoTrimRange?.lowerBound ?? 0
+                let end = values.videoTrimRange?.upperBound ?? (min(originalDuration, start + storyMaxCombinedVideoDuration))
+                
                 for i in 0 ..< storyCount {
-                    let trimmedValues = values.withUpdatedVideoTrimRange(start ..< min(start + storyMaxVideoDuration, originalDuration))
+                    let trimmedValues = values.withUpdatedVideoTrimRange(start ..< min(end, start + storyMaxVideoDuration))
                     
                     var editingItem = EditingItem(asset: asset)
                     if i == 0 {
@@ -526,7 +528,7 @@ extension MediaEditorScreenImpl {
         }
         
         var items = items
-        if let mediaEditor = self.node.mediaEditor, case let .asset(asset) = self.node.subject, let currentItemIndex = items.firstIndex(where: { $0.asset.localIdentifier == asset.localIdentifier }) {
+        if !isLongVideo, let mediaEditor = self.node.mediaEditor, case let .asset(asset) = self.node.subject, let currentItemIndex = items.firstIndex(where: { $0.asset.localIdentifier == asset.localIdentifier }) {
             var updatedCurrentItem = items[currentItemIndex]
             updatedCurrentItem.caption = self.node.getCaption()
             updatedCurrentItem.values = mediaEditor.values

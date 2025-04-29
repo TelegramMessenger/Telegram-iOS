@@ -97,6 +97,7 @@ public extension Stories {
             case period
             case randomId
             case forwardInfo
+            case uploadInfo
         }
         
         public let target: PendingTarget
@@ -113,6 +114,7 @@ public extension Stories {
         public let period: Int32
         public let randomId: Int64
         public let forwardInfo: PendingForwardInfo?
+        public let uploadInfo: StoryUploadInfo?
         
         public init(
             target: PendingTarget,
@@ -128,7 +130,8 @@ public extension Stories {
             isForwardingDisabled: Bool,
             period: Int32,
             randomId: Int64,
-            forwardInfo: PendingForwardInfo?
+            forwardInfo: PendingForwardInfo?,
+            uploadInfo: StoryUploadInfo?
         ) {
             self.target = target
             self.stableId = stableId
@@ -144,6 +147,7 @@ public extension Stories {
             self.period = period
             self.randomId = randomId
             self.forwardInfo = forwardInfo
+            self.uploadInfo = uploadInfo
         }
         
         public init(from decoder: Decoder) throws {
@@ -171,6 +175,8 @@ public extension Stories {
             self.randomId = try container.decode(Int64.self, forKey: .randomId)
             
             self.forwardInfo = try container.decodeIfPresent(PendingForwardInfo.self, forKey: .forwardInfo)
+            
+            self.uploadInfo = try container.decodeIfPresent(StoryUploadInfo.self, forKey: .uploadInfo)
         }
         
         public func encode(to encoder: Encoder) throws {
@@ -199,6 +205,7 @@ public extension Stories {
             try container.encode(self.period, forKey: .period)
             try container.encode(self.randomId, forKey: .randomId)
             try container.encodeIfPresent(self.forwardInfo, forKey: .forwardInfo)
+            try container.encodeIfPresent(self.uploadInfo, forKey: .uploadInfo)
         }
         
         public static func ==(lhs: PendingItem, rhs: PendingItem) -> Bool {
@@ -236,6 +243,9 @@ public extension Stories {
                 return false
             }
             if lhs.forwardInfo != rhs.forwardInfo {
+                return false
+            }
+            if lhs.uploadInfo != rhs.uploadInfo {
                 return false
             }
             return true
@@ -467,7 +477,12 @@ final class PendingStoryManager {
                         switch event {
                         case let .progress(progress):
                             if let currentPendingItemContext = self.currentPendingItemContext, currentPendingItemContext.item.stableId == stableId {
-                                currentPendingItemContext.progress = progress
+                                if let uploadInfo = currentPendingItemContext.item.uploadInfo {
+                                    let partTotalProgress = 1.0 / Float(uploadInfo.total)
+                                    currentPendingItemContext.progress = Float(uploadInfo.index) * partTotalProgress + progress * partTotalProgress
+                                } else {
+                                    currentPendingItemContext.progress = progress
+                                }
                                 currentPendingItemContext.updated()
                             }
                         case let .completed(id):
