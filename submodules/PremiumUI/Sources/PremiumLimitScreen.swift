@@ -1124,7 +1124,8 @@ private final class LimitSheetContent: CombinedComponent {
                 premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
                 badgePosition = max(0.32, CGFloat(component.count) / CGFloat(premiumLimit))
                 badgeGraphPosition = badgePosition
-            
+                titleText = strings.Premium_CreateMultipleStories
+                
                 if isPremiumDisabled {
                     badgeText = "\(limit)"
                     let numberString = strings.Premium_MaxExpiringStoriesNoPremiumTextNumberFormat(Int32(limit))

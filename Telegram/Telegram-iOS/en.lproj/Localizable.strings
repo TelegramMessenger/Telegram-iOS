@@ -14296,3 +14296,5 @@ Sorry for the inconvenience.";
 
 "Gift.Transfer.Unavailable.Title" = "Transfer Gift";
 "Gift.Transfer.Unavailable.Text" = "Sorry, you can't transfer this gift yet.\n\Transferring will be available on %@.";
+
+"Premium.CreateMultipleStories" = "Create Multiple Stories";
