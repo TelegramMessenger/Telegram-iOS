@@ -976,7 +976,19 @@ private func apiInputPrivacyRules(privacy: EngineStoryPrivacy, transaction: Tran
     return privacyRules
 }
 
-func _internal_uploadStory(account: Account, target: Stories.PendingTarget, media: EngineStoryInputMedia, mediaAreas: [MediaArea], text: String, entities: [MessageTextEntity], pin: Bool, privacy: EngineStoryPrivacy, isForwardingDisabled: Bool, period: Int, randomId: Int64, forwardInfo: Stories.PendingForwardInfo?) -> Signal<Int32, NoError> {
+public struct StoryUploadInfo: Codable, Equatable {
+    public var groupingId: Int32
+    public var index: Int32
+    public var total: Int32
+    
+    public init(groupingId: Int32, index: Int32, total: Int32) {
+        self.groupingId = groupingId
+        self.index = index
+        self.total = total
+    }
+}
+
+func _internal_uploadStory(account: Account, target: Stories.PendingTarget, media: EngineStoryInputMedia, mediaAreas: [MediaArea], text: String, entities: [MessageTextEntity], pin: Bool, privacy: EngineStoryPrivacy, isForwardingDisabled: Bool, period: Int, randomId: Int64, forwardInfo: Stories.PendingForwardInfo?, uploadInfo: StoryUploadInfo? = nil) -> Signal<Int32, NoError> {
     let inputMedia = prepareUploadStoryContent(account: account, media: media)
     
     return (account.postbox.transaction { transaction in
@@ -1004,7 +1016,8 @@ func _internal_uploadStory(account: Account, target: Stories.PendingTarget, medi
             isForwardingDisabled: isForwardingDisabled,
             period: Int32(period),
             randomId: randomId,
-            forwardInfo: forwardInfo
+            forwardInfo: forwardInfo,
+            uploadInfo: uploadInfo
         ))
         transaction.setLocalStoryState(state: CodableEntry(currentState))
         return stableId
@@ -1020,7 +1033,50 @@ func _internal_cancelStoryUpload(account: Account, stableId: Int32) {
             currentState = Stories.LocalState(items: [])
         }
         if let index = currentState.items.firstIndex(where: { $0.stableId == stableId }) {
-            currentState.items.remove(at: index)
+            let cancelledItem = currentState.items[index]
+            if let uploadInfo = cancelledItem.uploadInfo {
+                let groupingId = uploadInfo.groupingId
+                let total = uploadInfo.total - 1
+                
+                currentState.items.remove(at: index)
+                
+                for i in 0..<currentState.items.count {
+                    if let itemUploadInfo = currentState.items[i].uploadInfo, itemUploadInfo.groupingId == groupingId {
+                        let newIndex: Int32
+                        if itemUploadInfo.index > uploadInfo.index {
+                            newIndex = itemUploadInfo.index - 1
+                        } else {
+                            newIndex = itemUploadInfo.index
+                        }
+                        
+                        let updatedItem = Stories.PendingItem(
+                            target: currentState.items[i].target,
+                            stableId: currentState.items[i].stableId,
+                            timestamp: currentState.items[i].timestamp,
+                            media: currentState.items[i].media,
+                            mediaAreas: currentState.items[i].mediaAreas,
+                            text: currentState.items[i].text,
+                            entities: currentState.items[i].entities,
+                            embeddedStickers: currentState.items[i].embeddedStickers,
+                            pin: currentState.items[i].pin,
+                            privacy: currentState.items[i].privacy,
+                            isForwardingDisabled: currentState.items[i].isForwardingDisabled,
+                            period: currentState.items[i].period,
+                            randomId: currentState.items[i].randomId,
+                            forwardInfo: currentState.items[i].forwardInfo,
+                            uploadInfo: StoryUploadInfo(
+                                groupingId: groupingId,
+                                index: newIndex,
+                                total: total
+                            )
+                        )
+                        
+                        currentState.items[i] = updatedItem
+                    }
+                }
+            } else {
+                currentState.items.remove(at: index)
+            }
             transaction.setLocalStoryState(state: CodableEntry(currentState))
         }
     }).start()

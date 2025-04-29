@@ -659,6 +659,8 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         }
         
         if let _ = self.chatListController as? ChatListControllerImpl {
+            var index: Int32 = 0
+            let groupingId = Int32.random(in: 2000000 ..< Int32.max)
             for result in results {
                 var media: EngineStoryInputMedia?
                 
@@ -732,12 +734,14 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                         isForwardingDisabled: result.options.isForwardingDisabled,
                         period: result.options.timeout,
                         randomId: result.randomId,
-                        forwardInfo: forwardInfo
+                        forwardInfo: forwardInfo,
+                        uploadInfo: results.count > 1 ? StoryUploadInfo(groupingId: groupingId, index: index, total: Int32(results.count)) : nil
                     )
                     |> deliverOnMainQueue).startStandalone(next: { stableId in
                         moveStorySource(engine: context.engine, peerId: context.account.peerId, from: result.randomId, to: Int64(stableId))
                     })
                 }
+                index += 1
             }
             completionImpl()
         }
