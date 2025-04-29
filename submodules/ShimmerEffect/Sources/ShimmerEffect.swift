@@ -174,6 +174,10 @@ public final class ShimmerEffectForegroundView: UIView {
     }
 }
 
+private let shadowImage: UIImage? = {
+    UIImage(named: "Stories/PanelGradient")
+}()
+
 public final class ShimmerEffectForegroundNode: ASDisplayNode {
     private var currentBackgroundColor: UIColor?
     private var currentForegroundColor: UIColor?
@@ -232,23 +236,32 @@ public final class ShimmerEffectForegroundNode: ASDisplayNode {
         
         let image: UIImage?
         if horizontal {
-            image = generateImage(CGSize(width: effectSize ?? 320.0, height: 16.0), opaque: false, scale: 1.0, rotatedContext: { size, context in
+            let baseAlpha: CGFloat = 0.1
+            image = generateImage(CGSize(width: effectSize ?? 200.0, height: 16.0), opaque: false, scale: 1.0, rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setFillColor(backgroundColor.cgColor)
-                context.fill(CGRect(origin: CGPoint(), size: size))
                 
-                context.clip(to: CGRect(origin: CGPoint(), size: size))
+                let foregroundColor = UIColor(white: 1.0, alpha: min(1.0, baseAlpha * 4.0))
                 
-                let transparentColor = foregroundColor.withAlphaComponent(0.0).cgColor
-                let peakColor = foregroundColor.cgColor
-                
-                var locations: [CGFloat] = [0.0, 0.5, 1.0]
-                let colors: [CGColor] = [transparentColor, peakColor, transparentColor]
-                
-                let colorSpace = CGColorSpaceCreateDeviceRGB()
-                let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
-                
-                context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: 0.0), options: CGGradientDrawingOptions())
+                if let shadowImage {
+                    UIGraphicsPushContext(context)
+                    
+                    for i in 0 ..< 2 {
+                        let shadowFrame = CGRect(origin: CGPoint(x: CGFloat(i) * (size.width * 0.5), y: 0.0), size: CGSize(width: size.width * 0.5, height: size.height))
+                        
+                        context.saveGState()
+                        context.translateBy(x: shadowFrame.midX, y: shadowFrame.midY)
+                        context.rotate(by: CGFloat(i == 0 ? 1.0 : -1.0) * CGFloat.pi * 0.5)
+                        let adjustedRect = CGRect(origin: CGPoint(x: -shadowFrame.height * 0.5, y: -shadowFrame.width * 0.5), size: CGSize(width: shadowFrame.height, height: shadowFrame.width))
+                        
+                        context.clip(to: adjustedRect, mask: shadowImage.cgImage!)
+                        context.setFillColor(foregroundColor.cgColor)
+                        context.fill(adjustedRect)
+                        
+                        context.restoreGState()
+                    }
+                    
+                    UIGraphicsPopContext()
+                }
             })
         } else {
             image = generateImage(CGSize(width: 16.0, height: 320.0), opaque: false, scale: 1.0, rotatedContext: { size, context in
