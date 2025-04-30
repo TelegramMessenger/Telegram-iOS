@@ -1106,6 +1106,10 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                 }
             }
             
+            if let rightLabelTextLayoutAndApply {
+                additionalTitleInset += rightLabelTextLayoutAndApply.0.size.width + 36.0
+            }
+            
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - rightInset - additionalTitleInset), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             var maxStatusWidth: CGFloat = params.width - leftInset - rightInset - badgeSize

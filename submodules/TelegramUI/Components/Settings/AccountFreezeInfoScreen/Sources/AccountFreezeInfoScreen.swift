@@ -22,17 +22,20 @@ private final class SheetContent: CombinedComponent {
     
     let context: AccountContext
     let configuration: AccountFreezeConfiguration
+    let openTerms: () -> Void
     let submitAppeal: () -> Void
     let dismiss: () -> Void
     
     init(
         context: AccountContext,
         configuration: AccountFreezeConfiguration,
+        openTerms: @escaping () -> Void,
         submitAppeal: @escaping () -> Void,
         dismiss: @escaping () -> Void
     ) {
         self.context = context
         self.configuration = configuration
+        self.openTerms = openTerms
         self.submitAppeal = submitAppeal
         self.dismiss = dismiss
     }
@@ -132,10 +135,14 @@ private final class SheetContent: CombinedComponent {
                     component: AnyComponent(ParagraphComponent(
                         title: strings.FrozenAccount_Violation_Title,
                         titleColor: textColor,
-                        text: strings.FrozenAccount_Violation_Text,
+                        text: strings.FrozenAccount_Violation_TextNew,
                         textColor: secondaryTextColor,
                         iconName: "Account Freeze/Violation",
-                        iconColor: linkColor
+                        iconColor: linkColor,
+                        action: {
+                            component.openTerms()
+                            component.dismiss()
+                        }
                     ))
                 )
             )
@@ -257,15 +264,18 @@ private final class SheetContainerComponent: CombinedComponent {
     
     let context: AccountContext
     let configuration: AccountFreezeConfiguration
+    let openTerms: () -> Void
     let submitAppeal: () -> Void
     
     init(
         context: AccountContext,
         configuration: AccountFreezeConfiguration,
+        openTerms: @escaping () -> Void,
         submitAppeal: @escaping () -> Void
     ) {
         self.context = context
         self.configuration = configuration
+        self.openTerms = openTerms
         self.submitAppeal = submitAppeal
     }
     
@@ -292,6 +302,7 @@ private final class SheetContainerComponent: CombinedComponent {
                     content: AnyComponent<EnvironmentType>(SheetContent(
                         context: context.component.context,
                         configuration: context.component.configuration,
+                        openTerms: context.component.openTerms,
                         submitAppeal: context.component.submitAppeal,
                         dismiss: {
                             animateOut.invoke(Action { _ in
@@ -367,12 +378,16 @@ public final class AccountFreezeInfoScreen: ViewControllerComponentContainer {
         self.context = context
         
         let configuration = AccountFreezeConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+        var openTermsImpl: (() -> Void)?
         var submitAppealImpl: (() -> Void)?
         super.init(
             context: context,
             component: SheetContainerComponent(
                 context: context,
                 configuration: configuration,
+                openTerms: {
+                    openTermsImpl?()
+                },
                 submitAppeal: {
                     submitAppealImpl?()
                 }
@@ -384,6 +399,15 @@ public final class AccountFreezeInfoScreen: ViewControllerComponentContainer {
         
         self.navigationPresentation = .flatModal
                              
+        openTermsImpl = { [weak self] in
+            guard let self, let navigationController = self.navigationController as? NavigationController else {
+                return
+            }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            Queue.mainQueue().after(0.4) {
+                context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: presentationData.strings.FrozenAccount_Violation_TextNew_URL, forceExternal: false, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
+            }
+        }
         submitAppealImpl = { [weak self] in
             guard let self, let navigationController = self.navigationController as? NavigationController, let url = configuration.freezeAppealUrl else {
                 return

@@ -14291,10 +14291,13 @@ Sorry for the inconvenience.";
 "MediaPicker.CreateStory_any" = "Create %@ Stories";
 "MediaPicker.CombineIntoCollage" = "Combine into Collage";
 
-"Gift.Resale.Unavailable.Title" = "Resell Gift";
-"Gift.Resale.Unavailable.Text" = "Sorry, you can't list this gift yet.\n\Reselling will be available on %@.";
+"Gift.Resale.Unavailable.Title" = "Try Later";
+"Gift.Resale.Unavailable.Text" = "You will be able to resell this gift on %@.";
 
-"Gift.Transfer.Unavailable.Title" = "Transfer Gift";
-"Gift.Transfer.Unavailable.Text" = "Sorry, you can't transfer this gift yet.\n\Transferring will be available on %@.";
+"Gift.Transfer.Unavailable.Title" = "Try Later";
+"Gift.Transfer.Unavailable.Text" = "You will be able to transfer this gift on %@.";
 
 "Premium.CreateMultipleStories" = "Create Multiple Stories";
+
+"FrozenAccount.Violation.TextNew" = "Your account was frozen for breaking Telegram's [Terms and Conditions]().";
+"FrozenAccount.Violation.TextNew_URL" = "https://telegram.org/tos";
