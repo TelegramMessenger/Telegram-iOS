@@ -466,7 +466,7 @@ final class StoryItemContentComponent: Component {
                 return
             }
             
-            var useLegacyImplementation = false
+            var useLegacyImplementation = true
             if let data = component.context.currentAppConfiguration.with({ $0 }).data, let value = data["ios_video_legacystoryplayer"] as? Double {
                 useLegacyImplementation = value != 0.0
             }
