@@ -1441,6 +1441,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         break
                     case .messageLink:
                         break
+                    case .stars:
+                        break
                 }
             }
         }))

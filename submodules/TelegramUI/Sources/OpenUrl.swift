@@ -1016,7 +1016,9 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                     }
                 }
             } else {
-                if parsedUrl.host == "importStickers" {
+                if parsedUrl.host == "stars" {
+                    handleResolvedUrl(.stars)
+                } else if parsedUrl.host == "importStickers" {
                     handleResolvedUrl(.importStickers)
                 } else if parsedUrl.host == "settings" {
                     if let path = parsedUrl.pathComponents.last {

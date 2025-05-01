@@ -240,9 +240,20 @@ final class GiftStoreScreenComponent: Component {
                                                 } else {
                                                     mainController = controller
                                                 }
+                                                
+                                                let allSubjects: [GiftViewScreen.Subject] = (self.effectiveGifts ?? []).compactMap { gift in
+                                                    if case let .unique(uniqueGift) = gift {
+                                                        return .uniqueGift(uniqueGift, state.peerId)
+                                                    }
+                                                    return nil
+                                                }
+                                                let index = self.effectiveGifts?.firstIndex(where: { $0 == .unique(uniqueGift) }) ?? 0
+                                                
                                                 let giftController = GiftViewScreen(
                                                     context: component.context,
                                                     subject: .uniqueGift(uniqueGift, state.peerId),
+                                                    allSubjects: allSubjects,
+                                                    index: index,
                                                     buyGift: { slug, peerId in
                                                         return self.state?.starGiftsContext.buyStarGift(slug: slug, peerId: peerId) ?? .complete()
                                                     },

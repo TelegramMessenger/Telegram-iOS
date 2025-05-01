@@ -14301,3 +14301,16 @@ Sorry for the inconvenience.";
 
 "FrozenAccount.Violation.TextNew" = "Your account was frozen for breaking Telegram's [Terms and Conditions]().";
 "FrozenAccount.Violation.TextNew_URL" = "https://telegram.org/tos";
+
+"Stars.Purchase.BuyStarGiftInfo" = "Buy Stars to acquire a unique collectible.";
+
+"Stars.Purchase.EnoughStars" = "You have enough stars at the moment.";
+"Stars.Purchase.BuyAnyway" = "Buy Anyway";
+
+"Gift.Buy.Confirm.Title" = "Confirm Payment";
+"Gift.Buy.Confirm.Text" = "Do you really want to buy **%1$@** for %2$@?";
+"Gift.Buy.Confirm.GiftText" = "Do you really want to buy **%1$@** for %2$@ and gift it to **%3$@**?";
+"Gift.Buy.Confirm.Text.Stars_1" = "**%@** Star";
+"Gift.Buy.Confirm.Text.Stars_any" = "**%@** Stars";
+"Gift.Buy.Confirm.BuyFor_1" = "Buy for %@ Star";
+"Gift.Buy.Confirm.BuyFor_any" = "Buy for %@ Stars";

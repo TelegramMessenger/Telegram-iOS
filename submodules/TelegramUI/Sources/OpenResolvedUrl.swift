@@ -802,7 +802,6 @@ func openResolvedUrlImpl(
                 }
                 if let currentState = starsContext.currentState, currentState.balance >= StarsAmount(value: amount, nanos: 0) {
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    //TODO:localize
                     let controller = UndoOverlayController(
                         presentationData: presentationData,
                         content: .universal(
@@ -810,8 +809,8 @@ func openResolvedUrlImpl(
                             scale: 0.066,
                             colors: [:],
                             title: nil,
-                            text: "You have enough stars at the moment.",
-                            customUndoText: "Buy Anyway",
+                            text: presentationData.strings.Stars_Purchase_EnoughStars,
+                            customUndoText: presentationData.strings.Stars_Purchase_BuyAnyway,
                             timeout: nil
                         ),
                         elevatedLayout: true,
@@ -825,6 +824,12 @@ func openResolvedUrlImpl(
                 } else {
                     proceed()
                 }
+            }
+        case .stars:
+            dismissInput()
+            let controller = context.sharedContext.makeStarsIntroScreen(context: context)
+            if let navigationController = navigationController {
+                navigationController.pushViewController(controller, animated: true)
             }
         case let .joinVoiceChat(peerId, invite):
             let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
