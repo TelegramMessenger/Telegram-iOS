@@ -2462,13 +2462,23 @@ private final class GiftViewSheetContent: CombinedComponent {
                 if let uniqueGift {
                     if isMyUniqueGift, case let .peerId(peerId) = uniqueGift.owner {
                         var canTransfer = true
-                        if let peer = state.peerMap[peerId], case let .channel(channel) = peer, !channel.flags.contains(.isCreator) {
-                            canTransfer = false
+                        var canResell = true
+                        if let peer = state.peerMap[peerId], case let .channel(channel) = peer {
+                            if !channel.flags.contains(.isCreator) {
+                                canTransfer = false
+                            }
+                            canResell = false
                         } else if subject.arguments?.transferStars == nil {
                             canTransfer = false
                         }
                         
-                        let buttonsCount = canTransfer ? 3 : 2
+                        var buttonsCount = 1
+                        if canTransfer {
+                            buttonsCount += 1
+                        }
+                        if canResell {
+                            buttonsCount += 1
+                        }
                         
                         let buttonSpacing: CGFloat = 10.0
                         let buttonWidth = floor(context.availableSize.width - sideInset * 2.0 - buttonSpacing * CGFloat(buttonsCount - 1)) / CGFloat(buttonsCount)
@@ -2560,28 +2570,30 @@ private final class GiftViewSheetContent: CombinedComponent {
                         )
                         buttonOriginX += buttonWidth + buttonSpacing
                         
-                        let resellButton = resellButton.update(
-                            component: PlainButtonComponent(
-                                content: AnyComponent(
-                                    HeaderButtonComponent(
-                                        title: uniqueGift.resellStars == nil ? strings.Gift_View_Sell : strings.Gift_View_Unlist,
-                                        iconName: uniqueGift.resellStars == nil ? "Premium/Collectible/Sell" : "Premium/Collectible/Unlist"
-                                    )
+                        if canResell {
+                            let resellButton = resellButton.update(
+                                component: PlainButtonComponent(
+                                    content: AnyComponent(
+                                        HeaderButtonComponent(
+                                            title: uniqueGift.resellStars == nil ? strings.Gift_View_Sell : strings.Gift_View_Unlist,
+                                            iconName: uniqueGift.resellStars == nil ? "Premium/Collectible/Sell" : "Premium/Collectible/Unlist"
+                                        )
+                                    ),
+                                    effectAlignment: .center,
+                                    action: { [weak state] in
+                                        state?.resellGift()
+                                    }
                                 ),
-                                effectAlignment: .center,
-                                action: { [weak state] in
-                                    state?.resellGift()
-                                }
-                            ),
-                            environment: {},
-                            availableSize: CGSize(width: buttonWidth, height: buttonHeight),
-                            transition: context.transition
-                        )
-                        context.add(resellButton
-                            .position(CGPoint(x: buttonOriginX + buttonWidth / 2.0, y: headerHeight - buttonHeight / 2.0 - 16.0))
-                            .appear(.default(scale: true, alpha: true))
-                            .disappear(.default(scale: true, alpha: true))
-                        )
+                                environment: {},
+                                availableSize: CGSize(width: buttonWidth, height: buttonHeight),
+                                transition: context.transition
+                            )
+                            context.add(resellButton
+                                .position(CGPoint(x: buttonOriginX + buttonWidth / 2.0, y: headerHeight - buttonHeight / 2.0 - 16.0))
+                                .appear(.default(scale: true, alpha: true))
+                                .disappear(.default(scale: true, alpha: true))
+                            )
+                        }
                     }
                                         
                     let order: [StarGift.UniqueGift.Attribute.AttributeType] = [

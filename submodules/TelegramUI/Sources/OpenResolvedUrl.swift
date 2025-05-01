@@ -827,9 +827,12 @@ func openResolvedUrlImpl(
             }
         case .stars:
             dismissInput()
-            let controller = context.sharedContext.makeStarsIntroScreen(context: context)
-            if let navigationController = navigationController {
-                navigationController.pushViewController(controller, animated: true)
+            if let starsContext = context.starsContext {
+                let controller = context.sharedContext.makeStarsTransactionsScreen(context: context, starsContext: starsContext)
+                controller.navigationPresentation = .modal
+                if let navigationController {
+                    navigationController.pushViewController(controller, animated: true)
+                }
             }
         case let .joinVoiceChat(peerId, invite):
             let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))

@@ -142,11 +142,32 @@ public extension Peer {
     var largeProfileImage: TelegramMediaImageRepresentation? {
         return largestImageRepresentation(self.profileImageRepresentations)
     }
-    
+        
     var isDeleted: Bool {
         switch self {
         case let user as TelegramUser:
             return user.firstName == nil && user.lastName == nil
+        default:
+            return false
+        }
+    }
+    
+    var isGenericUser: Bool {
+        switch self {
+        case let user as TelegramUser:
+            if user.isDeleted {
+                return false
+            }
+            if user.botInfo != nil {
+                return false
+            }
+            if user.id.isRepliesOrVerificationCodes {
+                return false
+            }
+            if user.id.isTelegramNotifications {
+                return false
+            }
+            return true
         default:
             return false
         }
