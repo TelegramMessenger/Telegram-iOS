@@ -115,7 +115,7 @@ final class ChatPremiumRequiredInputPanelNode: ChatInputPanelNode {
             }
         }
 
-        let size = CGSize(width: params.width - params.additionalSideInsets.left * 2.0 - params.leftInset * 2.0, height: height)
+        let size = CGSize(width: params.width - params.additionalSideInsets.left * 2.0 - params.leftInset * 2.0 - 32.0, height: height)
         let buttonSize = self.button.update(
             transition: .immediate,
             component: AnyComponent(PlainButtonComponent(
@@ -136,7 +136,7 @@ final class ChatPremiumRequiredInputPanelNode: ChatInputPanelNode {
             if buttonView.superview == nil {
                 self.view.addSubview(buttonView)
             }
-            transition.setFrame(view: buttonView, frame: CGRect(origin: CGPoint(), size: buttonSize))
+            transition.setFrame(view: buttonView, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((params.width - buttonSize.width) / 2.0), y: 0.0), size: buttonSize))
         }
 
         return height

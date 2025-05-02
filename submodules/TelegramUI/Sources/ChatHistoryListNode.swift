@@ -1655,7 +1655,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
         
         let translationState: Signal<ChatTranslationState?, NoError>
         if let peerId = chatLocation.peerId, peerId.namespace != Namespaces.Peer.SecretChat && peerId != context.account.peerId && subject != .scheduledMessages {
-            translationState = chatTranslationState(context: context, peerId: peerId)
+            translationState = chatTranslationState(context: context, peerId: peerId, threadId: self.chatLocation.threadId)
         } else {
             translationState = .single(nil)
         }
