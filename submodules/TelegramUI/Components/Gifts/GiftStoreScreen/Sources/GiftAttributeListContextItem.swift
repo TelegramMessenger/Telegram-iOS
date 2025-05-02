@@ -71,15 +71,8 @@ private func actionForAttribute(attribute: StarGift.UniqueGift.Attribute, presen
                                 
         var title = "#   \(name)"
         var count = ""
-        var attributeId: ResaleGiftsContext.Attribute?
-        switch attribute {
-        case .model:
-            attributeId = .model(file.fileId.id)
-        case .pattern:
-            attributeId = .pattenr(file.fileId.id)
-        }
         
-        if let attributeId, let counter = item.attributeCount[attributeId] {
+        if let counter = item.attributeCount[attributeId] {
             count = "  \(presentationStringsFormattedNumber(counter, presentationData.dateTimeFormat.groupingSeparator))"
             entities.append(
                 MessageTextEntity(
