@@ -71,7 +71,15 @@ private func actionForAttribute(attribute: StarGift.UniqueGift.Attribute, presen
                                 
         var title = "#   \(name)"
         var count = ""
-        if let counter = item.attributeCount[.model(file.fileId.id)] {
+        var attributeId: ResaleGiftsContext.Attribute?
+        switch attribute {
+        case .model:
+            attributeId = .model(file.fileId.id)
+        case .pattern:
+            attributeId = .pattenr(file.fileId.id)
+        }
+        
+        if let attributeId, let counter = item.attributeCount[attributeId] {
             count = "  \(presentationStringsFormattedNumber(counter, presentationData.dateTimeFormat.groupingSeparator))"
             entities.append(
                 MessageTextEntity(
@@ -81,6 +89,7 @@ private func actionForAttribute(attribute: StarGift.UniqueGift.Attribute, presen
             )
             title += count
         }
+      
         
         let words = title.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
         var wordStartIndices: [String.Index] = []

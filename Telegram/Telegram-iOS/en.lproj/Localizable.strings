@@ -14262,6 +14262,7 @@ Sorry for the inconvenience.";
 
 "PeerInfo.Gifts.Sale" = "sale";
 
+"Gift.Store.ForResaleNoResults" = "no results";
 "Gift.Store.ForResale_1" = "%@ for resale";
 "Gift.Store.ForResale_any" = "%@ for resale";
 "Gift.Store.Sort.Price" = "Price";

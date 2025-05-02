@@ -454,22 +454,31 @@ final class GiftStoreScreenComponent: Component {
                 return generateTintedImage(image: UIImage(bundleImageName: "Peer Info/SortValue"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] _, f in
                 f(.default)
-                
-                self?.state?.starGiftsContext.updateSorting(.value)
+                guard let self else {
+                    return
+                }
+                self.state?.starGiftsContext.updateSorting(.value)
+                self.scrollToTop()
             })))
             items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_Store_SortByDate, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Peer Info/SortDate"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] _, f in
                 f(.default)
-                
-                self?.state?.starGiftsContext.updateSorting(.date)
+                guard let self else {
+                    return
+                }
+                self.state?.starGiftsContext.updateSorting(.date)
+                self.scrollToTop()
             })))
             items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_Store_SortByNumber, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Peer Info/SortNumber"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] _, f in
                 f(.default)
-                
-                self?.state?.starGiftsContext.updateSorting(.number)
+                guard let self else {
+                    return
+                }
+                self.state?.starGiftsContext.updateSorting(.number)
+                self.scrollToTop()
             })))
             
             let contextController = ContextController(presentationData: presentationData, source: .reference(GiftStoreReferenceContentSource(controller: controller, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
@@ -542,6 +551,7 @@ final class GiftStoreScreenComponent: Component {
                         }
                     }
                     self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
+                    self.scrollToTop()
                 },
                 selectAll: { [weak self] in
                     guard let self else {
@@ -554,6 +564,7 @@ final class GiftStoreScreenComponent: Component {
                         return true
                     }
                     self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
+                    self.scrollToTop()
                 }
             ), false))
             
@@ -633,6 +644,7 @@ final class GiftStoreScreenComponent: Component {
                         }
                     }
                     self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
+                    self.scrollToTop()
                 },
                 selectAll: { [weak self] in
                     guard let self else {
@@ -645,6 +657,7 @@ final class GiftStoreScreenComponent: Component {
                         return true
                     }
                     self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
+                    self.scrollToTop()
                 }
             ), false))
             
@@ -724,6 +737,7 @@ final class GiftStoreScreenComponent: Component {
                         }
                     }
                     self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
+                    self.scrollToTop()
                 },
                 selectAll: { [weak self] in
                     guard let self else {
@@ -736,6 +750,7 @@ final class GiftStoreScreenComponent: Component {
                         return true
                     }
                     self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
+                    self.scrollToTop()
                 }
             ), false))
             
@@ -900,7 +915,7 @@ final class GiftStoreScreenComponent: Component {
             let subtitleSize = self.subtitle.update(
                 transition: transition,
                 component: AnyComponent(BalancedTextComponent(
-                    text: .plain(NSAttributedString(string: environment.strings.Gift_Store_ForResale(effectiveCount), font: Font.regular(13.0), textColor: theme.rootController.navigationBar.secondaryTextColor)),
+                    text: .plain(NSAttributedString(string: effectiveCount == 0 ? environment.strings.Gift_Store_ForResaleNoResults :  environment.strings.Gift_Store_ForResale(effectiveCount), font: Font.regular(13.0), textColor: theme.rootController.navigationBar.secondaryTextColor)),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 1
                 )),

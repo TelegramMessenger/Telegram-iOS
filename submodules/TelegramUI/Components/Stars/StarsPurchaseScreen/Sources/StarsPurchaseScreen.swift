@@ -308,6 +308,7 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
             var i = 0
             var items: [AnyComponentWithIdentity<Empty>] = []
                            
+            var collapsedItems = 0
             if let products = state.products, let balance = context.component.balance {
                 var minimumCount: StarsAmount?
                 if let requiredStars = context.component.purpose.requiredStars {
@@ -326,6 +327,7 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
                     if let _ = minimumCount, items.isEmpty {
                         
                     } else if !context.component.expanded && product.isExtended {
+                        collapsedItems += 1
                         continue
                     }
                     
@@ -390,7 +392,7 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
                 }
             }
             
-            if !context.component.expanded && items.count > 1 {
+            if !context.component.expanded && collapsedItems > 0 {
                 let titleComponent = AnyComponent(MultilineTextComponent(
                     text: .plain(NSAttributedString(
                         string: strings.Stars_Purchase_ShowMore,
