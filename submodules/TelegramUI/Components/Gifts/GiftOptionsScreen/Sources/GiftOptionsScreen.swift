@@ -458,9 +458,13 @@ final class GiftOptionsScreenComponent: Component {
                                                             mainController.push(giftController)
                                                         }
                                                     } else { 
-                                                        var forceUnique = false
-                                                        if let disallowedGifts = self.state?.disallowedGifts, disallowedGifts.contains(.limited) && !disallowedGifts.contains(.unique) {
-                                                            forceUnique = true
+                                                        var forceUnique: Bool?
+                                                        if let disallowedGifts = self.state?.disallowedGifts {
+                                                            if disallowedGifts.contains(.limited) && !disallowedGifts.contains(.unique) {
+                                                                forceUnique = true
+                                                            } else if !disallowedGifts.contains(.limited) && disallowedGifts.contains(.unique) {
+                                                                forceUnique = false
+                                                            }
                                                         }
                                                         
                                                         let giftController = GiftSetupScreen(

@@ -788,57 +788,60 @@ final class GiftSetupScreenComponent: Component {
                 contentHeight += sectionSpacing
             }
             
-            if case let .starGift(starGift, _) = component.subject, let availability = starGift.availability, availability.resale > 0 {
-                let resaleSectionSize = self.resaleSection.update(
-                    transition: transition,
-                    component: AnyComponent(ListSectionComponent(
-                        theme: environment.theme,
-                        header: nil,
-                        footer: nil,
-                        items: [
-                            AnyComponentWithIdentity(id: 0, component: AnyComponent(ListActionItemComponent(
-                                theme: environment.theme,
-                                title: AnyComponent(VStack([
-                                    AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(
-                                        MultilineTextComponent(
-                                            text: .plain(NSAttributedString(string: environment.strings.Gift_Send_AvailableForResale, font: Font.regular(presentationData.listsFontSize.baseDisplaySize), textColor: environment.theme.list.itemPrimaryTextColor))
+            if case let .starGift(starGift, forceUnique) = component.subject, let availability = starGift.availability, availability.resale > 0 {
+                if let forceUnique, !forceUnique {
+                } else {
+                    let resaleSectionSize = self.resaleSection.update(
+                        transition: transition,
+                        component: AnyComponent(ListSectionComponent(
+                            theme: environment.theme,
+                            header: nil,
+                            footer: nil,
+                            items: [
+                                AnyComponentWithIdentity(id: 0, component: AnyComponent(ListActionItemComponent(
+                                    theme: environment.theme,
+                                    title: AnyComponent(VStack([
+                                        AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(
+                                            MultilineTextComponent(
+                                                text: .plain(NSAttributedString(string: environment.strings.Gift_Send_AvailableForResale, font: Font.regular(presentationData.listsFontSize.baseDisplaySize), textColor: environment.theme.list.itemPrimaryTextColor))
+                                            )
+                                        )),
+                                    ], alignment: .left, spacing: 2.0)),
+                                    accessory: .custom(ListActionItemComponent.CustomAccessory(component: AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
+                                        text: .plain(NSAttributedString(
+                                            string: presentationStringsFormattedNumber(Int32(availability.resale), environment.dateTimeFormat.groupingSeparator),
+                                            font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                                            textColor: environment.theme.list.itemSecondaryTextColor
+                                        )),
+                                        maximumNumberOfLines: 0
+                                    ))), insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 16.0))),
+                                    action: { [weak self] _ in
+                                        guard let self, let component = self.component, let controller = environment.controller() else {
+                                            return
+                                        }
+                                        let storeController = component.context.sharedContext.makeGiftStoreController(
+                                            context: component.context,
+                                            peerId: component.peerId,
+                                            gift: starGift
                                         )
-                                    )),
-                                ], alignment: .left, spacing: 2.0)),
-                                accessory: .custom(ListActionItemComponent.CustomAccessory(component: AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
-                                    text: .plain(NSAttributedString(
-                                        string: presentationStringsFormattedNumber(Int32(availability.resale), environment.dateTimeFormat.groupingSeparator),
-                                        font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
-                                        textColor: environment.theme.list.itemSecondaryTextColor
-                                    )),
-                                    maximumNumberOfLines: 0
-                                ))), insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 16.0))),
-                                action: { [weak self] _ in
-                                    guard let self, let component = self.component, let controller = environment.controller() else {
-                                        return
+                                        controller.push(storeController)
                                     }
-                                    let storeController = component.context.sharedContext.makeGiftStoreController(
-                                        context: component.context,
-                                        peerId: component.peerId,
-                                        gift: starGift
-                                    )
-                                    controller.push(storeController)
-                                }
-                            )))
-                        ]
-                    )),
-                    environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
-                )
-                let resaleSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: resaleSectionSize)
-                if let resaleSectionView = self.resaleSection.view {
-                    if resaleSectionView.superview == nil {
-                        self.scrollView.addSubview(resaleSectionView)
+                                )))
+                            ]
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                    )
+                    let resaleSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: resaleSectionSize)
+                    if let resaleSectionView = self.resaleSection.view {
+                        if resaleSectionView.superview == nil {
+                            self.scrollView.addSubview(resaleSectionView)
+                        }
+                        transition.setFrame(view: resaleSectionView, frame: resaleSectionFrame)
                     }
-                    transition.setFrame(view: resaleSectionView, frame: resaleSectionFrame)
+                    contentHeight += resaleSectionSize.height
+                    contentHeight += sectionSpacing
                 }
-                contentHeight += resaleSectionSize.height
-                contentHeight += sectionSpacing
             }
             
             let giftConfiguration = GiftConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
@@ -1128,7 +1131,7 @@ final class GiftSetupScreenComponent: Component {
                     if isChannelGift {
                         upgradeFooterRawString = environment.strings.Gift_SendChannel_Upgrade_Info(peerName).string
                     } else {
-                        if forceUnique {
+                        if forceUnique == true {
                             upgradeFooterRawString = environment.strings.Gift_Send_Upgrade_ForcedInfo(peerName).string
                         } else {
                             upgradeFooterRawString = environment.strings.Gift_Send_Upgrade_Info(peerName).string
@@ -1201,8 +1204,8 @@ final class GiftSetupScreenComponent: Component {
                                             )
                                         )),
                                     ], alignment: .left, spacing: 2.0)),
-                                    accessory: .toggle(ListActionItemComponent.Toggle(style: .regular, isOn: self.includeUpgrade, isEnabled: !forceUnique, action: { [weak self] _ in
-                                        guard let self, !forceUnique else {
+                                    accessory: .toggle(ListActionItemComponent.Toggle(style: .regular, isOn: self.includeUpgrade, isEnabled: forceUnique != true, action: { [weak self] _ in
+                                        guard let self, forceUnique != true else {
                                             return
                                         }
                                         self.includeUpgrade = !self.includeUpgrade
@@ -1748,7 +1751,7 @@ final class GiftSetupScreenComponent: Component {
 public final class GiftSetupScreen: ViewControllerComponentContainer {
     public enum Subject: Equatable {
         case premium(PremiumGiftProduct)
-        case starGift(StarGift.Gift, Bool)
+        case starGift(StarGift.Gift, Bool?)
     }
     
     private let context: AccountContext

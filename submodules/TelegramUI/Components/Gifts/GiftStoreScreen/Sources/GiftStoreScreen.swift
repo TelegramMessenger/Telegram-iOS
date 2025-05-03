@@ -789,6 +789,11 @@ final class GiftStoreScreenComponent: Component {
             }
             self.component = component
             
+            var isLoading = false
+            if self.state?.starGiftsState?.gifts == nil || self.state?.starGiftsState?.dataState == .loading {
+                isLoading = true
+            }
+            
             let theme = environment.theme
             let strings = environment.strings
             
@@ -887,6 +892,10 @@ final class GiftStoreScreenComponent: Component {
                 balanceIconView.bounds = CGRect(origin: .zero, size: balanceIconSize)
             }
             
+            var topInset: CGFloat = 0.0
+            if environment.statusBarHeight > 0.0 {
+                topInset = environment.statusBarHeight - 6.0
+            }
             let titleSize = self.title.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
@@ -900,7 +909,7 @@ final class GiftStoreScreenComponent: Component {
                 if titleView.superview == nil {
                     self.addSubview(titleView)
                 }
-                transition.setFrame(view: titleView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) / 2.0), y: 10.0), size: titleSize))
+                transition.setFrame(view: titleView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) / 2.0), y: topInset + 10.0), size: titleSize))
             }
             
             let effectiveCount: Int32
@@ -922,7 +931,7 @@ final class GiftStoreScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - headerSideInset * 2.0, height: 100.0)
             )
-            let subtitleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - subtitleSize.width) / 2.0), y: 31.0), size: subtitleSize)
+            let subtitleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - subtitleSize.width) / 2.0), y: topInset + 31.0), size: subtitleSize)
             if let subtitleView = self.subtitle.view {
                 if subtitleView.superview == nil {
                     self.addSubview(subtitleView)
@@ -984,10 +993,10 @@ final class GiftStoreScreenComponent: Component {
                     modelTitle = environment.strings.Gift_Store_Filter_Selected_Model(modelCount)
                 }
                 if backdropCount > 0 {
-                    backdropTitle = environment.strings.Gift_Store_Filter_Selected_Backdrop(modelCount)
+                    backdropTitle = environment.strings.Gift_Store_Filter_Selected_Backdrop(backdropCount)
                 }
                 if symbolCount > 0 {
-                    symbolTitle = environment.strings.Gift_Store_Filter_Selected_Symbol(modelCount)
+                    symbolTitle = environment.strings.Gift_Store_Filter_Selected_Symbol(symbolCount)
                 }
             }
             
@@ -1036,7 +1045,7 @@ final class GiftStoreScreenComponent: Component {
                 if filterSelectorView.superview == nil {
                     self.addSubview(filterSelectorView)
                 }
-                transition.setFrame(view: filterSelectorView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - filterSize.width) / 2.0), y: 56.0), size: filterSize))
+                transition.setFrame(view: filterSelectorView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - filterSize.width) / 2.0), y: topInset + 56.0), size: filterSize))
             }
             
             if let starGifts = self.state?.starGiftsState?.gifts {
@@ -1078,12 +1087,7 @@ final class GiftStoreScreenComponent: Component {
             self.topOverscrollLayer.frame = CGRect(origin: CGPoint(x: 0.0, y: -3000.0), size: CGSize(width: availableSize.width, height: 3000.0))
             
             self.updateScrolling(transition: transition)
-            
-            var isLoading = false
-            if self.state?.starGiftsState?.gifts == nil || self.state?.starGiftsState?.dataState == .loading {
-                isLoading = true
-            }
-            
+                        
             let loadingTransition: ComponentTransition = .easeInOut(duration: 0.25)
             if isLoading {
                 self.loadingNode.update(size: availableSize, theme: environment.theme, transition: .immediate)

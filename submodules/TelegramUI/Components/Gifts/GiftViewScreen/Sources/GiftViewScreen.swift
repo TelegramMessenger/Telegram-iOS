@@ -805,6 +805,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                                 default:
                                     break
                                 }
+                                self.updated(transition: .easeInOut(duration: 0.2))
                                 
                                 let text = presentationData.strings.Gift_View_Resale_Unlist_Success(giftTitle).string
                                 let tooltipController = UndoOverlayController(
@@ -880,7 +881,8 @@ private final class GiftViewSheetContent: CombinedComponent {
                         default:
                             break
                         }
-                                                
+                        self.updated(transition: .easeInOut(duration: 0.2))
+                        
                         var text = presentationData.strings.Gift_View_Resale_List_Success(giftTitle).string
                         if update {
                             let starsString = presentationData.strings.Gift_View_Resale_Relist_Success_Stars(Int32(price))
