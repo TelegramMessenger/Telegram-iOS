@@ -306,40 +306,46 @@ private final class GiftViewSheetContent: CombinedComponent {
                         
             controller.dismissAllTooltips()
             
-            if gifts {
-                if let profileController = self.context.sharedContext.makePeerInfoController(
-                    context: self.context,
-                    updatedPresentationData: nil,
-                    peer: peer._asPeer(),
-                    mode: peer.id == self.context.account.peerId ? .myProfileGifts : .gifts,
-                    avatarInitiallyExpanded: false,
-                    fromChat: false,
-                    requestsContext: nil
-                ) {
-                    controller.push(profileController)
+            let context = self.context
+            let action = {
+                if gifts {
+                    if let profileController = context.sharedContext.makePeerInfoController(
+                        context: context,
+                        updatedPresentationData: nil,
+                        peer: peer._asPeer(),
+                        mode: peer.id == context.account.peerId ? .myProfileGifts : .gifts,
+                        avatarInitiallyExpanded: false,
+                        fromChat: false,
+                        requestsContext: nil
+                    ) {
+                        navigationController.pushViewController(profileController)
+                    }
+                } else {
+                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(
+                        navigationController: navigationController,
+                        chatController: nil,
+                        context: context,
+                        chatLocation: .peer(peer),
+                        subject: nil,
+                        botStart: nil,
+                        updateTextInputState: nil,
+                        keepStack: .always,
+                        useExisting: true,
+                        purposefulAction: nil,
+                        scrollToEndIfExists: false,
+                        activateMessageSearch: nil,
+                        animated: true
+                    ))
                 }
-            } else {
-                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(
-                    navigationController: navigationController,
-                    chatController: nil,
-                    context: self.context,
-                    chatLocation: .peer(peer),
-                    subject: nil,
-                    botStart: nil,
-                    updateTextInputState: nil,
-                    keepStack: .always,
-                    useExisting: true,
-                    purposefulAction: nil,
-                    scrollToEndIfExists: false,
-                    activateMessageSearch: nil,
-                    animated: true
-                ))
             }
             
             if dismiss {
-                Queue.mainQueue().after(0.6, {
-                    self.dismiss(animated: false)
+                self.dismiss(animated: true)
+                Queue.mainQueue().after(0.4, {
+                    action()
                 })
+            } else {
+                action()
             }
         }
                

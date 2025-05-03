@@ -1542,24 +1542,7 @@ private final class ProfileGiftsContextImpl {
                 return EmptyDisposable
             }
             
-            var saveToProfile = false
-            if let gift = self.gifts.first(where: { $0.reference == reference }) {
-                if !gift.savedToProfile {
-                    saveToProfile = true
-                }
-            } else if let gift = self.filteredGifts.first(where: { $0.reference == reference }) {
-                if !gift.savedToProfile {
-                    saveToProfile = true
-                }
-            }
-            
-            var signal = _internal_updateStarGiftResalePrice(account: self.account, reference: reference, price: price)
-            if saveToProfile {
-                signal = _internal_updateStarGiftAddedToProfile(account: self.account, reference: reference, added: true)
-                |> castError(UpdateStarGiftPriceError.self)
-                |> then(signal)
-            }
-            
+            let signal = _internal_updateStarGiftResalePrice(account: self.account, reference: reference, price: price)
             let disposable = MetaDisposable()
             disposable.set(
                 (signal
@@ -1584,7 +1567,7 @@ private final class ProfileGiftsContextImpl {
                     }) {
                         if case let .unique(uniqueGift) = self.gifts[index].gift {
                             let updatedUniqueGift = uniqueGift.withResellStars(price)
-                            let updatedGift = self.gifts[index].withGift(.unique(updatedUniqueGift)).withSavedToProfile(true)
+                            let updatedGift = self.gifts[index].withGift(.unique(updatedUniqueGift))
                             self.gifts[index] = updatedGift
                         }
                     }
@@ -1607,7 +1590,7 @@ private final class ProfileGiftsContextImpl {
                     }) {
                         if case let .unique(uniqueGift) = self.filteredGifts[index].gift {
                             let updatedUniqueGift = uniqueGift.withResellStars(price)
-                            let updatedGift = self.filteredGifts[index].withGift(.unique(updatedUniqueGift)).withSavedToProfile(true)
+                            let updatedGift = self.filteredGifts[index].withGift(.unique(updatedUniqueGift))
                             self.filteredGifts[index] = updatedGift
                         }
                     }
