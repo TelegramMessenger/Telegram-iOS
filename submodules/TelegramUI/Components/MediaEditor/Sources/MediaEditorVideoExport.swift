@@ -264,6 +264,11 @@ public final class MediaEditorVideoExport {
         self.outputPath = outputPath
         self.textScale = textScale
         
+        Logger.shared.log("VideoExport", "Init")
+        Logger.shared.log("VideoExport", "Subject: \(subject)")
+        Logger.shared.log("VideoExport", "Output Path: \(outputPath)")
+        Logger.shared.log("VideoExport", "Configuration: \(configuration)")
+        
         if FileManager.default.fileExists(atPath: outputPath) {
             try? FileManager.default.removeItem(atPath: outputPath)
         }
@@ -297,6 +302,9 @@ public final class MediaEditorVideoExport {
     }
     
     private func setup() {
+        Logger.shared.log("VideoExport", "Setting up")
+        
+        
         var mainAsset: AVAsset?
         
         var signals: [Signal<Input, NoError>] = []
@@ -948,11 +956,6 @@ public final class MediaEditorVideoExport {
                         return false
                     }
                 }
-            } else {
-//                if !writer.appendVideoBuffer(sampleBuffer) {
-//                    writer.markVideoAsFinished()
-//                    return false
-//                }
             }
         }
         return true
@@ -983,17 +986,21 @@ public final class MediaEditorVideoExport {
     }
     
     private func start() {
+        Logger.shared.log("VideoExport", "Start")
         guard self.internalStatus == .idle, let writer = self.writer else {
+            Logger.shared.log("VideoExport", "Failed with invalid state")
             self.statusValue = .failed(.invalid)
             return
         }
         
         guard writer.startWriting() else {
+            Logger.shared.log("VideoExport", "Failed on startWriting")
             self.statusValue = .failed(.writing(nil))
             return
         }
         
         if let reader = self.reader, !reader.startReading() {
+            Logger.shared.log("VideoExport", "Failed on startReading")
             self.statusValue = .failed(.reading(nil))
             return
         }
@@ -1067,6 +1074,7 @@ public final class MediaEditorVideoExport {
         }
         
         if cancelled {
+            Logger.shared.log("VideoExport", "Cancelled")
             try? FileManager.default.removeItem(at: outputUrl)
             self.internalStatus = .finished
             self.statusValue = .failed(.cancelled)
@@ -1108,6 +1116,7 @@ public final class MediaEditorVideoExport {
                             let exportDuration = end - self.startTimestamp
                             print("video processing took \(exportDuration)s")
                             if duration.seconds > 0 {
+                                Logger.shared.log("VideoExport", "Completed with path \(self.outputPath)")
                                 Logger.shared.log("VideoExport", "Video processing took \(exportDuration / duration.seconds)")
                             }
                         })

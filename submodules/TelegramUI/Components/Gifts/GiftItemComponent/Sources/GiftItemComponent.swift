@@ -872,7 +872,7 @@ public final class GiftItemComponent: Component {
                 if range.location != NSNotFound {
                     labelText.addAttribute(NSAttributedString.Key.font, value: Font.semibold(10.0), range: range)
                     labelText.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: true)), range: range)
-                    labelText.addAttribute(.kern, value: -2.0, range: NSRange(location: range.lowerBound, length: 1))
+                    labelText.addAttribute(.kern, value: -1.5, range: NSRange(location: range.upperBound, length: 1))
                 }
                 
                 let resellSize = self.reselLabel.update(

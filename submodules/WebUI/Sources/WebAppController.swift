@@ -828,7 +828,11 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
             
             if let webView = self.webView {
-                var scrollInset = UIEdgeInsets(top: 0.0, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0)
+                let inputHeight = self.validLayout?.0.inputHeight ?? 0.0
+                
+                let intrinsicBottomInset = layout.intrinsicInsets.bottom > 40.0 ? layout.intrinsicInsets.bottom : 0.0
+                
+                var scrollInset = UIEdgeInsets(top: 0.0, left: 0.0, bottom: max(inputHeight, intrinsicBottomInset), right: 0.0)
                 var frameBottomInset: CGFloat = 0.0
                 if scrollInset.bottom > 40.0 {
                     frameBottomInset = scrollInset.bottom
@@ -841,12 +845,12 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 if !webView.frame.width.isZero && webView.frame != webViewFrame {
                     self.updateWebViewWhenStable = true
                 }
-                
-                var bottomInset = layout.intrinsicInsets.bottom + layout.additionalInsets.bottom
-                if let inputHeight = self.validLayout?.0.inputHeight, inputHeight > 44.0 {
-                    bottomInset = max(bottomInset, inputHeight)
+                                
+                var viewportBottomInset = max(frameBottomInset, scrollInset.bottom)
+                if (self.validLayout?.0.inputHeight ?? 0.0) < 44.0 {
+                    viewportBottomInset += layout.additionalInsets.bottom
                 }
-                let viewportFrame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: topInset), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: max(1.0, layout.size.height - topInset - bottomInset)))
+                let viewportFrame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: topInset), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: max(1.0, layout.size.height - topInset - viewportBottomInset)))
                 
                 if webView.scrollView.contentInset != scrollInset {
                     webView.scrollView.contentInset = scrollInset
@@ -1061,6 +1065,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 } else {
                     self.lastExpansionTimestamp = currentTimestamp
                     controller.requestAttachmentMenuExpansion()
+                    
+                    Queue.mainQueue().after(0.4) {
+                        self.webView?.setNeedsLayout()
+                    }
                 }
             case "web_app_close":
                 controller.dismiss()
