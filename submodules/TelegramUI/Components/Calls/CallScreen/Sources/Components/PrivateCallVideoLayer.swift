@@ -5,6 +5,21 @@ import MetalPerformanceShaders
 import Accelerate
 import MetalEngine
 
+private func makeSharpenKernel(device: MTLDevice, sharpeningStrength: Float) -> MPSImageConvolution {
+    let centerWeight = 1.0 + 6.0 * sharpeningStrength
+    let adjacentWeight = -1.0 * sharpeningStrength
+    let diagonalWeight = -0.5 * sharpeningStrength
+
+    let sharpenWeights: [Float] = [
+        diagonalWeight, adjacentWeight, diagonalWeight,
+        adjacentWeight, centerWeight, adjacentWeight,
+        diagonalWeight, adjacentWeight, diagonalWeight
+    ]
+    let result = MPSImageConvolution(device: device, kernelWidth: 3, kernelHeight: 3, weights: sharpenWeights)
+    result.edgeMode = .clamp
+    return result
+}
+
 public final class PrivateCallVideoLayer: MetalEngineSubjectLayer, MetalEngineSubject {
     public var internalData: MetalEngineSubjectInternalData?
     
@@ -16,6 +31,9 @@ public final class PrivateCallVideoLayer: MetalEngineSubjectLayer, MetalEngineSu
         let computePipelineStateHorizontal: MTLComputePipelineState
         let computePipelineStateVertical: MTLComputePipelineState
         let downscaleKernel: MPSImageBilinearScale
+
+        var sharpeningStrength: Float = 0.0
+        var sharpenKernel: MPSImageConvolution
         
         required init?(device: MTLDevice) {
             guard let library = metalLibrary(device: device) else {
@@ -52,6 +70,14 @@ public final class PrivateCallVideoLayer: MetalEngineSubjectLayer, MetalEngineSu
             self.computePipelineStateVertical = computePipelineStateVertical
             
             self.downscaleKernel = MPSImageBilinearScale(device: device)
+
+            self.sharpeningStrength = 1.4
+            self.sharpenKernel = makeSharpenKernel(device: device, sharpeningStrength: self.sharpeningStrength)
+        }
+
+        func updateSharpeningStrength(device: MTLDevice, sharpeningStrength: Float) {
+            self.sharpeningStrength = sharpeningStrength
+            self.sharpenKernel = makeSharpenKernel(device: device, sharpeningStrength: self.sharpeningStrength)
         }
     }
     
@@ -82,21 +108,26 @@ public final class PrivateCallVideoLayer: MetalEngineSubjectLayer, MetalEngineSu
             self.setNeedsUpdate()
         }
     }
+
+    private let enableSharpening: Bool
     
     public var renderSpec: RenderLayerSpec?
     
     private var rgbaTexture: PooledTexture?
+    private var sharpenedTexture: PooledTexture?
     private var downscaledTexture: PooledTexture?
     private var blurredHorizontalTexture: PooledTexture?
     private var blurredVerticalTexture: PooledTexture?
     
-    override public init() {
+    public init(enableSharpening: Bool) {
+        self.enableSharpening = enableSharpening
         self.blurredLayer = MetalEngineSubjectLayer()
         
         super.init()
     }
     
     override public init(layer: Any) {
+        self.enableSharpening = false
         self.blurredLayer = MetalEngineSubjectLayer()
         
         super.init(layer: layer)
@@ -121,6 +152,9 @@ public final class PrivateCallVideoLayer: MetalEngineSubjectLayer, MetalEngineSu
         if self.rgbaTexture == nil || self.rgbaTexture?.spec != rgbaTextureSpec {
             self.rgbaTexture = MetalEngine.shared.pooledTexture(spec: rgbaTextureSpec)
         }
+        if self.sharpenedTexture == nil || self.sharpenedTexture?.spec != rgbaTextureSpec {
+            self.sharpenedTexture = MetalEngine.shared.pooledTexture(spec: rgbaTextureSpec)
+        }
         if self.downscaledTexture == nil {
             self.downscaledTexture = MetalEngine.shared.pooledTexture(spec: TextureSpec(width: 128, height: 128, pixelFormat: .rgba8UnsignedNormalized))
         }
@@ -134,35 +168,90 @@ public final class PrivateCallVideoLayer: MetalEngineSubjectLayer, MetalEngineSu
         guard let rgbaTexture = self.rgbaTexture?.get(context: context) else {
             return
         }
+
+        var outputTexture = rgbaTexture
+
+        var sharpenedTexture: TexturePlaceholder?
+        if self.enableSharpening && rgbaTextureSpec.width * rgbaTextureSpec.height >= 800 * 480 {
+            sharpenedTexture = self.sharpenedTexture?.get(context: context)
+            if let sharpenedTexture {
+                outputTexture = sharpenedTexture
+            }
+        }
         
-        let _ = context.compute(state: BlurState.self, inputs: rgbaTexture.placeholer, commands: { commandBuffer, blurState, rgbaTexture in
-            guard let rgbaTexture else {
-                return
-            }
-            guard let computeEncoder = commandBuffer.makeComputeCommandEncoder() else {
-                return
-            }
-            
-            let threadgroupSize = MTLSize(width: 16, height: 16, depth: 1)
-            let threadgroupCount = MTLSize(width: (rgbaTexture.width + threadgroupSize.width - 1) / threadgroupSize.width, height: (rgbaTexture.height + threadgroupSize.height - 1) / threadgroupSize.height, depth: 1)
-            
-            switch videoTextures.textureLayout {
-            case let .biPlanar(biPlanar):
-                computeEncoder.setComputePipelineState(blurState.computePipelineStateYUVBiPlanarToRGBA)
-                computeEncoder.setTexture(biPlanar.y, index: 0)
-                computeEncoder.setTexture(biPlanar.uv, index: 1)
-                computeEncoder.setTexture(rgbaTexture, index: 2)
-            case let .triPlanar(triPlanar):
-                computeEncoder.setComputePipelineState(blurState.computePipelineStateYUVTriPlanarToRGBA)
-                computeEncoder.setTexture(triPlanar.y, index: 0)
-                computeEncoder.setTexture(triPlanar.u, index: 1)
-                computeEncoder.setTexture(triPlanar.u, index: 2)
-                computeEncoder.setTexture(rgbaTexture, index: 3)
-            }
-            computeEncoder.dispatchThreadgroups(threadgroupCount, threadsPerThreadgroup: threadgroupSize)
-            
-            computeEncoder.endEncoding()
-        })
+        if let sharpenedTexture {
+            let _ = context.compute(state: BlurState.self, inputs: rgbaTexture.placeholer, sharpenedTexture.placeholer, commands: { commandBuffer, blurState, rgbaTexture, sharpenedTexture in
+                guard let rgbaTexture else {
+                    return
+                }
+                guard let sharpenedTexture else {
+                    return
+                }
+
+                do {
+                    guard let computeEncoder = commandBuffer.makeComputeCommandEncoder() else {
+                        return
+                    }
+                    
+                    let threadgroupSize = MTLSize(width: 16, height: 16, depth: 1)
+                    let threadgroupCount = MTLSize(width: (rgbaTexture.width + threadgroupSize.width - 1) / threadgroupSize.width, height: (rgbaTexture.height + threadgroupSize.height - 1) / threadgroupSize.height, depth: 1)
+                    
+                    switch videoTextures.textureLayout {
+                    case let .biPlanar(biPlanar):
+                        computeEncoder.setComputePipelineState(blurState.computePipelineStateYUVBiPlanarToRGBA)
+                        computeEncoder.setTexture(biPlanar.y, index: 0)
+                        computeEncoder.setTexture(biPlanar.uv, index: 1)
+                        computeEncoder.setTexture(rgbaTexture, index: 2)
+                    case let .triPlanar(triPlanar):
+                        computeEncoder.setComputePipelineState(blurState.computePipelineStateYUVTriPlanarToRGBA)
+                        computeEncoder.setTexture(triPlanar.y, index: 0)
+                        computeEncoder.setTexture(triPlanar.u, index: 1)
+                        computeEncoder.setTexture(triPlanar.u, index: 2)
+                        computeEncoder.setTexture(rgbaTexture, index: 3)
+                    }
+                    computeEncoder.dispatchThreadgroups(threadgroupCount, threadsPerThreadgroup: threadgroupSize)
+                    
+                    computeEncoder.endEncoding()
+                }
+
+                do {
+
+                    blurState.sharpenKernel.encode(commandBuffer: commandBuffer, sourceTexture: rgbaTexture, destinationTexture: sharpenedTexture)
+                }
+            })
+        } else {
+            let _ = context.compute(state: BlurState.self, inputs: rgbaTexture.placeholer, commands: { commandBuffer, blurState, rgbaTexture in
+                guard let rgbaTexture else {
+                    return
+                }
+
+                do {
+                    guard let computeEncoder = commandBuffer.makeComputeCommandEncoder() else {
+                        return
+                    }
+                    
+                    let threadgroupSize = MTLSize(width: 16, height: 16, depth: 1)
+                    let threadgroupCount = MTLSize(width: (rgbaTexture.width + threadgroupSize.width - 1) / threadgroupSize.width, height: (rgbaTexture.height + threadgroupSize.height - 1) / threadgroupSize.height, depth: 1)
+                    
+                    switch videoTextures.textureLayout {
+                    case let .biPlanar(biPlanar):
+                        computeEncoder.setComputePipelineState(blurState.computePipelineStateYUVBiPlanarToRGBA)
+                        computeEncoder.setTexture(biPlanar.y, index: 0)
+                        computeEncoder.setTexture(biPlanar.uv, index: 1)
+                        computeEncoder.setTexture(rgbaTexture, index: 2)
+                    case let .triPlanar(triPlanar):
+                        computeEncoder.setComputePipelineState(blurState.computePipelineStateYUVTriPlanarToRGBA)
+                        computeEncoder.setTexture(triPlanar.y, index: 0)
+                        computeEncoder.setTexture(triPlanar.u, index: 1)
+                        computeEncoder.setTexture(triPlanar.u, index: 2)
+                        computeEncoder.setTexture(rgbaTexture, index: 3)
+                    }
+                    computeEncoder.dispatchThreadgroups(threadgroupCount, threadsPerThreadgroup: threadgroupSize)
+                    
+                    computeEncoder.endEncoding()
+                }
+            })
+        }
         
         if !self.blurredLayer.isHidden {
             guard let downscaledTexture = self.downscaledTexture?.get(context: context), let blurredHorizontalTexture = self.blurredHorizontalTexture?.get(context: context), let blurredVerticalTexture = self.blurredVerticalTexture?.get(context: context) else {
@@ -228,8 +317,8 @@ public final class PrivateCallVideoLayer: MetalEngineSubjectLayer, MetalEngineSu
             })
         }
     
-        context.renderToLayer(spec: renderSpec, state: RenderState.self, layer: self, inputs: rgbaTexture.placeholer, commands: { encoder, placement, rgbaTexture in
-            guard let rgbaTexture else {
+        context.renderToLayer(spec: renderSpec, state: RenderState.self, layer: self, inputs: outputTexture.placeholer, commands: { encoder, placement, outputTexture in
+            guard let outputTexture else {
                 return
             }
             
@@ -244,7 +333,7 @@ public final class PrivateCallVideoLayer: MetalEngineSubjectLayer, MetalEngineSu
             )
             encoder.setVertexBytes(&mirror, length: 2 * 4, index: 1)
             
-            encoder.setFragmentTexture(rgbaTexture, index: 0)
+            encoder.setFragmentTexture(outputTexture, index: 0)
             
             var brightness: Float = 1.0
             var saturation: Float = 1.0

@@ -128,6 +128,7 @@ final class VideoContainerView: HighlightTrackingButton {
     }
     
     let key: Key
+    let enableSharpening: Bool
     
     let videoContainerLayer: VideoContainerLayer
     var videoContainerLayerTaken: Bool = false
@@ -211,8 +212,9 @@ final class VideoContainerView: HighlightTrackingButton {
     
     var pressAction: (() -> Void)?
     
-    init(key: Key) {
+    init(key: Key, enableSharpening: Bool) {
         self.key = key
+        self.enableSharpening = enableSharpening
         
         self.videoContainerLayer = VideoContainerLayer()
         self.videoContainerLayer.backgroundColor = nil
@@ -223,7 +225,7 @@ final class VideoContainerView: HighlightTrackingButton {
             self.videoContainerLayer.contentsLayer.cornerCurve = .circular
         }
         
-        self.videoLayer = PrivateCallVideoLayer()
+        self.videoLayer = PrivateCallVideoLayer(enableSharpening: self.enableSharpening)
         self.videoLayer.masksToBounds = true
         self.videoLayer.isDoubleSided = false
         if #available(iOS 13.0, *) {
@@ -454,7 +456,7 @@ final class VideoContainerView: HighlightTrackingButton {
         let previousVideoLayer = self.videoLayer
         self.disappearingVideoLayer = DisappearingVideo(flipAnimationInfo: flipAnimationInfo, videoLayer: self.videoLayer, videoMetrics: videoMetrics)
         
-        self.videoLayer = PrivateCallVideoLayer()
+        self.videoLayer = PrivateCallVideoLayer(enableSharpening: self.enableSharpening)
         self.videoLayer.opacity = previousVideoLayer.opacity
         self.videoLayer.masksToBounds = true
         self.videoLayer.isDoubleSided = false
