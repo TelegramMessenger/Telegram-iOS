@@ -469,13 +469,7 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                     
                     self.giftButton.isHidden = false
                     self.helpButton.isHidden = true
-                    //TODO:release
-                    self.suggestedPostButton.isHidden = false
-                    self.presentGiftOrSuggestTooltip()
-                } else if case .broadcast = peer.info {
-                    self.giftButton.isHidden = true
-                    self.helpButton.isHidden = true
-                    self.suggestedPostButton.isHidden = false
+                    self.suggestedPostButton.isHidden = true
                     self.presentGiftOrSuggestTooltip()
                 } else if peer.flags.contains(.isGigagroup), self.action == .muteNotifications || self.action == .unmuteNotifications {
                     self.giftButton.isHidden = true

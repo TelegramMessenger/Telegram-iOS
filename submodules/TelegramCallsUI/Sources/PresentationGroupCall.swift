@@ -1160,7 +1160,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             useIPCContext = value != 0.0
         }
         
-        let embeddedBroadcastImplementationTypePath = self.accountContext.sharedContext.basePath + "/broadcast-coordination-type"
+        let embeddedBroadcastImplementationTypePath = self.accountContext.sharedContext.basePath + "/broadcast-coordination-type-v2"
         
         let screencastIPCContext: ScreencastIPCContext
         if useIPCContext {

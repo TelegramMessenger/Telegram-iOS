@@ -11,5 +11,8 @@
     },
     "search.exclude": {
         ".git/**": true
+    },
+    "files.associations": {
+        "memory": "cpp"
     }
 }

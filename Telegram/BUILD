@@ -55,6 +55,10 @@ load("@build_bazel_rules_apple//apple:resources.bzl",
     "swift_intent_library",
 )
 
+load("//build-system/bazel-utils:spm.bzl",
+    "generate_spm",
+)
+
 config_setting(
     name = "debug",
     values = {
@@ -950,29 +954,6 @@ plist_fragment(
     """.format(
         telegram_bundle_id = telegram_bundle_id,
     )
-)
-
-ios_framework(
-    name = "TelegramApiFramework",
-    bundle_id = "{telegram_bundle_id}.TelegramApi".format(
-        telegram_bundle_id = telegram_bundle_id,
-    ),
-    families = [
-        "iphone",
-        "ipad",
-    ],
-    infoplists = [
-        ":TelegramApiInfoPlist",
-        ":BuildNumberInfoPlist",
-        ":VersionInfoPlist",
-        ":RequiredDeviceCapabilitiesPlist",
-    ],
-    minimum_os_version = minimum_os_version,
-    extension_safe = True,
-    ipa_post_processor = strip_framework,
-    deps = [
-        "//submodules/TelegramApi:TelegramApi",
-    ],
 )
 
 plist_fragment(
@@ -2022,7 +2003,45 @@ xcodeproj(
     default_xcode_configuration = "Debug"
 )
 
-# Temporary targets used to simplify webrtc build tests
+# Temporary targets used to simplify build tests
+
+ios_application(
+    name = "spm_build_app",
+    bundle_id = "{telegram_bundle_id}".format(
+        telegram_bundle_id = telegram_bundle_id,
+    ),
+    families = ["iphone", "ipad"],
+    minimum_os_version = minimum_os_version,
+    provisioning_profile = select({
+        ":disableProvisioningProfilesSetting": None,
+        "//conditions:default": "@build_configuration//provisioning:Telegram.mobileprovision",
+    }),
+    entitlements = ":TelegramEntitlements.entitlements",
+    infoplists = [
+        ":TelegramInfoPlist",
+        ":BuildNumberInfoPlist",
+        ":VersionInfoPlist",
+        ":RequiredDeviceCapabilitiesPlist",
+        ":UrlTypesInfoPlist",
+    ],
+    deps = [
+        #"//submodules/MtProtoKit",
+        #"//submodules/SSignalKit/SwiftSignalKit",
+        #"//submodules/Postbox",
+        #"//submodules/TelegramApi",
+        #"//submodules/TelegramCore",
+        #"//submodules/FFMpegBinding",
+        "//submodules/Display",
+        #"//third-party/webrtc",
+    ],
+)
+
+generate_spm(
+    name = "spm_build_root",
+    deps = [
+        ":spm_build_app",
+    ]
+)
 
 ios_application(
     name = "webrtc_build_test",
@@ -2044,7 +2063,7 @@ ios_application(
         ":UrlTypesInfoPlist",
     ],
     deps = [
-        "//third-party/webrtc:webrtc_lib",
+        "//third-party/webrtc:webrtc",
     ],
 )
 

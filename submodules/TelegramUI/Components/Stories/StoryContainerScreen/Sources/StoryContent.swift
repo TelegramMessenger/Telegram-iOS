@@ -6,7 +6,6 @@ import SwiftSignalKit
 import TelegramCore
 import Postbox
 import TelegramPresentationData
-import UniversalMediaPlayer
 
 public final class StoryContentItem: Equatable {
     public final class ExternalState {
@@ -33,7 +32,6 @@ public final class StoryContentItem: Equatable {
     public final class SharedState {
         public var replyDrafts: [StoryId: NSAttributedString] = [:]
         public var baseRate: Double = 1.0
-        public var audioContext: ChunkMediaPlayerV2.AudioContext?
         
         public init() {
         }

@@ -1478,7 +1478,7 @@ public final class StoryItemSetContainerComponent: Component {
                     }
                     
                     if itemLayout.contentScaleFraction <= 0.0001 && !self.preparingToDisplayViewList {
-                        if index != centralIndex && index != centralIndex + 1 {
+                        if index != centralIndex {
                             itemVisible = false
                         }
                     }
@@ -1867,19 +1867,6 @@ public final class StoryItemSetContainerComponent: Component {
                             footerPanel.view?.removeFromSuperview()
                         }
                     }
-                }
-            }
-            
-            for i in 0 ..< component.slice.allItems.count {
-                guard let visibleItem = self.visibleItems[component.slice.allItems[i].id] else {
-                    continue
-                }
-                var nextVisibleItem: VisibleItem?
-                if i != component.slice.allItems.count - 1 {
-                    nextVisibleItem = self.visibleItems[component.slice.allItems[i + 1].id]
-                }
-                if let itemView = visibleItem.view.view as? StoryItemContentComponent.View {
-                    itemView.setNextItemView(nextItemView: nextVisibleItem?.view.view as? StoryItemContentComponent.View)
                 }
             }
             

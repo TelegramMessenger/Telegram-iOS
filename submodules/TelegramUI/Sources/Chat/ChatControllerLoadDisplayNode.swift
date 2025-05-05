@@ -4131,7 +4131,8 @@ extension ChatControllerImpl {
                 strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(title: nil, text: strongSelf.presentationData.strings.Conversation_GigagroupDescription, timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return true }), in: .current)
             }
         }, openSuggestPost: { [weak self] in
-             guard let self else {
+            let _ = self
+             /*guard let self else {
                 return
              }
              guard let peerId = self.chatLocation.peerId else {
@@ -4152,7 +4153,7 @@ extension ChatControllerImpl {
             )
             chatController.navigationPresentation = .modal
             
-            self.push(chatController)
+            self.push(chatController)*/
         }, editMessageMedia: { [weak self] messageId, draw in
             if let strongSelf = self {
                 strongSelf.controllerInteraction?.editMessageMedia(messageId, draw)

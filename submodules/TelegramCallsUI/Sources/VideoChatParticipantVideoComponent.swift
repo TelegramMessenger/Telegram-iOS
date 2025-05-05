@@ -51,6 +51,7 @@ final class VideoChatParticipantVideoComponent: Component {
     let contentInsets: UIEdgeInsets
     let controlInsets: UIEdgeInsets
     let interfaceOrientation: UIInterfaceOrientation
+    let enableVideoSharpening: Bool
     let action: (() -> Void)?
     let contextAction: ((EnginePeer, ContextExtractedContentContainingView, ContextGesture) -> Void)?
     let activatePinch: ((PinchSourceContainerNode) -> Void)?
@@ -70,6 +71,7 @@ final class VideoChatParticipantVideoComponent: Component {
         contentInsets: UIEdgeInsets,
         controlInsets: UIEdgeInsets,
         interfaceOrientation: UIInterfaceOrientation,
+        enableVideoSharpening: Bool,
         action: (() -> Void)?,
         contextAction: ((EnginePeer, ContextExtractedContentContainingView, ContextGesture) -> Void)?,
         activatePinch: ((PinchSourceContainerNode) -> Void)?,
@@ -88,6 +90,7 @@ final class VideoChatParticipantVideoComponent: Component {
         self.contentInsets = contentInsets
         self.controlInsets = controlInsets
         self.interfaceOrientation = interfaceOrientation
+        self.enableVideoSharpening = enableVideoSharpening
         self.action = action
         self.contextAction = contextAction
         self.activatePinch = activatePinch
@@ -126,6 +129,9 @@ final class VideoChatParticipantVideoComponent: Component {
             return false
         }
         if lhs.interfaceOrientation != rhs.interfaceOrientation {
+            return false
+        }
+        if lhs.enableVideoSharpening != rhs.enableVideoSharpening {
             return false
         }
         if (lhs.action == nil) != (rhs.action == nil) {
@@ -525,7 +531,7 @@ final class VideoChatParticipantVideoComponent: Component {
                         resetVideoSource = true
                     }
                 } else {
-                    videoLayer = PrivateCallVideoLayer()
+                    videoLayer = PrivateCallVideoLayer(enableSharpening: component.enableVideoSharpening)
                     self.videoLayer = videoLayer
                     videoLayer.opacity = 0.0
                     self.pinchContainerNode.contentNode.view.layer.insertSublayer(videoLayer.blurredLayer, above: videoBackgroundLayer)

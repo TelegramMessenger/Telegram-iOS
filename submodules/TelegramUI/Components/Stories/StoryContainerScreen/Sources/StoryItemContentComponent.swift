@@ -15,275 +15,6 @@ import ButtonComponent
 import MultilineTextComponent
 import TelegramPresentationData
 
-private protocol StoryVideoView: UIView {
-    var audioMode: StoryContentItem.AudioMode { get set }
-    var playbackCompleted: (() -> Void)? { get set }
-    var status: Signal<MediaPlayerStatus?, NoError> { get }
-    
-    func play()
-    func pause()
-    func seek(timestamp: Double)
-    func setSoundMuted(soundMuted: Bool)
-    func continueWithOverridingAmbientMode(isAmbient: Bool)
-    func setBaseRate(baseRate: Double)
-    func update(size: CGSize, transition: ComponentTransition)
-}
-
-private final class LegacyStoryVideoView: UIView, StoryVideoView {
-    private let videoNode: UniversalVideoNode
-    
-    var audioMode: StoryContentItem.AudioMode
-    var playbackCompleted: (() -> Void)?
-    
-    var status: Signal<MediaPlayerStatus?, NoError> {
-        return self.videoNode.status
-    }
-    
-    init(
-        context: AccountContext,
-        file: FileMediaReference,
-        audioMode: StoryContentItem.AudioMode,
-        baseRate: Double,
-        isCaptureProtected: Bool
-    ) {
-        self.audioMode = audioMode
-        
-        var userLocation: MediaResourceUserLocation = .other
-        switch file {
-        case let .story(peer, _, _):
-            userLocation = .peer(peer.id)
-        default:
-            break
-        }
-        var hasSentFramesToDisplay: (() -> Void)?
-        self.videoNode = UniversalVideoNode(
-            context: context,
-            postbox: context.account.postbox,
-            audioSession: context.sharedContext.mediaManager.audioSession,
-            manager: context.sharedContext.mediaManager.universalVideoManager,
-            decoration: StoryVideoDecoration(),
-            content: NativeVideoContent(
-                id: .contextResult(0, "\(UInt64.random(in: 0 ... UInt64.max))"),
-                userLocation: userLocation,
-                fileReference: file,
-                imageReference: nil,
-                streamVideo: .story,
-                loopVideo: true,
-                enableSound: true,
-                soundMuted: audioMode == .off,
-                beginWithAmbientSound: audioMode == .ambient,
-                mixWithOthers: true,
-                useLargeThumbnail: false,
-                autoFetchFullSizeThumbnail: false,
-                tempFilePath: nil,
-                captureProtected: isCaptureProtected,
-                hintDimensions: file.media.dimensions?.cgSize,
-                storeAfterDownload: nil,
-                displayImage: false,
-                hasSentFramesToDisplay: {
-                    hasSentFramesToDisplay?()
-                }
-            ),
-            priority: .gallery
-        )
-        self.videoNode.isHidden = true
-        self.videoNode.setBaseRate(baseRate)
-        
-        super.init(frame: CGRect())
-        
-        hasSentFramesToDisplay = { [weak self] in
-            guard let self else {
-                return
-            }
-            self.videoNode.isHidden = false
-        }
-        
-        self.videoNode.playbackCompleted = { [weak self] in
-            guard let self else {
-                return
-            }
-            self.playbackCompleted?()
-        }
-        
-        self.addSubview(self.videoNode.view)
-        
-        self.videoNode.ownsContentNodeUpdated = { [weak self] value in
-            guard let self else {
-                return
-            }
-            if value {
-                self.videoNode.seek(0.0)
-                if self.audioMode != .off {
-                    self.videoNode.playOnceWithSound(playAndRecord: false, actionAtEnd: .stop)
-                } else {
-                    self.videoNode.play()
-                }
-            }
-        }
-        self.videoNode.canAttachContent = true
-    }
-    
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    func play() {
-        self.videoNode.play()
-    }
-    
-    func pause() {
-        self.videoNode.pause()
-    }
-    
-    func seek(timestamp: Double) {
-        self.videoNode.seek(timestamp)
-    }
-    
-    func setSoundMuted(soundMuted: Bool) {
-        self.videoNode.setSoundMuted(soundMuted: soundMuted)
-    }
-    
-    func continueWithOverridingAmbientMode(isAmbient: Bool) {
-        self.videoNode.continueWithOverridingAmbientMode(isAmbient: isAmbient)
-    }
-    
-    func setBaseRate(baseRate: Double) {
-        self.videoNode.setBaseRate(baseRate)
-    }
-    
-    func update(size: CGSize, transition: ComponentTransition) {
-        transition.setFrame(view: self.videoNode.view, frame: CGRect(origin: CGPoint(), size: size))
-        self.videoNode.updateLayout(size: size, transition: transition.containedViewLayoutTransition)
-    }
-}
-
-private final class ModernStoryVideoView: UIView, StoryVideoView {
-    private let player: ChunkMediaPlayerV2
-    private let playerNode: MediaPlayerNode
-    
-    var audioMode: StoryContentItem.AudioMode
-    var playbackCompleted: (() -> Void)?
-    var isFirstPlay: Bool = true
-    
-    var status: Signal<MediaPlayerStatus?, NoError> {
-        return self.player.status |> map(Optional.init)
-    }
-    
-    init(
-        context: AccountContext,
-        audioContext: ChunkMediaPlayerV2.AudioContext,
-        file: FileMediaReference,
-        audioMode: StoryContentItem.AudioMode,
-        baseRate: Double,
-        isCaptureProtected: Bool
-    ) {
-        self.audioMode = audioMode
-        
-        self.playerNode = MediaPlayerNode(
-            backgroundThread: false,
-            captureProtected: isCaptureProtected
-        )
-        
-        var userLocation: MediaResourceUserLocation = .other
-        switch file {
-        case let .story(peer, _, _):
-            userLocation = .peer(peer.id)
-        default:
-            break
-        }
-        
-        self.player = ChunkMediaPlayerV2(
-            params: ChunkMediaPlayerV2.MediaDataReaderParams(context: context),
-            audioContext: audioContext,
-            source: .directFetch(ChunkMediaPlayerV2.SourceDescription.ResourceDescription(
-                postbox: context.account.postbox,
-                size: file.media.size ?? 0,
-                reference: file.resourceReference(file.media.resource),
-                userLocation: userLocation,
-                userContentType: .story,
-                statsCategory: statsCategoryForFileWithAttributes(file.media.attributes),
-                fetchAutomatically: false
-            )),
-            video: true,
-            playAutomatically: false,
-            enableSound: true,
-            baseRate: baseRate,
-            soundMuted: audioMode == .off,
-            ambient: audioMode == .ambient,
-            mixWithOthers: true,
-            continuePlayingWithoutSoundOnLostAudioSession: false,
-            isAudioVideoMessage: false,
-            playerNode: self.playerNode
-        )
-        self.playerNode.isHidden = true
-        self.player.setBaseRate(baseRate)
-        
-        super.init(frame: CGRect())
-        
-        self.addSubview(self.playerNode.view)
-        
-        self.playerNode.hasSentFramesToDisplay = { [weak self] in
-            guard let self else {
-                return
-            }
-            self.playerNode.isHidden = false
-        }
-        
-        self.player.actionAtEnd = .action({ [weak self] in
-            guard let self else {
-                return
-            }
-            self.playbackCompleted?()
-        })
-    }
-    
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    func play() {
-        if self.isFirstPlay {
-            self.isFirstPlay = false
-            
-            if self.audioMode != .off {
-                self.player.playOnceWithSound(playAndRecord: false, seek: .start)
-            } else {
-                self.player.play()
-            }
-        } else {
-            self.player.play()
-        }
-    }
-    
-    func pause() {
-        self.player.pause()
-    }
-    
-    func seek(timestamp: Double) {
-        self.player.seek(timestamp: timestamp, play: nil)
-    }
-    
-    func setSoundMuted(soundMuted: Bool) {
-        self.player.setSoundMuted(soundMuted: soundMuted)
-    }
-    
-    func continueWithOverridingAmbientMode(isAmbient: Bool) {
-        self.player.continueWithOverridingAmbientMode(isAmbient: isAmbient)
-    }
-    
-    func setBaseRate(baseRate: Double) {
-        self.player.setBaseRate(baseRate)
-    }
-    
-    func update(size: CGSize, transition: ComponentTransition) {
-        transition.containedViewLayoutTransition.updateFrame(node: self.playerNode, frame: CGRect(origin: CGPoint(), size: size))
-    }
-    
-    func updateNext(nextVideoView: ModernStoryVideoView?) {
-        self.player.migrateToNextPlayerOnEnd = nextVideoView?.player
-    }
-}
-
 final class StoryItemContentComponent: Component {
     typealias EnvironmentType = StoryContentItem.Environment
     
@@ -360,10 +91,9 @@ final class StoryItemContentComponent: Component {
     final class View: StoryContentItem.View {
         private let imageView: StoryItemImageView
         private let overlaysView: StoryItemOverlaysView
+        private var videoNode: UniversalVideoNode?
         private var loadingEffectView: StoryItemLoadingEffectView?
         private var loadingEffectAppearanceTimer: SwiftSignalKit.Timer?
-        
-        private var videoView: StoryVideoView?
         
         private var mediaAreasEffectView: StoryItemLoadingEffectView?
         
@@ -398,8 +128,6 @@ final class StoryItemContentComponent: Component {
         
         private var fetchPriorityResourceId: String?
         private var currentFetchPriority: (isMain: Bool, disposable: Disposable)?
-        
-        private weak var nextItemView: StoryItemContentComponent.View?
         
 		override init(frame: CGRect) {
             self.hierarchyTrackingLayer = HierarchyTrackingLayer()
@@ -458,7 +186,10 @@ final class StoryItemContentComponent: Component {
         }
         
         private func initializeVideoIfReady(update: Bool) {
-            if self.videoView != nil {
+            if self.videoNode != nil {
+                return
+            }
+            if case .pause = self.progressMode {
                 return
             }
             
@@ -466,49 +197,48 @@ final class StoryItemContentComponent: Component {
                 return
             }
             
-            var useLegacyImplementation = true
-            if let data = component.context.currentAppConfiguration.with({ $0 }).data, let value = data["ios_video_legacystoryplayer"] as? Double {
-                useLegacyImplementation = value != 0.0
-            }
-            
-            if case .pause = self.progressMode {
-                if useLegacyImplementation {
-                    return
-                }
-            }
-            
             if case let .file(file) = currentMessageMedia, let peerReference = PeerReference(component.peer._asPeer()) {
-                if self.videoView == nil {
-                    let videoView: StoryVideoView
-                    if useLegacyImplementation {
-                        videoView = LegacyStoryVideoView(
-                            context: component.context,
-                            file: .story(peer: peerReference, id: component.item.id, media: file),
-                            audioMode: component.audioMode,
-                            baseRate: component.baseRate,
-                            isCaptureProtected: component.item.isForwardingDisabled
-                        )
-                    } else {
-                        let audioContext: ChunkMediaPlayerV2.AudioContext
-                        if let current = self.environment?.sharedState.audioContext {
-                            audioContext = current
-                        } else {
-                            audioContext = ChunkMediaPlayerV2.AudioContext(audioSessionManager: component.context.sharedContext.mediaManager.audioSession)
-                            self.environment?.sharedState.audioContext = audioContext
-                        }
-                        videoView = ModernStoryVideoView(
-                            context: component.context,
-                            audioContext: audioContext,
-                            file: .story(peer: peerReference, id: component.item.id, media: file),
-                            audioMode: component.audioMode,
-                            baseRate: component.baseRate,
-                            isCaptureProtected: component.item.isForwardingDisabled
-                        )
-                    }
-                    self.videoView = videoView
-                    self.insertSubview(videoView, aboveSubview: self.imageView)
+                if self.videoNode == nil {
+                    let videoNode = UniversalVideoNode(
+                        context: component.context,
+                        postbox: component.context.account.postbox,
+                        audioSession: component.context.sharedContext.mediaManager.audioSession,
+                        manager: component.context.sharedContext.mediaManager.universalVideoManager,
+                        decoration: StoryVideoDecoration(),
+                        content: NativeVideoContent(
+                            id: .contextResult(0, "\(UInt64.random(in: 0 ... UInt64.max))"),
+                            userLocation: .peer(peerReference.id),
+                            fileReference: .story(peer: peerReference, id: component.item.id, media: file),
+                            imageReference: nil,
+                            streamVideo: .story,
+                            loopVideo: true,
+                            enableSound: true,
+                            soundMuted: component.audioMode == .off,
+                            beginWithAmbientSound: component.audioMode == .ambient,
+                            mixWithOthers: true,
+                            useLargeThumbnail: false,
+                            autoFetchFullSizeThumbnail: false,
+                            tempFilePath: nil,
+                            captureProtected: component.item.isForwardingDisabled,
+                            hintDimensions: file.dimensions?.cgSize,
+                            storeAfterDownload: nil,
+                            displayImage: false,
+                            hasSentFramesToDisplay: { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                self.videoNode?.isHidden = false
+                            }
+                        ),
+                        priority: .gallery
+                    )
+                    videoNode.isHidden = true
+                    videoNode.setBaseRate(component.baseRate)
                     
-                    videoView.playbackCompleted = { [weak self] in
+                    self.videoNode = videoNode
+                    self.insertSubview(videoNode.view, aboveSubview: self.imageView)
+                    
+                    videoNode.playbackCompleted = { [weak self] in
                         guard let self else {
                             return
                         }
@@ -523,24 +253,38 @@ final class StoryItemContentComponent: Component {
                         if shouldLoop {
                             self.rewind()
                             
-                            if let videoView = self.videoView {
+                            if let videoNode = self.videoNode {
                                 if self.contentLoaded {
-                                    videoView.play()
+                                    videoNode.play()
                                 }
                             }
                         } else {
                             self.environment?.presentationProgressUpdated(1.0, false, true)
                         }
                     }
+                    videoNode.ownsContentNodeUpdated = { [weak self] value in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        if value {
+                            self.videoNode?.seek(0.0)
+                            if component.audioMode != .off {
+                                self.videoNode?.playOnceWithSound(playAndRecord: false, actionAtEnd: .stop)
+                            } else {
+                                self.videoNode?.play()
+                            }
+                        }
+                    }
+                    videoNode.canAttachContent = true
                     if update {
                         self.state?.updated(transition: .immediate)
                     }
                 }
             }
             
-            if let videoView = self.videoView {
+            if let videoNode = self.videoNode {
                 if self.videoProgressDisposable == nil {
-                    self.videoProgressDisposable = (videoView.status
+                    self.videoProgressDisposable = (videoNode.status
                     |> deliverOnMainQueue).start(next: { [weak self] status in
                         guard let self, let status else {
                             return
@@ -552,17 +296,7 @@ final class StoryItemContentComponent: Component {
                         }
                     })
                 }
-                
-                let canPlay = self.progressMode != .pause && self.contentLoaded && self.hierarchyTrackingLayer.isInHierarchy
-                
-                if canPlay {
-                    videoView.play()
-                } else {
-                    videoView.pause()
-                }
             }
-            
-            self.updateVideoNextItem()
         }
         
         override func setProgressMode(_ progressMode: StoryContentItem.ProgressMode) {
@@ -576,62 +310,48 @@ final class StoryItemContentComponent: Component {
             }
         }
         
-        func setNextItemView(nextItemView: StoryItemContentComponent.View?) {
-            if self.nextItemView !== nextItemView {
-                self.nextItemView = nextItemView
-                self.updateVideoNextItem()
-            }
-        }
-        
-        private func updateVideoNextItem() {
-            if let videoView = self.videoView as? ModernStoryVideoView {
-                let nextVideoView = self.nextItemView?.videoView as? ModernStoryVideoView
-                videoView.updateNext(nextVideoView: nextVideoView)
-            }
-        }
-        
         override func rewind() {
             self.currentProgressTimerValue = 0.0
-            if let videoView = self.videoView {
+            if let videoNode = self.videoNode {
                 if self.contentLoaded {
-                    videoView.seek(timestamp: 0.0)
+                    videoNode.seek(0.0)
                 }
             }
         }
         
         override func leaveAmbientMode() {
-            if let videoView = self.videoView {
+            if let videoNode = self.videoNode {
                 self.ignoreBufferingTimestamp = CFAbsoluteTimeGetCurrent()
-                videoView.setSoundMuted(soundMuted: false)
-                videoView.continueWithOverridingAmbientMode(isAmbient: false)
+                videoNode.setSoundMuted(soundMuted: false)
+                videoNode.continueWithOverridingAmbientMode(isAmbient: false)
             }
         }
         
         override func enterAmbientMode(ambient: Bool) {
-            if let videoView = self.videoView {
+            if let videoNode = self.videoNode {
                 self.ignoreBufferingTimestamp = CFAbsoluteTimeGetCurrent()
                 if ambient {
-                    videoView.continueWithOverridingAmbientMode(isAmbient: true)
+                    videoNode.continueWithOverridingAmbientMode(isAmbient: true)
                 } else {
-                    videoView.setSoundMuted(soundMuted: true)
+                    videoNode.setSoundMuted(soundMuted: true)
                 }
             }
         }
         
         override func setBaseRate(_ baseRate: Double) {
-            if let videoView = self.videoView {
-                videoView.setBaseRate(baseRate: baseRate)
+            if let videoNode = self.videoNode {
+                videoNode.setBaseRate(baseRate)
             }
         }
         
         private func updateProgressMode(update: Bool) {
-            if let videoView = self.videoView {
+            if let videoNode = self.videoNode {
                 let canPlay = self.progressMode != .pause && self.contentLoaded && self.hierarchyTrackingLayer.isInHierarchy
                 
                 if canPlay {
-                    videoView.play()
+                    videoNode.play()
                 } else {
-                    videoView.pause()
+                    videoNode.pause()
                 }
             }
             
@@ -846,11 +566,11 @@ final class StoryItemContentComponent: Component {
         
         private var isSeeking = false
         func seekTo(_ timestamp: Double, apply: Bool) {
-            guard let videoView = self.videoView else {
+            guard let videoNode = self.videoNode else {
                 return
             }
             if apply {
-                videoView.seek(timestamp: min(timestamp, self.effectiveDuration - 0.3))
+                videoNode.seek(min(timestamp, self.effectiveDuration - 0.3))
             }
             self.isSeeking = true
             self.updateVideoPlaybackProgress(timestamp)
@@ -867,10 +587,6 @@ final class StoryItemContentComponent: Component {
             self.state = state
             let environment = environment[StoryContentItem.Environment.self].value
             self.environment = environment
-            
-            if let videoView = self.videoView {
-                videoView.audioMode = component.audioMode
-            }
             
             var synchronousLoad = false
             if let hint = transition.userData(Hint.self) {
@@ -916,12 +632,12 @@ final class StoryItemContentComponent: Component {
                 self.currentMessageMedia = messageMedia
                 reloadMedia = true
                 
-                if let videoView = self.videoView {
+                if let videoNode = self.videoNode {
                     self.videoProgressDisposable?.dispose()
                     self.videoProgressDisposable = nil
                     
-                    self.videoView = nil
-                    videoView.removeFromSuperview()
+                    self.videoNode = nil
+                    videoNode.view.removeFromSuperview()
                 }
             }
             self.currentMessageMetadataMedia = component.item.media
@@ -1051,10 +767,10 @@ final class StoryItemContentComponent: Component {
                     }
                     let _ = imageSize
                     
-                    if let videoView = self.videoView {
+                    if let videoNode = self.videoNode {
                         let videoSize = dimensions.aspectFilled(availableSize)
-                        videoView.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - videoSize.width) * 0.5), y: floor((availableSize.height - videoSize.height) * 0.5)), size: videoSize)
-                        videoView.update(size: videoSize, transition: .immediate)
+                        videoNode.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - videoSize.width) * 0.5), y: floor((availableSize.height - videoSize.height) * 0.5)), size: videoSize)
+                        videoNode.updateLayout(size: videoSize, transition: .immediate)
                     }
                 }
             }

@@ -234,6 +234,8 @@ final class VideoChatScreenComponent: Component {
         
         let participants = ComponentView<Empty>()
         var scheduleInfo: ComponentView<Empty>?
+
+        var enableVideoSharpening: Bool = false
         
         var reconnectedAsEventsDisposable: Disposable?
         var memberEventsDisposable: Disposable?
@@ -1244,6 +1246,11 @@ final class VideoChatScreenComponent: Component {
                     self.invitedPeers.removeAll(where: { invitedPeer in members.participants.contains(where: { $0.id == .peer(invitedPeer.peer.id) }) })
                 }
                 self.callState = component.initialData.callState
+
+                self.enableVideoSharpening = false
+                if let data = component.initialCall.accountContext.currentAppConfiguration.with({ $0 }).data, let value = data["ios_call_video_sharpening"] as? Double {
+                    self.enableVideoSharpening = value != 0.0
+                }
             }
             
             var call: VideoChatCall
@@ -1359,7 +1366,7 @@ final class VideoChatScreenComponent: Component {
                                         return false
                                     }
                                     if participant.videoDescription != nil || participant.presentationDescription != nil {
-                                        if let participantPeer = participant.peer, members.speakingParticipants.contains(participantPeer.id) {
+                                        if let participantPeer = participant.peer, participantPeer.id != groupCall.accountContext.account.peerId, members.speakingParticipants.contains(participantPeer.id) {
                                             return true
                                         }
                                     }
@@ -1421,7 +1428,7 @@ final class VideoChatScreenComponent: Component {
                             var speakingParticipantPeers: [EnginePeer] = []
                             if let members, !members.speakingParticipants.isEmpty {
                                 for participant in members.participants {
-                                    if let participantPeer = participant.peer, members.speakingParticipants.contains(participantPeer.id) {
+                                    if let participantPeer = participant.peer, participantPeer.id != groupCall.accountContext.account.peerId, members.speakingParticipants.contains(participantPeer.id) {
                                         speakingParticipantPeers.append(participantPeer)
                                     }
                                 }
@@ -1698,7 +1705,7 @@ final class VideoChatScreenComponent: Component {
                                         return false
                                     }
                                     if participant.videoDescription != nil || participant.presentationDescription != nil {
-                                        if let participantPeer = participant.peer, members.speakingParticipants.contains(participantPeer.id) {
+                                        if let participantPeer = participant.peer, participantPeer.id != conferenceSource.context.account.peerId, members.speakingParticipants.contains(participantPeer.id) {
                                             return true
                                         }
                                     }
@@ -1760,7 +1767,7 @@ final class VideoChatScreenComponent: Component {
                             var speakingParticipantPeers: [EnginePeer] = []
                             if !members.speakingParticipants.isEmpty {
                                 for participant in members.participants {
-                                    if let participantPeer = participant.peer, members.speakingParticipants.contains(participantPeer.id) {
+                                    if let participantPeer = participant.peer, participantPeer.id != conferenceSource.context.account.peerId, members.speakingParticipants.contains(participantPeer.id) {
                                         speakingParticipantPeers.append(participantPeer)
                                     }
                                 }
@@ -2501,6 +2508,7 @@ final class VideoChatScreenComponent: Component {
                     expandedInsets: participantsExpandedInsets,
                     safeInsets: participantsSafeInsets,
                     interfaceOrientation: environment.orientation ?? .portrait,
+                    enableVideoSharpening: self.enableVideoSharpening,
                     openParticipantContextMenu: { [weak self] id, sourceView, gesture in
                         guard let self else {
                             return

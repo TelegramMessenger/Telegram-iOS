@@ -336,7 +336,7 @@ private final class EmbeddedBroadcastUploadImpl: BroadcastUploadImpl {
         let logsPath = rootPath + "/logs/broadcast-logs"
         let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
 
-        let embeddedBroadcastImplementationTypePath = rootPath + "/broadcast-coordination-type"
+        let embeddedBroadcastImplementationTypePath = rootPath + "/broadcast-coordination-type-v2"
         
         var useIPCContext = false
         if let typeData = try? Data(contentsOf: URL(fileURLWithPath: embeddedBroadcastImplementationTypePath)), let type = String(data: typeData, encoding: .utf8) {
