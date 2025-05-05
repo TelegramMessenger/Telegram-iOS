@@ -1893,7 +1893,7 @@ open class ListView: ASDisplayNode, ASScrollViewDelegate, ASGestureRecognizerDel
         
         let widthUpdated: Bool
         if let updateSizeAndInsets = updateSizeAndInsets {
-            widthUpdated = abs(state.visibleSize.width - updateSizeAndInsets.size.width) > CGFloat.ulpOfOne || options.contains(.ForceUpdate)
+            widthUpdated = abs(state.visibleSize.width - updateSizeAndInsets.size.width) > CGFloat.ulpOfOne || abs(state.insets.left - updateSizeAndInsets.insets.left) > CGFloat.ulpOfOne || abs(state.insets.right - updateSizeAndInsets.insets.right) > CGFloat.ulpOfOne || options.contains(.ForceUpdate)
             
             state.visibleSize = updateSizeAndInsets.size
             state.insets = updateSizeAndInsets.insets

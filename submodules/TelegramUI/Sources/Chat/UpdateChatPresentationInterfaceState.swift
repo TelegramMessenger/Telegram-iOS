@@ -589,6 +589,13 @@ func updateChatPresentationInterfaceStateImpl(
         }
     }
     
+    if selfController.chatDisplayNode.historyNode.chatLocation != selfController.presentationInterfaceState.chatLocation {
+        selfController.chatLocation = selfController.presentationInterfaceState.chatLocation
+        selfController.reloadChatLocation()
+        selfController.reloadCachedData()
+        selfController.chatDisplayNode.historyNode.updateChatLocation(chatLocation: selfController.presentationInterfaceState.chatLocation)
+    }
+    
     selfController.updateDownButtonVisibility()
     
     if selfController.presentationInterfaceState.hasBirthdayToday {

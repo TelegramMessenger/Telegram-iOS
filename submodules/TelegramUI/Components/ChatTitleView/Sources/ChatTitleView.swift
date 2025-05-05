@@ -432,10 +432,25 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                 }
                 self.isUserInteractionEnabled = isEnabled
                 self.button.isUserInteractionEnabled = isEnabled
-                if !self.updateStatus() {
+                
+                var enableAnimation = false
+                switch titleContent {
+                case let .peer(_, customTitle, _, _, _, _, _):
+                    if case let .peer(_, previousCustomTitle, _, _, _, _, _) = oldValue {
+                        if customTitle != previousCustomTitle {
+                            enableAnimation = false
+                        }
+                    } else {
+                        enableAnimation = false
+                    }
+                default:
+                    break
+                }
+                
+                if !self.updateStatus(enableAnimation: enableAnimation) {
                     if updated {
                         if !self.manualLayout, let (size, clearBounds) = self.validLayout {
-                            let _ = self.updateLayout(size: size, clearBounds: clearBounds, transition: self.disableAnimations ? .immediate : .animated(duration: 0.2, curve: .easeInOut))
+                            let _ = self.updateLayout(size: size, clearBounds: clearBounds, transition: (self.disableAnimations || !enableAnimation) ? .immediate : .animated(duration: 0.2, curve: .easeInOut))
                         }
                     }
                 }
@@ -443,7 +458,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
         }
     }
     
-    private func updateStatus() -> Bool {
+    private func updateStatus(enableAnimation: Bool = true) -> Bool {
         var inputActivitiesAllowed = true
         if let titleContent = self.titleContent {
             switch titleContent {
@@ -688,9 +703,9 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
             }
         }
         
-        if self.activityNode.transitionToState(state, animation: .slide) {
+        if self.activityNode.transitionToState(state, animation: enableAnimation ? .slide : .none) {
             if !self.manualLayout, let (size, clearBounds) = self.validLayout {
-                let _ = self.updateLayout(size: size, clearBounds: clearBounds, transition: .animated(duration: 0.3, curve: .spring))
+                let _ = self.updateLayout(size: size, clearBounds: clearBounds, transition: enableAnimation ? .animated(duration: 0.3, curve: .spring) : .immediate)
             }
             return true
         } else {

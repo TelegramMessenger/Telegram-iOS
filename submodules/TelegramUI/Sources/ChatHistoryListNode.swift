@@ -468,7 +468,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
     static let fixedAdMessageStableId: UInt32 = UInt32.max - 5000
     
     public let context: AccountContext
-    private let chatLocation: ChatLocation
+    private(set) var chatLocation: ChatLocation
     private let chatLocationContextHolder: Atomic<ChatLocationContextHolder?>
     private let source: ChatHistoryListSource
     private let subject: ChatControllerSubject?
@@ -1231,6 +1231,14 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
         self.tag = tag
         
         self.beginChatHistoryTransitions(resetScrolling: true)
+    }
+    
+    public func updateChatLocation(chatLocation: ChatLocation) {
+        if self.chatLocation == chatLocation {
+            return
+        }
+        self.chatLocation = chatLocation
+        self.beginChatHistoryTransitions(resetScrolling: false)
     }
     
     private func beginAdMessageManagement(adMessages: Signal<(interPostInterval: Int32?, messages: [Message]), NoError>) {

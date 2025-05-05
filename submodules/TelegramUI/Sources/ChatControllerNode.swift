@@ -44,6 +44,7 @@ import ComponentDisplayAdapters
 import ComponentFlow
 import ChatEmptyNode
 import SpaceWarpView
+import ChatSideTopicsPanel
 
 final class VideoNavigationControllerDropContentItem: NavigationControllerDropContentItem {
     let itemNode: OverlayMediaItemNode
@@ -211,6 +212,9 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     private var titleAccessoryPanelNode: ChatTitleAccessoryPanelNode?
     
     private var chatTranslationPanel: ChatTranslationPanelNode?
+    
+    private var leftPanelContainer: ChatControllerTitlePanelNodeContainer
+    private var leftPanel: (component: AnyComponentWithIdentity<ChatSidePanelEnvironment>, view: ComponentView<ChatSidePanelEnvironment>)?
     
     private(set) var inputPanelNode: ChatInputPanelNode?
     private(set) var inputPanelOverscrollNode: ChatInputPanelOverscrollNode?
@@ -419,6 +423,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         
         self.titleAccessoryPanelContainer = ChatControllerTitlePanelNodeContainer()
         self.titleAccessoryPanelContainer.clipsToBounds = true
+        
+        self.leftPanelContainer = ChatControllerTitlePanelNodeContainer()
         
         setLayerDisableScreenshots(self.titleAccessoryPanelContainer.layer, chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat)
         
@@ -824,6 +830,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         self.wrappingNode.contentNode.addSubnode(self.contentContainerNode)
         self.contentContainerNode.contentNode.addSubnode(self.backgroundNode)
         self.contentContainerNode.contentNode.addSubnode(self.historyNodeContainer)
+        self.contentContainerNode.contentNode.addSubnode(self.leftPanelContainer)
         
         if let navigationBar = self.navigationBar {
             self.contentContainerNode.contentNode.addSubnode(navigationBar)
@@ -1544,6 +1551,30 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             self.feePanelNode = nil
         }
         
+        var defaultLeftPanelWidth: CGFloat = 72.0
+        if case .landscapeRight = layout.metrics.orientation {
+            defaultLeftPanelWidth += layout.safeInsets.left
+        }
+        let leftPanelLeftInset = defaultLeftPanelWidth - 72.0
+        
+        var leftPanelSize: CGSize?
+        var dismissedLeftPanel: (component: AnyComponentWithIdentity<ChatSidePanelEnvironment>, view: ComponentView<ChatSidePanelEnvironment>)?
+        var immediatelyLayoutLeftPanelNodeAndAnimateAppearance = false
+        if let leftPanelComponent = sidePanelForChatPresentationInterfaceState(self.chatPresentationInterfaceState, context: self.context, currentPanel: self.leftPanel?.component, controllerInteraction: self.controllerInteraction, interfaceInteraction: self.interfaceInteraction, force: false) {
+            if self.leftPanel?.component.id != leftPanelComponent.id {
+                dismissedLeftPanel = self.leftPanel
+                self.leftPanel = (leftPanelComponent, ComponentView())
+                immediatelyLayoutLeftPanelNodeAndAnimateAppearance = true
+            } else if let leftPanel = self.leftPanel {
+                self.leftPanel = (leftPanelComponent, leftPanel.view)
+            }
+            
+            leftPanelSize = CGSize(width: defaultLeftPanelWidth, height: layout.size.height)
+        } else if let leftPanel = self.leftPanel {
+            dismissedLeftPanel = leftPanel
+            self.leftPanel = nil
+        }
+        
         var inputPanelNodeBaseHeight: CGFloat = 0.0
         if let inputPanelNode = self.inputPanelNode {
             inputPanelNodeBaseHeight += inputPanelNode.minimalHeight(interfaceState: self.chatPresentationInterfaceState, metrics: layout.metrics)
@@ -2125,6 +2156,10 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             listInsets.top += 8.0
         }
         
+        if let leftPanelSize {
+            listInsets.left += leftPanelSize.width
+        }
+        
         var displayTopDimNode = false
         let ensureTopInsetForOverlayHighlightedItems: CGFloat? = nil
         var expandTopDimNode = false
@@ -2196,6 +2231,13 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 strongSelf.notifyTransitionCompletionListeners(transition: transition)
             }
         })
+        
+        if immediatelyLayoutLeftPanelNodeAndAnimateAppearance {
+            transition.animatePositionAdditive(layer: self.historyNode.layer, offset: CGPoint(x: -defaultLeftPanelWidth, y: 0.0))
+        } else if dismissedLeftPanel != nil {
+            transition.animatePositionAdditive(layer: self.historyNode.layer, offset: CGPoint(x: defaultLeftPanelWidth, y: 0.0))
+        }
+        
         if self.isScrollingLockedAtTop {
             switch self.historyNode.visibleContentOffset() {
             case let .known(value) where value <= CGFloat.ulpOfOne:
@@ -2247,6 +2289,52 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         transition.updatePosition(node: self.inputPanelOverlayNode, position: CGRect(origin: apparentInputBackgroundFrame.origin, size: layout.size).center, beginWithCurrentState: true)
         transition.updateBounds(node: self.inputPanelOverlayNode, bounds: CGRect(origin: CGPoint(x: 0.0, y: apparentInputBackgroundFrame.origin.y), size: layout.size), beginWithCurrentState: true)
         transition.updateFrame(node: self.inputPanelBackgroundNode, frame: apparentInputBackgroundFrame, beginWithCurrentState: true)
+        
+        let leftPanelContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 0.0, height: layout.size.height))
+        transition.updateFrame(node: self.leftPanelContainer, frame: leftPanelContainerFrame)
+        if let leftPanel = self.leftPanel, let leftPanelSize {
+            let _ = leftPanel.view.update(
+                transition: immediatelyLayoutLeftPanelNodeAndAnimateAppearance ? .immediate :ComponentTransition(transition),
+                component: leftPanel.component.component,
+                environment: {
+                    ChatSidePanelEnvironment(insets: UIEdgeInsets(
+                        top: containerInsets.top,
+                        left: leftPanelLeftInset,
+                        bottom: containerInsets.bottom + contentBottomInset,
+                        right: 0.0
+                    ))
+                },
+                containerSize: leftPanelSize
+            )
+            let leftPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: leftPanelSize)
+            if let leftPanelView = leftPanel.view.view {
+                if leftPanelView.superview == nil {
+                    self.leftPanelContainer.view.addSubview(leftPanelView)
+                }
+                if immediatelyLayoutLeftPanelNodeAndAnimateAppearance {
+                    leftPanelView.frame = leftPanelFrame.offsetBy(dx: -leftPanelSize.width, dy: 0.0)
+                }
+                transition.updateFrame(view: leftPanelView, frame: leftPanelFrame)
+            }
+        }
+        if let dismissedLeftPanel, let dismissedLeftPanelView = dismissedLeftPanel.view.view {
+            let dismissedLeftPanelSize = dismissedLeftPanel.view.update(
+                transition: ComponentTransition(transition),
+                component: dismissedLeftPanel.component.component,
+                environment: {
+                    ChatSidePanelEnvironment(insets: UIEdgeInsets(
+                        top: containerInsets.top,
+                        left: leftPanelLeftInset,
+                        bottom: containerInsets.bottom + contentBottomInset,
+                        right: 0.0
+                    ))
+                },
+                containerSize: CGSize(width: defaultLeftPanelWidth, height: layout.size.height)
+            )
+            transition.updateFrame(view: dismissedLeftPanelView, frame: CGRect(origin: CGPoint(x: -dismissedLeftPanelSize.width, y: 0.0), size: dismissedLeftPanelSize), completion: { [weak dismissedLeftPanelView] _ in
+                dismissedLeftPanelView?.removeFromSuperview()
+            })
+        }
 
         if let navigationBarBackgroundContent = self.navigationBarBackgroundContent {
             transition.updateFrame(node: navigationBarBackgroundContent, frame: CGRect(origin: .zero, size: CGSize(width: layout.size.width, height: navigationBarHeight + (titleAccessoryPanelBackgroundHeight ?? 0.0) + (translationPanelHeight ?? 0.0))), beginWithCurrentState: true)

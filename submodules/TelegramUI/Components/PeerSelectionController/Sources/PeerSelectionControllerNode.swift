@@ -785,6 +785,8 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }, openBoostToUnrestrict: {
         }, updateVideoTrimRange: { _, _, _, _ in
         }, updateHistoryFilter: { _ in
+        }, updateChatLocationThread: { _ in
+        }, toggleChatSidebarMode: {
         }, updateDisplayHistoryFilterAsList: { _ in
         }, requestLayout: { _ in
         }, chatController: {
