@@ -230,7 +230,7 @@ final class GiftStoreScreenComponent: Component {
                             color: ribbonColor
                         )
                                                 
-                        let subject: GiftItemComponent.Subject = .uniqueGift(gift: uniqueGift, price: "⭐️\(presentationStringsFormattedNumber(Int32(uniqueGift.resellStars ?? 0), environment.dateTimeFormat.groupingSeparator))")
+                        let subject: GiftItemComponent.Subject = .uniqueGift(gift: uniqueGift, price: "# \(presentationStringsFormattedNumber(Int32(uniqueGift.resellStars ?? 0), environment.dateTimeFormat.groupingSeparator))")
                         let _ = visibleItem.update(
                             transition: itemTransition,
                             component: AnyComponent(

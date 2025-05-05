@@ -412,12 +412,12 @@ final class GiftOptionsScreenComponent: Component {
                             if let availability = gift.availability, availability.remains == 0, let minResaleStars = availability.minResaleStars {
                                 let priceString = presentationStringsFormattedNumber(Int32(minResaleStars), environment.dateTimeFormat.groupingSeparator)
                                 if let resaleConfiguration = self.resaleConfiguration, minResaleStars == resaleConfiguration.starGiftResaleMaxAmount || availability.resale == 1 {
-                                    subject = .starGift(gift: gift, price: "⭐️ \(priceString)")
+                                    subject = .starGift(gift: gift, price: "# \(priceString)")
                                 } else {
-                                    subject = .starGift(gift: gift, price: "⭐️ \(priceString)+")
+                                    subject = .starGift(gift: gift, price: "# \(priceString)+")
                                 }
                             } else {
-                                subject = .starGift(gift: gift, price: "⭐️ \(presentationStringsFormattedNumber(Int32(gift.price), environment.dateTimeFormat.groupingSeparator))")
+                                subject = .starGift(gift: gift, price: "# \(presentationStringsFormattedNumber(Int32(gift.price), environment.dateTimeFormat.groupingSeparator))")
                             }
                         case let .unique(gift):
                             subject = .uniqueGift(gift: gift, price: nil)
