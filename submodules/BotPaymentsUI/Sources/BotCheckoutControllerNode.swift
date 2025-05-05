@@ -611,7 +611,7 @@ private final class ActionButtonPanelNode: ASDisplayNode {
     private(set) var isAccepted: Bool = false
     var isAcceptedUpdated: (() -> Void)?
     var openRecurrentTerms: (() -> Void)?
-    private var recurrentConfirmationNode: RecurrentConfirmationNode?
+    var recurrentConfirmationNode: RecurrentConfirmationNode?
     
     func update(presentationData: PresentationData, layout: ContainerViewLayout, invoice: BotPaymentInvoice?, botName: String?) -> (CGFloat, CGFloat) {
         let bottomPanelVerticalInset: CGFloat = 16.0
@@ -1211,7 +1211,8 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
             payString = self.presentationData.strings.CheckoutInfo_Pay
         }
         
-        self.actionButton.isEnabled = isButtonEnabled
+        self.actionButton.isEnabled = true
+        self.actionButton.isImplicitlyDisabled = !isButtonEnabled
         
         if let currentPaymentMethod = self.currentPaymentMethod {
             switch currentPaymentMethod {
@@ -1268,7 +1269,11 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
     }
     
     @objc func actionButtonPressed() {
-        self.pay()
+        if let recurrentConfirmationNode = self.actionButtonPanelNode.recurrentConfirmationNode, !self.actionButtonPanelNode.isAccepted {
+            recurrentConfirmationNode.layer.addShakeAnimation()
+        } else {
+            self.pay()
+        }
     }
     
     private func pay(savedCredentialsToken: TemporaryTwoStepPasswordToken? = nil, liabilityNoticeAccepted: Bool = false, receivedCredentials: BotPaymentCredentials? = nil) {
