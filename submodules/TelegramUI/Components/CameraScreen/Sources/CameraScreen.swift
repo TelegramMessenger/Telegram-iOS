@@ -3630,7 +3630,13 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             self.node.resumeCameraCapture(fromGallery: true)
         }
         
-        var dismissControllerImpl: (() -> Void)?
+        class DismissArgs {
+            var resumeOnDismiss = true
+        }
+        
+        var dismissControllerImpl: ((Bool) -> Void)?
+        let dismissArgs = DismissArgs()
+        
         let controller: ViewController
         if let current = self.galleryController {
             controller = current
@@ -3686,7 +3692,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                                 }
                             }
 
-                            dismissControllerImpl?()
+                            dismissControllerImpl?(true)
                         } else {
                             stopCameraCapture()
                             
@@ -3759,17 +3765,19 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                             self.node.collage?.addResults(signals: results)
                         }
                     } else {
+                        self.node.animateOutToEditor()
                         if let assets = results as? [PHAsset] {
                             self.completion(.single(.assets(assets)), nil, self.remainingStoryCount, {
-                                
                             })
                         }
                     }
                     self.galleryController = nil
                     
-                    dismissControllerImpl?()
+                    dismissControllerImpl?(false)
                 }, dismissed: { [weak self] in
-                    resumeCameraCapture()
+                    if dismissArgs.resumeOnDismiss {
+                        resumeCameraCapture()
+                    }
                     if let self {
                         self.node.hasGallery = false
                         self.node.requestUpdateLayout(transition: .immediate)
@@ -3780,7 +3788,8 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             )
             self.galleryController = controller
             
-            dismissControllerImpl = { [weak controller] in
+            dismissControllerImpl = { [weak controller] resume in
+                dismissArgs.resumeOnDismiss = resume
                 controller?.dismiss(animated: true)
             }
         }

@@ -235,6 +235,8 @@ final class GiftOptionsScreenComponent: Component {
         
         private var chevronImage: (UIImage, PresentationTheme)?
         
+        private var resaleConfiguration: StarsSubscriptionConfiguration?
+        
         override init(frame: CGRect) {
             self.scrollView = ScrollView()
             self.scrollView.showsVerticalScrollIndicator = true
@@ -408,9 +410,14 @@ final class GiftOptionsScreenComponent: Component {
                         switch gift {
                         case let .generic(gift):
                             if let availability = gift.availability, availability.remains == 0, let minResaleStars = availability.minResaleStars {
-                                subject = .starGift(gift: gift, price: "⭐️ \(minResaleStars)+")
+                                let priceString = presentationStringsFormattedNumber(Int32(minResaleStars), environment.dateTimeFormat.groupingSeparator)
+                                if let resaleConfiguration = self.resaleConfiguration, minResaleStars == resaleConfiguration.starGiftResaleMaxAmount || availability.resale == 1 {
+                                    subject = .starGift(gift: gift, price: "⭐️ \(priceString)")
+                                } else {
+                                    subject = .starGift(gift: gift, price: "⭐️ \(priceString)+")
+                                }
                             } else {
-                                subject = .starGift(gift: gift, price: "⭐️ \(gift.price)")
+                                subject = .starGift(gift: gift, price: "⭐️ \(presentationStringsFormattedNumber(Int32(gift.price), environment.dateTimeFormat.groupingSeparator))")
                             }
                         case let .unique(gift):
                             subject = .uniqueGift(gift: gift, price: nil)
@@ -773,6 +780,8 @@ final class GiftOptionsScreenComponent: Component {
                     self.optionsPromise.set(component.context.engine.payments.starsTopUpOptions()
                     |> map(Optional.init))
                 }
+                
+                self.resaleConfiguration = StarsSubscriptionConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
             }
             self.component = component
             

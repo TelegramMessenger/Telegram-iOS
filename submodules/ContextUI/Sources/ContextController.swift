@@ -527,7 +527,12 @@ final class ContextControllerNode: ViewControllerTracingNode, ASScrollViewDelega
                 guard let strongSelf = self, let _ = gesture else {
                     return
                 }
-                let localPoint = strongSelf.view.convert(point, from: view)
+                let localPoint: CGPoint
+                if let layout = strongSelf.validLayout, layout.metrics.isTablet, layout.size.width > layout.size.height, let view {
+                    localPoint = view.convert(point, to: nil)
+                } else {
+                    localPoint = strongSelf.view.convert(point, from: view)
+                }
                 let initialPoint: CGPoint
                 if let current = strongSelf.initialContinueGesturePoint {
                     initialPoint = current

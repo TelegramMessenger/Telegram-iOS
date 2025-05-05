@@ -496,7 +496,7 @@ private final class GiftViewSheetContent: CombinedComponent {
             
             if currentTime > starsConvertMaxDate {
                 let days: Int32 = Int32(ceil(Float(configuration.convertToStarsPeriod) / 86400.0))
-                let controller = textAlertController(
+                let alertController = textAlertController(
                     context: self.context,
                     title: presentationData.strings.Gift_Convert_Title,
                     text: presentationData.strings.Gift_Convert_Period_Unavailable_Text(presentationData.strings.Gift_Convert_Period_Unavailable_Days(days)).string,
@@ -505,7 +505,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                     ],
                     parseMarkdown: true
                 )
-                controller.present(controller, in: .window(.root))
+                controller.present(alertController, in: .window(.root))
             } else {
                 let delta = starsConvertMaxDate - currentTime
                 let days: Int32 = Int32(ceil(Float(delta) / 86400.0))

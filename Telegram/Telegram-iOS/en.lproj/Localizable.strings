@@ -14315,3 +14315,8 @@ Sorry for the inconvenience.";
 "Gift.Buy.Confirm.Text.Stars_any" = "**%@** Stars";
 "Gift.Buy.Confirm.BuyFor_1" = "Buy for %@ Star";
 "Gift.Buy.Confirm.BuyFor_any" = "Buy for %@ Stars";
+
+"Calls.HideCallsTab" = "Hide Calls Tab";
+
+"Story.Editor.TooltipSelection_1" = "Tap here to view your %@ story";
+"Story.Editor.TooltipSelection_any" = "Tap here to view your %@ stories";
