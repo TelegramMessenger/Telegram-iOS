@@ -469,6 +469,10 @@ final class PendingStoryManager {
                         }
                     })
                 } else {
+                    if let uploadInfo = pendingItemContext.item.uploadInfo {
+                        let partTotalProgress = 1.0 / Float(uploadInfo.total)
+                        pendingItemContext.progress = Float(uploadInfo.index) * partTotalProgress
+                    }
                     pendingItemContext.disposable = (_internal_uploadStoryImpl(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, stateManager: self.stateManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, revalidationContext: self.revalidationContext, auxiliaryMethods: self.auxiliaryMethods, toPeerId: toPeerId, stableId: stableId, media: firstItem.media, mediaAreas: firstItem.mediaAreas, text: firstItem.text, entities: firstItem.entities, embeddedStickers: firstItem.embeddedStickers, pin: firstItem.pin, privacy: firstItem.privacy, isForwardingDisabled: firstItem.isForwardingDisabled, period: Int(firstItem.period), randomId: firstItem.randomId, forwardInfo: firstItem.forwardInfo)
                     |> deliverOn(self.queue)).start(next: { [weak self] event in
                         guard let `self` = self else {

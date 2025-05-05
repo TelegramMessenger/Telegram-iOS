@@ -55,6 +55,7 @@ private final class SheetContent: CombinedComponent {
         let closeButton = Child(Button.self)
         let title = Child(Text.self)
         let amountSection = Child(ListSectionComponent.self)
+        let amountAdditionalLabel = Child(MultilineTextComponent.self)
         let button = Child(ButtonComponent.self)
         let balanceTitle = Child(MultilineTextComponent.self)
         let balanceValue = Child(MultilineTextComponent.self)
@@ -100,7 +101,8 @@ private final class SheetContent: CombinedComponent {
             let titleString: String
             let amountTitle: String
             let amountPlaceholder: String
-            let amountLabel: String?
+            var amountLabel: String?
+            var amountRightLabel: String?
             
             let minAmount: StarsAmount?
             let maxAmount: StarsAmount?
@@ -116,7 +118,6 @@ private final class SheetContent: CombinedComponent {
                 
                 minAmount = withdrawConfiguration.minWithdrawAmount.flatMap { StarsAmount(value: $0, nanos: 0) }
                 maxAmount = status.balances.availableBalance
-                amountLabel = nil
             case .accountWithdraw:
                 titleString = environment.strings.Stars_Withdraw_Title
                 amountTitle = environment.strings.Stars_Withdraw_AmountTitle
@@ -124,7 +125,6 @@ private final class SheetContent: CombinedComponent {
                 
                 minAmount = withdrawConfiguration.minWithdrawAmount.flatMap { StarsAmount(value: $0, nanos: 0) }
                 maxAmount = state.balance
-                amountLabel = nil
             case .paidMedia:
                 titleString = environment.strings.Stars_PaidContent_Title
                 amountTitle = environment.strings.Stars_PaidContent_AmountTitle
@@ -136,8 +136,6 @@ private final class SheetContent: CombinedComponent {
                 if let usdWithdrawRate = withdrawConfiguration.usdWithdrawRate, let amount = state.amount, amount > StarsAmount.zero {
                     let usdRate = Double(usdWithdrawRate) / 1000.0 / 100.0
                     amountLabel = "≈\(formatTonUsdValue(amount.value, divide: false, rate: usdRate, dateTimeFormat: environment.dateTimeFormat))"
-                } else {
-                    amountLabel = nil
                 }
             case .reaction:
                 titleString = environment.strings.Stars_SendStars_Title
@@ -146,7 +144,6 @@ private final class SheetContent: CombinedComponent {
                 
                 minAmount = StarsAmount(value: 1, nanos: 0)
                 maxAmount = withdrawConfiguration.maxPaidMediaAmount.flatMap { StarsAmount(value: $0, nanos: 0) }
-                amountLabel = nil
             case let .starGiftResell(update):
                 titleString = update ? environment.strings.Stars_SellGift_EditTitle : environment.strings.Stars_SellGift_Title
                 amountTitle = environment.strings.Stars_SellGift_AmountTitle
@@ -154,7 +151,6 @@ private final class SheetContent: CombinedComponent {
                 
                 minAmount = StarsAmount(value: resaleConfiguration.starGiftResaleMinAmount, nanos: 0)
                 maxAmount = StarsAmount(value: resaleConfiguration.starGiftResaleMaxAmount, nanos: 0)
-                amountLabel = nil
             case let .paidMessages(_, minAmountValue, _, kind):
                 //TODO:localize
                 switch kind {
@@ -168,7 +164,6 @@ private final class SheetContent: CombinedComponent {
                 
                 minAmount = StarsAmount(value: minAmountValue, nanos: 0)
                 maxAmount = StarsAmount(value: resaleConfiguration.paidMessageMaxAmount, nanos: 0)
-                amountLabel = nil
             }
             
             let title = title.update(
@@ -287,6 +282,11 @@ private final class SheetContent: CombinedComponent {
                     let starsValue = Int32(floor(Float(value) * Float(resaleConfiguration.paidMessageCommissionPermille) / 1000.0))
                     let starsString = environment.strings.Stars_SellGift_AmountInfo_Stars(starsValue)
                     amountInfoString = NSAttributedString(attributedString: parseMarkdownIntoAttributedString(environment.strings.Stars_SellGift_AmountInfo(starsString).string, attributes: amountMarkdownAttributes, textAlignment: .natural))
+                    
+                    if let usdWithdrawRate = withdrawConfiguration.usdWithdrawRate {
+                        let usdRate = Double(usdWithdrawRate) / 1000.0 / 100.0
+                        amountRightLabel = "≈\(formatTonUsdValue(Int64(starsValue), divide: false, rate: usdRate, dateTimeFormat: environment.dateTimeFormat))"
+                    }
                 } else {
                     amountInfoString = NSAttributedString(attributedString: parseMarkdownIntoAttributedString(environment.strings.Stars_SellGift_AmountInfo("\(resaleConfiguration.paidMessageCommissionPermille / 10)%").string, attributes: amountMarkdownAttributes, textAlignment: .natural))
                 }
@@ -355,8 +355,17 @@ private final class SheetContent: CombinedComponent {
                 .cornerRadius(10.0)
             )
             contentSize.height += amountSection.size.height
+            if let amountRightLabel {
+                let amountAdditionalLabel = amountAdditionalLabel.update(
+                    component: MultilineTextComponent(text: .plain(NSAttributedString(string: amountRightLabel, font: amountFont, textColor: amountTextColor))),
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: .greatestFiniteMagnitude),
+                    transition: context.transition
+                )
+                context.add(amountAdditionalLabel
+                    .position(CGPoint(x: context.availableSize.width - amountAdditionalLabel.size.width / 2.0 - sideInset - 16.0, y: contentSize.height - amountAdditionalLabel.size.height / 2.0)))
+            }
             contentSize.height += 32.0
-            
+    
             let buttonString: String
             if case .paidMedia = component.mode {
                 buttonString = environment.strings.Stars_PaidContent_Create

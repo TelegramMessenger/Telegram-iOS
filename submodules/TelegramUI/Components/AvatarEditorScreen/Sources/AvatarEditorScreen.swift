@@ -1331,11 +1331,7 @@ final class AvatarEditorScreenComponent: Component {
                         isEnabled: true,
                         displaysProgress: false,
                         action: { [weak self] in
-                            if isLocked {
-                                self?.presentPremiumToast()
-                            } else {
-                                self?.complete()
-                            }
+                            self?.complete()
                         }
                     )
                 ),
@@ -1389,11 +1385,34 @@ final class AvatarEditorScreenComponent: Component {
             parentController.present(controller, in: .window(.root))
         }
         
+        private func isPremiumRequired() -> Bool {
+            guard let component = self.component, let state = self.state else {
+                return false
+            }
+            if component.peerType != .suggest, !component.context.isPremium {
+                if state.selectedBackground.isPremium {
+                    return true
+                }
+                if let selectedFile = state.selectedFile {
+                    if selectedFile.isSticker {
+                        return true
+                    }
+                }
+            }
+            return false
+        }
+        
         private let queue = Queue()
         func complete() {
             guard let state = self.state, let file = state.selectedFile, let controller = self.controller?() else {
                 return
             }
+            
+            if self.isPremiumRequired() {
+                self.presentPremiumToast()
+                return
+            }
+            
             let context = controller.context
             let _ = context.animationCache.getFirstFrame(queue: self.queue, sourceId: file.resource.id.stringRepresentation, size: CGSize(width: 640.0, height: 640.0), fetch: animationCacheFetchFile(context: context, userLocation: .other, userContentType: .sticker, resource: .media(media: .standalone(media: file), resource: file.resource), type: AnimationCacheAnimationType(file: file), keyframeOnly: true, customColor: nil), completion: { result in
                 guard let item = result.item else {

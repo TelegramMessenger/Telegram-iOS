@@ -970,6 +970,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
             titleTransition = .immediate
         }
         
+        let statusSpacing: CGFloat = 3.0
         let titleSideInset: CGFloat = 6.0
         var titleFrame: CGRect
         if size.height > 40.0 {
@@ -981,7 +982,12 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
             var titleSize = self.titleTextNode.updateLayout(size: CGSize(width: clearBounds.width - leftIconWidth - credibilityIconWidth - verifiedIconWidth - statusIconWidth - rightIconWidth - titleSideInset * 2.0, height: size.height), insets: titleInsets, animated: titleTransition.isAnimated)
             titleSize.width += credibilityIconWidth
             titleSize.width += verifiedIconWidth
-            titleSize.width += statusIconWidth
+            if statusIconWidth > 0.0 {
+                titleSize.width += statusIconWidth
+                if credibilityIconWidth > 0.0 {
+                    titleSize.width += statusSpacing
+                }
+            }
             
             let activitySize = self.activityNode.updateLayout(CGSize(width: clearBounds.size.width - titleSideInset * 2.0, height: clearBounds.size.height), alignment: .center)
             let titleInfoSpacing: CGFloat = 0.0
@@ -1021,6 +1027,9 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
             
             self.titleCredibilityIconView.frame = CGRect(origin: CGPoint(x: nextIconX - titleCredibilitySize.width, y: floor((titleFrame.height - titleCredibilitySize.height) / 2.0)), size: titleCredibilitySize)
             nextIconX -= titleCredibilitySize.width
+            if credibilityIconWidth > 0.0 {
+                nextIconX -= statusSpacing
+            }
             
             self.titleStatusIconView.frame = CGRect(origin: CGPoint(x: nextIconX - titleStatusSize.width, y: floor((titleFrame.height - titleStatusSize.height) / 2.0)), size: titleStatusSize)
             nextIconX -= titleStatusSize.width

@@ -75,9 +75,12 @@ public struct ChatTranslationState: Codable {
     }
 }
 
-private func cachedChatTranslationState(engine: TelegramEngine, peerId: EnginePeer.Id) -> Signal<ChatTranslationState?, NoError> {
+private func cachedChatTranslationState(engine: TelegramEngine, peerId: EnginePeer.Id, threadId: Int64?) -> Signal<ChatTranslationState?, NoError> {
     let key = EngineDataBuffer(length: 8)
     key.setInt64(0, value: peerId.id._internalGetInt64Value())
+    if let threadId {
+        key.setInt64(8, value: threadId)
+    }
     
     return engine.data.subscribe(TelegramEngine.EngineData.Item.ItemCache.Item(collectionId: ApplicationSpecificItemCacheCollectionId.translationState, id: key))
     |> map { entry -> ChatTranslationState? in
@@ -85,9 +88,12 @@ private func cachedChatTranslationState(engine: TelegramEngine, peerId: EnginePe
     }
 }
 
-private func updateChatTranslationState(engine: TelegramEngine, peerId: EnginePeer.Id, state: ChatTranslationState?) -> Signal<Never, NoError> {
+private func updateChatTranslationState(engine: TelegramEngine, peerId: EnginePeer.Id, threadId: Int64?, state: ChatTranslationState?) -> Signal<Never, NoError> {
     let key = EngineDataBuffer(length: 8)
     key.setInt64(0, value: peerId.id._internalGetInt64Value())
+    if let threadId {
+        key.setInt64(8, value: threadId)
+    }
     
     if let state {
         return engine.itemCache.put(collectionId: ApplicationSpecificItemCacheCollectionId.translationState, id: key, item: state)
@@ -96,9 +102,12 @@ private func updateChatTranslationState(engine: TelegramEngine, peerId: EnginePe
     }
 }
 
-public func updateChatTranslationStateInteractively(engine: TelegramEngine, peerId: EnginePeer.Id, _ f: @escaping (ChatTranslationState?) -> ChatTranslationState?) -> Signal<Never, NoError> {
+public func updateChatTranslationStateInteractively(engine: TelegramEngine, peerId: EnginePeer.Id, threadId: Int64?, _ f: @escaping (ChatTranslationState?) -> ChatTranslationState?) -> Signal<Never, NoError> {
     let key = EngineDataBuffer(length: 8)
     key.setInt64(0, value: peerId.id._internalGetInt64Value())
+    if let threadId {
+        key.setInt64(8, value: threadId)
+    }
     
     return engine.data.get(TelegramEngine.EngineData.Item.ItemCache.Item(collectionId: ApplicationSpecificItemCacheCollectionId.translationState, id: key))
     |> map { entry -> ChatTranslationState? in
@@ -106,7 +115,7 @@ public func updateChatTranslationStateInteractively(engine: TelegramEngine, peer
     }
     |> mapToSignal { current -> Signal<Never, NoError> in
         if let current {
-            return updateChatTranslationState(engine: engine, peerId: peerId, state: f(current))
+            return updateChatTranslationState(engine: engine, peerId: peerId, threadId: threadId, state: f(current))
         } else {
             return .never()
         }
@@ -166,7 +175,7 @@ public func translateMessageIds(context: AccountContext, messageIds: [EngineMess
     } |> switchToLatest
 }
 
-public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id) -> Signal<ChatTranslationState?, NoError> {
+public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64?) -> Signal<ChatTranslationState?, NoError> {
     if peerId.id == EnginePeer.Id.Id._internalFromInt64Value(777000) {
         return .single(nil)
     }
@@ -202,7 +211,7 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id)
                 }
             }
             
-            return cachedChatTranslationState(engine: context.engine, peerId: peerId)
+            return cachedChatTranslationState(engine: context.engine, peerId: peerId, threadId: threadId)
             |> mapToSignal { cached in
                 let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
                 if let cached, let timestamp = cached.timestamp, cached.baseLang == baseLang && currentTime - timestamp < 60 * 60 {
@@ -214,7 +223,7 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id)
                 } else {
                     return .single(nil)
                     |> then(
-                        context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId: peerId, threadId: nil), index: .upperBound, anchorIndex: .upperBound, count: 32, fixedCombinedReadStates: nil)
+                        context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId: peerId, threadId: threadId), index: .upperBound, anchorIndex: .upperBound, count: 32, fixedCombinedReadStates: nil)
                         |> filter { messageHistoryView -> Bool in
                             return messageHistoryView.0.entries.count > 1
                         }
@@ -308,7 +317,7 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id)
                                 toLang: cached?.toLang,
                                 isEnabled: isEnabled
                             )
-                            let _ = updateChatTranslationState(engine: context.engine, peerId: peerId, state: state).start()
+                            let _ = updateChatTranslationState(engine: context.engine, peerId: peerId, threadId: threadId, state: state).start()
                             if !dontTranslateLanguages.contains(fromLang) {
                                 return state
                             } else {

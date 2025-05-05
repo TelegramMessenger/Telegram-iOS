@@ -825,6 +825,14 @@ public final class MediaScrubberComponent: Component {
                         transition: transition
                     )
                 }
+            } else {
+                for (_ , trackView) in self.trackViews {
+                    trackView.updateTrimEdges(
+                        left: leftHandleFrame.minX,
+                        right: rightHandleFrame.maxX,
+                        transition: transition
+                    )
+                }
             }
             
             let isDraggingTracks = self.trackViews.values.contains(where: { $0.isDragging })
@@ -862,7 +870,6 @@ public final class MediaScrubberComponent: Component {
             }
             
             transition.setFrame(view: self.cursorImageView, frame: CGRect(origin: .zero, size: self.cursorView.frame.size))
-            
             
             if let (coverPosition, coverImage) = component.cover {
                 let imageSize = CGSize(width: 36.0, height: 36.0)
@@ -964,6 +971,7 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
     fileprivate let audioIconView: UIImageView
     fileprivate let audioTitle = ComponentView<Empty>()
     
+    fileprivate let segmentsContainerView = UIView()
     fileprivate var segmentTitles: [Int32: ComponentView<Empty>] = [:]
     fileprivate var segmentLayers: [Int32: SimpleLayer] = [:]
 
@@ -1037,7 +1045,10 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
         self.clippingView.addSubview(self.scrollView)
         self.scrollView.addSubview(self.containerView)
         self.backgroundView.addSubview(self.vibrancyView)
-                                
+        
+        self.segmentsContainerView.clipsToBounds = true
+        self.segmentsContainerView.isUserInteractionEnabled = false
+        
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(self.handleTap(_:)))
         self.addGestureRecognizer(tapGesture)
         
@@ -1133,6 +1144,25 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
         }
     }
     
+    private var leftTrimEdge: CGFloat?
+    private var rightTrimEdge: CGFloat?
+    func updateTrimEdges(
+        left: CGFloat,
+        right: CGFloat,
+        transition: ComponentTransition
+    ) {
+        self.leftTrimEdge = left
+        self.rightTrimEdge = right
+        
+        if let params = self.params {
+            self.updateSegmentContainer(
+                scrubberSize: CGSize(width: params.availableSize.width, height: trackHeight),
+                availableSize: params.availableSize,
+                transition: transition
+            )
+        }
+    }
+    
     private func updateThumbnailContainers(
         scrubberSize: CGSize,
         availableSize: CGSize,
@@ -1144,6 +1174,17 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
         transition.setFrame(view: self.videoTransparentFramesContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: scrubberSize.width, height: scrubberSize.height)))
         transition.setFrame(view: self.videoOpaqueFramesContainer, frame: CGRect(origin: CGPoint(x: containerLeftEdge, y: 0.0), size: CGSize(width: containerRightEdge - containerLeftEdge, height: scrubberSize.height)))
         transition.setBounds(view: self.videoOpaqueFramesContainer, bounds: CGRect(origin: CGPoint(x: containerLeftEdge, y: 0.0), size: CGSize(width: containerRightEdge - containerLeftEdge, height: scrubberSize.height)))
+    }
+    
+    private func updateSegmentContainer(
+        scrubberSize: CGSize,
+        availableSize: CGSize,
+        transition: ComponentTransition
+    ) {
+        let containerLeftEdge: CGFloat = self.leftTrimEdge ?? 0.0
+        let containerRightEdge: CGFloat = self.rightTrimEdge ?? availableSize.width
+        
+        transition.setFrame(view: self.segmentsContainerView, frame: CGRect(origin: CGPoint(x: containerLeftEdge, y: 0.0), size: CGSize(width: containerRightEdge - containerLeftEdge - 2.0, height: scrubberSize.height)))
     }
     
     func update(
@@ -1281,6 +1322,7 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
             if self.videoTransparentFramesContainer.superview == nil {
                 self.containerView.addSubview(self.videoTransparentFramesContainer)
                 self.containerView.addSubview(self.videoOpaqueFramesContainer)
+                self.containerView.addSubview(self.segmentsContainerView)
             }
             var previousFramesUpdateTimestamp: Double?
             if let previousParams, case let .video(_, previousFramesUpdateTimestampValue) = previousParams.track.content {
@@ -1328,6 +1370,12 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
             }
                         
             self.updateThumbnailContainers(
+                scrubberSize: scrubberSize,
+                availableSize: availableSize,
+                transition: transition
+            )
+            
+            self.updateSegmentContainer(
                 scrubberSize: scrubberSize,
                 availableSize: availableSize,
                 transition: transition
@@ -1488,9 +1536,8 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
         self.backgroundView.update(size: containerFrame.size, transition: transition.containedViewLayoutTransition)
         transition.setFrame(view: self.vibrancyView, frame: CGRect(origin: .zero, size: containerFrame.size))
         transition.setFrame(view: self.vibrancyContainer, frame: CGRect(origin: .zero, size: containerFrame.size))
-        
+                
         var segmentCount = 0
-        var segmentOrigin: CGFloat = 0.0
         var segmentWidth: CGFloat = 0.0
         if let segmentDuration {
             if duration > segmentDuration {
@@ -1499,17 +1546,15 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
                 segmentWidth = floorToScreenPixels(containerFrame.width * fraction)
             }
             if let trimRange = track.trimRange {
-                if trimRange.lowerBound > 0.0 {
-                    let fraction = trimRange.lowerBound / duration
-                    segmentOrigin = floorToScreenPixels(containerFrame.width * fraction)
-                }
                 let actualSegmentCount = Int(ceil((trimRange.upperBound - trimRange.lowerBound) / segmentDuration)) - 1
                 segmentCount = min(actualSegmentCount, segmentCount)
             }
         }
         
+        let displaySegmentLabels = segmentWidth >= 30.0
+
         var validIds = Set<Int32>()
-        var segmentFrame = CGRect(x: segmentOrigin + segmentWidth, y: 0.0, width: 1.0, height: containerFrame.size.height)
+        var segmentFrame = CGRect(x: segmentWidth, y: 0.0, width: 1.0, height: containerFrame.size.height)
         for i in 0 ..< min(segmentCount, 2) {
             let id = Int32(i)
             validIds.insert(id)
@@ -1530,7 +1575,7 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
                 self.segmentLayers[id] = segmentLayer
                 self.segmentTitles[id] = segmentTitle
                 
-                self.containerView.layer.addSublayer(segmentLayer)
+                self.segmentsContainerView.layer.addSublayer(segmentLayer)
             }
             
             transition.setFrame(layer: segmentLayer, frame: segmentFrame)
@@ -1546,8 +1591,9 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
                 containerSize: containerFrame.size
             )
             if let view = segmentTitle.view {
+                view.alpha = displaySegmentLabels ? 1.0 : 0.0
                 if view.superview == nil {
-                    self.containerView.addSubview(view)
+                    self.segmentsContainerView.addSubview(view)
                 }
                 segmentTransition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: segmentFrame.maxX + 2.0, y: 2.0), size: segmentTitleSize))
             }

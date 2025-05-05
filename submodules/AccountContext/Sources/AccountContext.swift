@@ -322,6 +322,7 @@ public enum ResolvedUrl {
     case premiumMultiGift(reference: String?)
     case collectible(gift: StarGift.UniqueGift?)
     case messageLink(link: TelegramResolvedMessageLink?)
+    case stars
 }
 
 public enum ResolveUrlResult {

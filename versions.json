@@ -1,5 +1,5 @@
 {
-    "app": "11.10",
+    "app": "11.11",
     "xcode": "16.2",
     "bazel": "7.3.1:981f82a470bad1349322b6f51c9c6ffa0aa291dab1014fac411543c12e661dff",
     "macos": "15"

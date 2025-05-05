@@ -334,8 +334,8 @@ public class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode
                             strongSelf.buttonNode.isHidden = fromYou || isGroupOrChannel
                             strongSelf.buttonTitleNode.isHidden = fromYou || isGroupOrChannel
                             
-                            let imageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - imageSize.width) / 2.0), y: 13.0), size: imageSize)
-                            if let media, mediaUpdated {     
+                            let imageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((boundingWidth - imageSize.width) / 2.0), y: 13.0), size: imageSize)
+                            if let media, mediaUpdated {
                                 let boundingSize = imageSize
                                 var imageSize = boundingSize
                                 let updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>
@@ -440,7 +440,7 @@ public class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode
                                 }
                             }
                             
-                            let mediaBackgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - width) / 2.0), y: 0.0), size: backgroundSize)
+                            let mediaBackgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((boundingWidth - width) / 2.0), y: 0.0), size: backgroundSize)
                             strongSelf.mediaBackgroundNode.frame = mediaBackgroundFrame
                                                         
                             strongSelf.mediaBackgroundNode.updateColor(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: item.controllerInteraction.enableFullTranslucency && dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), transition: .immediate)

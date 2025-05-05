@@ -167,10 +167,12 @@ public func searchCountries(items: [((String, String), String, [Int])], query: S
         let componentsOne = item.0.0.components(separatedBy: " ")
         let abbrOne = componentsOne.compactMap { $0.first.flatMap { String($0) } }.reduce(into: String(), { $0.append(contentsOf: $1) }).replacingOccurrences(of: "&", with: "")
         
-        let componentsTwo = item.0.0.components(separatedBy: " ")
+        let componentsTwo = item.0.1.components(separatedBy: " ")
         let abbrTwo = componentsTwo.compactMap { $0.first.flatMap { String($0) } }.reduce(into: String(), { $0.append(contentsOf: $1) }).replacingOccurrences(of: "&", with: "")
         
-        let string = "\(item.0.0) \((item.0.1)) \(item.1) \(abbrOne) \(abbrTwo)"
+        let phoneCodes = item.2.map { "\($0)" }.joined(separator: " ")
+        
+        let string = "\(item.0.0) \((item.0.1)) \(item.1) \(abbrOne) \(abbrTwo) \(phoneCodes)"
         let tokens = stringTokens(string)
         if matchStringTokens(tokens, with: queryTokens) {
             for code in item.2 {

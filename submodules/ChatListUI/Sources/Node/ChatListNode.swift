@@ -2092,8 +2092,6 @@ public final class ChatListNode: ListView {
                     return .single(.setupPhoto(accountPeer))
                 } else if suggestions.contains(.gracePremium) {
                     return .single(.premiumGrace)
-                } else if suggestions.contains(.setupBirthday) && birthday == nil {
-                    return .single(.setupBirthday)
                 } else if suggestions.contains(.xmasPremiumGift) {
                     return .single(.xmasPremiumGift)
                 } else if suggestions.contains(.annualPremium) || suggestions.contains(.upgradePremium) || suggestions.contains(.restorePremium), let inAppPurchaseManager = context.inAppPurchaseManager {
@@ -2149,6 +2147,8 @@ public final class ChatListNode: ListView {
                         }
                         return .birthdayPremiumGift(peers: todayBirthdayPeers, birthdays: birthdays)
                     }
+                } else if suggestions.contains(.setupBirthday) && birthday == nil {
+                    return .single(.setupBirthday)
                 } else if case let .link(id, url, title, subtitle) = suggestions.first(where: { if case .link = $0 { return true } else { return false} }) {
                     return .single(.link(id: id, url: url, title: title, subtitle: subtitle))
                 } else {

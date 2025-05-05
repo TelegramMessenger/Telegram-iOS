@@ -447,7 +447,11 @@ final class StarsTransactionsScreenComponent: Component {
             let sideInsets: CGFloat = environment.safeInsets.left + environment.safeInsets.right + 16.0 * 2.0
             let bottomInset: CGFloat = environment.safeInsets.bottom
              
-            contentHeight += environment.statusBarHeight
+            if environment.statusBarHeight > 0.0 {
+                contentHeight += environment.statusBarHeight
+            } else {
+                contentHeight += 12.0
+            }
             
             let starTransition: ComponentTransition = .immediate
             
