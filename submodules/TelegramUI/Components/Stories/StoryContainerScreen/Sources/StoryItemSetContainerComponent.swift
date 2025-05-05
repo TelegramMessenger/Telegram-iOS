@@ -1875,7 +1875,7 @@ public final class StoryItemSetContainerComponent: Component {
                     continue
                 }
                 var nextVisibleItem: VisibleItem?
-                if i != component.slice.allItems.count - 1 {
+                if i != component.slice.allItems.count {
                     nextVisibleItem = self.visibleItems[component.slice.allItems[i + 1].id]
                 }
                 if let itemView = visibleItem.view.view as? StoryItemContentComponent.View {
