@@ -5744,14 +5744,36 @@ extension ChatControllerImpl {
                 strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(title: nil, text: strongSelf.presentationData.strings.Conversation_GigagroupDescription, timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return true }), in: .current)
             }
         }, openSuggestPost: { [weak self] in
-             guard let self else {
+            guard let self else {
                 return
-             }
-             guard let peerId = self.chatLocation.peerId else {
+            }
+            guard let peerId = self.chatLocation.peerId else {
                 return
-             }
-
-             let contents = PostSuggestionsChatContents(
+            }
+            
+            let _ = (self.context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.LinkedMonoforumPeerId(id: peerId)
+            )
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] monoforumPeerIdValue in
+                guard let self, case let .known(monoforumPeerIdValue) = monoforumPeerIdValue, let monoforumPeerId = monoforumPeerIdValue else {
+                    return
+                }
+                
+                let _ = (self.context.engine.data.get(
+                    TelegramEngine.EngineData.Item.Peer.Peer(id: monoforumPeerId)
+                )
+                |> deliverOnMainQueue).startStandalone(next: { [weak self] monoforumPeer in
+                    guard let self, let monoforumPeer else {
+                        return
+                    }
+                    guard let navigationController = self.effectiveNavigationController else {
+                        return
+                    }
+                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(monoforumPeer), keepStack: .always))
+                })
+            })
+            
+            /*let contents = PostSuggestionsChatContents(
                 context: self.context,
                 peerId: peerId
             )
@@ -5765,7 +5787,7 @@ extension ChatControllerImpl {
             )
             chatController.navigationPresentation = .modal
             
-            self.push(chatController)
+            self.push(chatController)*/
         }, editMessageMedia: { [weak self] messageId, draw in
             if let strongSelf = self {
                 strongSelf.controllerInteraction?.editMessageMedia(messageId, draw)

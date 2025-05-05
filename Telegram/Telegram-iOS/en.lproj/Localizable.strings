@@ -14013,7 +14013,9 @@ Sorry for the inconvenience.";
 "Notification.PaidMessagePriceChanged.Stars_1" = "%@ Star";
 "Notification.PaidMessagePriceChanged.Stars_any" = "%@ Stars";
 "Notification.PaidMessagePriceChanged" = "%1$@ changed price to %2$@ per message";
+"Notification.PaidMessagePriceChangedAndEnabledChannelMessage" = "%1$@ changed price to %2$@ per message, and enabled messaging this channel";
 "Notification.PaidMessagePriceChangedYou" = "You changed price to %1$@ per message";
+"Notification.PaidMessagePriceChangedAndEnabledChannelMessageYou" = "You changed price to %1$@ per message, and enabled messaging this channel";
 
 "Premium.MaxExpiringStoriesTextNumberFormat_1" = "**%d** story";
 "Premium.MaxExpiringStoriesTextNumberFormat_any" = "**%d** stories";

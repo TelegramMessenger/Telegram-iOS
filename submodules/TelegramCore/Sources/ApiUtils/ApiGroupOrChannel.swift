@@ -91,6 +91,9 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
             if (flags & Int32(1 << 20)) != 0 {
                 infoFlags.insert(.hasDiscussionGroup)
             }
+            if (flags2 & Int32(1 << 16)) != 0 {
+                infoFlags.insert(.hasMonoforum)
+            }
             info = .broadcast(TelegramChannelBroadcastInfo(flags: infoFlags))
         }
         
@@ -133,6 +136,9 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
         }
         if (flags2 & Int32(1 << 15)) != 0 {
             channelFlags.insert(.autoTranslateEnabled)
+        }
+        if (flags2 & Int32(1 << 17)) != 0 {
+            channelFlags.insert(.isMonoforum)
         }
         
         var storiesHidden: Bool?

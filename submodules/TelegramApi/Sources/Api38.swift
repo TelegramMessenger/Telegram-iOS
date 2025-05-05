@@ -3786,12 +3786,13 @@ public extension Api.functions.channels {
                 }
 }
 public extension Api.functions.channels {
-                static func updatePaidMessagesPrice(channel: Api.InputChannel, sendPaidMessagesStars: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func updatePaidMessagesPrice(flags: Int32, channel: Api.InputChannel, sendPaidMessagesStars: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-58432193)
+                    buffer.appendInt32(1259483771)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     channel.serialize(buffer, true)
                     serializeInt64(sendPaidMessagesStars, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "channels.updatePaidMessagesPrice", parameters: [("channel", String(describing: channel)), ("sendPaidMessagesStars", String(describing: sendPaidMessagesStars))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    return (FunctionDescription(name: "channels.updatePaidMessagesPrice", parameters: [("flags", String(describing: flags)), ("channel", String(describing: channel)), ("sendPaidMessagesStars", String(describing: sendPaidMessagesStars))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {

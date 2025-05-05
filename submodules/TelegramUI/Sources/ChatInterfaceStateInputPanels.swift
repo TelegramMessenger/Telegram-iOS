@@ -238,7 +238,9 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                 }
             }
             
-            if channel.flags.contains(.isForum) && isMember {
+            if channel.flags.contains(.isMonoforum) {
+                displayInputTextPanel = true
+            } else if channel.flags.contains(.isForum) && isMember {
                 var canManage = false
                 if channel.flags.contains(.isCreator) {
                     canManage = true
@@ -313,7 +315,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
             case .group:
                 switch channel.participationStatus {
                 case .kicked, .left:
-                    if !isMember {
+                    if !channel.flags.contains(.isMonoforum) && !isMember {
                         if let currentPanel = (currentPanel as? ChatChannelSubscriberInputPanelNode) ?? (currentSecondaryPanel as? ChatChannelSubscriberInputPanelNode) {
                             return (currentPanel, nil)
                         } else {

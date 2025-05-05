@@ -9139,11 +9139,20 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
     
     private func editingOpenPostSuggestionsSetup() {
-        guard let data = self.data, let peer = data.peer else {
-            return
+        if #available(iOS 13.0, *) {
+            guard let data = self.data, let peer = data.peer else {
+                return
+            }
+            let context = self.context
+            Task { @MainActor [weak self] in
+                let postSettingsScreen = await context.sharedContext.makePostSuggestionsSettingsScreen(context: context, peerId: peer.id)
+                
+                guard let self else {
+                    return
+                }
+                self.controller?.push(postSettingsScreen)
+            }
         }
-        let _ = peer
-        self.controller?.push(self.context.sharedContext.makePostSuggestionsSettingsScreen(context: self.context))
     }
     
     private func editingOpenRevenue() {

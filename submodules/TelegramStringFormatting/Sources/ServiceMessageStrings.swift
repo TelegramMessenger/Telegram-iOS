@@ -1249,16 +1249,26 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     let resultString = strings.Notification_PaidMessageRefund(peerName, starsString)
                     attributedString = addAttributesToStringWithRanges(resultString._tuple, body: bodyAttributes, argumentAttributes: attributes)
                 }
-            case let .paidMessagesPriceEdited(stars):
+            case let .paidMessagesPriceEdited(stars, broadcastMessagesAllowed):
                 let starsString = strings.Notification_PaidMessagePriceChanged_Stars(Int32(stars))
                 if message.author?.id == accountPeerId {
-                    let resultString = strings.Notification_PaidMessagePriceChangedYou(starsString)
+                    let resultString: PresentationStrings.FormattedString
+                    if broadcastMessagesAllowed {
+                        resultString = strings.Notification_PaidMessagePriceChangedAndEnabledChannelMessageYou(starsString)
+                    } else {
+                        resultString = strings.Notification_PaidMessagePriceChangedYou(starsString)
+                    }
                     attributedString = addAttributesToStringWithRanges(resultString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
                 } else {
                     let peerName = message.author?.compactDisplayTitle ?? ""
                     var attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)])
                     attributes[1] = boldAttributes
-                    let resultString = strings.Notification_PaidMessagePriceChanged(peerName, starsString)
+                    let resultString: PresentationStrings.FormattedString
+                    if broadcastMessagesAllowed {
+                        resultString = strings.Notification_PaidMessagePriceChangedAndEnabledChannelMessage(peerName, starsString)
+                    } else {
+                        resultString = strings.Notification_PaidMessagePriceChanged(peerName, starsString)
+                    }
                     attributedString = addAttributesToStringWithRanges(resultString._tuple, body: bodyAttributes, argumentAttributes: attributes)
                 }
             case .unknown:

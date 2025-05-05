@@ -35,6 +35,7 @@ public struct TelegramChannelBroadcastFlags: OptionSet {
     public static let messagesShouldHaveSignatures = TelegramChannelBroadcastFlags(rawValue: 1 << 0)
     public static let hasDiscussionGroup = TelegramChannelBroadcastFlags(rawValue: 1 << 1)
     public static let messagesShouldHaveProfiles = TelegramChannelBroadcastFlags(rawValue: 1 << 2)
+    public static let hasMonoforum = TelegramChannelBroadcastFlags(rawValue: 1 << 3)
 }
 
 public struct TelegramChannelBroadcastInfo: Equatable {
@@ -182,6 +183,7 @@ public struct TelegramChannelFlags: OptionSet {
     public static let requestToJoin = TelegramChannelFlags(rawValue: 1 << 10)
     public static let isForum = TelegramChannelFlags(rawValue: 1 << 11)
     public static let autoTranslateEnabled = TelegramChannelFlags(rawValue: 1 << 12)
+    public static let isMonoforum = TelegramChannelFlags(rawValue: 1 << 13)
 }
 
 public final class TelegramChannel: Peer, Equatable {
@@ -551,6 +553,14 @@ public final class TelegramChannel: Peer, Equatable {
     
     public func withUpdatedFlags(_ flags: TelegramChannelFlags) -> TelegramChannel {
         return TelegramChannel(id: self.id, accessHash: self.accessHash, title: self.title, username: self.username, photo: self.photo, creationDate: self.creationDate, version: self.version, participationStatus: self.participationStatus, info: self.info, flags: flags, restrictionInfo: self.restrictionInfo, adminRights: self.adminRights, bannedRights: self.bannedRights, defaultBannedRights: self.defaultBannedRights, usernames: self.usernames, storiesHidden: self.storiesHidden, nameColor: self.nameColor, backgroundEmojiId: self.backgroundEmojiId, profileColor: self.profileColor, profileBackgroundEmojiId: self.profileBackgroundEmojiId, emojiStatus: self.emojiStatus, approximateBoostLevel: self.approximateBoostLevel, subscriptionUntilDate: self.subscriptionUntilDate, verificationIconFileId: self.verificationIconFileId, sendPaidMessageStars: self.sendPaidMessageStars)
+    }
+    
+    public func withUpdatedInfo(_ info: TelegramChannelInfo) -> TelegramChannel {
+        return TelegramChannel(id: self.id, accessHash: self.accessHash, title: self.title, username: self.username, photo: self.photo, creationDate: self.creationDate, version: self.version, participationStatus: self.participationStatus, info: info, flags: self.flags, restrictionInfo: self.restrictionInfo, adminRights: self.adminRights, bannedRights: self.bannedRights, defaultBannedRights: self.defaultBannedRights, usernames: self.usernames, storiesHidden: self.storiesHidden, nameColor: self.nameColor, backgroundEmojiId: self.backgroundEmojiId, profileColor: self.profileColor, profileBackgroundEmojiId: self.profileBackgroundEmojiId, emojiStatus: self.emojiStatus, approximateBoostLevel: self.approximateBoostLevel, subscriptionUntilDate: self.subscriptionUntilDate, verificationIconFileId: self.verificationIconFileId, sendPaidMessageStars: self.sendPaidMessageStars)
+    }
+    
+    public func withUpdatedSendPaidMessageStars(_ sendPaidMessageStars: StarsAmount?) -> TelegramChannel {
+        return TelegramChannel(id: self.id, accessHash: self.accessHash, title: self.title, username: self.username, photo: self.photo, creationDate: self.creationDate, version: self.version, participationStatus: self.participationStatus, info: self.info, flags: self.flags, restrictionInfo: self.restrictionInfo, adminRights: self.adminRights, bannedRights: self.bannedRights, defaultBannedRights: self.defaultBannedRights, usernames: self.usernames, storiesHidden: self.storiesHidden, nameColor: self.nameColor, backgroundEmojiId: self.backgroundEmojiId, profileColor: self.profileColor, profileBackgroundEmojiId: self.profileBackgroundEmojiId, emojiStatus: self.emojiStatus, approximateBoostLevel: self.approximateBoostLevel, subscriptionUntilDate: self.subscriptionUntilDate, verificationIconFileId: self.verificationIconFileId, sendPaidMessageStars: sendPaidMessageStars)
     }
     
     public func withUpdatedStoriesHidden(_ storiesHidden: Bool?) -> TelegramChannel {

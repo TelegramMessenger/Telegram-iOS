@@ -3849,8 +3849,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return SendInviteLinkScreen(context: context, subject: subject, peers: peers, theme: theme)
     }
     
-    public func makePostSuggestionsSettingsScreen(context: AccountContext) -> ViewController {
-        return PostSuggestionsSettingsScreen(context: context, completion: {})
+    @available(iOS 13.0, *)
+    public func makePostSuggestionsSettingsScreen(context: AccountContext, peerId: EnginePeer.Id) async -> ViewController {
+        return await PostSuggestionsSettingsScreen(context: context, peerId: peerId, completion: {})
     }
 }
 
