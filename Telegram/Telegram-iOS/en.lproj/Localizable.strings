@@ -14262,6 +14262,7 @@ Sorry for the inconvenience.";
 
 "PeerInfo.Gifts.Sale" = "sale";
 
+"Gift.Store.ForResaleNoResults" = "no results";
 "Gift.Store.ForResale_1" = "%@ for resale";
 "Gift.Store.ForResale_any" = "%@ for resale";
 "Gift.Store.Sort.Price" = "Price";
@@ -14291,10 +14292,31 @@ Sorry for the inconvenience.";
 "MediaPicker.CreateStory_any" = "Create %@ Stories";
 "MediaPicker.CombineIntoCollage" = "Combine into Collage";
 
-"Gift.Resale.Unavailable.Title" = "Resell Gift";
-"Gift.Resale.Unavailable.Text" = "Sorry, you can't list this gift yet.\n\Reselling will be available on %@.";
+"Gift.Resale.Unavailable.Title" = "Try Later";
+"Gift.Resale.Unavailable.Text" = "You will be able to resell this gift on %@.";
 
-"Gift.Transfer.Unavailable.Title" = "Transfer Gift";
-"Gift.Transfer.Unavailable.Text" = "Sorry, you can't transfer this gift yet.\n\Transferring will be available on %@.";
+"Gift.Transfer.Unavailable.Title" = "Try Later";
+"Gift.Transfer.Unavailable.Text" = "You will be able to transfer this gift on %@.";
 
 "Premium.CreateMultipleStories" = "Create Multiple Stories";
+
+"FrozenAccount.Violation.TextNew" = "Your account was frozen for breaking Telegram's [Terms and Conditions]().";
+"FrozenAccount.Violation.TextNew_URL" = "https://telegram.org/tos";
+
+"Stars.Purchase.BuyStarGiftInfo" = "Buy Stars to acquire a unique collectible.";
+
+"Stars.Purchase.EnoughStars" = "You have enough stars at the moment.";
+"Stars.Purchase.BuyAnyway" = "Buy Anyway";
+
+"Gift.Buy.Confirm.Title" = "Confirm Payment";
+"Gift.Buy.Confirm.Text" = "Do you really want to buy **%1$@** for %2$@?";
+"Gift.Buy.Confirm.GiftText" = "Do you really want to buy **%1$@** for %2$@ and gift it to **%3$@**?";
+"Gift.Buy.Confirm.Text.Stars_1" = "**%@** Star";
+"Gift.Buy.Confirm.Text.Stars_any" = "**%@** Stars";
+"Gift.Buy.Confirm.BuyFor_1" = "Buy for %@ Star";
+"Gift.Buy.Confirm.BuyFor_any" = "Buy for %@ Stars";
+
+"Calls.HideCallsTab" = "Hide Calls Tab";
+
+"Story.Editor.TooltipSelection_1" = "Tap here to view your %@ story";
+"Story.Editor.TooltipSelection_any" = "Tap here to view your %@ stories";

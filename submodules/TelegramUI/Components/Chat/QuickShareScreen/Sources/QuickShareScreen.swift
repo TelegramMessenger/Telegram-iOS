@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import ComponentFlow
 import SwiftSignalKit
+import Postbox
 import TelegramCore
 import TextFormat
 import TelegramPresentationData
@@ -211,27 +212,46 @@ private final class QuickShareScreenComponent: Component {
             self.state = state
             
             if self.component == nil {
+                let peers = component.context.engine.peers.recentPeers()
+                |> take(1)
+                |> mapToSignal { recentPeers -> Signal<[EnginePeer], NoError> in
+                    if case let .peers(peers) = recentPeers, !peers.isEmpty {
+                        return .single(peers.map(EnginePeer.init))
+                    } else {
+                        return component.context.account.stateManager.postbox.tailChatListView(
+                            groupId: .root,
+                            count: 20,
+                            summaryComponents: ChatListEntrySummaryComponents()
+                        )
+                        |> take(1)
+                        |> map { view -> [EnginePeer] in
+                            var peers: [EnginePeer] = []
+                            for entry in view.0.entries.reversed() {
+                                if case let .MessageEntry(entryData) = entry {
+                                    if let user = entryData.renderedPeer.chatMainPeer as? TelegramUser, user.isGenericUser && user.id != component.context.account.peerId && !user.id.isSecretChat {
+                                        peers.append(EnginePeer(user))
+                                    }
+                                }
+                            }
+                            return peers
+                        }
+                    }
+                }
+                
                 self.disposable = combineLatest(queue: Queue.mainQueue(),
-                    component.context.engine.peers.recentPeers() |> take(1),
+                    peers,
                     component.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: component.context.account.peerId))
-                ).start(next: { [weak self] recentPeers, accountPeer in
+                ).start(next: { [weak self] peers, accountPeer in
                     guard let self else {
                         return
                     }
-                    var result: [EnginePeer] = []
-                    switch recentPeers {
-                    case let .peers(peers):
-                        result = peers.map(EnginePeer.init)
-                    case .disabled:
-                        break
-                    }
-                    if !result.isEmpty, let accountPeer {
-                        self.peers = Array([accountPeer] + result.prefix(4))
+                    if !peers.isEmpty, let accountPeer {
+                        self.peers = Array([accountPeer] + peers.prefix(4))
                         self.state?.updated()
+                        component.ready.set(.single(true))
                     } else {
                         self.environment?.controller()?.dismiss()
                     }
-                    component.ready.set(.single(true))
                 })
                 
                 component.gesture.externalUpdated = { [weak self] view, point in

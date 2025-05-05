@@ -249,6 +249,8 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
                 } else {
                     textString = strings.Stars_Purchase_SendGroupMessageInfo(component.peers.first?.value.compactDisplayTitle ?? "").string
                 }
+            case .buyStarGift:
+                textString = strings.Stars_Purchase_BuyStarGiftInfo
             }
             
             let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: accentColor), linkAttribute: { contents in
@@ -306,6 +308,7 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
             var i = 0
             var items: [AnyComponentWithIdentity<Empty>] = []
                            
+            var collapsedItems = 0
             if let products = state.products, let balance = context.component.balance {
                 var minimumCount: StarsAmount?
                 if let requiredStars = context.component.purpose.requiredStars {
@@ -324,6 +327,7 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
                     if let _ = minimumCount, items.isEmpty {
                         
                     } else if !context.component.expanded && product.isExtended {
+                        collapsedItems += 1
                         continue
                     }
                     
@@ -388,7 +392,7 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
                 }
             }
             
-            if !context.component.expanded && items.count > 1 {
+            if !context.component.expanded && collapsedItems > 0 {
                 let titleComponent = AnyComponent(MultilineTextComponent(
                     text: .plain(NSAttributedString(
                         string: strings.Stars_Purchase_ShowMore,
@@ -830,7 +834,7 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
                 titleText = strings.Stars_Purchase_GetStars
             case .gift:
                 titleText = strings.Stars_Purchase_GiftStars
-            case let .topUp(requiredStars, _), let .transfer(_, requiredStars), let .reactions(_, requiredStars), let .subscription(_, requiredStars, _), let .unlockMedia(requiredStars), let .starGift(_, requiredStars), let .upgradeStarGift(requiredStars), let .transferStarGift(requiredStars), let .sendMessage(_, requiredStars):
+            case let .topUp(requiredStars, _), let .transfer(_, requiredStars), let .reactions(_, requiredStars), let .subscription(_, requiredStars, _), let .unlockMedia(requiredStars), let .starGift(_, requiredStars), let .upgradeStarGift(requiredStars), let .transferStarGift(requiredStars), let .sendMessage(_, requiredStars), let .buyStarGift(requiredStars):
                 titleText = strings.Stars_Purchase_StarsNeeded(Int32(requiredStars))
             }
             
@@ -1279,6 +1283,8 @@ private extension StarsPurchasePurpose {
         case let .transferStarGift(requiredStars):
             return requiredStars
         case let .sendMessage(_, requiredStars):
+            return requiredStars
+        case let .buyStarGift(requiredStars):
             return requiredStars
         default:
             return nil

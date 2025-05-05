@@ -1542,24 +1542,7 @@ private final class ProfileGiftsContextImpl {
                 return EmptyDisposable
             }
             
-            var saveToProfile = false
-            if let gift = self.gifts.first(where: { $0.reference == reference }) {
-                if !gift.savedToProfile {
-                    saveToProfile = true
-                }
-            } else if let gift = self.filteredGifts.first(where: { $0.reference == reference }) {
-                if !gift.savedToProfile {
-                    saveToProfile = true
-                }
-            }
-            
-            var signal = _internal_updateStarGiftResalePrice(account: self.account, reference: reference, price: price)
-            if saveToProfile {
-                signal = _internal_updateStarGiftAddedToProfile(account: self.account, reference: reference, added: true)
-                |> castError(UpdateStarGiftPriceError.self)
-                |> then(signal)
-            }
-            
+            let signal = _internal_updateStarGiftResalePrice(account: self.account, reference: reference, price: price)
             let disposable = MetaDisposable()
             disposable.set(
                 (signal
@@ -1584,7 +1567,7 @@ private final class ProfileGiftsContextImpl {
                     }) {
                         if case let .unique(uniqueGift) = self.gifts[index].gift {
                             let updatedUniqueGift = uniqueGift.withResellStars(price)
-                            let updatedGift = self.gifts[index].withGift(.unique(updatedUniqueGift)).withSavedToProfile(true)
+                            let updatedGift = self.gifts[index].withGift(.unique(updatedUniqueGift))
                             self.gifts[index] = updatedGift
                         }
                     }
@@ -1607,7 +1590,7 @@ private final class ProfileGiftsContextImpl {
                     }) {
                         if case let .unique(uniqueGift) = self.filteredGifts[index].gift {
                             let updatedUniqueGift = uniqueGift.withResellStars(price)
-                            let updatedGift = self.filteredGifts[index].withGift(.unique(updatedUniqueGift)).withSavedToProfile(true)
+                            let updatedGift = self.filteredGifts[index].withGift(.unique(updatedUniqueGift))
                             self.filteredGifts[index] = updatedGift
                         }
                     }
@@ -2438,6 +2421,7 @@ private final class ResaleGiftsContextImpl {
     private var gifts: [StarGift] = []
     private var attributes: [StarGift.UniqueGift.Attribute] = []
     private var attributeCount: [ResaleGiftsContext.Attribute: Int32] = [:]
+    private var attributesHash: Int64?
  
     private var count: Int32?
     private var dataState: ResaleGiftsContext.State.DataState = .ready(canLoadMore: true, nextOffset: nil)
@@ -2477,6 +2461,7 @@ private final class ResaleGiftsContextImpl {
         let postbox = self.account.postbox
         let sorting = self.sorting
         let filterAttributes = self.filterAttributes
+        let currentAttributesHash = self.attributesHash
         
         let dataState =  self.dataState
         
@@ -2511,46 +2496,45 @@ private final class ResaleGiftsContextImpl {
                 }
             }
                         
-            var attributesHash: Int64?
-            if "".isEmpty {
-                flags |= (1 << 0)
-                attributesHash = 0
-            }
+            let attributesHash = currentAttributesHash ?? 0
+            flags |= (1 << 0)
             
             let signal = network.request(Api.functions.payments.getResaleStarGifts(flags: flags, attributesHash: attributesHash, giftId: giftId, attributes: apiAttributes, offset: initialNextOffset ?? "", limit: 36))
             |> map(Optional.init)
             |> `catch` { _ -> Signal<Api.payments.ResaleStarGifts?, NoError> in
                 return .single(nil)
             }
-            |> mapToSignal { result -> Signal<([StarGift], [StarGift.UniqueGift.Attribute], [ResaleGiftsContext.Attribute: Int32], Int32, String?), NoError> in
+            |> mapToSignal { result -> Signal<([StarGift], [StarGift.UniqueGift.Attribute]?, [ResaleGiftsContext.Attribute: Int32]?, Int64?, Int32, String?), NoError> in
                 guard let result else {
-                    return .single(([], [], [:], 0, nil))
+                    return .single(([], nil, nil, nil, 0, nil))
                 }
-                return postbox.transaction { transaction -> ([StarGift], [StarGift.UniqueGift.Attribute], [ResaleGiftsContext.Attribute: Int32], Int32, String?) in
+                return postbox.transaction { transaction -> ([StarGift], [StarGift.UniqueGift.Attribute]?, [ResaleGiftsContext.Attribute: Int32]?, Int64?, Int32, String?) in
                     switch result {
                     case let .resaleStarGifts(_, count, gifts, nextOffset, attributes, attributesHash, chats, counters, users):
                         let _ = attributesHash
 
-                        var resultAttributes: [StarGift.UniqueGift.Attribute] = []
+                        var resultAttributes: [StarGift.UniqueGift.Attribute]?
                         if let attributes {
                             resultAttributes = attributes.compactMap { StarGift.UniqueGift.Attribute(apiAttribute: $0) }
                         }
                         
-                        var attributeCount: [ResaleGiftsContext.Attribute: Int32] = [:]
+                        var attributeCount: [ResaleGiftsContext.Attribute: Int32]?
                         if let counters {
+                            var attributeCountValue: [ResaleGiftsContext.Attribute: Int32] = [:]
                             for counter in counters {
                                 switch counter {
                                 case let .starGiftAttributeCounter(attribute, count):
                                     switch attribute {
                                     case let .starGiftAttributeIdModel(documentId):
-                                        attributeCount[.model(documentId)] = count
+                                        attributeCountValue[.model(documentId)] = count
                                     case let .starGiftAttributeIdPattern(documentId):
-                                        attributeCount[.pattern(documentId)] = count
+                                        attributeCountValue[.pattern(documentId)] = count
                                     case let .starGiftAttributeIdBackdrop(backdropId):
-                                        attributeCount[.backdrop(backdropId)] = count
+                                        attributeCountValue[.backdrop(backdropId)] = count
                                     }
                                 }
                             }
+                            attributeCount = attributeCountValue
                         }
                         
                         let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
@@ -2563,13 +2547,13 @@ private final class ResaleGiftsContextImpl {
                             }
                         }
 
-                        return (mappedGifts, resultAttributes, attributeCount, count, nextOffset)
+                        return (mappedGifts, resultAttributes, attributeCount, attributesHash, count, nextOffset)
                     }
                 }
             }
         
             self.disposable.set((signal
-            |> deliverOn(self.queue)).start(next: { [weak self] (gifts, attributes, attributeCount, count, nextOffset) in
+            |> deliverOn(self.queue)).start(next: { [weak self] (gifts, attributes, attributeCount, attributesHash, count, nextOffset) in
                 guard let self else {
                     return 
                 }
@@ -2581,10 +2565,13 @@ private final class ResaleGiftsContextImpl {
                 
                 let updatedCount = max(Int32(self.gifts.count), count)
                 self.count = updatedCount
-                self.attributes = attributes
-                if !attributeCount.isEmpty {
+                
+                if let attributes, let attributeCount, let attributesHash {
+                    self.attributes = attributes
                     self.attributeCount = attributeCount
+                    self.attributesHash = attributesHash
                 }
+                
                 self.dataState = .ready(canLoadMore: count != 0 && updatedCount > self.gifts.count && nextOffset != nil, nextOffset: nextOffset)
             
                 self.pushState()

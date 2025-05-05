@@ -154,10 +154,17 @@ final class LoadingShimmerNode: ASDisplayNode {
                 context.setFillColor(theme.list.blocksBackgroundColor.cgColor)
                 context.fill(CGRect(origin: CGPoint(), size: size))
                 
-                var currentY: CGFloat = 0.0
+                let sideInset: CGFloat = 16.0
+                
+                let filterSpacing: CGFloat = 6.0
+                let filterWidth = (size.width - sideInset * 2.0 - filterSpacing * 3.0) / 4.0
+                for i in 0 ..< 4 {
+                    context.addPath(CGPath(roundedRect: CGRect(origin: CGPoint(x: sideInset + (filterWidth + filterSpacing) * CGFloat(i), y: 0.0), size: CGSize(width: filterWidth, height: 28.0)), cornerWidth: 14.0, cornerHeight: 14.0, transform: nil))
+                }
+                
+                var currentY: CGFloat = 39.0 + 7.0
                 var rowIndex: Int = 0
                 
-                let sideInset: CGFloat = 16.0// + environment.safeInsets.left
                 let optionSpacing: CGFloat = 10.0
                 let optionWidth = (size.width - sideInset * 2.0 - optionSpacing * 2.0) / 3.0
                 let itemSize = CGSize(width: optionWidth, height: 154.0)
@@ -167,7 +174,7 @@ final class LoadingShimmerNode: ASDisplayNode {
                 
                 while currentY < size.height {
                     for i in 0 ..< 3 {
-                        let itemOrigin = CGPoint(x: sideInset + CGFloat(i) * (itemSize.width + optionSpacing), y: 2.0 + CGFloat(rowIndex) * (itemSize.height + optionSpacing))
+                        let itemOrigin = CGPoint(x: sideInset + CGFloat(i) * (itemSize.width + optionSpacing), y: 39.0 + 9.0 + CGFloat(rowIndex) * (itemSize.height + optionSpacing))
                         context.addPath(CGPath(roundedRect: CGRect(origin: itemOrigin, size: itemSize), cornerWidth: 10.0, cornerHeight: 10.0, transform: nil))
                     }
                     currentY += itemSize.height

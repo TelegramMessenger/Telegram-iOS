@@ -501,7 +501,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
                 animationFraction = max(0.0, min(1.0, (CACurrentMediaTime() - animationState.startTime) / animationState.duration))
                 animationFraction = animationState.curve.solve(at: animationFraction)
                 if animationState.fromExtracted != isExtracted {
-                    fixedTransitionDirection = isExtracted ? true : false
+                    fixedTransitionDirection = isExtracted
                 }
             } else {
                 animationFraction = 1.0
