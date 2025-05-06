@@ -309,17 +309,29 @@ private final class GiftViewSheetContent: CombinedComponent {
             let context = self.context
             let action = {
                 if gifts {
-                    if let profileController = context.sharedContext.makePeerInfoController(
-                        context: context,
-                        updatedPresentationData: nil,
-                        peer: peer._asPeer(),
-                        mode: peer.id == context.account.peerId ? .myProfileGifts : .gifts,
-                        avatarInitiallyExpanded: false,
-                        fromChat: false,
-                        requestsContext: nil
-                    ) {
-                        navigationController.pushViewController(profileController)
+                    let profileGifts = ProfileGiftsContext(account: context.account, peerId: peer.id)
+                    let _ = (profileGifts.state
+                    |> filter { state in
+                        if case .ready = state.dataState {
+                            return true
+                        }
+                        return false
                     }
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { [weak navigationController] _ in
+                        if let profileController = context.sharedContext.makePeerInfoController(
+                            context: context,
+                            updatedPresentationData: nil,
+                            peer: peer._asPeer(),
+                            mode: peer.id == context.account.peerId ? .myProfileGifts : .gifts,
+                            avatarInitiallyExpanded: false,
+                            fromChat: false,
+                            requestsContext: nil
+                        ) {
+                            navigationController?.pushViewController(profileController)
+                        }
+                        let _ = profileGifts
+                    })
                 } else {
                     context.sharedContext.navigateToChatController(NavigateToChatControllerParams(
                         navigationController: navigationController,

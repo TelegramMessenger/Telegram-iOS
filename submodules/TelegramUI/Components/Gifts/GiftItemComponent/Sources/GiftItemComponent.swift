@@ -559,7 +559,7 @@ public final class GiftItemComponent: Component {
                 let price: String
                 switch component.subject {
                 case let .premium(_, priceValue), let .starGift(_, priceValue):
-                    if priceValue.containsEmoji {
+                    if priceValue.contains("#") {
                         buttonColor = component.theme.overallDarkAppearance ? UIColor(rgb: 0xffc337) : UIColor(rgb: 0xd3720a)
                         if !component.isSoldOut {
                             starsColor = UIColor(rgb: 0xffbe27)
@@ -867,10 +867,12 @@ public final class GiftItemComponent: Component {
                     }
                 )
                 let dateTimeFormat = component.context.sharedContext.currentPresentationData.with { $0 }.dateTimeFormat
-                let labelText = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString("#\(presentationStringsFormattedNumber(Int32(resellPrice), dateTimeFormat.groupingSeparator))", attributes: attributes))
-                if let range = labelText.string.range(of: "#") {
-                    labelText.addAttribute(NSAttributedString.Key.font, value: Font.semibold(10.0), range: NSRange(range, in: labelText.string))
-                    labelText.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: true)), range: NSRange(range, in: labelText.string))
+                let labelText = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString("# \(presentationStringsFormattedNumber(Int32(resellPrice), dateTimeFormat.groupingSeparator))", attributes: attributes))
+                let range = (labelText.string as NSString).range(of: "#")
+                if range.location != NSNotFound {
+                    labelText.addAttribute(NSAttributedString.Key.font, value: Font.semibold(10.0), range: range)
+                    labelText.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: true)), range: range)
+                    labelText.addAttribute(.kern, value: -1.5, range: NSRange(location: range.upperBound, length: 1))
                 }
                 
                 let resellSize = self.reselLabel.update(
@@ -1048,11 +1050,13 @@ private final class ButtonContentComponent: Component {
             self.componentState = state
                         
             let attributedText = NSMutableAttributedString(string: component.text, font: Font.semibold(11.0), textColor: component.color)
-            let range = (attributedText.string as NSString).range(of: "⭐️")
+            let range = (attributedText.string as NSString).range(of: "#")
             if range.location != NSNotFound {
                 attributedText.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: component.tinted)), range: range)
-                attributedText.addAttribute(.font, value: Font.semibold(15.0), range: range)
-                attributedText.addAttribute(.baselineOffset, value: 2.0, range: NSRange(location: range.upperBound, length: attributedText.length - range.upperBound))
+                attributedText.addAttribute(.font, value: Font.semibold(component.tinted ? 14.0 : 15.0), range: range)
+                attributedText.addAttribute(.baselineOffset, value: -3.0, range: range)
+                attributedText.addAttribute(.baselineOffset, value: 1.5, range: NSRange(location: range.upperBound + 1, length: attributedText.length - range.upperBound - 1))
+                attributedText.addAttribute(.kern, value: -1.5, range: NSRange(location: range.upperBound, length: 1))
             }
         
             let titleSize = self.title.update(
