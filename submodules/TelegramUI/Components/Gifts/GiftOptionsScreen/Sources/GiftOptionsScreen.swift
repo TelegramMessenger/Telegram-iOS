@@ -1567,6 +1567,9 @@ final class GiftOptionsScreenComponent: Component {
                                     }
                                 }
                             }
+                            if disallowedGifts.contains(.unique) && gift.availability?.remains == 0 {
+                                return false
+                            }
                         }
                         return true
                     }
