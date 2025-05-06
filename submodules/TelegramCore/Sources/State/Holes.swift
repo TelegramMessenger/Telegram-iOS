@@ -339,9 +339,12 @@ enum FetchMessageHistoryHoleThreadInput: CustomStringConvertible {
         }
     }
     
-    func requestThreadId(accountPeerId: PeerId) -> Int64? {
+    func requestThreadId(accountPeerId: PeerId, peer: Peer) -> Int64? {
         switch self {
         case let .direct(peerId, threadId):
+            if let channel = peer as? TelegramChannel, channel.flags.contains(.isMonoforum) {
+                return nil
+            }
             if let threadId = threadId, peerId != accountPeerId {
                 return threadId
             } else {
@@ -352,10 +355,12 @@ enum FetchMessageHistoryHoleThreadInput: CustomStringConvertible {
         }
     }
     
-    func requestSubPeerId(accountPeerId: PeerId) -> PeerId? {
+    func requestSubPeerId(accountPeerId: PeerId, peer: Peer) -> PeerId? {
         switch self {
         case let .direct(peerId, threadId):
-            if let threadId = threadId, peerId == accountPeerId {
+            if let threadId, peerId == accountPeerId {
+                return PeerId(threadId)
+            } else if let threadId, let channel = peer as? TelegramChannel, channel.flags.contains(.isMonoforum) {
                 return PeerId(threadId)
             } else {
                 return nil
@@ -390,7 +395,12 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
         return postbox.transaction { transaction -> (Peer?, Int64, Peer?) in
             switch peerInput {
             case let .direct(peerId, _):
-                return (transaction.getPeer(peerId), 0, peerInput.requestSubPeerId(accountPeerId: accountPeerId).flatMap(transaction.getPeer))
+                let peer = transaction.getPeer(peerId)
+                var subPeerId: PeerId?
+                if let peer {
+                    subPeerId = peerInput.requestSubPeerId(accountPeerId: accountPeerId, peer: peer)
+                }
+                return (peer, 0, subPeerId.flatMap(transaction.getPeer))
             case let .threadFromChannel(channelMessageId):
                 return (transaction.getPeer(channelMessageId.peerId), 0, nil)
             }
@@ -411,7 +421,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
             
             switch space {
             case .everywhere:
-                if let requestThreadId = peerInput.requestThreadId(accountPeerId: accountPeerId) {
+                if let requestThreadId = peerInput.requestThreadId(accountPeerId: accountPeerId, peer: peer) {
                     let offsetId: Int32
                     let addOffset: Int32
                     let selectedLimit = count
@@ -459,7 +469,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                     }
                     
                     request = source.request(Api.functions.messages.getReplies(peer: inputPeer, msgId: Int32(clamping: requestThreadId), offsetId: offsetId, offsetDate: 0, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId, hash: hash))
-                } else if let subPeerId = peerInput.requestSubPeerId(accountPeerId: accountPeerId) {
+                } else if let subPeerId = peerInput.requestSubPeerId(accountPeerId: accountPeerId, peer: peer) {
                     guard let subPeer, subPeer.id == subPeerId, let inputSubPeer = apiInputPeer(subPeer) else {
                         Logger.shared.log("fetchMessageHistoryHole", "subPeer not available")
                         return .never()
@@ -511,7 +521,14 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                         minMaxRange = 1 ... (Int32.max - 1)
                     }
                     
-                    request = source.request(Api.functions.messages.getSavedHistory(peer: inputSubPeer, offsetId: offsetId, offsetDate: 0, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId, hash: hash))
+                    var getSavedHistoryFlags: Int32 = 0
+                    var parentPeer: Api.InputPeer?
+                    if peer.id != accountPeerId {
+                        getSavedHistoryFlags |= 1 << 0
+                        parentPeer = inputPeer
+                    }
+                    
+                    request = source.request(Api.functions.messages.getSavedHistory(flags: getSavedHistoryFlags, parentPeer: parentPeer, peer: inputSubPeer, offsetId: offsetId, offsetDate: 0, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId, hash: hash))
                 } else {
                     let offsetId: Int32
                     let addOffset: Int32
@@ -611,7 +628,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                     
                     var flags: Int32 = 0
                     var topMsgId: Int32?
-                    if let threadId = peerInput.requestThreadId(accountPeerId: accountPeerId) {
+                    if let threadId = peerInput.requestThreadId(accountPeerId: accountPeerId, peer: peer) {
                         flags |= (1 << 1)
                         topMsgId = Int32(clamping: threadId)
                     }
@@ -666,7 +683,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                     
                     var flags: Int32 = 0
                     var topMsgId: Int32?
-                    if let threadId = peerInput.requestThreadId(accountPeerId: accountPeerId) {
+                    if let threadId = peerInput.requestThreadId(accountPeerId: accountPeerId, peer: peer) {
                         flags |= (1 << 0)
                         topMsgId = Int32(clamping: threadId)
                     }
@@ -730,13 +747,13 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                     
                     var flags: Int32 = 0
                     var topMsgId: Int32?
-                    if let threadId = peerInput.requestThreadId(accountPeerId: accountPeerId) {
+                    if let threadId = peerInput.requestThreadId(accountPeerId: accountPeerId, peer: peer) {
                         flags |= (1 << 1)
                         topMsgId = Int32(clamping: threadId)
                     }
                     
                     var savedPeerId: Api.InputPeer?
-                    if let subPeerId = peerInput.requestSubPeerId(accountPeerId: accountPeerId), let subPeer = subPeer, subPeer.id == subPeerId {
+                    if let subPeerId = peerInput.requestSubPeerId(accountPeerId: accountPeerId, peer: peer), let subPeer = subPeer, subPeer.id == subPeerId {
                         if let inputPeer = apiInputPeer(subPeer) {
                             flags |= 1 << 2
                             savedPeerId = inputPeer
@@ -799,13 +816,13 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                     
                     var flags: Int32 = 0
                     var topMsgId: Int32?
-                    if let threadId = peerInput.requestThreadId(accountPeerId: accountPeerId) {
+                    if let threadId = peerInput.requestThreadId(accountPeerId: accountPeerId, peer: peer) {
                         flags |= (1 << 1)
                         topMsgId = Int32(clamping: threadId)
                     }
                     
                     var savedPeerId: Api.InputPeer?
-                    if let subPeerId = peerInput.requestSubPeerId(accountPeerId: accountPeerId), let subPeer = subPeer, subPeer.id == subPeerId {
+                    if let subPeerId = peerInput.requestSubPeerId(accountPeerId: accountPeerId, peer: peer), let subPeer = subPeer, subPeer.id == subPeerId {
                         if let inputPeer = apiInputPeer(subPeer) {
                             flags |= 1 << 2
                             savedPeerId = inputPeer
@@ -960,9 +977,6 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                         }
                         
                         print("fetchMessageHistoryHole for \(peerInput) space \(space) done")
-                        if peerInput.requestThreadId(accountPeerId: accountPeerId) != nil, case .everywhere = space, case .aroundId = direction {
-                            assert(true)
-                        }
                         
                         if ids.count == 0 || implicitelyFillHole {
                             filledRange = minMaxRange
@@ -974,7 +988,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                                 filledRange = min(aroundId.id, messageRange.lowerBound) ... max(aroundId.id, messageRange.upperBound)
                                 strictFilledIndices = IndexSet(integersIn: Int(min(aroundId.id, messageRange.lowerBound)) ... Int(max(aroundId.id, messageRange.upperBound)))
                                 var shouldFillAround = false
-                                if peerInput.requestThreadId(accountPeerId: accountPeerId) != nil {
+                                if peerInput.requestThreadId(accountPeerId: accountPeerId, peer: peer) != nil || peerInput.requestSubPeerId(accountPeerId: accountPeerId, peer: peer) != nil {
                                     shouldFillAround = true
                                 }
                                 if case .customTag = space {

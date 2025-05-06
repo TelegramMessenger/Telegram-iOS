@@ -102,7 +102,7 @@ func chatHistoryViewForLocation(
                 if tag != nil {
                     requestAroundId = true
                 }
-                if case let .replyThread(message) = chatLocation, message.peerId == context.account.peerId {
+                if case let .replyThread(message) = chatLocation, (message.peerId == context.account.peerId || message.isMonoforum) {
                     preFixedReadState = .peer([:])
                 }
             

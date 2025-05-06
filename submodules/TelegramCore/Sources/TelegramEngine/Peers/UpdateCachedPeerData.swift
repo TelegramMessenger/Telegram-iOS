@@ -30,6 +30,10 @@ func fetchAndUpdateSupplementalCachedPeerData(peerId rawPeerId: PeerId, accountP
             } else {
                 peer = rawPeer
             }
+            
+            if let channel = peer as? TelegramChannel, channel.flags.contains(.isMonoforum) {
+                return .single(false)
+            }
                 
             let cachedData = transaction.getPeerCachedData(peerId: peer.id)
             
@@ -579,6 +583,9 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                     }
                 }
             } else if let inputChannel = maybePeer.flatMap(apiInputChannel) {
+                if let channel = maybePeer as? TelegramChannel, channel.flags.contains(.isMonoforum) {
+                    return .single(false)
+                }
                 let fullChannelSignal = network.request(Api.functions.channels.getFullChannel(channel: inputChannel))
                 |> map(Optional.init)
                 |> `catch` { error -> Signal<Api.messages.ChatFull?, NoError> in

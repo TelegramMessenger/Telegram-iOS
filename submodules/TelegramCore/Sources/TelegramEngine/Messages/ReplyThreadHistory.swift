@@ -565,6 +565,7 @@ public struct ChatReplyThreadMessage: Equatable {
     public var channelMessageId: MessageId?
     public var isChannelPost: Bool
     public var isForumPost: Bool
+    public var isMonoforum: Bool
     public var maxMessage: MessageId?
     public var maxReadIncomingMessageId: MessageId?
     public var maxReadOutgoingMessageId: MessageId?
@@ -581,12 +582,13 @@ public struct ChatReplyThreadMessage: Equatable {
         }
     }
     
-    public init(peerId: PeerId, threadId: Int64, channelMessageId: MessageId?, isChannelPost: Bool, isForumPost: Bool, maxMessage: MessageId?, maxReadIncomingMessageId: MessageId?, maxReadOutgoingMessageId: MessageId?, unreadCount: Int, initialFilledHoles: IndexSet, initialAnchor: Anchor, isNotAvailable: Bool) {
+    public init(peerId: PeerId, threadId: Int64, channelMessageId: MessageId?, isChannelPost: Bool, isForumPost: Bool, isMonoforum: Bool, maxMessage: MessageId?, maxReadIncomingMessageId: MessageId?, maxReadOutgoingMessageId: MessageId?, unreadCount: Int, initialFilledHoles: IndexSet, initialAnchor: Anchor, isNotAvailable: Bool) {
         self.peerId = peerId
         self.threadId = threadId
         self.channelMessageId = channelMessageId
         self.isChannelPost = isChannelPost
         self.isForumPost = isForumPost
+        self.isMonoforum = isMonoforum
         self.maxMessage = maxMessage
         self.maxReadIncomingMessageId = maxReadIncomingMessageId
         self.maxReadOutgoingMessageId = maxReadOutgoingMessageId
@@ -598,7 +600,7 @@ public struct ChatReplyThreadMessage: Equatable {
     
     public var normalized: ChatReplyThreadMessage {
         if self.isForumPost {
-            return ChatReplyThreadMessage(peerId: self.peerId, threadId: self.threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false)
+            return ChatReplyThreadMessage(peerId: self.peerId, threadId: self.threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, isMonoforum: false, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false)
         } else {
             return self
         }
@@ -931,6 +933,7 @@ func _internal_fetchChannelReplyThreadMessage(account: Account, messageId: Messa
                     channelMessageId: discussionMessage.channelMessageId,
                     isChannelPost: discussionMessage.isChannelPost,
                     isForumPost: discussionMessage.isForumPost,
+                    isMonoforum: false,
                     maxMessage: discussionMessage.maxMessage,
                     maxReadIncomingMessageId: discussionMessage.maxReadIncomingMessageId,
                     maxReadOutgoingMessageId: discussionMessage.maxReadOutgoingMessageId,

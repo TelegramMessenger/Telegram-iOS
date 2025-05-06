@@ -827,7 +827,13 @@ func _internal_searchMessageIdByTimestamp(account: Account, peerId: PeerId, thre
                     guard let subPeer = transaction.getPeer(PeerId(threadId)), let inputSubPeer = apiInputPeer(subPeer) else {
                         return .single(nil)
                     }
-                    let primaryIndex = account.network.request(Api.functions.messages.getSavedHistory(peer: inputSubPeer, offsetId: 0, offsetDate: timestamp, addOffset: -1, limit: 1, maxId: 0, minId: 0, hash: 0))
+                    var getSavedHistoryFlags: Int32 = 0
+                    var parentPeer: Api.InputPeer?
+                    if peer.id != account.peerId {
+                        getSavedHistoryFlags |= 1 << 0
+                        parentPeer = inputPeer
+                    }
+                    let primaryIndex = account.network.request(Api.functions.messages.getSavedHistory(flags: getSavedHistoryFlags, parentPeer: parentPeer, peer: inputSubPeer, offsetId: 0, offsetDate: timestamp, addOffset: -1, limit: 1, maxId: 0, minId: 0, hash: 0))
                     |> map { result -> MessageIndex? in
                         let messages: [Api.Message]
                         switch result {

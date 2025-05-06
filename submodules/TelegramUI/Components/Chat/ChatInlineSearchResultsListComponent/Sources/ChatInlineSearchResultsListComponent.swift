@@ -804,7 +804,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
                         return ChatListItem(
                             presentationData: chatListPresentationData,
                             context: component.context,
-                            chatListLocation: component.peerId == component.context.account.peerId ? .savedMessagesChats : .chatList(groupId: .root),
+                            chatListLocation: component.peerId == component.context.account.peerId ? .savedMessagesChats(peerId: component.context.account.peerId) : .chatList(groupId: .root),
                             filterData: nil,
                             index: .forum(
                                 pinnedIndex: .none,

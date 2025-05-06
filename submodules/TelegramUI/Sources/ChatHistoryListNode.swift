@@ -1647,8 +1647,18 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
 
         let topicAuthorId: Signal<EnginePeer.Id?, NoError>
         if let peerId = chatLocation.peerId, let threadId = chatLocation.threadId {
-            topicAuthorId = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.ThreadData(id: peerId, threadId: threadId))
-            |> map { data -> EnginePeer.Id? in
+            topicAuthorId = context.engine.data.subscribe(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
+                TelegramEngine.EngineData.Item.Peer.ThreadData(id: peerId, threadId: threadId)
+            )
+            |> map { peer, data -> EnginePeer.Id? in
+                guard let peer else {
+                    return nil
+                }
+                if case let .channel(channel) = peer, channel.flags.contains(.isMonoforum) {
+                    return nil
+                }
+                
                 return data?.author
             }
             |> distinctUntilChanged

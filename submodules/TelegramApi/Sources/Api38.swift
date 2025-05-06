@@ -6833,16 +6833,17 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func getSavedDialogs(flags: Int32, offsetDate: Int32, offsetId: Int32, offsetPeer: Api.InputPeer, limit: Int32, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.SavedDialogs>) {
+                static func getSavedDialogs(flags: Int32, parentPeer: Api.InputPeer?, offsetDate: Int32, offsetId: Int32, offsetPeer: Api.InputPeer, limit: Int32, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.SavedDialogs>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1401016858)
+                    buffer.appendInt32(512883865)
                     serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {parentPeer!.serialize(buffer, true)}
                     serializeInt32(offsetDate, buffer: buffer, boxed: false)
                     serializeInt32(offsetId, buffer: buffer, boxed: false)
                     offsetPeer.serialize(buffer, true)
                     serializeInt32(limit, buffer: buffer, boxed: false)
                     serializeInt64(hash, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.getSavedDialogs", parameters: [("flags", String(describing: flags)), ("offsetDate", String(describing: offsetDate)), ("offsetId", String(describing: offsetId)), ("offsetPeer", String(describing: offsetPeer)), ("limit", String(describing: limit)), ("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.SavedDialogs? in
+                    return (FunctionDescription(name: "messages.getSavedDialogs", parameters: [("flags", String(describing: flags)), ("parentPeer", String(describing: parentPeer)), ("offsetDate", String(describing: offsetDate)), ("offsetId", String(describing: offsetId)), ("offsetPeer", String(describing: offsetPeer)), ("limit", String(describing: limit)), ("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.SavedDialogs? in
                         let reader = BufferReader(buffer)
                         var result: Api.messages.SavedDialogs?
                         if let signature = reader.readInt32() {
@@ -6868,9 +6869,11 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func getSavedHistory(peer: Api.InputPeer, offsetId: Int32, offsetDate: Int32, addOffset: Int32, limit: Int32, maxId: Int32, minId: Int32, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
+                static func getSavedHistory(flags: Int32, parentPeer: Api.InputPeer?, peer: Api.InputPeer, offsetId: Int32, offsetDate: Int32, addOffset: Int32, limit: Int32, maxId: Int32, minId: Int32, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1033519437)
+                    buffer.appendInt32(-1718964215)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {parentPeer!.serialize(buffer, true)}
                     peer.serialize(buffer, true)
                     serializeInt32(offsetId, buffer: buffer, boxed: false)
                     serializeInt32(offsetDate, buffer: buffer, boxed: false)
@@ -6879,7 +6882,7 @@ public extension Api.functions.messages {
                     serializeInt32(maxId, buffer: buffer, boxed: false)
                     serializeInt32(minId, buffer: buffer, boxed: false)
                     serializeInt64(hash, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.getSavedHistory", parameters: [("peer", String(describing: peer)), ("offsetId", String(describing: offsetId)), ("offsetDate", String(describing: offsetDate)), ("addOffset", String(describing: addOffset)), ("limit", String(describing: limit)), ("maxId", String(describing: maxId)), ("minId", String(describing: minId)), ("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.Messages? in
+                    return (FunctionDescription(name: "messages.getSavedHistory", parameters: [("flags", String(describing: flags)), ("parentPeer", String(describing: parentPeer)), ("peer", String(describing: peer)), ("offsetId", String(describing: offsetId)), ("offsetDate", String(describing: offsetDate)), ("addOffset", String(describing: addOffset)), ("limit", String(describing: limit)), ("maxId", String(describing: maxId)), ("minId", String(describing: minId)), ("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.Messages? in
                         let reader = BufferReader(buffer)
                         var result: Api.messages.Messages?
                         if let signature = reader.readInt32() {

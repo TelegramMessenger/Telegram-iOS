@@ -11016,7 +11016,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 self?.deactivateSearch()
             })
         } else if let currentPaneKey = self.paneContainerNode.currentPaneKey, case .savedMessagesChats = currentPaneKey {
-            let contentNode = ChatListSearchContainerNode(context: self.context, animationCache: self.context.animationCache, animationRenderer: self.context.animationRenderer, filter: [.removeSearchHeader], requestPeerType: nil, location: .savedMessagesChats, displaySearchFilters: false, hasDownloads: false, initialFilter: .chats, openPeer: { [weak self] peer, _, _, _ in
+            let contentNode = ChatListSearchContainerNode(context: self.context, animationCache: self.context.animationCache, animationRenderer: self.context.animationRenderer, filter: [.removeSearchHeader], requestPeerType: nil, location: .savedMessagesChats(peerId: self.context.account.peerId), displaySearchFilters: false, hasDownloads: false, initialFilter: .chats, openPeer: { [weak self] peer, _, _, _ in
                 guard let self else {
                     return
                 }
@@ -11032,6 +11032,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         channelMessageId: nil,
                         isChannelPost: false,
                         isForumPost: false,
+                        isMonoforum: false,
                         maxMessage: nil,
                         maxReadIncomingMessageId: nil,
                         maxReadOutgoingMessageId: nil,
@@ -11061,6 +11062,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         channelMessageId: nil,
                         isChannelPost: false,
                         isForumPost: false,
+                        isMonoforum: false,
                         maxMessage: nil,
                         maxReadIncomingMessageId: nil,
                         maxReadOutgoingMessageId: nil,
@@ -13374,7 +13376,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
                     let navigateChatLocation: NavigateToChatControllerParams.Location
                     if let threadId = item.threadId {
                         navigateChatLocation = .replyThread(ChatReplyThreadMessage(
-                            peerId: item.peerId, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false
+                            peerId: item.peerId, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, isMonoforum: false,maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false
                         ))
                     } else {
                         navigateChatLocation = .peer(itemPeer)

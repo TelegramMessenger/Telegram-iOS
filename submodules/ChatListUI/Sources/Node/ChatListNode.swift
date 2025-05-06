@@ -1535,9 +1535,9 @@ public final class ChatListNode: ListView {
                 }
             }
         }, setItemPinned: { [weak self] itemId, _ in
-            if case .savedMessagesChats = location {
+            if case let .savedMessagesChats(peerId) = location {
                 if case let .peer(itemPeerId) = itemId {
-                    let _ = (context.engine.peers.toggleForumChannelTopicPinned(id: context.account.peerId, threadId: itemPeerId.toInt64())
+                    let _ = (context.engine.peers.toggleForumChannelTopicPinned(id: peerId, threadId: itemPeerId.toInt64())
                     |> deliverOnMainQueue).start(error: { error in
                         guard let self else {
                             return

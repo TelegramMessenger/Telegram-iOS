@@ -2161,16 +2161,24 @@ public final class AccountViewTracker {
         if let account = self.account {
             let signal: Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError>
             if let peerId = chatLocation.peerId, let threadId = chatLocation.threadId, tag == nil {
-                signal = account.postbox.transaction { transaction -> (MessageHistoryThreadData?, MessageIndex?) in
+                signal = account.postbox.transaction { transaction -> (Peer?, MessageHistoryThreadData?, MessageIndex?) in
                     let interfaceState = transaction.getPeerChatThreadInterfaceState(peerId, threadId: threadId)
                     
                     return (
+                        transaction.getPeer(peerId),
                         transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self),
                         interfaceState?.historyScrollMessageIndex
                     )
                 }
-                |> mapToSignal { threadInfo, scrollRestorationIndex -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> in
+                |> mapToSignal { peer, threadInfo, scrollRestorationIndex -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> in
+                    var isSimpleThread = false
                     if peerId == account.peerId {
+                        isSimpleThread = true
+                    } else if let channel = peer as? TelegramChannel, channel.flags.contains(.isMonoforum) {
+                        isSimpleThread = true
+                    }
+                    
+                    if isSimpleThread {
                         let anchor: HistoryViewInputAnchor
                         if let scrollRestorationIndex {
                             anchor = .index(scrollRestorationIndex)

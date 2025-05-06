@@ -319,9 +319,9 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
             isFirst = false
             return ChatListNodeViewUpdate(list: list, type: type, scrollPosition: nil)
         }
-    case .savedMessagesChats:
-        let viewKey: PostboxViewKey = .savedMessagesIndex(peerId: account.peerId)
-        let interfaceStateKey: PostboxViewKey = .chatInterfaceState(peerId: account.peerId)
+    case let .savedMessagesChats(peerId):
+        let viewKey: PostboxViewKey = .savedMessagesIndex(peerId: peerId)
+        let interfaceStateKey: PostboxViewKey = .chatInterfaceState(peerId: peerId)
         
         var isFirst = true
         return account.postbox.combinedView(keys: [viewKey, interfaceStateKey])

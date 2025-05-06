@@ -3137,7 +3137,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     if case let .peer(peerData) = item.content, peerData.customMessageListData?.hidePeerStatus == true {
                         currentCredibilityIconContent = nil
-                    } else if case .savedMessagesChats = item.chatListLocation, peer.id == item.context.account.peerId {
+                    } else if case let .savedMessagesChats(peerId) = item.chatListLocation, peer.id == peerId {
                         currentCredibilityIconContent = nil
                     } else if peer.isScam {
                         currentCredibilityIconContent = .text(color: item.presentationData.theme.chat.message.incoming.scamColor, string: item.presentationData.strings.Message_ScamAccount.uppercased())
@@ -3273,6 +3273,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             var isFirstForumThreadSelectable = false
             var forumThreads: [(id: Int64, title: NSAttributedString, iconId: Int64?, iconColor: Int32)] = []
             if case .savedMessagesChats = item.chatListLocation {
+            } else if case let .peer(peer) = item.content, case let .channel(channel) = peer.peer.peer, channel.flags.contains(.isMonoforum) {
             } else if forumThread != nil || !topForumTopicItems.isEmpty {
                 if let forumThread = forumThread {
                     isFirstForumThreadSelectable = forumThread.isUnread

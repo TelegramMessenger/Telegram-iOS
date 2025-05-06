@@ -27,7 +27,9 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
     }
     
     var viewForumAsMessages: Signal<Bool, NoError> = .single(false)
-    if case let .peer(peer) = params.chatLocation, case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+    if case let .peer(peer) = params.chatLocation, case let .channel(channel) = peer, channel.flags.contains(.isMonoforum) {
+        viewForumAsMessages = .single(false)
+    } else if case let .peer(peer) = params.chatLocation, case let .channel(channel) = peer, channel.flags.contains(.isForum) {
         viewForumAsMessages = params.context.account.postbox.combinedView(keys: [.cachedPeerData(peerId: peer.id)])
         |> take(1)
         |> map { combinedView in
@@ -52,6 +54,11 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
     let _ = (viewForumAsMessages
     |> take(1)
     |> deliverOnMainQueue).start(next: { viewForumAsMessages in
+        var viewForumAsMessages = viewForumAsMessages
+        if case let .peer(peer) = params.chatLocation, case let .channel(channel) = peer, channel.flags.contains(.isMonoforum), channel.adminRights == nil {
+            viewForumAsMessages = true
+        }
+        
         if case let .peer(peer) = params.chatLocation, case let .channel(channel) = peer, channel.flags.contains(.isForum), !viewForumAsMessages {
             for controller in params.navigationController.viewControllers.reversed() {
                 var chatListController: ChatListControllerImpl?
@@ -64,6 +71,8 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                 if let chatListController = chatListController {
                     var matches = false
                     if case let .forum(peerId) = chatListController.location, peer.id == peerId {
+                        matches = true
+                    } else if case let .savedMessagesChats(peerId) = chatListController.location, peer.id == peerId {
                         matches = true
                     } else if case let .forum(peerId) = chatListController.effectiveLocation, peer.id == peerId {
                         matches = true
@@ -79,7 +88,14 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                 }
             }
             
-            let controller = ChatListControllerImpl(context: params.context, location: .forum(peerId: peer.id), controlsHistoryPreload: false, enableDebugActions: false)
+            let chatListLocation: ChatListControllerLocation
+            if case let .peer(peer) = params.chatLocation, case let .channel(channel) = peer, channel.flags.contains(.isMonoforum) {
+                chatListLocation = .savedMessagesChats(peerId: peer.id)
+            } else {
+                chatListLocation = .forum(peerId: peer.id)
+            }
+            
+            let controller = ChatListControllerImpl(context: params.context, location: chatListLocation, controlsHistoryPreload: false, enableDebugActions: false)
             
             let activateMessageSearch = params.activateMessageSearch
             let chatListCompletion = params.chatListCompletion

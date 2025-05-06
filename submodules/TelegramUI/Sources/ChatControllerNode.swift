@@ -2964,6 +2964,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                                 channelMessageId: nil,
                                 isChannelPost: false,
                                 isForumPost: false,
+                                isMonoforum: false,
                                 maxMessage: nil,
                                 maxReadIncomingMessageId: nil,
                                 maxReadOutgoingMessageId: nil,

@@ -1030,14 +1030,32 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             guard let self else {
                 return
             }
-            let _ = (self.context.account.postbox.combinedView(keys: [.cachedPeerData(peerId: peer.id)])
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { [weak self] combinedView in
+            
+            var forumSourcePeer: Signal<EnginePeer?, NoError> = .single(nil)
+            if case let .savedMessagesChats(peerId) = self.location, peerId != self.context.account.peerId {
+                forumSourcePeer = self.context.engine.data.get(
+                    TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+                )
+            }
+            
+            let _ = (combineLatest(queue: .mainQueue(),
+                self.context.account.postbox.combinedView(keys: [.cachedPeerData(peerId: peer.id)])
+                |> take(1),
+                forumSourcePeer
+            )
+            |> deliverOnMainQueue).start(next: { [weak self] combinedView, forumSourcePeer in
                 guard let self, let cachedDataView = combinedView.views[.cachedPeerData(peerId: peer.id)] as? CachedPeerDataView else {
                     return
                 }
                 guard let navigationController = self.navigationController as? NavigationController else {
                     return
+                }
+                
+                var peer = peer
+                var threadId = threadId
+                if let forumSourcePeer {
+                    threadId = peer.id.toInt64()
+                    peer = forumSourcePeer
                 }
                 
                 var scrollToEndIfExists = false
@@ -1046,13 +1064,17 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 }
                 
                 var openAsInlineForum = true
-                if let cachedData = cachedDataView.cachedPeerData as? CachedChannelData, case let .known(viewForumAsMessages) = cachedData.viewForumAsMessages, viewForumAsMessages {
+                
+                if case let .channel(channel) = peer, channel.flags.contains(.isMonoforum) {
                     openAsInlineForum = false
+                } else {
+                    if let cachedData = cachedDataView.cachedPeerData as? CachedChannelData, case let .known(viewForumAsMessages) = cachedData.viewForumAsMessages, viewForumAsMessages {
+                        openAsInlineForum = false
+                    }
                 }
                 
                 if openAsInlineForum, case let .channel(channel) = peer, channel.flags.contains(.isForum), threadId == nil {
                     self.chatListDisplayNode.clearHighlightAnimated(true)
-                    
                     if self.chatListDisplayNode.inlineStackContainerNode?.location == .forum(peerId: channel.id) {
                         self.setInlineChatList(location: nil)
                     } else {
@@ -1062,7 +1084,28 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 }
                 
                 if case let .channel(channel) = peer, channel.flags.contains(.isForum), let threadId {
-                    let _ = self.context.sharedContext.navigateToForumThread(context: self.context, peerId: peer.id, threadId: threadId, messageId: nil, navigationController: navigationController, activateInput: nil, scrollToEndIfExists: scrollToEndIfExists, keepStack: .never).startStandalone()
+                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(
+                        navigationController: navigationController,
+                        context: self.context,
+                        chatLocation: .replyThread(ChatReplyThreadMessage(
+                            peerId: peer.id,
+                            threadId: threadId,
+                            channelMessageId: nil,
+                            isChannelPost: false,
+                            isForumPost: true,
+                            isMonoforum: channel.flags.contains(.isMonoforum),
+                            maxMessage: nil,
+                            maxReadIncomingMessageId: nil,
+                            maxReadOutgoingMessageId: nil,
+                            unreadCount: 0,
+                            initialFilledHoles: IndexSet(),
+                            initialAnchor: .automatic,
+                            isNotAvailable: false
+                        )),
+                        subject: nil,
+                        keepStack: .always
+                    ))
+                    
                     self.chatListDisplayNode.clearHighlightAnimated(true)
                 } else {
                     var navigationAnimationOptions: NavigationAnimationOptions = []
@@ -1476,7 +1519,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         if let threadId = threadId {
                             let source: ContextContentSource
                             let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .replyThread(message: ChatReplyThreadMessage(
-                                peerId: peer.peerId, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false
+                                peerId: peer.peerId, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, isMonoforum: false, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false
                             )), subject: nil, botStart: nil, mode: .standard(.previewing), params: nil)
                             chatController.canReadHistory.set(false)
                             source = .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController))
@@ -1545,7 +1588,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     }
                     let source: ContextContentSource
                     let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .replyThread(message: ChatReplyThreadMessage(
-                        peerId: peer.peerId, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false
+                        peerId: peer.peerId, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, isMonoforum: false, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false
                     )), subject: nil, botStart: nil, mode: .standard(.previewing), params: nil)
                     chatController.canReadHistory.set(false)
                     source = .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController))

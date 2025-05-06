@@ -6231,14 +6231,23 @@ extension ChatControllerImpl {
             guard let peerId = self.chatLocation.peerId else {
                 return
             }
+            guard let peer = self.presentationInterfaceState.renderedPeer?.chatMainPeer else {
+                return
+            }
             let updatedChatLocation: ChatLocation
             if let threadId {
+                var isMonoforum = false
+                if let channel = peer as? TelegramChannel, channel.flags.contains(.isMonoforum) {
+                    isMonoforum = true
+                }
+                
                 updatedChatLocation = .replyThread(message: ChatReplyThreadMessage(
                     peerId: peerId,
                     threadId: threadId,
                     channelMessageId: nil,
                     isChannelPost: false,
                     isForumPost: true,
+                    isMonoforum: isMonoforum,
                     maxMessage: nil,
                     maxReadIncomingMessageId: nil,
                     maxReadOutgoingMessageId: nil,
@@ -6709,6 +6718,7 @@ extension ChatControllerImpl {
                         channelMessageId: nil,
                         isChannelPost: false,
                         isForumPost: true,
+                        isMonoforum: false,
                         maxMessage: nil,
                         maxReadIncomingMessageId: nil,
                         maxReadOutgoingMessageId: nil,
