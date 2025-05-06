@@ -109,6 +109,15 @@ public final class FilterSelectorComponent: Component {
             return true
         }
         
+        func animateIn() {
+            for (_, item) in self.visibleItems {
+                if let itemView = item.title.view {
+                    itemView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    itemView.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
+                }
+            }
+        }
+        
         func update(component: FilterSelectorComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.state = state

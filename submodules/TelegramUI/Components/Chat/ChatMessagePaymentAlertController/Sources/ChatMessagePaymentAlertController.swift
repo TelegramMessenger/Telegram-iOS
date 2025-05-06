@@ -325,6 +325,8 @@ public class ChatMessagePaymentAlertController: AlertController {
    
     private let balance = ComponentView<Empty>()
     
+    private var didAppear = false
+    
     public init(context: AccountContext?, presentationData: PresentationData, contentNode: AlertContentNode, navigationController: NavigationController?, showBalance: Bool = true) {
         self.context = context
         self.presentationData = presentationData
@@ -360,6 +362,15 @@ public class ChatMessagePaymentAlertController: AlertController {
     
     public override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
+        
+        if !self.didAppear {
+            self.didAppear = true
+            if !layout.metrics.isTablet && layout.size.width > layout.size.height {
+                Queue.mainQueue().after(0.1) {
+                    self.view.window?.endEditing(true)
+                }
+            }
+        }
         
         if let context = self.context, let _ = self.parentNavigationController, self.showBalance {
             let insets = layout.insets(options: .statusBar)

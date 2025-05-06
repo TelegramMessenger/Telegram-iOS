@@ -488,7 +488,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                     
                     switch product.gift {
                     case let .generic(gift):
-                        subject = .starGift(gift: gift, price: "⭐️ \(gift.price)")
+                        subject = .starGift(gift: gift, price: "# \(gift.price)")
                         peer = product.fromPeer.flatMap { .peer($0) } ?? .anonymous
                         
                         if let availability = gift.availability {
@@ -571,10 +571,15 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                             }
                                         }
                                     } else {
+                                        let allSubjects: [GiftViewScreen.Subject] = (self.starsProducts ?? []).map { .profileGift(self.peerId, $0) }
+                                        let index = self.starsProducts?.firstIndex(where: { $0 == product }) ?? 0
+                                        
                                         var dismissImpl: (() -> Void)?
                                         let controller = GiftViewScreen(
                                             context: self.context,
                                             subject: .profileGift(self.peerId, product),
+                                            allSubjects: allSubjects,
+                                            index: index,
                                             updateSavedToProfile: { [weak self] reference, added in
                                                 guard let self else {
                                                     return

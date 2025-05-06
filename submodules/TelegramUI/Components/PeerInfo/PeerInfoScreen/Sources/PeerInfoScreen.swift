@@ -4978,7 +4978,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         self.refreshMessageTagStatsDisposable = context.engine.messages.refreshMessageTagStats(peerId: peerId, threadId: chatLocation.threadId, tags: [.video, .photo, .gif, .music, .voiceOrInstantVideo, .webPage, .file]).startStrict()
         
         if peerId.namespace == Namespaces.Peer.CloudChannel {
-            self.translationStateDisposable = (chatTranslationState(context: context, peerId: peerId)
+            self.translationStateDisposable = (chatTranslationState(context: context, peerId: peerId, threadId: nil)
             |> deliverOnMainQueue).startStrict(next: { [weak self] translationState in
                 self?.translationState = translationState
             })
@@ -6507,7 +6507,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                             f(.dismissWithoutContent)
                             
                             if let strongSelf = self {
-                                let _ = updateChatTranslationStateInteractively(engine: strongSelf.context.engine, peerId: strongSelf.peerId, { current in
+                                let _ = updateChatTranslationStateInteractively(engine: strongSelf.context.engine, peerId: strongSelf.peerId, threadId: nil, { current in
                                     return current?.withIsEnabled(true)
                                 }).startStandalone()
                                 
@@ -6698,7 +6698,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                                 f(.dismissWithoutContent)
                                 
                                 if let strongSelf = self {
-                                    let _ = updateChatTranslationStateInteractively(engine: strongSelf.context.engine, peerId: strongSelf.peerId, { current in
+                                    let _ = updateChatTranslationStateInteractively(engine: strongSelf.context.engine, peerId: strongSelf.peerId, threadId: nil, { current in
                                         return current?.withIsEnabled(true)
                                     }).startStandalone()
                                     
@@ -6957,7 +6957,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                             f(.dismissWithoutContent)
                             
                             if let strongSelf = self {
-                                let _ = updateChatTranslationStateInteractively(engine: strongSelf.context.engine, peerId: strongSelf.peerId, { current in
+                                let _ = updateChatTranslationStateInteractively(engine: strongSelf.context.engine, peerId: strongSelf.peerId, threadId: nil, { current in
                                     return current?.withIsEnabled(true)
                                 }).startStandalone()
                                 

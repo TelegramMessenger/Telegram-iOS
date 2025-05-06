@@ -27,6 +27,8 @@ import UndoUI
 import ContextUI
 import LottieComponent
 
+private let minimumCountToDisplayFilters = 18
+
 final class GiftStoreScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
@@ -93,7 +95,8 @@ final class GiftStoreScreenComponent: Component {
         
         private var starsStateDisposable: Disposable?
         private var starsState: StarsContext.State?
-                
+        private var initialCount: Int?
+        
         private var component: GiftStoreScreenComponent?
         private(set) weak var state: State?
         private var environment: EnvironmentType?
@@ -148,6 +151,13 @@ final class GiftStoreScreenComponent: Component {
             }
         }
         
+        private var effectiveIsLoading: Bool {
+            if self.state?.starGiftsState?.gifts == nil || self.state?.starGiftsState?.dataState == .loading {
+                return true
+            }
+            return false
+        }
+        
         private func updateScrolling(interactive: Bool = false, transition: ComponentTransition) {
             guard let environment = self.environment, let component = self.component, self.state?.starGiftsState?.dataState != .loading else {
                 return
@@ -163,6 +173,11 @@ final class GiftStoreScreenComponent: Component {
                 transition.setAlpha(view: topSeparator, alpha: topPanelAlpha)
             }
             
+            var topInset = environment.navigationHeight + 39.0
+            if let initialCount = self.initialCount, initialCount < minimumCountToDisplayFilters {
+                topInset = environment.navigationHeight
+            }
+            
             let visibleBounds = self.scrollView.bounds.insetBy(dx: 0.0, dy: -10.0)
             if let starGifts = self.effectiveGifts {
                 let sideInset: CGFloat = 16.0 + environment.safeInsets.left
@@ -172,7 +187,7 @@ final class GiftStoreScreenComponent: Component {
                 let starsOptionSize = CGSize(width: optionWidth, height: 154.0)
                 
                 var validIds: [AnyHashable] = []
-                var itemFrame = CGRect(origin: CGPoint(x: sideInset, y: environment.navigationHeight + 39.0 + 9.0), size: starsOptionSize)
+                var itemFrame = CGRect(origin: CGPoint(x: sideInset, y: topInset + 9.0), size: starsOptionSize)
                 
                 let controller = environment.controller
                 
@@ -215,7 +230,7 @@ final class GiftStoreScreenComponent: Component {
                             color: ribbonColor
                         )
                                                 
-                        let subject: GiftItemComponent.Subject = .uniqueGift(gift: uniqueGift, price: "⭐️\(presentationStringsFormattedNumber(Int32(uniqueGift.resellStars ?? 0), environment.dateTimeFormat.groupingSeparator))")
+                        let subject: GiftItemComponent.Subject = .uniqueGift(gift: uniqueGift, price: "# \(presentationStringsFormattedNumber(Int32(uniqueGift.resellStars ?? 0), environment.dateTimeFormat.groupingSeparator))")
                         let _ = visibleItem.update(
                             transition: itemTransition,
                             component: AnyComponent(
@@ -240,9 +255,20 @@ final class GiftStoreScreenComponent: Component {
                                                 } else {
                                                     mainController = controller
                                                 }
+                                                
+                                                let allSubjects: [GiftViewScreen.Subject] = (self.effectiveGifts ?? []).compactMap { gift in
+                                                    if case let .unique(uniqueGift) = gift {
+                                                        return .uniqueGift(uniqueGift, state.peerId)
+                                                    }
+                                                    return nil
+                                                }
+                                                let index = self.effectiveGifts?.firstIndex(where: { $0 == .unique(uniqueGift) }) ?? 0
+                                                
                                                 let giftController = GiftViewScreen(
                                                     context: component.context,
                                                     subject: .uniqueGift(uniqueGift, state.peerId),
+                                                    allSubjects: allSubjects,
+                                                    index: index,
                                                     buyGift: { slug, peerId in
                                                         return self.state?.starGiftsContext.buyStarGift(slug: slug, peerId: peerId) ?? .complete()
                                                     },
@@ -326,7 +352,6 @@ final class GiftStoreScreenComponent: Component {
                 showClearFilters = true
             }
             
-            let topInset: CGFloat = environment.navigationHeight + 39.0
             let bottomInset: CGFloat = environment.safeInsets.bottom
             
             var emptyResultsActionFrame = CGRect(
@@ -432,7 +457,7 @@ final class GiftStoreScreenComponent: Component {
         }
         
         func openSortContextMenu(sourceView: UIView) {
-            guard let component = self.component, let controller = self.environment?.controller() else {
+            guard let component = self.component, let controller = self.environment?.controller(), !self.effectiveIsLoading else {
                 return
             }
             
@@ -443,22 +468,31 @@ final class GiftStoreScreenComponent: Component {
                 return generateTintedImage(image: UIImage(bundleImageName: "Peer Info/SortValue"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] _, f in
                 f(.default)
-                
-                self?.state?.starGiftsContext.updateSorting(.value)
+                guard let self else {
+                    return
+                }
+                self.state?.starGiftsContext.updateSorting(.value)
+                self.scrollToTop()
             })))
             items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_Store_SortByDate, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Peer Info/SortDate"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] _, f in
                 f(.default)
-                
-                self?.state?.starGiftsContext.updateSorting(.date)
+                guard let self else {
+                    return
+                }
+                self.state?.starGiftsContext.updateSorting(.date)
+                self.scrollToTop()
             })))
             items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_Store_SortByNumber, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Peer Info/SortNumber"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] _, f in
                 f(.default)
-                
-                self?.state?.starGiftsContext.updateSorting(.number)
+                guard let self else {
+                    return
+                }
+                self.state?.starGiftsContext.updateSorting(.number)
+                self.scrollToTop()
             })))
             
             let contextController = ContextController(presentationData: presentationData, source: .reference(GiftStoreReferenceContentSource(controller: controller, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
@@ -466,10 +500,10 @@ final class GiftStoreScreenComponent: Component {
         }
         
         func openModelContextMenu(sourceView: UIView) {
-            guard let component = self.component, let controller = self.environment?.controller() else {
+            guard let component = self.component, let controller = self.environment?.controller(), !self.effectiveIsLoading else {
                 return
             }
-            
+                        
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             let searchQueryPromise = ValuePromise<String>("")
             
@@ -531,6 +565,7 @@ final class GiftStoreScreenComponent: Component {
                         }
                     }
                     self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
+                    self.scrollToTop()
                 },
                 selectAll: { [weak self] in
                     guard let self else {
@@ -543,6 +578,7 @@ final class GiftStoreScreenComponent: Component {
                         return true
                     }
                     self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
+                    self.scrollToTop()
                 }
             ), false))
             
@@ -557,7 +593,7 @@ final class GiftStoreScreenComponent: Component {
         }
         
         func openBackdropContextMenu(sourceView: UIView) {
-            guard let component = self.component, let controller = self.environment?.controller() else {
+            guard let component = self.component, let controller = self.environment?.controller(), !self.effectiveIsLoading else {
                 return
             }
             
@@ -622,6 +658,7 @@ final class GiftStoreScreenComponent: Component {
                         }
                     }
                     self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
+                    self.scrollToTop()
                 },
                 selectAll: { [weak self] in
                     guard let self else {
@@ -634,6 +671,7 @@ final class GiftStoreScreenComponent: Component {
                         return true
                     }
                     self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
+                    self.scrollToTop()
                 }
             ), false))
             
@@ -648,7 +686,7 @@ final class GiftStoreScreenComponent: Component {
         }
         
         func openSymbolContextMenu(sourceView: UIView) {
-            guard let component = self.component, let controller = self.environment?.controller() else {
+            guard let component = self.component, let controller = self.environment?.controller(), !self.effectiveIsLoading else {
                 return
             }
             
@@ -713,6 +751,7 @@ final class GiftStoreScreenComponent: Component {
                         }
                     }
                     self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
+                    self.scrollToTop()
                 },
                 selectAll: { [weak self] in
                     guard let self else {
@@ -725,6 +764,7 @@ final class GiftStoreScreenComponent: Component {
                         return true
                     }
                     self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
+                    self.scrollToTop()
                 }
             ), false))
             
@@ -763,6 +803,8 @@ final class GiftStoreScreenComponent: Component {
             }
             self.component = component
             
+            let isLoading = self.effectiveIsLoading
+            
             let theme = environment.theme
             let strings = environment.strings
             
@@ -777,7 +819,10 @@ final class GiftStoreScreenComponent: Component {
             var contentHeight: CGFloat = 0.0
             contentHeight += environment.navigationHeight
             
-            let topPanelHeight = environment.navigationHeight + 39.0
+            var topPanelHeight = environment.navigationHeight + 39.0
+            if let initialCount = self.initialCount, initialCount < minimumCountToDisplayFilters {
+                topPanelHeight = environment.navigationHeight
+            }
 
             let topPanelSize = self.topPanel.update(
                 transition: transition,
@@ -861,6 +906,10 @@ final class GiftStoreScreenComponent: Component {
                 balanceIconView.bounds = CGRect(origin: .zero, size: balanceIconSize)
             }
             
+            var topInset: CGFloat = 0.0
+            if environment.statusBarHeight > 0.0 {
+                topInset = environment.statusBarHeight - 6.0
+            }
             let titleSize = self.title.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
@@ -874,11 +923,14 @@ final class GiftStoreScreenComponent: Component {
                 if titleView.superview == nil {
                     self.addSubview(titleView)
                 }
-                transition.setFrame(view: titleView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) / 2.0), y: 10.0), size: titleSize))
+                transition.setFrame(view: titleView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) / 2.0), y: topInset + 10.0), size: titleSize))
             }
             
             let effectiveCount: Int32
-            if let count = self.effectiveGifts?.count {
+            if let count = self.effectiveGifts?.count, count > 0 || self.initialCount != nil {
+                if self.initialCount == nil {
+                    self.initialCount = count
+                }
                 effectiveCount = Int32(count)
             } else if let resale = component.gift.availability?.resale {
                 effectiveCount = Int32(resale)
@@ -889,14 +941,14 @@ final class GiftStoreScreenComponent: Component {
             let subtitleSize = self.subtitle.update(
                 transition: transition,
                 component: AnyComponent(BalancedTextComponent(
-                    text: .plain(NSAttributedString(string: environment.strings.Gift_Store_ForResale(effectiveCount), font: Font.regular(13.0), textColor: theme.rootController.navigationBar.secondaryTextColor)),
+                    text: .plain(NSAttributedString(string: effectiveCount == 0 ? environment.strings.Gift_Store_ForResaleNoResults :  environment.strings.Gift_Store_ForResale(effectiveCount), font: Font.regular(13.0), textColor: theme.rootController.navigationBar.secondaryTextColor)),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 1
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - headerSideInset * 2.0, height: 100.0)
             )
-            let subtitleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - subtitleSize.width) / 2.0), y: 31.0), size: subtitleSize)
+            let subtitleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - subtitleSize.width) / 2.0), y: topInset + 31.0), size: subtitleSize)
             if let subtitleView = self.subtitle.view {
                 if subtitleView.superview == nil {
                     self.addSubview(subtitleView)
@@ -958,10 +1010,10 @@ final class GiftStoreScreenComponent: Component {
                     modelTitle = environment.strings.Gift_Store_Filter_Selected_Model(modelCount)
                 }
                 if backdropCount > 0 {
-                    backdropTitle = environment.strings.Gift_Store_Filter_Selected_Backdrop(modelCount)
+                    backdropTitle = environment.strings.Gift_Store_Filter_Selected_Backdrop(backdropCount)
                 }
                 if symbolCount > 0 {
-                    symbolTitle = environment.strings.Gift_Store_Filter_Selected_Symbol(modelCount)
+                    symbolTitle = environment.strings.Gift_Store_Filter_Selected_Symbol(symbolCount)
                 }
             }
             
@@ -993,13 +1045,15 @@ final class GiftStoreScreenComponent: Component {
                 }
             ))
                         
+            let loadingTransition: ComponentTransition = .easeInOut(duration: 0.25)
+            
             let filterSize = self.filterSelector.update(
                 transition: transition,
                 component: AnyComponent(FilterSelectorComponent(
                     context: component.context,
                     colors: FilterSelectorComponent.Colors(
                         foreground: theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.65),
-                        background: theme.list.itemSecondaryTextColor.withMultipliedAlpha(0.15)
+                        background: theme.list.itemSecondaryTextColor.mixedWith(theme.list.blocksBackgroundColor, alpha: 0.85)
                     ),
                     items: filterItems
                 )),
@@ -1008,9 +1062,14 @@ final class GiftStoreScreenComponent: Component {
             )
             if let filterSelectorView = self.filterSelector.view {
                 if filterSelectorView.superview == nil {
+                    filterSelectorView.alpha = 0.0
                     self.addSubview(filterSelectorView)
                 }
-                transition.setFrame(view: filterSelectorView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - filterSize.width) / 2.0), y: 56.0), size: filterSize))
+                transition.setFrame(view: filterSelectorView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - filterSize.width) / 2.0), y: topInset + 56.0), size: filterSize))
+                
+                if let initialCount = self.initialCount, initialCount >= minimumCountToDisplayFilters {
+                    loadingTransition.setAlpha(view: filterSelectorView, alpha: 1.0)
+                }
             }
             
             if let starGifts = self.state?.starGiftsState?.gifts {
@@ -1052,20 +1111,14 @@ final class GiftStoreScreenComponent: Component {
             self.topOverscrollLayer.frame = CGRect(origin: CGPoint(x: 0.0, y: -3000.0), size: CGSize(width: availableSize.width, height: 3000.0))
             
             self.updateScrolling(transition: transition)
-            
-            var isLoading = false
-            if self.state?.starGiftsState?.gifts == nil || self.state?.starGiftsState?.dataState == .loading {
-                isLoading = true
-            }
-            
-            let loadingTransition: ComponentTransition = .easeInOut(duration: 0.25)
+                        
             if isLoading {
                 self.loadingNode.update(size: availableSize, theme: environment.theme, transition: .immediate)
                 loadingTransition.setAlpha(view: self.loadingNode.view, alpha: 1.0)
             } else {
                 loadingTransition.setAlpha(view: self.loadingNode.view, alpha: 0.0)
             }
-            transition.setFrame(view: self.loadingNode.view, frame: CGRect(origin: CGPoint(x: 0.0, y: environment.navigationHeight + 39.0 + 7.0), size: availableSize))
+            transition.setFrame(view: self.loadingNode.view, frame: CGRect(origin: CGPoint(x: 0.0, y: environment.navigationHeight), size: availableSize))
                 
             return availableSize
         }
@@ -1078,19 +1131,22 @@ final class GiftStoreScreenComponent: Component {
     final class State: ComponentState {
         private let context: AccountContext
         var peerId: EnginePeer.Id
+        private let gift: StarGift.Gift
+        
         private var disposable: Disposable?
         
         fileprivate let starGiftsContext: ResaleGiftsContext
         fileprivate var starGiftsState: ResaleGiftsContext.State?
-        
+                
         init(
             context: AccountContext,
             peerId: EnginePeer.Id,
-            giftId: Int64
+            gift: StarGift.Gift
         ) {
             self.context = context
             self.peerId = peerId
-            self.starGiftsContext = ResaleGiftsContext(account: context.account, giftId: giftId)
+            self.gift = gift
+            self.starGiftsContext = ResaleGiftsContext(account: context.account, giftId: gift.id)
             
             super.init()
             
@@ -1110,7 +1166,7 @@ final class GiftStoreScreenComponent: Component {
     }
     
     func makeState() -> State {
-        return State(context: self.context, peerId: self.peerId, giftId: self.gift.id)
+        return State(context: self.context, peerId: self.peerId, gift: self.gift)
     }
     
     func update(view: View, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {

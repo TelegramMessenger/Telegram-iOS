@@ -802,7 +802,6 @@ func openResolvedUrlImpl(
                 }
                 if let currentState = starsContext.currentState, currentState.balance >= StarsAmount(value: amount, nanos: 0) {
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    //TODO:localize
                     let controller = UndoOverlayController(
                         presentationData: presentationData,
                         content: .universal(
@@ -810,8 +809,8 @@ func openResolvedUrlImpl(
                             scale: 0.066,
                             colors: [:],
                             title: nil,
-                            text: "You have enough stars at the moment.",
-                            customUndoText: "Buy Anyway",
+                            text: presentationData.strings.Stars_Purchase_EnoughStars,
+                            customUndoText: presentationData.strings.Stars_Purchase_BuyAnyway,
                             timeout: nil
                         ),
                         elevatedLayout: true,
@@ -824,6 +823,15 @@ func openResolvedUrlImpl(
                     present(controller, nil)
                 } else {
                     proceed()
+                }
+            }
+        case .stars:
+            dismissInput()
+            if let starsContext = context.starsContext {
+                let controller = context.sharedContext.makeStarsTransactionsScreen(context: context, starsContext: starsContext)
+                controller.navigationPresentation = .modal
+                if let navigationController {
+                    navigationController.pushViewController(controller, animated: true)
                 }
             }
         case let .joinVoiceChat(peerId, invite):

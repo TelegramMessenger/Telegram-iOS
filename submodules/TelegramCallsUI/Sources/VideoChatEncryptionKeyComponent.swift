@@ -7,6 +7,7 @@ import BalancedTextComponent
 import TelegramPresentationData
 import CallsEmoji
 import ImageBlur
+import HierarchyTrackingLayer
 
 private final class EmojiContainerView: UIView {
     private let maskImageView: UIImageView?
@@ -207,6 +208,7 @@ private final class EmojiItemComponent: Component {
     }
 
     final class View: UIView {
+        private let hierarchyTrackingLayer: HierarchyTrackingLayer
         private let containerView: EmojiContainerView
         private let measureEmojiView = ComponentView<Empty>()
         private var pendingContainerView: EmojiContainerView?
@@ -219,11 +221,22 @@ private final class EmojiItemComponent: Component {
         private var pendingEmojiValues: [String]?
 
         override init(frame: CGRect) {
+            self.hierarchyTrackingLayer = HierarchyTrackingLayer()
             self.containerView = EmojiContainerView(hasMask: true)
 
             super.init(frame: frame)
 
+            self.layer.addSublayer(self.hierarchyTrackingLayer)
             self.addSubview(self.containerView)
+            
+            self.hierarchyTrackingLayer.isInHierarchyUpdated = { [weak self] value in
+                guard let self else {
+                    return
+                }
+                if value {
+                    self.state?.updated(transition: .immediate)
+                }
+            }
         }
 
         required init?(coder: NSCoder) {

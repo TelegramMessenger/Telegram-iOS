@@ -697,7 +697,7 @@ final class ColorGridComponent: Component {
                     bottomRightRadius = largeCornerRadius
                 }
                 
-                let isLight = (selectedColor?.toUIColor().lightness ?? 1.0) < 0.5 ? true : false
+                let isLight = (selectedColor?.toUIColor().lightness ?? 1.0) < 0.5
                 
                 var selectionKnobImage = ColorSelectionImage(size: CGSize(width: squareSize, height: squareSize), topLeftRadius: topLeftRadius, topRightRadius: topRightRadius, bottomLeftRadius: bottomLeftRadius, bottomRightRadius: bottomRightRadius, isLight: isLight)
                 if selectionKnobImage != self.selectionKnobImage {

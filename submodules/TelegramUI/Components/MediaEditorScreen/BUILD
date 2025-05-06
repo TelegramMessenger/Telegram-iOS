@@ -67,6 +67,7 @@ swift_library(
         "//submodules/TelegramUI/Components/SaveProgressScreen",
         "//submodules/TelegramUI/Components/MediaAssetsContext",
         "//submodules/CheckNode",
+        "//submodules/TelegramNotices",
     ],
     visibility = [
         "//visibility:public",

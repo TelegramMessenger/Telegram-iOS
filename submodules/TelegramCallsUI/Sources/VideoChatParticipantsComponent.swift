@@ -152,6 +152,7 @@ final class VideoChatParticipantsComponent: Component {
     let expandedInsets: UIEdgeInsets
     let safeInsets: UIEdgeInsets
     let interfaceOrientation: UIInterfaceOrientation
+    let enableVideoSharpening: Bool
     let openParticipantContextMenu: (EnginePeer.Id, ContextExtractedContentContainingView, ContextGesture?) -> Void
     let openInvitedParticipantContextMenu: (EnginePeer.Id, ContextExtractedContentContainingView, ContextGesture?) -> Void
     let updateMainParticipant: (VideoParticipantKey?, Bool?) -> Void
@@ -173,6 +174,7 @@ final class VideoChatParticipantsComponent: Component {
         expandedInsets: UIEdgeInsets,
         safeInsets: UIEdgeInsets,
         interfaceOrientation: UIInterfaceOrientation,
+        enableVideoSharpening: Bool,
         openParticipantContextMenu: @escaping (EnginePeer.Id, ContextExtractedContentContainingView, ContextGesture?) -> Void,
         openInvitedParticipantContextMenu: @escaping (EnginePeer.Id, ContextExtractedContentContainingView, ContextGesture?) -> Void,
         updateMainParticipant: @escaping (VideoParticipantKey?, Bool?) -> Void,
@@ -193,6 +195,7 @@ final class VideoChatParticipantsComponent: Component {
         self.expandedInsets = expandedInsets
         self.safeInsets = safeInsets
         self.interfaceOrientation = interfaceOrientation
+        self.enableVideoSharpening = enableVideoSharpening
         self.openParticipantContextMenu = openParticipantContextMenu
         self.openInvitedParticipantContextMenu = openInvitedParticipantContextMenu
         self.updateMainParticipant = updateMainParticipant
@@ -237,6 +240,9 @@ final class VideoChatParticipantsComponent: Component {
             return false
         }
         if lhs.interfaceOrientation != rhs.interfaceOrientation {
+            return false
+        }
+        if lhs.enableVideoSharpening != rhs.enableVideoSharpening {
             return false
         }
         return true
@@ -1074,6 +1080,7 @@ final class VideoChatParticipantsComponent: Component {
                         contentInsets: itemContentInsets,
                         controlInsets: itemControlInsets,
                         interfaceOrientation: component.interfaceOrientation,
+                        enableVideoSharpening: component.enableVideoSharpening,
                         action: { [weak self] in
                             guard let self, let component = self.component else {
                                 return

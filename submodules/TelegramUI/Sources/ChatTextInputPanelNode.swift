@@ -1,4 +1,5 @@
 import Foundation
+import UniformTypeIdentifiers
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -44,6 +45,7 @@ import TelegramNotices
 import AnimatedCountLabelNode
 import TelegramStringFormatting
 import TextNodeWithEntities
+import DeviceModel
 
 private let accessoryButtonFont = Font.medium(14.0)
 private let counterFont = Font.with(size: 14.0, design: .regular, traits: [.monospacedNumbers])
@@ -4473,10 +4475,14 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         var attributedString: NSAttributedString?
         if let data = pasteboard.data(forPasteboardType: "private.telegramtext"), let value = chatInputStateStringFromAppSpecificString(data: data) {
             attributedString = value
-        } else if let data = pasteboard.data(forPasteboardType: kUTTypeRTF as String) {
+        } else if let data = pasteboard.data(forPasteboardType: "public.rtf") {
             attributedString = chatInputStateStringFromRTF(data, type: NSAttributedString.DocumentType.rtf)
         } else if let data = pasteboard.data(forPasteboardType: "com.apple.flat-rtfd") {
-            attributedString = chatInputStateStringFromRTF(data, type: NSAttributedString.DocumentType.rtfd)
+            if let _ = pasteboard.data(forPasteboardType: "com.apple.notes.richtext"), DeviceModel.current.isIpad, let htmlData = pasteboard.data(forPasteboardType: "public.html") {
+                attributedString = chatInputStateStringFromRTF(htmlData, type: NSAttributedString.DocumentType.html)
+            } else {
+                attributedString = chatInputStateStringFromRTF(data, type: NSAttributedString.DocumentType.rtfd)
+            }
         }
         
         if let attributedString = attributedString {

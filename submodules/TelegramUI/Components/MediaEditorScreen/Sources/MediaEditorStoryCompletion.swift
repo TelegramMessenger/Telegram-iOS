@@ -597,7 +597,7 @@ extension MediaEditorScreenImpl {
                         orderedResults.append(item)
                     }
                 }
-                self.completion(results, { [weak self] finished in
+                self.completion(orderedResults, { [weak self] finished in
                     self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
                         self?.dismiss()
                         Queue.mainQueue().justDispatch {
@@ -737,7 +737,10 @@ extension MediaEditorScreenImpl {
             DispatchQueue.main.async {
                 if let image {
                     itemMediaEditor.replaceSource(image, additionalImage: nil, time: .zero, mirror: false)
-                
+                    if itemMediaEditor.values.gradientColors == nil {
+                        itemMediaEditor.setGradientColors(mediaEditorGetGradientColors(from: image))
+                    }
+                    
                     if let resultImage = itemMediaEditor.resultImage {
                         makeEditorImageComposition(
                             context: self.node.ciContext,

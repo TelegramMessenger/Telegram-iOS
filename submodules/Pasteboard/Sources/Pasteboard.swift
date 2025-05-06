@@ -53,15 +53,29 @@ private func chatInputStateString(attributedString: NSAttributedString) -> NSAtt
         }
         if let value = attributes[.font], let font = value as? UIFont {
             let fontName = font.fontName.lowercased()
-            if fontName.contains("bolditalic") {
-                string.addAttribute(ChatTextInputAttributes.bold, value: true as NSNumber, range: range)
-                string.addAttribute(ChatTextInputAttributes.italic, value: true as NSNumber, range: range)
-            } else if fontName.contains("bold") {
-                string.addAttribute(ChatTextInputAttributes.bold, value: true as NSNumber, range: range)
-            } else if fontName.contains("italic") {
-                string.addAttribute(ChatTextInputAttributes.italic, value: true as NSNumber, range: range)
-            } else if fontName.contains("menlo") || fontName.contains("courier") || fontName.contains("sfmono") {
-                string.addAttribute(ChatTextInputAttributes.monospace, value: true as NSNumber, range: range)
+            if fontName.hasPrefix(".sfui") {
+                let traits = font.fontDescriptor.symbolicTraits
+                if traits.contains(.traitMonoSpace) {
+                    string.addAttribute(ChatTextInputAttributes.monospace, value: true as NSNumber, range: range)
+                } else {
+                    if traits.contains(.traitBold) {
+                        string.addAttribute(ChatTextInputAttributes.bold, value: true as NSNumber, range: range)
+                    }
+                    if traits.contains(.traitItalic) {
+                        string.addAttribute(ChatTextInputAttributes.italic, value: true as NSNumber, range: range)
+                    }
+                }
+            } else {
+                if fontName.contains("bolditalic") {
+                    string.addAttribute(ChatTextInputAttributes.bold, value: true as NSNumber, range: range)
+                    string.addAttribute(ChatTextInputAttributes.italic, value: true as NSNumber, range: range)
+                } else if fontName.contains("bold") {
+                    string.addAttribute(ChatTextInputAttributes.bold, value: true as NSNumber, range: range)
+                } else if fontName.contains("italic") {
+                    string.addAttribute(ChatTextInputAttributes.italic, value: true as NSNumber, range: range)
+                } else if fontName.contains("menlo") || fontName.contains("courier") || fontName.contains("sfmono") {
+                    string.addAttribute(ChatTextInputAttributes.monospace, value: true as NSNumber, range: range)
+                }
             }
         }
         if let value = attributes[.backgroundColor] as? UIColor, value.rgb == UIColor.gray.rgb  {

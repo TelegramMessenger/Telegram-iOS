@@ -713,7 +713,7 @@ public class GalleryController: ViewController, StandalonePresentableController,
                         return .single(message.flatMap { ($0, false) })
                     }
                 }
-                translateToLanguage = chatTranslationState(context: context, peerId: messageId.peerId)
+                translateToLanguage = chatTranslationState(context: context, peerId: messageId.peerId, threadId: threadIdValue)
                 |> map { translationState in
                     if let translationState, translationState.isEnabled {
                         let translateToLanguage = translationState.toLang ?? baseLanguageCode

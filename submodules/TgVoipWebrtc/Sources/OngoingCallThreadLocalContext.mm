@@ -1631,7 +1631,6 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         tgcalls::Register<tgcalls::InstanceImpl>();
-        //tgcalls::Register<tgcalls::InstanceV2_4_0_0Impl>();
         tgcalls::Register<tgcalls::InstanceV2Impl>();
         tgcalls::Register<tgcalls::InstanceV2ReferenceImpl>();
     });

@@ -16,6 +16,7 @@ import TelegramBaseController
 import InviteLinksUI
 import UndoUI
 import TelegramCallsUI
+import TelegramUIPreferences
 
 public enum CallListControllerMode {
     case tab
@@ -734,10 +735,22 @@ public final class CallListController: TelegramBaseController {
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.contextMenu.primaryColor)
         }, action: { [weak self] c, f in
             c?.dismiss(completion: { [weak self] in
-                guard let strongSelf = self else {
+                guard let self else {
                     return
                 }
-                strongSelf.callPressed()
+                self.callPressed()
+            })
+        })))
+        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Calls_HideCallsTab, icon: { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Peer Info/HideIcon"), color: theme.contextMenu.primaryColor)
+        }, action: { [weak self] c, f in
+            c?.dismiss(completion: { [weak self] in
+                guard let self else {
+                    return
+                }
+                let _ = updateCallListSettingsInteractively(accountManager: self.context.sharedContext.accountManager, {
+                    $0.withUpdatedShowTab(false)
+                }).start()
             })
         })))
         

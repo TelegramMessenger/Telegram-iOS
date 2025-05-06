@@ -49,6 +49,7 @@ import StickerPickerScreen
 import UIKitRuntimeUtils
 import ImageObjectSeparation
 import SaveProgressScreen
+import TelegramNotices
 
 private let playbackButtonTag = GenericComponentViewTag()
 private let muteButtonTag = GenericComponentViewTag()
@@ -58,6 +59,7 @@ private let drawButtonTag = GenericComponentViewTag()
 private let textButtonTag = GenericComponentViewTag()
 private let stickerButtonTag = GenericComponentViewTag()
 private let dayNightButtonTag = GenericComponentViewTag()
+private let selectionButtonTag = GenericComponentViewTag()
 
 final class MediaEditorScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -2320,7 +2322,8 @@ final class MediaEditorScreenComponent: Component {
                                     controller.hapticFeedback.impact(.light)
                                 }
                             },
-                            animateAlpha: false
+                            animateAlpha: false,
+                            tag: selectionButtonTag
                         )),
                         environment: {},
                         containerSize: CGSize(width: 33.0, height: 33.0)
@@ -4744,6 +4747,33 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             self.controller?.present(tooltipController, in: .current)
         }
         
+        private var displayedSelectionTooltip = false
+        func presentSelectionTooltip() {
+            guard let sourceView = self.componentHost.findTaggedView(tag: selectionButtonTag), !self.displayedSelectionTooltip, self.items.count > 1 else {
+                return
+            }
+            
+            self.displayedSelectionTooltip = true
+            
+            let _ = (ApplicationSpecificNotice.getMultipleStoriesTooltip(accountManager: self.context.sharedContext.accountManager)
+            |> deliverOnMainQueue).start(next: { [weak self] count in
+                guard let self, count < 3 else {
+                    return
+                }
+                let parentFrame = self.view.convert(self.bounds, to: nil)
+                let absoluteFrame = sourceView.convert(sourceView.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
+                let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 3.0), size: CGSize())
+                            
+                let text = self.presentationData.strings.Story_Editor_TooltipSelection(Int32(self.items.count))
+                let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: text), location: .point(location, .bottom), displayDuration: .default, inset: 8.0, shouldDismissOnTouch: { _, _ in
+                    return .dismiss(consume: false)
+                })
+                self.controller?.present(tooltipController, in: .current)
+                
+                let _ = ApplicationSpecificNotice.incrementMultipleStoriesTooltip(accountManager: self.context.sharedContext.accountManager).start()
+            })
+        }
+        
         fileprivate weak var saveTooltip: SaveProgressScreen?
         func presentSaveTooltip() {
             guard let controller = self.controller else {
@@ -5725,6 +5755,8 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             
             if hasAppeared && !self.hasAppeared {
                 self.hasAppeared = hasAppeared
+                
+                self.presentSelectionTooltip()
             }
 
             let componentSize = self.componentHost.update(

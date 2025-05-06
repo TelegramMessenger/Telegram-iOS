@@ -275,7 +275,7 @@ final class VideoChatParticipantThumbnailComponent: Component {
                 if let current = self.videoLayer {
                     videoLayer = current
                 } else {
-                    videoLayer = PrivateCallVideoLayer()
+                    videoLayer = PrivateCallVideoLayer(enableSharpening: false)
                     self.videoLayer = videoLayer
                     self.extractedContainerView.contentView.layer.insertSublayer(videoLayer.blurredLayer, above: videoBackgroundLayer)
                     self.extractedContainerView.contentView.layer.insertSublayer(videoLayer, above: videoLayer.blurredLayer)

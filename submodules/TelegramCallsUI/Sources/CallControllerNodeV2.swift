@@ -166,6 +166,11 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             }
             self.conferenceAddParticipant?()
         }
+
+        var enableVideoSharpening = false
+        if let data = call.context.currentAppConfiguration.with({ $0 }).data, let value = data["ios_call_video_sharpening"] as? Double {
+            enableVideoSharpening = value != 0.0
+        }
         
         self.callScreenState = PrivateCallScreen.State(
             strings: presentationData.strings,
@@ -180,7 +185,8 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             remoteVideo: nil,
             isRemoteBatteryLow: false,
             isEnergySavingEnabled: !self.sharedContext.energyUsageSettings.fullTranslucency,
-            isConferencePossible: false
+            isConferencePossible: false,
+            enableVideoSharpening: enableVideoSharpening
         )
         
         self.isMicrophoneMutedDisposable = (call.isMuted
