@@ -1108,6 +1108,10 @@ private final class SheetContent: CombinedComponent {
             func layoutLevel(_ level: Int32) {
                 var perks: [LevelSectionComponent.Perk] = []
                 
+                if !isGroup && level >= requiredBoostSubjectLevel(subject: .autoTranslate, group: isGroup, context: component.context, configuration: premiumConfiguration) {
+                    perks.append(.autoTranslate)
+                }
+                
                 perks.append(.story(level))
                 
                 if !isGroup {
@@ -1171,12 +1175,6 @@ private final class SheetContent: CombinedComponent {
                 if !isGroup && level >= requiredBoostSubjectLevel(subject: .noAds, group: isGroup, context: component.context, configuration: premiumConfiguration) {
                     perks.append(.noAds)
                 }
-                if !isGroup && level >= requiredBoostSubjectLevel(subject: .autoTranslate, group: isGroup, context: component.context, configuration: premiumConfiguration) {
-                    perks.append(.autoTranslate)
-                }
-//                if !isGroup && level >= requiredBoostSubjectLevel(subject: .wearGift, group: isGroup, context: component.context, configuration: premiumConfiguration) {
-//                    perks.append(.wearGift)
-//                }
                 
                 levelItems.append(
                     AnyComponentWithIdentity(
