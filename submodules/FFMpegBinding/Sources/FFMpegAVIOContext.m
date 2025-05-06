@@ -1,6 +1,6 @@
 #import <FFMpegBinding/FFMpegAVIOContext.h>
 
-#import <third_party/ffmpeg/libavformat/avformat.h>
+#import "libavformat/avformat.h"
 
 int FFMPEG_CONSTANT_AVERROR_EOF = AVERROR_EOF;
 

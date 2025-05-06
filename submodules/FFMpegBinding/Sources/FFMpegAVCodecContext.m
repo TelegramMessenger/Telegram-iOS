@@ -3,8 +3,8 @@
 #import <FFMpegBinding/FFMpegAVFrame.h>
 #import <FFMpegBinding/FFMpegAVCodec.h>
 
-#import <third_party/ffmpeg/libavformat/avformat.h>
-#import <third_party/ffmpeg/libavcodec/avcodec.h>
+#import "libavformat/avformat.h"
+#import "libavcodec/avcodec.h"
 
 static enum AVPixelFormat getPreferredPixelFormat(__unused AVCodecContext *ctx, __unused const enum AVPixelFormat *pix_fmts) {
     return AV_PIX_FMT_VIDEOTOOLBOX;
