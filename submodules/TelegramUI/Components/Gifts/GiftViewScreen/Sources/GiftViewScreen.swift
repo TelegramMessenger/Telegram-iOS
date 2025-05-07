@@ -958,7 +958,7 @@ private final class GiftViewSheetContent: CombinedComponent {
             
             let location = CGRect(origin: CGPoint(x: absoluteLocation.x, y: absoluteLocation.y - 12.0), size: CGSize())
             let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: text), style: .wide, location: .point(location, .bottom), displayDuration: .default, inset: 16.0, shouldDismissOnTouch: { _, _ in
-                return .ignore
+                return .dismiss(consume: false)
             })
             controller.present(tooltipController, in: .current)
         }

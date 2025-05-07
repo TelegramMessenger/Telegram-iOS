@@ -95,7 +95,8 @@ final class GiftStoreScreenComponent: Component {
         
         private var starsStateDisposable: Disposable?
         private var starsState: StarsContext.State?
-        private var initialCount: Int?
+        private var initialCount: Int32?
+        private var showLoading = true
         
         private var component: GiftStoreScreenComponent?
         private(set) weak var state: State?
@@ -451,7 +452,7 @@ final class GiftStoreScreenComponent: Component {
             }
             
             let bottomContentOffset = max(0.0, self.scrollView.contentSize.height - self.scrollView.contentOffset.y - self.scrollView.frame.height)
-            if interactive, bottomContentOffset < 320.0 {
+            if interactive, bottomContentOffset < 1000.0 {
                 self.state?.starGiftsContext.loadMore()
             }
         }
@@ -471,6 +472,7 @@ final class GiftStoreScreenComponent: Component {
                 guard let self else {
                     return
                 }
+                self.showLoading = true
                 self.state?.starGiftsContext.updateSorting(.value)
                 self.scrollToTop()
             })))
@@ -481,6 +483,7 @@ final class GiftStoreScreenComponent: Component {
                 guard let self else {
                     return
                 }
+                self.showLoading = true
                 self.state?.starGiftsContext.updateSorting(.date)
                 self.scrollToTop()
             })))
@@ -491,6 +494,7 @@ final class GiftStoreScreenComponent: Component {
                 guard let self else {
                     return
                 }
+                self.showLoading = true
                 self.state?.starGiftsContext.updateSorting(.number)
                 self.scrollToTop()
             })))
@@ -564,6 +568,7 @@ final class GiftStoreScreenComponent: Component {
                             updatedFilterAttributes.append(attribute)
                         }
                     }
+                    self.showLoading = true
                     self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
                     self.scrollToTop()
                 },
@@ -577,6 +582,7 @@ final class GiftStoreScreenComponent: Component {
                         }
                         return true
                     }
+                    self.showLoading = true
                     self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
                     self.scrollToTop()
                 }
@@ -657,6 +663,7 @@ final class GiftStoreScreenComponent: Component {
                             updatedFilterAttributes.append(attribute)
                         }
                     }
+                    self.showLoading = true
                     self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
                     self.scrollToTop()
                 },
@@ -670,6 +677,7 @@ final class GiftStoreScreenComponent: Component {
                         }
                         return true
                     }
+                    self.showLoading = true
                     self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
                     self.scrollToTop()
                 }
@@ -750,6 +758,7 @@ final class GiftStoreScreenComponent: Component {
                             updatedFilterAttributes.append(attribute)
                         }
                     }
+                    self.showLoading = true
                     self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
                     self.scrollToTop()
                 },
@@ -763,6 +772,7 @@ final class GiftStoreScreenComponent: Component {
                         }
                         return true
                     }
+                    self.showLoading = true
                     self.state?.starGiftsContext.updateFilterAttributes(updatedFilterAttributes)
                     self.scrollToTop()
                 }
@@ -804,6 +814,12 @@ final class GiftStoreScreenComponent: Component {
             self.component = component
             
             let isLoading = self.effectiveIsLoading
+            if case let .ready(loadMore, nextOffset) = self.state?.starGiftsState?.dataState {
+                if loadMore && nextOffset == nil {
+                } else {
+                    self.showLoading = false
+                }
+            }
             
             let theme = environment.theme
             let strings = environment.strings
@@ -927,7 +943,7 @@ final class GiftStoreScreenComponent: Component {
             }
             
             let effectiveCount: Int32
-            if let count = self.effectiveGifts?.count, count > 0 || self.initialCount != nil {
+            if let count = self.state?.starGiftsState?.count, count > 0 || self.initialCount != nil {
                 if self.initialCount == nil {
                     self.initialCount = count
                 }
@@ -1112,7 +1128,7 @@ final class GiftStoreScreenComponent: Component {
             
             self.updateScrolling(transition: transition)
                         
-            if isLoading {
+            if isLoading && self.showLoading {
                 self.loadingNode.update(size: availableSize, theme: environment.theme, transition: .immediate)
                 loadingTransition.setAlpha(view: self.loadingNode.view, alpha: 1.0)
             } else {
