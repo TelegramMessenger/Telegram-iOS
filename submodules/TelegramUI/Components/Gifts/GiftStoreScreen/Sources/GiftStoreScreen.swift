@@ -339,6 +339,7 @@ final class GiftStoreScreenComponent: Component {
                             guard let self else {
                                 return
                             }
+                            self.showLoading = true
                             self.state?.starGiftsContext.updateFilterAttributes([])
                         },
                         animateScale: false
@@ -1063,6 +1064,7 @@ final class GiftStoreScreenComponent: Component {
                         
             let loadingTransition: ComponentTransition = .easeInOut(duration: 0.25)
             
+            var showingFilters = false
             let filterSize = self.filterSelector.update(
                 transition: transition,
                 component: AnyComponent(FilterSelectorComponent(
@@ -1085,6 +1087,7 @@ final class GiftStoreScreenComponent: Component {
                 
                 if let initialCount = self.initialCount, initialCount >= minimumCountToDisplayFilters {
                     loadingTransition.setAlpha(view: filterSelectorView, alpha: 1.0)
+                    showingFilters = true
                 }
             }
             
@@ -1129,7 +1132,7 @@ final class GiftStoreScreenComponent: Component {
             self.updateScrolling(transition: transition)
                         
             if isLoading && self.showLoading {
-                self.loadingNode.update(size: availableSize, theme: environment.theme, transition: .immediate)
+                self.loadingNode.update(size: availableSize, theme: environment.theme, showFilters: !showingFilters, transition: .immediate)
                 loadingTransition.setAlpha(view: self.loadingNode.view, alpha: 1.0)
             } else {
                 loadingTransition.setAlpha(view: self.loadingNode.view, alpha: 0.0)
