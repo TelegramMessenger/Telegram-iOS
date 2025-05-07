@@ -488,7 +488,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                     
                     switch product.gift {
                     case let .generic(gift):
-                        subject = .starGift(gift: gift, price: "⭐️ \(gift.price)")
+                        subject = .starGift(gift: gift, price: "# \(gift.price)")
                         peer = product.fromPeer.flatMap { .peer($0) } ?? .anonymous
                         
                         if let availability = gift.availability {

@@ -202,6 +202,16 @@ func managedPromoInfoUpdates(accountPeerId: PeerId, postbox: Postbox, network: N
                     switch data {
                     case .promoDataEmpty:
                         transaction.replaceAdditionalChatListItems([])
+                        
+                        let suggestionInfo = ServerSuggestionInfo(
+                            legacyItems: [],
+                            items: [],
+                            dismissedIds: []
+                        )
+                        
+                        transaction.updatePreferencesEntry(key: PreferencesKeys.serverSuggestionInfo(), { _ in
+                            return PreferencesEntry(suggestionInfo)
+                        })
                     case let .promoData(flags, expires, peer, psaType, psaMessage, pendingSuggestions, dismissedSuggestions, customPendingSuggestion, chats, users):
                         let _ = expires
                         

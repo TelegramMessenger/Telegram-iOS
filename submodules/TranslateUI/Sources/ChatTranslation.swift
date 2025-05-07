@@ -78,7 +78,7 @@ public struct ChatTranslationState: Codable {
 private func cachedChatTranslationState(engine: TelegramEngine, peerId: EnginePeer.Id, threadId: Int64?) -> Signal<ChatTranslationState?, NoError> {
     let key: EngineDataBuffer
     if let threadId {
-        key = EngineDataBuffer(length: 8 + 8)
+        key = EngineDataBuffer(length: 16)
         key.setInt64(0, value: peerId.id._internalGetInt64Value())
         key.setInt64(8, value: threadId)
     } else {
@@ -95,7 +95,7 @@ private func cachedChatTranslationState(engine: TelegramEngine, peerId: EnginePe
 private func updateChatTranslationState(engine: TelegramEngine, peerId: EnginePeer.Id, threadId: Int64?, state: ChatTranslationState?) -> Signal<Never, NoError> {
     let key: EngineDataBuffer
     if let threadId {
-        key = EngineDataBuffer(length: 8 + 8)
+        key = EngineDataBuffer(length: 16)
         key.setInt64(0, value: peerId.id._internalGetInt64Value())
         key.setInt64(8, value: threadId)
     } else {
@@ -111,10 +111,14 @@ private func updateChatTranslationState(engine: TelegramEngine, peerId: EnginePe
 }
 
 public func updateChatTranslationStateInteractively(engine: TelegramEngine, peerId: EnginePeer.Id, threadId: Int64?, _ f: @escaping (ChatTranslationState?) -> ChatTranslationState?) -> Signal<Never, NoError> {
-    let key = EngineDataBuffer(length: 8)
-    key.setInt64(0, value: peerId.id._internalGetInt64Value())
+    let key: EngineDataBuffer
     if let threadId {
+        key = EngineDataBuffer(length: 16)
+        key.setInt64(0, value: peerId.id._internalGetInt64Value())
         key.setInt64(8, value: threadId)
+    } else {
+        key = EngineDataBuffer(length: 8)
+        key.setInt64(0, value: peerId.id._internalGetInt64Value())
     }
     
     return engine.data.get(TelegramEngine.EngineData.Item.ItemCache.Item(collectionId: ApplicationSpecificItemCacheCollectionId.translationState, id: key))

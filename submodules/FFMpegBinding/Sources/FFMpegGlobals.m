@@ -1,6 +1,6 @@
 #import <FFMpegBinding/FFMpegGlobals.h>
 
-#import <third_party/ffmpeg/libavformat/avformat.h>
+#import "libavformat/avformat.h"
 
 @implementation FFMpegGlobals
 

@@ -1247,7 +1247,7 @@ final class VideoChatScreenComponent: Component {
                 }
                 self.callState = component.initialData.callState
 
-                self.enableVideoSharpening = true
+                self.enableVideoSharpening = false
                 if let data = component.initialCall.accountContext.currentAppConfiguration.with({ $0 }).data, let value = data["ios_call_video_sharpening"] as? Double {
                     self.enableVideoSharpening = value != 0.0
                 }

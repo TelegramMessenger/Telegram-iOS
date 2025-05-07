@@ -2463,7 +2463,7 @@ private final class ResaleGiftsContextImpl {
         let filterAttributes = self.filterAttributes
         let currentAttributesHash = self.attributesHash
         
-        let dataState =  self.dataState
+        let dataState = self.dataState
         
         if case let .ready(true, initialNextOffset) = dataState {
             self.dataState = .loading

@@ -125,7 +125,7 @@ final class LoadingShimmerNode: ASDisplayNode {
     private let backgroundColorNode: ASDisplayNode
     private let effectNode: SearchShimmerEffectNode
     private let maskNode: ASImageNode
-    private var currentParams: (size: CGSize, theme: PresentationTheme)?
+    private var currentParams: (size: CGSize, theme: PresentationTheme, showFilters: Bool)?
     
     override init() {
         self.backgroundColorNode = ASDisplayNode()
@@ -142,11 +142,11 @@ final class LoadingShimmerNode: ASDisplayNode {
         self.addSubnode(self.maskNode)
     }
     
-    func update(size: CGSize, theme: PresentationTheme, transition: ContainedViewLayoutTransition) {
+    func update(size: CGSize, theme: PresentationTheme, showFilters: Bool, transition: ContainedViewLayoutTransition) {
         let color = theme.list.itemSecondaryTextColor.mixedWith(theme.list.blocksBackgroundColor, alpha: 0.85)
         
-        if self.currentParams?.size != size || self.currentParams?.theme !== theme {
-            self.currentParams = (size, theme)
+        if self.currentParams?.size != size || self.currentParams?.theme !== theme  || self.currentParams?.showFilters != showFilters {
+            self.currentParams = (size, theme, showFilters)
             
             self.backgroundColorNode.backgroundColor = color
             
@@ -156,10 +156,12 @@ final class LoadingShimmerNode: ASDisplayNode {
                 
                 let sideInset: CGFloat = 16.0
                 
-                let filterSpacing: CGFloat = 6.0
-                let filterWidth = (size.width - sideInset * 2.0 - filterSpacing * 3.0) / 4.0
-                for i in 0 ..< 4 {
-                    context.addPath(CGPath(roundedRect: CGRect(origin: CGPoint(x: sideInset + (filterWidth + filterSpacing) * CGFloat(i), y: 0.0), size: CGSize(width: filterWidth, height: 28.0)), cornerWidth: 14.0, cornerHeight: 14.0, transform: nil))
+                if showFilters {
+                    let filterSpacing: CGFloat = 6.0
+                    let filterWidth = (size.width - sideInset * 2.0 - filterSpacing * 3.0) / 4.0
+                    for i in 0 ..< 4 {
+                        context.addPath(CGPath(roundedRect: CGRect(origin: CGPoint(x: sideInset + (filterWidth + filterSpacing) * CGFloat(i), y: 0.0), size: CGSize(width: filterWidth, height: 28.0)), cornerWidth: 14.0, cornerHeight: 14.0, transform: nil))
+                    }
                 }
                 
                 var currentY: CGFloat = 39.0 + 7.0
