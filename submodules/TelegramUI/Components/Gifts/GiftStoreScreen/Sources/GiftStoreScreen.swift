@@ -519,7 +519,13 @@ final class GiftStoreScreenComponent: Component {
                 } else {
                     return false
                 }
-            }
+            }.sorted(by: { lhs, rhs in
+                if case let .model(_, lhsFile, _) = lhs, case let .model(_, rhsFile, _) = rhs, let lhsCount = self.state?.starGiftsState?.attributeCount[.model(lhsFile.fileId.id)], let rhsCount = self.state?.starGiftsState?.attributeCount[.model(rhsFile.fileId.id)] {
+                    return lhsCount > rhsCount
+                } else {
+                    return false
+                }
+            })
             
             let currentFilterAttributes = self.state?.starGiftsState?.filterAttributes ?? []
             let selectedModelAttributes = currentFilterAttributes.filter { attribute in
@@ -614,7 +620,13 @@ final class GiftStoreScreenComponent: Component {
                 } else {
                     return false
                 }
-            }
+            }.sorted(by: { lhs, rhs in
+                if case let .backdrop(_, lhsId, _, _, _, _, _) = lhs, case let .backdrop(_, rhsId, _, _, _, _, _) = rhs, let lhsCount = self.state?.starGiftsState?.attributeCount[.backdrop(lhsId)], let rhsCount = self.state?.starGiftsState?.attributeCount[.backdrop(rhsId)] {
+                    return lhsCount > rhsCount
+                } else {
+                    return false
+                }
+            })
             
             let currentFilterAttributes = self.state?.starGiftsState?.filterAttributes ?? []
             let selectedBackdropAttributes = currentFilterAttributes.filter { attribute in
@@ -709,7 +721,13 @@ final class GiftStoreScreenComponent: Component {
                 } else {
                     return false
                 }
-            }
+            }.sorted(by: { lhs, rhs in
+                if case let .pattern(_, lhsFile, _) = lhs, case let .pattern(_, rhsFile, _) = rhs, let lhsCount = self.state?.starGiftsState?.attributeCount[.pattern(lhsFile.fileId.id)], let rhsCount = self.state?.starGiftsState?.attributeCount[.pattern(rhsFile.fileId.id)] {
+                    return lhsCount > rhsCount
+                } else {
+                    return false
+                }
+            })
             
             let currentFilterAttributes = self.state?.starGiftsState?.filterAttributes ?? []
             let selectedPatternAttributes = currentFilterAttributes.filter { attribute in
