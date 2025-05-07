@@ -1133,7 +1133,7 @@ extension ChatControllerImpl {
             }
             
             let savedMessagesPeerId: PeerId?
-            if case let .replyThread(replyThreadMessage) = chatLocation, replyThreadMessage.peerId == context.account.peerId {
+            if case let .replyThread(replyThreadMessage) = chatLocation, (replyThreadMessage.peerId == context.account.peerId || replyThreadMessage.isMonoforum) {
                 savedMessagesPeerId = PeerId(replyThreadMessage.threadId)
             } else {
                 savedMessagesPeerId = nil
@@ -1350,9 +1350,9 @@ extension ChatControllerImpl {
                         let imageOverride: AvatarNodeImageOverride?
                         if strongSelf.context.account.peerId == savedMessagesPeerId {
                             imageOverride = .myNotesIcon
-                        } else if savedMessagesPeerId.isReplies {
+                        } else if let peer = savedMessagesPeer?.peer, peer.id.isReplies {
                             imageOverride = .repliesIcon
-                        } else if savedMessagesPeerId.isAnonymousSavedMessages {
+                        } else if let peer = savedMessagesPeer?.peer, peer.id.isAnonymousSavedMessages {
                             imageOverride = .anonymousSavedMessagesIcon(isColored: true)
                         } else if let peer = savedMessagesPeer?.peer, peer.isDeleted {
                             imageOverride = .deletedIcon

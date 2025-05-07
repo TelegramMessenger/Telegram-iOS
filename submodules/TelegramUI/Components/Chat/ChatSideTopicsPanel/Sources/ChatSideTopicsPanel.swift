@@ -13,6 +13,7 @@ import AccountContext
 import BlurredBackgroundComponent
 import EmojiStatusComponent
 import BundleIconComponent
+import AvatarNode
 
 public final class ChatSidePanelEnvironment: Equatable {
     public let insets: UIEdgeInsets
@@ -111,6 +112,7 @@ public final class ChatSideTopicsPanel: Component {
         private let containerButton: HighlightTrackingButton
         
         private let icon = ComponentView<Empty>()
+        private var avatarNode: AvatarNode?
         private let title = ComponentView<Empty>()
         
         init(context: AccountContext, action: @escaping (() -> Void), contextGesture: @escaping (ContextGesture, ContextExtractedContentContainingNode) -> Void) {
@@ -204,7 +206,7 @@ public final class ChatSideTopicsPanel: Component {
                 containerSize: CGSize(width: 30.0, height: 30.0)
             )
             
-            let titleText: String = item.item.threadData?.info.title ?? "Topic"
+            let titleText: String = item.item.renderedPeer.chatMainPeer?.compactDisplayTitle ?? " "
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
@@ -228,6 +230,33 @@ public final class ChatSideTopicsPanel: Component {
                     self.containerButton.addSubview(iconView)
                 }
                 iconView.frame = iconFrame
+                
+                if "".isEmpty {
+                    iconView.isHidden = true
+                    
+                    let avatarNode: AvatarNode
+                    if let current = self.avatarNode {
+                        avatarNode = current
+                    } else {
+                        avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 11.0))
+                        self.avatarNode = avatarNode
+                        self.containerButton.addSubview(avatarNode.view)
+                    }
+                    avatarNode.frame = iconFrame
+                    avatarNode.updateSize(size: iconFrame.size)
+                    
+                    if let peer = item.item.renderedPeer.chatMainPeer {
+                        if peer.smallProfileImage != nil {
+                            avatarNode.setPeerV2(context: context, theme: theme, peer: peer, overrideImage: nil, emptyColor: .gray, clipStyle: .round, synchronousLoad: false, displayDimensions: iconFrame.size)
+                        } else {
+                            avatarNode.setPeer(context: context, theme: theme, peer: peer, overrideImage: nil, emptyColor: .gray, clipStyle: .round, synchronousLoad: false, displayDimensions: iconFrame.size)
+                        }
+                    }
+                } else if let avatarNode = self.avatarNode {
+                    self.avatarNode = nil
+                    avatarNode.view.removeFromSuperview()
+                    iconView.isHidden = false
+                }
             }
             
             if let titleView = self.title.view {
@@ -572,123 +601,54 @@ public final class ChatSideTopicsPanel: Component {
             self.state = state
             
             if self.component == nil {
-                let viewKey: PostboxViewKey = .messageHistoryThreadIndex(
-                    id: component.peerId,
-                    summaryComponents: ChatListEntrySummaryComponents(
-                        components: [
-                            ChatListEntryMessageTagSummaryKey(
-                                tag: .unseenPersonalMessage,
-                                actionType: PendingMessageActionType.consumeUnseenPersonalMessage
-                            ): ChatListEntrySummaryComponents.Component(
-                                tagSummary: ChatListEntryMessageTagSummaryComponent(namespace: Namespaces.Message.Cloud),
-                                actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent(namespace: Namespaces.Message.Cloud)
-                            ),
-                            ChatListEntryMessageTagSummaryKey(
-                                tag: .unseenReaction,
-                                actionType: PendingMessageActionType.readReaction
-                            ): ChatListEntrySummaryComponents.Component(
-                                tagSummary: ChatListEntryMessageTagSummaryComponent(namespace: Namespaces.Message.Cloud),
-                                actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent(namespace: Namespaces.Message.Cloud)
-                            )
-                        ]
-                    )
-                )
+                let viewKey: PostboxViewKey = .savedMessagesIndex(peerId: component.peerId)
+                let interfaceStateKey: PostboxViewKey = .chatInterfaceState(peerId: component.peerId)
                 
-                let readStateKey: PostboxViewKey = .combinedReadState(peerId: component.peerId, handleThreads: false)
-                
-                let threadListSignal: Signal<EngineChatList, NoError> = component.context.account.postbox.combinedView(keys: [viewKey, readStateKey])
+                let accountPeerId = component.context.account.peerId
+                let threadListSignal: Signal<EngineChatList, NoError> = component.context.account.postbox.combinedView(keys: [viewKey, interfaceStateKey])
                 |> map { views -> EngineChatList in
-                    guard let view = views.views[viewKey] as? MessageHistoryThreadIndexView else {
-                        preconditionFailure()
-                    }
-                    guard let readStateView = views.views[readStateKey] as? CombinedReadStateView else {
+                    guard let view = views.views[viewKey] as? MessageHistorySavedMessagesIndexView else {
                         preconditionFailure()
                     }
                     
-                    var maxReadId: Int32 = 0
-                    if let state = readStateView.state?.states.first(where: { $0.0 == Namespaces.Message.Cloud }) {
-                        if case let .idBased(maxIncomingReadId, _, _, _, _) = state.1 {
-                            maxReadId = maxIncomingReadId
-                        }
-                    }
-                    
-                    var items: [EngineChatList.Item] = []
-                    for item in view.items {
-                        guard let peer = view.peer else {
-                            continue
-                        }
-                        guard let data = item.info.get(MessageHistoryThreadData.self) else {
-                            continue
-                        }
-                        
-                        let defaultPeerNotificationSettings: TelegramPeerNotificationSettings = (view.peerNotificationSettings as? TelegramPeerNotificationSettings) ?? .defaultSettings
-                        
-                        var hasUnseenMentions = false
-                        
-                        var isMuted = false
-                        switch data.notificationSettings.muteState {
-                        case .muted:
-                            isMuted = true
-                        case .unmuted:
-                            isMuted = false
-                        case .default:
-                            if case .default = data.notificationSettings.muteState {
-                                if case .muted = defaultPeerNotificationSettings.muteState {
-                                    isMuted = true
-                                }
-                            }
-                        }
-                        
-                        if let info = item.tagSummaryInfo[ChatListEntryMessageTagSummaryKey(
-                            tag: .unseenPersonalMessage,
-                            actionType: PendingMessageActionType.consumeUnseenPersonalMessage
-                        )] {
-                            hasUnseenMentions = (info.tagSummaryCount ?? 0) > (info.actionsSummaryCount ?? 0)
-                        }
-                        
-                        var hasUnseenReactions = false
-                        if let info = item.tagSummaryInfo[ChatListEntryMessageTagSummaryKey(
-                            tag: .unseenReaction,
-                            actionType: PendingMessageActionType.readReaction
-                        )] {
-                            hasUnseenReactions = (info.tagSummaryCount ?? 0) != 0// > (info.actionsSummaryCount ?? 0)
-                        }
-                        
-                        let pinnedIndex: EngineChatList.Item.PinnedIndex
-                        if let index = item.pinnedIndex {
-                            pinnedIndex = .index(index)
-                        } else {
-                            pinnedIndex = .none
-                        }
-                        
-                        var topicMaxIncomingReadId = data.maxIncomingReadId
-                        if data.maxIncomingReadId == 0 && maxReadId != 0 && Int64(maxReadId) <= item.id {
-                            topicMaxIncomingReadId = max(topicMaxIncomingReadId, maxReadId)
-                        }
-                        
-                        let readCounters = EnginePeerReadCounters(state: CombinedPeerReadState(states: [(Namespaces.Message.Cloud, .idBased(maxIncomingReadId: topicMaxIncomingReadId, maxOutgoingReadId: data.maxOutgoingReadId, maxKnownId: 1, count: data.incomingUnreadCount, markedUnread: false))]), isMuted: false)
-                        
-                        var draft: EngineChatList.Draft?
-                        if let embeddedState = item.embeddedInterfaceState, let _ = embeddedState.overrideChatTimestamp {
+                    var draft: EngineChatList.Draft?
+                    if let interfaceStateView = views.views[interfaceStateKey] as? ChatInterfaceStateView {
+                        if let embeddedState = interfaceStateView.value, let _ = embeddedState.overrideChatTimestamp {
                             if let opaqueState = _internal_decodeStoredChatInterfaceState(state: embeddedState) {
                                 if let text = opaqueState.synchronizeableInputState?.text {
                                     draft = EngineChatList.Draft(text: text, entities: opaqueState.synchronizeableInputState?.entities ?? [])
                                 }
                             }
                         }
+                    }
+                     
+                    var items: [EngineChatList.Item] = []
+                    for item in view.items {
+                        guard let sourcePeer = item.peer else {
+                            continue
+                        }
+                        
+                        let sourceId = PeerId(item.id)
+                        
+                        var messages: [EngineMessage] = []
+                        if let topMessage = item.topMessage {
+                            messages.append(EngineMessage(topMessage))
+                        }
+                        
+                        let mappedMessageIndex = MessageIndex(id: MessageId(peerId: sourceId, namespace: item.index.id.namespace, id: item.index.id.id), timestamp: item.index.timestamp)
                         
                         items.append(EngineChatList.Item(
-                            id: .forum(item.id),
-                            index: .forum(pinnedIndex: pinnedIndex, timestamp: item.index.timestamp, threadId: item.id, namespace: item.index.id.namespace, id: item.index.id.id),
-                            messages: item.topMessage.flatMap { [EngineMessage($0)] } ?? [],
-                            readCounters: readCounters,
-                            isMuted: isMuted,
-                            draft: draft,
-                            threadData: data,
-                            renderedPeer: EngineRenderedPeer(peer: EnginePeer(peer)),
+                            id: .chatList(sourceId),
+                            index: .chatList(ChatListIndex(pinningIndex: item.pinnedIndex.flatMap(UInt16.init), messageIndex: mappedMessageIndex)),
+                            messages: messages,
+                            readCounters: nil,
+                            isMuted: false,
+                            draft: sourceId == accountPeerId ? draft : nil,
+                            threadData: nil,
+                            renderedPeer: EngineRenderedPeer(peer: EnginePeer(sourcePeer)),
                             presence: nil,
-                            hasUnseenMentions: hasUnseenMentions,
-                            hasUnseenReactions: hasUnseenReactions,
+                            hasUnseenMentions: false,
+                            hasUnseenReactions: false,
                             forumTopicData: nil,
                             topForumTopicItems: [],
                             hasFailed: false,
@@ -709,6 +669,7 @@ public final class ChatSideTopicsPanel: Component {
                         hasLater: false,
                         isLoading: view.isLoading
                     )
+                    
                     return list
                 }
                 
@@ -884,9 +845,7 @@ public final class ChatSideTopicsPanel: Component {
                         guard let self, let component = self.component else {
                             return
                         }
-                        guard case let .forum(topicId) = chatListItem.id else {
-                            return
-                        }
+                        let topicId = chatListItem.renderedPeer.peerId.toInt64()
                         component.updateTopicId(topicId)
                     }, contextGesture: { gesture, sourceNode in
                     })
@@ -895,7 +854,7 @@ public final class ChatSideTopicsPanel: Component {
                 }
                     
                 var isSelected = false
-                if case let .forum(topicId) = item.item.id, component.topicId == topicId {
+                if component.topicId == item.item.renderedPeer.peerId.toInt64() {
                     isSelected = true
                 }
                 let itemSize = itemView.update(context: component.context, item: item, isSelected: isSelected, theme: component.theme, width: panelWidth, transition: .immediate)
