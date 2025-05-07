@@ -341,6 +341,7 @@ final class GiftStoreScreenComponent: Component {
                             }
                             self.showLoading = true
                             self.state?.starGiftsContext.updateFilterAttributes([])
+                            self.scrollToTop()
                         },
                         animateScale: false
                     )
@@ -359,7 +360,7 @@ final class GiftStoreScreenComponent: Component {
             var emptyResultsActionFrame = CGRect(
                 origin: CGPoint(
                     x: floorToScreenPixels((availableWidth - emptyResultsActionSize.width) / 2.0),
-                    y: max(self.scrollView.contentSize.height - 8.0, availableHeight - bottomInset - emptyResultsActionSize.height - 16.0)
+                    y: max(self.scrollView.contentSize.height - 70.0, availableHeight - bottomInset - emptyResultsActionSize.height - 16.0)
                 ),
                 size: emptyResultsActionSize
             )
@@ -437,7 +438,7 @@ final class GiftStoreScreenComponent: Component {
                     if view.superview == nil {
                         view.alpha = 0.0
                         fadeTransition.setAlpha(view: view, alpha: 1.0)
-                        self.insertSubview(view, belowSubview: self.loadingNode.view)
+                        self.scrollView.addSubview(view)
                     }
                     view.bounds = CGRect(origin: .zero, size: emptyResultsActionFrame.size)
                     ComponentTransition.immediate.setPosition(view: view, position: emptyResultsActionFrame.center)
@@ -847,7 +848,7 @@ final class GiftStoreScreenComponent: Component {
                 self.backgroundColor = environment.theme.list.blocksBackgroundColor
             }
                         
-            let bottomContentInset: CGFloat = 24.0
+            let bottomContentInset: CGFloat = 56.0
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
             let headerSideInset: CGFloat = 24.0 + environment.safeInsets.left
                         
