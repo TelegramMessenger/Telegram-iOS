@@ -117,6 +117,8 @@ public final class TabSelectorComponent: Component {
         private let selectionView: UIImageView
         private var visibleItems: [AnyHashable: VisibleItem] = [:]
         
+        private var didInitiallyScroll = false
+        
         override init(frame: CGRect) {
             self.selectionView = UIImageView()
             
@@ -238,11 +240,15 @@ public final class TabSelectorComponent: Component {
                         )),
                         effectAlignment: .center,
                         minSize: nil,
-                        action: { [weak self] in
+                        action: { [weak self, weak itemView] in
                             guard let self, let component = self.component else {
                                 return
                             }
                             component.setSelectedId(itemId)
+                            
+                            if let view = itemView?.title.view, allowScroll && self.contentSize.width > self.bounds.width {
+                                self.scrollRectToVisible(view.frame.insetBy(dx: -64.0, dy: 0.0), animated: true)
+                            }
                         },
                         animateScale: !isLineSelection
                     )),
@@ -336,11 +342,15 @@ public final class TabSelectorComponent: Component {
                 self.selectionView.alpha = 0.0
             }
             
-            self.contentSize = CGSize(width: contentWidth, height: baseHeight + verticalInset * 2.0)
+            let contentSize = CGSize(width: contentWidth, height: baseHeight + verticalInset * 2.0)
+            if self.contentSize != contentSize {
+                self.contentSize = contentSize
+            }
             self.disablesInteractiveTransitionGestureRecognizer = contentWidth > availableSize.width
             
-            if let selectedBackgroundRect, self.bounds.width > 0.0 {
+            if let selectedBackgroundRect, self.bounds.width > 0.0 && !self.didInitiallyScroll {
                 self.scrollRectToVisible(selectedBackgroundRect.insetBy(dx: -spacing, dy: 0.0), animated: false)
+                self.didInitiallyScroll = true
             }
             
             return CGSize(width: min(contentWidth, availableSize.width), height: baseHeight + verticalInset * 2.0)

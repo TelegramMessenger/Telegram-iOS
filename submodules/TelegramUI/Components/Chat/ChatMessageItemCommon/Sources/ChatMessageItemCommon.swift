@@ -295,10 +295,6 @@ public func canAddMessageReactions(message: Message) -> Bool {
                     return true
                 }
             }
-        } else if let story = media as? TelegramMediaStory {
-            if story.isMention {
-                return false
-            }
         }
     }
     return true

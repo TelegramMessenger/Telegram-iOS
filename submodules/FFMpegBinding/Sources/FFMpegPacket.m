@@ -2,8 +2,8 @@
 
 #import <FFMpegBinding/FFMpegAVCodecContext.h>
 
-#import <third_party/ffmpeg/libavcodec/avcodec.h>
-#import <third_party/ffmpeg/libavformat/avformat.h>
+#import "libavcodec/avcodec.h"
+#import "libavformat/avformat.h"
 
 @interface FFMpegPacket () {
     AVPacket *_impl;

@@ -167,7 +167,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             self.conferenceAddParticipant?()
         }
 
-        var enableVideoSharpening = true
+        var enableVideoSharpening = false
         if let data = call.context.currentAppConfiguration.with({ $0 }).data, let value = data["ios_call_video_sharpening"] as? Double {
             enableVideoSharpening = value != 0.0
         }

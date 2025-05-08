@@ -230,7 +230,7 @@ public enum MediaCropOrientation: Int32 {
     }
 }
 
-public final class MediaEditorValues: Codable, Equatable {
+public final class MediaEditorValues: Codable, Equatable, CustomStringConvertible {
     public static func == (lhs: MediaEditorValues, rhs: MediaEditorValues) -> Bool {
         if lhs.peerId != rhs.peerId {
             return false
@@ -1009,6 +1009,114 @@ public final class MediaEditorValues: Codable, Equatable {
             return true
         }
         return false
+    }
+    
+    public var description: String {
+        var components: [String] = []
+        
+        components.append("originalDimensions: \(self.originalDimensions.width)x\(self.originalDimensions.height)")
+        
+        if self.cropOffset != .zero {
+            components.append("cropOffset: \(cropOffset)")
+        }
+        
+        if let cropRect = self.cropRect {
+            components.append("cropRect: \(cropRect)")
+        }
+        
+        if self.cropScale != 1.0 {
+            components.append("cropScale: \(self.cropScale)")
+        }
+        
+        if self.cropRotation != 0.0 {
+            components.append("cropRotation: \(self.cropRotation)")
+        }
+        
+        if self.cropMirroring {
+            components.append("cropMirroring: true")
+        }
+        
+        if let cropOrientation = self.cropOrientation {
+            components.append("cropOrientation: \(cropOrientation)")
+        }
+        
+        if let gradientColors = self.gradientColors, !gradientColors.isEmpty {
+            components.append("gradientColors: \(gradientColors.count) colors")
+        }
+        
+        if let videoTrimRange = self.videoTrimRange {
+            components.append("videoTrimRange: \(videoTrimRange.lowerBound) - \(videoTrimRange.upperBound)")
+        }
+        
+        if self.videoIsMuted {
+            components.append("videoIsMuted: true")
+        }
+        
+        if self.videoIsFullHd {
+            components.append("videoIsFullHd: true")
+        }
+        
+        if self.videoIsMirrored {
+            components.append("videoIsMirrored: true")
+        }
+        
+        if let videoVolume = self.videoVolume, videoVolume != 1.0 {
+            components.append("videoVolume: \(videoVolume)")
+        }
+        
+        if let additionalVideoPath = self.additionalVideoPath {
+            components.append("additionalVideo: \(additionalVideoPath)")
+        }
+        
+        if let position = self.additionalVideoPosition {
+            components.append("additionalVideoPosition: \(position)")
+        }
+        
+        if let scale = self.additionalVideoScale {
+            components.append("additionalVideoScale: \(scale)")
+        }
+        
+        if let rotation = self.additionalVideoRotation {
+            components.append("additionalVideoRotation: \(rotation)")
+        }
+        
+        if !self.additionalVideoPositionChanges.isEmpty {
+            components.append("additionalVideoPositionChanges: \(additionalVideoPositionChanges.count) changes")
+        }
+                
+        if !self.collage.isEmpty {
+            components.append("collage: \(collage.count) items")
+        }
+        
+        if self.nightTheme {
+            components.append("nightTheme: true")
+        }
+        
+        if self.drawing != nil {
+            components.append("drawing: true")
+        }
+        
+        if self.maskDrawing != nil {
+            components.append("maskDrawing: true")
+        }
+        
+        if !self.entities.isEmpty {
+            components.append("entities: \(self.entities.count) items")
+        }
+        
+        if !self.toolValues.isEmpty {
+            components.append("toolValues: \(self.toolValues.count) tools")
+        }
+        
+        if let audioTrack = self.audioTrack {
+            components.append("audioTrack: \(audioTrack.path)")
+        }
+        
+        if let qualityPreset = self.qualityPreset {
+            components.append("qualityPreset: \(qualityPreset)")
+        }
+        
+        return "MediaEditorValues(\(components.joined(separator: ", ")))"
     }
 }
 

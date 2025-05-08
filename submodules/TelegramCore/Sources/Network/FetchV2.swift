@@ -103,6 +103,10 @@ private final class FetchImpl {
         init(range: Range<Int64>) {
             self.range = range
         }
+        
+        deinit {
+            self.disposable?.dispose()
+        }
     }
     
     private final class HashRangeData {
