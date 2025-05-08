@@ -2166,7 +2166,7 @@ private func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostSt
                 let ItemBanned = 11
                 let ItemRecentActions = 12
                 let ItemAffiliatePrograms = 13
-                let ItemPostSuggestionsSettings = 14
+                //let ItemPostSuggestionsSettings = 14
                 let ItemPeerAutoTranslate = 15
                 
                 let isCreator = channel.flags.contains(.isCreator)
