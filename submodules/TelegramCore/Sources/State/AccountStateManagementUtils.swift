@@ -1571,10 +1571,11 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                     case let .draftMessage(_, replyToMsgHeader, message, entities, media, date, messageEffectId):
                         let _ = media
                         var replySubject: EngineMessageReplySubject?
-                        if let replyToMsgHeader = replyToMsgHeader {
+                        if let replyToMsgHeader {
                             switch replyToMsgHeader {
-                            case let .inputReplyToMessage(_, replyToMsgId, topMsgId, replyToPeerId, quoteText, quoteEntities, quoteOffset):
+                            case let .inputReplyToMessage(_, replyToMsgId, topMsgId, replyToPeerId, quoteText, quoteEntities, quoteOffset, monoforumPeerId):
                                 let _ = topMsgId
+                                let _ = monoforumPeerId
                                 
                                 var quote: EngineMessageReplyQuote?
                                 if let quoteText = quoteText {
@@ -1611,6 +1612,8 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                                     quote: quote
                                 )
                             case .inputReplyToStory:
+                                break
+                            case .inputReplyToMonoForum:
                                 break
                             }
                         }
@@ -1926,8 +1929,10 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, network: Netwo
         case let .AddMessages(messages, _):
             for message in messages {
                 if let threadId = message.threadId {
-                    if let channel = state.peers[message.id.peerId] as? TelegramChannel, case .group = channel.info, channel.flags.contains(.isForum) {
-                        forumThreadIds.insert(MessageId(peerId: message.id.peerId, namespace: message.id.namespace, id: Int32(clamping: threadId)))
+                    if let channel = state.peers[message.id.peerId] as? TelegramChannel, case .group = channel.info {
+                        if channel.flags.contains(.isForum) {
+                            forumThreadIds.insert(MessageId(peerId: message.id.peerId, namespace: message.id.namespace, id: Int32(clamping: threadId)))
+                        }
                     }
                 }
             }

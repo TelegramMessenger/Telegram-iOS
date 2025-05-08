@@ -573,7 +573,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
         
         var isForum = false
-        if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {
+        if let channel = peer as? TelegramChannel, channel.isForumOrMonoForum {
             isForum = true
         }
         

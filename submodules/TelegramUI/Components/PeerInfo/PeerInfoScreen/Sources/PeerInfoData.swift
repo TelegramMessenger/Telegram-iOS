@@ -2317,7 +2317,7 @@ func peerInfoCanEdit(peer: Peer?, chatLocation: ChatLocation, threadData: Messag
         }
         return true
     } else if let peer = peer as? TelegramChannel {
-        if peer.flags.contains(.isForum), let threadData = threadData {
+        if peer.isForumOrMonoForum, let threadData = threadData {
             if peer.flags.contains(.isCreator) {
                 return true
             } else if threadData.isOwnedByMe {

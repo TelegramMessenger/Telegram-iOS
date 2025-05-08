@@ -25,7 +25,7 @@ func _internal_resetAccountState(postbox: Postbox, network: Network, accountPeer
                     }
                     
                     if peerId.namespace == Namespaces.Peer.CloudChannel {
-                        if let channel = transaction.getPeer(peerId) as? TelegramChannel, channel.flags.contains(.isForum) {
+                        if let channel = transaction.getPeer(peerId) as? TelegramChannel, channel.isForumOrMonoForum {
                             transaction.setPeerPinnedThreads(peerId: peerId, threadIds: [])
                             for threadId in transaction.setMessageHistoryThreads(peerId: peerId) {
                                 transaction.setMessageHistoryThreadInfo(peerId: peerId, threadId: threadId, info: nil)

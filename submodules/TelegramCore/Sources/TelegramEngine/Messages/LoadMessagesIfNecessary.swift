@@ -100,7 +100,7 @@ func _internal_getMessagesLoadIfNecessary(_ messageIds: [MessageId], postbox: Po
                             var storeMessages: [StoreMessage] = []
                             
                             for message in messages {
-                                if let message = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForum) {
+                                if let message = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForumOrMonoForum) {
                                     storeMessages.append(message)
                                 }
                             }

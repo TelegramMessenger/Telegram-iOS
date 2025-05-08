@@ -103,7 +103,7 @@ private func peerButtons(_ state: ChatPresentationInterfaceState) -> [ChatReport
             }
         }
     } else if let peer = state.renderedPeer?.chatMainPeer {
-        if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {
+        if let channel = peer as? TelegramChannel, channel.isForumOrMonoForum {
             if let threadData = state.threadData {
                 if threadData.isClosed {
                     var canManage = false

@@ -301,7 +301,7 @@ func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMessageHis
                     for (peer, messages, chats, users) in results {
                         if !messages.isEmpty {
                             for message in messages {
-                                if let message = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForum) {
+                                if let message = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForumOrMonoForum) {
                                     additionalMessages.append(message)
                                 }
                             }
@@ -905,7 +905,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                     var storeMessages: [StoreMessage] = []
                     
                     for message in messages {
-                        if let storeMessage = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForum, namespace: namespace) {
+                        if let storeMessage = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForumOrMonoForum, namespace: namespace) {
                             if let channelPts = channelPts {
                                 var attributes = storeMessage.attributes
                                 attributes.append(ChannelMessageStateVersionAttribute(pts: channelPts))
@@ -1204,7 +1204,7 @@ func fetchCallListHole(network: Network, postbox: Postbox, accountPeerId: PeerId
                 
                 for message in messages {
                     var peerIsForum = false
-                    if let peerId = message.peerId, let peer = parsedPeers.get(peerId), peer.isForum {
+                    if let peerId = message.peerId, let peer = parsedPeers.get(peerId), peer.isForumOrMonoForum {
                         peerIsForum = true
                     }
                     if let storeMessage = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peerIsForum) {

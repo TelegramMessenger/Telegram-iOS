@@ -135,7 +135,7 @@ class HistoryNodeContainer: ASDisplayNode {
 
 class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     let context: AccountContext
-    let chatLocation: ChatLocation
+    var chatLocation: ChatLocation
     let controllerInteraction: ChatControllerInteraction
     private weak var controller: ChatControllerImpl?
     
@@ -2964,7 +2964,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                                 channelMessageId: nil,
                                 isChannelPost: false,
                                 isForumPost: false,
-                                isMonoforum: false,
+                                isMonoforumPost: false,
                                 maxMessage: nil,
                                 maxReadIncomingMessageId: nil,
                                 maxReadOutgoingMessageId: nil,

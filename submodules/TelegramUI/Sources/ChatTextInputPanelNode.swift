@@ -1923,7 +1923,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                                 } else {
                                     placeholder = interfaceState.strings.Conversation_InputTextPlaceholderReply
                                 }
-                            } else if let channel = peer as? TelegramChannel, channel.isForum, let forumTopicData = interfaceState.forumTopicData {
+                            } else if let channel = peer as? TelegramChannel, channel.isForumOrMonoForum, let forumTopicData = interfaceState.forumTopicData {
                                 if let replyMessage = interfaceState.replyMessage, let threadInfo = replyMessage.associatedThreadInfo {
                                     placeholder = interfaceState.strings.Chat_InputPlaceholderReplyInTopic(threadInfo.title).string
                                 } else {

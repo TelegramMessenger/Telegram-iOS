@@ -576,7 +576,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                     strongSelf.controllerInteraction!.selectedPeerIds.remove(peer.peerId)
                     strongSelf.controllerInteraction!.selectedPeers = strongSelf.controllerInteraction!.selectedPeers.filter({ $0.peerId != peer.peerId })
                 } else {
-                    if case let .channel(channel) = peer.peer, channel.flags.contains(.isForum) {
+                    if case let .channel(channel) = peer.peer, channel.isForumOrMonoForum {
                         if strongSelf.controllerInteraction!.selectedTopics[peer.peerId] != nil {
                             strongSelf.controllerInteraction!.selectedTopics[peer.peerId] = nil
                             strongSelf.peersContentNode?.update()

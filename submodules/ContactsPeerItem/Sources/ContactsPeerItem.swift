@@ -1227,7 +1227,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                         if case .app(true) = item.peerMode {
                                             clipStyle = .roundedRect
                                             displayDimensions = CGSize(width: displayDimensions.width, height: displayDimensions.width * 1.2)
-                                        } else if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+                                        } else if case let .channel(channel) = peer, channel.isForumOrMonoForum {
                                             clipStyle = .roundedRect
                                         } else {
                                             clipStyle = .round

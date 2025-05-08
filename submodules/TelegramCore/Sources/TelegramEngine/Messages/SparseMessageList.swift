@@ -842,7 +842,7 @@ public final class SparseMessageCalendar {
                             let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
 
                             for message in messages {
-                                if let parsedMessage = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForum) {
+                                if let parsedMessage = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForumOrMonoForum) {
                                     parsedMessages.append(parsedMessage)
                                 }
                             }

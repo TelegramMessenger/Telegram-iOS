@@ -476,7 +476,7 @@ struct AccountMutableState {
             return peer.isForum
         } else if let chat = self.apiChats[peerId] {
             if let channel = parseTelegramGroupOrChannel(chat: chat) {
-                return channel.isForum
+                return channel.isForumOrMonoForum
             } else {
                 return false
             }

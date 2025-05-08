@@ -139,7 +139,7 @@ private func mergedState(transaction: Transaction, seedConfiguration: SeedConfig
     var renderedMessages: [Message] = []
     for message in messages {
         var peerIsForum = false
-        if let peerId = message.peerId, let peer = peers[peerId], peer.isForum {
+        if let peerId = message.peerId, let peer = peers[peerId], peer.isForumOrMonoForum {
             peerIsForum = true
         }
         if let message = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peerIsForum) {
@@ -671,7 +671,7 @@ func _internal_downloadMessage(accountPeerId: PeerId, postbox: Postbox, network:
                         
                         var renderedMessages: [Message] = []
                         for message in messages {
-                            if let message = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForum), let renderedMessage = locallyRenderedMessage(message: message, peers: peers) {
+                            if let message = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForumOrMonoForum), let renderedMessage = locallyRenderedMessage(message: message, peers: peers) {
                                 renderedMessages.append(renderedMessage)
                             }
                         }
@@ -755,7 +755,7 @@ func fetchRemoteMessage(accountPeerId: PeerId, postbox: Postbox, source: FetchMe
             var renderedMessages: [Message] = []
             for message in messages {
                 var peerIsForum = false
-                if let peerId = message.peerId, let peer = transaction.getPeer(peerId) ?? parsedPeers.get(peerId), peer.isForum {
+                if let peerId = message.peerId, let peer = transaction.getPeer(peerId) ?? parsedPeers.get(peerId), peer.isForumOrMonoForum {
                     peerIsForum = true
                 }
                 if let message = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peerIsForum, namespace: id.namespace), case let .Id(updatedId) = message.id {
@@ -810,7 +810,7 @@ func _internal_searchMessageIdByTimestamp(account: Account, peerId: PeerId, thre
                             messages = []
                         }
                         for message in messages {
-                            if let message = StoreMessage(apiMessage: message, accountPeerId: account.peerId, peerIsForum: peer.isForum) {
+                            if let message = StoreMessage(apiMessage: message, accountPeerId: account.peerId, peerIsForum: peer.isForumOrMonoForum) {
                                 return message.index
                             }
                         }
@@ -847,7 +847,7 @@ func _internal_searchMessageIdByTimestamp(account: Account, peerId: PeerId, thre
                             messages = []
                         }
                         for message in messages {
-                            if let message = StoreMessage(apiMessage: message, accountPeerId: account.peerId, peerIsForum: peer.isForum) {
+                            if let message = StoreMessage(apiMessage: message, accountPeerId: account.peerId, peerIsForum: peer.isForumOrMonoForum) {
                                 return message.index
                             }
                         }
@@ -880,7 +880,7 @@ func _internal_searchMessageIdByTimestamp(account: Account, peerId: PeerId, thre
                                 messages = []
                         }
                         for message in messages {
-                            if let message = StoreMessage(apiMessage: message, accountPeerId: account.peerId, peerIsForum: secondaryPeer.isForum) {
+                            if let message = StoreMessage(apiMessage: message, accountPeerId: account.peerId, peerIsForum: secondaryPeer.isForumOrMonoForum) {
                                 return message.index
                             }
                         }
@@ -904,7 +904,7 @@ func _internal_searchMessageIdByTimestamp(account: Account, peerId: PeerId, thre
                             messages = []
                     }
                     for message in messages {
-                        if let message = StoreMessage(apiMessage: message, accountPeerId: account.peerId, peerIsForum: peer.isForum) {
+                        if let message = StoreMessage(apiMessage: message, accountPeerId: account.peerId, peerIsForum: peer.isForumOrMonoForum) {
                             return message.index
                         }
                     }

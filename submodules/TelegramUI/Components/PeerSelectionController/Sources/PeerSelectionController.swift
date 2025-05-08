@@ -276,7 +276,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
         
         self.peerSelectionNode.requestOpenPeer = { [weak self] peer, threadId in
             if let strongSelf = self, let peerSelected = strongSelf.peerSelected {
-                if case let .channel(peer) = peer, peer.flags.contains(.isForum), threadId == nil, strongSelf.selectForumThreads {
+                if case let .channel(peer) = peer, peer.isForumOrMonoForum, threadId == nil, strongSelf.selectForumThreads {
                     let controller = PeerSelectionControllerImpl(
                         PeerSelectionControllerParams(
                             context: strongSelf.context,
@@ -316,7 +316,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
                 strongSelf.openMessageFromSearchDisposable.set((_internal_storedMessageFromSearchPeer(postbox: strongSelf.context.account.postbox, peer: peer._asPeer())
                 |> deliverOnMainQueue).start(completed: { [weak strongSelf] in
                     if let strongSelf = strongSelf, let peerSelected = strongSelf.peerSelected {
-                        if case let .channel(peer) = peer, peer.flags.contains(.isForum), threadId == nil, strongSelf.selectForumThreads {
+                        if case let .channel(peer) = peer, peer.isForumOrMonoForum, threadId == nil, strongSelf.selectForumThreads {
                             let controller = PeerSelectionControllerImpl(
                                 PeerSelectionControllerParams(
                                     context: strongSelf.context,

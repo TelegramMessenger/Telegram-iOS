@@ -586,7 +586,7 @@ extension ChatControllerImpl {
                     if let previous = strongSelf.peerView, let group = previous.peers[previous.peerId] as? TelegramGroup, group.migrationReference == nil, let updatedGroup = peerView.peers[peerView.peerId] as? TelegramGroup, let migrationReference = updatedGroup.migrationReference {
                         upgradedToPeerId = migrationReference.peerId
                     }
-                    if let previous = strongSelf.peerView, let channel = previous.peers[previous.peerId] as? TelegramChannel, !channel.flags.contains(.isForum), let updatedChannel = peerView.peers[peerView.peerId] as? TelegramChannel, updatedChannel.flags.contains(.isForum) {
+                    if let previous = strongSelf.peerView, let channel = previous.peers[previous.peerId] as? TelegramChannel, !channel.isForumOrMonoForum, let updatedChannel = peerView.peers[peerView.peerId] as? TelegramChannel, updatedChannel.isForumOrMonoForum {
                         movedToForumTopics = true
                     }
                     
@@ -1133,7 +1133,7 @@ extension ChatControllerImpl {
             }
             
             let savedMessagesPeerId: PeerId?
-            if case let .replyThread(replyThreadMessage) = chatLocation, (replyThreadMessage.peerId == context.account.peerId || replyThreadMessage.isMonoforum) {
+            if case let .replyThread(replyThreadMessage) = chatLocation, (replyThreadMessage.peerId == context.account.peerId || replyThreadMessage.isMonoforumPost) {
                 savedMessagesPeerId = PeerId(replyThreadMessage.threadId)
             } else {
                 savedMessagesPeerId = nil
@@ -1625,7 +1625,7 @@ extension ChatControllerImpl {
                                 }
                         })
                         
-                        if let replyThreadId, let channel = renderedPeer?.peer as? TelegramChannel, channel.isForum, strongSelf.nextChannelToReadDisposable == nil {
+                        if let replyThreadId, let channel = renderedPeer?.peer as? TelegramChannel, channel.isForumOrMonoForum, strongSelf.nextChannelToReadDisposable == nil {
                             strongSelf.nextChannelToReadDisposable = (combineLatest(queue: .mainQueue(),
                             strongSelf.context.engine.peers.getNextUnreadForumTopic(peerId: channel.id, topicId: Int32(clamping: replyThreadId)),
                                 ApplicationSpecificNotice.getNextChatSuggestionTip(accountManager: strongSelf.context.sharedContext.accountManager)
@@ -1750,7 +1750,7 @@ extension ChatControllerImpl {
             let isForum = self.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
             |> map { peer -> Bool in
                 if case let .channel(channel) = peer {
-                    return channel.flags.contains(.isForum)
+                    return channel.isForumOrMonoForum
                 } else {
                     return false
                 }
@@ -2464,7 +2464,7 @@ extension ChatControllerImpl {
                 }
                 
                 if case let .replyThread(replyThreadMessageId) = strongSelf.chatLocation {
-                    if let channel = combinedInitialData.initialData?.peer as? TelegramChannel, channel.flags.contains(.isForum) {
+                    if let channel = combinedInitialData.initialData?.peer as? TelegramChannel, channel.isForumOrMonoForum {
                         pinnedMessageId = nil
                     } else {
                         pinnedMessageId = replyThreadMessageId.effectiveTopId
@@ -6247,7 +6247,7 @@ extension ChatControllerImpl {
                     channelMessageId: nil,
                     isChannelPost: false,
                     isForumPost: true,
-                    isMonoforum: isMonoforum,
+                    isMonoforumPost: isMonoforum,
                     maxMessage: nil,
                     maxReadIncomingMessageId: nil,
                     maxReadOutgoingMessageId: nil,
@@ -6718,7 +6718,7 @@ extension ChatControllerImpl {
                         channelMessageId: nil,
                         isChannelPost: false,
                         isForumPost: true,
-                        isMonoforum: false,
+                        isMonoforumPost: false,
                         maxMessage: nil,
                         maxReadIncomingMessageId: nil,
                         maxReadOutgoingMessageId: nil,

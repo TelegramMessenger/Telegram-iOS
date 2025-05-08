@@ -30,7 +30,7 @@ extension PeerInfoScreenImpl {
         
         let peerId = self.peerId
         var isForum = false
-        if let peer = peer as? TelegramChannel, peer.flags.contains(.isForum) {
+        if let peer = peer as? TelegramChannel, peer.isForumOrMonoForum {
             isForum = true
         }
         
@@ -135,7 +135,7 @@ extension PeerInfoScreenImpl {
                         peerType = .group
                     } else if case let .channel(channel) = peer {
                         if case .group = channel.info {
-                            peerType = channel.flags.contains(.isForum) ? .forum : .group
+                            peerType = channel.isForumOrMonoForum ? .forum : .group
                         } else {
                             peerType = .channel
                         }

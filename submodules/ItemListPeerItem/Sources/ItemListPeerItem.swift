@@ -1721,7 +1721,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                             strongSelf.avatarNode.imageNode.animateFirstTransition = item.animateFirstAvatarTransition
                             
                             var clipStyle: AvatarNodeClipStyle = .round
-                            if case let .channel(channel) = item.peer, channel.isForum {
+                            if case let .channel(channel) = item.peer, channel.isForumOrMonoForum {
                                 clipStyle = .roundedRect
                             }
                             

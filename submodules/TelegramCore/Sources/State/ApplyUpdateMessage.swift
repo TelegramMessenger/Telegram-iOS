@@ -145,7 +145,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                 namespace = Namespaces.Message.ScheduledCloud
             }
             
-            if let apiMessage = apiMessage, let apiMessagePeerId = apiMessage.peerId, let updatedMessage = StoreMessage(apiMessage: apiMessage, accountPeerId: accountPeerId, peerIsForum: transaction.getPeer(apiMessagePeerId)?.isForum ?? false, namespace: namespace) {
+            if let apiMessage = apiMessage, let apiMessagePeerId = apiMessage.peerId, let updatedMessage = StoreMessage(apiMessage: apiMessage, accountPeerId: accountPeerId, peerIsForum: transaction.getPeer(apiMessagePeerId)?.isForumOrMonoForum ?? false, namespace: namespace) {
                 media = updatedMessage.media
                 attributes = updatedMessage.attributes
                 text = updatedMessage.text
@@ -423,7 +423,7 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
         for apiMessage in result.messages {
             var peerIsForum = false
             if let apiMessagePeerId = apiMessage.peerId, let peer = transaction.getPeer(apiMessagePeerId) {
-                if peer.isForum {
+                if peer.isForumOrMonoForum {
                     peerIsForum = true
                 }
             }

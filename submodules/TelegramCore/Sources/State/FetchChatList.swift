@@ -145,7 +145,7 @@ private func parseDialogs(accountPeerId: PeerId, apiDialogs: [Api.Dialog], apiMe
     
     for message in apiMessages {
         var peerIsForum = false
-        if let peerId = message.peerId, let peer = peers.get(peerId), peer.isForum {
+        if let peerId = message.peerId, let peer = peers.get(peerId), peer.isForumOrMonoForum {
             peerIsForum = true
         }
         if let storeMessage = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peerIsForum) {
