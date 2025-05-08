@@ -178,7 +178,7 @@ private func getCommonTimeline(friends: [Friend]?, in context: TimelineProviderC
                 }
                 
                 var isForum = false
-                if let peer = peer as? TelegramChannel, peer.flags.contains(.isForum) {
+                if let peer = peer as? TelegramChannel, peer.isForumOrMonoForum {
                     isForum = true
                 }
                 

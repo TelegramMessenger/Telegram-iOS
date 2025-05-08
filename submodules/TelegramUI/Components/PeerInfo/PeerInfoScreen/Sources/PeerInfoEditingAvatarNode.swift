@@ -90,7 +90,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
         
         var isForum = false
         let avatarCornerRadius: CGFloat
-        if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {
+        if let channel = peer as? TelegramChannel, channel.isForumOrMonoForum {
             isForum = true
             avatarCornerRadius = floor(avatarSize * 0.25)
         } else {

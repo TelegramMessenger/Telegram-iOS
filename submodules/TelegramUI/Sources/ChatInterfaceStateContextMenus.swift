@@ -315,7 +315,7 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
         }
     }
     
-    if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {
+    if let channel = peer as? TelegramChannel, channel.isForumOrMonoForum {
         if let threadData = chatPresentationInterfaceState.threadData {
             if threadData.isClosed {
                 var canManage = false
@@ -722,7 +722,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
     
     let message = messages[0]
     
-    if case .peer = chatPresentationInterfaceState.chatLocation, let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.flags.contains(.isForum) {
+    if case .peer = chatPresentationInterfaceState.chatLocation, let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isForumOrMonoForum {
         if message.threadId == nil {
             canReply = false
         }

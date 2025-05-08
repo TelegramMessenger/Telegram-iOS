@@ -340,22 +340,6 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                     }
                 }
             }
-            
-            if channel.flags.contains(.isForum) {
-                /*if let _ = chatPresentationInterfaceState.threadData {
-                } else {
-                    if chatPresentationInterfaceState.interfaceState.replyMessageSubject == nil {
-                        if let currentPanel = (currentPanel as? ChatRestrictedInputPanelNode) ?? (currentSecondaryPanel as? ChatRestrictedInputPanelNode) {
-                            return (currentPanel, nil)
-                        } else {
-                            let panel = ChatRestrictedInputPanelNode()
-                            panel.context = context
-                            panel.interfaceInteraction = interfaceInteraction
-                            return (panel, nil)
-                        }
-                    }
-                }*/
-            }
         } else if let group = peer as? TelegramGroup {
             switch group.membership {
             case .Removed, .Left:

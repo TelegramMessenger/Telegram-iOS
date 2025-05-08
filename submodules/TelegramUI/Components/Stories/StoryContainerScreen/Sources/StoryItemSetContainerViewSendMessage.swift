@@ -2808,7 +2808,7 @@ final class StoryItemSetContainerSendMessage {
                 let context = component.context
                 switch navigation {
                 case let .chat(_, subject, peekData):
-                    if case let .channel(channel) = peerId, channel.flags.contains(.isForum) {
+                    if case let .channel(channel) = peerId, channel.isForumOrMonoForum {
                         controller.dismissWithoutTransitionOut()
                         context.sharedContext.navigateToForumChannel(context: context, peerId: peerId.id, navigationController: navigationController)
                     } else {

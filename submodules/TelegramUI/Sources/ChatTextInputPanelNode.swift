@@ -539,6 +539,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
     var customEmojiContainerView: CustomEmojiContainerView?
     
     let textInputBackgroundNode: ASImageNode
+    var textInputBackgroundTapRecognizer: TouchDownGestureRecognizer?
     private var transparentTextInputBackgroundImage: UIImage?
     let actionButtons: ChatTextInputActionButtonsNode
     private let slowModeButton: BoostSlowModeButton
@@ -1089,6 +1090,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                 return false
             }
         }
+        self.textInputBackgroundTapRecognizer = recognizer
         self.textInputBackgroundNode.isUserInteractionEnabled = true
         self.textInputBackgroundNode.view.addGestureRecognizer(recognizer)
         
@@ -1165,6 +1167,11 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         textInputNode.view.disablesInteractiveTransitionGestureRecognizer = true
         textInputNode.isUserInteractionEnabled = !self.sendingTextDisabled
         self.textInputNode = textInputNode
+        
+        if let textInputBackgroundTapRecognizer = self.textInputBackgroundTapRecognizer {
+            self.textInputBackgroundTapRecognizer = nil
+            self.textInputBackgroundNode.view.removeGestureRecognizer(textInputBackgroundTapRecognizer)
+        }
         
         var accessoryButtonsWidth: CGFloat = 0.0
         var firstButton = true
@@ -1916,7 +1923,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                                 } else {
                                     placeholder = interfaceState.strings.Conversation_InputTextPlaceholderReply
                                 }
-                            } else if let channel = peer as? TelegramChannel, channel.isForum, let forumTopicData = interfaceState.forumTopicData {
+                            } else if let channel = peer as? TelegramChannel, channel.isForumOrMonoForum, let forumTopicData = interfaceState.forumTopicData {
                                 if let replyMessage = interfaceState.replyMessage, let threadInfo = replyMessage.associatedThreadInfo {
                                     placeholder = interfaceState.strings.Chat_InputPlaceholderReplyInTopic(threadInfo.title).string
                                 } else {

@@ -882,7 +882,7 @@ private func loadAndStorePeerChatInfos(accountPeerId: PeerId, postbox: Postbox, 
                 var storeMessages: [StoreMessage] = []
                 for message in messages {
                     var peerIsForum = false
-                    if let peerId = message.peerId, let peer = parsedPeers.get(peerId), peer.isForum {
+                    if let peerId = message.peerId, let peer = parsedPeers.get(peerId), peer.isForumOrMonoForum {
                         peerIsForum = true
                     }
                     if let storeMessage = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peerIsForum) {

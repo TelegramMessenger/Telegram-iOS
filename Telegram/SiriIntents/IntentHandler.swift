@@ -1309,7 +1309,7 @@ private func mapPeersToFriends(accountId: AccountRecordId, accountPeerId: PeerId
             var profileImage: INImage?
             
             var isForum = false
-            if let peer = peer as? TelegramChannel, peer.flags.contains(.isForum) {
+            if let peer = peer as? TelegramChannel, peer.isForumOrMonoForum {
                 isForum = true
             }
             

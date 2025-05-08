@@ -116,6 +116,7 @@ func _internal_togglePeerUnreadMarkInteractively(postbox: Postbox, network: Netw
 }
 
 func _internal_markForumThreadAsReadInteractively(transaction: Transaction, network: Network, viewTracker: AccountViewTracker, peerId: PeerId, threadId: Int64) {
+    //TODO:release monoforums
     guard let peer = transaction.getPeer(peerId) else {
         return
     }
@@ -145,6 +146,7 @@ func _internal_markForumThreadAsReadInteractively(transaction: Transaction, netw
 }
 
 func _internal_togglePeerUnreadMarkInteractively(transaction: Transaction, network: Network, viewTracker: AccountViewTracker, peerId: PeerId, setToValue: Bool? = nil) {
+    //TODO:release monoforums
     guard let peer = transaction.getPeer(peerId) else {
         return
     }

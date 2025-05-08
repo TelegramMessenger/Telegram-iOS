@@ -23,6 +23,7 @@ swift_library(
         "//submodules/Components/BlurredBackgroundComponent",
         "//submodules/TelegramUI/Components/EmojiStatusComponent",
         "//submodules/Components/BundleIconComponent",
+        "//submodules/AvatarNode",
     ],
     visibility = [
         "//visibility:public",

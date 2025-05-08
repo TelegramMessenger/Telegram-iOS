@@ -8,6 +8,7 @@ private struct DiscussionMessage {
     var channelMessageId: MessageId?
     var isChannelPost: Bool
     var isForumPost: Bool
+    var isMonoforumPost: Bool
     var maxMessage: MessageId?
     var maxReadIncomingMessageId: MessageId?
     var maxReadOutgoingMessageId: MessageId?
@@ -165,7 +166,7 @@ private class ReplyThreadHistoryContextImpl {
                     switch discussionMessage {
                     case let .discussionMessage(_, messages, maxId, readInboxMaxId, readOutboxMaxId, unreadCount, chats, users):
                         let parsedMessages = messages.compactMap { message -> StoreMessage? in
-                            StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForum)
+                            StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForumOrMonoForum)
                         }
                         
                         guard let topMessage = parsedMessages.last, let parsedIndex = topMessage.index else {
@@ -237,8 +238,14 @@ private class ReplyThreadHistoryContextImpl {
                         }
                         
                         var isForumPost = false
-                        if let channel = transaction.getPeer(parsedIndex.id.peerId) as? TelegramChannel, channel.flags.contains(.isForum) {
-                            isForumPost = true
+                        var isMonoforumPost = false
+                        if let channel = transaction.getPeer(parsedIndex.id.peerId) as? TelegramChannel {
+                            if channel.isForumOrMonoForum {
+                                isForumPost = true
+                            }
+                            if channel.isMonoForum {
+                                isMonoforumPost = true
+                            }
                         }
                         
                         return .single(DiscussionMessage(
@@ -246,6 +253,7 @@ private class ReplyThreadHistoryContextImpl {
                             channelMessageId: channelMessageId,
                             isChannelPost: isChannelPost,
                             isForumPost: isForumPost,
+                            isMonoforumPost: isMonoforumPost,
                             maxMessage: resolvedMaxMessage,
                             maxReadIncomingMessageId: maxReadIncomingMessageId,
                             maxReadOutgoingMessageId: readOutboxMaxId.flatMap { readMaxId in
@@ -565,7 +573,7 @@ public struct ChatReplyThreadMessage: Equatable {
     public var channelMessageId: MessageId?
     public var isChannelPost: Bool
     public var isForumPost: Bool
-    public var isMonoforum: Bool
+    public var isMonoforumPost: Bool
     public var maxMessage: MessageId?
     public var maxReadIncomingMessageId: MessageId?
     public var maxReadOutgoingMessageId: MessageId?
@@ -582,13 +590,13 @@ public struct ChatReplyThreadMessage: Equatable {
         }
     }
     
-    public init(peerId: PeerId, threadId: Int64, channelMessageId: MessageId?, isChannelPost: Bool, isForumPost: Bool, isMonoforum: Bool, maxMessage: MessageId?, maxReadIncomingMessageId: MessageId?, maxReadOutgoingMessageId: MessageId?, unreadCount: Int, initialFilledHoles: IndexSet, initialAnchor: Anchor, isNotAvailable: Bool) {
+    public init(peerId: PeerId, threadId: Int64, channelMessageId: MessageId?, isChannelPost: Bool, isForumPost: Bool, isMonoforumPost: Bool, maxMessage: MessageId?, maxReadIncomingMessageId: MessageId?, maxReadOutgoingMessageId: MessageId?, unreadCount: Int, initialFilledHoles: IndexSet, initialAnchor: Anchor, isNotAvailable: Bool) {
         self.peerId = peerId
         self.threadId = threadId
         self.channelMessageId = channelMessageId
         self.isChannelPost = isChannelPost
         self.isForumPost = isForumPost
-        self.isMonoforum = isMonoforum
+        self.isMonoforumPost = isMonoforumPost
         self.maxMessage = maxMessage
         self.maxReadIncomingMessageId = maxReadIncomingMessageId
         self.maxReadOutgoingMessageId = maxReadOutgoingMessageId
@@ -600,7 +608,7 @@ public struct ChatReplyThreadMessage: Equatable {
     
     public var normalized: ChatReplyThreadMessage {
         if self.isForumPost {
-            return ChatReplyThreadMessage(peerId: self.peerId, threadId: self.threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, isMonoforum: false, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false)
+            return ChatReplyThreadMessage(peerId: self.peerId, threadId: self.threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, isMonoforumPost: self.isMonoforumPost, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false)
         } else {
             return self
         }
@@ -644,7 +652,7 @@ func _internal_fetchChannelReplyThreadMessage(account: Account, messageId: Messa
                 switch discussionMessage {
                 case let .discussionMessage(_, messages, maxId, readInboxMaxId, readOutboxMaxId, unreadCount, chats, users):
                     let parsedMessages = messages.compactMap { message -> StoreMessage? in
-                        StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForum)
+                        StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForumOrMonoForum)
                     }
                     
                     guard let topMessage = parsedMessages.last, let parsedIndex = topMessage.index else {
@@ -685,8 +693,14 @@ func _internal_fetchChannelReplyThreadMessage(account: Account, messageId: Messa
                     }
                     
                     var isForumPost = false
-                    if let channel = transaction.getPeer(parsedIndex.id.peerId) as? TelegramChannel, channel.flags.contains(.isForum) {
-                        isForumPost = true
+                    var isMonoforumPost = false
+                    if let channel = transaction.getPeer(parsedIndex.id.peerId) as? TelegramChannel {
+                        if channel.isForumOrMonoForum {
+                            isForumPost = true
+                        }
+                        if channel.isMonoForum {
+                            isMonoforumPost = true
+                        }
                     }
                     
                     return DiscussionMessage(
@@ -694,6 +708,7 @@ func _internal_fetchChannelReplyThreadMessage(account: Account, messageId: Messa
                         channelMessageId: channelMessageId,
                         isChannelPost: isChannelPost,
                         isForumPost: isForumPost,
+                        isMonoforumPost: isMonoforumPost,
                         maxMessage: resolvedMaxMessage,
                         maxReadIncomingMessageId: readInboxMaxId.flatMap { readMaxId in
                             MessageId(peerId: parsedIndex.id.peerId, namespace: Namespaces.Message.Cloud, id: readMaxId)
@@ -718,6 +733,7 @@ func _internal_fetchChannelReplyThreadMessage(account: Account, messageId: Messa
                     channelMessageId: nil,
                     isChannelPost: false,
                     isForumPost: true,
+                    isMonoforumPost: false,
                     maxMessage: MessageId(peerId: messageId.peerId, namespace: messageId.namespace, id: threadData.maxKnownMessageId),
                     maxReadIncomingMessageId: MessageId(peerId: messageId.peerId, namespace: messageId.namespace, id: threadData.maxIncomingReadId),
                     maxReadOutgoingMessageId: MessageId(peerId: messageId.peerId, namespace: messageId.namespace, id: threadData.maxOutgoingReadId),
@@ -933,7 +949,7 @@ func _internal_fetchChannelReplyThreadMessage(account: Account, messageId: Messa
                     channelMessageId: discussionMessage.channelMessageId,
                     isChannelPost: discussionMessage.isChannelPost,
                     isForumPost: discussionMessage.isForumPost,
-                    isMonoforum: false,
+                    isMonoforumPost: discussionMessage.isMonoforumPost,
                     maxMessage: discussionMessage.maxMessage,
                     maxReadIncomingMessageId: discussionMessage.maxReadIncomingMessageId,
                     maxReadOutgoingMessageId: discussionMessage.maxReadOutgoingMessageId,

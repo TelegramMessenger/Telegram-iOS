@@ -636,7 +636,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                                         state = .info(string, .generic)
                                     }
                                 } else if let channel = peer as? TelegramChannel {
-                                    if channel.flags.contains(.isForum), customTitle != nil {
+                                    if channel.isForumOrMonoForum, customTitle != nil {
                                         let string = NSAttributedString(string: EnginePeer(peer).displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder), font: subtitleFont, textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
                                         state = .info(string, .generic)
                                     } else if let cachedChannelData = peerView.cachedData as? CachedChannelData, let memberCount = onlineMemberCount.total ?? cachedChannelData.participantsSummary.memberCount {

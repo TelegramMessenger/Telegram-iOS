@@ -522,7 +522,7 @@ extension EngineChatList.Item {
             let readCounters = readState.flatMap(EnginePeerReadCounters.init)
             
             if let channel = renderedPeer.peer as? TelegramChannel {
-                if channel.flags.contains(.isForum) {
+                if channel.isForumOrMonoForum {
                     draft = nil
                 } else {
                     forumTopicDataValue = nil

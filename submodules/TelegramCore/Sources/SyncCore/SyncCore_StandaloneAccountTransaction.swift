@@ -66,11 +66,7 @@ public let telegramPostboxSeedConfiguration: SeedConfiguration = {
                 case .broadcast:
                     return .channel
                 case .group:
-                    if channel.flags.contains(.isForum) {
-                        return .group
-                    } else {
-                        return .group
-                    }
+                    return .group
                 }
             } else {
                 assertionFailure()

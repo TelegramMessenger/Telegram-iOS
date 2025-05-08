@@ -229,7 +229,7 @@ final class WidgetDataContext {
                         }
                         
                         var isForum = false
-                        if let peer = peer as? TelegramChannel, peer.flags.contains(.isForum) {
+                        if let peer = peer as? TelegramChannel, peer.isForumOrMonoForum {
                             isForum = true
                         }
                         

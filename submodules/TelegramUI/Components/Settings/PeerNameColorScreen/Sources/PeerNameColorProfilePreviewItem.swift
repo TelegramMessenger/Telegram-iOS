@@ -271,7 +271,7 @@ final class PeerNameColorProfilePreviewItemNode: ListViewItemNode {
                 
                 let clipStyle: AvatarNodeClipStyle
                 switch item.peer {
-                case let .channel(channel) where channel.isForum:
+                case let .channel(channel) where channel.isForumOrMonoForum:
                     clipStyle = .roundedRect
                 default:
                     clipStyle = .round

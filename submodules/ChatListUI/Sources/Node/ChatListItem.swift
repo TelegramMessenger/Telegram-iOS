@@ -536,7 +536,7 @@ public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
                 if case let .forum(_, _, threadIdValue, _, _) = self.index {
                     threadId = threadIdValue
                 }
-                if threadId == nil, self.interaction.searchTextHighightState != nil, case let .channel(channel) = peerData.peer.peer, channel.flags.contains(.isForum) {
+                if threadId == nil, self.interaction.searchTextHighightState != nil, case let .channel(channel) = peerData.peer.peer, channel.isForumOrMonoForum {
                     threadId = message.threadId
                 }
                 self.interaction.messageSelected(peer, threadId, message, peerData.promoInfo)
@@ -768,7 +768,7 @@ private func leftRevealOptions(strings: PresentationStrings, theme: Presentation
                 options.append(ItemListRevealOption(key: RevealOptionKey.toggleMarkedUnread.rawValue, title: strings.DialogList_Read, icon: readIcon, color: theme.list.itemDisclosureActions.inactive.fillColor, textColor: theme.list.itemDisclosureActions.neutral1.foregroundColor))
             } else {
                 var canMarkUnread = true
-                if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+                if case let .channel(channel) = peer, channel.isForumOrMonoForum {
                     canMarkUnread = false
                 }
                 
@@ -1726,7 +1726,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 overrideImage = .deletedIcon
             }
             var isForumAvatar = false
-            if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+            if case let .channel(channel) = peer, channel.isForumOrMonoForum {
                 isForumAvatar = true
             }
             if case let .peer(data) = item.content {
@@ -2392,7 +2392,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         }
                     }
                 
-                    if let _ = peerText, case let .channel(channel) = itemPeer.chatMainPeer, channel.flags.contains(.isForum), threadInfo == nil {
+                    if let _ = peerText, case let .channel(channel) = itemPeer.chatMainPeer, channel.isForumOrMonoForum, threadInfo == nil {
                         if let forumTopicData = forumTopicData {
                             forumThread = (forumTopicData.id, forumTopicData.title, forumTopicData.iconFileId, forumTopicData.iconColor, forumTopicData.isUnread)
                         } else if let threadInfo = threadInfo {

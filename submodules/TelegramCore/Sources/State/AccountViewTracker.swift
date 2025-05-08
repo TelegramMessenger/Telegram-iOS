@@ -125,7 +125,7 @@ private func fetchWebpage(account: Account, messageId: MessageId, threadId: Int6
                     let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                     
                     for message in messages {
-                        if let storeMessage = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForum, namespace: targetMessageNamespace) {
+                        if let storeMessage = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForumOrMonoForum, namespace: targetMessageNamespace) {
                             var webpage: TelegramMediaWebpage?
                             for media in storeMessage.media {
                                 if let media = media as? TelegramMediaWebpage {
@@ -1110,7 +1110,7 @@ public final class AccountViewTracker {
                                     updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                                     
                                     for message in messages {
-                                        guard let storeMessage = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: topPeer.isForum) else {
+                                        guard let storeMessage = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: topPeer.isForumOrMonoForum) else {
                                             continue
                                         }
                                         guard case let .Id(id) = storeMessage.id else {
