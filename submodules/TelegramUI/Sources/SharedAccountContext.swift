@@ -2388,6 +2388,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }, forceUpdateWarpContents: {
         }, playShakeAnimation: {
         }, displayQuickShare: { _, _ ,_ in
+        }, updateChatLocationThread: { _ in
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
         pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(), presentationContext: ChatPresentationContext(context: context, backgroundNode: backgroundNode as? WallpaperBackgroundNode))
         

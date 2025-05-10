@@ -128,7 +128,7 @@ open class ListViewItemHeaderNode: ASDisplayNode {
     
     private var cachedLayout: (CGSize, CGFloat, CGFloat)?
     
-    public func updateLayoutInternal(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
+    public func updateLayoutInternal(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
         var update = false
         if let cachedLayout = self.cachedLayout {
             if cachedLayout.0 != size || cachedLayout.1 != leftInset || cachedLayout.2 != rightInset {
@@ -139,11 +139,11 @@ open class ListViewItemHeaderNode: ASDisplayNode {
         }
         if update {
             self.cachedLayout = (size, leftInset, rightInset)
-            self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset)
+            self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: transition)
         }
     }
     
-    open func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
+    open func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
     }
     
     open func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {

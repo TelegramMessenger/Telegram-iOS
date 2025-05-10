@@ -2201,11 +2201,11 @@ public final class ItemListPeerItemHeaderNode: ListViewItemHeaderNode, ItemListH
         self.actionTextNode.attributedText = NSAttributedString(string: actionTitle ?? "", font: titleFont, textColor: action == nil ? theme.list.sectionHeaderTextColor : theme.list.itemAccentColor)
         self.actionButton.isUserInteractionEnabled = self.action != nil
         if let (size, leftInset, rightInset) = self.validLayout {
-            self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset)
+            self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: .immediate)
         }
     }
     
-    override public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
+    override public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = (size, leftInset, rightInset)
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
         self.snappedBackgroundNode.frame = CGRect(origin: CGPoint(), size: size)

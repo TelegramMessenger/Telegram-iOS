@@ -274,7 +274,7 @@ public final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         }
     }
     
-    override public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
+    override public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
         let chatDateSize: CGFloat = 20.0
         let chatDateInset: CGFloat = 6.0
         
@@ -282,22 +282,26 @@ public final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         let backgroundSize = CGSize(width: labelSize.width + chatDateInset * 2.0, height: chatDateSize)
         
         let backgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - backgroundSize.width) / 2.0), y: (34.0 - chatDateSize) / 2.0), size: backgroundSize)
-        self.stickBackgroundNode.frame = CGRect(origin: CGPoint(), size: backgroundFrame.size)
-        self.backgroundNode.frame = backgroundFrame
-        self.backgroundNode.update(size: backgroundFrame.size, cornerRadius: backgroundFrame.size.height / 2.0, transition: .immediate)
-        self.labelNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.origin.x + chatDateInset, y: backgroundFrame.origin.y + floorToScreenPixels((backgroundSize.height - labelSize.height) / 2.0)), size: labelSize)
+        transition.updateFrame(node: self.stickBackgroundNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
+        transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
+        self.backgroundNode.update(size: backgroundFrame.size, cornerRadius: backgroundFrame.size.height / 2.0, transition: transition)
+        let labelFrame = CGRect(origin: CGPoint(x: backgroundFrame.origin.x + chatDateInset, y: backgroundFrame.origin.y + floorToScreenPixels((backgroundSize.height - labelSize.height) / 2.0)), size: labelSize)
+        
+        transition.updatePosition(node: self.labelNode, position: labelFrame.center)
+        self.labelNode.bounds = CGRect(origin: CGPoint(), size: labelFrame.size)
                 
         if let backgroundContent = self.backgroundContent {
             backgroundContent.allowsGroupOpacity = true
             self.backgroundNode.isHidden = true
-            backgroundContent.frame = self.backgroundNode.frame
+            
+            transition.updateFrame(node: backgroundContent, frame: self.backgroundNode.frame)
             backgroundContent.cornerRadius = backgroundFrame.size.height / 2.0
             
             if let (rect, containerSize) = self.absolutePosition {
                 var backgroundFrame = backgroundContent.frame
                 backgroundFrame.origin.x += rect.minX
                 backgroundFrame.origin.y += containerSize.height - rect.minY
-                backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
+                backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: transition)
             }
         }
     }
@@ -471,6 +475,8 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
     private var hierarchyTrackingLayer: HierarchyTrackingLayer?
     
     private var backgroundContent: WallpaperBubbleBackgroundNode?
+    
+    private var isAvatarHidden: Bool = false
     
     private var trackingIsInHierarchy: Bool = false {
         didSet {
@@ -713,15 +719,20 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
         }
     }
 
-    override public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
-        self.containerNode.frame = CGRect(origin: CGPoint(x: leftInset + 3.0, y: 0.0), size: CGSize(width: 38.0, height: 38.0))
-        self.avatarNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 38.0, height: 38.0))
+    override public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
+        transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(x: leftInset + 3.0, y: 0.0), size: CGSize(width: 38.0, height: 38.0)))
+        let avatarFrame = CGRect(origin: CGPoint(), size: CGSize(width: 38.0, height: 38.0))
+        self.avatarNode.position = avatarFrame.center
+        self.avatarNode.bounds = CGRect(origin: CGPoint(), size: avatarFrame.size)
+        self.avatarNode.updateSize(size: avatarFrame.size)
     }
 
     override public func animateRemoved(duration: Double) {
         self.alpha = 0.0
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: false)
-        self.avatarNode.layer.animateScale(from: 1.0, to: 0.2, duration: duration, removeOnCompletion: false)
+        if !self.isAvatarHidden {
+            self.avatarNode.layer.animateScale(from: 1.0, to: 0.2, duration: duration, removeOnCompletion: false)
+        }
     }
 
     override public func animateAdded(duration: Double) {
@@ -747,6 +758,18 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
         if animated {
             self.layer.animate(from: NSValue(caTransform3D: previousSubnodeTransform), to: NSValue(caTransform3D: self.subnodeTransform), keyPath: "sublayerTransform", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.2)
         }
+    }
+    
+    public func updateAvatarIsHidden(isHidden: Bool, transition: ContainedViewLayoutTransition) {
+        self.isAvatarHidden = isHidden
+        var avatarTransform: CATransform3D = CATransform3DIdentity
+        if isHidden {
+            let scale: CGFloat = isHidden ? 0.001 : 1.0
+            avatarTransform = CATransform3DTranslate(avatarTransform, -38.0 * 0.5, 38.0 * 0.5, 0.0)
+            avatarTransform = CATransform3DScale(avatarTransform, scale, scale, 1.0)
+        }
+        transition.updateTransform(node: self.avatarNode, transform: avatarTransform)
+        transition.updateAlpha(node: self.avatarNode, alpha: isHidden ? 0.0 : 1.0)
     }
 
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -786,7 +809,7 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
         self.avatarVideoNode?.updateVisibility(isVisible)
       
         if let videoNode = self.avatarVideoNode {
-            videoNode.updateLayout(size: self.avatarNode.frame.size, cornerRadius: self.avatarNode.frame.size.width / 2.0, transition: .immediate)
+            videoNode.updateLayout(size: self.avatarNode.bounds.size, cornerRadius: self.avatarNode.bounds.size.width / 2.0, transition: .immediate)
             videoNode.frame = self.avatarNode.bounds
         }
     }

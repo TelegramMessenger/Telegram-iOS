@@ -106,6 +106,7 @@ public enum ChatMessageMerge: Int32 {
 
 public protocol ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
     func updateSelectionState(animated: Bool)
+    func updateAvatarIsHidden(isHidden: Bool, transition: ContainedViewLayoutTransition)
 }
 
 public protocol ChatMessageItem: ListViewItem {

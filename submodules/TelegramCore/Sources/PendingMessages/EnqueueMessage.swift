@@ -236,8 +236,6 @@ private func filterMessageAttributesForOutgoingMessage(_ attributes: [MessageAtt
             return true
         case _ as OutgoingQuickReplyMessageAttribute:
             return true
-        case _ as OutgoingSuggestedPostMessageAttribute:
-            return true
         case _ as EmbeddedMediaStickersMessageAttribute:
             return true
         case _ as EmojiSearchQueryMessageAttribute:
@@ -276,8 +274,6 @@ private func filterMessageAttributesForForwardedMessage(_ attributes: [MessageAt
             case _ as OutgoingScheduleInfoMessageAttribute:
                 return true
             case _ as OutgoingQuickReplyMessageAttribute:
-                return true
-            case _ as OutgoingSuggestedPostMessageAttribute:
                 return true
             case _ as ForwardOptionsMessageAttribute:
                 return true
@@ -737,9 +733,6 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                         } else if attribute is OutgoingQuickReplyMessageAttribute {
                             messageNamespace = Namespaces.Message.QuickReplyLocal
                             effectiveTimestamp = 0
-                        } else if attribute is OutgoingSuggestedPostMessageAttribute {
-                            messageNamespace = Namespaces.Message.SuggestedPostLocal
-                            effectiveTimestamp = 0
                         } else if let attribute = attribute as? SendAsMessageAttribute {
                             if let peer = transaction.getPeer(attribute.peerId) {
                                 sendAsPeer = peer
@@ -775,9 +768,6 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                     }
                     if messageNamespace != Namespaces.Message.QuickReplyLocal {
                         attributes.removeAll(where: { $0 is OutgoingQuickReplyMessageAttribute })
-                    }
-                    if messageNamespace != Namespaces.Message.SuggestedPostLocal {
-                        attributes.removeAll(where: { $0 is OutgoingSuggestedPostMessageAttribute })
                     }
                                         
                     if let peer = peer as? TelegramChannel {
@@ -1013,9 +1003,6 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                             } else if attribute is OutgoingQuickReplyMessageAttribute {
                                 messageNamespace = Namespaces.Message.QuickReplyLocal
                                 effectiveTimestamp = 0
-                            } else if attribute is OutgoingSuggestedPostMessageAttribute {
-                                messageNamespace = Namespaces.Message.SuggestedPostLocal
-                                effectiveTimestamp = 0
                             } else if let attribute = attribute as? ReplyMessageAttribute {
                                 if let threadMessageId = attribute.threadMessageId {
                                     threadId = Int64(threadMessageId.id)
@@ -1047,9 +1034,6 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                         }
                         if messageNamespace != Namespaces.Message.QuickReplyLocal {
                             attributes.removeAll(where: { $0 is OutgoingQuickReplyMessageAttribute })
-                        }
-                        if messageNamespace != Namespaces.Message.SuggestedPostLocal {
-                            attributes.removeAll(where: { $0 is OutgoingSuggestedPostMessageAttribute })
                         }
                         
                         let (tags, globalTags) = tagsForStoreMessage(incoming: false, attributes: attributes, media: sourceMessage.media, textEntities: entitiesAttribute?.entities, isPinned: false)

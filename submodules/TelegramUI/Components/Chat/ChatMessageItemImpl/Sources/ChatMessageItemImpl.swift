@@ -283,7 +283,7 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
         let incoming = content.effectivelyIncoming(self.context.account.peerId)
         
         var effectiveAuthor: Peer?
-        let displayAuthorInfo: Bool
+        var displayAuthorInfo: Bool
         
         let messagePeerId: PeerId = chatLocation.peerId ?? content.firstMessage.id.peerId
         
@@ -316,6 +316,12 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
                     }
                 }
                 displayAuthorInfo = incoming && peerId.isGroupOrChannel && effectiveAuthor != nil
+                
+                if let channel = content.firstMessage.peers[content.firstMessage.id.peerId] as? TelegramChannel, channel.isMonoForum {
+                    if case .replyThread = chatLocation {
+                        displayAuthorInfo = false
+                    }
+                }
             }
         }
         
@@ -365,10 +371,6 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
                         effectiveAuthor = message.author
                     }
                 }
-            }
-            
-            if let subject = associatedData.subject, case let .customChatContents(contents) = subject, case .postSuggestions = contents.kind {
-                hasAvatar = false
             }
             
             if hasAvatar {
