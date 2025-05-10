@@ -3,9 +3,7 @@ objc_library(
     name = "EncryptionProvider",
     enable_modules = True,
     module_name = "EncryptionProvider",
-    srcs = glob([
-        "Sources/**/*.m",
-    ]),
+    srcs = [],
     hdrs = glob([
         "PublicHeaders/**/*.h",
     ]),

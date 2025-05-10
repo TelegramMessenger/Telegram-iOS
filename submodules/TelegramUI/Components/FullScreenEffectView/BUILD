@@ -44,7 +44,7 @@ filegroup(
     name = "FullScreenEffectViewResources",
     srcs = glob([
         "Resources/**/*",
-    ], exclude = ["Resources/**/.*"]),
+    ], allow_empty=True, exclude = ["Resources/**/.*"]),
     visibility = ["//visibility:public"],
 )
 
