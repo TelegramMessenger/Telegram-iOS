@@ -19,7 +19,7 @@ build --per_file_copt="Tests/LottieMetalTest/SoftwareLottieRenderer/Sources/.*\.
 build --per_file_copt="Tests/LottieMetalTest/SoftwareLottieRenderer/Sources/.*\.mm$","@-std=c++17"
 build --per_file_copt="third-party/td/TdBinding/Sources/.*\.mm$","@-std=c++17"
 
-build --swiftcopt=-whole-module-optimization
+#build --swiftcopt=-whole-module-optimization
 
 build --per_file_copt=".*\.m$","@-fno-objc-msgsend-selector-stubs"
 build --per_file_copt=".*\.mm$","@-fno-objc-msgsend-selector-stubs"
@@ -37,4 +37,3 @@ build --spawn_strategy=standalone
 build --strategy=SwiftCompile=standalone
 build --define RULES_SWIFT_BUILD_DUMMY_WORKER=1
 
-build --noenable_bzlmod
