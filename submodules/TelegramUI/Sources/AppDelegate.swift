@@ -2400,30 +2400,33 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     }
     
     private func reportFailedIncomingCallKitCall() {
-        guard let callKitIntegration = CallKitIntegration.shared else {
-            return
-        }
-        let uuid = CallSessionInternalId()
-        callKitIntegration.reportIncomingCall(
-            uuid: uuid,
-            stableId: Int64.random(in: Int64.min ... Int64.max),
-            handle: "Unknown",
-            phoneNumber: nil,
-            isVideo: false,
-            displayTitle: "Unknown",
-            completion: { error in
-                if let error = error {
-                    if error.domain == "com.apple.CallKit.error.incomingcall" && (error.code == -3 || error.code == 3) {
-                        Logger.shared.log("PresentationCall", "reportFailedIncomingCallKitCall device in DND mode")
-                    } else {
-                        Logger.shared.log("PresentationCall", "reportFailedIncomingCallKitCall error \(error)")
+        if #available(iOS 14.4, *) {
+        } else {
+            guard let callKitIntegration = CallKitIntegration.shared else {
+                return
+            }
+            let uuid = CallSessionInternalId()
+            callKitIntegration.reportIncomingCall(
+                uuid: uuid,
+                stableId: Int64.random(in: Int64.min ... Int64.max),
+                handle: "Unknown",
+                phoneNumber: nil,
+                isVideo: false,
+                displayTitle: "Unknown",
+                completion: { error in
+                    if let error = error {
+                        if error.domain == "com.apple.CallKit.error.incomingcall" && (error.code == -3 || error.code == 3) {
+                            Logger.shared.log("PresentationCall", "reportFailedIncomingCallKitCall device in DND mode")
+                        } else {
+                            Logger.shared.log("PresentationCall", "reportFailedIncomingCallKitCall error \(error)")
+                        }
                     }
                 }
-            }
-        )
-        Queue.mainQueue().after(1.0, {
-            callKitIntegration.dropCall(uuid: uuid)
-        })
+            )
+            Queue.mainQueue().after(1.0, {
+                callKitIntegration.dropCall(uuid: uuid)
+            })
+        }
     }
     
     private func authorizedContext() -> Signal<AuthorizedApplicationContext, NoError> {
