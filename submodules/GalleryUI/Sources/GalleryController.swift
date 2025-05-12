@@ -792,8 +792,8 @@ public class GalleryController: ViewController, StandalonePresentableController,
         let syncResult = Atomic<(Bool, (() -> Void)?)>(value: (false, nil))
         self.disposable.set(combineLatest(
             messageView,
-            self.context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration]),
-            translateToLanguage
+            self.context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration]) |> take(1),
+            translateToLanguage |> take(1)
         ).start(next: { [weak self] view, preferencesView, translateToLanguage in
             let f: () -> Void = {
                 if let strongSelf = self {
