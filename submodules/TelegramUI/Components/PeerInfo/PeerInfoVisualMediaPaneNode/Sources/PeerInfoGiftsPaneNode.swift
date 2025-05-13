@@ -604,11 +604,11 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                                 }
                                                 return self.profileGifts.upgradeStarGift(formId: formId, reference: reference, keepOriginalInfo: keepOriginalInfo)
                                             },
-                                            buyGift: { [weak self] slug, peerId in
+                                            buyGift: { [weak self] slug, peerId, price in
                                                 guard let self else {
                                                     return .never()
                                                 }
-                                                return self.profileGifts.buyStarGift(slug: slug, peerId: peerId)
+                                                return self.profileGifts.buyStarGift(slug: slug, peerId: peerId, price: price)
                                             },
                                             updateResellStars: { [weak self] price in
                                                 guard let self, let reference = product.reference else {

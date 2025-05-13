@@ -2851,6 +2851,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     private var hiddenMediaDisposable: Disposable?
     private let hiddenAvatarRepresentationDisposable = MetaDisposable()
     
+    private var autoTranslateDisposable: Disposable?
+    
     private var resolvePeerByNameDisposable: MetaDisposable?
     private let navigationActionDisposable = MetaDisposable()
     private let enqueueMediaMessageDisposable = MetaDisposable()
@@ -5113,6 +5115,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         self.joinChannelDisposable.dispose()
         self.boostStatusDisposable?.dispose()
         self.personalChannelsDisposable?.dispose()
+        self.autoTranslateDisposable?.dispose()
     }
     
     override func didLoad() {
@@ -9183,7 +9186,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
     
     private func displayAutoTranslateLocked() {
-        let _ = combineLatest(
+        guard self.autoTranslateDisposable == nil else {
+            return
+        }
+        self.autoTranslateDisposable = combineLatest(
             queue: Queue.mainQueue(),
             context.engine.peers.getChannelBoostStatus(peerId: self.peerId),
             context.engine.peers.getMyBoostStatus()
@@ -9197,6 +9203,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 }
             })
             controller.push(boostController)
+            
+            self.autoTranslateDisposable?.dispose()
+            self.autoTranslateDisposable = nil
         })
     }
     
