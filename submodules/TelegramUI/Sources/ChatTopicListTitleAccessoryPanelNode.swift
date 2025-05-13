@@ -868,4 +868,16 @@ final class ChatTopicListTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, C
             transition.setTransform(view: tabItemView, transform: CATransform3DMakeTranslation(0.0, -globalOffset, 0.0))
         }
     }
+    
+    public func topicIndex(threadId: Int64?) -> Int? {
+        if let threadId {
+            if let value = self.items.firstIndex(where: { $0.id == .chatList(PeerId(threadId)) }) {
+                return value + 1
+            } else {
+                return nil
+            }
+        } else {
+            return 0
+        }
+    }
 }

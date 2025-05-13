@@ -338,7 +338,7 @@ final class PeerNameColorChatPreviewItemNode: ListViewItemNode {
                                     headerNode.item = header
                                 }
                                 headerNode.updateLayoutInternal(size: headerFrame.size, leftInset: leftInset, rightInset: rightInset, transition: .immediate)
-                                headerNode.updateStickDistanceFactor(stickLocationDistanceFactor, transition: .immediate)
+                                headerNode.updateStickDistanceFactor(stickLocationDistanceFactor, distance: 0.0, transition: .immediate)
                             } else {
                                 headerNode = header.node(synchronousLoad: true)
                                 if headerNode.item !== header {
@@ -350,7 +350,7 @@ final class PeerNameColorChatPreviewItemNode: ListViewItemNode {
                                 strongSelf.itemHeaderNodes[id] = headerNode
 
                                 strongSelf.containerNode.addSubnode(headerNode)
-                                headerNode.updateStickDistanceFactor(stickLocationDistanceFactor, transition: .immediate)
+                                headerNode.updateStickDistanceFactor(stickLocationDistanceFactor, distance: 0.0, transition: .immediate)
                             }
                         }
                     }

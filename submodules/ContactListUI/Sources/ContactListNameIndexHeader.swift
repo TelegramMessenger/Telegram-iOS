@@ -6,6 +6,7 @@ import ListSectionHeaderNode
 
 final class ContactListNameIndexHeader: Equatable, ListViewItemHeader {
     let id: ListViewItemNode.HeaderId
+    let stackingId: ListViewItemNode.HeaderId? = nil
     let theme: PresentationTheme
     let letter: unichar
     let stickDirection: ListViewItemHeaderStickDirection = .top

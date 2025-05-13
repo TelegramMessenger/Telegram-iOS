@@ -1099,19 +1099,22 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
         public let spoilerEffectColor: UIColor
         public let areContentAnimationsEnabled: Bool
         public let spoilerExpandRect: CGRect?
+        public var crossfadeContents: ((UIView) -> Void)?
         
         public init(
             animation: ListViewItemUpdateAnimation,
             spoilerTextColor: UIColor,
             spoilerEffectColor: UIColor,
             areContentAnimationsEnabled: Bool,
-            spoilerExpandRect: CGRect?
+            spoilerExpandRect: CGRect?,
+            crossfadeContents: ((UIView) -> Void)? = nil
         ) {
             self.animation = animation
             self.spoilerTextColor = spoilerTextColor
             self.spoilerEffectColor = spoilerEffectColor
             self.areContentAnimationsEnabled = areContentAnimationsEnabled
             self.spoilerExpandRect = spoilerExpandRect
+            self.crossfadeContents = crossfadeContents
         }
     }
     

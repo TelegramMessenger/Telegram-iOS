@@ -42,6 +42,7 @@ final class ListMessageDateHeader: ListViewItemHeader {
     private let year: Int32
     
     let id: ListViewItemNode.HeaderId
+    let stackingId: ListViewItemNode.HeaderId? = nil
     let theme: PresentationTheme
     let strings: PresentationStrings
     let fontSize: PresentationFontSize

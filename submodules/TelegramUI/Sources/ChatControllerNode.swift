@@ -135,7 +135,8 @@ class HistoryNodeContainer: ASDisplayNode {
 
 class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     let context: AccountContext
-    var chatLocation: ChatLocation
+    private(set) var chatLocation: ChatLocation
+    private let chatLocationContextHolder: Atomic<ChatLocationContextHolder?>
     let controllerInteraction: ChatControllerInteraction
     private weak var controller: ChatControllerImpl?
     
@@ -158,7 +159,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     let contentContainerNode: ChatNodeContainer
     let contentDimNode: ASDisplayNode
     let backgroundNode: WallpaperBackgroundNode
-    let historyNode: ChatHistoryListNodeImpl
+    var historyNode: ChatHistoryListNodeImpl
     var blurredHistoryNode: ASImageNode?
     let historyNodeContainer: HistoryNodeContainer
     let loadingNode: ChatLoadingNode
@@ -183,6 +184,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     
     private(set) var validLayout: (ContainerViewLayout, CGFloat)?
     private var visibleAreaInset = UIEdgeInsets()
+    private var currentListViewLayout: (size: CGSize, insets: UIEdgeInsets, scrollIndicatorInsets: UIEdgeInsets)?
     
     private(set) var searchNavigationNode: ChatSearchNavigationContentNode?
     
@@ -293,7 +295,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     
     private var dropDimNode: ASDisplayNode?
 
-    let messageTransitionNode: ChatMessageTransitionNodeImpl
+    var messageTransitionNode: ChatMessageTransitionNodeImpl
 
     private let presentationContextMarker = ASDisplayNode()
     
@@ -405,6 +407,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, chatPresentationInterfaceState: ChatPresentationInterfaceState, automaticMediaDownloadSettings: MediaAutoDownloadSettings, navigationBar: NavigationBar?, statusBar: StatusBar?, backgroundNode: WallpaperBackgroundNode, controller: ChatControllerImpl?) {
         self.context = context
         self.chatLocation = chatLocation
+        self.chatLocationContextHolder = chatLocationContextHolder
         self.controllerInteraction = controllerInteraction
         self.chatPresentationInterfaceState = chatPresentationInterfaceState
         self.automaticMediaDownloadSettings = automaticMediaDownloadSettings
@@ -762,34 +765,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         
         assert(Queue.mainQueue().isCurrent())
                 
-        self.historyNode.setLoadStateUpdated { [weak self] loadState, animated in
-            if let strongSelf = self {
-                let wasLoading = strongSelf.isLoadingValue
-                if case let .loading(earlier) = loadState {
-                    strongSelf.updateIsLoading(isLoading: true, earlier: earlier, animated: animated)
-                } else {
-                    strongSelf.updateIsLoading(isLoading: false, earlier: false, animated: animated)
-                }
-                
-                var emptyType: ChatHistoryNodeLoadState.EmptyType?
-                if case let .empty(type) = loadState {
-                    if case .botInfo = type {
-                    } else {
-                        emptyType = type
-                        if case .joined = type {
-                            if strongSelf.didDisplayEmptyGreeting {
-                                emptyType = .generic
-                            } else {
-                                strongSelf.didDisplayEmptyGreeting = true
-                            }
-                        }
-                    }
-                } else if case .messages = loadState {
-                    strongSelf.didDisplayEmptyGreeting = true
-                }
-                strongSelf.updateIsEmpty(emptyType, wasLoading: wasLoading, animated: animated)
-            }
-        }
+        self.setupHistoryNode()
         
         self.interactiveEmojisDisposable = (self.context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
         |> map { preferencesView -> InteractiveEmojiConfiguration in
@@ -801,31 +777,6 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 strongSelf.interactiveEmojis = emojis
             }
         })
-
-        var backgroundColors: [UInt32] = []
-        switch chatPresentationInterfaceState.chatWallpaper {
-        case let .file(file):
-            if file.isPattern {
-                backgroundColors = file.settings.colors
-            }
-        case let .gradient(gradient):
-            backgroundColors = gradient.colors
-        case let .color(color):
-            backgroundColors = [color]
-        default:
-            break
-        }
-        if !backgroundColors.isEmpty {
-            let averageColor = UIColor.average(of: backgroundColors.map(UIColor.init(rgb:)))
-            if averageColor.hsb.b >= 0.3 {
-                self.historyNode.verticalScrollIndicatorColor = UIColor(white: 0.0, alpha: 0.3)
-            } else {
-                self.historyNode.verticalScrollIndicatorColor = UIColor(white: 1.0, alpha: 0.3)
-            }
-        } else {
-            self.historyNode.verticalScrollIndicatorColor = UIColor(white: 0.5, alpha: 0.8)
-        }
-        self.historyNode.enableExtractedBackgrounds = true
     
         self.addSubnode(self.wrappingNode)
         self.wrappingNode.contentNode.addSubnode(self.contentContainerNode)
@@ -865,8 +816,6 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         self.contentContainerNode.contentNode.addSubnode(self.contentDimNode)
 
         self.navigationBar?.additionalContentNode.addSubnode(self.titleAccessoryPanelContainer)
-        
-        self.historyNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
         
         self.textInputPanelNode = ChatTextInputPanelNode(context: context, presentationInterfaceState: chatPresentationInterfaceState, presentationContext: ChatPresentationContext(context: context, backgroundNode: backgroundNode), presentController: { [weak self] controller in
             self?.interfaceInteraction?.presentController(controller, nil)
@@ -1014,44 +963,6 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             
             return false
         }
-        
-        self.displayVideoUnmuteTipDisposable = (combineLatest(queue: Queue.mainQueue(), ApplicationSpecificNotice.getVolumeButtonToUnmute(accountManager: self.context.sharedContext.accountManager), self.historyNode.hasVisiblePlayableItemNodes, self.historyNode.isInteractivelyScrolling)
-        |> mapToSignal { notice, hasVisiblePlayableItemNodes, isInteractivelyScrolling -> Signal<Bool, NoError> in
-            let display = !notice && hasVisiblePlayableItemNodes && !isInteractivelyScrolling
-            if display {
-                return .complete()
-                |> delay(2.5, queue: Queue.mainQueue())
-                |> then(
-                    .single(display)
-                )
-            } else {
-                return .single(display)
-            }
-        }).startStrict(next: { [weak self] display in
-            if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
-                if display {
-                    var nodes: [(CGFloat, ChatMessageItemView, ASDisplayNode)] = []
-                    var skip = false
-                    strongSelf.historyNode.forEachVisibleItemNode { itemNode in
-                        if let itemNode = itemNode as? ChatMessageItemView, let (_, soundEnabled, isVideoMessage, _, badgeNode) = itemNode.playMediaWithSound(), let node = badgeNode {
-                            if soundEnabled {
-                                skip = true
-                            } else if !skip && !isVideoMessage, case let .visible(fraction, _) = itemNode.visibility {
-                                nodes.insert((fraction, itemNode, node), at: 0)
-                            }
-                        }
-                    }
-                    for (fraction, _, badgeNode) in nodes {
-                        if fraction > 0.7 {
-                            interfaceInteraction.displayVideoUnmuteTip(badgeNode.view.convert(badgeNode.view.bounds, to: strongSelf.view).origin.offsetBy(dx: 42.0, dy: -1.0))
-                            break
-                        }
-                    }
-                } else {
-                    interfaceInteraction.displayVideoUnmuteTip(nil)
-                }
-            }
-        })
     }
     
     private func updateIsEmpty(_ emptyType: ChatHistoryNodeLoadState.EmptyType?, wasLoading: Bool, animated: Bool) {
@@ -2277,6 +2188,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             }
         }
         
+        self.currentListViewLayout = (contentBounds.size, insets: listInsets, scrollIndicatorInsets: listScrollIndicatorInsets)
         listViewTransaction(ListViewUpdateSizeAndInsets(size: contentBounds.size, insets: listInsets, scrollIndicatorInsets: listScrollIndicatorInsets, duration: duration, curve: curve, ensureTopInsetForOverlayHighlightedItems: ensureTopInsetForOverlayHighlightedItems, customAnimationTransition: customListAnimationTransition), additionalScrollDistance, scrollToTop, { [weak self] in
             if let strongSelf = self {
                 strongSelf.notifyTransitionCompletionListeners(transition: transition)
@@ -4879,6 +4791,201 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         if let inputPanelNode = self.inputPanelNode {
             transition.updateAlpha(node: inputPanelNode, alpha: overscrollNode == nil ? 1.0 : 0.0)
             transition.updateSublayerTransformOffset(layer: inputPanelNode.layer, offset: CGPoint(x: 0.0, y: overscrollNode == nil ? 0.0 : -5.0))
+        }
+    }
+    
+    private func setupHistoryNode() {
+        var backgroundColors: [UInt32] = []
+        switch self.chatPresentationInterfaceState.chatWallpaper {
+        case let .file(file):
+            if file.isPattern {
+                backgroundColors = file.settings.colors
+            }
+        case let .gradient(gradient):
+            backgroundColors = gradient.colors
+        case let .color(color):
+            backgroundColors = [color]
+        default:
+            break
+        }
+        if !backgroundColors.isEmpty {
+            let averageColor = UIColor.average(of: backgroundColors.map(UIColor.init(rgb:)))
+            if averageColor.hsb.b >= 0.3 {
+                self.historyNode.verticalScrollIndicatorColor = UIColor(white: 0.0, alpha: 0.3)
+            } else {
+                self.historyNode.verticalScrollIndicatorColor = UIColor(white: 1.0, alpha: 0.3)
+            }
+        } else {
+            self.historyNode.verticalScrollIndicatorColor = UIColor(white: 0.5, alpha: 0.8)
+        }
+        self.historyNode.enableExtractedBackgrounds = true
+        
+        self.historyNode.setLoadStateUpdated { [weak self] loadState, animated in
+            guard let strongSelf = self else {
+                return
+            }
+            let wasLoading = strongSelf.isLoadingValue
+            if case let .loading(earlier) = loadState {
+                strongSelf.updateIsLoading(isLoading: true, earlier: earlier, animated: animated)
+            } else {
+                strongSelf.updateIsLoading(isLoading: false, earlier: false, animated: animated)
+            }
+            
+            var emptyType: ChatHistoryNodeLoadState.EmptyType?
+            if case let .empty(type) = loadState {
+                if case .botInfo = type {
+                } else {
+                    emptyType = type
+                    if case .joined = type {
+                        if strongSelf.didDisplayEmptyGreeting {
+                            emptyType = .generic
+                        } else {
+                            strongSelf.didDisplayEmptyGreeting = true
+                        }
+                    }
+                }
+            } else if case .messages = loadState {
+                strongSelf.didDisplayEmptyGreeting = true
+            }
+            strongSelf.updateIsEmpty(emptyType, wasLoading: wasLoading, animated: animated)
+        }
+        
+        self.historyNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+        
+        self.displayVideoUnmuteTipDisposable?.dispose()
+        self.displayVideoUnmuteTipDisposable = (combineLatest(queue: Queue.mainQueue(), ApplicationSpecificNotice.getVolumeButtonToUnmute(accountManager: self.context.sharedContext.accountManager), self.historyNode.hasVisiblePlayableItemNodes, self.historyNode.isInteractivelyScrolling)
+        |> mapToSignal { notice, hasVisiblePlayableItemNodes, isInteractivelyScrolling -> Signal<Bool, NoError> in
+            let display = !notice && hasVisiblePlayableItemNodes && !isInteractivelyScrolling
+            if display {
+                return .complete()
+                |> delay(2.5, queue: Queue.mainQueue())
+                |> then(
+                    .single(display)
+                )
+            } else {
+                return .single(display)
+            }
+        }).startStrict(next: { [weak self] display in
+            if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
+                if display {
+                    var nodes: [(CGFloat, ChatMessageItemView, ASDisplayNode)] = []
+                    var skip = false
+                    strongSelf.historyNode.forEachVisibleItemNode { itemNode in
+                        if let itemNode = itemNode as? ChatMessageItemView, let (_, soundEnabled, isVideoMessage, _, badgeNode) = itemNode.playMediaWithSound(), let node = badgeNode {
+                            if soundEnabled {
+                                skip = true
+                            } else if !skip && !isVideoMessage, case let .visible(fraction, _) = itemNode.visibility {
+                                nodes.insert((fraction, itemNode, node), at: 0)
+                            }
+                        }
+                    }
+                    for (fraction, _, badgeNode) in nodes {
+                        if fraction > 0.7 {
+                            interfaceInteraction.displayVideoUnmuteTip(badgeNode.view.convert(badgeNode.view.bounds, to: strongSelf.view).origin.offsetBy(dx: 42.0, dy: -1.0))
+                            break
+                        }
+                    }
+                } else {
+                    interfaceInteraction.displayVideoUnmuteTip(nil)
+                }
+            }
+        })
+    }
+    
+    func chatLocationTabSwitchDirection(from fromLocation: ChatLocation, to toLocation: ChatLocation) -> Bool? {
+        var leftIndex: Int?
+        var rightIndex: Int?
+        if let titleTopicsAccessoryPanelNode = self.titleTopicsAccessoryPanelNode {
+            leftIndex = titleTopicsAccessoryPanelNode.topicIndex(threadId: fromLocation.threadId)
+            rightIndex = titleTopicsAccessoryPanelNode.topicIndex(threadId: toLocation.threadId)
+        } else if let leftPanelView = self.leftPanel?.view.view as? ChatSideTopicsPanel.View {
+            leftIndex = leftPanelView.topicIndex(threadId: fromLocation.threadId)
+            rightIndex = leftPanelView.topicIndex(threadId: toLocation.threadId)
+        }
+        guard let leftIndex, let rightIndex else {
+            return nil
+        }
+        return leftIndex < rightIndex
+    }
+    
+    func updateChatLocation(chatLocation: ChatLocation, transition: ContainedViewLayoutTransition, tabSwitchDirection: Bool?) {
+        if chatLocation == self.chatLocation {
+            return
+        }
+        self.chatLocation = chatLocation
+        
+        let historyNode = ChatHistoryListNodeImpl(
+            context: self.context,
+            updatedPresentationData: self.controller?.updatedPresentationData ?? (self.context.sharedContext.currentPresentationData.with({ $0 }), self.context.sharedContext.presentationData),
+            chatLocation: chatLocation,
+            chatLocationContextHolder: self.chatLocationContextHolder,
+            tag: nil,
+            source: .default,
+            subject: nil,
+            controllerInteraction: self.controllerInteraction,
+            selectedMessages: self.selectedMessagesPromise.get(),
+            rotated: self.controllerInteraction.chatIsRotated,
+            isChatPreview: false,
+            messageTransitionNode: { [weak self] in
+                return self?.messageTransitionNode
+            }
+        )
+        
+        var getContentAreaInScreenSpaceImpl: (() -> CGRect)?
+        var onTransitionEventImpl: ((ContainedViewLayoutTransition) -> Void)?
+        let messageTransitionNode = ChatMessageTransitionNodeImpl(listNode: historyNode, getContentAreaInScreenSpace: {
+            return getContentAreaInScreenSpaceImpl?() ?? CGRect()
+        }, onTransitionEvent: { transition in
+            onTransitionEventImpl?(transition)
+        })
+        
+        getContentAreaInScreenSpaceImpl = { [weak self] in
+            guard let strongSelf = self else {
+                return CGRect()
+            }
+
+            return strongSelf.view.convert(strongSelf.frameForVisibleArea(), to: nil)
+        }
+
+        onTransitionEventImpl = { [weak self] transition in
+            guard let strongSelf = self else {
+                return
+            }
+            if (strongSelf.context.sharedContext.currentPresentationData.with({ $0 })).reduceMotion {
+                return
+            }
+            if strongSelf.context.sharedContext.energyUsageSettings.fullTranslucency {
+                strongSelf.backgroundNode.animateEvent(transition: transition, extendAnimation: false)
+            }
+        }
+        
+        self.wrappingNode.contentNode.insertSubnode(messageTransitionNode, aboveSubnode: self.messageTransitionNode)
+        self.messageTransitionNode.removeFromSupernode()
+        self.messageTransitionNode = messageTransitionNode
+        
+        let previousHistoryNode = self.historyNode
+        previousHistoryNode.supernode?.insertSubnode(historyNode, aboveSubnode: previousHistoryNode)
+        self.historyNode = historyNode
+        
+        self.setupHistoryNode()
+        
+        historyNode.position = previousHistoryNode.position
+        historyNode.bounds = previousHistoryNode.bounds
+        historyNode.transform = previousHistoryNode.transform
+        
+        if let currentListViewLayout = self.currentListViewLayout {
+            let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: currentListViewLayout.size, insets: currentListViewLayout.insets, scrollIndicatorInsets: currentListViewLayout.scrollIndicatorInsets, duration: 0.0, curve: .Default(duration: nil), ensureTopInsetForOverlayHighlightedItems: nil, customAnimationTransition: nil)
+            historyNode.updateLayout(transition: .immediate, updateSizeAndInsets: updateSizeAndInsets, additionalScrollDistance: 0.0, scrollToTop: false, completion: {})
+        }
+        
+        if let validLayout = self.validLayout, transition.isAnimated, let tabSwitchDirection {
+            let offsetMultiplier: CGFloat = tabSwitchDirection ? 1.0 : -1.0
+            transition.animatePosition(layer: historyNode.layer, from: CGPoint(x: offsetMultiplier * validLayout.0.size.width, y: 0.0), to: CGPoint(), removeOnCompletion: true, additive: true)
+            transition.animatePosition(layer: previousHistoryNode.layer, from: CGPoint(), to: CGPoint(x: -offsetMultiplier * validLayout.0.size.width, y: 0.0), removeOnCompletion: false, additive: true, completion: { [weak previousHistoryNode] _ in
+                previousHistoryNode?.removeFromSupernode()
+            })
+        } else {
+            previousHistoryNode.removeFromSupernode()
         }
     }
 }

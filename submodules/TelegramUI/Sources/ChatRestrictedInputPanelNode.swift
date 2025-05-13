@@ -90,8 +90,7 @@ final class ChatRestrictedInputPanelNode: ChatInputPanelNode {
             accountFreezeConfiguration = AccountFreezeConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
         }
         if let channel = interfaceState.renderedPeer?.chatMainPeer as? TelegramChannel, channel.isMonoForum {
-            //TODO:localize
-            self.textNode.attributedText = NSAttributedString(string: "Choose a thread to reply", font: Font.regular(13.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
+            self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Chat_PanelForumModeReplyText, font: Font.regular(15.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
         } else if let _ = accountFreezeConfiguration?.freezeUntilDate {
             self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Chat_PanelFrozenAccount_Title, font: Font.semibold(15.0), textColor: interfaceState.theme.list.itemDestructiveColor)
             self.subtitleNode.attributedText = NSAttributedString(string: interfaceState.strings.Chat_PanelFrozenAccount_Text, font: Font.regular(13.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)

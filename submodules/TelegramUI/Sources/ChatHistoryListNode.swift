@@ -1233,14 +1233,6 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
         self.beginChatHistoryTransitions(resetScrolling: true, switchedToAnotherSource: false)
     }
     
-    public func updateChatLocation(chatLocation: ChatLocation) {
-        if self.chatLocation == chatLocation {
-            return
-        }
-        self.chatLocation = chatLocation
-        self.beginChatHistoryTransitions(resetScrolling: false, switchedToAnotherSource: true)
-    }
-    
     private func beginAdMessageManagement(adMessages: Signal<(interPostInterval: Int32?, messages: [Message]), NoError>) {
         self.adMessagesDisposable = (adMessages
         |> deliverOnMainQueue).startStrict(next: { [weak self] interPostInterval, messages in
@@ -2362,7 +2354,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                     strongSelf.dynamicBounceEnabled = false
                     
                     strongSelf.forEachItemHeaderNode { itemHeaderNode in
-                        if let dateNode = itemHeaderNode as? ChatMessageDateHeaderNode {
+                        if let dateNode = itemHeaderNode as? ChatMessageDateHeaderNodeImpl {
                             dateNode.updatePresentationData(chatPresentationData, context: strongSelf.context)
                         } else if let avatarNode = itemHeaderNode as? ChatMessageAvatarHeaderNodeImpl {
                             avatarNode.updatePresentationData(chatPresentationData, context: strongSelf.context)

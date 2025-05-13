@@ -231,15 +231,16 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
             
             if channel.flags.contains(.isMonoforum) {
                 if channel.adminRights != nil, case .peer = chatPresentationInterfaceState.chatLocation {
-                    displayInputTextPanel = false
-                    
-                    if let currentPanel = (currentPanel as? ChatRestrictedInputPanelNode) ?? (currentSecondaryPanel as? ChatRestrictedInputPanelNode) {
-                        return (currentPanel, nil)
-                    } else {
-                        let panel = ChatRestrictedInputPanelNode()
-                        panel.context = context
-                        panel.interfaceInteraction = interfaceInteraction
-                        return (panel, nil)
+                    if chatPresentationInterfaceState.interfaceState.replyMessageSubject == nil {
+                        displayInputTextPanel = false
+                        if let currentPanel = (currentPanel as? ChatRestrictedInputPanelNode) ?? (currentSecondaryPanel as? ChatRestrictedInputPanelNode) {
+                            return (currentPanel, nil)
+                        } else {
+                            let panel = ChatRestrictedInputPanelNode()
+                            panel.context = context
+                            panel.interfaceInteraction = interfaceInteraction
+                            return (panel, nil)
+                        }
                     }
                 } else {
                     displayInputTextPanel = true

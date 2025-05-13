@@ -2045,6 +2045,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
 
 public final class ItemListPeerItemHeader: ListViewItemHeader {
     public let id: ListViewItemNode.HeaderId
+    public let stackingId: ListViewItemNode.HeaderId? = nil
     public let context: AccountContext
     public let text: NSAttributedString
     public let additionalText: String
@@ -2229,7 +2230,7 @@ public final class ItemListPeerItemHeaderNode: ListViewItemHeaderNode, ItemListH
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: true)
     }
     
-    override public func updateStickDistanceFactor(_ factor: CGFloat, transition: ContainedViewLayoutTransition) {
+    override public func updateStickDistanceFactor(_ factor: CGFloat, distance: CGFloat, transition: ContainedViewLayoutTransition) {
         if self.stickDistanceFactor == factor {
             return
         }

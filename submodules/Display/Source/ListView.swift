@@ -9,6 +9,11 @@ private let insertionAnimationDuration: Double = 0.4
 private struct VisibleHeaderNodeId: Hashable {
     var id: ListViewItemNode.HeaderId
     var affinity: Int
+    
+    init(id: ListViewItemNode.HeaderId, affinity: Int) {
+        self.id = id
+        self.affinity = affinity
+    }
 }
 
 private final class ListViewBackingLayer: CALayer {
@@ -3871,23 +3876,84 @@ open class ListView: ASDisplayNode, ASScrollViewDelegate, ASGestureRecognizerDel
         func addHeader(id: VisibleHeaderNodeId, upperBound: CGFloat, upperIndex: Int, upperBoundEdge: CGFloat, lowerBound: CGFloat, lowerIndex: Int, item: ListViewItemHeader, hasValidNodes: Bool) {
             let itemHeaderHeight: CGFloat = item.height
             
-            let headerFrame: CGRect
-            let stickLocationDistanceFactor: CGFloat
-            let stickLocationDistance: CGFloat
+            var insertItemBelowOtherHeaders = false
+            var offsetByHeaderNodeId: ListViewItemNode.HeaderId?
+            var didOffsetByHeaderNode = false
+            
+            var headerFrame: CGRect
+            let naturalY: CGFloat
+            var stickLocationDistanceFactor: CGFloat = 0.0
+            var stickLocationDistance: CGFloat
             switch item.stickDirection {
             case .top:
+                naturalY = lowerBound
                 headerFrame = CGRect(origin: CGPoint(x: 0.0, y: min(max(upperDisplayBound, upperBound), lowerBound - itemHeaderHeight)), size: CGSize(width: self.visibleSize.width, height: itemHeaderHeight))
                 stickLocationDistance = headerFrame.minY - upperBound
                 stickLocationDistanceFactor = max(0.0, min(1.0, stickLocationDistance / itemHeaderHeight))
             case .topEdge:
+                naturalY = lowerBound
                 headerFrame = CGRect(origin: CGPoint(x: 0.0, y: min(max(upperDisplayBound, upperBoundEdge - itemHeaderHeight), lowerBound - itemHeaderHeight)), size: CGSize(width: self.visibleSize.width, height: itemHeaderHeight))
                 stickLocationDistance = headerFrame.minY - upperBoundEdge + itemHeaderHeight
                 stickLocationDistanceFactor = max(0.0, min(1.0, stickLocationDistance / itemHeaderHeight))
             case .bottom:
+                naturalY = lowerBound
                 headerFrame = CGRect(origin: CGPoint(x: 0.0, y: max(upperBound, min(lowerBound, lowerDisplayBound) - itemHeaderHeight)), size: CGSize(width: self.visibleSize.width, height: itemHeaderHeight))
                 stickLocationDistance = lowerBound - headerFrame.maxY
                 stickLocationDistanceFactor = max(0.0, min(1.0, stickLocationDistance / itemHeaderHeight))
+                
+                if let stackingId = item.stackingId {
+                    insertItemBelowOtherHeaders = true
+                    
+                    var naturalOverlapLowerBound: CGFloat = naturalY
+                    do {
+                        for (otherId, otherNode) in self.itemHeaderNodes {
+                            if otherId.id.space == stackingId.space {
+                                if !visibleHeaderNodes.contains(otherId) {
+                                    continue
+                                }
+                                if let otherNaturalOriginY = otherNode.naturalOriginY, otherNaturalOriginY == naturalY {
+                                    naturalOverlapLowerBound = otherNaturalOriginY - 7.0 - 20.0
+                                    break
+                                }
+                            }
+                        }
+                    }
+                    
+                    for _ in 0 ..< 2 {
+                        var mostOverlap: (CGRect, CGFloat, ListViewItemHeaderNode)?
+                        for (otherId, otherNode) in self.itemHeaderNodes {
+                            if otherId.id.space == stackingId.space {
+                                if !visibleHeaderNodes.contains(otherId) {
+                                    continue
+                                }
+                                if headerFrame.intersects(otherNode.frame) {
+                                    let intersectionHeight = headerFrame.intersection(otherNode.frame).height
+                                    if intersectionHeight > 0.0 {
+                                        if let (currentOverlapFrame, _, _) = mostOverlap {
+                                            if headerFrame.minY < currentOverlapFrame.minY {
+                                                mostOverlap = (otherNode.frame, intersectionHeight, otherNode)
+                                            }
+                                        } else {
+                                            mostOverlap = (otherNode.frame, intersectionHeight, otherNode)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if let (mostOverlap, _, otherNode) = mostOverlap {
+                            let originalY = headerFrame.origin.y
+                            headerFrame.origin.y = min(headerFrame.origin.y, mostOverlap.minY - 7.0 - 20.0)
+                            headerFrame.origin.y = max(upperBound, headerFrame.origin.y)
+                            offsetByHeaderNodeId = otherNode.item?.id
+                            didOffsetByHeaderNode = originalY != headerFrame.origin.y
+                        }
+                    }
+                    
+                    stickLocationDistance = naturalOverlapLowerBound - headerFrame.maxY
+                    stickLocationDistanceFactor = max(0.0, min(1.0, stickLocationDistance / itemHeaderHeight))
+                }
             }
+            
             visibleHeaderNodes.append(id)
             
             let initialHeaderNodeAlpha = self.itemHeaderNodesAlpha
@@ -3896,7 +3962,14 @@ open class ListView: ASDisplayNode, ASScrollViewDelegate, ASGestureRecognizerDel
                 headerNode = current
                 switch transition.0 {
                     case .immediate:
+                        let previousFrame = headerNode.frame
                         headerNode.updateFrame(headerFrame, within: self.visibleSize)
+                        if headerNode.offsetByHeaderNodeId != nil && offsetByHeaderNodeId != nil && headerNode.offsetByHeaderNodeId != offsetByHeaderNodeId {
+                            let _ = didOffsetByHeaderNode
+                            if !previousFrame.isEmpty {
+                                ContainedViewLayoutTransition.animated(duration: 0.35, curve: .spring).animatePositionAdditive(node: headerNode, offset: CGPoint(x: 0.0, y: previousFrame.minY - headerFrame.minY))
+                            }
+                        }
                     case let .animated(duration, curve):
                         let previousFrame = headerNode.frame
                         headerNode.updateFrame(headerFrame, within: self.visibleSize)
@@ -3927,7 +4000,7 @@ open class ListView: ASDisplayNode, ASScrollViewDelegate, ASGestureRecognizerDel
                     item.updateNode(headerNode, previous: nil, next: nil)
                     headerNode.item = item
                 }
-                headerNode.updateLayoutInternal(size: headerFrame.size, leftInset: leftInset, rightInset: rightInset, transition: transition.0)
+                headerNode.updateLayoutInternal(size: headerFrame.size, leftInset: leftInset, rightInset: rightInset, transition: animateInsertion ? .immediate : transition.0)
                 headerNode.updateInternalStickLocationDistanceFactor(stickLocationDistanceFactor, animated: true)
                 headerNode.internalStickLocationDistance = stickLocationDistance
                 if !hasValidNodes && !headerNode.alpha.isZero {
@@ -3940,7 +4013,7 @@ open class ListView: ASDisplayNode, ASScrollViewDelegate, ASGestureRecognizerDel
                         headerNode.animateAdded(duration: 0.2)
                     }
                 }
-                headerNode.updateStickDistanceFactor(stickLocationDistanceFactor, transition: transition.0)
+                headerNode.updateStickDistanceFactor(stickLocationDistanceFactor, distance: stickLocationDistance, transition: transition.0)
             } else {
                 headerNode = item.node(synchronousLoad: synchronousLoad)
                 headerNode.alpha = initialHeaderNodeAlpha
@@ -3950,10 +4023,28 @@ open class ListView: ASDisplayNode, ASScrollViewDelegate, ASGestureRecognizerDel
                 }
                 headerNode.updateFlashingOnScrolling(flashing, animated: false)
                 headerNode.frame = headerFrame
-                headerNode.updateLayoutInternal(size: headerFrame.size, leftInset: leftInset, rightInset: rightInset, transition: transition.0)
+                headerNode.updateLayoutInternal(size: headerFrame.size, leftInset: leftInset, rightInset: rightInset, transition: animateInsertion ? .immediate : transition.0)
                 headerNode.updateInternalStickLocationDistanceFactor(stickLocationDistanceFactor, animated: false)
                 self.itemHeaderNodes[id] = headerNode
-                if let verticalScrollIndicator = self.verticalScrollIndicator {
+                if insertItemBelowOtherHeaders {
+                    var lowestHeaderNode: ASDisplayNode?
+                    var lowestHeaderNodeIndex: Int?
+                    for (_, headerNode) in self.itemHeaderNodes {
+                        if let index = self.view.subviews.firstIndex(of: headerNode.view) {
+                            if lowestHeaderNodeIndex == nil || index < lowestHeaderNodeIndex! {
+                                lowestHeaderNodeIndex = index
+                                lowestHeaderNode = headerNode
+                            }
+                        }
+                    }
+                    if let lowestHeaderNode {
+                        self.insertSubnode(headerNode, belowSubnode: lowestHeaderNode)
+                    } else if let verticalScrollIndicator = self.verticalScrollIndicator {
+                        self.insertSubnode(headerNode, belowSubnode: verticalScrollIndicator)
+                    } else {
+                        self.addSubnode(headerNode)
+                    }
+                } else if let verticalScrollIndicator = self.verticalScrollIndicator {
                     self.insertSubnode(headerNode, belowSubnode: verticalScrollIndicator)
                 } else {
                     self.addSubnode(headerNode)
@@ -3962,8 +4053,10 @@ open class ListView: ASDisplayNode, ASScrollViewDelegate, ASGestureRecognizerDel
                     headerNode.alpha = initialHeaderNodeAlpha
                     headerNode.animateAdded(duration: 0.2)
                 }
-                headerNode.updateStickDistanceFactor(stickLocationDistanceFactor, transition: .immediate)
+                headerNode.updateStickDistanceFactor(stickLocationDistanceFactor, distance: stickLocationDistance, transition: .immediate)
             }
+            headerNode.offsetByHeaderNodeId = offsetByHeaderNodeId
+            headerNode.naturalOriginY = naturalY
             var maxIntersectionHeight: (CGFloat, Int)?
             for i in upperIndex ... lowerIndex {
                 let itemNode = self.itemNodes[i]
@@ -4008,53 +4101,65 @@ open class ListView: ASDisplayNode, ASScrollViewDelegate, ASGestureRecognizerDel
 
         var previousHeaderBySpace: [AnyHashable: (id: VisibleHeaderNodeId, upperBound: CGFloat, upperBoundIndex: Int, upperBoundEdge: CGFloat, lowerBound: CGFloat, lowerBoundIndex: Int, item: ListViewItemHeader, hasValidNodes: Bool)] = [:]
         
-        for i in 0 ..< self.itemNodes.count {
-            let itemNode = self.itemNodes[i]
-            let itemFrame = itemNode.apparentFrame
-            let itemTopInset = itemNode.insets.top
-            var validItemHeaderSpaces: [AnyHashable] = []
-            if let itemHeaders = itemNode.headers() {
-                for itemHeader in itemHeaders {
-                    guard let affinity = itemNode.headerSpaceAffinities[itemHeader.id] else {
-                        assertionFailure()
-                        continue
-                    }
-
-                    let headerId = VisibleHeaderNodeId(id: itemHeader.id, affinity: affinity)
-
-                    validItemHeaderSpaces.append(itemHeader.id.space)
-
-                    let itemMaxY: CGFloat
-                    if itemHeader.stickOverInsets {
-                        itemMaxY = itemFrame.maxY
-                    } else {
-                        itemMaxY = itemFrame.maxY - (self.rotated ? itemNode.insets.top : itemNode.insets.bottom)
-                    }
-
-                    if let (previousHeaderId, previousUpperBound, previousUpperIndex, previousUpperBoundEdge, previousLowerBound, previousLowerIndex, previousHeaderItem, hasValidNodes) = previousHeaderBySpace[itemHeader.id.space] {
-                        if previousHeaderId == headerId {
-                            previousHeaderBySpace[itemHeader.id.space] = (previousHeaderId, previousUpperBound, previousUpperIndex, previousUpperBoundEdge, itemMaxY, i, previousHeaderItem, hasValidNodes || itemNode.index != nil)
+        for phase in 0 ..< 2 {
+            for i in 0 ..< self.itemNodes.count {
+                let itemNode = self.itemNodes[i]
+                let itemFrame = itemNode.apparentFrame
+                let itemTopInset = itemNode.insets.top
+                var validItemHeaderSpaces: [AnyHashable] = []
+                if let itemHeaders = itemNode.headers() {
+                    outerItemHeaders: for itemHeader in itemHeaders {
+                        if phase == 0 {
+                            if itemHeader.stackingId != nil {
+                                continue outerItemHeaders
+                            }
                         } else {
-                            addHeader(id: previousHeaderId, upperBound: previousUpperBound, upperIndex: previousUpperIndex, upperBoundEdge: previousUpperBoundEdge, lowerBound: previousLowerBound, lowerIndex: previousLowerIndex, item: previousHeaderItem, hasValidNodes: hasValidNodes)
-
+                            if itemHeader.stackingId == nil {
+                                continue outerItemHeaders
+                            }
+                        }
+                        
+                        guard let affinity = itemNode.headerSpaceAffinities[itemHeader.id] else {
+                            assertionFailure()
+                            continue
+                        }
+                        
+                        let headerId = VisibleHeaderNodeId(id: itemHeader.id, affinity: affinity)
+                        
+                        validItemHeaderSpaces.append(itemHeader.id.space)
+                        
+                        var itemMaxY: CGFloat
+                        if itemHeader.stickOverInsets {
+                            itemMaxY = itemFrame.maxY
+                        } else {
+                            itemMaxY = itemFrame.maxY - (self.rotated ? itemNode.insets.top : itemNode.insets.bottom)
+                        }
+                        
+                        if let (previousHeaderId, previousUpperBound, previousUpperIndex, previousUpperBoundEdge, previousLowerBound, previousLowerIndex, previousHeaderItem, hasValidNodes) = previousHeaderBySpace[itemHeader.id.space] {
+                            if previousHeaderId == headerId {
+                                previousHeaderBySpace[itemHeader.id.space] = (previousHeaderId, previousUpperBound, previousUpperIndex, previousUpperBoundEdge, itemMaxY, i, previousHeaderItem, hasValidNodes || itemNode.index != nil)
+                            } else {
+                                addHeader(id: previousHeaderId, upperBound: previousUpperBound, upperIndex: previousUpperIndex, upperBoundEdge: previousUpperBoundEdge, lowerBound: previousLowerBound, lowerIndex: previousLowerIndex, item: previousHeaderItem, hasValidNodes: hasValidNodes)
+                                
+                                previousHeaderBySpace[itemHeader.id.space] = (headerId, itemFrame.minY, i, itemFrame.minY + itemTopInset, itemMaxY, i, itemHeader, itemNode.index != nil)
+                            }
+                        } else {
                             previousHeaderBySpace[itemHeader.id.space] = (headerId, itemFrame.minY, i, itemFrame.minY + itemTopInset, itemMaxY, i, itemHeader, itemNode.index != nil)
                         }
-                    } else {
-                        previousHeaderBySpace[itemHeader.id.space] = (headerId, itemFrame.minY, i, itemFrame.minY + itemTopInset, itemMaxY, i, itemHeader, itemNode.index != nil)
                     }
                 }
-            }
-
-            for (space, previousHeader) in previousHeaderBySpace {
-                if validItemHeaderSpaces.contains(space) {
-                    continue
+                
+                for (space, previousHeader) in previousHeaderBySpace {
+                    if validItemHeaderSpaces.contains(space) {
+                        continue
+                    }
+                    
+                    let (previousHeaderId, previousUpperBound, previousUpperIndex, previousUpperBoundEdge, previousLowerBound, previousLowerIndex, previousHeaderItem, hasValidNodes) = previousHeader
+                    
+                    addHeader(id: previousHeaderId, upperBound: previousUpperBound, upperIndex: previousUpperIndex, upperBoundEdge: previousUpperBoundEdge, lowerBound: previousLowerBound, lowerIndex: previousLowerIndex, item: previousHeaderItem, hasValidNodes: hasValidNodes)
+                    
+                    previousHeaderBySpace.removeValue(forKey: space)
                 }
-
-                let (previousHeaderId, previousUpperBound, previousUpperIndex, previousUpperBoundEdge, previousLowerBound, previousLowerIndex, previousHeaderItem, hasValidNodes) = previousHeader
-
-                addHeader(id: previousHeaderId, upperBound: previousUpperBound, upperIndex: previousUpperIndex, upperBoundEdge: previousUpperBoundEdge, lowerBound: previousLowerBound, lowerIndex: previousLowerIndex, item: previousHeaderItem, hasValidNodes: hasValidNodes)
-
-                previousHeaderBySpace.removeValue(forKey: space)
             }
         }
 

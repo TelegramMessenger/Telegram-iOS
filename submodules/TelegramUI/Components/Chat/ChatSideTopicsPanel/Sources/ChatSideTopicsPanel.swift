@@ -239,6 +239,7 @@ public final class ChatSideTopicsPanel: Component {
                         avatarNode = current
                     } else {
                         avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 11.0))
+                        avatarNode.isUserInteractionEnabled = false
                         self.avatarNode = avatarNode
                         self.containerButton.addSubview(avatarNode.view)
                     }
@@ -594,6 +595,18 @@ public final class ChatSideTopicsPanel: Component {
         public func updateGlobalOffset(globalOffset: CGFloat, transition: ComponentTransition) {
             if let tabItemView = self.tabItemView {
                 transition.setTransform(view: tabItemView, transform: CATransform3DMakeTranslation(-globalOffset, 0.0, 0.0))
+            }
+        }
+        
+        public func topicIndex(threadId: Int64?) -> Int? {
+            if let threadId {
+                if let value = self.items.firstIndex(where: { $0.id == .chatList(PeerId(threadId)) }) {
+                    return value + 1
+                } else {
+                    return nil
+                }
+            } else {
+                return 0
             }
         }
         

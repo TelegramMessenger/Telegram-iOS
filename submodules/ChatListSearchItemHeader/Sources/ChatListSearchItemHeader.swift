@@ -204,6 +204,7 @@ private enum ChatListSearchItemHeaderId: Hashable {
 
 public final class ChatListSearchItemHeader: ListViewItemHeader {
     public let id: ListViewItemNode.HeaderId
+    public let stackingId: ListViewItemNode.HeaderId? = nil
     public let type: ChatListSearchItemHeaderType
     public let stickDirection: ListViewItemHeaderStickDirection = .top
     public let stickOverInsets: Bool = true

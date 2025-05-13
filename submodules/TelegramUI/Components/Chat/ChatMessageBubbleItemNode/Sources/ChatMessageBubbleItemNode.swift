@@ -728,7 +728,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     
     private var forceStopAnimations: Bool = false
     
-    typealias Params = (item: ChatMessageItem, params: ListViewItemLayoutParams, mergedTop: ChatMessageMerge, mergedBottom: ChatMessageMerge, dateHeaderAtBottom: Bool)
+    typealias Params = (item: ChatMessageItem, params: ListViewItemLayoutParams, mergedTop: ChatMessageMerge, mergedBottom: ChatMessageMerge, dateHeaderAtBottom: ChatMessageHeaderSpec)
     private var currentInputParams: Params?
     private var currentApplyParams: ListViewItemApply?
     
@@ -1394,7 +1394,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         }
     }
     
-    override public func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
+    override public func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: ChatMessageHeaderSpec) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
         var currentContentClassesPropertiesAndLayouts: [(Message, AnyClass, Bool, Int?, (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))))] = []
         for contentNode in self.contentNodes {
             if let message = contentNode.item?.message {
@@ -1431,7 +1431,13 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         
         return { item, params, mergedTop, mergedBottom, dateHeaderAtBottom in
             let layoutConstants = chatMessageItemLayoutConstants(layoutConstants, params: params, presentationData: item.presentationData)
-            return ChatMessageBubbleItemNode.beginLayout(selfReference: weakSelf, item, params, mergedTop, mergedBottom, dateHeaderAtBottom,
+            return ChatMessageBubbleItemNode.beginLayout(
+                selfReference: weakSelf,
+                item: item,
+                params: params,
+                mergedTop: mergedTop,
+                mergedBottom: mergedBottom,
+                dateHeaderAtBottom: dateHeaderAtBottom,
                 currentContentClassesPropertiesAndLayouts: currentContentClassesPropertiesAndLayouts,
                 authorNameLayout: authorNameLayout,
                 viaMeasureLayout: viaMeasureLayout,
@@ -1456,11 +1462,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     
     private static func beginLayout(
         selfReference: Weak<ChatMessageBubbleItemNode>,
-        _ item: ChatMessageItem,
-        _ params: ListViewItemLayoutParams,
-        _ mergedTop: ChatMessageMerge,
-        _ mergedBottom: ChatMessageMerge,
-        _ dateHeaderAtBottom: Bool,
+        item: ChatMessageItem,
+        params: ListViewItemLayoutParams,
+        mergedTop: ChatMessageMerge,
+        mergedBottom: ChatMessageMerge,
+        dateHeaderAtBottom: ChatMessageHeaderSpec,
         currentContentClassesPropertiesAndLayouts: [(Message, AnyClass, Bool, Int?, (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))))],
         authorNameLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
         viaMeasureLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
@@ -2620,7 +2626,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
             
             var hasThreadInfo = false
-            if case let .peer(peerId) = item.chatLocation, (peerId == replyMessage?.id.peerId || item.message.threadId == 1 || item.associatedData.isRecentActions), let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.isForumOrMonoForum, item.message.associatedThreadInfo != nil {
+            if case let .peer(peerId) = item.chatLocation, (peerId == replyMessage?.id.peerId || item.message.threadId == 1 || item.associatedData.isRecentActions), let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.isForum, item.message.associatedThreadInfo != nil {
                 hasThreadInfo = true
             } else if case let .customChatContents(contents) = item.associatedData.subject, case .hashTagSearch = contents.kind {
                 if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
@@ -3219,11 +3225,18 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         }
         
         var layoutInsets = UIEdgeInsets(top: mergedTop.merged ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, left: 0.0, bottom: mergedBottom.merged ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, right: 0.0)
-        if dateHeaderAtBottom {
-            layoutInsets.top += layoutConstants.timestampHeaderHeight
-        }
-        if isAd {
-            layoutInsets.top += 4.0
+        if dateHeaderAtBottom.hasDate && dateHeaderAtBottom.hasTopic {
+            layoutInsets.top += layoutConstants.timestampDateAndTopicHeaderHeight
+        } else {
+            if dateHeaderAtBottom.hasDate {
+                layoutInsets.top += layoutConstants.timestampHeaderHeight
+            }
+            if dateHeaderAtBottom.hasTopic {
+                layoutInsets.top += layoutConstants.timestampHeaderHeight
+            }
+            if isAd {
+                layoutInsets.top += 4.0
+            }
         }
         
         let layout = ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets)
@@ -3468,6 +3481,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             strongSelf.updateAttachedAvatarNodeOffset(offset: avatarOffset, transition: .animated(duration: 0.3, curve: .spring))
         }
         strongSelf.updateAttachedAvatarNodeIsHidden(isHidden: isSidePanelOpen, transition: animation.transition)
+        strongSelf.updateAttachedDateHeader(hasDate: inputParams.dateHeaderAtBottom.hasDate, hasPeer: inputParams.dateHeaderAtBottom.hasTopic)
         
         let isFailed = item.content.firstMessage.effectivelyFailed(timestamp: item.context.account.network.getApproximateRemoteTimestamp())
         if isFailed {

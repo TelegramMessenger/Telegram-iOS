@@ -583,9 +583,6 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                     }
                 }
             } else if let inputChannel = maybePeer.flatMap(apiInputChannel) {
-                if let channel = maybePeer as? TelegramChannel, channel.flags.contains(.isMonoforum) {
-                    return .single(false)
-                }
                 let fullChannelSignal = network.request(Api.functions.channels.getFullChannel(channel: inputChannel))
                 |> map(Optional.init)
                 |> `catch` { error -> Signal<Api.messages.ChatFull?, NoError> in
@@ -594,10 +591,17 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                     }
                     return .single(nil)
                 }
-                let participantSignal = network.request(Api.functions.channels.getParticipant(channel: inputChannel, participant: .inputPeerSelf))
-                |> map(Optional.init)
-                |> `catch` { error -> Signal<Api.channels.ChannelParticipant?, NoError> in
-                    return .single(nil)
+                
+                
+                let participantSignal: Signal<Api.channels.ChannelParticipant?, NoError>
+                if let channel = maybePeer as? TelegramChannel, channel.flags.contains(.isMonoforum) {
+                    participantSignal = .single(nil)
+                } else {
+                    participantSignal = network.request(Api.functions.channels.getParticipant(channel: inputChannel, participant: .inputPeerSelf))
+                    |> map(Optional.init)
+                    |> `catch` { error -> Signal<Api.channels.ChannelParticipant?, NoError> in
+                        return .single(nil)
+                    }
                 }
                 
                 return combineLatest(fullChannelSignal, participantSignal)

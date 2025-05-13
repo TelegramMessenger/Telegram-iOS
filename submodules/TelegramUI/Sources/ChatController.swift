@@ -842,7 +842,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return true
                 case let .quickReplyMessageInput(_, shortcutType):
                     if let historyView = strongSelf.chatDisplayNode.historyNode.originalHistoryView, historyView.entries.isEmpty {
-                        
                         let titleString: String
                         let textString: String
                         switch shortcutType {
@@ -7917,6 +7916,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     if let scheduleTime = scheduleTime {
                          attributes.append(OutgoingScheduleInfoMessageAttribute(scheduleTime: scheduleTime))
+                    }
+                }
+                
+                if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum {
+                    attributes.removeAll(where: { $0 is SendAsMessageAttribute })
+                    if channel.adminRights != nil, let sendAsPeerId = self.presentationInterfaceState.currentSendAsPeerId {
+                        attributes.append(SendAsMessageAttribute(peerId: sendAsPeerId))
                     }
                 }
                 if let sendAsPeerId = self.presentationInterfaceState.currentSendAsPeerId {

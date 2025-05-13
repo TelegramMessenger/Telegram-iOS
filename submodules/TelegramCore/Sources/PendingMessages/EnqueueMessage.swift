@@ -498,6 +498,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                 }
             }
         }
+        
         switch message {
             case let .message(_, attributes, _, _, threadId, replyToMessageId, _, _, _, _):
                 if let replyToMessageId = replyToMessageId, (replyToMessageId.messageId.peerId != peerId && peerId.namespace == Namespaces.Peer.SecretChat), let replyMessage = transaction.getMessage(replyToMessageId.messageId) {
