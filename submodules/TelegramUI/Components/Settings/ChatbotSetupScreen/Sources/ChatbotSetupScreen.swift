@@ -174,6 +174,8 @@ final class ChatbotSetupScreenComponent: Component {
         private var permissions: [Permission] = []
         private var botRights: TelegramBusinessBotRights = []
         
+        private var temporaryEnabledPermissions = Set<String>()
+        
         override init(frame: CGRect) {
             self.scrollView = ScrollView()
             self.scrollView.showsVerticalScrollIndicator = true
@@ -505,6 +507,44 @@ final class ChatbotSetupScreenComponent: Component {
             }
         }
         
+        private func presentStarGiftsWarningIfNeeded(_ key: TelegramBusinessBotRights, completion: @escaping (Bool) -> Void) -> Bool {
+            guard let component = self.component, let environment = self.environment, let botResolutionState = self.botResolutionState, case let .found(peer, _) = botResolutionState.state, let controller = environment.controller() else {
+                return false
+            }
+            
+            if !key.contains(.transferAndUpgradeGifts) && !key.contains(.transferStars) && !key.contains(.editUsername) {
+                completion(true)
+                return false
+            } else {
+                let botUsername = "@\(peer.addressName ?? "")"
+                let text: String
+                if key.contains(.editUsername) {
+                    text = environment.strings.ChatbotSetup_Gift_Warning_UsernameText(botUsername).string
+                } else if key == .transferAndUpgradeGifts {
+                    text = environment.strings.ChatbotSetup_Gift_Warning_GiftsText(botUsername).string
+                } else if key == .transferStars {
+                    text = environment.strings.ChatbotSetup_Gift_Warning_StarsText(botUsername).string
+                } else {
+                    text = environment.strings.ChatbotSetup_Gift_Warning_CombinedText(botUsername).string
+                }
+                let alertController = textAlertController(context: component.context, title: environment.strings.ChatbotSetup_Gift_Warning_Title, text: text, actions: [
+                    TextAlertAction(type: .genericAction, title: environment.strings.Common_Cancel, action: {
+                        completion(false)
+                    }),
+                    TextAlertAction(type: .defaultAction, title: environment.strings.ChatbotSetup_Gift_Warning_Proceed, action: {
+                        completion(true)
+                    })
+                ], parseMarkdown: true)
+                alertController.dismissed = { byOutsideTap in
+                    if byOutsideTap {
+                        completion(false)
+                    }
+                }
+                controller.present(alertController, in: .window(.root))
+                return true
+            }
+        }
+        
         func update(component: ChatbotSetupScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
@@ -741,7 +781,7 @@ final class ChatbotSetupScreenComponent: Component {
                             if case let .user(user) = peer, let botInfo = user.botInfo, botInfo.flags.contains(.isBusiness) {
                                 botResolutionState.state = .found(peer: peer, isInstalled: true)
                                 self.botResolutionState = botResolutionState
-                                self.botRights = .All
+                                self.botRights = [.reply, .readMessages, .deleteSentMessages, .deleteReceivedMessages]
                                 self.state?.updated(transition: .spring(duration: 0.3))
                             } else {
                                 self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.ChatbotSetup_ErrorBotNotBusinessCapable, actions: [
@@ -1074,6 +1114,10 @@ final class ChatbotSetupScreenComponent: Component {
                                 selectedCount += 1
                             }
                         }
+                        if self.temporaryEnabledPermissions.contains(permission.id) {
+                            value = true
+                        }
+                        
                         titleItems.append(
                             AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
                                 text: .plain(NSAttributedString(
@@ -1101,11 +1145,33 @@ final class ChatbotSetupScreenComponent: Component {
                                     return
                                 }
                                 if let subpermissions = permission.subpermissions {
-                                    for subpermission in subpermissions {
-                                        if subpermission.enabled {
-                                            if let key = subpermission.key {
+                                    if value {
+                                        var combinedKey: TelegramBusinessBotRights = []
+                                        for subpermission in subpermissions {
+                                            if subpermission.enabled, let key = subpermission.key {
+                                                combinedKey.insert(key)
+                                            }
+                                        }
+                                        self.temporaryEnabledPermissions.insert(permission.id)
+                                       
+                                        let presentedWarning = self.presentStarGiftsWarningIfNeeded(combinedKey, completion: { [weak self] value in
+                                            guard let self else {
+                                                return
+                                            }
+                                            if value {
+                                                self.botRights.insert(combinedKey)
+                                            }
+                                            self.temporaryEnabledPermissions.remove(permission.id)
+                                            self.state?.updated(transition: .spring(duration: 0.4))
+                                        })
+                                        
+                                        if !presentedWarning {
+                                            self.state?.updated(transition: .spring(duration: 0.4))
+                                        }
+                                    } else {
+                                        for subpermission in subpermissions {
+                                            if subpermission.enabled, let key = subpermission.key {
                                                 if value {
-                                                    self.botRights.insert(key)
                                                 } else {
                                                     self.botRights.remove(key)
                                                 }
@@ -1170,7 +1236,15 @@ final class ChatbotSetupScreenComponent: Component {
                                         }
                                         if let key = subpermission.key {
                                             if !value {
-                                                self.botRights.insert(key)
+                                                let _ = self.presentStarGiftsWarningIfNeeded(key, completion: { [weak self] value in
+                                                    guard let self else {
+                                                        return
+                                                    }
+                                                    if value {
+                                                        self.botRights.insert(key)
+                                                    }
+                                                    self.state?.updated(transition: .spring(duration: 0.4))
+                                                })
                                             } else {
                                                 self.botRights.remove(key)
                                             }

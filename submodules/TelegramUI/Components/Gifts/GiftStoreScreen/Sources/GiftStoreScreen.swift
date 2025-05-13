@@ -270,8 +270,8 @@ final class GiftStoreScreenComponent: Component {
                                                     subject: .uniqueGift(uniqueGift, state.peerId),
                                                     allSubjects: allSubjects,
                                                     index: index,
-                                                    buyGift: { slug, peerId in
-                                                        return self.state?.starGiftsContext.buyStarGift(slug: slug, peerId: peerId) ?? .complete()
+                                                    buyGift: { slug, peerId, price in
+                                                        return self.state?.starGiftsContext.buyStarGift(slug: slug, peerId: peerId, price: price) ?? .complete()
                                                     },
                                                     updateResellStars: { price in
                                                         return self.state?.starGiftsContext.updateStarGiftResellPrice(slug: uniqueGift.slug, price: price) ?? .complete()

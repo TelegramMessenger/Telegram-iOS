@@ -14320,3 +14320,16 @@ Sorry for the inconvenience.";
 
 "Story.Editor.TooltipSelection_1" = "Tap here to view your %@ story";
 "Story.Editor.TooltipSelection_any" = "Tap here to view your %@ stories";
+
+"Gift.Buy.ErrorUnknown" = "An error occurred. Please try again.";
+"Gift.Buy.ErrorPriceChanged.Title" = "Warning";
+"Gift.Buy.ErrorPriceChanged.Text" = "The price has increased from **%1$@** to **%2$@**. Buy the gift anyway?";
+"Gift.Buy.ErrorPriceChanged.Text.Stars_1" = "%@ Star";
+"Gift.Buy.ErrorPriceChanged.Text.Stars_any" = "%@ Stars";
+
+"ChatbotSetup.Gift.Warning.Title" = "Warning";
+"ChatbotSetup.Gift.Warning.CombinedText" = "The bot **%@** will be able to **manage your gifts and stars**, including giving them away to other users.";
+"ChatbotSetup.Gift.Warning.GiftsText" = "The bot **%@** will be able to **manage your gifts**, including giving them away to other users.";
+"ChatbotSetup.Gift.Warning.StarsText" = "The bot **%@** will be able to **transfer your stars**.";
+"ChatbotSetup.Gift.Warning.UsernameText" = "The bot **%@** will be able to **edit your username**, which will make your current username available for others to claim.";
+"ChatbotSetup.Gift.Warning.Proceed" = "Proceed";

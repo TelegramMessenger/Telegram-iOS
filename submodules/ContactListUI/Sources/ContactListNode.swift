@@ -1841,7 +1841,7 @@ public final class ContactListNode: ASDisplayNode {
                         }
                         
                         var isEmpty = false
-                        if (authorizationStatus == .notDetermined || authorizationStatus == .denied) && peers.isEmpty {
+                        if (authorizationStatus == .notDetermined || authorizationStatus == .denied) && peers.isEmpty && topPeers.isEmpty {
                             isEmpty = true
                         }
                         

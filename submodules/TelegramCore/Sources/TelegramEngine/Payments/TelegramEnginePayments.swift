@@ -125,8 +125,8 @@ public extension TelegramEngine {
             return _internal_transferStarGift(account: self.account, prepaid: prepaid, reference: reference, peerId: peerId)
         }
         
-        public func buyStarGift(slug: String, peerId: EnginePeer.Id) -> Signal<Never, BuyStarGiftError> {
-            return _internal_buyStarGift(account: self.account, slug: slug, peerId: peerId)
+        public func buyStarGift(slug: String, peerId: EnginePeer.Id, price: Int64?) -> Signal<Never, BuyStarGiftError> {
+            return _internal_buyStarGift(account: self.account, slug: slug, peerId: peerId, price: price)
         }
         
         public func upgradeStarGift(formId: Int64?, reference: StarGiftReference, keepOriginalInfo: Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError> {

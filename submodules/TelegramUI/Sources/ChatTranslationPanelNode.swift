@@ -178,7 +178,18 @@ final class ChatTranslationPanelNode: ASDisplayNode {
     }
     
     @objc private func closePressed() {
-        let _ = ApplicationSpecificNotice.incrementTranslationSuggestion(accountManager: self.context.sharedContext.accountManager, count: -100, timestamp: Int32(Date().timeIntervalSince1970) + 60 * 60 * 24 * 7).startStandalone()
+        let isPremium = self.chatInterfaceState?.isPremium ?? false
+        
+        var translationAvailable = isPremium
+        if let channel = self.chatInterfaceState?.renderedPeer?.chatMainPeer as? TelegramChannel, channel.flags.contains(.autoTranslateEnabled) {
+            translationAvailable = true
+        }
+        
+        if translationAvailable {
+            self.interfaceInteraction?.hideTranslationPanel()
+        } else if !isPremium {
+            let _ = ApplicationSpecificNotice.incrementTranslationSuggestion(accountManager: self.context.sharedContext.accountManager, count: -100, timestamp: Int32(Date().timeIntervalSince1970) + 60 * 60 * 24 * 7).startStandalone()
+        }
     }
     
     @objc private func buttonPressed() {
