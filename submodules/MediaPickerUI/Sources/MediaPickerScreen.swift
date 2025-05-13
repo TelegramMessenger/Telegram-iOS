@@ -528,29 +528,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             if case let .assets(_, mode) = controller.subject, [.wallpaper, .story, .addImage, .cover, .createSticker, .createAvatar].contains(mode) {
                 
             } else {
-                let selectionGesture = MediaPickerGridSelectionGesture<TGMediaSelectableItem>()
-                selectionGesture.delegate = self.wrappedGestureRecognizerDelegate
-                selectionGesture.began = { [weak self] in
-                    self?.controller?.cancelPanGesture()
-                }
-                selectionGesture.updateIsScrollEnabled = { [weak self] isEnabled in
-                    self?.gridNode.scrollView.isScrollEnabled = isEnabled
-                }
-                selectionGesture.itemAt = { [weak self] point in
-                    if let self, let itemNode = self.gridNode.itemNodeAtPoint(point) as? MediaPickerGridItemNode, let selectableItem = itemNode.selectableItem {
-                        return (selectableItem, self.controller?.interaction?.selectionState?.isIdentifierSelected(selectableItem.uniqueIdentifier) ?? false)
-                    } else {
-                        return nil
-                    }
-                }
-                selectionGesture.updateSelection = { [weak self] asset, selected in
-                    if let strongSelf = self {
-                        strongSelf.controller?.interaction?.selectionState?.setItem(asset, selected: selected, animated: true, sender: nil)
-                    }
-                }
-                selectionGesture.sideInset = 44.0
-                self.gridNode.view.addGestureRecognizer(selectionGesture)
-                self.selectionGesture = selectionGesture
+                self.setupSelectionGesture()
             }
             
             if let controller = self.controller, case let .assets(collection, _) = controller.subject, collection != nil {
@@ -711,6 +689,35 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             } else {
                 self.containerNode.clipsToBounds = true
             }
+        }
+        
+        func setupSelectionGesture() {
+            guard self.selectionGesture == nil else {
+                return
+            }
+            let selectionGesture = MediaPickerGridSelectionGesture<TGMediaSelectableItem>()
+            selectionGesture.delegate = self.wrappedGestureRecognizerDelegate
+            selectionGesture.began = { [weak self] in
+                self?.controller?.cancelPanGesture()
+            }
+            selectionGesture.updateIsScrollEnabled = { [weak self] isEnabled in
+                self?.gridNode.scrollView.isScrollEnabled = isEnabled
+            }
+            selectionGesture.itemAt = { [weak self] point in
+                if let self, let itemNode = self.gridNode.itemNodeAtPoint(point) as? MediaPickerGridItemNode, let selectableItem = itemNode.selectableItem {
+                    return (selectableItem, self.controller?.interaction?.selectionState?.isIdentifierSelected(selectableItem.uniqueIdentifier) ?? false)
+                } else {
+                    return nil
+                }
+            }
+            selectionGesture.updateSelection = { [weak self] asset, selected in
+                if let strongSelf = self {
+                    strongSelf.controller?.interaction?.selectionState?.setItem(asset, selected: selected, animated: true, sender: nil)
+                }
+            }
+            selectionGesture.sideInset = 44.0
+            self.gridNode.view.addGestureRecognizer(selectionGesture)
+            self.selectionGesture = selectionGesture
         }
         
         @objc private func cameraTapped() {
@@ -2352,9 +2359,6 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         let transition = ContainedViewLayoutTransition.animated(duration: 0.25, curve: .easeInOut)
         var moreIsVisible = false
         if case let .assets(_, mode) = self.subject, [.story, .createSticker].contains(mode) {
-            if count == 1 {
-                self.requestAttachmentMenuExpansion()
-            }
             moreIsVisible = true
         } else if case let .media(media) = self.subject {
             self.titleView.title = media.count == 1 ? self.presentationData.strings.Attachment_Pasteboard : self.presentationData.strings.Attachment_SelectedMedia(count)
@@ -2618,6 +2622,8 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         
         self.navigationItem.setRightBarButton(nil, animated: true)
         self.explicitMultipleSelection = true
+        self.controllerNode.setupSelectionGesture()
+        self.requestAttachmentMenuExpansion()
         
         if let state = self.controllerNode.state {
             self.controllerNode.updateState(state)

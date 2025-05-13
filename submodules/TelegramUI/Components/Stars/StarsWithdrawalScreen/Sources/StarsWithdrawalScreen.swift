@@ -279,7 +279,7 @@ private final class SheetContent: CombinedComponent {
             case .starGiftResell:
                 let amountInfoString: NSAttributedString
                 if let value = state.amount?.value, value > 0 {
-                    let starsValue = Int32(floor(Float(value) * Float(resaleConfiguration.paidMessageCommissionPermille) / 1000.0))
+                    let starsValue = Int32(floor(Float(value) * Float(resaleConfiguration.starGiftCommissionPermille) / 1000.0))
                     let starsString = environment.strings.Stars_SellGift_AmountInfo_Stars(starsValue)
                     amountInfoString = NSAttributedString(attributedString: parseMarkdownIntoAttributedString(environment.strings.Stars_SellGift_AmountInfo(starsString).string, attributes: amountMarkdownAttributes, textAlignment: .natural))
                     
@@ -288,7 +288,7 @@ private final class SheetContent: CombinedComponent {
                         amountRightLabel = "≈\(formatTonUsdValue(Int64(starsValue), divide: false, rate: usdRate, dateTimeFormat: environment.dateTimeFormat))"
                     }
                 } else {
-                    amountInfoString = NSAttributedString(attributedString: parseMarkdownIntoAttributedString(environment.strings.Stars_SellGift_AmountInfo("\(resaleConfiguration.paidMessageCommissionPermille / 10)%").string, attributes: amountMarkdownAttributes, textAlignment: .natural))
+                    amountInfoString = NSAttributedString(attributedString: parseMarkdownIntoAttributedString(environment.strings.Stars_SellGift_AmountInfo("\(resaleConfiguration.starGiftCommissionPermille / 10)%").string, attributes: amountMarkdownAttributes, textAlignment: .natural))
                 }
                 amountFooter = AnyComponent(MultilineTextComponent(
                     text: .plain(amountInfoString),

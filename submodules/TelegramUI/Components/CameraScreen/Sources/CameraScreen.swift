@@ -2553,6 +2553,8 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                     transitionCircleLayer.animateScale(from: sourceLocalFrame.width / 320.0, to: 6.0, duration: 0.6, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
                         self.view.mask = nil
                         colorFillView.removeFromSuperview()
+                        
+                        self.requestUpdateLayout(hasAppeared: true, transition: .immediate)
                     })
                 } else {
                     if case .story = controller.mode {
