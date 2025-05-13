@@ -4912,11 +4912,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                                 }
                                 return profileGifts.upgradeStarGift(formId: formId, reference: reference, keepOriginalInfo: keepOriginalInfo)
                             },
-                            buyGift: { [weak profileGifts] slug, peerId in
+                            buyGift: { [weak profileGifts] slug, peerId, price in
                                 guard let profileGifts else {
                                     return .never()
                                 }
-                                return profileGifts.buyStarGift(slug: slug, peerId: peerId)
+                                return profileGifts.buyStarGift(slug: slug, peerId: peerId, price: price)
                             },
                             shareStory: { [weak self] uniqueGift in
                                 guard let self, let controller = self.controller else {
