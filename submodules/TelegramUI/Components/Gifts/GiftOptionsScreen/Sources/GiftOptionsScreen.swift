@@ -601,6 +601,22 @@ final class GiftOptionsScreenComponent: Component {
                 return
             }
             
+            let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+            if let canTransferDate = gift.canTransferDate, currentTime < canTransferDate {
+                let dateString = stringForFullDate(timestamp: canTransferDate, strings: environment.strings, dateTimeFormat: environment.dateTimeFormat)
+                let alertController = textAlertController(
+                    context: component.context,
+                    title: environment.strings.Gift_Transfer_Unavailable_Title,
+                    text: environment.strings.Gift_Transfer_Unavailable_Text(dateString).string,
+                    actions: [
+                        TextAlertAction(type: .defaultAction, title: environment.strings.Common_OK, action: {})
+                    ],
+                    parseMarkdown: true
+                )
+                controller.present(alertController, in: .window(.root))
+                return
+            }
+            
             let mainController: ViewController
             if let parentController = controller.parentController() {
                 mainController = parentController
