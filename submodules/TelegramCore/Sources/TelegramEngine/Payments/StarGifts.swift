@@ -1152,10 +1152,12 @@ private final class ProfileGiftsContextImpl {
             self.filteredGifts = []
             self.filteredCount = nil
         }
+        let isUniqueOnlyFilter = self.filter == [.unique, .displayed, .hidden]
+        
         let dataState = isFiltered ? self.filteredDataState : self.dataState
         
         if case let .ready(true, initialNextOffset) = dataState {
-            if !isFiltered, self.gifts.isEmpty, initialNextOffset == nil, !reload {
+            if !isFiltered || isUniqueOnlyFilter, self.gifts.isEmpty, initialNextOffset == nil, !reload {
                 self.cacheDisposable.set((self.account.postbox.transaction { transaction -> CachedProfileGifts? in
                     let cachedGifts = transaction.retrieveItemCacheEntry(id: entryId(peerId: peerId))?.get(CachedProfileGifts.self)
                     cachedGifts?.render(transaction: transaction)
@@ -1164,7 +1166,22 @@ private final class ProfileGiftsContextImpl {
                     guard let self, let cachedGifts else {
                         return
                     }
-                    if case .loading = self.dataState {
+                    if isUniqueOnlyFilter, case .loading = self.filteredDataState {
+                        var gifts = cachedGifts.gifts
+                        if isUniqueOnlyFilter {
+                            gifts = gifts.filter({ gift in
+                                if case .unique = gift.gift {
+                                    return true
+                                } else {
+                                    return false
+                                }
+                            })
+                        }
+                        self.gifts = gifts
+                        self.count = cachedGifts.count
+                        self.notificationsEnabled = cachedGifts.notificationsEnabled
+                        self.pushState()
+                    } else if case .loading = self.dataState {
                         self.gifts = cachedGifts.gifts
                         self.count = cachedGifts.count
                         self.notificationsEnabled = cachedGifts.notificationsEnabled

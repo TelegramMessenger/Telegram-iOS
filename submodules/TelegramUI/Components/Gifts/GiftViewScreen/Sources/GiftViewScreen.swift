@@ -1217,6 +1217,8 @@ private final class GiftViewSheetContent: CombinedComponent {
                                     parseMarkdown: true
                                 )
                                 controller.present(alertController, in: .window(.root))
+
+                                HapticFeedback().error()
                             default:
                                 let alertController = textAlertController(context: context, title: nil, text: presentationData.strings.Gift_Buy_ErrorUnknown, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})], parseMarkdown: true)
                                 controller.present(alertController, in: .window(.root))
