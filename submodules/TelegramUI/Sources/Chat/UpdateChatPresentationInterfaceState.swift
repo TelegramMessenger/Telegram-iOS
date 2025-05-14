@@ -496,25 +496,24 @@ func updateChatPresentationInterfaceStateImpl(
         selfController.leftNavigationButton = nil
     }
     
-    if let channel = presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isForumOrMonoForum {
-    } else {
-        var buttonsAnimated = transition.isAnimated
-        if let button = rightNavigationButtonForChatInterfaceState(context: selfController.context, presentationInterfaceState: updatedChatPresentationInterfaceState, strings: updatedChatPresentationInterfaceState.strings, currentButton: selfController.rightNavigationButton, target: selfController, selector: #selector(selfController.rightNavigationButtonAction), chatInfoNavigationButton: selfController.chatInfoNavigationButton, moreInfoNavigationButton: selfController.moreInfoNavigationButton) {
-            if selfController.rightNavigationButton != button {
-                if let currentButton = selfController.rightNavigationButton?.action, currentButton == button.action {
-                    buttonsAnimated = false
-                }
-                if case .replyThread = selfController.chatLocation {
-                    buttonsAnimated = false
-                }
-                if let channel = updatedChatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum {
-                    buttonsAnimated = false
-                }
-                selfController.rightNavigationButton = button
+    /*if let channel = selfController.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isForumOrMonoForum {
+    } else {*/
+    var buttonsAnimated = transition.isAnimated
+    if let button = rightNavigationButtonForChatInterfaceState(context: selfController.context, presentationInterfaceState: updatedChatPresentationInterfaceState, strings: updatedChatPresentationInterfaceState.strings, currentButton: selfController.rightNavigationButton, target: selfController, selector: #selector(selfController.rightNavigationButtonAction), chatInfoNavigationButton: selfController.chatInfoNavigationButton, moreInfoNavigationButton: selfController.moreInfoNavigationButton) {
+        if selfController.rightNavigationButton != button {
+            if let currentButton = selfController.rightNavigationButton?.action, currentButton == button.action {
+                buttonsAnimated = false
             }
-        } else if let _ = selfController.rightNavigationButton {
-            selfController.rightNavigationButton = nil
+            if case .replyThread = selfController.chatLocation {
+                buttonsAnimated = false
+            }
+            if let channel = updatedChatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum {
+                buttonsAnimated = false
+            }
+            selfController.rightNavigationButton = button
         }
+    } else if let _ = selfController.rightNavigationButton {
+        selfController.rightNavigationButton = nil
     }
     
     if let button = secondaryRightNavigationButtonForChatInterfaceState(context: selfController.context, presentationInterfaceState: updatedChatPresentationInterfaceState, strings: updatedChatPresentationInterfaceState.strings, currentButton: selfController.secondaryRightNavigationButton, target: selfController, selector: #selector(selfController.secondaryRightNavigationButtonAction), chatInfoNavigationButton: selfController.chatInfoNavigationButton, moreInfoNavigationButton: selfController.moreInfoNavigationButton) {

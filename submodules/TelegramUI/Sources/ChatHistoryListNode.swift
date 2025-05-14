@@ -848,7 +848,8 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                                 approximateBoostLevel: nil,
                                 subscriptionUntilDate: nil,
                                 verificationIconFileId: nil,
-                                sendPaidMessageStars: nil
+                                sendPaidMessageStars: nil,
+                                linkedMonoforumId: nil
                             )
                             messagePeers[author.id] = author
                             

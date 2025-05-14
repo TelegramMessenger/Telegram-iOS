@@ -117,7 +117,7 @@ func _internal_requestRecommendedChannels(account: Account, peerId: EnginePeer.I
                 for chat in chats {
                     if let peer = transaction.getPeer(chat.peerId) {
                         peers.append(EnginePeer(peer))
-                        if case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _, _, _, _, _, _, _, _, _) = chat, let participantsCount = participantsCount {
+                        if case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _, _, _, _, _, _, _, _, _, _) = chat, let participantsCount = participantsCount {
                             transaction.updatePeerCachedData(peerIds: Set([peer.id]), update: { _, current in
                                 var current = current as? CachedChannelData ?? CachedChannelData()
                                 var participantsSummary = current.participantsSummary

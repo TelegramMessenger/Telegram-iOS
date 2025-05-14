@@ -226,7 +226,7 @@ func _internal_requestAccountPrivacySettings(account: Account) -> Signal<Account
             if let peer = parseTelegramGroupOrChannel(chat: chat) {
                 var participantCount: Int32? = nil
                 switch chat {
-                    case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCountValue, _, _, _, _, _, _, _, _, _):
+                    case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCountValue, _, _, _, _, _, _, _, _, _, _):
                         participantCount = participantsCountValue
                     default:
                         break

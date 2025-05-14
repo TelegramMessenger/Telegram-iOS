@@ -774,9 +774,7 @@ extension ChatControllerImpl {
                             }
                         } else if let cachedChannelData = peerView.cachedData as? CachedChannelData {
                             if let channel = peer as? TelegramChannel, channel.isMonoForum {
-                                if case let .known(value) = cachedChannelData.linkedMonoforumPeerId {
-                                    currentSendAsPeerId = value
-                                }
+                                currentSendAsPeerId = channel.linkedMonoforumId
                             } else {
                                 currentSendAsPeerId = cachedChannelData.sendAsPeerId
                                 if let channel = peer as? TelegramChannel, case .group = channel.info {
@@ -1389,8 +1387,6 @@ extension ChatControllerImpl {
                         
                         strongSelf.chatTitleView?.titleContent = .peer(peerView: mappedPeerData, customTitle: nil, onlineMemberCount: (nil, nil), isScheduledMessages: false, isMuted: false, customMessageCount: customMessageCount, isEnabled: true)
                         
-                        if selfController.rightNavigationButton != button {
-                        
                         strongSelf.peerView = peerView
                         
                         let imageOverride: AvatarNodeImageOverride?
@@ -1511,9 +1507,7 @@ extension ChatControllerImpl {
                         var currentSendAsPeerId: PeerId?
                         if let peer = peerView.peers[peerView.peerId] as? TelegramChannel, let cachedData = peerView.cachedData as? CachedChannelData {
                             if peer.isMonoForum {
-                                if case let .known(value) = cachedData.linkedMonoforumPeerId {
-                                    currentSendAsPeerId = value
-                                }
+                                currentSendAsPeerId = peer.linkedMonoforumId
                             } else {
                                 currentSendAsPeerId = cachedData.sendAsPeerId
                                 if case .group = peer.info {
@@ -5760,30 +5754,24 @@ extension ChatControllerImpl {
             guard let self else {
                 return
             }
-            guard let peerId = self.chatLocation.peerId else {
+            guard let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel else {
+                return
+            }
+            guard let monoforumPeerId = channel.linkedMonoforumId else {
                 return
             }
             
             let _ = (self.context.engine.data.get(
-                TelegramEngine.EngineData.Item.Peer.LinkedMonoforumPeerId(id: peerId)
+                TelegramEngine.EngineData.Item.Peer.Peer(id: monoforumPeerId)
             )
-            |> deliverOnMainQueue).startStandalone(next: { [weak self] monoforumPeerIdValue in
-                guard let self, case let .known(monoforumPeerIdValue) = monoforumPeerIdValue, let monoforumPeerId = monoforumPeerIdValue else {
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] monoforumPeer in
+                guard let self, let monoforumPeer else {
                     return
                 }
-                
-                let _ = (self.context.engine.data.get(
-                    TelegramEngine.EngineData.Item.Peer.Peer(id: monoforumPeerId)
-                )
-                |> deliverOnMainQueue).startStandalone(next: { [weak self] monoforumPeer in
-                    guard let self, let monoforumPeer else {
-                        return
-                    }
-                    guard let navigationController = self.effectiveNavigationController else {
-                        return
-                    }
-                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(monoforumPeer), keepStack: .always))
-                })
+                guard let navigationController = self.effectiveNavigationController else {
+                    return
+                }
+                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(monoforumPeer), keepStack: .always))
             })
         }, editMessageMedia: { [weak self] messageId, draw in
             if let strongSelf = self {
