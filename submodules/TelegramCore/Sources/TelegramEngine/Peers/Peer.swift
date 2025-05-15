@@ -632,6 +632,14 @@ public final class EngineRenderedPeer: Equatable {
             return nil
         }
     }
+    
+    public var chatOrMonoforumMainPeer: EnginePeer? {
+        if case let .channel(channel) = self.peer, channel.flags.contains(.isMonoforum), let linkedMonoforumId = channel.linkedMonoforumId {
+            return self.peers[linkedMonoforumId]
+        } else {
+            return self.chatMainPeer
+        }
+    }
 }
 
 public extension EngineRenderedPeer {

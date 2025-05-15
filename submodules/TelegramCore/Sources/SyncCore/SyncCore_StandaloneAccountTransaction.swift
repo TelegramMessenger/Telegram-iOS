@@ -76,12 +76,14 @@ public let telegramPostboxSeedConfiguration: SeedConfiguration = {
         peerSummaryIsThreadBased: { peer in
             if let channel = peer as? TelegramChannel {
                 if channel.flags.contains(.isForum) {
-                    return true
+                    return (true, false)
+                } else if channel.flags.contains(.isMonoforum) {
+                    return (true, true)
                 } else {
-                    return false
+                    return (false, false)
                 }
             } else {
-                return false
+                return (false, false)
             }
         },
         additionalChatListIndexNamespace: Namespaces.Message.Cloud,

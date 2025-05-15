@@ -900,7 +900,7 @@ final class MutableMessageHistoryView: MutablePostboxView {
             case let .peerIsContact(peerId, value):
                 if let replacedPeerIds = transaction.replaceContactPeerIds {
                     let updatedValue: Bool
-                    if let contactPeer = postbox.peerTable.get(peerId), let associatedPeerId = contactPeer.associatedPeerId {
+                    if let contactPeer = postbox.peerTable.get(peerId), let associatedPeerId = contactPeer.associatedPeerId, contactPeer.associatedPeerOverridesIdentity {
                         updatedValue = replacedPeerIds.contains(associatedPeerId)
                     } else {
                         updatedValue = replacedPeerIds.contains(peerId)

@@ -198,13 +198,13 @@ final class ChatListIndexTable: Table {
             }
             
             if let previous = previous {
-                var isThreadBasedUnreadCalculation = postbox.seedConfiguration.peerSummaryIsThreadBased(updated.0)
+                var isThreadBasedUnreadCalculation = postbox.seedConfiguration.peerSummaryIsThreadBased(updated.0).value
                 if let cachedData = updatedCachedPeerData[updated.0.id]?.1, postbox.seedConfiguration.decodeDisplayPeerAsRegularChat(cachedData) {
                     isThreadBasedUnreadCalculation = false
                 }
                 
                 var wasThreadBasedUnreadCalculation = false
-                if postbox.seedConfiguration.peerSummaryIsThreadBased(previous.0) {
+                if postbox.seedConfiguration.peerSummaryIsThreadBased(previous.0).value {
                     if let cachedData = postbox.cachedPeerDataTable.get(previous.0.id), postbox.seedConfiguration.decodeDisplayPeerAsRegularChat(cachedData) {
                     } else {
                         wasThreadBasedUnreadCalculation = true
@@ -224,13 +224,13 @@ final class ChatListIndexTable: Table {
                 continue
             }
             
-            var isThreadBasedUnreadCalculation = postbox.seedConfiguration.peerSummaryIsThreadBased(peer)
+            var isThreadBasedUnreadCalculation = postbox.seedConfiguration.peerSummaryIsThreadBased(peer).value
             if postbox.seedConfiguration.decodeDisplayPeerAsRegularChat(cachedDataUpdate.1) {
                 isThreadBasedUnreadCalculation = false
             }
             
             var wasThreadBasedUnreadCalculation = false
-            if postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
+            if postbox.seedConfiguration.peerSummaryIsThreadBased(peer).value {
                 if let previousCachedData = cachedDataUpdate.0, postbox.seedConfiguration.decodeDisplayPeerAsRegularChat(previousCachedData) {
                 } else {
                     wasThreadBasedUnreadCalculation = true
@@ -412,7 +412,12 @@ final class ChatListIndexTable: Table {
                     continue
                 }
                 let isContact = postbox.contactsTable.isContact(peerId: peerId)
-                let notificationPeerId: PeerId = peer.associatedPeerId ?? peerId
+                let notificationPeerId: PeerId
+                if let associatedPeerId = peer.associatedPeerId, peer.associatedPeerOverridesIdentity {
+                    notificationPeerId = associatedPeerId
+                } else {
+                    notificationPeerId = peerId
+                }
                 
                 let initialReadState: CombinedPeerReadState?
                 if let updated = updatedIsThreadBasedUnreadCountCalculation[peerId] {
@@ -434,7 +439,7 @@ final class ChatListIndexTable: Table {
                         displayAsRegularChat = true
                     }
                     
-                    if let peer = postbox.peerTable.get(peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer), !displayAsRegularChat {
+                    if let peer = postbox.peerTable.get(peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer).value, !displayAsRegularChat {
                         let previousCount: Int32
                         if let previousSummary = alteredInitialPeerThreadsSummaries[peerId] {
                             previousCount = previousSummary.effectiveUnreadCount
@@ -453,7 +458,7 @@ final class ChatListIndexTable: Table {
                 }
                 
                 let currentReadState: CombinedPeerReadState?
-                if let peer = postbox.peerTable.get(peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer), !displayAsRegularChat {
+                if let peer = postbox.peerTable.get(peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer).value, !displayAsRegularChat {
                     let count = postbox.peerThreadsSummaryTable.get(peerId: peerId)?.effectiveUnreadCount ?? 0
                     currentReadState = CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 0, maxOutgoingReadId: 1, maxKnownId: 0, count: count, markedUnread: false))])
                 } else {
@@ -686,7 +691,7 @@ final class ChatListIndexTable: Table {
             }
             
             let combinedState: CombinedPeerReadState?
-            if postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
+            if postbox.seedConfiguration.peerSummaryIsThreadBased(peer).value {
                 let count: Int32 = postbox.peerThreadsSummaryTable.get(peerId: peerId)?.effectiveUnreadCount ?? 0
                 combinedState = CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 0, maxOutgoingReadId: 1, maxKnownId: 0, count: count, markedUnread: false))])
             } else {
@@ -698,7 +703,12 @@ final class ChatListIndexTable: Table {
             }
             
             let isContact = postbox.contactsTable.isContact(peerId: peerId)
-            let notificationPeerId: PeerId = peer.associatedPeerId ?? peerId
+            let notificationPeerId: PeerId
+            if let associatedPeerId = peer.associatedPeerId, peer.associatedPeerOverridesIdentity {
+                notificationPeerId = associatedPeerId
+            } else {
+                notificationPeerId = peerId
+            }
             let inclusion = self.get(peerId: peerId)
             if let (groupId, _) = inclusion.includedIndex(peerId: peerId) {
                 if totalStates[groupId] == nil {
@@ -778,7 +788,7 @@ final class ChatListIndexTable: Table {
             }
             
             let combinedState: CombinedPeerReadState?
-            if postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
+            if postbox.seedConfiguration.peerSummaryIsThreadBased(peer).value {
                 let count: Int32 = postbox.peerThreadsSummaryTable.get(peerId: peerId)?.effectiveUnreadCount ?? 0
                 combinedState = CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 0, maxOutgoingReadId: 1, maxKnownId: 0, count: count, markedUnread: false))])
             } else {

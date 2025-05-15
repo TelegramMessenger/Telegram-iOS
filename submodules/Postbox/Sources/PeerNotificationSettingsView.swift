@@ -9,7 +9,7 @@ final class MutablePeerNotificationSettingsView: MutablePostboxView {
         self.notificationSettings = [:]
         for peerId in peerIds {
             var notificationPeerId = peerId
-            if let peer = postbox.peerTable.get(peerId), let associatedPeerId = peer.associatedPeerId {
+            if let peer = postbox.peerTable.get(peerId), let associatedPeerId = peer.associatedPeerId, peer.associatedPeerOverridesIdentity {
                 notificationPeerId = associatedPeerId
             }
             if let settings = postbox.peerNotificationSettingsTable.getEffective(notificationPeerId) {
@@ -23,7 +23,7 @@ final class MutablePeerNotificationSettingsView: MutablePostboxView {
             var updated = false
             for peerId in self.peerIds {
                 var notificationPeerId = peerId
-                if let peer = postbox.peerTable.get(peerId), let associatedPeerId = peer.associatedPeerId {
+                if let peer = postbox.peerTable.get(peerId), let associatedPeerId = peer.associatedPeerId, peer.associatedPeerOverridesIdentity {
                     notificationPeerId = associatedPeerId
                 }
                 if let (_, settings) = transaction.currentUpdatedPeerNotificationSettings[notificationPeerId] {
@@ -41,7 +41,7 @@ final class MutablePeerNotificationSettingsView: MutablePostboxView {
         /*var notificationSettings: [PeerId: PeerNotificationSettings] = [:]
         for peerId in self.peerIds {
             var notificationPeerId = peerId
-            if let peer = postbox.peerTable.get(peerId), let associatedPeerId = peer.associatedPeerId {
+            if let peer = postbox.peerTable.get(peerId), let associatedPeerId = peer.associatedPeerId, peer.associatedPeerOverridesIdentity {
                 notificationPeerId = associatedPeerId
             }
             if let settings = postbox.peerNotificationSettingsTable.getEffective(notificationPeerId) {
