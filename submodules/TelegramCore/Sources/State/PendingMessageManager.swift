@@ -946,9 +946,14 @@ public final class PendingMessageManager {
                     }
                     
                     var topMsgId: Int32?
+                    var monoforumPeerId: Api.InputPeer?
                     if let threadId = messages[0].0.threadId {
-                        flags |= Int32(1 << 9)
-                        topMsgId = Int32(clamping: threadId)
+                        if let channel = peer as? TelegramChannel, channel.flags.contains(.isMonoforum) {
+                            monoforumPeerId = transaction.getPeer(PeerId(threadId)).flatMap(apiInputPeer)
+                        } else {
+                            flags |= Int32(1 << 9)
+                            topMsgId = Int32(clamping: threadId)
+                        }
                     }
                     
                     var quickReplyShortcut: Api.InputQuickReplyShortcut?
@@ -965,6 +970,12 @@ public final class PendingMessageManager {
                         flags |= 1 << 21
                     }
                     
+                    var replyTo: Api.InputReplyTo?
+                    if let monoforumPeerId {
+                        replyTo = .inputReplyToMonoForum(monoforumPeerId: monoforumPeerId)
+                        flags |= 1 << 22
+                    }
+                    
                     let forwardPeerIds = Set(forwardIds.map { $0.0.peerId })
                     if forwardPeerIds.count != 1 {
                         assertionFailure()
@@ -972,7 +983,7 @@ public final class PendingMessageManager {
                     } else if let inputSourcePeerId = forwardPeerIds.first, let inputSourcePeer = transaction.getPeer(inputSourcePeerId).flatMap(apiInputPeer) {
                         let dependencyTag = PendingMessageRequestDependencyTag(messageId: messages[0].0.id)
 
-                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: inputSourcePeer, id: forwardIds.map { $0.0.id }, randomId: forwardIds.map { $0.1 }, toPeer: inputPeer, topMsgId: topMsgId, replyTo: nil, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, videoTimestamp: videoTimestamp, allowPaidStars: allowPaidStars), tag: dependencyTag)
+                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: inputSourcePeer, id: forwardIds.map { $0.0.id }, randomId: forwardIds.map { $0.1 }, toPeer: inputPeer, topMsgId: topMsgId, replyTo: replyTo, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, videoTimestamp: videoTimestamp, allowPaidStars: allowPaidStars), tag: dependencyTag)
                     } else {
                         assertionFailure()
                         sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "Invalid forward source"))
@@ -1601,9 +1612,14 @@ public final class PendingMessageManager {
                         |> map(NetworkRequestResult.result)
                     case let .forward(sourceInfo):
                         var topMsgId: Int32?
+                        var monoforumPeerId: Api.InputPeer?
                         if let threadId = message.threadId {
-                            flags |= Int32(1 << 9)
-                            topMsgId = Int32(clamping: threadId)
+                            if let channel = peer as? TelegramChannel, channel.flags.contains(.isMonoforum) {
+                                monoforumPeerId = transaction.getPeer(PeerId(threadId)).flatMap(apiInputPeer)
+                            } else {
+                                flags |= Int32(1 << 9)
+                                topMsgId = Int32(clamping: threadId)
+                            }
                         }
                     
                         var quickReplyShortcut: Api.InputQuickReplyShortcut?
@@ -1624,8 +1640,14 @@ public final class PendingMessageManager {
                             flags |= 1 << 21
                         }
                     
+                        var replyTo: Api.InputReplyTo?
+                        if let monoforumPeerId {
+                            replyTo = .inputReplyToMonoForum(monoforumPeerId: monoforumPeerId)
+                            flags |= 1 << 22
+                        }
+                    
                         if let forwardSourceInfoAttribute = forwardSourceInfoAttribute, let sourcePeer = transaction.getPeer(forwardSourceInfoAttribute.messageId.peerId), let sourceInputPeer = apiInputPeer(sourcePeer) {
-                            sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer, topMsgId: topMsgId, replyTo: nil, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, videoTimestamp: videoTimestamp, allowPaidStars: allowPaidStars), tag: dependencyTag)
+                            sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer, topMsgId: topMsgId, replyTo: replyTo, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, videoTimestamp: videoTimestamp, allowPaidStars: allowPaidStars), tag: dependencyTag)
                             |> map(NetworkRequestResult.result)
                         } else {
                             sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "internal"))

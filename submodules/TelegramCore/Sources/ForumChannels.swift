@@ -539,6 +539,7 @@ struct LoadMessageHistoryThreadsResult {
         var unreadMentionsCount: Int32
         var unreadReactionsCount: Int32
         var index: StoredPeerThreadCombinedState.Index?
+        var threadPeer: Peer?
         
         init(
             threadId: Int64,
@@ -546,7 +547,8 @@ struct LoadMessageHistoryThreadsResult {
             topMessage: Int32,
             unreadMentionsCount: Int32,
             unreadReactionsCount: Int32,
-            index: StoredPeerThreadCombinedState.Index
+            index: StoredPeerThreadCombinedState.Index,
+            threadPeer: Peer?
         ) {
             self.threadId = threadId
             self.data = data
@@ -554,6 +556,7 @@ struct LoadMessageHistoryThreadsResult {
             self.unreadMentionsCount = unreadMentionsCount
             self.unreadReactionsCount = unreadReactionsCount
             self.index = index
+            self.threadPeer = threadPeer
         }
     }
     
@@ -661,7 +664,8 @@ public func _internal_fillSavedMessageHistory(accountPeerId: PeerId, postbox: Po
                 topMessage: message.id.id,
                 unreadMentionsCount: 0,
                 unreadReactionsCount: 0,
-                index: StoredPeerThreadCombinedState.Index(timestamp: message.timestamp, threadId: threadId, messageId: message.id.id)
+                index: StoredPeerThreadCombinedState.Index(timestamp: message.timestamp, threadId: threadId, messageId: message.id.id),
+                threadPeer: nil
             ))
         }
         
@@ -791,13 +795,22 @@ func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Post
                                 minIndex = topicIndex
                             }
                             
+                            var threadPeer: Peer?
+                            for user in users {
+                                if user.peerId == peer.peerId {
+                                    threadPeer = TelegramUser(user: user)
+                                    break
+                                }
+                            }
+                            
                             items.append(LoadMessageHistoryThreadsResult.Item(
                                 threadId: peer.peerId.toInt64(),
                                 data: data,
                                 topMessage: topMessage,
                                 unreadMentionsCount: 0,
                                 unreadReactionsCount: 0,
-                                index: topicIndex
+                                index: topicIndex,
+                                threadPeer: threadPeer
                             ))
                         }
                     }
@@ -936,7 +949,8 @@ func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Post
                                     topMessage: topMessage,
                                     unreadMentionsCount: unreadMentionsCount,
                                     unreadReactionsCount: unreadReactionsCount,
-                                    index: topicIndex
+                                    index: topicIndex,
+                                    threadPeer: nil
                                 ))
                             case .forumTopicDeleted:
                                 break
@@ -1157,7 +1171,8 @@ public func _internal_searchForumTopics(account: Account, peerId: EnginePeer.Id,
                         iconFileId: itemData.info.icon,
                         iconColor: itemData.info.iconColor,
                         maxOutgoingReadMessageId: EngineMessage.Id(peerId: peerId, namespace: Namespaces.Message.Cloud, id: itemData.maxOutgoingReadId),
-                        isUnread: false
+                        isUnread: false,
+                        threadPeer: item.threadPeer.flatMap(EnginePeer.init)
                     ),
                     topForumTopicItems: [],
                     hasFailed: false,

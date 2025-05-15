@@ -481,6 +481,14 @@ public extension RenderedPeer {
             return nil
         }
     }
+    
+    var chatOrMonoforumMainPeer: Peer? {
+        if let channel = self.peer as? TelegramChannel, channel.flags.contains(.isMonoforum), let linkedMonoforumId = channel.linkedMonoforumId {
+            return self.peers[linkedMonoforumId]
+        } else {
+            return self.chatMainPeer
+        }
+    }
 }
 
 public func isServicePeer(_ peer: Peer) -> Bool {

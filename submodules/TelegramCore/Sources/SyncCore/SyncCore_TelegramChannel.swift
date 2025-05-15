@@ -214,6 +214,14 @@ public final class TelegramChannel: Peer, Equatable {
     public let sendPaidMessageStars: StarsAmount?
     public let linkedMonoforumId: PeerId?
     
+    public var associatedPeerId: PeerId? {
+        if self.flags.contains(.isMonoforum) {
+            return self.linkedMonoforumId
+        } else {
+            return nil
+        }
+    }
+    
     public var indexName: PeerIndexNameRepresentation {
         var addressNames = self.usernames.map { $0.username }
         if addressNames.isEmpty, let username = self.username, !username.isEmpty {
@@ -245,7 +253,6 @@ public final class TelegramChannel: Peer, Equatable {
         return mediaIds
     }
     
-    public let associatedPeerId: PeerId? = nil
     public let notificationSettingsPeerId: PeerId? = nil
     
     public var timeoutAttribute: UInt32? {

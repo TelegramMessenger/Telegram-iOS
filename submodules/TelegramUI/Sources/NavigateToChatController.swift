@@ -403,17 +403,49 @@ public func navigateToForumThreadImpl(context: AccountContext, peerId: EnginePee
 }
 
 public func chatControllerForForumThreadImpl(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64) -> Signal<ChatController, NoError> {
-    return fetchAndPreloadReplyThreadInfo(context: context, subject: .groupMessage(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId))), atMessageId: nil, preload: false)
+    return context.engine.data.get(
+        TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+    )
     |> deliverOnMainQueue
-    |> `catch` { _ -> Signal<ReplyThreadInfo, NoError> in
-        return .complete()
-    }
-    |> map { result in
-        return ChatControllerImpl(
-            context: context,
-            chatLocation: .replyThread(message: result.message),
-            chatLocationContextHolder: result.contextHolder
-        )
+    |> mapToSignal { peer -> Signal<ChatController, NoError> in
+        guard let peer else {
+            return .complete()
+        }
+        
+        if case let .channel(channel) = peer, channel.flags.contains(.isMonoforum) {
+            return .single(ChatControllerImpl(
+                context: context,
+                chatLocation: .replyThread(message: ChatReplyThreadMessage(
+                    peerId: peer.id,
+                    threadId: threadId,
+                    channelMessageId: nil,
+                    isChannelPost: false,
+                    isForumPost: true,
+                    isMonoforumPost: channel.flags.contains(.isMonoforum),
+                    maxMessage: nil,
+                    maxReadIncomingMessageId: nil,
+                    maxReadOutgoingMessageId: nil,
+                    unreadCount: 0,
+                    initialFilledHoles: IndexSet(),
+                    initialAnchor: .automatic,
+                    isNotAvailable: false
+                )),
+                chatLocationContextHolder: Atomic(value: nil)
+            ))
+        } else {
+            return fetchAndPreloadReplyThreadInfo(context: context, subject: .groupMessage(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId))), atMessageId: nil, preload: false)
+            |> deliverOnMainQueue
+            |> `catch` { _ -> Signal<ReplyThreadInfo, NoError> in
+                return .complete()
+            }
+            |> map { result in
+                return ChatControllerImpl(
+                    context: context,
+                    chatLocation: .replyThread(message: result.message),
+                    chatLocationContextHolder: result.contextHolder
+                )
+            }
+        }
     }
 }
 
