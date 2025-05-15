@@ -357,6 +357,8 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
             selectionView.alpha = 1.0
             selectionView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         }
+        
+        parentView.onTextEditingEnded(reset)
     }
     
     func suspendEditing() {
