@@ -290,13 +290,6 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode, ChatSendMessageAction
                 }
             }
             starsAmount = amount
-        } else if case let .customChatContents(customChatContents) = interfaceState.subject {
-            switch customChatContents.kind {
-            case let .postSuggestions(postSuggestions):
-                starsAmount = postSuggestions.value
-            default:
-                break
-            }
         }
         
         if let amount = starsAmount {

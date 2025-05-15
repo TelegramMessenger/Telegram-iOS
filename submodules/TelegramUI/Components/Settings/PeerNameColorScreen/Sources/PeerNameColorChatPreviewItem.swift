@@ -337,8 +337,8 @@ final class PeerNameColorChatPreviewItemNode: ListViewItemNode {
                                     header.updateNode(headerNode, previous: nil, next: nil)
                                     headerNode.item = header
                                 }
-                                headerNode.updateLayoutInternal(size: headerFrame.size, leftInset: leftInset, rightInset: rightInset)
-                                headerNode.updateStickDistanceFactor(stickLocationDistanceFactor, transition: .immediate)
+                                headerNode.updateLayoutInternal(size: headerFrame.size, leftInset: leftInset, rightInset: rightInset, transition: .immediate)
+                                headerNode.updateStickDistanceFactor(stickLocationDistanceFactor, distance: 0.0, transition: .immediate)
                             } else {
                                 headerNode = header.node(synchronousLoad: true)
                                 if headerNode.item !== header {
@@ -346,11 +346,11 @@ final class PeerNameColorChatPreviewItemNode: ListViewItemNode {
                                     headerNode.item = header
                                 }
                                 headerNode.frame = headerFrame
-                                headerNode.updateLayoutInternal(size: headerFrame.size, leftInset: leftInset, rightInset: rightInset)
+                                headerNode.updateLayoutInternal(size: headerFrame.size, leftInset: leftInset, rightInset: rightInset, transition: .immediate)
                                 strongSelf.itemHeaderNodes[id] = headerNode
 
                                 strongSelf.containerNode.addSubnode(headerNode)
-                                headerNode.updateStickDistanceFactor(stickLocationDistanceFactor, transition: .immediate)
+                                headerNode.updateStickDistanceFactor(stickLocationDistanceFactor, distance: 0.0, transition: .immediate)
                             }
                         }
                     }

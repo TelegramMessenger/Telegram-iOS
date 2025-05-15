@@ -777,8 +777,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             case .hashTagSearch:
                 break
-            case .postSuggestions:
-                break
             }
         }
         
@@ -844,7 +842,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return true
                 case let .quickReplyMessageInput(_, shortcutType):
                     if let historyView = strongSelf.chatDisplayNode.historyNode.originalHistoryView, historyView.entries.isEmpty {
-                        
                         let titleString: String
                         let textString: String
                         switch shortcutType {
@@ -885,8 +882,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         
                         return false
                     }
-                case .postSuggestions:
-                    break
                 }
             }
             
@@ -4833,6 +4828,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             self.displayQuickShare(id: messageId, node: node, gesture: gesture)
+        }, updateChatLocationThread: { [weak self] threadId in
+            guard let self else {
+                return
+            }
+            self.interfaceInteraction?.updateChatLocationThread(threadId)
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: self.stickerSettings, presentationContext: ChatPresentationContext(context: context, backgroundNode: self.chatBackgroundNode))
         controllerInteraction.enableFullTranslucency = context.sharedContext.energyUsageSettings.fullTranslucency
         
@@ -5227,14 +5227,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             chatInfoButtonItem = UIBarButtonItem(customDisplayNode: avatarNode)!
             self.avatarNode = avatarNode
         case .customChatContents:
-            if case let .customChatContents(customChatContents) = self.subject, case .postSuggestions = customChatContents.kind {
-                let avatarNode = ChatAvatarNavigationNode()
-                chatInfoButtonItem = UIBarButtonItem(customDisplayNode: avatarNode)!
-                chatInfoButtonItem.isEnabled = false
-                self.avatarNode = avatarNode
-            } else {
-                chatInfoButtonItem = UIBarButtonItem(title: "", style: .plain, target: nil, action: nil)
-            }
+            chatInfoButtonItem = UIBarButtonItem(title: "", style: .plain, target: nil, action: nil)
         }
         chatInfoButtonItem.target = self
         chatInfoButtonItem.action = #selector(self.rightNavigationButtonAction)
@@ -7923,6 +7916,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     if let scheduleTime = scheduleTime {
                          attributes.append(OutgoingScheduleInfoMessageAttribute(scheduleTime: scheduleTime))
+                    }
+                }
+                
+                if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum {
+                    attributes.removeAll(where: { $0 is SendAsMessageAttribute })
+                    if channel.adminRights != nil, let sendAsPeerId = self.presentationInterfaceState.currentSendAsPeerId {
+                        attributes.append(SendAsMessageAttribute(peerId: sendAsPeerId))
                     }
                 }
                 if let sendAsPeerId = self.presentationInterfaceState.currentSendAsPeerId {

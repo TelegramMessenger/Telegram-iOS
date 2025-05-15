@@ -858,14 +858,10 @@ public final class PendingMessageManager {
                 var videoTimestamp: Int32?
                 var sendAsPeerId: PeerId?
                 var quickReply: OutgoingQuickReplyMessageAttribute?
-                var suggestedPost: OutgoingSuggestedPostMessageAttribute?
                 var messageEffect: EffectMessageAttribute?
                 var allowPaidStars: Int64?
                 
                 var flags: Int32 = 0
-                
-                //TODO:release
-                let _ = suggestedPost
                 
                 for attribute in messages[0].0.attributes {
                     if let replyAttribute = attribute as? ReplyMessageAttribute {
@@ -894,8 +890,6 @@ public final class PendingMessageManager {
                         sendAsPeerId = attribute.peerId
                     } else if let attribute = attribute as? OutgoingQuickReplyMessageAttribute {
                         quickReply = attribute
-                    } else if let attribute = attribute as? OutgoingSuggestedPostMessageAttribute {
-                        suggestedPost = attribute
                     } else if let attribute = attribute as? EffectMessageAttribute {
                         messageEffect = attribute
                     } else if let _ = attribute as? InvertMediaMessageAttribute {
@@ -978,7 +972,7 @@ public final class PendingMessageManager {
                     } else if let inputSourcePeerId = forwardPeerIds.first, let inputSourcePeer = transaction.getPeer(inputSourcePeerId).flatMap(apiInputPeer) {
                         let dependencyTag = PendingMessageRequestDependencyTag(messageId: messages[0].0.id)
 
-                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: inputSourcePeer, id: forwardIds.map { $0.0.id }, randomId: forwardIds.map { $0.1 }, toPeer: inputPeer, topMsgId: topMsgId, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, videoTimestamp: videoTimestamp, allowPaidStars: allowPaidStars), tag: dependencyTag)
+                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: inputSourcePeer, id: forwardIds.map { $0.0.id }, randomId: forwardIds.map { $0.1 }, toPeer: inputPeer, topMsgId: topMsgId, replyTo: nil, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, videoTimestamp: videoTimestamp, allowPaidStars: allowPaidStars), tag: dependencyTag)
                     } else {
                         assertionFailure()
                         sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "Invalid forward source"))
@@ -1631,7 +1625,7 @@ public final class PendingMessageManager {
                         }
                     
                         if let forwardSourceInfoAttribute = forwardSourceInfoAttribute, let sourcePeer = transaction.getPeer(forwardSourceInfoAttribute.messageId.peerId), let sourceInputPeer = apiInputPeer(sourcePeer) {
-                            sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer, topMsgId: topMsgId, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, videoTimestamp: videoTimestamp, allowPaidStars: allowPaidStars), tag: dependencyTag)
+                            sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer, topMsgId: topMsgId, replyTo: nil, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, videoTimestamp: videoTimestamp, allowPaidStars: allowPaidStars), tag: dependencyTag)
                             |> map(NetworkRequestResult.result)
                         } else {
                             sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "internal"))
@@ -1846,8 +1840,6 @@ public final class PendingMessageManager {
                 targetNamespace = Namespaces.Message.ScheduledCloud
             } else if Namespaces.Message.allQuickReply.contains(message.id.namespace) {
                 targetNamespace = Namespaces.Message.QuickReplyCloud
-            } else if Namespaces.Message.allSuggestedPost.contains(message.id.namespace) {
-                targetNamespace = Namespaces.Message.SuggestedPostCloud
             } else {
                 targetNamespace = Namespaces.Message.Cloud
             }
@@ -1899,8 +1891,6 @@ public final class PendingMessageManager {
         if let message = messages.first {
             if message.id.namespace == Namespaces.Message.QuickReplyLocal {
                 namespace = Namespaces.Message.QuickReplyCloud
-            } else if Namespaces.Message.allSuggestedPost.contains(message.id.namespace) {
-                namespace = Namespaces.Message.SuggestedPostCloud
             } else if let apiMessage = result.messages.first, message.scheduleTime != nil && message.scheduleTime == apiMessage.timestamp {
                 namespace = Namespaces.Message.ScheduledCloud
             } else if let apiMessage = result.messages.first, case let .message(_, flags2, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _) = apiMessage, (flags2 & (1 << 4)) != 0 {

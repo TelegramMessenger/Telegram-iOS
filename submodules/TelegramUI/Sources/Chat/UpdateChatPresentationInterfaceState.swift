@@ -23,6 +23,8 @@ func updateChatPresentationInterfaceStateImpl(
     _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState,
     completion externalCompletion: @escaping (ContainedViewLayoutTransition) -> Void
 ) {
+    let previousChatLocation = selfController.chatDisplayNode.historyNode.chatLocation
+    
     var completion = externalCompletion
     var temporaryChatPresentationInterfaceState = f(selfController.presentationInterfaceState)
     
@@ -230,8 +232,6 @@ func updateChatPresentationInterfaceStateImpl(
             break
         case .businessLinkSetup:
             canHaveUrlPreview = false
-        case .postSuggestions:
-            break
         }
     }
     
@@ -436,6 +436,11 @@ func updateChatPresentationInterfaceStateImpl(
     
     selfController.presentationInterfaceState = updatedChatPresentationInterfaceState
     
+    if selfController.chatDisplayNode.chatLocation != selfController.presentationInterfaceState.chatLocation {
+        let tabSwitchDirection = selfController.chatDisplayNode.chatLocationTabSwitchDirection(from: selfController.chatDisplayNode.chatLocation, to: selfController.presentationInterfaceState.chatLocation)
+        selfController.chatDisplayNode.updateChatLocation(chatLocation: selfController.presentationInterfaceState.chatLocation, transition: transition, tabSwitchDirection: tabSwitchDirection)
+    }
+    
     selfController.updateSlowmodeStatus()
     
     switch updatedChatPresentationInterfaceState.inputMode {
@@ -491,6 +496,8 @@ func updateChatPresentationInterfaceStateImpl(
         selfController.leftNavigationButton = nil
     }
     
+    /*if let channel = selfController.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isForumOrMonoForum {
+    } else {*/
     var buttonsAnimated = transition.isAnimated
     if let button = rightNavigationButtonForChatInterfaceState(context: selfController.context, presentationInterfaceState: updatedChatPresentationInterfaceState, strings: updatedChatPresentationInterfaceState.strings, currentButton: selfController.rightNavigationButton, target: selfController, selector: #selector(selfController.rightNavigationButtonAction), chatInfoNavigationButton: selfController.chatInfoNavigationButton, moreInfoNavigationButton: selfController.moreInfoNavigationButton) {
         if selfController.rightNavigationButton != button {
@@ -498,6 +505,9 @@ func updateChatPresentationInterfaceStateImpl(
                 buttonsAnimated = false
             }
             if case .replyThread = selfController.chatLocation {
+                buttonsAnimated = false
+            }
+            if let channel = updatedChatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum {
                 buttonsAnimated = false
             }
             selfController.rightNavigationButton = button
@@ -589,12 +599,10 @@ func updateChatPresentationInterfaceStateImpl(
         }
     }
     
-    if selfController.chatDisplayNode.historyNode.chatLocation != selfController.presentationInterfaceState.chatLocation {
+    if previousChatLocation != selfController.presentationInterfaceState.chatLocation {
         selfController.chatLocation = selfController.presentationInterfaceState.chatLocation
-        selfController.chatDisplayNode.chatLocation = selfController.presentationInterfaceState.chatLocation
         selfController.reloadChatLocation()
         selfController.reloadCachedData()
-        selfController.chatDisplayNode.historyNode.updateChatLocation(chatLocation: selfController.presentationInterfaceState.chatLocation)
     }
     
     selfController.updateDownButtonVisibility()

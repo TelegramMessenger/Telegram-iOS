@@ -651,6 +651,15 @@ public extension ContainedViewLayoutTransition {
         }
     }
     
+    func animateOffsetAdditive(node: ASDisplayNode, offset: CGPoint) {
+        switch self {
+            case .immediate:
+                break
+            case let .animated(duration, curve):
+                node.layer.animateBoundsOriginAdditive(from: offset, to: CGPoint(), duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction)
+        }
+    }
+    
     func animateHorizontalOffsetAdditive(node: ASDisplayNode, offset: CGFloat, completion: (() -> Void)? = nil) {
         switch self {
             case .immediate:

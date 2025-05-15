@@ -848,7 +848,8 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                                 approximateBoostLevel: nil,
                                 subscriptionUntilDate: nil,
                                 verificationIconFileId: nil,
-                                sendPaidMessageStars: nil
+                                sendPaidMessageStars: nil,
+                                linkedMonoforumId: nil
                             )
                             messagePeers[author.id] = author
                             
@@ -985,7 +986,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
         
         self.preloadPages = false
         
-        self.beginChatHistoryTransitions(resetScrolling: false)
+        self.beginChatHistoryTransitions(resetScrolling: false, switchedToAnotherSource: false)
         
         self.beginReadHistoryManagement()
         
@@ -1230,15 +1231,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
         }
         self.tag = tag
         
-        self.beginChatHistoryTransitions(resetScrolling: true)
-    }
-    
-    public func updateChatLocation(chatLocation: ChatLocation) {
-        if self.chatLocation == chatLocation {
-            return
-        }
-        self.chatLocation = chatLocation
-        self.beginChatHistoryTransitions(resetScrolling: false)
+        self.beginChatHistoryTransitions(resetScrolling: true, switchedToAnotherSource: false)
     }
     
     private func beginAdMessageManagement(adMessages: Signal<(interPostInterval: Int32?, messages: [Message]), NoError>) {
@@ -1293,7 +1286,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
     private let previousView = Atomic<(ChatHistoryView, Int, Set<MessageId>?, Int)?>(value: nil)
     private let previousHistoryAppearsCleared = Atomic<Bool?>(value: nil)
     
-    private func beginChatHistoryTransitions(resetScrolling: Bool) {
+    private func beginChatHistoryTransitions(resetScrolling: Bool, switchedToAnotherSource: Bool) {
         self.historyDisposable.set(nil)
         self._isReady.set(false)
         
@@ -2085,6 +2078,10 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                 var disableAnimations = false
                 var forceSynchronous = false
                 
+                if switchedToAnotherSource {
+                    disableAnimations = true
+                }
+                
                 if let previousValueAndVersion = previousValueAndVersion, allAdMessages.version != previousValueAndVersion.3 {
                     reason = ChatHistoryViewTransitionReason.Reload
                     disableAnimations = true
@@ -2243,7 +2240,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                     mappedTransition.options.remove(.AnimateTopItemPosition)
                     mappedTransition.options.remove(.RequestItemInsertionAnimations)
                 }
-                if forceSynchronous || resetScrolling {
+                if forceSynchronous || resetScrolling || switchedToAnotherSource {
                     mappedTransition.options.insert(.Synchronous)
                 }
                 if resetScrolling {
@@ -2358,7 +2355,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                     strongSelf.dynamicBounceEnabled = false
                     
                     strongSelf.forEachItemHeaderNode { itemHeaderNode in
-                        if let dateNode = itemHeaderNode as? ChatMessageDateHeaderNode {
+                        if let dateNode = itemHeaderNode as? ChatMessageDateHeaderNodeImpl {
                             dateNode.updatePresentationData(chatPresentationData, context: strongSelf.context)
                         } else if let avatarNode = itemHeaderNode as? ChatMessageAvatarHeaderNodeImpl {
                             avatarNode.updatePresentationData(chatPresentationData, context: strongSelf.context)

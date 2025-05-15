@@ -321,7 +321,7 @@ final class ChatTopicListTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, C
             let iconSize = self.icon.update(
                 transition: .immediate,
                 component: AnyComponent(BundleIconComponent(
-                    name: "Call/PanelIcon",
+                    name: "Chat/Title Panels/SidebarIcon",
                     tintColor: theme.rootController.navigationBar.secondaryTextColor,
                     maxSize: nil,
                     scaleFactor: 1.0
@@ -658,7 +658,7 @@ final class ChatTopicListTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, C
         let itemSpacing: CGFloat = 24.0
         
         var contentSize = CGSize(width: 0.0, height: panelHeight)
-        contentSize.width += containerInsets.left
+        contentSize.width += containerInsets.left + 8.0
         
         var validIds: [Item.Id] = []
         var isFirst = true
@@ -860,6 +860,24 @@ final class ChatTopicListTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, C
             } else {
                 self.appliedScrollToId = scrollToId
             }
+        }
+    }
+
+    public func updateGlobalOffset(globalOffset: CGFloat, transition: ComponentTransition) {
+        if let tabItemView = self.tabItemView {
+            transition.setTransform(view: tabItemView, transform: CATransform3DMakeTranslation(0.0, -globalOffset, 0.0))
+        }
+    }
+    
+    public func topicIndex(threadId: Int64?) -> Int? {
+        if let threadId {
+            if let value = self.items.firstIndex(where: { $0.id == .chatList(PeerId(threadId)) }) {
+                return value + 1
+            } else {
+                return nil
+            }
+        } else {
+            return 0
         }
     }
 }

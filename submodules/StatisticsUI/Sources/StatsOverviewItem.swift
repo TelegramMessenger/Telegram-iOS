@@ -388,7 +388,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                     insets = itemListNeighborsGroupedInsets(neighbors, params)
             }
             
-            var twoColumnLayout = true
+            var twoColumnLayout = "".isEmpty // Silence the warning
             var useMinLeftColumnWidth = false
             
             var topLeftItemLayoutAndApply: (CGSize, () -> ValueItemNode)?

@@ -239,6 +239,7 @@ public final class ChatSideTopicsPanel: Component {
                         avatarNode = current
                     } else {
                         avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 11.0))
+                        avatarNode.isUserInteractionEnabled = false
                         self.avatarNode = avatarNode
                         self.containerButton.addSubview(avatarNode.view)
                     }
@@ -355,7 +356,7 @@ public final class ChatSideTopicsPanel: Component {
             let iconSize = self.icon.update(
                 transition: .immediate,
                 component: AnyComponent(BundleIconComponent(
-                    name: "Call/PanelIcon",
+                    name: "Chat/Title Panels/SidebarIcon",
                     tintColor: theme.rootController.navigationBar.accentTextColor,
                     maxSize: nil,
                     scaleFactor: 1.0
@@ -364,7 +365,7 @@ public final class ChatSideTopicsPanel: Component {
                 containerSize: CGSize(width: 100.0, height: 100.0)
             )
             
-            let topInset: CGFloat = 12.0
+            let topInset: CGFloat = 10.0
             let bottomInset: CGFloat = 12.0
             
             let contentSize: CGFloat = topInset + iconSize.height + bottomInset
@@ -578,7 +579,6 @@ public final class ChatSideTopicsPanel: Component {
             self.scrollView.alwaysBounceHorizontal = false
             self.scrollView.alwaysBounceVertical = false
             self.scrollView.scrollsToTop = false
-            //self.scrollView.delegate = self.wrappedScrollViewDelegate
             
             self.addSubview(self.scrollView)
             self.scrollView.addSubview(self.selectedLineView)
@@ -590,6 +590,24 @@ public final class ChatSideTopicsPanel: Component {
         
         deinit {
             self.itemsDisposable?.dispose()
+        }
+
+        public func updateGlobalOffset(globalOffset: CGFloat, transition: ComponentTransition) {
+            if let tabItemView = self.tabItemView {
+                transition.setTransform(view: tabItemView, transform: CATransform3DMakeTranslation(-globalOffset, 0.0, 0.0))
+            }
+        }
+        
+        public func topicIndex(threadId: Int64?) -> Int? {
+            if let threadId {
+                if let value = self.items.firstIndex(where: { $0.id == .chatList(PeerId(threadId)) }) {
+                    return value + 1
+                } else {
+                    return nil
+                }
+            } else {
+                return 0
+            }
         }
         
         func update(component: ChatSideTopicsPanel, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
@@ -774,6 +792,7 @@ public final class ChatSideTopicsPanel: Component {
                 }
                 
                 contentSize.height += itemSize.height
+                contentSize.height -= 20.0
             }
             
             do {

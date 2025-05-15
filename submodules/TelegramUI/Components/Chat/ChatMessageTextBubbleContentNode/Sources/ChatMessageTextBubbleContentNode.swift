@@ -734,7 +734,21 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                     spoilerTextColor: messageTheme.primaryTextColor,
                                     spoilerEffectColor: messageTheme.secondaryTextColor,
                                     areContentAnimationsEnabled: item.context.sharedContext.energyUsageSettings.loopEmoji,
-                                    spoilerExpandRect: spoilerExpandRect
+                                    spoilerExpandRect: spoilerExpandRect,
+                                    crossfadeContents: { [weak strongSelf] sourceView in
+                                        guard let strongSelf else {
+                                            return
+                                        }
+                                        if let textNodeContainer = strongSelf.textNode.textNode.view.superview {
+                                            sourceView.frame = CGRect(origin: strongSelf.textNode.textNode.frame.origin, size: sourceView.bounds.size)
+                                            textNodeContainer.addSubview(sourceView)
+                                            
+                                            sourceView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.12, removeOnCompletion: false, completion: { [weak sourceView] _ in
+                                                sourceView?.removeFromSuperview()
+                                            })
+                                            strongSelf.textNode.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+                                        }
+                                    }
                                 )
                             ))
                             animation.animator.updateFrame(layer: strongSelf.textNode.textNode.layer, frame: textFrame, completion: nil)
