@@ -1233,8 +1233,8 @@ public extension TelegramEngine {
             |> ignoreValues
         }
         
-        public func setChannelForumMode(id: EnginePeer.Id, isForum: Bool) -> Signal<Never, NoError> {
-            return _internal_setChannelForumMode(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, peerId: id, isForum: isForum)
+        public func setChannelForumMode(id: EnginePeer.Id, isForum: Bool, displayForumAsTabs: Bool) -> Signal<Never, NoError> {
+            return _internal_setChannelForumMode(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, peerId: id, isForum: isForum, displayForumAsTabs: displayForumAsTabs)
         }
         
         public func createForumChannelTopic(id: EnginePeer.Id, title: String, iconColor: Int32, iconFileId: Int64?) -> Signal<Int64, CreateForumChannelTopicError> {

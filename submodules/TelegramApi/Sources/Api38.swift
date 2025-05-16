@@ -3607,12 +3607,13 @@ public extension Api.functions.channels {
                 }
 }
 public extension Api.functions.channels {
-                static func toggleForum(channel: Api.InputChannel, enabled: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func toggleForum(channel: Api.InputChannel, enabled: Api.Bool, tabs: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1540781271)
+                    buffer.appendInt32(1073174324)
                     channel.serialize(buffer, true)
                     enabled.serialize(buffer, true)
-                    return (FunctionDescription(name: "channels.toggleForum", parameters: [("channel", String(describing: channel)), ("enabled", String(describing: enabled))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    tabs.serialize(buffer, true)
+                    return (FunctionDescription(name: "channels.toggleForum", parameters: [("channel", String(describing: channel)), ("enabled", String(describing: enabled)), ("tabs", String(describing: tabs))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {

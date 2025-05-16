@@ -1266,13 +1266,7 @@ public final class ShareController: ViewController {
                             requiresStars[peerId] = cachedData.sendPaidMessageStars
                         }
                     } else if let channel = peer as? TelegramChannel {
-                        if channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId {
-                            if let mainChannel = view.peers[linkedMonoforumId] as? TelegramChannel {
-                                requiresStars[peerId] = mainChannel.sendPaidMessageStars
-                            }
-                        } else {
-                            requiresStars[peerId] = channel.sendPaidMessageStars
-                        }
+                        requiresStars[peerId] = channel.sendPaidMessageStars
                     }
                 }
             }
@@ -1926,13 +1920,7 @@ public final class ShareController: ViewController {
                             requiresStars[peerId] = cachedData.sendPaidMessageStars
                         }
                     } else if let channel = peer as? TelegramChannel {
-                        if channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId {
-                            if let mainChannel = view.peers[linkedMonoforumId] as? TelegramChannel {
-                                requiresStars[peerId] = mainChannel.sendPaidMessageStars
-                            }
-                        } else {
-                            requiresStars[peerId] = channel.sendPaidMessageStars
-                        }
+                        requiresStars[peerId] = channel.sendPaidMessageStars
                     }
                 }
             }
@@ -2530,9 +2518,6 @@ public final class ShareController: ViewController {
                             possiblePremiumRequiredPeers.insert(user.id)
                         } else if let channel = peer as? TelegramChannel, let _ = channel.sendPaidMessageStars {
                             possiblePremiumRequiredPeers.insert(channel.id)
-                            if channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = entryData.renderedPeer.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.sendPaidMessageStars != nil {
-                                possiblePremiumRequiredPeers.insert(channel.id)
-                            }
                         }
                     }
                 default:
@@ -2565,11 +2550,7 @@ public final class ShareController: ViewController {
                         requiresPremiumForMessaging[id] = data.flags.contains(.premiumRequired)
                         requiresStars[id] = data.sendPaidMessageStars?.value
                     } else if let view = views.views[.basicPeer(id)] as? PeerView, let channel = peerViewMainPeer(view) as? TelegramChannel {
-                        if channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = view.peers[linkedMonoforumId] as? TelegramChannel {
-                            requiresStars[id] = mainChannel.sendPaidMessageStars?.value
-                        } else {
-                            requiresStars[id] = channel.sendPaidMessageStars?.value
-                        }
+                        requiresStars[id] = channel.sendPaidMessageStars?.value
                     } else {
                         requiresPremiumForMessaging[id] = false
                     }

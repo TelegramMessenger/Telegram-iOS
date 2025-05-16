@@ -507,7 +507,7 @@ func _internal_setForumChannelPinnedTopics(account: Account, id: EnginePeer.Id, 
     }
 }
 
-func _internal_setChannelForumMode(postbox: Postbox, network: Network, stateManager: AccountStateManager, peerId: PeerId, isForum: Bool) -> Signal<Never, NoError> {
+func _internal_setChannelForumMode(postbox: Postbox, network: Network, stateManager: AccountStateManager, peerId: PeerId, isForum: Bool, displayForumAsTabs: Bool) -> Signal<Never, NoError> {
     return postbox.transaction { transaction -> Api.InputChannel? in
         return transaction.getPeer(peerId).flatMap(apiInputChannel)
     }
@@ -515,7 +515,7 @@ func _internal_setChannelForumMode(postbox: Postbox, network: Network, stateMana
         guard let inputChannel = inputChannel else {
             return .complete()
         }
-        return network.request(Api.functions.channels.toggleForum(channel: inputChannel, enabled: isForum ? .boolTrue : .boolFalse))
+        return network.request(Api.functions.channels.toggleForum(channel: inputChannel, enabled: isForum ? .boolTrue : .boolFalse, tabs: displayForumAsTabs ? .boolTrue : .boolFalse))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
             return .single(nil)

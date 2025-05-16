@@ -1297,15 +1297,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
                 if let data = view.cachedData as? CachedUserData {
                     return data.sendPaidMessageStars
                 } else if let channel = peerViewMainPeer(view) as? TelegramChannel {
-                    if channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId {
-                        if let mainChannel = view.peers[linkedMonoforumId] as? TelegramChannel {
-                            return mainChannel.sendPaidMessageStars
-                        } else {
-                            return nil
-                        }
-                    } else {
-                        return channel.sendPaidMessageStars
-                    }
+                    return channel.sendPaidMessageStars
                 } else {
                     return nil
                 }

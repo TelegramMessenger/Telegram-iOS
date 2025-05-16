@@ -83,10 +83,17 @@ func _internal_updateChannelPaidMessagesStars(account: Account, peerId: PeerId, 
             }
             let channel = channel
                 .withUpdatedInfo(.broadcast(TelegramChannelBroadcastInfo(flags: infoFlags)))
-                .withUpdatedSendPaidMessageStars(stars)
             transaction.updatePeersInternal([channel], update: { _, channel in
                 return channel
             })
+            
+            if let linkedMonoforumId = channel.linkedMonoforumId, let monoforumChannel = transaction.getPeer(linkedMonoforumId) as? TelegramChannel {
+                let monoforumChannel = monoforumChannel
+                    .withUpdatedSendPaidMessageStars(stars)
+                transaction.updatePeersInternal([monoforumChannel], update: { _, channel in
+                    return monoforumChannel
+                })
+            }
         }
         
         return account.network.request(Api.functions.channels.updatePaidMessagesPrice(flags: flags, channel: inputChannel, sendPaidMessagesStars: stars?.value ?? 0))

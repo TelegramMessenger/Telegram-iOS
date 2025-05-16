@@ -385,11 +385,7 @@ public extension TelegramEngine.EngineData.Item {
                 if let cachedPeerData = view.cachedData as? CachedUserData {
                     return cachedPeerData.sendPaidMessageStars
                 } else if let channel = peerViewMainPeer(view) as? TelegramChannel {
-                    if channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = view.peers[linkedMonoforumId] as? TelegramChannel {
-                        return mainChannel.sendPaidMessageStars
-                    } else {
-                        return channel.sendPaidMessageStars
-                    }
+                    return channel.sendPaidMessageStars
                 } else {
                     return nil
                 }
@@ -417,15 +413,7 @@ public extension TelegramEngine.EngineData.Item {
                     preconditionFailure()
                 }
                 if let channel = peerViewMainPeer(view) as? TelegramChannel {
-                    if case let .broadcast(info) = channel.info {
-                        if info.flags.contains(.hasMonoforum) {
-                            return channel.sendPaidMessageStars ?? StarsAmount(value: 0, nanos: 0)
-                        } else {
-                            return nil
-                        }
-                    } else {
-                        return nil
-                    }
+                    return channel.sendPaidMessageStars
                 } else {
                     return nil
                 }

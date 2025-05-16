@@ -9243,7 +9243,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             if isEnabled {
                 let context = self.context
                 let signal: Signal<EnginePeer.Id?, NoError> = self.context.engine.peers.convertGroupToSupergroup(peerId: self.peerId, additionalProcessing: { upgradedPeerId -> Signal<Never, NoError> in
-                    return context.engine.peers.setChannelForumMode(id: upgradedPeerId, isForum: isEnabled)
+                    return context.engine.peers.setChannelForumMode(id: upgradedPeerId, isForum: isEnabled, displayForumAsTabs: false)
                 })
                 |> map(Optional.init)
                 |> `catch` { [weak self] error -> Signal<PeerId?, NoError> in
@@ -9273,7 +9273,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         return
                     }
                     
-                    let _ = (self.context.engine.peers.setChannelForumMode(id: resultPeerId, isForum: isEnabled)
+                    let _ = (self.context.engine.peers.setChannelForumMode(id: resultPeerId, isForum: isEnabled, displayForumAsTabs: false)
                     |> deliverOnMainQueue).startStandalone(completed: { [weak self] in
                         guard let self, let controller = self.controller else {
                             return
@@ -9286,7 +9286,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 })
             }
         } else {
-            let _ = self.context.engine.peers.setChannelForumMode(id: self.peerId, isForum: isEnabled).startStandalone()
+            let _ = self.context.engine.peers.setChannelForumMode(id: self.peerId, isForum: isEnabled, displayForumAsTabs: false).startStandalone()
         }
     }
         

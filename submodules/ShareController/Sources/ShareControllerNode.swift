@@ -1291,11 +1291,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                                 requiresStars[peerId] = cachedData.sendPaidMessageStars?.value
                             }
                         } else if let channel = peer as? TelegramChannel {
-                            if channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = view.peers[linkedMonoforumId] as? TelegramChannel {
-                                requiresStars[peerId] = mainChannel.sendPaidMessageStars?.value
-                            } else {
-                                requiresStars[peerId] = channel.sendPaidMessageStars?.value
-                            }
+                            requiresStars[peerId] = channel.sendPaidMessageStars?.value
                         }
                     }
                 }

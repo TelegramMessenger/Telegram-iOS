@@ -501,10 +501,20 @@ public final class PostSuggestionsSettingsScreen: ViewControllerComponentContain
         
         let configuration = StarsSubscriptionConfiguration.with(appConfiguration: context.currentAppConfiguration.with({ $0 }))
         
-        let (peer, initialPrice) = await context.engine.data.get(
-            TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
-            TelegramEngine.EngineData.Item.Peer.SendMessageToChannelPrice(id: peerId)
+        let peer = await context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
         ).get()
+        
+        let initialPrice: StarsAmount?
+        if case let .channel(channel) = peer, case let .broadcast(info) = channel.info, info.flags.contains(.hasMonoforum), let linkedMonoforumId = channel.linkedMonoforumId {
+            initialPrice = await context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.SendMessageToChannelPrice(id: linkedMonoforumId)
+            ).get() ?? StarsAmount(value: 20, nanos: 0)
+        } else {
+            initialPrice = await context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.SendMessageToChannelPrice(id: peerId)
+            ).get()
+        }
         
         super.init(context: context, component: PostSuggestionsSettingsScreenComponent(
             context: context,
