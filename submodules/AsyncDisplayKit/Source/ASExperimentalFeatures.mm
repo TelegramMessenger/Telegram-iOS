@@ -31,9 +31,15 @@ NSArray<NSString *> *ASExperimentalFeaturesGetNames(ASExperimentalFeatures flags
   
   // Go through all names, testing each bit.
   NSUInteger i = 0;
+    
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wvla-cxx-extension"
+    
   return ASArrayByFlatMapping(allNames, NSString *name, ({
     (flags & (1 << i++)) ? name : nil;
   }));
+    
+#pragma clang diagnostic pop
 }
 
 // O(N^2) but with counts this small, it's probably faster

@@ -8,6 +8,7 @@ private struct DiscussionMessage {
     var channelMessageId: MessageId?
     var isChannelPost: Bool
     var isForumPost: Bool
+    var isMonoforumPost: Bool
     var maxMessage: MessageId?
     var maxReadIncomingMessageId: MessageId?
     var maxReadOutgoingMessageId: MessageId?
@@ -137,7 +138,7 @@ private class ReplyThreadHistoryContextImpl {
             guard let strongSelf = self else {
                 return
             }
-            if let value = outgoing[referencedMessageId] {
+            if let value = outgoing[PeerAndBoundThreadId(peerId: referencedMessageId.peerId, threadId: Int64(referencedMessageId.id))] {
                 strongSelf.maxReadOutgoingMessageIdValue = MessageId(peerId: data.peerId, namespace: Namespaces.Message.Cloud, id: value)
             }
         })
@@ -165,7 +166,7 @@ private class ReplyThreadHistoryContextImpl {
                     switch discussionMessage {
                     case let .discussionMessage(_, messages, maxId, readInboxMaxId, readOutboxMaxId, unreadCount, chats, users):
                         let parsedMessages = messages.compactMap { message -> StoreMessage? in
-                            StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForum)
+                            StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForumOrMonoForum)
                         }
                         
                         guard let topMessage = parsedMessages.last, let parsedIndex = topMessage.index else {
@@ -237,8 +238,14 @@ private class ReplyThreadHistoryContextImpl {
                         }
                         
                         var isForumPost = false
-                        if let channel = transaction.getPeer(parsedIndex.id.peerId) as? TelegramChannel, channel.flags.contains(.isForum) {
-                            isForumPost = true
+                        var isMonoforumPost = false
+                        if let channel = transaction.getPeer(parsedIndex.id.peerId) as? TelegramChannel {
+                            if channel.isForumOrMonoForum {
+                                isForumPost = true
+                            }
+                            if channel.isMonoForum {
+                                isMonoforumPost = true
+                            }
                         }
                         
                         return .single(DiscussionMessage(
@@ -246,6 +253,7 @@ private class ReplyThreadHistoryContextImpl {
                             channelMessageId: channelMessageId,
                             isChannelPost: isChannelPost,
                             isForumPost: isForumPost,
+                            isMonoforumPost: isMonoforumPost,
                             maxMessage: resolvedMaxMessage,
                             maxReadIncomingMessageId: maxReadIncomingMessageId,
                             maxReadOutgoingMessageId: readOutboxMaxId.flatMap { readMaxId in
@@ -330,7 +338,11 @@ private class ReplyThreadHistoryContextImpl {
 
         let account = self.account
         
-        let _ = (self.account.postbox.transaction { transaction -> (Api.InputPeer?, MessageId?, Int?) in
+        let _ = (self.account.postbox.transaction { transaction -> (Api.InputPeer?, Api.InputPeer?, MessageId?, Int?) in
+            guard let peer = transaction.getPeer(peerId) else {
+                return (nil, nil, nil, nil)
+            }
+            
             if var data = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
                 if messageIndex.id.id >= data.maxIncomingReadId {
                     if let count = transaction.getThreadMessageCount(peerId: peerId, threadId: threadId, namespace: Namespaces.Message.Cloud, fromIdExclusive: data.maxIncomingReadId, toIndex: messageIndex) {
@@ -356,39 +368,44 @@ private class ReplyThreadHistoryContextImpl {
                 }
             }
             
-            let referencedMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId))
-            if let message = transaction.getMessage(referencedMessageId) {
-                for attribute in message.attributes {
-                    if let attribute = attribute as? SourceReferenceMessageAttribute {
-                        if let sourceMessage = transaction.getMessage(attribute.messageId) {
-                            account.viewTracker.applyMaxReadIncomingMessageIdForReplyInfo(id: attribute.messageId, maxReadIncomingMessageId: messageIndex.id)
-                            
-                            var updatedAttribute: ReplyThreadMessageAttribute?
-                            for i in 0 ..< sourceMessage.attributes.count {
-                                if let attribute = sourceMessage.attributes[i] as? ReplyThreadMessageAttribute {
-                                    if let maxReadMessageId = attribute.maxReadMessageId {
-                                        if maxReadMessageId < messageIndex.id.id {
+            var subPeerId: Api.InputPeer?
+            if let channel = peer as? TelegramChannel, channel.flags.contains(.isMonoforum) {
+                subPeerId = transaction.getPeer(PeerId(threadId)).flatMap(apiInputPeer)
+            } else {
+                let referencedMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId))
+                if let message = transaction.getMessage(referencedMessageId) {
+                    for attribute in message.attributes {
+                        if let attribute = attribute as? SourceReferenceMessageAttribute {
+                            if let sourceMessage = transaction.getMessage(attribute.messageId) {
+                                account.viewTracker.applyMaxReadIncomingMessageIdForReplyInfo(id: attribute.messageId, maxReadIncomingMessageId: messageIndex.id)
+                                
+                                var updatedAttribute: ReplyThreadMessageAttribute?
+                                for i in 0 ..< sourceMessage.attributes.count {
+                                    if let attribute = sourceMessage.attributes[i] as? ReplyThreadMessageAttribute {
+                                        if let maxReadMessageId = attribute.maxReadMessageId {
+                                            if maxReadMessageId < messageIndex.id.id {
+                                                updatedAttribute = ReplyThreadMessageAttribute(count: attribute.count, latestUsers: attribute.latestUsers, commentsPeerId: attribute.commentsPeerId, maxMessageId: attribute.maxMessageId, maxReadMessageId: messageIndex.id.id)
+                                            }
+                                        } else {
                                             updatedAttribute = ReplyThreadMessageAttribute(count: attribute.count, latestUsers: attribute.latestUsers, commentsPeerId: attribute.commentsPeerId, maxMessageId: attribute.maxMessageId, maxReadMessageId: messageIndex.id.id)
                                         }
-                                    } else {
-                                        updatedAttribute = ReplyThreadMessageAttribute(count: attribute.count, latestUsers: attribute.latestUsers, commentsPeerId: attribute.commentsPeerId, maxMessageId: attribute.maxMessageId, maxReadMessageId: messageIndex.id.id)
+                                        break
                                     }
-                                    break
+                                }
+                                if let updatedAttribute = updatedAttribute {
+                                    transaction.updateMessage(sourceMessage.id, update: { currentMessage in
+                                        var attributes = currentMessage.attributes
+                                        loop: for j in 0 ..< attributes.count {
+                                            if let _ = attributes[j] as? ReplyThreadMessageAttribute {
+                                                attributes[j] = updatedAttribute
+                                            }
+                                        }
+                                        return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init), authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                                    })
                                 }
                             }
-                            if let updatedAttribute = updatedAttribute {
-                                transaction.updateMessage(sourceMessage.id, update: { currentMessage in
-                                    var attributes = currentMessage.attributes
-                                    loop: for j in 0 ..< attributes.count {
-                                        if let _ = attributes[j] as? ReplyThreadMessageAttribute {
-                                            attributes[j] = updatedAttribute
-                                        }
-                                    }
-                                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init), authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
-                                })
-                            }
+                            break
                         }
-                        break
                     }
                 }
             }
@@ -397,14 +414,13 @@ private class ReplyThreadHistoryContextImpl {
             let readCount = transaction.getThreadMessageCount(peerId: peerId, threadId: threadId, namespace: Namespaces.Message.Cloud, fromIdExclusive: fromIdExclusive, toIndex: toIndex)
             let topMessageId = transaction.getMessagesWithThreadId(peerId: peerId, namespace: Namespaces.Message.Cloud, threadId: threadId, from: MessageIndex.upperBound(peerId: peerId, namespace: Namespaces.Message.Cloud), includeFrom: false, to: MessageIndex.lowerBound(peerId: peerId, namespace: Namespaces.Message.Cloud), limit: 1).first?.id
             
-            return (inputPeer, topMessageId, readCount)
+            return (inputPeer, subPeerId, topMessageId, readCount)
         }
-        |> deliverOnMainQueue).start(next: { [weak self] inputPeer, topMessageId, readCount in
+        |> deliverOnMainQueue).start(next: { [weak self] inputPeer, subPeerId, topMessageId, readCount in
             guard let strongSelf = self else {
                 return
             }
-
-            guard let inputPeer = inputPeer else {
+            guard let inputPeer else {
                 return
             }
 
@@ -440,39 +456,50 @@ private class ReplyThreadHistoryContextImpl {
                 }
             }
 
-            var signal = strongSelf.account.network.request(Api.functions.messages.readDiscussion(peer: inputPeer, msgId: Int32(clamping: threadId), readMaxId: messageIndex.id.id))
-            |> `catch` { _ -> Signal<Api.Bool, NoError> in
-                return .single(.boolFalse)
-            }
-            |> ignoreValues
-            if revalidate {
-                let validateSignal = strongSelf.account.network.request(Api.functions.messages.getDiscussionMessage(peer: inputPeer, msgId: Int32(clamping: threadId)))
-                |> map { result -> (MessageId?, Int) in
-                    switch result {
-                    case let .discussionMessage(_, _, _, readInboxMaxId, _, unreadCount, _, _):
-                        return (readInboxMaxId.flatMap({ MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) }), Int(unreadCount))
-                    }
-                }
-                |> `catch` { _ -> Signal<(MessageId?, Int)?, NoError> in
-                    return .single(nil)
-                }
-                |> afterNext { result in
-                    guard let (incomingMessageId, count) = result else {
-                        return
-                    }
-                    Queue.mainQueue().async {
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        strongSelf.maxReadIncomingMessageIdValue = incomingMessageId
-                        strongSelf.unreadCountValue = count
-                    }
+            if let subPeerId {
+                let signal = strongSelf.account.network.request(Api.functions.messages.readSavedHistory(parentPeer: inputPeer, peer: subPeerId, maxId: messageIndex.id.id))
+                |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                    return .single(.boolFalse)
                 }
                 |> ignoreValues
-                signal = signal
-                |> then(validateSignal)
+                if revalidate {
+                }
+                strongSelf.readDisposable.set(signal.start())
+            } else {
+                var signal = strongSelf.account.network.request(Api.functions.messages.readDiscussion(peer: inputPeer, msgId: Int32(clamping: threadId), readMaxId: messageIndex.id.id))
+                |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                    return .single(.boolFalse)
+                }
+                |> ignoreValues
+                if revalidate {
+                    let validateSignal = strongSelf.account.network.request(Api.functions.messages.getDiscussionMessage(peer: inputPeer, msgId: Int32(clamping: threadId)))
+                    |> map { result -> (MessageId?, Int) in
+                        switch result {
+                        case let .discussionMessage(_, _, _, readInboxMaxId, _, unreadCount, _, _):
+                            return (readInboxMaxId.flatMap({ MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) }), Int(unreadCount))
+                        }
+                    }
+                    |> `catch` { _ -> Signal<(MessageId?, Int)?, NoError> in
+                        return .single(nil)
+                    }
+                    |> afterNext { result in
+                        guard let (incomingMessageId, count) = result else {
+                            return
+                        }
+                        Queue.mainQueue().async {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.maxReadIncomingMessageIdValue = incomingMessageId
+                            strongSelf.unreadCountValue = count
+                        }
+                    }
+                    |> ignoreValues
+                    signal = signal
+                    |> then(validateSignal)
+                }
+                strongSelf.readDisposable.set(signal.start())
             }
-            strongSelf.readDisposable.set(signal.start())
         })
     }
 }
@@ -565,6 +592,7 @@ public struct ChatReplyThreadMessage: Equatable {
     public var channelMessageId: MessageId?
     public var isChannelPost: Bool
     public var isForumPost: Bool
+    public var isMonoforumPost: Bool
     public var maxMessage: MessageId?
     public var maxReadIncomingMessageId: MessageId?
     public var maxReadOutgoingMessageId: MessageId?
@@ -581,12 +609,13 @@ public struct ChatReplyThreadMessage: Equatable {
         }
     }
     
-    public init(peerId: PeerId, threadId: Int64, channelMessageId: MessageId?, isChannelPost: Bool, isForumPost: Bool, maxMessage: MessageId?, maxReadIncomingMessageId: MessageId?, maxReadOutgoingMessageId: MessageId?, unreadCount: Int, initialFilledHoles: IndexSet, initialAnchor: Anchor, isNotAvailable: Bool) {
+    public init(peerId: PeerId, threadId: Int64, channelMessageId: MessageId?, isChannelPost: Bool, isForumPost: Bool, isMonoforumPost: Bool, maxMessage: MessageId?, maxReadIncomingMessageId: MessageId?, maxReadOutgoingMessageId: MessageId?, unreadCount: Int, initialFilledHoles: IndexSet, initialAnchor: Anchor, isNotAvailable: Bool) {
         self.peerId = peerId
         self.threadId = threadId
         self.channelMessageId = channelMessageId
         self.isChannelPost = isChannelPost
         self.isForumPost = isForumPost
+        self.isMonoforumPost = isMonoforumPost
         self.maxMessage = maxMessage
         self.maxReadIncomingMessageId = maxReadIncomingMessageId
         self.maxReadOutgoingMessageId = maxReadOutgoingMessageId
@@ -598,7 +627,7 @@ public struct ChatReplyThreadMessage: Equatable {
     
     public var normalized: ChatReplyThreadMessage {
         if self.isForumPost {
-            return ChatReplyThreadMessage(peerId: self.peerId, threadId: self.threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false)
+            return ChatReplyThreadMessage(peerId: self.peerId, threadId: self.threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, isMonoforumPost: self.isMonoforumPost, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false)
         } else {
             return self
         }
@@ -642,7 +671,7 @@ func _internal_fetchChannelReplyThreadMessage(account: Account, messageId: Messa
                 switch discussionMessage {
                 case let .discussionMessage(_, messages, maxId, readInboxMaxId, readOutboxMaxId, unreadCount, chats, users):
                     let parsedMessages = messages.compactMap { message -> StoreMessage? in
-                        StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForum)
+                        StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForumOrMonoForum)
                     }
                     
                     guard let topMessage = parsedMessages.last, let parsedIndex = topMessage.index else {
@@ -683,8 +712,14 @@ func _internal_fetchChannelReplyThreadMessage(account: Account, messageId: Messa
                     }
                     
                     var isForumPost = false
-                    if let channel = transaction.getPeer(parsedIndex.id.peerId) as? TelegramChannel, channel.flags.contains(.isForum) {
-                        isForumPost = true
+                    var isMonoforumPost = false
+                    if let channel = transaction.getPeer(parsedIndex.id.peerId) as? TelegramChannel {
+                        if channel.isForumOrMonoForum {
+                            isForumPost = true
+                        }
+                        if channel.isMonoForum {
+                            isMonoforumPost = true
+                        }
                     }
                     
                     return DiscussionMessage(
@@ -692,6 +727,7 @@ func _internal_fetchChannelReplyThreadMessage(account: Account, messageId: Messa
                         channelMessageId: channelMessageId,
                         isChannelPost: isChannelPost,
                         isForumPost: isForumPost,
+                        isMonoforumPost: isMonoforumPost,
                         maxMessage: resolvedMaxMessage,
                         maxReadIncomingMessageId: readInboxMaxId.flatMap { readMaxId in
                             MessageId(peerId: parsedIndex.id.peerId, namespace: Namespaces.Message.Cloud, id: readMaxId)
@@ -716,6 +752,7 @@ func _internal_fetchChannelReplyThreadMessage(account: Account, messageId: Messa
                     channelMessageId: nil,
                     isChannelPost: false,
                     isForumPost: true,
+                    isMonoforumPost: false,
                     maxMessage: MessageId(peerId: messageId.peerId, namespace: messageId.namespace, id: threadData.maxKnownMessageId),
                     maxReadIncomingMessageId: MessageId(peerId: messageId.peerId, namespace: messageId.namespace, id: threadData.maxIncomingReadId),
                     maxReadOutgoingMessageId: MessageId(peerId: messageId.peerId, namespace: messageId.namespace, id: threadData.maxOutgoingReadId),
@@ -931,6 +968,7 @@ func _internal_fetchChannelReplyThreadMessage(account: Account, messageId: Messa
                     channelMessageId: discussionMessage.channelMessageId,
                     isChannelPost: discussionMessage.isChannelPost,
                     isForumPost: discussionMessage.isForumPost,
+                    isMonoforumPost: discussionMessage.isMonoforumPost,
                     maxMessage: discussionMessage.maxMessage,
                     maxReadIncomingMessageId: discussionMessage.maxReadIncomingMessageId,
                     maxReadOutgoingMessageId: discussionMessage.maxReadOutgoingMessageId,

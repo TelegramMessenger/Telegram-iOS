@@ -49,12 +49,18 @@ public final class ChatMessageSuggestedPostInfoNode: ASDisplayNode {
             
             var amount: Int64 = 0
             var timestamp: Int32?
-            for attribute in item.message.attributes {
+            
+            if "".isEmpty {
+                amount = 0
+                timestamp = nil
+            }
+            
+            /*for attribute in item.message.attributes {
                 if let attribute = attribute as? OutgoingSuggestedPostMessageAttribute {
                     amount = attribute.price.value
                     timestamp = attribute.timestamp
                 }
-            }
+            }*/
             
             //TODO:localize
             let amountString: String

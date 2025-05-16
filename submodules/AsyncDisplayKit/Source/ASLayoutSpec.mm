@@ -159,7 +159,10 @@ ASLayoutElementStyleExtensibilityForwarding
   const auto result = [NSMutableArray<NSDictionary *> array];
   if (NSArray *children = self.children) {
     // Use tiny descriptions because these trees can get nested very deep.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wvla-cxx-extension"
     const auto tinyDescriptions = ASArrayByFlatMapping(children, id object, ASObjectDescriptionMakeTiny(object));
+#pragma clang diagnostic pop
     [result addObject:@{ @"children": tinyDescriptions }];
   }
   return result;
@@ -290,7 +293,10 @@ ASSynthesizeLockingMethodsWithMutex(__instanceLock__)
 {
   NSArray *children = self.children;
   const auto count = children.count;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wvla-cxx-extension"
   ASLayout *rawSublayouts[count];
+#pragma clang diagnostic pop
   int i = 0;
   
   CGSize size = constrainedSize.min;

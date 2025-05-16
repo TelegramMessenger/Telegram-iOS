@@ -385,7 +385,47 @@ public extension TelegramEngine.EngineData.Item {
                 if let cachedPeerData = view.cachedData as? CachedUserData {
                     return cachedPeerData.sendPaidMessageStars
                 } else if let channel = peerViewMainPeer(view) as? TelegramChannel {
-                    return channel.sendPaidMessageStars
+                    if channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = view.peers[linkedMonoforumId] as? TelegramChannel {
+                        return mainChannel.sendPaidMessageStars
+                    } else {
+                        return channel.sendPaidMessageStars
+                    }
+                } else {
+                    return nil
+                }
+            }
+        }
+        
+        public struct SendMessageToChannelPrice: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
+            public typealias Result = Optional<StarsAmount>
+
+            fileprivate var id: EnginePeer.Id
+            public var mapKey: EnginePeer.Id {
+                return self.id
+            }
+
+            public init(id: EnginePeer.Id) {
+                self.id = id
+            }
+
+            var key: PostboxViewKey {
+                return .peer(peerId: self.id, components: [])
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? PeerView else {
+                    preconditionFailure()
+                }
+                if let channel = peerViewMainPeer(view) as? TelegramChannel {
+                    if case let .broadcast(info) = channel.info {
+                        if info.flags.contains(.hasMonoforum) {
+                            return channel.sendPaidMessageStars ?? StarsAmount(value: 0, nanos: 0)
+                        } else {
+                            return nil
+                        }
+                    } else {
+                        return nil
+                    }
                 } else {
                     return nil
                 }

@@ -10,7 +10,7 @@ objc_library(
     srcs = glob([
         "Sources/*.c",
         "Sources/*.h",
-    ], exclude = public_headers),
+    ], exclude = public_headers, allow_empty=True),
     hdrs = public_headers,
     includes = [
         "PublicHeaders",

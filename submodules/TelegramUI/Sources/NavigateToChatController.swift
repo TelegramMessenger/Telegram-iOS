@@ -27,7 +27,21 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
     }
     
     var viewForumAsMessages: Signal<Bool, NoError> = .single(false)
-    if case let .peer(peer) = params.chatLocation, case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+    if case let .peer(peer) = params.chatLocation, case let .channel(channel) = peer, channel.flags.contains(.isMonoforum) {
+        if let linkedMonoforumId = channel.linkedMonoforumId {
+            viewForumAsMessages = params.context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: linkedMonoforumId)
+            )
+            |> map { peer -> Bool in
+                guard case let .channel(channel) = peer else {
+                    return false
+                }
+                return channel.adminRights == nil
+            }
+        } else {
+            viewForumAsMessages = .single(false)
+        }
+    } else if case let .peer(peer) = params.chatLocation, case let .channel(channel) = peer, channel.flags.contains(.isForum) {
         viewForumAsMessages = params.context.account.postbox.combinedView(keys: [.cachedPeerData(peerId: peer.id)])
         |> take(1)
         |> map { combinedView in
@@ -65,6 +79,8 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                     var matches = false
                     if case let .forum(peerId) = chatListController.location, peer.id == peerId {
                         matches = true
+                    } else if case let .savedMessagesChats(peerId) = chatListController.location, peer.id == peerId {
+                        matches = true
                     } else if case let .forum(peerId) = chatListController.effectiveLocation, peer.id == peerId {
                         matches = true
                     }
@@ -79,7 +95,14 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                 }
             }
             
-            let controller = ChatListControllerImpl(context: params.context, location: .forum(peerId: peer.id), controlsHistoryPreload: false, enableDebugActions: false)
+            let chatListLocation: ChatListControllerLocation
+            if case let .peer(peer) = params.chatLocation, case let .channel(channel) = peer, channel.flags.contains(.isMonoforum) {
+                chatListLocation = .savedMessagesChats(peerId: peer.id)
+            } else {
+                chatListLocation = .forum(peerId: peer.id)
+            }
+            
+            let controller = ChatListControllerImpl(context: params.context, location: chatListLocation, controlsHistoryPreload: false, enableDebugActions: false)
             
             let activateMessageSearch = params.activateMessageSearch
             let chatListCompletion = params.chatListCompletion
@@ -387,17 +410,49 @@ public func navigateToForumThreadImpl(context: AccountContext, peerId: EnginePee
 }
 
 public func chatControllerForForumThreadImpl(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64) -> Signal<ChatController, NoError> {
-    return fetchAndPreloadReplyThreadInfo(context: context, subject: .groupMessage(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId))), atMessageId: nil, preload: false)
+    return context.engine.data.get(
+        TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+    )
     |> deliverOnMainQueue
-    |> `catch` { _ -> Signal<ReplyThreadInfo, NoError> in
-        return .complete()
-    }
-    |> map { result in
-        return ChatControllerImpl(
-            context: context,
-            chatLocation: .replyThread(message: result.message),
-            chatLocationContextHolder: result.contextHolder
-        )
+    |> mapToSignal { peer -> Signal<ChatController, NoError> in
+        guard let peer else {
+            return .complete()
+        }
+        
+        if case let .channel(channel) = peer, channel.flags.contains(.isMonoforum) {
+            return .single(ChatControllerImpl(
+                context: context,
+                chatLocation: .replyThread(message: ChatReplyThreadMessage(
+                    peerId: peer.id,
+                    threadId: threadId,
+                    channelMessageId: nil,
+                    isChannelPost: false,
+                    isForumPost: true,
+                    isMonoforumPost: channel.flags.contains(.isMonoforum),
+                    maxMessage: nil,
+                    maxReadIncomingMessageId: nil,
+                    maxReadOutgoingMessageId: nil,
+                    unreadCount: 0,
+                    initialFilledHoles: IndexSet(),
+                    initialAnchor: .automatic,
+                    isNotAvailable: false
+                )),
+                chatLocationContextHolder: Atomic(value: nil)
+            ))
+        } else {
+            return fetchAndPreloadReplyThreadInfo(context: context, subject: .groupMessage(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId))), atMessageId: nil, preload: false)
+            |> deliverOnMainQueue
+            |> `catch` { _ -> Signal<ReplyThreadInfo, NoError> in
+                return .complete()
+            }
+            |> map { result in
+                return ChatControllerImpl(
+                    context: context,
+                    chatLocation: .replyThread(message: result.message),
+                    chatLocationContextHolder: result.contextHolder
+                )
+            }
+        }
     }
 }
 

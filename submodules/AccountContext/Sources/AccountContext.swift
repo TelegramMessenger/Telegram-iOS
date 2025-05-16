@@ -1225,7 +1225,8 @@ public protocol SharedAccountContext: AnyObject {
     func makeAccountFreezeInfoScreen(context: AccountContext) -> ViewController
     func makeSendInviteLinkScreen(context: AccountContext, subject: SendInviteLinkScreenSubject, peers: [TelegramForbiddenInvitePeer], theme: PresentationTheme?) -> ViewController
     
-    func makePostSuggestionsSettingsScreen(context: AccountContext) -> ViewController
+    @available(iOS 13.0, *)
+    func makePostSuggestionsSettingsScreen(context: AccountContext, peerId: EnginePeer.Id) async -> ViewController
     
     func makeDebugSettingsController(context: AccountContext?) -> ViewController?
     

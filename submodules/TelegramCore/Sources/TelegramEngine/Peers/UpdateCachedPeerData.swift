@@ -30,6 +30,10 @@ func fetchAndUpdateSupplementalCachedPeerData(peerId rawPeerId: PeerId, accountP
             } else {
                 peer = rawPeer
             }
+            
+            if let channel = peer as? TelegramChannel, channel.flags.contains(.isMonoforum) {
+                return .single(false)
+            }
                 
             let cachedData = transaction.getPeerCachedData(peerId: peer.id)
             
@@ -377,7 +381,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                             var subscriberCount: Int32?
                                             for chat in chats {
                                                 if chat.peerId == channelPeerId {
-                                                    if case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _, _, _, _, _, _, _, _, _) = chat {
+                                                    if case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _, _, _, _, _, _, _, _, _, _) = chat {
                                                         subscriberCount = participantsCount
                                                     }
                                                 }
@@ -587,10 +591,17 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                     }
                     return .single(nil)
                 }
-                let participantSignal = network.request(Api.functions.channels.getParticipant(channel: inputChannel, participant: .inputPeerSelf))
-                |> map(Optional.init)
-                |> `catch` { error -> Signal<Api.channels.ChannelParticipant?, NoError> in
-                    return .single(nil)
+                
+                
+                let participantSignal: Signal<Api.channels.ChannelParticipant?, NoError>
+                if let channel = maybePeer as? TelegramChannel, channel.flags.contains(.isMonoforum) {
+                    participantSignal = .single(nil)
+                } else {
+                    participantSignal = network.request(Api.functions.channels.getParticipant(channel: inputChannel, participant: .inputPeerSelf))
+                    |> map(Optional.init)
+                    |> `catch` { error -> Signal<Api.channels.ChannelParticipant?, NoError> in
+                        return .single(nil)
+                    }
                 }
                 
                 return combineLatest(fullChannelSignal, participantSignal)

@@ -207,7 +207,11 @@ private final class GiftWithdrawAlertContentNode: AlertContentNode {
         let maxActionWidth: CGFloat = floor(size.width / CGFloat(self.actionNodes.count))
         let actionTitleInsets: CGFloat = 8.0
         
-        let effectiveActionLayout = TextAlertContentActionLayout.vertical
+        var effectiveActionLayout = TextAlertContentActionLayout.vertical
+        if !"".isEmpty {
+            // Silence the warning
+            effectiveActionLayout = .horizontal
+        }
         for actionNode in self.actionNodes {
             let actionTitleSize = actionNode.titleNode.updateLayout(CGSize(width: maxActionWidth, height: actionButtonHeight))
             minActionsWidth = max(minActionsWidth, actionTitleSize.width + actionTitleInsets)

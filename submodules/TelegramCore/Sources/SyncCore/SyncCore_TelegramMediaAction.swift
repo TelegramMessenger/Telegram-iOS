@@ -158,7 +158,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case starGift(gift: StarGift, convertStars: Int64?, text: String?, entities: [MessageTextEntity]?, nameHidden: Bool, savedToProfile: Bool, converted: Bool, upgraded: Bool, canUpgrade: Bool, upgradeStars: Int64?, isRefunded: Bool, upgradeMessageId: Int32?, peerId: EnginePeer.Id?, senderId: EnginePeer.Id?, savedId: Int64?)
     case starGiftUnique(gift: StarGift, isUpgrade: Bool, isTransferred: Bool, savedToProfile: Bool, canExportDate: Int32?, transferStars: Int64?, isRefunded: Bool, peerId: EnginePeer.Id?, senderId: EnginePeer.Id?, savedId: Int64?, resaleStars: Int64?, canTransferDate: Int32?, canResaleDate: Int32?)
     case paidMessagesRefunded(count: Int32, stars: Int64)
-    case paidMessagesPriceEdited(stars: Int64)
+    case paidMessagesPriceEdited(stars: Int64, broadcastMessagesAllowed: Bool)
     case conferenceCall(ConferenceCall)
     
     public init(decoder: PostboxDecoder) {
@@ -287,7 +287,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
         case 46:
             self = .paidMessagesRefunded(count: decoder.decodeInt32ForKey("count", orElse: 0), stars: decoder.decodeInt64ForKey("stars", orElse: 0))
         case 47:
-            self = .paidMessagesPriceEdited(stars: decoder.decodeInt64ForKey("stars", orElse: 0))
+            self = .paidMessagesPriceEdited(stars: decoder.decodeInt64ForKey("stars", orElse: 0), broadcastMessagesAllowed: decoder.decodeBoolForKey("brmsg", orElse: false))
         case 48:
             self = .conferenceCall(ConferenceCall(
                 callId: decoder.decodeInt64ForKey("cid", orElse: 0),
@@ -684,9 +684,10 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             encoder.encodeInt32(46, forKey: "_rawValue")
             encoder.encodeInt32(count, forKey: "count")
             encoder.encodeInt64(stars, forKey: "stars")
-        case let .paidMessagesPriceEdited(stars):
+        case let .paidMessagesPriceEdited(stars, broadcastMessagesAllowed):
             encoder.encodeInt32(47, forKey: "_rawValue")
             encoder.encodeInt64(stars, forKey: "stars")
+            encoder.encodeBool(broadcastMessagesAllowed, forKey: "brmsg")
         case let .conferenceCall(conferenceCall):
             encoder.encodeInt32(48, forKey: "_rawValue")
             encoder.encodeInt64(conferenceCall.callId, forKey: "cid")

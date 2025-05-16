@@ -716,7 +716,7 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
         }
     }
     
-    open func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
+    open func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: ChatMessageHeaderSpec) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
         return { _, _, _, _, _ in
             return (ListViewItemNodeLayout(contentSize: CGSize(width: 32.0, height: 32.0), insets: UIEdgeInsets()), { _, _, _ in
                 
@@ -901,6 +901,9 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
     }
 
     private var attachedAvatarNodeOffset: CGFloat = 0.0
+    private var attachedAvatarNodeIsHidden: Bool = false
+    
+    private var attachedDateHeader: (hasDate: Bool, hasPeer: Bool) = (false, false)
 
     override open func attachedHeaderNodesUpdated() {
         if !self.attachedAvatarNodeOffset.isZero {
@@ -912,6 +915,18 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
                 }
             }
         }
+        
+        for headerNode in self.attachedHeaderNodes {
+            if let headerNode = headerNode as? ChatMessageAvatarHeaderNode {
+                headerNode.updateAvatarIsHidden(isHidden: self.attachedAvatarNodeIsHidden, transition: .immediate)
+            }
+        }
+        
+        for headerNode in self.attachedHeaderNodes {
+            if let headerNode = headerNode as? ChatMessageDateHeaderNode {
+                headerNode.updateItem(hasDate: self.attachedDateHeader.hasDate, hasPeer: self.attachedDateHeader.hasPeer)
+            }
+        }
     }
 
     open func updateAttachedAvatarNodeOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -919,6 +934,24 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
         for headerNode in self.attachedHeaderNodes {
             if let headerNode = headerNode as? ChatMessageAvatarHeaderNode {
                 transition.updateSublayerTransformOffset(layer: headerNode.layer, offset: CGPoint(x: offset, y: 0.0))
+            }
+        }
+    }
+    
+    open func updateAttachedAvatarNodeIsHidden(isHidden: Bool, transition: ContainedViewLayoutTransition) {
+        self.attachedAvatarNodeIsHidden = isHidden
+        for headerNode in self.attachedHeaderNodes {
+            if let headerNode = headerNode as? ChatMessageAvatarHeaderNode {
+                headerNode.updateAvatarIsHidden(isHidden: self.attachedAvatarNodeIsHidden, transition: transition)
+            }
+        }
+    }
+    
+    open func updateAttachedDateHeader(hasDate: Bool, hasPeer: Bool) {
+        self.attachedDateHeader = (hasDate, hasPeer)
+        for headerNode in self.attachedHeaderNodes {
+            if let headerNode = headerNode as? ChatMessageDateHeaderNode {
+                headerNode.updateItem(hasDate: hasDate, hasPeer: hasPeer)
             }
         }
     }

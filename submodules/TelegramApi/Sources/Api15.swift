@@ -364,7 +364,7 @@ public extension Api {
         case messageActionGroupCallScheduled(call: Api.InputGroupCall, scheduleDate: Int32)
         case messageActionHistoryClear
         case messageActionInviteToGroupCall(call: Api.InputGroupCall, users: [Int64])
-        case messageActionPaidMessagesPrice(stars: Int64)
+        case messageActionPaidMessagesPrice(flags: Int32, stars: Int64)
         case messageActionPaidMessagesRefunded(count: Int32, stars: Int64)
         case messageActionPaymentRefunded(flags: Int32, peer: Api.Peer, currency: String, totalAmount: Int64, payload: Buffer?, charge: Api.PaymentCharge)
         case messageActionPaymentSent(flags: Int32, currency: String, totalAmount: Int64, invoiceSlug: String?, subscriptionUntilDate: Int32?)
@@ -611,10 +611,11 @@ public extension Api {
                         serializeInt64(item, buffer: buffer, boxed: false)
                     }
                     break
-                case .messageActionPaidMessagesPrice(let stars):
+                case .messageActionPaidMessagesPrice(let flags, let stars):
                     if boxed {
-                        buffer.appendInt32(-1126755303)
+                        buffer.appendInt32(-2068281992)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(stars, buffer: buffer, boxed: false)
                     break
                 case .messageActionPaidMessagesRefunded(let count, let stars):
@@ -881,8 +882,8 @@ public extension Api {
                 return ("messageActionHistoryClear", [])
                 case .messageActionInviteToGroupCall(let call, let users):
                 return ("messageActionInviteToGroupCall", [("call", call as Any), ("users", users as Any)])
-                case .messageActionPaidMessagesPrice(let stars):
-                return ("messageActionPaidMessagesPrice", [("stars", stars as Any)])
+                case .messageActionPaidMessagesPrice(let flags, let stars):
+                return ("messageActionPaidMessagesPrice", [("flags", flags as Any), ("stars", stars as Any)])
                 case .messageActionPaidMessagesRefunded(let count, let stars):
                 return ("messageActionPaidMessagesRefunded", [("count", count as Any), ("stars", stars as Any)])
                 case .messageActionPaymentRefunded(let flags, let peer, let currency, let totalAmount, let payload, let charge):
@@ -1338,11 +1339,14 @@ public extension Api {
             }
         }
         public static func parse_messageActionPaidMessagesPrice(_ reader: BufferReader) -> MessageAction? {
-            var _1: Int64?
-            _1 = reader.readInt64()
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.MessageAction.messageActionPaidMessagesPrice(stars: _1!)
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.MessageAction.messageActionPaidMessagesPrice(flags: _1!, stars: _2!)
             }
             else {
                 return nil

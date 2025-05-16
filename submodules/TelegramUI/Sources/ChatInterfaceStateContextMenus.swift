@@ -315,7 +315,7 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
         }
     }
     
-    if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {
+    if let channel = peer as? TelegramChannel, channel.isForumOrMonoForum {
         if let threadData = chatPresentationInterfaceState.threadData {
             if threadData.isClosed {
                 var canManage = false
@@ -343,6 +343,8 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
                 canReply = channel.hasPermission(.sendSomething, ignoreDefault: canBypassRestrictions)
             }
             if case .broadcast = channel.info {
+                canReply = true
+            } else if channel.isMonoForum {
                 canReply = true
             }
         } else if let group = peer as? TelegramGroup {
@@ -722,7 +724,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
     
     let message = messages[0]
     
-    if case .peer = chatPresentationInterfaceState.chatLocation, let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.flags.contains(.isForum) {
+    if case .peer = chatPresentationInterfaceState.chatLocation, let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isForumOrMonoForum {
         if message.threadId == nil {
             canReply = false
         }
@@ -2108,39 +2110,6 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 }
             case .businessLinkSetup:
                 actions.removeAll()
-            case .postSuggestions:
-                //TODO:release
-                actions.removeAll()
-                
-                actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_MessageDialogEdit, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.actionSheet.primaryTextColor)
-                }, action: { c, f in
-                    interfaceInteraction.setupEditMessage(messages[0].id, { transition in
-                        f(.custom(transition))
-                    })
-                })))
-                actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.ScheduledMessages_EditTime, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Schedule"), color: theme.actionSheet.primaryTextColor)
-                }, action: { _, f in
-                    controllerInteraction.editScheduledMessagesTime(messages.map { $0.id })
-                    f(.dismissWithoutContent)
-                })))
-                actions.append(.action(ContextMenuActionItem(text: "Edit Price", icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Tag"), color: theme.actionSheet.primaryTextColor)
-                }, action: { _, f in
-                    f(.dismissWithoutContent)
-                })))
-                actions.append(.action(ContextMenuActionItem(text: "Delete", textColor: .destructive, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
-                }, action: { controller, f in
-                    interfaceInteraction.deleteMessages(messages, controller, f)
-                })))
-                actions.append(.separator)
-                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                let action: ((ContextControllerProtocol?, @escaping (ContextMenuActionResult) -> Void) -> Void)? = nil
-                actions.append(.action(ContextMenuActionItem(text: "Deleting suggested post will auto-refund your order.", textColor: .primary, textLayout: .multiline, textFont: .custom(font: Font.regular(floor(presentationData.listsFontSize.baseDisplaySize * 0.8)), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
-                    return nil
-                }, iconSource: nil, action: action)))
             }
         }
         

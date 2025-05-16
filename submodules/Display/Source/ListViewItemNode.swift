@@ -629,9 +629,16 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
         (self.supernode as? ListView)?.ensureItemNodeVisible(self, animated: false, overflow: 22.0, allowIntersection: true)
     }
     
-    public func updateFrame(_ frame: CGRect, within containerSize: CGSize, updateFrame: Bool = true) {
+    public func updateFrame(_ frame: CGRect, within containerSize: CGSize, updateFrame: Bool = true, transition: ControlledTransition? = nil) {
         if updateFrame {
-            self.frame = frame
+            if let transition {
+                let previousFrame = self.frame
+                self.frame = frame
+                
+                transition.legacyAnimator.transition.animatePositionAdditive(layer: self.layer, offset: CGPoint(x: previousFrame.minX - frame.minX, y: previousFrame.minY - frame.minY))
+            } else {
+                self.frame = frame
+            }
         }
         if frame.maxY < 0.0 || frame.minY > containerSize.height {
         } else {

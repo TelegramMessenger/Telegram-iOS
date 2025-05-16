@@ -29,15 +29,21 @@ final class PostSuggestionsSettingsScreenComponent: Component {
     
     let context: AccountContext
     let usdWithdrawRate: Int64
+    let peer: EnginePeer?
+    let initialPrice: StarsAmount?
     let completion: () -> Void
 
     init(
         context: AccountContext,
         usdWithdrawRate: Int64,
+        peer: EnginePeer?,
+        initialPrice: StarsAmount?,
         completion: @escaping () -> Void
     ) {
         self.context = context
         self.usdWithdrawRate = usdWithdrawRate
+        self.peer = peer
+        self.initialPrice = initialPrice
         self.completion = completion
     }
 
@@ -103,12 +109,23 @@ final class PostSuggestionsSettingsScreenComponent: Component {
         }
         
         func attemptNavigation(complete: @escaping () -> Void) -> Bool {
-            guard let component = self.component, let environment = self.environment else {
+            guard let component = self.component else {
                 return true
             }
+            guard let peer = component.peer else {
+                return true
+            }
+
+            let currentAmount: StarsAmount?
+            if self.areSuggestionsEnabled {
+                currentAmount = StarsAmount(value: Int64(self.starCount), nanos: 0)
+            } else {
+                currentAmount = nil
+            }
             
-            let _ = component
-            let _ = environment
+            if component.initialPrice != currentAmount {
+                let _ = component.context.engine.peers.updateChannelPaidMessagesStars(peerId: peer.id, stars: currentAmount, broadcastMessagesAllowed: true).startStandalone()
+            }
             
             return true
         }
@@ -154,7 +171,13 @@ final class PostSuggestionsSettingsScreenComponent: Component {
             }
             
             if self.component == nil {
-                self.starCount = 20
+                if let initialPrice = component.initialPrice {
+                    self.starCount = Int(initialPrice.value)
+                    self.areSuggestionsEnabled = true
+                } else {
+                    self.starCount = 20
+                    self.areSuggestionsEnabled = false
+                }
             }
             
             let environment = environment[EnvironmentType.self].value
@@ -464,20 +487,30 @@ final class PostSuggestionsSettingsScreenComponent: Component {
     }
 }
 
+@available(iOS 13.0, *)
 public final class PostSuggestionsSettingsScreen: ViewControllerComponentContainer {
     private let context: AccountContext
     
+    @MainActor
     public init(
         context: AccountContext,
+        peerId: EnginePeer.Id,
         completion: @escaping () -> Void
-    ) {
+    ) async {
         self.context = context
         
         let configuration = StarsSubscriptionConfiguration.with(appConfiguration: context.currentAppConfiguration.with({ $0 }))
         
+        let (peer, initialPrice) = await context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
+            TelegramEngine.EngineData.Item.Peer.SendMessageToChannelPrice(id: peerId)
+        ).get()
+        
         super.init(context: context, component: PostSuggestionsSettingsScreenComponent(
             context: context,
             usdWithdrawRate: configuration.usdWithdrawRate,
+            peer: peer,
+            initialPrice: initialPrice,
             completion: completion
         ), navigationBarAppearance: .default, theme: .default, updatedPresentationData: nil)
         

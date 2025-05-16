@@ -13,8 +13,16 @@ import Cocoa
 import UIKit
 #endif
 
+public final class ContainerViewReference {
+    public weak var value: GView?
+
+    public init(value: GView) {
+        self.value = value
+    }
+}
+
 public protocol ChartViewRenderer: AnyObject {
-    var containerViews: [GView] { get set }
+    var containerViews: [ContainerViewReference] { get set }
     func render(context: CGContext, bounds: CGRect, chartFrame: CGRect)
 }
 
@@ -22,7 +30,7 @@ public protocol ChartViewRenderer: AnyObject {
 private let exponentialAnimationTrashold: CGFloat = 100
 
 class BaseChartRenderer: ChartViewRenderer {
-    var containerViews: [GView] = []
+    var containerViews: [ContainerViewReference] = []
     
     var optimizationLevel: CGFloat = 1 {
         didSet {
@@ -116,7 +124,12 @@ class BaseChartRenderer: ChartViewRenderer {
     }
     
     func setNeedsDisplay() {
-        containerViews.forEach { $0.setNeedsDisplay($0.bounds) }
+        containerViews.forEach { containerView in
+            guard let value = containerView.value else {
+                return
+            }
+            value.setNeedsDisplay(value.bounds)
+        }
     }
     
     var refreshClosure: () -> Void {

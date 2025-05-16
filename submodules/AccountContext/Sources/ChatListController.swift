@@ -6,7 +6,7 @@ import TelegramCore
 public enum ChatListControllerLocation: Equatable {
     case chatList(groupId: EngineChatList.Group)
     case forum(peerId: EnginePeer.Id)
-    case savedMessagesChats
+    case savedMessagesChats(peerId: EnginePeer.Id)
 }
 
 public protocol ChatListController: ViewController {

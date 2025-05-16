@@ -620,7 +620,7 @@ public final class CachedChannelData: CachedPeerData {
         } else {
             self.linkedDiscussionPeerId = .unknown
         }
-        
+
         if let peerGeoLocation = decoder.decodeObjectForKey("pgl", decoder: { PeerGeoLocation(decoder: $0) }) as? PeerGeoLocation {
             self.peerGeoLocation = peerGeoLocation
         } else {
@@ -776,6 +776,7 @@ public final class CachedChannelData: CachedPeerData {
                 encoder.encodeInt64(0, forKey: "dgi")
             }
         }
+
         if let peerGeoLocation = self.peerGeoLocation {
             encoder.encodeObject(peerGeoLocation, forKey: "pgl")
         } else {
@@ -908,7 +909,7 @@ public final class CachedChannelData: CachedPeerData {
         if other.linkedDiscussionPeerId != self.linkedDiscussionPeerId {
             return false
         }
-        
+
         if other.about != self.about {
             return false
         }

@@ -453,6 +453,14 @@ public extension CALayer {
         self.animate(from: from as NSNumber, to: to as NSNumber, keyPath: "bounds.origin.y", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: duration, mediaTimingFunction: mediaTimingFunction, additive: true)
     }
     
+    func animateBoundsOriginAdditive(from: CGPoint, to: CGPoint, duration: Double, mediaTimingFunction: CAMediaTimingFunction) {
+        self.animate(from: NSValue(cgPoint: from), to: NSValue(cgPoint: to), keyPath: "bounds.origin", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: duration, mediaTimingFunction: mediaTimingFunction, additive: true)
+    }
+    
+    func animateBoundsOriginAdditive(from: CGPoint, to: CGPoint, duration: Double, timingFunction: String = CAMediaTimingFunctionName.easeInEaseOut.rawValue, mediaTimingFunction: CAMediaTimingFunction? = nil) {
+        self.animate(from: NSValue(cgPoint: from), to: NSValue(cgPoint: to), keyPath: "bounds.origin", timingFunction: timingFunction, duration: duration, mediaTimingFunction: mediaTimingFunction, additive: true)
+    }
+    
     func animateShapeLineWidth(from: CGFloat, to: CGFloat, duration: Double, delay: Double = 0.0, timingFunction: String = CAMediaTimingFunctionName.easeInEaseOut.rawValue, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         self.animate(from: NSNumber(value: Float(from)), to: NSNumber(value: Float(to)), keyPath: "lineWidth", timingFunction: timingFunction, duration: duration, delay: delay, mediaTimingFunction: mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: additive, completion: completion)
     }

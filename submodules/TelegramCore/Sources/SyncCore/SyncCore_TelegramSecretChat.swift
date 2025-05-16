@@ -17,6 +17,10 @@ public final class TelegramSecretChat: Peer, Equatable {
     public var associatedMediaIds: [MediaId]? { return nil }
     
     public let associatedPeerId: PeerId?
+    public var associatedPeerControlsNotifications: Bool {
+        return true
+    }
+    
     public let notificationSettingsPeerId: PeerId?
     
     public var timeoutAttribute: UInt32? { return nil }

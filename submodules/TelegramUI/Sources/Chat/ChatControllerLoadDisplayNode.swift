@@ -127,236 +127,1677 @@ import PostSuggestionsSettingsScreen
 import ChatSendStarsScreen
 
 extension ChatControllerImpl {
-    func loadDisplayNodeImpl() {
-        if #available(iOS 18.0, *) {
-            if self.context.sharedContext.immediateExperimentalUISettings.enableLocalTranslation {
-                if engineExperimentalInternalTranslationService == nil, let hostView = self.context.sharedContext.mainWindow?.hostView {
-                    let translationService = ExperimentalInternalTranslationServiceImpl(view: hostView.containerView)
-                    engineExperimentalInternalTranslationService = translationService
-                }
-            } else {
-                if engineExperimentalInternalTranslationService != nil {
-                    engineExperimentalInternalTranslationService = nil
-                }
-            }
-        }
+    func reloadChatLocation() {
+        let context = self.context
+        let chatLocation = self.chatLocation
+        let chatLocationPeerId: PeerId? = self.chatLocation.peerId
+        let mode = self.mode
+        let subject = self.subject
+        let peerId = chatLocationPeerId
         
-        self.displayNode = ChatControllerNode(context: self.context, chatLocation: self.chatLocation, chatLocationContextHolder: self.chatLocationContextHolder, subject: self.subject, controllerInteraction: self.controllerInteraction!, chatPresentationInterfaceState: self.presentationInterfaceState, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, navigationBar: self.navigationBar, statusBar: self.statusBar, backgroundNode: self.chatBackgroundNode, controller: self)
-        
-        if let currentItem = self.tempVoicePlaylistCurrentItem {
-            self.chatDisplayNode.historyNode.voicePlaylistItemChanged(nil, currentItem)
-        }
-        
-        self.chatDisplayNode.historyNode.beganDragging = { [weak self] in
-            guard let self else {
-                return
-            }
-            if self.presentationInterfaceState.search != nil && self.presentationInterfaceState.historyFilter != nil {
-                self.chatDisplayNode.historyNode.addAfterTransactionsCompleted { [weak self] in
-                    guard let self else {
-                        return
+        switch chatLocation {
+        case .peer:
+            self.chatLocationInfoData = .peer(Promise())
+        case let .replyThread(replyThreadMessage):
+            let promise = Promise<Message?>()
+            if let effectiveMessageId = replyThreadMessage.effectiveMessageId {
+                promise.set(context.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.Message(id: effectiveMessageId))
+                |> map { message -> Message? in
+                    guard let message = message else {
+                        return nil
                     }
-                    
-                    self.chatDisplayNode.dismissInput()
-                }
-            }
-        }
-    
-        self.chatDisplayNode.historyNode.didScrollWithOffset = { [weak self] offset, transition, itemNode, isTracking in
-            guard let strongSelf = self else {
-                return
-            }
-
-            //print("didScrollWithOffset offset: \(offset), itemNode: \(String(describing: itemNode))")
-            
-            if offset > 0.0 {
-                if var scrolledToMessageIdValue = strongSelf.scrolledToMessageIdValue {
-                    scrolledToMessageIdValue.allowedReplacementDirection.insert(.up)
-                    strongSelf.scrolledToMessageIdValue = scrolledToMessageIdValue
-                }
-            } else if offset < 0.0 {
-                strongSelf.scrolledToMessageIdValue = nil
-            }
-
-            if let currentPinchSourceItemNode = strongSelf.currentPinchSourceItemNode {
-                if let itemNode = itemNode {
-                    if itemNode === currentPinchSourceItemNode {
-                        strongSelf.currentPinchController?.addRelativeContentOffset(CGPoint(x: 0.0, y: -offset), transition: transition)
-                    }
-                } else {
-                    strongSelf.currentPinchController?.addRelativeContentOffset(CGPoint(x: 0.0, y: -offset), transition: transition)
-                }
-            }
-            
-            if isTracking {
-                strongSelf.chatDisplayNode.loadingPlaceholderNode?.addContentOffset(offset: offset, transition: transition)
-            }
-            strongSelf.chatDisplayNode.messageTransitionNode.addExternalOffset(offset: offset, transition: transition, itemNode: itemNode, isRotated: strongSelf.chatDisplayNode.historyNode.rotated)
-            
-        }
-        
-        self.chatDisplayNode.historyNode.hasAtLeast3MessagesUpdated = { [weak self] hasAtLeast3Messages in
-            if let strongSelf = self {
-                strongSelf.updateChatPresentationInterfaceState(interactive: false, { $0.updatedHasAtLeast3Messages(hasAtLeast3Messages) })
-            }
-        }
-        self.chatDisplayNode.historyNode.hasPlentyOfMessagesUpdated = { [weak self] hasPlentyOfMessages in
-            if let strongSelf = self {
-                strongSelf.updateChatPresentationInterfaceState(interactive: false, { $0.updatedHasPlentyOfMessages(hasPlentyOfMessages) })
-            }
-        }
-        
-        if case .peer(self.context.account.peerId) = self.chatLocation {
-            var didDisplayTooltip = false
-            if "".isEmpty {
-                didDisplayTooltip = true
-            }
-            self.chatDisplayNode.historyNode.hasLotsOfMessagesUpdated = { [weak self] hasLotsOfMessages in
-                guard let self, hasLotsOfMessages else {
-                    return
-                }
-                if didDisplayTooltip {
-                    return
-                }
-                didDisplayTooltip = true
-                
-                let _ = (ApplicationSpecificNotice.getSavedMessagesChatsSuggestion(accountManager: self.context.sharedContext.accountManager)
-                |> deliverOnMainQueue).startStandalone(next: { [weak self] counter in
-                    guard let self else {
-                        return
-                    }
-                    if counter >= 3 {
-                        return
-                    }
-                    guard let navigationBar = self.navigationBar else {
-                        return
-                    }
-                    
-                    let tooltipScreen = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: self.presentationData.strings.Chat_SavedMessagesChatsTooltip), location: .point(navigationBar.frame, .top), displayDuration: .manual, shouldDismissOnTouch: { point, _ in
-                        return .ignore
-                    })
-                    self.present(tooltipScreen, in: .current)
-                    
-                    let _ = ApplicationSpecificNotice.incrementSavedMessagesChatsSuggestion(accountManager: self.context.sharedContext.accountManager).startStandalone()
+                    return message._asMessage()
                 })
-            }
-        }
-
-        self.chatDisplayNode.historyNode.addContentOffset = { [weak self] offset, itemNode in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.chatDisplayNode.messageTransitionNode.addContentOffset(offset: offset, itemNode: itemNode)
-        }
-        
-        var closeOnEmpty = false
-        if case .pinnedMessages = self.presentationInterfaceState.subject {
-            closeOnEmpty = true
-        } else if self.chatLocation.peerId == self.context.account.peerId {
-            if let data = self.context.currentAppConfiguration.with({ $0 }).data, let _ = data["ios_killswitch_disable_close_empty_saved"] {
             } else {
-                closeOnEmpty = true
+                promise.set(.single(nil))
             }
+            self.chatLocationInfoData = .replyThread(promise)
+        case .customChatContents:
+            self.chatLocationInfoData = .customChatContents
         }
         
-        if closeOnEmpty {
-            self.chatDisplayNode.historyNode.addSetLoadStateUpdated({ [weak self] state, _ in
+        let managingBot: Signal<ChatManagingBot?, NoError>
+        if let peerId = self.chatLocation.peerId, peerId.namespace == Namespaces.Peer.CloudUser {
+            managingBot = self.context.engine.data.subscribe(
+                TelegramEngine.EngineData.Item.Peer.ChatManagingBot(id: peerId)
+            )
+            |> mapToSignal { result -> Signal<ChatManagingBot?, NoError> in
+                guard let result else {
+                    return .single(nil)
+                }
+                return context.engine.data.subscribe(
+                    TelegramEngine.EngineData.Item.Peer.Peer(id: result.id)
+                )
+                |> map { botPeer -> ChatManagingBot? in
+                    guard let botPeer else {
+                        return nil
+                    }
+                    
+                    return ChatManagingBot(bot: botPeer, isPaused: result.isPaused, canReply: result.canReply, settingsUrl: result.manageUrl)
+                }
+            }
+            |> distinctUntilChanged
+        } else {
+            managingBot = .single(nil)
+        }
+        
+        if case let .peer(peerView) = self.chatLocationInfoData, let peerId = peerId {
+            peerView.set(context.account.viewTracker.peerView(peerId))
+            var onlineMemberCount: Signal<(total: Int32?, recent: Int32?), NoError> = .single((nil, nil))
+            var hasScheduledMessages: Signal<Bool, NoError> = .single(false)
+            
+            if peerId.namespace == Namespaces.Peer.CloudChannel {
+                let recentOnlineSignal: Signal<(total: Int32?, recent: Int32?), NoError> = peerView.get()
+                |> map { view -> Bool? in
+                    if let cachedData = view.cachedData as? CachedChannelData, let peer = peerViewMainPeer(view) as? TelegramChannel {
+                        if case .broadcast = peer.info {
+                            return nil
+                        } else if let memberCount = cachedData.participantsSummary.memberCount, memberCount > 50 {
+                            return true
+                        } else {
+                            return false
+                        }
+                    } else {
+                        return false
+                    }
+                }
+                |> distinctUntilChanged
+                |> mapToSignal { isLarge -> Signal<(total: Int32?, recent: Int32?), NoError> in
+                    if let isLarge = isLarge {
+                        if isLarge {
+                            return context.peerChannelMemberCategoriesContextsManager.recentOnline(account: context.account, accountPeerId: context.account.peerId, peerId: peerId)
+                            |> map { value -> (total: Int32?, recent: Int32?) in
+                                return (nil, value)
+                            }
+                        } else {
+                            return context.peerChannelMemberCategoriesContextsManager.recentOnlineSmall(engine: context.engine, postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId)
+                            |> map { value -> (total: Int32?, recent: Int32?) in
+                                return (value.total, value.recent)
+                            }
+                        }
+                    } else {
+                        return .single((nil, nil))
+                    }
+                }
+                onlineMemberCount = recentOnlineSignal
+                
+                self.reportIrrelvantGeoNoticePromise.set(context.engine.data.get(TelegramEngine.EngineData.Item.Notices.Notice(key: ApplicationSpecificNotice.irrelevantPeerGeoReportKey(peerId: peerId)))
+                |> map { entry -> Bool? in
+                    if let _ = entry?.get(ApplicationSpecificBoolNotice.self) {
+                        return true
+                    } else {
+                        return false
+                    }
+                })
+            } else {
+                self.reportIrrelvantGeoNoticePromise.set(.single(nil))
+            }
+            
+            var isScheduledOrPinnedMessages = false
+            switch self.subject {
+            case .scheduledMessages, .pinnedMessages, .messageOptions:
+                isScheduledOrPinnedMessages = true
+            default:
+                break
+            }
+            
+            if chatLocation.peerId != nil, !isScheduledOrPinnedMessages, peerId.namespace != Namespaces.Peer.SecretChat {
+                let chatLocationContextHolder = self.chatLocationContextHolder
+                hasScheduledMessages = peerView.get()
+                |> take(1)
+                |> mapToSignal { view -> Signal<Bool, NoError> in
+                    if let peer = peerViewMainPeer(view) as? TelegramChannel, !peer.hasPermission(.sendSomething) {
+                        return .single(false)
+                    } else {
+                        return context.account.viewTracker.scheduledMessagesViewForLocation(context.chatLocationInput(for: chatLocation, contextHolder: chatLocationContextHolder))
+                        |> map { view, _, _ in
+                            return !view.entries.isEmpty
+                        }
+                    }
+                }
+            }
+            
+            var displayedCountSignal: Signal<Int?, NoError> = .single(nil)
+            var subtitleTextSignal: Signal<String?, NoError> = .single(nil)
+            if case .pinnedMessages = subject {
+                displayedCountSignal = self.topPinnedMessageSignal(latest: true)
+                |> map { message -> Int? in
+                    return message?.totalCount
+                }
+                |> distinctUntilChanged
+            } else if case let .messageOptions(peerIds, messageIds, info) = subject {
+                displayedCountSignal = self.presentationInterfaceStatePromise.get()
+                |> map { state -> Int? in
+                    if let selectionState = state.interfaceState.selectionState {
+                        return selectionState.selectedIds.count
+                    } else {
+                        return messageIds.count
+                    }
+                }
+                |> distinctUntilChanged
+                
+                let peers = self.context.account.postbox.multiplePeersView(peerIds)
+                |> take(1)
+                
+                let presentationData = self.presentationData
+                
+                switch info {
+                case let .forward(forward):
+                    subtitleTextSignal = combineLatest(peers, forward.options, displayedCountSignal)
+                    |> map { peersView, options, count in
+                        let peers = peersView.peers.values
+                        if !peers.isEmpty {
+                            if peers.count == 1, let peer = peers.first {
+                                if let peer = peer as? TelegramUser {
+                                    let displayName = EnginePeer(peer).compactDisplayTitle
+                                    if count == 1 {
+                                        if options.hideNames {
+                                            return presentationData.strings.Conversation_ForwardOptions_UserMessageForwardHidden(displayName).string
+                                        } else {
+                                            return presentationData.strings.Conversation_ForwardOptions_UserMessageForwardVisible(displayName).string
+                                        }
+                                    } else {
+                                        if options.hideNames {
+                                            return presentationData.strings.Conversation_ForwardOptions_UserMessagesForwardHidden(displayName).string
+                                        } else {
+                                            return presentationData.strings.Conversation_ForwardOptions_UserMessagesForwardVisible(displayName).string
+                                        }
+                                    }
+                                } else if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                                    if count == 1 {
+                                        if options.hideNames {
+                                            return presentationData.strings.Conversation_ForwardOptions_ChannelMessageForwardHidden
+                                        } else {
+                                            return presentationData.strings.Conversation_ForwardOptions_ChannelMessageForwardVisible
+                                        }
+                                    } else {
+                                        if options.hideNames {
+                                            return presentationData.strings.Conversation_ForwardOptions_ChannelMessagesForwardHidden
+                                        } else {
+                                            return presentationData.strings.Conversation_ForwardOptions_ChannelMessagesForwardVisible
+                                        }
+                                    }
+                                } else {
+                                    if count == 1 {
+                                        if options.hideNames {
+                                            return presentationData.strings.Conversation_ForwardOptions_GroupMessageForwardHidden
+                                        } else {
+                                            return presentationData.strings.Conversation_ForwardOptions_GroupMessageForwardVisible
+                                        }
+                                    } else {
+                                        if options.hideNames {
+                                            return presentationData.strings.Conversation_ForwardOptions_GroupMessagesForwardHidden
+                                        } else {
+                                            return presentationData.strings.Conversation_ForwardOptions_GroupMessagesForwardVisible
+                                        }
+                                    }
+                                }
+                            } else {
+                                if count == 1 {
+                                    if options.hideNames {
+                                        return presentationData.strings.Conversation_ForwardOptions_RecipientsMessageForwardHidden
+                                    } else {
+                                        return presentationData.strings.Conversation_ForwardOptions_RecipientsMessageForwardVisible
+                                    }
+                                } else {
+                                    if options.hideNames {
+                                        return presentationData.strings.Conversation_ForwardOptions_RecipientsMessagesForwardHidden
+                                    } else {
+                                        return presentationData.strings.Conversation_ForwardOptions_RecipientsMessagesForwardVisible
+                                    }
+                                }
+                            }
+                        } else {
+                            return nil
+                        }
+                    }
+                case let .reply(reply):
+                    subtitleTextSignal = reply.selectionState.get()
+                    |> map { selectionState -> String? in
+                        if !selectionState.canQuote {
+                            return nil
+                        }
+                        return presentationData.strings.Chat_SubtitleQuoteSelectionTip
+                    }
+                case let .link(link):
+                    subtitleTextSignal = link.options
+                    |> map { options -> String? in
+                        if options.hasAlternativeLinks {
+                            return presentationData.strings.Chat_SubtitleLinkListTip
+                        } else {
+                            return nil
+                        }
+                    }
+                    |> distinctUntilChanged
+                }
+            }
+            
+            let hasPeerInfo: Signal<Bool, NoError>
+            if peerId == context.account.peerId {
+                hasPeerInfo = .single(true)
+                |> then(
+                    hasAvailablePeerInfoMediaPanes(context: context, peerId: peerId)
+                )
+            } else {
+                hasPeerInfo = .single(true)
+            }
+            
+            enum MessageOptionsTitleInfo {
+                case reply(hasQuote: Bool)
+            }
+            let messageOptionsTitleInfo: Signal<MessageOptionsTitleInfo?, NoError>
+            if case let .messageOptions(_, _, info) = self.subject {
+                switch info {
+                case .forward, .link:
+                    messageOptionsTitleInfo = .single(nil)
+                case let .reply(reply):
+                    messageOptionsTitleInfo = reply.selectionState.get()
+                    |> map { selectionState -> Bool in
+                        return selectionState.quote != nil
+                    }
+                    |> distinctUntilChanged
+                    |> map { hasQuote -> MessageOptionsTitleInfo in
+                        return .reply(hasQuote: hasQuote)
+                    }
+                }
+            } else {
+                messageOptionsTitleInfo = .single(nil)
+            }
+            
+            var isFirstTimeValue = true
+            self.titleDisposable.set((combineLatest(queue: Queue.mainQueue(), peerView.get(), onlineMemberCount, displayedCountSignal, subtitleTextSignal, self.presentationInterfaceStatePromise.get(), hasPeerInfo, messageOptionsTitleInfo)
+            |> deliverOnMainQueue).startStrict(next: { [weak self] peerView, onlineMemberCount, displayedCount, subtitleText, presentationInterfaceState, hasPeerInfo, messageOptionsTitleInfo in
+                if let strongSelf = self {
+                    let isFirstTime = isFirstTimeValue
+                    isFirstTimeValue = false
+                    
+                    var isScheduledMessages = false
+                    if case .scheduledMessages = presentationInterfaceState.subject {
+                        isScheduledMessages = true
+                    }
+                    
+                    if case let .messageOptions(_, _, info) = presentationInterfaceState.subject {
+                        if case .reply = info {
+                            let titleContent: ChatTitleContent
+                            if case let .reply(hasQuote) = messageOptionsTitleInfo, hasQuote {
+                                titleContent = .custom(presentationInterfaceState.strings.Chat_TitleQuoteSelection, subtitleText, false)
+                            } else {
+                                titleContent = .custom(presentationInterfaceState.strings.Chat_TitleReply, subtitleText, false)
+                            }
+                            if strongSelf.chatTitleView?.titleContent != titleContent {
+                                if strongSelf.chatTitleView?.titleContent != nil {
+                                    strongSelf.chatTitleView?.animateLayoutTransition()
+                                }
+                                strongSelf.chatTitleView?.titleContent = titleContent
+                            }
+                        } else if case .link = info {
+                            strongSelf.chatTitleView?.titleContent = .custom(presentationInterfaceState.strings.Chat_TitleLinkOptions, subtitleText, false)
+                        } else if displayedCount == 1 {
+                            strongSelf.chatTitleView?.titleContent = .custom(presentationInterfaceState.strings.Conversation_ForwardOptions_ForwardTitleSingle, subtitleText, false)
+                        } else {
+                            strongSelf.chatTitleView?.titleContent = .custom(presentationInterfaceState.strings.Conversation_ForwardOptions_ForwardTitle(Int32(displayedCount ?? 1)), subtitleText, false)
+                        }
+                    } else if let selectionState = presentationInterfaceState.interfaceState.selectionState {
+                        if selectionState.selectedIds.count > 0 {
+                            strongSelf.chatTitleView?.titleContent = .custom(presentationInterfaceState.strings.Conversation_SelectedMessages(Int32(selectionState.selectedIds.count)), nil, false)
+                        } else {
+                            if let (title, _, _) = presentationInterfaceState.reportReason {
+                                strongSelf.chatTitleView?.titleContent = .custom(title, presentationInterfaceState.strings.Conversation_SelectMessages, false)
+                            } else {
+                                strongSelf.chatTitleView?.titleContent = .custom(presentationInterfaceState.strings.Conversation_SelectMessages, nil, false)
+                            }
+                        }
+                    } else if let peer = peerViewMainPeer(peerView) {
+                        if case .pinnedMessages = presentationInterfaceState.subject {
+                            strongSelf.chatTitleView?.titleContent = .custom(presentationInterfaceState.strings.Chat_TitlePinnedMessages(Int32(displayedCount ?? 1)), nil, false)
+                        } else if let channel = peer as? TelegramChannel, channel.isMonoForum {
+                            if let linkedMonoforumId = channel.linkedMonoforumId, let mainPeer = peerView.peers[linkedMonoforumId] {
+                                //TODO:localize
+                                strongSelf.chatTitleView?.titleContent = .custom("\(mainPeer.debugDisplayTitle) Messages", nil, false)
+                            } else {
+                                strongSelf.chatTitleView?.titleContent = .custom(channel.debugDisplayTitle, nil, false)
+                            }
+                        } else {
+                            strongSelf.chatTitleView?.titleContent = .peer(peerView: ChatTitleContent.PeerData(peerView: peerView), customTitle: nil, onlineMemberCount: onlineMemberCount, isScheduledMessages: isScheduledMessages, isMuted: nil, customMessageCount: nil, isEnabled: hasPeerInfo)
+                            let imageOverride: AvatarNodeImageOverride?
+                            if strongSelf.context.account.peerId == peer.id {
+                                imageOverride = .savedMessagesIcon
+                            } else if peer.id.isReplies {
+                                imageOverride = .repliesIcon
+                            } else if peer.id.isAnonymousSavedMessages {
+                                imageOverride = .anonymousSavedMessagesIcon(isColored: true)
+                            } else if peer.isDeleted {
+                                imageOverride = .deletedIcon
+                            } else {
+                                imageOverride = nil
+                            }
+                            (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.setPeer(context: strongSelf.context, theme: strongSelf.presentationData.theme, peer: EnginePeer(peer), overrideImage: imageOverride, synchronousLoad: isFirstTime)
+                            if case .standard(.previewing) = strongSelf.mode {
+                                (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.contextActionIsEnabled = false
+                            } else {
+                                (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.contextActionIsEnabled = peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil
+                            }
+                            strongSelf.chatInfoNavigationButton?.buttonItem.accessibilityLabel = presentationInterfaceState.strings.Conversation_ContextMenuOpenProfile
+                            
+                            strongSelf.storyStats = peerView.storyStats
+                            if let avatarNode = strongSelf.avatarNode {
+                                avatarNode.avatarNode.setStoryStats(storyStats: peerView.storyStats.flatMap { storyStats -> AvatarNode.StoryStats? in
+                                    if storyStats.totalCount == 0 {
+                                        return nil
+                                    }
+                                    if storyStats.unseenCount == 0 {
+                                        return nil
+                                    }
+                                    return AvatarNode.StoryStats(
+                                        totalCount: storyStats.totalCount,
+                                        unseenCount: storyStats.unseenCount,
+                                        hasUnseenCloseFriendsItems: storyStats.hasUnseenCloseFriends
+                                    )
+                                }, presentationParams: AvatarNode.StoryPresentationParams(
+                                    colors: AvatarNode.Colors(theme: strongSelf.presentationData.theme),
+                                    lineWidth: 1.5,
+                                    inactiveLineWidth: 1.5
+                                ), transition: .immediate)
+                            }
+                        }
+                    }
+                }
+            }))
+            
+            let threadInfo: Signal<EngineMessageHistoryThread.Info?, NoError>
+            if let threadId = self.chatLocation.threadId {
+                let viewKey: PostboxViewKey = .messageHistoryThreadInfo(peerId: peerId, threadId: threadId)
+                threadInfo = context.account.postbox.combinedView(keys: [viewKey])
+                |> map { views -> EngineMessageHistoryThread.Info? in
+                    guard let view = views.views[viewKey] as? MessageHistoryThreadInfoView else {
+                        return nil
+                    }
+                    guard let data = view.info?.data.get(MessageHistoryThreadData.self) else {
+                        return nil
+                    }
+                    return data.info
+                }
+                |> distinctUntilChanged
+            } else {
+                threadInfo = .single(nil)
+            }
+            
+            let hasSearchTags: Signal<Bool, NoError>
+            if let peerId = self.chatLocation.peerId, peerId == context.account.peerId {
+                hasSearchTags = context.engine.data.subscribe(
+                    TelegramEngine.EngineData.Item.Messages.SavedMessageTagStats(peerId: context.account.peerId, threadId: self.chatLocation.threadId)
+                )
+                |> map { tags -> Bool in
+                    return !tags.isEmpty
+                }
+                |> distinctUntilChanged
+            } else {
+                hasSearchTags = .single(false)
+            }
+            
+            let hasSavedChats: Signal<Bool, NoError>
+            if case .peer(context.account.peerId) = self.chatLocation {
+                hasSavedChats = context.engine.messages.savedMessagesHasPeersOtherThanSaved()
+            } else {
+                hasSavedChats = .single(false)
+            }
+            
+            let isPremiumRequiredForMessaging: Signal<Bool, NoError>
+            if let peerId = self.chatLocation.peerId {
+                isPremiumRequiredForMessaging = context.engine.peers.subscribeIsPremiumRequiredForMessaging(id: peerId)
+                |> distinctUntilChanged
+            } else {
+                isPremiumRequiredForMessaging = .single(false)
+            }
+            
+            let adMessage: Signal<Message?, NoError>
+            if let adMessagesContext = self.chatDisplayNode.historyNode.adMessagesContext {
+                adMessage = adMessagesContext.state |> map { $0.messages.first }
+            } else {
+                adMessage = .single(nil)
+            }
+            
+            let displayedPeerVerification: Signal<Bool, NoError>
+            if let peerId = self.chatLocation.peerId {
+                displayedPeerVerification = ApplicationSpecificNotice.displayedPeerVerification(accountManager: context.sharedContext.accountManager, peerId: peerId)
+                |> take(1)
+            } else {
+                displayedPeerVerification = .single(false)
+            }
+            
+            let globalPrivacySettings = context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.GlobalPrivacy())
+
+            self.peerDisposable.set(combineLatest(
+                queue: Queue.mainQueue(),
+                peerView.get(),
+                context.engine.data.subscribe(TelegramEngine.EngineData.Item.NotificationSettings.Global()),
+                onlineMemberCount,
+                hasScheduledMessages,
+                self.reportIrrelvantGeoNoticePromise.get(),
+                displayedCountSignal,
+                threadInfo,
+                hasSearchTags,
+                hasSavedChats,
+                isPremiumRequiredForMessaging,
+                managingBot,
+                adMessage,
+                displayedPeerVerification,
+                globalPrivacySettings
+            ).startStrict(next: { [weak self] peerView, globalNotificationSettings, onlineMemberCount, hasScheduledMessages, peerReportNotice, pinnedCount, threadInfo, hasSearchTags, hasSavedChats, isPremiumRequiredForMessaging, managingBot, adMessage, displayedPeerVerification, globalPrivacySettings in
+                if let strongSelf = self {
+                    if strongSelf.peerView === peerView && strongSelf.reportIrrelvantGeoNotice == peerReportNotice && strongSelf.hasScheduledMessages == hasScheduledMessages && strongSelf.threadInfo == threadInfo && strongSelf.presentationInterfaceState.hasSearchTags == hasSearchTags && strongSelf.presentationInterfaceState.hasSavedChats == hasSavedChats && strongSelf.presentationInterfaceState.isPremiumRequiredForMessaging == isPremiumRequiredForMessaging && managingBot == strongSelf.presentationInterfaceState.contactStatus?.managingBot && adMessage?.id == strongSelf.presentationInterfaceState.adMessage?.id {
+                        return
+                    }
+                    
+                    strongSelf.reportIrrelvantGeoNotice = peerReportNotice
+                    strongSelf.hasScheduledMessages = hasScheduledMessages
+                    
+                    var upgradedToPeerId: PeerId?
+                    var movedToForumTopics = false
+                    if let previous = strongSelf.peerView, let group = previous.peers[previous.peerId] as? TelegramGroup, group.migrationReference == nil, let updatedGroup = peerView.peers[peerView.peerId] as? TelegramGroup, let migrationReference = updatedGroup.migrationReference {
+                        upgradedToPeerId = migrationReference.peerId
+                    }
+                    if let previous = strongSelf.peerView, let channel = previous.peers[previous.peerId] as? TelegramChannel, !channel.isForumOrMonoForum, let updatedChannel = peerView.peers[peerView.peerId] as? TelegramChannel, updatedChannel.isForumOrMonoForum {
+                        movedToForumTopics = true
+                    }
+                    
+                    var shouldDismiss = false
+                    if let previous = strongSelf.peerView, let group = previous.peers[previous.peerId] as? TelegramGroup, group.membership != .Removed, let updatedGroup = peerView.peers[peerView.peerId] as? TelegramGroup, updatedGroup.membership == .Removed {
+                        shouldDismiss = true
+                    } else if let previous = strongSelf.peerView, let channel = previous.peers[previous.peerId] as? TelegramChannel, channel.participationStatus != .kicked, let updatedChannel = peerView.peers[peerView.peerId] as? TelegramChannel, updatedChannel.participationStatus == .kicked {
+                        shouldDismiss = true
+                    } else if let previous = strongSelf.peerView, let secretChat = previous.peers[previous.peerId] as? TelegramSecretChat, case .active = secretChat.embeddedState, let updatedSecretChat = peerView.peers[peerView.peerId] as? TelegramSecretChat, case .terminated = updatedSecretChat.embeddedState {
+                        shouldDismiss = true
+                    }
+                    
+                    var wasGroupChannel: Bool?
+                    if let previousPeerView = strongSelf.peerView, let info = (previousPeerView.peers[previousPeerView.peerId] as? TelegramChannel)?.info {
+                        if case .group = info {
+                            wasGroupChannel = true
+                        } else {
+                            wasGroupChannel = false
+                        }
+                    }
+                    var isGroupChannel: Bool?
+                    if let info = (peerView.peers[peerView.peerId] as? TelegramChannel)?.info {
+                        if case .group = info {
+                            isGroupChannel = true
+                        } else {
+                            isGroupChannel = false
+                        }
+                    }
+                    let firstTime = strongSelf.peerView == nil
+                    strongSelf.peerView = peerView
+                    strongSelf.threadInfo = threadInfo
+                    if wasGroupChannel != isGroupChannel {
+                        if let isGroupChannel = isGroupChannel, isGroupChannel {
+                            let (recentDisposable, _) = strongSelf.context.peerChannelMemberCategoriesContextsManager.recent(engine: strongSelf.context.engine, postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, accountPeerId: context.account.peerId, peerId: peerView.peerId, updated: { _ in })
+                            let (adminsDisposable, _) = strongSelf.context.peerChannelMemberCategoriesContextsManager.admins(engine: strongSelf.context.engine, postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, accountPeerId: context.account.peerId, peerId: peerView.peerId, updated: { _ in })
+                            let disposable = DisposableSet()
+                            disposable.add(recentDisposable)
+                            disposable.add(adminsDisposable)
+                            strongSelf.chatAdditionalDataDisposable.set(disposable)
+                        } else {
+                            strongSelf.chatAdditionalDataDisposable.set(nil)
+                        }
+                    }
+                    if strongSelf.isNodeLoaded {
+                        strongSelf.chatDisplayNode.overlayTitle = strongSelf.overlayTitle
+                    }
+                    var peerIsMuted = false
+                    if let notificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings {
+                        if case let .muted(until) = notificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
+                            peerIsMuted = true
+                        } else if case .default = notificationSettings.muteState {
+                            if let peer = peerView.peers[peerView.peerId] {
+                                if peer is TelegramUser {
+                                    peerIsMuted = !globalNotificationSettings.privateChats.enabled
+                                } else if peer is TelegramGroup {
+                                    peerIsMuted = !globalNotificationSettings.groupChats.enabled
+                                } else if let channel = peer as? TelegramChannel {
+                                    switch channel.info {
+                                    case .group:
+                                        peerIsMuted = !globalNotificationSettings.groupChats.enabled
+                                    case .broadcast:
+                                        peerIsMuted = !globalNotificationSettings.channels.enabled
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    var starGiftsAvailable = false
+                    var peerDiscussionId: PeerId?
+                    var peerGeoLocation: PeerGeoLocation?
+                    if let peer = peerView.peers[peerView.peerId] as? TelegramChannel, let cachedData = peerView.cachedData as? CachedChannelData {
+                        if case .broadcast = peer.info {
+                            starGiftsAvailable = cachedData.flags.contains(.starGiftsAvailable)
+                        } else {
+                            peerGeoLocation = cachedData.peerGeoLocation
+                        }
+                        if case let .known(value) = cachedData.linkedDiscussionPeerId {
+                            peerDiscussionId = value
+                        }
+                    }
+                    var renderedPeer: RenderedPeer?
+                    var contactStatus: ChatContactStatus?
+                    var businessIntro: TelegramBusinessIntro?
+                    var sendPaidMessageStars: StarsAmount?
+                    var alwaysShowGiftButton = false
+                    var disallowedGifts: TelegramDisallowedGifts?
+                    if let peer = peerView.peers[peerView.peerId] {
+                        if let cachedData = peerView.cachedData as? CachedUserData {
+                            contactStatus = ChatContactStatus(canAddContact: !peerView.peerIsContact, canReportIrrelevantLocation: false, peerStatusSettings: cachedData.peerStatusSettings, invitedBy: nil, managingBot: managingBot)
+                            if case let .known(value) = cachedData.businessIntro {
+                                businessIntro = value
+                            }
+                            if case let .peer(peerId) = chatLocation, peerId.namespace == Namespaces.Peer.SecretChat {
+                            } else {
+                                sendPaidMessageStars = cachedData.sendPaidMessageStars
+                                if cachedData.disallowedGifts != .All {
+                                    alwaysShowGiftButton = globalPrivacySettings.displayGiftButton || cachedData.flags.contains(.displayGiftButton)
+                                }
+                                disallowedGifts = cachedData.disallowedGifts
+                            }
+                        } else if let cachedData = peerView.cachedData as? CachedGroupData {
+                            var invitedBy: Peer?
+                            if let invitedByPeerId = cachedData.invitedBy {
+                                if let peer = peerView.peers[invitedByPeerId] {
+                                    invitedBy = peer
+                                }
+                            }
+                            contactStatus = ChatContactStatus(canAddContact: false, canReportIrrelevantLocation: false, peerStatusSettings: cachedData.peerStatusSettings, invitedBy: invitedBy, managingBot: managingBot)
+                        } else if let cachedData = peerView.cachedData as? CachedChannelData {
+                            var canReportIrrelevantLocation = true
+                            if let peer = peerView.peers[peerView.peerId] as? TelegramChannel, peer.participationStatus == .member {
+                                canReportIrrelevantLocation = false
+                            }
+                            if let peerReportNotice = peerReportNotice, peerReportNotice {
+                                canReportIrrelevantLocation = false
+                            }
+                            var invitedBy: Peer?
+                            if let invitedByPeerId = cachedData.invitedBy {
+                                if let peer = peerView.peers[invitedByPeerId] {
+                                    invitedBy = peer
+                                }
+                            }
+                            contactStatus = ChatContactStatus(canAddContact: false, canReportIrrelevantLocation: canReportIrrelevantLocation, peerStatusSettings: cachedData.peerStatusSettings, invitedBy: invitedBy, managingBot: managingBot)
+                            
+                            if let channel = peerView.peers[peerView.peerId] as? TelegramChannel {
+                                if channel.flags.contains(.isCreator) || channel.adminRights != nil {
+                                } else {
+                                    if channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = peerView.peers[linkedMonoforumId] as? TelegramChannel {
+                                        sendPaidMessageStars = mainChannel.sendPaidMessageStars
+                                    } else {
+                                        sendPaidMessageStars = channel.sendPaidMessageStars
+                                    }
+                                }
+                            }
+                        }
+                        
+                        var peers = SimpleDictionary<PeerId, Peer>()
+                        peers[peer.id] = peer
+                        if let associatedPeerId = peer.associatedPeerId, let associatedPeer = peerView.peers[associatedPeerId] {
+                            peers[associatedPeer.id] = associatedPeer
+                        }
+                        renderedPeer = RenderedPeer(peerId: peer.id, peers: peers, associatedMedia: peerView.media)
+                    }
+                    
+                    var isNotAccessible: Bool = false
+                    if let cachedChannelData = peerView.cachedData as? CachedChannelData {
+                        isNotAccessible = cachedChannelData.isNotAccessible
+                    }
+                    
+                    if firstTime && isNotAccessible {
+                        strongSelf.context.account.viewTracker.forceUpdateCachedPeerData(peerId: peerView.peerId)
+                    }
+                    
+                    var hasBots: Bool = false
+                    var hasBotCommands: Bool = false
+                    var botMenuButton: BotMenuButton = .commands
+                    var currentSendAsPeerId: PeerId?
+                    var autoremoveTimeout: Int32?
+                    var copyProtectionEnabled: Bool = false
+                    var hasBirthdayToday = false
+                    var peerVerification: PeerVerification?
+                    if let peer = peerView.peers[peerView.peerId] {
+                        if !displayedPeerVerification {
+                            if let cachedUserData = peerView.cachedData as? CachedUserData {
+                                peerVerification = cachedUserData.verification
+                            } else if let cachedChannelData = peerView.cachedData as? CachedChannelData {
+                                peerVerification = cachedChannelData.verification
+                            }
+                        }
+                        copyProtectionEnabled = peer.isCopyProtectionEnabled
+                        if let cachedGroupData = peerView.cachedData as? CachedGroupData {
+                            if !cachedGroupData.botInfos.isEmpty {
+                                hasBots = true
+                            }
+                            let botCommands = cachedGroupData.botInfos.reduce(into: [], { result, info in
+                                result.append(contentsOf: info.botInfo.commands)
+                            })
+                            if !botCommands.isEmpty {
+                                hasBotCommands = true
+                            }
+                            if case let .known(value) = cachedGroupData.autoremoveTimeout {
+                                autoremoveTimeout = value?.effectiveValue
+                            }
+                        } else if let cachedChannelData = peerView.cachedData as? CachedChannelData {
+                            if let channel = peer as? TelegramChannel, channel.isMonoForum {
+                                if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = peerView.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.adminRights != nil {
+                                    currentSendAsPeerId = channel.linkedMonoforumId
+                                } else {
+                                    currentSendAsPeerId = nil
+                                }
+                            } else {
+                                currentSendAsPeerId = cachedChannelData.sendAsPeerId
+                                if let channel = peer as? TelegramChannel, case .group = channel.info {
+                                    if !cachedChannelData.botInfos.isEmpty {
+                                        hasBots = true
+                                    }
+                                    let botCommands = cachedChannelData.botInfos.reduce(into: [], { result, info in
+                                        result.append(contentsOf: info.botInfo.commands)
+                                    })
+                                    if !botCommands.isEmpty {
+                                        hasBotCommands = true
+                                    }
+                                }
+                            }
+                            if case let .known(value) = cachedChannelData.autoremoveTimeout {
+                                autoremoveTimeout = value?.effectiveValue
+                            }
+                        } else if let cachedUserData = peerView.cachedData as? CachedUserData {
+                            botMenuButton = cachedUserData.botInfo?.menuButton ?? .commands
+                            if case let .known(value) = cachedUserData.autoremoveTimeout {
+                                autoremoveTimeout = value?.effectiveValue
+                            }
+                            if let botInfo = cachedUserData.botInfo, !botInfo.commands.isEmpty {
+                                hasBotCommands = true
+                            }
+                            if let birthday = cachedUserData.birthday {
+                                let today = Calendar.current.dateComponents(Set([.day, .month]), from: Date())
+                                if today.day == Int(birthday.day) && today.month == Int(birthday.month) {
+                                    hasBirthdayToday = true
+                                }
+                            }
+                        }
+                    }
+                    
+                    let isArchived: Bool = peerView.groupId == Namespaces.PeerGroup.archive
+                    
+                    var explicitelyCanPinMessages: Bool = false
+                    if let cachedUserData = peerView.cachedData as? CachedUserData {
+                        explicitelyCanPinMessages = cachedUserData.canPinMessages
+                    } else if peerView.peerId == context.account.peerId {
+                        explicitelyCanPinMessages = true
+                    }
+                                            
+                    var animated = false
+                    if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramSecretChat, let updated = renderedPeer?.peer as? TelegramSecretChat, peer.embeddedState != updated.embeddedState {
+                        animated = true
+                    }
+                    if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, let updated = renderedPeer?.peer as? TelegramChannel {
+                        if peer.participationStatus != updated.participationStatus {
+                            animated = true
+                        }
+                    }
+                    
+                    var didDisplayActionsPanel = false
+                    if let contactStatus = strongSelf.presentationInterfaceState.contactStatus, !contactStatus.isEmpty, let peerStatusSettings = contactStatus.peerStatusSettings {
+                        if !peerStatusSettings.flags.isEmpty {
+                            if contactStatus.canAddContact && peerStatusSettings.contains(.canAddContact) {
+                                didDisplayActionsPanel = true
+                            } else if peerStatusSettings.contains(.canReport) || peerStatusSettings.contains(.canBlock) {
+                                didDisplayActionsPanel = true
+                            } else if peerStatusSettings.contains(.canShareContact) {
+                                didDisplayActionsPanel = true
+                            } else if contactStatus.canReportIrrelevantLocation && peerStatusSettings.contains(.canReportIrrelevantGeoLocation) {
+                                didDisplayActionsPanel = true
+                            } else if peerStatusSettings.contains(.suggestAddMembers) {
+                                didDisplayActionsPanel = true
+                            }
+                        }
+                    }
+                    if let contactStatus = strongSelf.presentationInterfaceState.contactStatus, contactStatus.managingBot != nil {
+                        didDisplayActionsPanel = true
+                    }
+                    if strongSelf.presentationInterfaceState.search != nil && strongSelf.presentationInterfaceState.hasSearchTags {
+                        didDisplayActionsPanel = true
+                    }
+                    
+                    var displayActionsPanel = false
+                    if let contactStatus = contactStatus, !contactStatus.isEmpty, let peerStatusSettings = contactStatus.peerStatusSettings {
+                        if !peerStatusSettings.flags.isEmpty {
+                            if contactStatus.canAddContact && peerStatusSettings.contains(.canAddContact) {
+                                displayActionsPanel = true
+                            } else if peerStatusSettings.contains(.canReport) || peerStatusSettings.contains(.canBlock) {
+                                displayActionsPanel = true
+                            } else if peerStatusSettings.contains(.canShareContact) {
+                                displayActionsPanel = true
+                            } else if contactStatus.canReportIrrelevantLocation && peerStatusSettings.contains(.canReportIrrelevantGeoLocation) {
+                                displayActionsPanel = true
+                            } else if peerStatusSettings.contains(.suggestAddMembers) {
+                                displayActionsPanel = true
+                            }
+                        }
+                    }
+                    if let contactStatus, contactStatus.managingBot != nil {
+                        displayActionsPanel = true
+                    }
+                    if strongSelf.presentationInterfaceState.search != nil && hasSearchTags {
+                        displayActionsPanel = true
+                    }
+                    
+                    if displayActionsPanel != didDisplayActionsPanel {
+                        animated = true
+                    }
+                    
+                    if strongSelf.preloadHistoryPeerId != peerDiscussionId {
+                        strongSelf.preloadHistoryPeerId = peerDiscussionId
+                        if let peerDiscussionId = peerDiscussionId, let channel = peerView.peers[peerView.peerId] as? TelegramChannel, case .broadcast = channel.info {
+                            let combinedDisposable = DisposableSet()
+                            strongSelf.preloadHistoryPeerIdDisposable.set(combinedDisposable)
+                            combinedDisposable.add(strongSelf.context.account.viewTracker.polledChannel(peerId: peerDiscussionId).startStrict())
+                            combinedDisposable.add(strongSelf.context.account.addAdditionalPreloadHistoryPeerId(peerId: peerDiscussionId))
+                        } else {
+                            strongSelf.preloadHistoryPeerIdDisposable.set(nil)
+                        }
+                    }
+                    
+                    var appliedBoosts: Int32?
+                    var boostsToUnrestrict: Int32?
+                    if let cachedChannelData = peerView.cachedData as? CachedChannelData {
+                        appliedBoosts = cachedChannelData.appliedBoosts
+                        boostsToUnrestrict = cachedChannelData.boostsToUnrestrict
+                    }
+                    
+                    if strongSelf.premiumOrStarsRequiredDisposable == nil, sendPaidMessageStars != nil, let peerId = strongSelf.chatLocation.peerId {
+                        strongSelf.premiumOrStarsRequiredDisposable = ((strongSelf.context.engine.peers.isPremiumRequiredToContact([peerId]) |> then(.complete() |> suspendAwareDelay(60.0, queue: Queue.concurrentDefaultQueue()))) |> restart).startStandalone()
+                    }
+                    
+                    var adMessage = adMessage
+                    if let peer = peerView.peers[peerView.peerId] as? TelegramUser, peer.botInfo != nil {
+                    } else {
+                        adMessage = nil
+                    }
+                    
+                    if strongSelf.presentationInterfaceState.adMessage?.id != adMessage?.id {
+                        animated = true
+                    }
+                    
+                    strongSelf.updateChatPresentationInterfaceState(animated: animated, interactive: false, {
+                        return $0.updatedPeer { _ in
+                            return renderedPeer
+                        }.updatedIsNotAccessible(isNotAccessible)
+                         .updatedContactStatus(contactStatus)
+                         .updatedHasBots(hasBots)
+                         .updatedHasBotCommands(hasBotCommands)
+                         .updatedBotMenuButton(botMenuButton)
+                         .updatedIsArchived(isArchived)
+                         .updatedPeerIsMuted(peerIsMuted)
+                         .updatedPeerDiscussionId(peerDiscussionId)
+                         .updatedPeerGeoLocation(peerGeoLocation)
+                         .updatedExplicitelyCanPinMessages(explicitelyCanPinMessages)
+                         .updatedHasScheduledMessages(hasScheduledMessages)
+                         .updatedAutoremoveTimeout(autoremoveTimeout)
+                         .updatedCurrentSendAsPeerId(currentSendAsPeerId)
+                         .updatedCopyProtectionEnabled(copyProtectionEnabled)
+                         .updatedHasSearchTags(hasSearchTags)
+                         .updatedIsPremiumRequiredForMessaging(isPremiumRequiredForMessaging)
+                         .updatedSendPaidMessageStars(sendPaidMessageStars)
+                         .updatedAlwaysShowGiftButton(alwaysShowGiftButton)
+                         .updatedDisallowedGifts(disallowedGifts)
+                         .updatedHasSavedChats(hasSavedChats)
+                         .updatedAppliedBoosts(appliedBoosts)
+                         .updatedBoostsToUnrestrict(boostsToUnrestrict)
+                         .updatedHasBirthdayToday(hasBirthdayToday)
+                         .updatedBusinessIntro(businessIntro)
+                         .updatedAdMessage(adMessage)
+                         .updatedPeerVerification(peerVerification)
+                         .updatedStarGiftsAvailable(starGiftsAvailable)
+                         .updatedInterfaceState { interfaceState in
+                             var interfaceState = interfaceState
+                             
+                             if let channel = renderedPeer?.peer as? TelegramChannel {
+                                 if channel.hasBannedPermission(.banSendVoice) != nil && channel.hasBannedPermission(.banSendInstantVideos) != nil {
+                                     interfaceState = interfaceState.withUpdatedMediaRecordingMode(.audio)
+                                 } else if channel.hasBannedPermission(.banSendVoice) != nil {
+                                     if channel.hasBannedPermission(.banSendInstantVideos) == nil {
+                                         interfaceState = interfaceState.withUpdatedMediaRecordingMode(.video)
+                                     }
+                                 } else if channel.hasBannedPermission(.banSendInstantVideos) != nil {
+                                     if channel.hasBannedPermission(.banSendVoice) == nil {
+                                         interfaceState = interfaceState.withUpdatedMediaRecordingMode(.audio)
+                                     }
+                                 }
+                             } else if let group = renderedPeer?.peer as? TelegramGroup {
+                                 if group.hasBannedPermission(.banSendVoice) && group.hasBannedPermission(.banSendInstantVideos) {
+                                     interfaceState = interfaceState.withUpdatedMediaRecordingMode(.audio)
+                                 } else if group.hasBannedPermission(.banSendVoice) {
+                                     if !group.hasBannedPermission(.banSendInstantVideos) {
+                                         interfaceState = interfaceState.withUpdatedMediaRecordingMode(.video)
+                                     }
+                                 } else if group.hasBannedPermission(.banSendInstantVideos) {
+                                     if !group.hasBannedPermission(.banSendVoice) {
+                                         interfaceState = interfaceState.withUpdatedMediaRecordingMode(.audio)
+                                     }
+                                 }
+                             }
+                             
+                             return interfaceState
+                         }
+                    })
+
+                    if case .standard(.default) = mode, let channel = renderedPeer?.chatMainPeer as? TelegramChannel, case .broadcast = channel.info {
+                        var isRegularChat = false
+                        if let subject = subject {
+                            if case .message = subject {
+                                isRegularChat = true
+                            }
+                        } else {
+                            isRegularChat = true
+                        }
+                        if strongSelf.nextChannelToReadDisposable == nil, let peerId = strongSelf.chatLocation.peerId, let customChatNavigationStack = strongSelf.customChatNavigationStack {
+                            if let index = customChatNavigationStack.firstIndex(of: peerId), index != customChatNavigationStack.count - 1 {
+                                let nextPeerId = customChatNavigationStack[index + 1]
+                                strongSelf.nextChannelToReadDisposable = (combineLatest(queue: .mainQueue(),
+                                    strongSelf.context.engine.data.subscribe(
+                                        TelegramEngine.EngineData.Item.Peer.Peer(id: nextPeerId)
+                                    ),
+                                    ApplicationSpecificNotice.getNextChatSuggestionTip(accountManager: strongSelf.context.sharedContext.accountManager)
+                                )
+                                |> then(.complete() |> delay(1.0, queue: .mainQueue()))
+                                |> restart).startStrict(next: { nextPeer, nextChatSuggestionTip in
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+
+                                    strongSelf.offerNextChannelToRead = true
+                                    strongSelf.chatDisplayNode.historyNode.nextChannelToRead = nextPeer.flatMap { nextPeer -> (peer: EnginePeer, threadData: (id: Int64, data: MessageHistoryThreadData)?, unreadCount: Int, location: TelegramEngine.NextUnreadChannelLocation) in
+                                        return (peer: nextPeer, threadData: nil, unreadCount: 0, location: .same)
+                                    }
+                                    strongSelf.chatDisplayNode.historyNode.nextChannelToReadDisplayName = nextChatSuggestionTip >= 3
+
+                                    let nextPeerId = nextPeer?.id
+
+                                    if strongSelf.preloadNextChatPeerId != nextPeerId {
+                                        strongSelf.preloadNextChatPeerId = nextPeerId
+                                        if let nextPeerId = nextPeerId {
+                                            let combinedDisposable = DisposableSet()
+                                            strongSelf.preloadNextChatPeerIdDisposable.set(combinedDisposable)
+                                            combinedDisposable.add(strongSelf.context.account.viewTracker.polledChannel(peerId: nextPeerId).startStrict())
+                                            combinedDisposable.add(strongSelf.context.account.addAdditionalPreloadHistoryPeerId(peerId: nextPeerId))
+                                        } else {
+                                            strongSelf.preloadNextChatPeerIdDisposable.set(nil)
+                                        }
+                                    }
+                                    
+                                    strongSelf.updateNextChannelToReadVisibility()
+                                })
+                            }
+                        } else if isRegularChat, strongSelf.nextChannelToReadDisposable == nil {
+                            //TODO:loc optimize
+                            let accountPeerId = strongSelf.context.account.peerId
+                            strongSelf.nextChannelToReadDisposable = (combineLatest(queue: .mainQueue(),
+                                strongSelf.context.engine.peers.getNextUnreadChannel(peerId: channel.id, chatListFilterId: strongSelf.currentChatListFilter, getFilterPredicate: { data in
+                                return chatListFilterPredicate(filter: data, accountPeerId: accountPeerId)
+                            }),
+                                ApplicationSpecificNotice.getNextChatSuggestionTip(accountManager: strongSelf.context.sharedContext.accountManager)
+                            )
+                            |> then(.complete() |> delay(1.0, queue: .mainQueue()))
+                            |> restart).startStrict(next: { nextPeer, nextChatSuggestionTip in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+
+                                strongSelf.offerNextChannelToRead = true
+                                strongSelf.chatDisplayNode.historyNode.nextChannelToRead = nextPeer.flatMap { nextPeer -> (peer: EnginePeer, threadData: (id: Int64, data: MessageHistoryThreadData)?, unreadCount: Int, location: TelegramEngine.NextUnreadChannelLocation) in
+                                    return (peer: nextPeer.peer, threadData: nil, unreadCount: nextPeer.unreadCount, location: nextPeer.location)
+                                }
+                                strongSelf.chatDisplayNode.historyNode.nextChannelToReadDisplayName = nextChatSuggestionTip >= 3
+
+                                let nextPeerId = nextPeer?.peer.id
+
+                                if strongSelf.preloadNextChatPeerId != nextPeerId {
+                                    strongSelf.preloadNextChatPeerId = nextPeerId
+                                    if let nextPeerId = nextPeerId {
+                                        let combinedDisposable = DisposableSet()
+                                        strongSelf.preloadNextChatPeerIdDisposable.set(combinedDisposable)
+                                        combinedDisposable.add(strongSelf.context.account.viewTracker.polledChannel(peerId: nextPeerId).startStrict())
+                                        combinedDisposable.add(strongSelf.context.account.addAdditionalPreloadHistoryPeerId(peerId: nextPeerId))
+                                    } else {
+                                        strongSelf.preloadNextChatPeerIdDisposable.set(nil)
+                                    }
+                                }
+                                
+                                strongSelf.updateNextChannelToReadVisibility()
+                            })
+                        }
+                    }
+
+                    if !strongSelf.didSetChatLocationInfoReady {
+                        strongSelf.didSetChatLocationInfoReady = true
+                        strongSelf._chatLocationInfoReady.set(.single(true))
+                    }
+                    strongSelf.updateReminderActivity()
+                    if let upgradedToPeerId = upgradedToPeerId {
+                        if let navigationController = strongSelf.effectiveNavigationController {
+                            var viewControllers = navigationController.viewControllers
+                            if let index = viewControllers.firstIndex(where: { $0 === strongSelf }) {
+                                viewControllers[index] = ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(id: upgradedToPeerId))
+                                navigationController.setViewControllers(viewControllers, animated: false)
+                            }
+                        }
+                    } else if movedToForumTopics {
+                        if let navigationController = strongSelf.effectiveNavigationController {
+                            let chatListController = strongSelf.context.sharedContext.makeChatListController(context: strongSelf.context, location: .forum(peerId: peerView.peerId), controlsHistoryPreload: false, hideNetworkActivityStatus: false, previewing: false, enableDebugActions: false)
+                            navigationController.replaceController(strongSelf, with: chatListController, animated: true)
+                        }
+                    } else if shouldDismiss {
+                        strongSelf.dismiss()
+                    }
+                }
+            }))
+            
+            if peerId == context.account.peerId {
+                self.preloadSavedMessagesChatsDisposable = context.engine.messages.savedMessagesPeerListHead().start()
+            }
+        } else if case let .replyThread(messagePromise) = self.chatLocationInfoData, let peerId = peerId {
+            self.reportIrrelvantGeoNoticePromise.set(.single(nil))
+                            
+            let replyThreadType: ChatTitleContent.ReplyThreadType
+            var replyThreadId: Int64?
+            switch chatLocation {
+            case .peer:
+                replyThreadType = .replies
+            case let .replyThread(replyThreadMessage):
+                if replyThreadMessage.peerId == context.account.peerId {
+                    replyThreadId = replyThreadMessage.threadId
+                    replyThreadType = .replies
+                } else {
+                    replyThreadId = replyThreadMessage.threadId
+                    if replyThreadMessage.isChannelPost {
+                        replyThreadType = .comments
+                    } else {
+                        replyThreadType = .replies
+                    }
+                }
+            case .customChatContents:
+                replyThreadType = .replies
+            }
+            
+            let peerView = context.account.viewTracker.peerView(peerId)
+            
+            let messageAndTopic = messagePromise.get()
+            |> mapToSignal { message -> Signal<(message: Message?, threadData: MessageHistoryThreadData?, messageCount: Int), NoError> in
+                guard let replyThreadId = replyThreadId else {
+                    return .single((message, nil, 0))
+                }
+                let viewKey: PostboxViewKey = .messageHistoryThreadInfo(peerId: peerId, threadId: replyThreadId)
+                let countViewKey: PostboxViewKey = .historyTagSummaryView(tag: MessageTags(), peerId: peerId, threadId: replyThreadId, namespace: Namespaces.Message.Cloud, customTag: nil)
+                let localCountViewKey: PostboxViewKey = .historyTagSummaryView(tag: MessageTags(), peerId: peerId, threadId: replyThreadId, namespace: Namespaces.Message.Local, customTag: nil)
+                return context.account.postbox.combinedView(keys: [viewKey, countViewKey, localCountViewKey])
+                |> map { views -> (message: Message?, threadData: MessageHistoryThreadData?, messageCount: Int) in
+                    guard let view = views.views[viewKey] as? MessageHistoryThreadInfoView else {
+                        return (message, nil, 0)
+                    }
+                    var messageCount = 0
+                    if let summaryView = views.views[countViewKey] as? MessageHistoryTagSummaryView, let count = summaryView.count {
+                        if replyThreadId == 1 {
+                            messageCount += Int(count)
+                        } else {
+                            messageCount += max(Int(count) - 1, 0)
+                        }
+                    }
+                    if let summaryView = views.views[localCountViewKey] as? MessageHistoryTagSummaryView, let count = summaryView.count {
+                        messageCount += Int(count)
+                    }
+                    return (message, view.info?.data.get(MessageHistoryThreadData.self), messageCount)
+                }
+            }
+            
+            let savedMessagesPeerId: PeerId?
+            if case let .replyThread(replyThreadMessage) = chatLocation, (replyThreadMessage.peerId == context.account.peerId || replyThreadMessage.isMonoforumPost) {
+                savedMessagesPeerId = PeerId(replyThreadMessage.threadId)
+            } else {
+                savedMessagesPeerId = nil
+            }
+            
+            let savedMessagesPeer: Signal<(peer: EnginePeer?, messageCount: Int, presence: EnginePeer.Presence?)?, NoError>
+            if let savedMessagesPeerId {
+                let threadPeerId = savedMessagesPeerId
+                let basicPeerKey: PostboxViewKey = .peer(peerId: threadPeerId, components: [])
+                let countViewKey: PostboxViewKey = .historyTagSummaryView(tag: MessageTags(), peerId: peerId, threadId: savedMessagesPeerId.toInt64(), namespace: Namespaces.Message.Cloud, customTag: nil)
+                savedMessagesPeer = context.account.postbox.combinedView(keys: [basicPeerKey, countViewKey])
+                |> map { views -> (peer: EnginePeer?, messageCount: Int, presence: EnginePeer.Presence?)? in
+                    var peer: EnginePeer?
+                    var presence: EnginePeer.Presence?
+                    if let peerView = views.views[basicPeerKey] as? PeerView {
+                        peer = peerViewMainPeer(peerView).flatMap(EnginePeer.init)
+                        presence = peerView.peerPresences[threadPeerId].flatMap(EnginePeer.Presence.init)
+                    }
+                    
+                    var messageCount = 0
+                    if let summaryView = views.views[countViewKey] as? MessageHistoryTagSummaryView, let count = summaryView.count {
+                        messageCount += Int(count)
+                    }
+                    
+                    return (peer, messageCount, presence)
+                }
+                |> distinctUntilChanged(isEqual: { lhs, rhs in
+                    if lhs?.peer != rhs?.peer {
+                        return false
+                    }
+                    if lhs?.messageCount != rhs?.messageCount {
+                        return false
+                    }
+                    if lhs?.presence != rhs?.presence {
+                        return false
+                    }
+                    return true
+                })
+            } else {
+                savedMessagesPeer = .single(nil)
+            }
+            
+            var isScheduledOrPinnedMessages = false
+            switch subject {
+            case .scheduledMessages, .pinnedMessages, .messageOptions:
+                isScheduledOrPinnedMessages = true
+            default:
+                break
+            }
+            
+            var hasScheduledMessages: Signal<Bool, NoError> = .single(false)
+            if chatLocation.peerId != nil, !isScheduledOrPinnedMessages, peerId.namespace != Namespaces.Peer.SecretChat {
+                let chatLocationContextHolder = self.chatLocationContextHolder
+                hasScheduledMessages = peerView
+                |> take(1)
+                |> mapToSignal { view -> Signal<Bool, NoError> in
+                    if let peer = peerViewMainPeer(view) as? TelegramChannel, !peer.hasPermission(.sendSomething) {
+                        return .single(false)
+                    } else {
+                        if case let .replyThread(message) = chatLocation, message.peerId == context.account.peerId {
+                            return context.account.viewTracker.scheduledMessagesViewForLocation(context.chatLocationInput(for: .peer(id: context.account.peerId), contextHolder: Atomic(value: nil)))
+                            |> map { view, _, _ in
+                                return !view.entries.isEmpty
+                            }
+                            |> distinctUntilChanged
+                        } else {
+                            return context.account.viewTracker.scheduledMessagesViewForLocation(context.chatLocationInput(for: chatLocation, contextHolder: chatLocationContextHolder))
+                            |> map { view, _, _ in
+                                return !view.entries.isEmpty
+                            }
+                            |> distinctUntilChanged
+                        }
+                    }
+                }
+            }
+            
+            var onlineMemberCount: Signal<(total: Int32?, recent: Int32?), NoError> = .single((nil, nil))
+            if peerId.namespace == Namespaces.Peer.CloudChannel {
+                let recentOnlineSignal: Signal<(total: Int32?, recent: Int32?), NoError> = peerView
+                |> map { view -> Bool? in
+                    if let cachedData = view.cachedData as? CachedChannelData, let peer = peerViewMainPeer(view) as? TelegramChannel {
+                        if case .broadcast = peer.info {
+                            return nil
+                        } else if let memberCount = cachedData.participantsSummary.memberCount, memberCount > 50 {
+                            return true
+                        } else {
+                            return false
+                        }
+                    } else {
+                        return false
+                    }
+                }
+                |> distinctUntilChanged
+                |> mapToSignal { isLarge -> Signal<(total: Int32?, recent: Int32?), NoError> in
+                    if let isLarge = isLarge {
+                        if isLarge {
+                            return context.peerChannelMemberCategoriesContextsManager.recentOnline(account: context.account, accountPeerId: context.account.peerId, peerId: peerId)
+                            |> map { value -> (total: Int32?, recent: Int32?) in
+                                return (nil, value)
+                            }
+                        } else {
+                            return context.peerChannelMemberCategoriesContextsManager.recentOnlineSmall(engine: context.engine, postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId)
+                            |> map { value -> (total: Int32?, recent: Int32?) in
+                                return (value.total, value.recent)
+                            }
+                        }
+                    } else {
+                        return .single((nil, nil))
+                    }
+                }
+                onlineMemberCount = recentOnlineSignal
+            }
+            
+            let hasSearchTags: Signal<Bool, NoError>
+            if let peerId = self.chatLocation.peerId, peerId == context.account.peerId {
+                hasSearchTags = context.engine.data.subscribe(
+                    TelegramEngine.EngineData.Item.Messages.SavedMessageTagStats(peerId: context.account.peerId, threadId: self.chatLocation.threadId)
+                )
+                |> map { tags -> Bool in
+                    return !tags.isEmpty
+                }
+                |> distinctUntilChanged
+            } else {
+                hasSearchTags = .single(false)
+            }
+            
+            let hasSavedChats: Signal<Bool, NoError>
+            if case .peer(context.account.peerId) = self.chatLocation {
+                hasSavedChats = context.engine.messages.savedMessagesHasPeersOtherThanSaved()
+            } else {
+                hasSavedChats = .single(false)
+            }
+            
+            let isPremiumRequiredForMessaging: Signal<Bool, NoError>
+            if let peerId = self.chatLocation.peerId {
+                isPremiumRequiredForMessaging = context.engine.peers.subscribeIsPremiumRequiredForMessaging(id: peerId)
+                |> distinctUntilChanged
+            } else {
+                isPremiumRequiredForMessaging = .single(false)
+            }
+            
+            let globalPrivacySettings = context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.GlobalPrivacy())
+            
+            self.titleDisposable.set(nil)
+            var isFirstTimeValue = true
+            self.peerDisposable.set((combineLatest(queue: Queue.mainQueue(),
+                peerView,
+                messageAndTopic,
+                savedMessagesPeer,
+                onlineMemberCount,
+                hasScheduledMessages,
+                hasSearchTags,
+                hasSavedChats,
+                isPremiumRequiredForMessaging,
+                managingBot,
+                globalPrivacySettings
+            )
+            |> deliverOnMainQueue).startStrict(next: { [weak self] peerView, messageAndTopic, savedMessagesPeer, onlineMemberCount, hasScheduledMessages, hasSearchTags, hasSavedChats, isPremiumRequiredForMessaging, managingBot, globalPrivacySettings in
+                if let strongSelf = self {
+                    let isFirstTime = isFirstTimeValue
+                    isFirstTimeValue = false
+                    
+                    strongSelf.hasScheduledMessages = hasScheduledMessages
+                    
+                    var renderedPeer: RenderedPeer?
+                    var contactStatus: ChatContactStatus?
+                    var copyProtectionEnabled = false
+                    var businessIntro: TelegramBusinessIntro?
+                    var sendPaidMessageStars: StarsAmount?
+                    var alwaysShowGiftButton = false
+                    var disallowedGifts: TelegramDisallowedGifts?
+                    if let peer = peerView.peers[peerView.peerId] {
+                        copyProtectionEnabled = peer.isCopyProtectionEnabled
+                        if let cachedData = peerView.cachedData as? CachedUserData {
+                            contactStatus = ChatContactStatus(canAddContact: !peerView.peerIsContact, canReportIrrelevantLocation: false, peerStatusSettings: cachedData.peerStatusSettings, invitedBy: nil, managingBot: managingBot)
+                            if case let .known(value) = cachedData.businessIntro {
+                                businessIntro = value
+                            }
+                            if cachedData.disallowedGifts != .All {
+                                alwaysShowGiftButton = globalPrivacySettings.displayGiftButton || cachedData.flags.contains(.displayGiftButton)
+                            }
+                            disallowedGifts = cachedData.disallowedGifts
+                        } else if let cachedData = peerView.cachedData as? CachedGroupData {
+                            var invitedBy: Peer?
+                            if let invitedByPeerId = cachedData.invitedBy {
+                                if let peer = peerView.peers[invitedByPeerId] {
+                                    invitedBy = peer
+                                }
+                            }
+                            contactStatus = ChatContactStatus(canAddContact: false, canReportIrrelevantLocation: false, peerStatusSettings: cachedData.peerStatusSettings, invitedBy: invitedBy, managingBot: managingBot)
+                        } else if let cachedData = peerView.cachedData as? CachedChannelData {
+                            var canReportIrrelevantLocation = true
+                            if let peer = peerView.peers[peerView.peerId] as? TelegramChannel, peer.participationStatus == .member {
+                                canReportIrrelevantLocation = false
+                            }
+                            canReportIrrelevantLocation = false
+                            var invitedBy: Peer?
+                            if let invitedByPeerId = cachedData.invitedBy {
+                                if let peer = peerView.peers[invitedByPeerId] {
+                                    invitedBy = peer
+                                }
+                            }
+                            contactStatus = ChatContactStatus(canAddContact: false, canReportIrrelevantLocation: canReportIrrelevantLocation, peerStatusSettings: cachedData.peerStatusSettings, invitedBy: invitedBy, managingBot: managingBot)
+                           
+                            if let channel = peerView.peers[peerView.peerId] as? TelegramChannel {
+                                if channel.flags.contains(.isCreator) || channel.adminRights != nil {
+                                } else {
+                                    if channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = peerView.peers[linkedMonoforumId] as? TelegramChannel {
+                                        sendPaidMessageStars = mainChannel.sendPaidMessageStars
+                                    } else {
+                                        sendPaidMessageStars = channel.sendPaidMessageStars
+                                    }
+                                }
+                            }
+                        }
+                        
+                        var peers = SimpleDictionary<PeerId, Peer>()
+                        peers[peer.id] = peer
+                        if let associatedPeerId = peer.associatedPeerId, let associatedPeer = peerView.peers[associatedPeerId] {
+                            peers[associatedPeer.id] = associatedPeer
+                        }
+                        renderedPeer = RenderedPeer(peerId: peer.id, peers: peers, associatedMedia: peerView.media)
+                    }
+                    
+                    if let savedMessagesPeerId {
+                        var peerPresences: [PeerId: PeerPresence] = [:]
+                        if let presence = savedMessagesPeer?.presence {
+                            peerPresences[savedMessagesPeerId] = presence._asPresence()
+                        }
+                        let mappedPeerData = ChatTitleContent.PeerData(
+                            peerId: savedMessagesPeerId,
+                            peer: savedMessagesPeer?.peer?._asPeer(),
+                            isContact: true,
+                            isSavedMessages: true,
+                            notificationSettings: nil,
+                            peerPresences: peerPresences,
+                            cachedData: nil
+                        )
+                        
+                        var customMessageCount: Int?
+                        if let peer = peerView.peers[peerView.peerId] as? TelegramChannel, peer.isMonoForum {
+                        } else {
+                            customMessageCount = savedMessagesPeer?.messageCount ?? 0
+                        }
+                        
+                        strongSelf.chatTitleView?.titleContent = .peer(peerView: mappedPeerData, customTitle: nil, onlineMemberCount: (nil, nil), isScheduledMessages: false, isMuted: false, customMessageCount: customMessageCount, isEnabled: true)
+                        
+                        strongSelf.peerView = peerView
+                        
+                        let imageOverride: AvatarNodeImageOverride?
+                        if strongSelf.context.account.peerId == savedMessagesPeerId {
+                            imageOverride = .myNotesIcon
+                        } else if let peer = savedMessagesPeer?.peer, peer.id.isReplies {
+                            imageOverride = .repliesIcon
+                        } else if let peer = savedMessagesPeer?.peer, peer.id.isAnonymousSavedMessages {
+                            imageOverride = .anonymousSavedMessagesIcon(isColored: true)
+                        } else if let peer = savedMessagesPeer?.peer, peer.isDeleted {
+                            imageOverride = .deletedIcon
+                        } else {
+                            imageOverride = nil
+                        }
+                        
+                        if strongSelf.isNodeLoaded {
+                            strongSelf.chatDisplayNode.overlayTitle = strongSelf.overlayTitle
+                        }
+                        
+                        let animated = false
+                        strongSelf.updateChatPresentationInterfaceState(animated: animated, interactive: false, {
+                            return $0.updatedPeer { _ in
+                                return renderedPeer
+                            }.updatedSavedMessagesTopicPeer(savedMessagesPeer?.peer)
+                            .updatedHasSearchTags(hasSearchTags)
+                            .updatedHasSavedChats(hasSavedChats)
+                            .updatedHasScheduledMessages(hasScheduledMessages)
+                        })
+                        
+                        (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.setPeer(context: strongSelf.context, theme: strongSelf.presentationData.theme, peer: savedMessagesPeer?.peer, overrideImage: imageOverride, synchronousLoad: isFirstTime)
+                        (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.contextActionIsEnabled = false
+                        strongSelf.chatInfoNavigationButton?.buttonItem.accessibilityLabel = strongSelf.presentationData.strings.Conversation_ContextMenuOpenProfile
+                    } else {
+                        let message = messageAndTopic.message
+                        
+                        var count = 0
+                        if let message = message {
+                            for attribute in message.attributes {
+                                if let attribute = attribute as? ReplyThreadMessageAttribute {
+                                    count = Int(attribute.count)
+                                    break
+                                }
+                            }
+                        }
+                        
+                        var peerIsMuted = false
+                        if let threadData = messageAndTopic.threadData {
+                            if case let .muted(until) = threadData.notificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
+                                peerIsMuted = true
+                            }
+                        } else if let notificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings {
+                            if case let .muted(until) = notificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
+                                peerIsMuted = true
+                            }
+                        }
+                        
+                        if let threadInfo = messageAndTopic.threadData?.info {
+                            strongSelf.chatTitleView?.titleContent = .peer(peerView: ChatTitleContent.PeerData(peerView: peerView), customTitle: threadInfo.title, onlineMemberCount: onlineMemberCount, isScheduledMessages: false, isMuted: peerIsMuted, customMessageCount: messageAndTopic.messageCount == 0 ? nil : messageAndTopic.messageCount, isEnabled: true)
+                            
+                            let avatarContent: EmojiStatusComponent.Content
+                            if strongSelf.chatLocation.threadId == 1 {
+                                avatarContent = .image(image: PresentationResourcesChat.chatGeneralThreadIcon(strongSelf.presentationData.theme))
+                            } else if let fileId = threadInfo.icon {
+                                avatarContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 48.0, height: 48.0), placeholderColor: strongSelf.presentationData.theme.list.mediaPlaceholderColor, themeColor: strongSelf.presentationData.theme.list.itemAccentColor, loopMode: .count(1))
+                            } else {
+                                avatarContent = .topic(title: String(threadInfo.title.prefix(1)), color: threadInfo.iconColor, size: CGSize(width: 32.0, height: 32.0))
+                            }
+                            (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.setStatus(context: strongSelf.context, content: avatarContent)
+                        } else {
+                            strongSelf.chatTitleView?.titleContent = .replyThread(type: replyThreadType, count: count)
+                        }
+                        
+                        var wasGroupChannel: Bool?
+                        if let previousPeerView = strongSelf.peerView, let info = (previousPeerView.peers[previousPeerView.peerId] as? TelegramChannel)?.info {
+                            if case .group = info {
+                                wasGroupChannel = true
+                            } else {
+                                wasGroupChannel = false
+                            }
+                        }
+                        var isGroupChannel: Bool?
+                        if let info = (peerView.peers[peerView.peerId] as? TelegramChannel)?.info {
+                            if case .group = info {
+                                isGroupChannel = true
+                            } else {
+                                isGroupChannel = false
+                            }
+                        }
+                        let firstTime = strongSelf.peerView == nil
+                        
+                        if wasGroupChannel != isGroupChannel {
+                            if let isGroupChannel = isGroupChannel, isGroupChannel {
+                                let (recentDisposable, _) = strongSelf.context.peerChannelMemberCategoriesContextsManager.recent(engine: strongSelf.context.engine, postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, accountPeerId: context.account.peerId, peerId: peerView.peerId, updated: { _ in })
+                                let (adminsDisposable, _) = strongSelf.context.peerChannelMemberCategoriesContextsManager.admins(engine: strongSelf.context.engine, postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, accountPeerId: context.account.peerId, peerId: peerView.peerId, updated: { _ in })
+                                let disposable = DisposableSet()
+                                disposable.add(recentDisposable)
+                                disposable.add(adminsDisposable)
+                                strongSelf.chatAdditionalDataDisposable.set(disposable)
+                            } else {
+                                strongSelf.chatAdditionalDataDisposable.set(nil)
+                            }
+                        }
+                        
+                        strongSelf.peerView = peerView
+                        strongSelf.threadInfo = messageAndTopic.threadData?.info
+                        
+                        if strongSelf.isNodeLoaded {
+                            strongSelf.chatDisplayNode.overlayTitle = strongSelf.overlayTitle
+                        }
+                        if case .standard(.previewing) = strongSelf.mode {
+                            (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.contextActionIsEnabled = false
+                        } else {
+                            (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.contextActionIsEnabled = true
+                        }
+                        
+                        var peerDiscussionId: PeerId?
+                        var peerGeoLocation: PeerGeoLocation?
+                        var currentSendAsPeerId: PeerId?
+                        if let peer = peerView.peers[peerView.peerId] as? TelegramChannel, let cachedData = peerView.cachedData as? CachedChannelData {
+                            if peer.isMonoForum {
+                                if let linkedMonoforumId = peer.linkedMonoforumId, let mainChannel = peerView.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.adminRights != nil {
+                                    currentSendAsPeerId = peer.linkedMonoforumId
+                                } else {
+                                    currentSendAsPeerId = nil
+                                }
+                            } else {
+                                currentSendAsPeerId = cachedData.sendAsPeerId
+                                if case .group = peer.info {
+                                    peerGeoLocation = cachedData.peerGeoLocation
+                                }
+                                if case let .known(value) = cachedData.linkedDiscussionPeerId {
+                                    peerDiscussionId = value
+                                }
+                            }
+                        }
+                        
+                        var isNotAccessible: Bool = false
+                        if let cachedChannelData = peerView.cachedData as? CachedChannelData {
+                            isNotAccessible = cachedChannelData.isNotAccessible
+                        }
+                        
+                        if firstTime && isNotAccessible {
+                            strongSelf.context.account.viewTracker.forceUpdateCachedPeerData(peerId: peerView.peerId)
+                        }
+                        
+                        var hasBots: Bool = false
+                        if let peer = peerView.peers[peerView.peerId] {
+                            if let cachedGroupData = peerView.cachedData as? CachedGroupData {
+                                if !cachedGroupData.botInfos.isEmpty {
+                                    hasBots = true
+                                }
+                            } else if let cachedChannelData = peerView.cachedData as? CachedChannelData, let channel = peer as? TelegramChannel, case .group = channel.info {
+                                if !cachedChannelData.botInfos.isEmpty {
+                                    hasBots = true
+                                }
+                            }
+                        }
+                        
+                        let isArchived: Bool = peerView.groupId == Namespaces.PeerGroup.archive
+                        
+                        var explicitelyCanPinMessages: Bool = false
+                        if let cachedUserData = peerView.cachedData as? CachedUserData {
+                            explicitelyCanPinMessages = cachedUserData.canPinMessages
+                        } else if peerView.peerId == context.account.peerId {
+                            explicitelyCanPinMessages = true
+                        }
+                        
+                        var animated = false
+                        if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramSecretChat, let updated = renderedPeer?.peer as? TelegramSecretChat, peer.embeddedState != updated.embeddedState {
+                            animated = true
+                        }
+                        if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, let updated = renderedPeer?.peer as? TelegramChannel {
+                            if peer.participationStatus != updated.participationStatus {
+                                animated = true
+                            }
+                        }
+                        
+                        var didDisplayActionsPanel = false
+                        if let contactStatus = strongSelf.presentationInterfaceState.contactStatus, !contactStatus.isEmpty, let peerStatusSettings = contactStatus.peerStatusSettings {
+                            if !peerStatusSettings.flags.isEmpty {
+                                if contactStatus.canAddContact && peerStatusSettings.contains(.canAddContact) {
+                                    didDisplayActionsPanel = true
+                                } else if peerStatusSettings.contains(.canReport) || peerStatusSettings.contains(.canBlock) {
+                                    didDisplayActionsPanel = true
+                                } else if peerStatusSettings.contains(.canShareContact) {
+                                    didDisplayActionsPanel = true
+                                } else if contactStatus.canReportIrrelevantLocation && peerStatusSettings.contains(.canReportIrrelevantGeoLocation) {
+                                    didDisplayActionsPanel = true
+                                } else if peerStatusSettings.contains(.suggestAddMembers) {
+                                    didDisplayActionsPanel = true
+                                }
+                            }
+                        }
+                        if let contactStatus = strongSelf.presentationInterfaceState.contactStatus, contactStatus.managingBot != nil {
+                            didDisplayActionsPanel = true
+                        }
+                        
+                        var displayActionsPanel = false
+                        if let contactStatus = contactStatus, !contactStatus.isEmpty, let peerStatusSettings = contactStatus.peerStatusSettings {
+                            if !peerStatusSettings.flags.isEmpty {
+                                if contactStatus.canAddContact && peerStatusSettings.contains(.canAddContact) {
+                                    displayActionsPanel = true
+                                } else if peerStatusSettings.contains(.canReport) || peerStatusSettings.contains(.canBlock) {
+                                    displayActionsPanel = true
+                                } else if peerStatusSettings.contains(.canShareContact) {
+                                    displayActionsPanel = true
+                                } else if contactStatus.canReportIrrelevantLocation && peerStatusSettings.contains(.canReportIrrelevantGeoLocation) {
+                                    displayActionsPanel = true
+                                } else if peerStatusSettings.contains(.suggestAddMembers) {
+                                    displayActionsPanel = true
+                                }
+                            }
+                        }
+                        if let contactStatus, contactStatus.managingBot != nil {
+                            displayActionsPanel = true
+                        }
+                        
+                        if displayActionsPanel != didDisplayActionsPanel {
+                            animated = true
+                        }
+                        
+                        if strongSelf.preloadHistoryPeerId != peerDiscussionId {
+                            strongSelf.preloadHistoryPeerId = peerDiscussionId
+                            if let peerDiscussionId = peerDiscussionId {
+                                strongSelf.preloadHistoryPeerIdDisposable.set(strongSelf.context.account.addAdditionalPreloadHistoryPeerId(peerId: peerDiscussionId))
+                            } else {
+                                strongSelf.preloadHistoryPeerIdDisposable.set(nil)
+                            }
+                        }
+                        
+                        var appliedBoosts: Int32?
+                        var boostsToUnrestrict: Int32?
+                        if let cachedChannelData = peerView.cachedData as? CachedChannelData {
+                            appliedBoosts = cachedChannelData.appliedBoosts
+                            boostsToUnrestrict = cachedChannelData.boostsToUnrestrict
+                        }
+                        
+                        if strongSelf.premiumOrStarsRequiredDisposable == nil, sendPaidMessageStars != nil, let peerId = strongSelf.chatLocation.peerId {
+                            strongSelf.premiumOrStarsRequiredDisposable = ((strongSelf.context.engine.peers.isPremiumRequiredToContact([peerId]) |> then(.complete() |> suspendAwareDelay(60.0, queue: Queue.concurrentDefaultQueue()))) |> restart).startStandalone()
+                        }
+                        
+                        strongSelf.updateChatPresentationInterfaceState(animated: animated, interactive: false, {
+                            return $0.updatedPeer { _ in
+                                return renderedPeer
+                            }.updatedIsNotAccessible(isNotAccessible).updatedContactStatus(contactStatus).updatedHasBots(hasBots).updatedIsArchived(isArchived).updatedPeerIsMuted(peerIsMuted).updatedPeerDiscussionId(peerDiscussionId).updatedPeerGeoLocation(peerGeoLocation).updatedExplicitelyCanPinMessages(explicitelyCanPinMessages).updatedHasScheduledMessages(hasScheduledMessages).updatedCurrentSendAsPeerId(currentSendAsPeerId)
+                                .updatedCopyProtectionEnabled(copyProtectionEnabled)
+                                .updatedHasSearchTags(hasSearchTags)
+                                .updatedIsPremiumRequiredForMessaging(isPremiumRequiredForMessaging)
+                                .updatedHasSavedChats(hasSavedChats)
+                                .updatedAppliedBoosts(appliedBoosts)
+                                .updatedBoostsToUnrestrict(boostsToUnrestrict)
+                                .updatedBusinessIntro(businessIntro)
+                                .updatedSendPaidMessageStars(sendPaidMessageStars)
+                                .updatedAlwaysShowGiftButton(alwaysShowGiftButton)
+                                .updatedDisallowedGifts(disallowedGifts)
+                                .updatedInterfaceState { interfaceState in
+                                    var interfaceState = interfaceState
+                                    
+                                    if let channel = renderedPeer?.peer as? TelegramChannel {
+                                        if channel.hasBannedPermission(.banSendVoice) != nil && channel.hasBannedPermission(.banSendInstantVideos) != nil {
+                                            interfaceState = interfaceState.withUpdatedMediaRecordingMode(.audio)
+                                        } else if channel.hasBannedPermission(.banSendVoice) != nil {
+                                            if channel.hasBannedPermission(.banSendInstantVideos) == nil {
+                                                interfaceState = interfaceState.withUpdatedMediaRecordingMode(.video)
+                                            }
+                                        } else if channel.hasBannedPermission(.banSendInstantVideos) != nil {
+                                            if channel.hasBannedPermission(.banSendVoice) == nil {
+                                                interfaceState = interfaceState.withUpdatedMediaRecordingMode(.audio)
+                                            }
+                                        }
+                                    } else if let group = renderedPeer?.peer as? TelegramGroup {
+                                        if group.hasBannedPermission(.banSendVoice) && group.hasBannedPermission(.banSendInstantVideos) {
+                                            interfaceState = interfaceState.withUpdatedMediaRecordingMode(.audio)
+                                        } else if group.hasBannedPermission(.banSendVoice) {
+                                            if !group.hasBannedPermission(.banSendInstantVideos) {
+                                                interfaceState = interfaceState.withUpdatedMediaRecordingMode(.video)
+                                            }
+                                        } else if group.hasBannedPermission(.banSendInstantVideos) {
+                                            if !group.hasBannedPermission(.banSendVoice) {
+                                                interfaceState = interfaceState.withUpdatedMediaRecordingMode(.audio)
+                                            }
+                                        }
+                                    }
+                                    
+                                    return interfaceState
+                                }
+                        })
+                        
+                        if let replyThreadId, let channel = renderedPeer?.peer as? TelegramChannel, channel.isForumOrMonoForum, strongSelf.nextChannelToReadDisposable == nil {
+                            strongSelf.nextChannelToReadDisposable = (combineLatest(queue: .mainQueue(),
+                            strongSelf.context.engine.peers.getNextUnreadForumTopic(peerId: channel.id, topicId: Int32(clamping: replyThreadId)),
+                                ApplicationSpecificNotice.getNextChatSuggestionTip(accountManager: strongSelf.context.sharedContext.accountManager)
+                            )
+                            |> then(.complete() |> delay(1.0, queue: .mainQueue()))
+                            |> restart).startStrict(next: { nextThreadData, nextChatSuggestionTip in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+
+                                strongSelf.offerNextChannelToRead = true
+                                strongSelf.chatDisplayNode.historyNode.nextChannelToRead = nextThreadData.flatMap { nextThreadData -> (peer: EnginePeer, threadData: (id: Int64, data: MessageHistoryThreadData)?, unreadCount: Int, location: TelegramEngine.NextUnreadChannelLocation) in
+                                    return (peer: EnginePeer(channel), threadData: nextThreadData, unreadCount: Int(nextThreadData.data.incomingUnreadCount), location: .same)
+                                }
+                                strongSelf.chatDisplayNode.historyNode.nextChannelToReadDisplayName = nextChatSuggestionTip >= 3
+                                
+                                strongSelf.updateNextChannelToReadVisibility()
+                            })
+                        }
+                    }
+                    if !strongSelf.didSetChatLocationInfoReady {
+                        strongSelf.didSetChatLocationInfoReady = true
+                        strongSelf._chatLocationInfoReady.set(.single(true))
+                    }
+                }
+            }))
+        } else if case .customChatContents = self.chatLocationInfoData {
+            self.reportIrrelvantGeoNoticePromise.set(.single(nil))
+            self.titleDisposable.set(nil)
+            
+            let peerView: Signal<PeerView?, NoError> = .single(nil)
+            
+            if case let .customChatContents(customChatContents) = self.subject {
+                switch customChatContents.kind {
+                case .hashTagSearch:
+                    break
+                case let .quickReplyMessageInput(shortcut, shortcutType):
+                    switch shortcutType {
+                    case .generic:
+                        self.chatTitleView?.titleContent = .custom("\(shortcut)", nil, false)
+                    case .greeting:
+                        self.chatTitleView?.titleContent = .custom(self.presentationData.strings.QuickReply_TitleGreetingMessage, nil, false)
+                    case .away:
+                        self.chatTitleView?.titleContent = .custom(self.presentationData.strings.QuickReply_TitleAwayMessage, nil, false)
+                    }
+                case let .businessLinkSetup(link):
+                    let linkUrl: String
+                    if link.url.hasPrefix("https://") {
+                        linkUrl = String(link.url[link.url.index(link.url.startIndex, offsetBy: "https://".count)...])
+                    } else {
+                        linkUrl = link.url
+                    }
+                    
+                    self.chatTitleView?.titleContent = .custom(link.title ?? self.presentationData.strings.Business_Links_EditLinkTitle, linkUrl, false)
+                }
+            } else {
+                self.chatTitleView?.titleContent = .custom(" ", nil, false)
+            }
+            
+            var isFirstTimeValue = true
+            self.peerDisposable.set((peerView
+            |> deliverOnMainQueue).startStrict(next: { [weak self] peerView in
                 guard let self else {
                     return
                 }
-                if case .empty = state {
-                    if self.chatLocation.peerId == self.context.account.peerId {
-                        if self.chatDisplayNode.historyNode.tag != nil {
-                            self.updateChatPresentationInterfaceState(animated: true, interactive: false, { state in
-                                return state.updatedSearch(nil).updatedHistoryFilter(nil)
-                            })
-                        } else if case .replyThread = self.chatLocation {
-                            self.dismiss()
-                        }
-                    } else {
-                        self.dismiss()
+                
+                let isFirstTime = isFirstTimeValue
+                isFirstTimeValue = false
+                    
+                var renderedPeer: RenderedPeer?
+                if let peerView, let peer = peerView.peers[peerView.peerId] {
+                    var peers = SimpleDictionary<PeerId, Peer>()
+                    peers[peer.id] = peer
+                    if let associatedPeerId = peer.associatedPeerId, let associatedPeer = peerView.peers[associatedPeerId] {
+                        peers[associatedPeer.id] = associatedPeer
                     }
+                    renderedPeer = RenderedPeer(peerId: peer.id, peers: peers, associatedMedia: peerView.media)
+                    
+                    (self.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.setPeer(context: self.context, theme: self.presentationData.theme, peer: EnginePeer(peer), overrideImage: nil, synchronousLoad: isFirstTime)
                 }
-            })
-        }
-        
-        self.chatDisplayNode.overlayTitle = self.overlayTitle
-        
-        let currentAccountPeer = self.context.account.postbox.loadedPeerWithId(self.context.account.peerId)
-        |> map { peer in
-            return SendAsPeer(peer: peer, subscribers: nil, isPremiumRequired: false)
-        }
-        
-        if let peerId = self.chatLocation.peerId, [Namespaces.Peer.CloudChannel, Namespaces.Peer.CloudGroup].contains(peerId.namespace) {
-            self.sendAsPeersDisposable = (combineLatest(
-                queue: Queue.mainQueue(),
-                currentAccountPeer,
-                self.context.account.postbox.peerView(id: peerId),
-                self.context.engine.peers.sendAsAvailablePeers(peerId: peerId))
-            ).startStrict(next: { [weak self] currentAccountPeer, peerView, peers in
-                guard let strongSelf = self else {
-                    return
+            
+                self.peerView = peerView
+                
+                if self.isNodeLoaded {
+                    self.chatDisplayNode.overlayTitle = self.overlayTitle
                 }
+                (self.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.contextActionIsEnabled = false
                 
-                let isPremium = strongSelf.presentationInterfaceState.isPremium
-                
-                var allPeers: [SendAsPeer]?
-                if !peers.isEmpty {
-                    if let channel = peerViewMainPeer(peerView) as? TelegramChannel, case .group = channel.info, channel.hasPermission(.canBeAnonymous) {
-                        allPeers = peers
-                        
-                        var hasAnonymousPeer = false
-                        for peer in peers {
-                            if peer.peer.id == channel.id {
-                                hasAnonymousPeer = true
-                                break
-                            }
-                        }
-                        if !hasAnonymousPeer {
-                            allPeers?.insert(SendAsPeer(peer: channel, subscribers: 0, isPremiumRequired: false), at: 0)
-                        }
-                    } else if let channel = peerViewMainPeer(peerView) as? TelegramChannel, case let .broadcast(info) = channel.info, (info.flags.contains(.messagesShouldHaveSignatures) || info.flags.contains(.messagesShouldHaveProfiles)) {
-                        allPeers = peers
-                        
-                        var hasAnonymousPeer = false
-                        var hasSelfPeer = false
-                        for peer in peers {
-                            if peer.peer.id == channel.id {
-                                hasAnonymousPeer = true
-                            } else if peer.peer.id == strongSelf.context.account.peerId {
-                                hasSelfPeer = true
-                            }
-                        }
-                        if !hasSelfPeer {
-                            allPeers?.insert(currentAccountPeer, at: 0)
-                        }
-                        if !hasAnonymousPeer {
-                            allPeers?.insert(SendAsPeer(peer: channel, subscribers: 0, isPremiumRequired: false), at: 0)
-                        }
-                    } else {
-                        allPeers = peers.filter { $0.peer.id != peerViewMainPeer(peerView)?.id }
-                        allPeers?.insert(currentAccountPeer, at: 0)
+                self.updateChatPresentationInterfaceState(animated: false, interactive: false, {
+                    return $0.updatedPeer { _ in
+                        return renderedPeer
+                    }.updatedInterfaceState { interfaceState in
+                        return interfaceState
                     }
-                }
-                if allPeers?.count == 1 {
-                    allPeers = nil
-                }
-                
-                var currentSendAsPeerId = strongSelf.presentationInterfaceState.currentSendAsPeerId
-                if let peerId = currentSendAsPeerId, let peer = allPeers?.first(where: { $0.peer.id == peerId }) {
-                    if !isPremium && peer.isPremiumRequired {
-                        currentSendAsPeerId = nil
-                    }
-                } else {
-                    currentSendAsPeerId = nil
-                }
-                
-                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                    return $0.updatedSendAsPeers(allPeers).updatedCurrentSendAsPeerId(currentSendAsPeerId)
                 })
-            })
+                
+                if !self.didSetChatLocationInfoReady {
+                    self.didSetChatLocationInfoReady = true
+                    self._chatLocationInfoReady.set(.single(true))
+                }
+            }))
         }
-        
+    }
+    
+    func reloadCachedData() {
         let initialData = self.chatDisplayNode.historyNode.initialData
         |> take(1)
         |> beforeNext { [weak self] combinedInitialData in
@@ -428,7 +1869,7 @@ extension ChatControllerImpl {
                 }
                 
                 if case let .replyThread(replyThreadMessageId) = strongSelf.chatLocation {
-                    if let channel = combinedInitialData.initialData?.peer as? TelegramChannel, channel.flags.contains(.isForum) {
+                    if let channel = combinedInitialData.initialData?.peer as? TelegramChannel, channel.isForumOrMonoForum {
                         pinnedMessageId = nil
                     } else {
                         pinnedMessageId = replyThreadMessageId.effectiveTopId
@@ -527,6 +1968,43 @@ extension ChatControllerImpl {
             }
         }
         
+        let effectiveCachedDataReady: Signal<Bool, NoError>
+        if case .replyThread = self.chatLocation {
+            effectiveCachedDataReady = self.cachedDataReady.get()
+        } else {
+            effectiveCachedDataReady = self.cachedDataReady.get()
+        }
+        var measure_isFirstTime = true
+        let initTimestamp = self.initTimestamp
+        
+        let mapped_chatLocationInfoReady = self._chatLocationInfoReady.get() |> filter { $0 } |> debug_measureTimeToFirstEvent(label: "chatLocationInfoReady")
+        let mapped_effectiveCachedDataReady = effectiveCachedDataReady |> filter { $0 } |> debug_measureTimeToFirstEvent(label: "effectiveCachedDataReady")
+        let mapped_initialDataReady = initialData |> map { $0 != nil } |> filter { $0 } |> debug_measureTimeToFirstEvent(label: "initialDataReady")
+        let mapped_wallpaperReady = self.wallpaperReady.get() |> filter { $0 } |> debug_measureTimeToFirstEvent(label: "wallpaperReady")
+        let mapped_presentationReady = self.presentationReady.get() |> filter { $0 } |> debug_measureTimeToFirstEvent(label: "presentationReady")
+        
+        self.ready.set(combineLatest(queue: .mainQueue(),
+            mapped_chatLocationInfoReady,
+            mapped_effectiveCachedDataReady,
+            mapped_initialDataReady,
+            mapped_wallpaperReady,
+            mapped_presentationReady
+        )
+        |> map { chatLocationInfoReady, cachedDataReady, initialData, wallpaperReady, presentationReady in
+            return chatLocationInfoReady && cachedDataReady && initialData && wallpaperReady && presentationReady
+        }
+        |> distinctUntilChanged
+        |> beforeNext { value in
+            if measure_isFirstTime {
+                measure_isFirstTime = false
+                #if DEBUG
+                let deltaTime = (CFAbsoluteTimeGetCurrent() - initTimestamp) * 1000.0
+                print("Chat controller init to ready: \(deltaTime) ms")
+                #endif
+            }
+        })
+        
+        self.buttonKeyboardMessageDisposable?.dispose()
         self.buttonKeyboardMessageDisposable = self.chatDisplayNode.historyNode.buttonKeyboardMessage.startStrict(next: { [weak self] message in
             if let strongSelf = self {
                 var buttonKeyboardMessageUpdated = false
@@ -542,49 +2020,6 @@ extension ChatControllerImpl {
                 }
             }
         })
-        
-        let hasPendingMessages: Signal<Bool, NoError>
-        let chatLocationPeerId = self.chatLocation.peerId
-        
-        if let chatLocationPeerId = chatLocationPeerId {
-            hasPendingMessages = self.context.account.pendingMessageManager.hasPendingMessages
-            |> mapToSignal { peerIds -> Signal<Bool, NoError> in
-                let value = peerIds.contains(chatLocationPeerId)
-                if value {
-                    return .single(true)
-                } else {
-                    return .single(false)
-                }
-            }
-            |> distinctUntilChanged
-        } else {
-            hasPendingMessages = .single(false)
-        }
-        
-        let isTopReplyThreadMessageShown: Signal<Bool, NoError> = self.chatDisplayNode.historyNode.isTopReplyThreadMessageShown.get()
-        |> distinctUntilChanged
-        
-        let topPinnedMessage: Signal<ChatPinnedMessage?, NoError>
-        if let subject = self.subject {
-            switch subject {
-            case .messageOptions, .pinnedMessages, .scheduledMessages:
-                topPinnedMessage = .single(nil)
-            default:
-                topPinnedMessage = self.topPinnedMessageSignal(latest: false)
-            }
-        } else {
-            topPinnedMessage = self.topPinnedMessageSignal(latest: false)
-        }
-        
-        if let peerId = self.chatLocation.peerId {
-            self.chatThemeEmoticonPromise.set(self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.ThemeEmoticon(id: peerId)))
-            let chatWallpaper = self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Wallpaper(id: peerId))
-            |> take(1)
-            self.chatWallpaperPromise.set(chatWallpaper)
-        } else {
-            self.chatThemeEmoticonPromise.set(.single(nil))
-            self.chatWallpaperPromise.set(.single(nil))
-        }
         
         if let peerId = self.chatLocation.peerId {
             let customEmojiAvailable: Signal<Bool, NoError> = self.context.engine.data.subscribe(
@@ -602,7 +2037,7 @@ extension ChatControllerImpl {
             let isForum = self.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
             |> map { peer -> Bool in
                 if case let .channel(channel) = peer {
-                    return channel.flags.contains(.isForum)
+                    return channel.isForumOrMonoForum
                 } else {
                     return false
                 }
@@ -652,6 +2087,7 @@ extension ChatControllerImpl {
             if case .standard(.previewing) = self.presentationInterfaceState.mode {
                 
             } else if peerId.namespace != Namespaces.Peer.SecretChat && peerId != context.account.peerId && self.subject != .scheduledMessages {
+                self.premiumGiftSuggestionDisposable?.dispose()
                 self.premiumGiftSuggestionDisposable = (ApplicationSpecificNotice.dismissedPremiumGiftSuggestion(accountManager: self.context.sharedContext.accountManager, peerId: peerId)
                 |> deliverOnMainQueue).startStrict(next: { [weak self] timestamp in
                     if let strongSelf = self {
@@ -681,6 +2117,7 @@ extension ChatControllerImpl {
                 let hasAutoTranslate = self.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.AutoTranslateEnabled(id: peerId))
                 |> distinctUntilChanged
                 
+                self.translationStateDisposable?.dispose()
                 let chatLocation = self.chatLocation
                 self.translationStateDisposable = (combineLatest(
                     queue: .concurrentDefaultQueue(),
@@ -724,6 +2161,40 @@ extension ChatControllerImpl {
                 }
             )
             
+            let isTopReplyThreadMessageShown: Signal<Bool, NoError> = self.chatDisplayNode.historyNode.isTopReplyThreadMessageShown.get()
+            |> distinctUntilChanged
+            
+            let hasPendingMessages: Signal<Bool, NoError>
+            let chatLocationPeerId = self.chatLocation.peerId
+            
+            if let chatLocationPeerId = chatLocationPeerId {
+                hasPendingMessages = self.context.account.pendingMessageManager.hasPendingMessages
+                |> mapToSignal { peerIds -> Signal<Bool, NoError> in
+                    let value = peerIds.contains(chatLocationPeerId)
+                    if value {
+                        return .single(true)
+                    } else {
+                        return .single(false)
+                    }
+                }
+                |> distinctUntilChanged
+            } else {
+                hasPendingMessages = .single(false)
+            }
+            
+            let topPinnedMessage: Signal<ChatPinnedMessage?, NoError>
+            if let subject = self.subject {
+                switch subject {
+                case .messageOptions, .pinnedMessages, .scheduledMessages:
+                    topPinnedMessage = .single(nil)
+                default:
+                    topPinnedMessage = self.topPinnedMessageSignal(latest: false)
+                }
+            } else {
+                topPinnedMessage = self.topPinnedMessageSignal(latest: false)
+            }
+            
+            self.cachedDataDisposable?.dispose()
             self.cachedDataDisposable = combineLatest(queue: .mainQueue(), self.chatDisplayNode.historyNode.cachedPeerDataAndMessages |> debug_measureTimeToFirstEvent(label: "cachedData_cachedPeerDataAndMessages"),
                 hasPendingMessages |> debug_measureTimeToFirstEvent(label: "cachedData_hasPendingMessages"),
                 isTopReplyThreadMessageShown |> debug_measureTimeToFirstEvent(label: "cachedData_isTopReplyThreadMessageShown"),
@@ -977,6 +2448,194 @@ extension ChatControllerImpl {
                 self.cachedDataReady.set(.single(true))
             }
         }
+    }
+    
+    func loadDisplayNodeImpl() {
+        if #available(iOS 18.0, *) {
+            if self.context.sharedContext.immediateExperimentalUISettings.enableLocalTranslation {
+                if engineExperimentalInternalTranslationService == nil, let hostView = self.context.sharedContext.mainWindow?.hostView {
+                    let translationService = ExperimentalInternalTranslationServiceImpl(view: hostView.containerView)
+                    engineExperimentalInternalTranslationService = translationService
+                }
+            } else {
+                if engineExperimentalInternalTranslationService != nil {
+                    engineExperimentalInternalTranslationService = nil
+                }
+            }
+        }
+        
+        self.displayNode = ChatControllerNode(context: self.context, chatLocation: self.chatLocation, chatLocationContextHolder: self.chatLocationContextHolder, subject: self.subject, controllerInteraction: self.controllerInteraction!, chatPresentationInterfaceState: self.presentationInterfaceState, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, navigationBar: self.navigationBar, statusBar: self.statusBar, backgroundNode: self.chatBackgroundNode, controller: self)
+        
+        if let currentItem = self.tempVoicePlaylistCurrentItem {
+            self.chatDisplayNode.historyNode.voicePlaylistItemChanged(nil, currentItem)
+        }
+        
+        if case .peer(self.context.account.peerId) = self.chatLocation {
+            var didDisplayTooltip = false
+            if "".isEmpty {
+                didDisplayTooltip = true
+            }
+            self.chatDisplayNode.historyNode.hasLotsOfMessagesUpdated = { [weak self] hasLotsOfMessages in
+                guard let self, hasLotsOfMessages else {
+                    return
+                }
+                if didDisplayTooltip {
+                    return
+                }
+                didDisplayTooltip = true
+                
+                let _ = (ApplicationSpecificNotice.getSavedMessagesChatsSuggestion(accountManager: self.context.sharedContext.accountManager)
+                |> deliverOnMainQueue).startStandalone(next: { [weak self] counter in
+                    guard let self else {
+                        return
+                    }
+                    if counter >= 3 {
+                        return
+                    }
+                    guard let navigationBar = self.navigationBar else {
+                        return
+                    }
+                    
+                    let tooltipScreen = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: self.presentationData.strings.Chat_SavedMessagesChatsTooltip), location: .point(navigationBar.frame, .top), displayDuration: .manual, shouldDismissOnTouch: { point, _ in
+                        return .ignore
+                    })
+                    self.present(tooltipScreen, in: .current)
+                    
+                    let _ = ApplicationSpecificNotice.incrementSavedMessagesChatsSuggestion(accountManager: self.context.sharedContext.accountManager).startStandalone()
+                })
+            }
+        }
+
+        self.chatDisplayNode.historyNode.addContentOffset = { [weak self] offset, itemNode in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.chatDisplayNode.messageTransitionNode.addContentOffset(offset: offset, itemNode: itemNode)
+        }
+        
+        var closeOnEmpty = false
+        if case .pinnedMessages = self.presentationInterfaceState.subject {
+            closeOnEmpty = true
+        } else if self.chatLocation.peerId == self.context.account.peerId {
+            if let data = self.context.currentAppConfiguration.with({ $0 }).data, let _ = data["ios_killswitch_disable_close_empty_saved"] {
+            } else {
+                closeOnEmpty = true
+            }
+        }
+        
+        if closeOnEmpty {
+            self.chatDisplayNode.historyNode.addSetLoadStateUpdated({ [weak self] state, _ in
+                guard let self else {
+                    return
+                }
+                if case .empty = state {
+                    if self.chatLocation.peerId == self.context.account.peerId {
+                        if self.chatDisplayNode.historyNode.tag != nil {
+                            self.updateChatPresentationInterfaceState(animated: true, interactive: false, { state in
+                                return state.updatedSearch(nil).updatedHistoryFilter(nil)
+                            })
+                        } else if case .replyThread = self.chatLocation {
+                            self.dismiss()
+                        }
+                    } else {
+                        self.dismiss()
+                    }
+                }
+            })
+        }
+        
+        self.chatDisplayNode.overlayTitle = self.overlayTitle
+        
+        let currentAccountPeer = self.context.account.postbox.loadedPeerWithId(self.context.account.peerId)
+        |> map { peer in
+            return SendAsPeer(peer: peer, subscribers: nil, isPremiumRequired: false)
+        }
+        
+        if let peerId = self.chatLocation.peerId, [Namespaces.Peer.CloudChannel, Namespaces.Peer.CloudGroup].contains(peerId.namespace) {
+            self.sendAsPeersDisposable = (combineLatest(
+                queue: Queue.mainQueue(),
+                currentAccountPeer,
+                self.context.account.postbox.peerView(id: peerId),
+                self.context.engine.peers.sendAsAvailablePeers(peerId: peerId))
+            ).startStrict(next: { [weak self] currentAccountPeer, peerView, peers in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                if let channel = peerViewMainPeer(peerView) as? TelegramChannel, channel.isMonoForum {
+                    return
+                }
+                
+                let isPremium = strongSelf.presentationInterfaceState.isPremium
+                
+                var allPeers: [SendAsPeer]?
+                if !peers.isEmpty {
+                    if let channel = peerViewMainPeer(peerView) as? TelegramChannel, case .group = channel.info, channel.hasPermission(.canBeAnonymous) {
+                        allPeers = peers
+                        
+                        var hasAnonymousPeer = false
+                        for peer in peers {
+                            if peer.peer.id == channel.id {
+                                hasAnonymousPeer = true
+                                break
+                            }
+                        }
+                        if !hasAnonymousPeer {
+                            allPeers?.insert(SendAsPeer(peer: channel, subscribers: 0, isPremiumRequired: false), at: 0)
+                        }
+                    } else if let channel = peerViewMainPeer(peerView) as? TelegramChannel, case let .broadcast(info) = channel.info, (info.flags.contains(.messagesShouldHaveSignatures) || info.flags.contains(.messagesShouldHaveProfiles)) {
+                        allPeers = peers
+                        
+                        var hasAnonymousPeer = false
+                        var hasSelfPeer = false
+                        for peer in peers {
+                            if peer.peer.id == channel.id {
+                                hasAnonymousPeer = true
+                            } else if peer.peer.id == strongSelf.context.account.peerId {
+                                hasSelfPeer = true
+                            }
+                        }
+                        if !hasSelfPeer {
+                            allPeers?.insert(currentAccountPeer, at: 0)
+                        }
+                        if !hasAnonymousPeer {
+                            allPeers?.insert(SendAsPeer(peer: channel, subscribers: 0, isPremiumRequired: false), at: 0)
+                        }
+                    } else {
+                        allPeers = peers.filter { $0.peer.id != peerViewMainPeer(peerView)?.id }
+                        allPeers?.insert(currentAccountPeer, at: 0)
+                    }
+                }
+                if allPeers?.count == 1 {
+                    allPeers = nil
+                }
+                
+                var currentSendAsPeerId = strongSelf.presentationInterfaceState.currentSendAsPeerId
+                if let peerId = currentSendAsPeerId, let peer = allPeers?.first(where: { $0.peer.id == peerId }) {
+                    if !isPremium && peer.isPremiumRequired {
+                        currentSendAsPeerId = nil
+                    }
+                } else {
+                    currentSendAsPeerId = nil
+                }
+                
+                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                    return $0.updatedSendAsPeers(allPeers).updatedCurrentSendAsPeerId(currentSendAsPeerId)
+                })
+            })
+        }
+        
+        if let peerId = self.chatLocation.peerId {
+            self.chatThemeEmoticonPromise.set(self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.ThemeEmoticon(id: peerId)))
+            let chatWallpaper = self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Wallpaper(id: peerId))
+            |> take(1)
+            self.chatWallpaperPromise.set(chatWallpaper)
+        } else {
+            self.chatThemeEmoticonPromise.set(.single(nil))
+            self.chatWallpaperPromise.set(.single(nil))
+        }
+        
+        self.reloadCachedData()
         
         self.historyStateDisposable = self.chatDisplayNode.historyNode.historyState.get().startStrict(next: { [weak self] state in
             if let strongSelf = self {
@@ -993,45 +2652,6 @@ extension ChatControllerImpl {
             }
         })
         
-        let effectiveCachedDataReady: Signal<Bool, NoError>
-        if case .replyThread = self.chatLocation {
-            effectiveCachedDataReady = self.cachedDataReady.get()
-        } else {
-            effectiveCachedDataReady = self.cachedDataReady.get()
-        }
-        var measure_isFirstTime = true
-        let initTimestamp = self.initTimestamp
-        
-        let mapped_chatLocationInfoReady = self._chatLocationInfoReady.get() |> filter { $0 } |> debug_measureTimeToFirstEvent(label: "chatLocationInfoReady")
-        let mapped_effectiveCachedDataReady = effectiveCachedDataReady |> filter { $0 } |> debug_measureTimeToFirstEvent(label: "effectiveCachedDataReady")
-        let mapped_initialDataReady = initialData |> map { $0 != nil } |> filter { $0 } |> debug_measureTimeToFirstEvent(label: "initialDataReady")
-        let mapped_wallpaperReady = self.wallpaperReady.get() |> filter { $0 } |> debug_measureTimeToFirstEvent(label: "wallpaperReady")
-        let mapped_presentationReady = self.presentationReady.get() |> filter { $0 } |> debug_measureTimeToFirstEvent(label: "presentationReady")
-        
-        self.ready.set(combineLatest(queue: .mainQueue(),
-            mapped_chatLocationInfoReady,
-            mapped_effectiveCachedDataReady,
-            mapped_initialDataReady,
-            mapped_wallpaperReady,
-            mapped_presentationReady
-        )
-        |> map { chatLocationInfoReady, cachedDataReady, initialData, wallpaperReady, presentationReady in
-            return chatLocationInfoReady && cachedDataReady && initialData && wallpaperReady && presentationReady
-        }
-        |> distinctUntilChanged
-        |> beforeNext { value in
-            if measure_isFirstTime {
-                measure_isFirstTime = false
-                #if DEBUG
-                let deltaTime = (CFAbsoluteTimeGetCurrent() - initTimestamp) * 1000.0
-                print("Chat controller init to ready: \(deltaTime) ms")
-                #endif
-            }
-        })
-        #if DEBUG
-        //self.ready.set(.single(true))
-        #endif
-        
         if self.context.sharedContext.immediateExperimentalUISettings.crashOnLongQueries {
             let _ = (self.ready.get()
             |> filter({ $0 })
@@ -1041,129 +2661,7 @@ extension ChatControllerImpl {
             })).startStandalone()
         }
         
-        self.chatDisplayNode.historyNode.contentPositionChanged = { [weak self] offset in
-            guard let strongSelf = self else { return }
-
-            var minOffsetForNavigation: CGFloat = 40.0
-            strongSelf.chatDisplayNode.historyNode.enumerateItemNodes { itemNode in
-                if let itemNode = itemNode as? ChatMessageBubbleItemNode {
-                    if let message = itemNode.item?.content.firstMessage, let adAttribute = message.adAttribute {
-                        minOffsetForNavigation += itemNode.bounds.height
-
-                        switch offset {
-                        case let .known(offset):
-                            if offset <= 50.0 {
-                                strongSelf.chatDisplayNode.historyNode.markAdAsSeen(opaqueId: adAttribute.opaqueId)
-                            }
-                        default:
-                            break
-                        }
-                    }
-                }
-                return false
-            }
-            
-            let offsetAlpha: CGFloat
-            let plainInputSeparatorAlpha: CGFloat
-            switch offset {
-                case let .known(offset):
-                    if offset < minOffsetForNavigation {
-                        offsetAlpha = 0.0
-                    } else {
-                        offsetAlpha = 1.0
-                    }
-                    if offset < 4.0 {
-                        plainInputSeparatorAlpha = 0.0
-                    } else {
-                        plainInputSeparatorAlpha = 1.0
-                    }
-                case .unknown:
-                    offsetAlpha = 1.0
-                    plainInputSeparatorAlpha = 1.0
-                case .none:
-                    offsetAlpha = 0.0
-                    plainInputSeparatorAlpha = 0.0
-            }
-            
-            strongSelf.shouldDisplayDownButton = !offsetAlpha.isZero
-            strongSelf.controllerInteraction?.recommendedChannelsOpenUp = !strongSelf.shouldDisplayDownButton
-            strongSelf.updateDownButtonVisibility()
-            strongSelf.chatDisplayNode.updatePlainInputSeparatorAlpha(plainInputSeparatorAlpha, transition: .animated(duration: 0.2, curve: .easeInOut))
-        }
-        
-        self.chatDisplayNode.historyNode.scrolledToIndex = { [weak self] toSubject, initial in
-            if let strongSelf = self, case let .message(index) = toSubject.index {
-                if case let .message(messageSubject, _, _, _) = strongSelf.subject, initial, case let .id(messageId) = messageSubject, messageId != index.id {
-                    if messageId.peerId == index.id.peerId {
-                        strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(title: nil, text: strongSelf.presentationData.strings.Conversation_MessageDoesntExist, timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return true }), in: .current)
-                    }
-                } else if let controllerInteraction = strongSelf.controllerInteraction {
-                    var mappedId = index.id
-                    if index.timestamp == 0 {
-                        if case let .replyThread(message) = strongSelf.chatLocation, let channelMessageId = message.channelMessageId {
-                            mappedId = channelMessageId
-                        }
-                    }
-                    
-                    if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(mappedId) {
-                        if toSubject.setupReply {
-                            Queue.mainQueue().after(0.1) {
-                                strongSelf.interfaceInteraction?.setupReplyMessage(mappedId, { _, f in f() })
-                            }
-                        }
-                        
-                        let highlightedState = ChatInterfaceHighlightedState(messageStableId: message.stableId, quote: toSubject.quote.flatMap { quote in ChatInterfaceHighlightedState.Quote(string: quote.string, offset: quote.offset) })
-                        controllerInteraction.highlightedState = highlightedState
-                        strongSelf.updateItemNodesHighlightedStates(animated: initial)
-                        strongSelf.scrolledToMessageIdValue = ScrolledToMessageId(id: mappedId, allowedReplacementDirection: [])
-                        
-                        var hasQuote = false
-                        if let quote = toSubject.quote {
-                            if message.text.contains(quote.string) {
-                                hasQuote = true
-                            } else {
-                                strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(title: nil, text: strongSelf.presentationData.strings.Chat_ToastQuoteNotFound, timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return true }), in: .current)
-                            }
-                        }
-                        
-                        strongSelf.messageContextDisposable.set((Signal<Void, NoError>.complete() |> delay(hasQuote ? 1.5 : 0.7, queue: Queue.mainQueue())).startStrict(completed: {
-                            if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
-                                if controllerInteraction.highlightedState == highlightedState {
-                                    controllerInteraction.highlightedState = nil
-                                    strongSelf.updateItemNodesHighlightedStates(animated: true)
-                                }
-                            }
-                        }))
-                        
-                        if let (messageId, params) = strongSelf.scheduledScrollToMessageId {
-                            strongSelf.scheduledScrollToMessageId = nil
-                            if let timecode = params.timestamp, message.id == messageId {
-                                Queue.mainQueue().after(0.2) {
-                                    let _ = strongSelf.controllerInteraction?.openMessage(message, OpenMessageParams(mode: .timecode(timecode)))
-                                }
-                            }
-                        } else if case let .message(_, _, maybeTimecode, _) = strongSelf.subject, let timecode = maybeTimecode, initial {
-                            Queue.mainQueue().after(0.2) {
-                                let _ = strongSelf.controllerInteraction?.openMessage(message, OpenMessageParams(mode: .timecode(timecode)))
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        self.chatDisplayNode.historyNode.scrolledToSomeIndex = { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.scrolledToMessageIdValue = nil
-        }
-        
-        self.chatDisplayNode.historyNode.maxVisibleMessageIndexUpdated = { [weak self] index in
-            if let strongSelf = self, !strongSelf.historyNavigationStack.isEmpty {
-                strongSelf.historyNavigationStack.filterOutIndicesLessThan(index)
-            }
-        }
+        self.setupChatHistoryNode()
         
         self.chatDisplayNode.requestLayout = { [weak self] transition in
             self?.requestLayout(transition: transition)
@@ -1425,46 +2923,6 @@ extension ChatControllerImpl {
                     }
                     
                     strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .succeed(text: strongSelf.presentationData.strings.Business_Links_EditLinkToastSaved, timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
-                case let .postSuggestions(postSuggestions):
-                    if let customChatContents = customChatContents as? PostSuggestionsChatContents {
-                        //TODO:release
-                        strongSelf.chatDisplayNode.dismissInput()
-                        
-                        let _ = (ChatSendStarsScreen.initialData(context: strongSelf.context, peerId: customChatContents.peerId, suggestMessageAmount: postSuggestions, completion: { [weak strongSelf] amount, timestamp in
-                            guard let strongSelf else {
-                                return
-                            }
-                            guard case let .customChatContents(customChatContents) = strongSelf.subject else {
-                                return
-                            }
-                            if amount == 0 {
-                                return
-                            }
-                            let messages = messages.map { message in
-                                return message.withUpdatedAttributes { attributes in
-                                    var attributes = attributes
-                                    attributes.removeAll(where: { $0 is OutgoingSuggestedPostMessageAttribute })
-                                    attributes.append(OutgoingSuggestedPostMessageAttribute(
-                                        price: StarsAmount(value: amount, nanos: 0),
-                                        timestamp: timestamp
-                                    ))
-                                    return attributes
-                                }
-                            }
-                            customChatContents.enqueueMessages(messages: messages)
-                            strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
-                        })
-                        |> deliverOnMainQueue).startStandalone(next: { [weak strongSelf] initialData in
-                            guard let strongSelf, let initialData else {
-                                return
-                            }
-                            let sendStarsScreen = ChatSendStarsScreen(
-                                context: strongSelf.context,
-                                initialData: initialData
-                            )
-                            strongSelf.push(sendStarsScreen)
-                        })
-                    }
                 }
             }
             strongSelf.updateChatPresentationInterfaceState(interactive: true, { $0.updatedShowCommands(false) })
@@ -4131,29 +5589,28 @@ extension ChatControllerImpl {
                 strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(title: nil, text: strongSelf.presentationData.strings.Conversation_GigagroupDescription, timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return true }), in: .current)
             }
         }, openSuggestPost: { [weak self] in
-            let _ = self
-             /*guard let self else {
+            guard let self else {
                 return
-             }
-             guard let peerId = self.chatLocation.peerId else {
+            }
+            guard let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel else {
                 return
-             }
-
-             let contents = PostSuggestionsChatContents(
-                context: self.context,
-                peerId: peerId
-            )
-            let chatController = self.context.sharedContext.makeChatController(
-                context: self.context,
-                chatLocation: .customChatContents,
-                subject: .customChatContents(contents: contents),
-                botStart: nil,
-                mode: .standard(.default),
-                params: nil
-            )
-            chatController.navigationPresentation = .modal
+            }
+            guard let monoforumPeerId = channel.linkedMonoforumId else {
+                return
+            }
             
-            self.push(chatController)*/
+            let _ = (self.context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: monoforumPeerId)
+            )
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] monoforumPeer in
+                guard let self, let monoforumPeer else {
+                    return
+                }
+                guard let navigationController = self.effectiveNavigationController else {
+                    return
+                }
+                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(monoforumPeer), keepStack: .always))
+            })
         }, editMessageMedia: { [weak self] messageId, draw in
             if let strongSelf = self {
                 strongSelf.controllerInteraction?.editMessageMedia(messageId, draw)
@@ -4590,6 +6047,58 @@ extension ChatControllerImpl {
             } else {
                 apply()
             }
+        }, updateChatLocationThread: { [weak self] threadId in
+            guard let self else {
+                return
+            }
+            guard let peerId = self.chatLocation.peerId else {
+                return
+            }
+            guard let peer = self.presentationInterfaceState.renderedPeer?.chatMainPeer else {
+                return
+            }
+            let updatedChatLocation: ChatLocation
+            if let threadId {
+                var isMonoforum = false
+                if let channel = peer as? TelegramChannel, channel.flags.contains(.isMonoforum) {
+                    isMonoforum = true
+                }
+                
+                updatedChatLocation = .replyThread(message: ChatReplyThreadMessage(
+                    peerId: peerId,
+                    threadId: threadId,
+                    channelMessageId: nil,
+                    isChannelPost: false,
+                    isForumPost: true,
+                    isMonoforumPost: isMonoforum,
+                    maxMessage: nil,
+                    maxReadIncomingMessageId: nil,
+                    maxReadOutgoingMessageId: nil,
+                    unreadCount: 0,
+                    initialFilledHoles: IndexSet(),
+                    initialAnchor: .automatic,
+                    isNotAvailable: false
+                ))
+            } else {
+                updatedChatLocation = .peer(id: peerId)
+            }
+            self.updateChatPresentationInterfaceState(animated: true, interactive: false, { presentationInterfaceState in
+                return presentationInterfaceState.updatedChatLocation(updatedChatLocation)
+            })
+        }, toggleChatSidebarMode: { [weak self] in
+            guard let self else {
+                return
+            }
+            self.updateChatPresentationInterfaceState(animated: true, interactive: true, { presentationInterfaceState in
+                let topicListDisplayMode: ChatPresentationInterfaceState.TopicListDisplayMode
+                switch presentationInterfaceState.topicListDisplayMode ?? .top {
+                case .top:
+                    topicListDisplayMode = .side
+                case .side:
+                    topicListDisplayMode = .top
+                }
+                return presentationInterfaceState.updatedTopicListDisplayMode(topicListDisplayMode)
+            })
         }, updateDisplayHistoryFilterAsList: { [weak self] displayAsList in
             guard let self else {
                 return
@@ -4610,6 +6119,145 @@ extension ChatControllerImpl {
             return self
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get(), inlineSearch: self.performingInlineSearch.get()))
         
+        self.interfaceInteraction = interfaceInteraction
+        
+        if let search = self.focusOnSearchAfterAppearance {
+            self.focusOnSearchAfterAppearance = nil
+            self.interfaceInteraction?.beginMessageSearch(search.0, search.1)
+        }
+        
+        self.chatDisplayNode.interfaceInteraction = interfaceInteraction
+        
+        self.context.sharedContext.mediaManager.galleryHiddenMediaManager.addTarget(self)
+        self.galleryHiddenMesageAndMediaDisposable.set(self.context.sharedContext.mediaManager.galleryHiddenMediaManager.hiddenIds().startStrict(next: { [weak self] ids in
+            if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
+                var messageIdAndMedia: [MessageId: [Media]] = [:]
+                
+                for id in ids {
+                    if case let .chat(accountId, messageId, media) = id, accountId == strongSelf.context.account.id {
+                        messageIdAndMedia[messageId] = [media]
+                    }
+                }
+                
+                controllerInteraction.hiddenMedia = messageIdAndMedia
+            
+                strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
+                    if let itemNode = itemNode as? ChatMessageItemView {
+                        itemNode.updateHiddenMedia()
+                    }
+                }
+            }
+        }))
+        
+        self.chatDisplayNode.dismissAsOverlay = { [weak self] in
+            if let strongSelf = self {
+                strongSelf.statusBar.statusBarStyle = .Ignore
+                strongSelf.chatDisplayNode.animateDismissAsOverlay(completion: {
+                    self?.dismiss()
+                })
+            }
+        }
+        
+        var lastEventTimestamp: Double = 0.0
+        self.networkSpeedEventsDisposable = (self.context.account.network.networkSpeedLimitedEvents
+        |> deliverOnMainQueue).start(next: { [weak self] event in
+            guard let self else {
+                return
+            }
+            
+            switch event {
+            case let .download(subject):
+                if case let .message(messageId) = subject {
+                    var isVisible = false
+                    self.chatDisplayNode.historyNode.forEachVisibleItemNode { itemNode in
+                        if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item {
+                            for (message, _) in item.content {
+                                if message.id == messageId {
+                                    isVisible = true
+                                }
+                            }
+                        }
+                    }
+                    
+                    if !isVisible {
+                        return
+                    }
+                }
+            case .upload:
+                break
+            }
+            
+            let timestamp = CFAbsoluteTimeGetCurrent()
+            if lastEventTimestamp + 10.0 < timestamp {
+                lastEventTimestamp = timestamp
+            } else {
+                return
+            }
+            
+            let title: String
+            let text: String
+            switch event {
+            case .download:
+                var speedIncreaseFactor = 10
+                if let data = self.context.currentAppConfiguration.with({ $0 }).data, let value = data["upload_premium_speedup_download"] as? Double {
+                    speedIncreaseFactor = Int(value)
+                }
+                title = self.presentationData.strings.Chat_SpeedLimitAlert_Download_Title
+                text = self.presentationData.strings.Chat_SpeedLimitAlert_Download_Text("\(speedIncreaseFactor)").string
+            case .upload:
+                var speedIncreaseFactor = 10
+                if let data = self.context.currentAppConfiguration.with({ $0 }).data, let value = data["upload_premium_speedup_upload"] as? Double {
+                    speedIncreaseFactor = Int(value)
+                }
+                title = self.presentationData.strings.Chat_SpeedLimitAlert_Upload_Title
+                text = self.presentationData.strings.Chat_SpeedLimitAlert_Upload_Text("\(speedIncreaseFactor)").string
+            }
+            let content: UndoOverlayContent = .universal(animation: "anim_speed_low", scale: 0.066, colors: [:], title: title, text: text, customUndoText: nil, timeout: 5.0)
+            
+            self.context.account.network.markNetworkSpeedLimitDisplayed()
+            
+            self.present(UndoOverlayController(presentationData: self.presentationData, content: content, elevatedLayout: false, position: .top, action: { [weak self] action in
+                guard let self else {
+                    return false
+                }
+                switch action {
+                case .info:
+                    let context = self.context
+                    var replaceImpl: ((ViewController) -> Void)?
+                    let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .fasterDownload, forceDark: false, action: {
+                        let controller = context.sharedContext.makePremiumIntroController(context: context, source: .fasterDownload, forceDark: false, dismissed: nil)
+                        replaceImpl?(controller)
+                    }, dismissed: nil)
+                    replaceImpl = { [weak controller] c in
+                        controller?.replace(with: c)
+                    }
+                    self.push(controller)
+                    return true
+                default:
+                    break
+                }
+                return false
+            }), in: .current)
+        })
+        
+        if case .scheduledMessages = self.subject {
+            self.postedScheduledMessagesEventsDisposable = (self.context.account.stateManager.sentScheduledMessageIds
+            |> deliverOnMainQueue).start(next: { [weak self] ids in
+                guard let self, let peerId = self.chatLocation.peerId else {
+                    return
+                }
+                let filteredIds = Array(ids).filter({ $0.peerId == peerId })
+                if filteredIds.isEmpty {
+                    return
+                }
+                self.displayPostedScheduledMessagesToast(ids: filteredIds)
+            })
+        }
+        
+        self.displayNodeDidLoad()
+    }
+    
+    func setupChatHistoryNode() {
         do {
             let peerId = self.chatLocation.peerId
             if let subject = self.subject, case .scheduledMessages = subject {
@@ -4618,6 +6266,7 @@ extension ChatControllerImpl {
                 |> mapToThrottled { value -> Signal<Int, NoError> in
                     return .single(value) |> then(.complete() |> delay(0.2, queue: Queue.mainQueue()))
                 }
+                self.buttonUnreadCountDisposable?.dispose()
                 self.buttonUnreadCountDisposable = (throttledUnreadCountSignal
                 |> deliverOnMainQueue).startStrict(next: { [weak self] count in
                     guard let strongSelf = self else {
@@ -4627,6 +6276,7 @@ extension ChatControllerImpl {
                 })
 
                 if case let .peer(peerId) = self.chatLocation {
+                    self.chatUnreadCountDisposable?.dispose()
                     self.chatUnreadCountDisposable = (self.context.engine.data.subscribe(
                         TelegramEngine.EngineData.Item.Messages.PeerUnreadCount(id: peerId),
                         TelegramEngine.EngineData.Item.Messages.TotalReadCounters(),
@@ -4657,6 +6307,7 @@ extension ChatControllerImpl {
                         }
                     })
                 
+                    self.chatUnreadMentionCountDisposable?.dispose()
                     self.chatUnreadMentionCountDisposable = (self.context.account.viewTracker.unseenPersonalMessagesAndReactionCount(peerId: peerId, threadId: nil) |> deliverOnMainQueue).startStrict(next: { [weak self] mentionCount, reactionCount in
                         if let strongSelf = self {
                             if case .standard(.previewing) = strongSelf.presentationInterfaceState.mode {
@@ -4669,6 +6320,7 @@ extension ChatControllerImpl {
                         }
                     })
                 } else if let peerId = self.chatLocation.peerId, let threadId = self.chatLocation.threadId {
+                    self.chatUnreadMentionCountDisposable?.dispose()
                     self.chatUnreadMentionCountDisposable = (self.context.account.viewTracker.unseenPersonalMessagesAndReactionCount(peerId: peerId, threadId: threadId) |> deliverOnMainQueue).startStrict(next: { [weak self] mentionCount, reactionCount in
                         if let strongSelf = self {
                             if case .standard(.previewing) = strongSelf.presentationInterfaceState.mode {
@@ -4696,6 +6348,7 @@ extension ChatControllerImpl {
                 }
                 
                 if let activitySpace = activitySpace, let peerId = peerId {
+                    self.peerInputActivitiesDisposable?.dispose()
                     self.peerInputActivitiesDisposable = (self.context.account.peerInputActivities(peerId: activitySpace)
                     |> mapToSignal { activities -> Signal<[(Peer, PeerInputActivity)], NoError> in
                         var foundAllPeers = true
@@ -4879,6 +6532,7 @@ extension ChatControllerImpl {
                     }
                 }))
                 
+                self.sentPeerMediaMessageEventsDisposable.dispose()
                 self.sentPeerMediaMessageEventsDisposable.set(
                     (self.context.account.pendingPeerMediaUploadManager.sentMessageEvents(peerId: peerId)
                     |> deliverOnMainQueue).startStrict(next: { [weak self] _ in
@@ -4890,45 +6544,131 @@ extension ChatControllerImpl {
             }
         }
         
-        self.interfaceInteraction = interfaceInteraction
-        
-        if let search = self.focusOnSearchAfterAppearance {
-            self.focusOnSearchAfterAppearance = nil
-            self.interfaceInteraction?.beginMessageSearch(search.0, search.1)
-        }
-        
-        self.chatDisplayNode.interfaceInteraction = interfaceInteraction
-        
-        self.context.sharedContext.mediaManager.galleryHiddenMediaManager.addTarget(self)
-        self.galleryHiddenMesageAndMediaDisposable.set(self.context.sharedContext.mediaManager.galleryHiddenMediaManager.hiddenIds().startStrict(next: { [weak self] ids in
-            if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
-                var messageIdAndMedia: [MessageId: [Media]] = [:]
-                
-                for id in ids {
-                    if case let .chat(accountId, messageId, media) = id, accountId == strongSelf.context.account.id {
-                        messageIdAndMedia[messageId] = [media]
+        self.chatDisplayNode.historyNode.contentPositionChanged = { [weak self] offset in
+            guard let strongSelf = self else { return }
+
+            var minOffsetForNavigation: CGFloat = 40.0
+            strongSelf.chatDisplayNode.historyNode.enumerateItemNodes { itemNode in
+                if let itemNode = itemNode as? ChatMessageBubbleItemNode {
+                    if let message = itemNode.item?.content.firstMessage, let adAttribute = message.adAttribute {
+                        minOffsetForNavigation += itemNode.bounds.height
+
+                        switch offset {
+                        case let .known(offset):
+                            if offset <= 50.0 {
+                                strongSelf.chatDisplayNode.historyNode.markAdAsSeen(opaqueId: adAttribute.opaqueId)
+                            }
+                        default:
+                            break
+                        }
                     }
                 }
-                
-                controllerInteraction.hiddenMedia = messageIdAndMedia
+                return false
+            }
             
-                strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
-                    if let itemNode = itemNode as? ChatMessageItemView {
-                        itemNode.updateHiddenMedia()
+            let offsetAlpha: CGFloat
+            let plainInputSeparatorAlpha: CGFloat
+            switch offset {
+                case let .known(offset):
+                    if offset < minOffsetForNavigation {
+                        offsetAlpha = 0.0
+                    } else {
+                        offsetAlpha = 1.0
+                    }
+                    if offset < 4.0 {
+                        plainInputSeparatorAlpha = 0.0
+                    } else {
+                        plainInputSeparatorAlpha = 1.0
+                    }
+                case .unknown:
+                    offsetAlpha = 1.0
+                    plainInputSeparatorAlpha = 1.0
+                case .none:
+                    offsetAlpha = 0.0
+                    plainInputSeparatorAlpha = 0.0
+            }
+            
+            strongSelf.shouldDisplayDownButton = !offsetAlpha.isZero
+            strongSelf.controllerInteraction?.recommendedChannelsOpenUp = !strongSelf.shouldDisplayDownButton
+            strongSelf.updateDownButtonVisibility()
+            strongSelf.chatDisplayNode.updatePlainInputSeparatorAlpha(plainInputSeparatorAlpha, transition: .animated(duration: 0.2, curve: .easeInOut))
+        }
+        
+        self.chatDisplayNode.historyNode.scrolledToIndex = { [weak self] toSubject, initial in
+            if let strongSelf = self, case let .message(index) = toSubject.index {
+                if case let .message(messageSubject, _, _, _) = strongSelf.subject, initial, case let .id(messageId) = messageSubject, messageId != index.id {
+                    if messageId.peerId == index.id.peerId {
+                        strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(title: nil, text: strongSelf.presentationData.strings.Conversation_MessageDoesntExist, timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return true }), in: .current)
+                    }
+                } else if let controllerInteraction = strongSelf.controllerInteraction {
+                    var mappedId = index.id
+                    if index.timestamp == 0 {
+                        if case let .replyThread(message) = strongSelf.chatLocation, let channelMessageId = message.channelMessageId {
+                            mappedId = channelMessageId
+                        }
+                    }
+                    
+                    if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(mappedId) {
+                        if toSubject.setupReply {
+                            Queue.mainQueue().after(0.1) {
+                                strongSelf.interfaceInteraction?.setupReplyMessage(mappedId, { _, f in f() })
+                            }
+                        }
+                        
+                        let highlightedState = ChatInterfaceHighlightedState(messageStableId: message.stableId, quote: toSubject.quote.flatMap { quote in ChatInterfaceHighlightedState.Quote(string: quote.string, offset: quote.offset) })
+                        controllerInteraction.highlightedState = highlightedState
+                        strongSelf.updateItemNodesHighlightedStates(animated: initial)
+                        strongSelf.scrolledToMessageIdValue = ScrolledToMessageId(id: mappedId, allowedReplacementDirection: [])
+                        
+                        var hasQuote = false
+                        if let quote = toSubject.quote {
+                            if message.text.contains(quote.string) {
+                                hasQuote = true
+                            } else {
+                                strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(title: nil, text: strongSelf.presentationData.strings.Chat_ToastQuoteNotFound, timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return true }), in: .current)
+                            }
+                        }
+                        
+                        strongSelf.messageContextDisposable.set((Signal<Void, NoError>.complete() |> delay(hasQuote ? 1.5 : 0.7, queue: Queue.mainQueue())).startStrict(completed: {
+                            if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
+                                if controllerInteraction.highlightedState == highlightedState {
+                                    controllerInteraction.highlightedState = nil
+                                    strongSelf.updateItemNodesHighlightedStates(animated: true)
+                                }
+                            }
+                        }))
+                        
+                        if let (messageId, params) = strongSelf.scheduledScrollToMessageId {
+                            strongSelf.scheduledScrollToMessageId = nil
+                            if let timecode = params.timestamp, message.id == messageId {
+                                Queue.mainQueue().after(0.2) {
+                                    let _ = strongSelf.controllerInteraction?.openMessage(message, OpenMessageParams(mode: .timecode(timecode)))
+                                }
+                            }
+                        } else if case let .message(_, _, maybeTimecode, _) = strongSelf.subject, let timecode = maybeTimecode, initial {
+                            Queue.mainQueue().after(0.2) {
+                                let _ = strongSelf.controllerInteraction?.openMessage(message, OpenMessageParams(mode: .timecode(timecode)))
+                            }
+                        }
                     }
                 }
             }
-        }))
+        }
         
-        self.chatDisplayNode.dismissAsOverlay = { [weak self] in
-            if let strongSelf = self {
-                strongSelf.statusBar.statusBarStyle = .Ignore
-                strongSelf.chatDisplayNode.animateDismissAsOverlay(completion: {
-                    self?.dismiss()
-                })
+        self.chatDisplayNode.historyNode.scrolledToSomeIndex = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.scrolledToMessageIdValue = nil
+        }
+        
+        self.chatDisplayNode.historyNode.maxVisibleMessageIndexUpdated = { [weak self] index in
+            if let strongSelf = self, !strongSelf.historyNavigationStack.isEmpty {
+                strongSelf.historyNavigationStack.filterOutIndicesLessThan(index)
             }
         }
         
+        self.hasActiveGroupCallDisposable?.dispose()
         let hasActiveCalls: Signal<Bool, NoError>
         if let callManager = self.context.sharedContext.callManager as? PresentationCallManagerImpl {
             hasActiveCalls = callManager.hasActiveCalls
@@ -4988,6 +6728,8 @@ extension ChatControllerImpl {
                 }
             }
         }
+        
+        self.volumeButtonsListener = nil
         self.volumeButtonsListener = VolumeButtonsListener(
             sharedContext: self.context.sharedContext,
             isCameraSpecific: false,
@@ -5032,6 +6774,7 @@ extension ChatControllerImpl {
                         channelMessageId: nil,
                         isChannelPost: false,
                         isForumPost: true,
+                        isMonoforumPost: false,
                         maxMessage: nil,
                         maxReadIncomingMessageId: nil,
                         maxReadOutgoingMessageId: nil,
@@ -5050,102 +6793,68 @@ extension ChatControllerImpl {
             }
         }
         
-        var lastEventTimestamp: Double = 0.0
-        self.networkSpeedEventsDisposable = (self.context.account.network.networkSpeedLimitedEvents
-        |> deliverOnMainQueue).start(next: { [weak self] event in
+        self.chatDisplayNode.historyNode.beganDragging = { [weak self] in
             guard let self else {
                 return
             }
-            
-            switch event {
-            case let .download(subject):
-                if case let .message(messageId) = subject {
-                    var isVisible = false
-                    self.chatDisplayNode.historyNode.forEachVisibleItemNode { itemNode in
-                        if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item {
-                            for (message, _) in item.content {
-                                if message.id == messageId {
-                                    isVisible = true
-                                }
-                            }
-                        }
-                    }
-                    
-                    if !isVisible {
+            if self.presentationInterfaceState.search != nil && self.presentationInterfaceState.historyFilter != nil {
+                self.chatDisplayNode.historyNode.addAfterTransactionsCompleted { [weak self] in
+                    guard let self else {
                         return
                     }
+                    
+                    self.chatDisplayNode.dismissInput()
                 }
-            case .upload:
-                break
             }
-            
-            let timestamp = CFAbsoluteTimeGetCurrent()
-            if lastEventTimestamp + 10.0 < timestamp {
-                lastEventTimestamp = timestamp
-            } else {
+        }
+    
+        self.chatDisplayNode.historyNode.didScrollWithOffset = { [weak self] offset, transition, itemNode, isTracking in
+            guard let strongSelf = self else {
                 return
             }
+
+            //print("didScrollWithOffset offset: \(offset), itemNode: \(String(describing: itemNode))")
             
-            let title: String
-            let text: String
-            switch event {
-            case .download:
-                var speedIncreaseFactor = 10
-                if let data = self.context.currentAppConfiguration.with({ $0 }).data, let value = data["upload_premium_speedup_download"] as? Double {
-                    speedIncreaseFactor = Int(value)
+            if offset > 0.0 {
+                if var scrolledToMessageIdValue = strongSelf.scrolledToMessageIdValue {
+                    scrolledToMessageIdValue.allowedReplacementDirection.insert(.up)
+                    strongSelf.scrolledToMessageIdValue = scrolledToMessageIdValue
                 }
-                title = self.presentationData.strings.Chat_SpeedLimitAlert_Download_Title
-                text = self.presentationData.strings.Chat_SpeedLimitAlert_Download_Text("\(speedIncreaseFactor)").string
-            case .upload:
-                var speedIncreaseFactor = 10
-                if let data = self.context.currentAppConfiguration.with({ $0 }).data, let value = data["upload_premium_speedup_upload"] as? Double {
-                    speedIncreaseFactor = Int(value)
-                }
-                title = self.presentationData.strings.Chat_SpeedLimitAlert_Upload_Title
-                text = self.presentationData.strings.Chat_SpeedLimitAlert_Upload_Text("\(speedIncreaseFactor)").string
+            } else if offset < 0.0 {
+                strongSelf.scrolledToMessageIdValue = nil
             }
-            let content: UndoOverlayContent = .universal(animation: "anim_speed_low", scale: 0.066, colors: [:], title: title, text: text, customUndoText: nil, timeout: 5.0)
-            
-            self.context.account.network.markNetworkSpeedLimitDisplayed()
-            
-            self.present(UndoOverlayController(presentationData: self.presentationData, content: content, elevatedLayout: false, position: .top, action: { [weak self] action in
-                guard let self else {
-                    return false
-                }
-                switch action {
-                case .info:
-                    let context = self.context
-                    var replaceImpl: ((ViewController) -> Void)?
-                    let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .fasterDownload, forceDark: false, action: {
-                        let controller = context.sharedContext.makePremiumIntroController(context: context, source: .fasterDownload, forceDark: false, dismissed: nil)
-                        replaceImpl?(controller)
-                    }, dismissed: nil)
-                    replaceImpl = { [weak controller] c in
-                        controller?.replace(with: c)
+
+            if let currentPinchSourceItemNode = strongSelf.currentPinchSourceItemNode {
+                if let itemNode = itemNode {
+                    if itemNode === currentPinchSourceItemNode {
+                        strongSelf.currentPinchController?.addRelativeContentOffset(CGPoint(x: 0.0, y: -offset), transition: transition)
                     }
-                    self.push(controller)
-                    return true
-                default:
-                    break
+                } else {
+                    strongSelf.currentPinchController?.addRelativeContentOffset(CGPoint(x: 0.0, y: -offset), transition: transition)
                 }
-                return false
-            }), in: .current)
-        })
-        
-        if case .scheduledMessages = self.subject {
-            self.postedScheduledMessagesEventsDisposable = (self.context.account.stateManager.sentScheduledMessageIds
-            |> deliverOnMainQueue).start(next: { [weak self] ids in
-                guard let self, let peerId = self.chatLocation.peerId else {
-                    return
-                }
-                let filteredIds = Array(ids).filter({ $0.peerId == peerId })
-                if filteredIds.isEmpty {
-                    return
-                }
-                self.displayPostedScheduledMessagesToast(ids: filteredIds)
-            })
+            }
+            
+            if isTracking {
+                strongSelf.chatDisplayNode.loadingPlaceholderNode?.addContentOffset(offset: offset, transition: transition)
+            }
+            strongSelf.chatDisplayNode.messageTransitionNode.addExternalOffset(offset: offset, transition: transition, itemNode: itemNode, isRotated: strongSelf.chatDisplayNode.historyNode.rotated)
+            
         }
         
-        self.displayNodeDidLoad()
+        self.chatDisplayNode.historyNode.hasAtLeast3MessagesUpdated = { [weak self] hasAtLeast3Messages in
+            if let strongSelf = self {
+                strongSelf.updateChatPresentationInterfaceState(interactive: false, { $0.updatedHasAtLeast3Messages(hasAtLeast3Messages) })
+            }
+        }
+        
+        self.chatDisplayNode.historyNode.hasPlentyOfMessagesUpdated = { [weak self] hasPlentyOfMessages in
+            if let strongSelf = self {
+                strongSelf.updateChatPresentationInterfaceState(interactive: false, { $0.updatedHasPlentyOfMessages(hasPlentyOfMessages) })
+            }
+        }
+        
+        if self.didAppear {
+            self.chatDisplayNode.historyNode.canReadHistory.set(self.computedCanReadHistoryPromise.get())
+        }
     }
 }

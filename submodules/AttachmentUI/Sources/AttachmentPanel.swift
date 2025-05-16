@@ -1267,6 +1267,8 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
         }, openBoostToUnrestrict: {
         }, updateVideoTrimRange: { _, _, _, _ in
         }, updateHistoryFilter: { _ in
+        }, updateChatLocationThread: { _ in
+        }, toggleChatSidebarMode: {
         }, updateDisplayHistoryFilterAsList: { _ in
         }, requestLayout: { _ in
         }, chatController: {
@@ -1295,7 +1297,15 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
                 if let data = view.cachedData as? CachedUserData {
                     return data.sendPaidMessageStars
                 } else if let channel = peerViewMainPeer(view) as? TelegramChannel {
-                    return channel.sendPaidMessageStars
+                    if channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId {
+                        if let mainChannel = view.peers[linkedMonoforumId] as? TelegramChannel {
+                            return mainChannel.sendPaidMessageStars
+                        } else {
+                            return nil
+                        }
+                    } else {
+                        return channel.sendPaidMessageStars
+                    }
                 } else {
                     return nil
                 }

@@ -110,7 +110,7 @@ public func peerAvatarCompleteImage(postbox: Postbox, network: Network, peer: En
     
     let clipStyle: AvatarNodeClipStyle
     if round {
-        if case let .channel(channel) = peer, channel.isForum {
+        if case let .channel(channel) = peer, channel.isForumOrMonoForum {
             clipStyle = .roundedRect
         } else {
             clipStyle = .round

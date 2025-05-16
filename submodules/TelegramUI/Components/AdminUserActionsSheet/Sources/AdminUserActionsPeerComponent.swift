@@ -206,7 +206,7 @@ final class AdminUserActionsPeerComponent: Component {
             }
             if let peer = component.peer {
                 let clipStyle: AvatarNodeClipStyle
-                if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+                if case let .channel(channel) = peer, channel.isForumOrMonoForum {
                     clipStyle = .roundedRect
                 } else {
                     clipStyle = .round

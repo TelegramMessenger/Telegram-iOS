@@ -24,7 +24,7 @@ sources = glob([
     "tgcalls/tgcalls/**/*.cpp",
     "tgcalls/tgcalls/**/*.mm",
     "tgcalls/tgcalls/**/*.m",
-], exclude = [
+], allow_empty=True, exclude = [
     "tgcalls/tgcalls/legacy/**",
     "tgcalls/tgcalls/platform/tdesktop/**",
     "tgcalls/tgcalls/platform/android/**",
@@ -60,7 +60,7 @@ sources = glob([
     "tgcalls/tgcalls/platform/darwin/**/*.c",
     "tgcalls/tgcalls/third-party/**/*.cpp",
     "tgcalls/tgcalls/utils/**/*.cpp",
-], exclude = [
+], allow_empty=True, exclude = [
     "tgcalls/tgcalls/legacy/**",
     "tgcalls/tgcalls/platform/tdesktop/**",
     "tgcalls/tgcalls/platform/android/**",
@@ -218,7 +218,7 @@ objc_library(
     srcs = glob([
         "tests/*.m",
         "tests/*.mm",
-    ]),
+    ], allow_empty=True),
     deps = [
         ":TgVoipWebrtc"
     ],

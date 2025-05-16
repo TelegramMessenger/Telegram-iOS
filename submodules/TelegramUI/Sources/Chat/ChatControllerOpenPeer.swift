@@ -224,7 +224,7 @@ extension ChatControllerImpl {
                                         }
                                     })
                                 } else {
-                                    if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+                                    if case let .channel(channel) = peer, channel.isForumOrMonoForum {
                                         self.effectiveNavigationController?.pushViewController(ChatListControllerImpl(context: self.context, location: .forum(peerId: channel.id), controlsHistoryPreload: false, enableDebugActions: false))
                                     } else {
                                         self.effectiveNavigationController?.pushViewController(ChatControllerImpl(context: self.context, chatLocation: .peer(id: peer.id), subject: subject))
