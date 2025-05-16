@@ -240,9 +240,10 @@ func _internal_getSearchMessageCount(account: Account, location: SearchMessagesL
     guard case let .peer(peerId, fromId, _, _, threadId, _, _) = location else {
         return .single(nil)
     }
-    return account.postbox.transaction { transaction -> (Api.InputPeer?, Api.InputPeer?) in
-        var chatPeer = transaction.getPeer(peerId).flatMap(apiInputPeer)
+    return account.postbox.transaction { transaction -> (Api.InputPeer?, Api.InputPeer?, Api.InputPeer?) in
+        var chatPeer = transaction.getPeer(peerId)
         var fromPeer: Api.InputPeer?
+        var savedPeer: Api.InputPeer?
         if let fromId {
             if let value = transaction.getPeer(fromId).flatMap(apiInputPeer) {
                 fromPeer = value
@@ -251,9 +252,13 @@ func _internal_getSearchMessageCount(account: Account, location: SearchMessagesL
             }
         }
         
-        return (chatPeer, fromPeer)
+        if let threadId, let channel = chatPeer as? TelegramChannel, channel.isMonoForum {
+            savedPeer = transaction.getPeer(PeerId(threadId)).flatMap(apiInputPeer)
+        }
+        
+        return (chatPeer.flatMap(apiInputPeer), fromPeer, savedPeer)
     }
-    |> mapToSignal { inputPeer, fromPeer -> Signal<Int?, NoError> in
+    |> mapToSignal { inputPeer, fromPeer, savedPeer -> Signal<Int?, NoError> in
         guard let inputPeer else {
             return .single(nil)
         }
@@ -265,12 +270,16 @@ func _internal_getSearchMessageCount(account: Account, location: SearchMessagesL
         }
         
         var topMsgId: Int32?
-        if let threadId = threadId {
+        var savedPeerId: Api.InputPeer?
+        if let savedPeer {
+            flags |= (1 << 2)
+            savedPeerId = savedPeer
+        } else if let threadId {
             flags |= (1 << 1)
             topMsgId = Int32(clamping: threadId)
         }
         
-        return account.network.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: query, fromId: fromPeer, savedPeerId: nil, savedReaction: nil, topMsgId: topMsgId, filter: .inputMessagesFilterEmpty, minDate: 0, maxDate: 0, offsetId: 0, addOffset: 0, limit: 1, maxId: 0, minId: 0, hash: 0))
+        return account.network.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: query, fromId: fromPeer, savedPeerId: savedPeerId, savedReaction: nil, topMsgId: topMsgId, filter: .inputMessagesFilterEmpty, minDate: 0, maxDate: 0, offsetId: 0, addOffset: 0, limit: 1, maxId: 0, minId: 0, hash: 0))
         |> map { result -> Int? in
             switch result {
             case let .channelMessages(_, _, count, _, _, _, _, _):
@@ -357,7 +366,7 @@ func _internal_searchMessages(account: Account, location: SearchMessagesLocation
                     additionalPeer = transaction.getPeer(migrationReference.maxMessageId.peerId)
                 }
                 var subPeer: Peer?
-                if peerId == account.peerId, let threadId = threadId {
+                if peerId == account.peerId || peer.isMonoForum, let threadId {
                     subPeer = transaction.getPeer(PeerId(threadId))
                 }
                 
@@ -387,7 +396,7 @@ func _internal_searchMessages(account: Account, location: SearchMessagesLocation
                     }
                 }
                 var topMsgId: Int32?
-                if peerId == account.peerId {
+                if peerId == account.peerId || inputSavedPeer != nil {
                 } else if let threadId = threadId {
                     flags |= (1 << 1)
                     topMsgId = Int32(clamping: threadId)
