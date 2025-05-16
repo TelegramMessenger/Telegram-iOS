@@ -518,6 +518,9 @@ def resolve_configuration(base_path, bazel_command_line: BazelCommandLine, argum
     with open(configuration_repository_path + '/WORKSPACE', 'w+') as file:
         pass
 
+    with open(configuration_repository_path + '/MODULE.bazel', 'w+') as file:
+        file.write('module(\n    name = "build_configuration",\n)\n')
+
     with open(configuration_repository_path + '/BUILD', 'w+') as file:
         pass
 
