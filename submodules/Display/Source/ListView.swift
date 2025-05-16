@@ -4023,7 +4023,7 @@ open class ListView: ASDisplayNode, ASScrollViewDelegate, ASGestureRecognizerDel
                 }
                 headerNode.updateFlashingOnScrolling(flashing, animated: false)
                 headerNode.frame = headerFrame
-                headerNode.updateLayoutInternal(size: headerFrame.size, leftInset: leftInset, rightInset: rightInset, transition: animateInsertion ? .immediate : transition.0)
+                headerNode.updateLayoutInternal(size: headerFrame.size, leftInset: leftInset, rightInset: rightInset, transition: .immediate)
                 headerNode.updateInternalStickLocationDistanceFactor(stickLocationDistanceFactor, animated: false)
                 self.itemHeaderNodes[id] = headerNode
                 if insertItemBelowOtherHeaders {

@@ -344,6 +344,8 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
             }
             if case .broadcast = channel.info {
                 canReply = true
+            } else if channel.isMonoForum {
+                canReply = true
             }
         } else if let group = peer as? TelegramGroup {
             if case .Member = group.membership {

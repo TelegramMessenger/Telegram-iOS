@@ -413,7 +413,11 @@ public func resendMessages(account: Account, messageIds: [MessageId]) -> Signal<
             } else if let channel = peer as? TelegramChannel {
                 if channel.flags.contains(.isCreator) || channel.adminRights != nil {
                 } else {
-                    sendPaidMessageStars = channel.sendPaidMessageStars
+                    if channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = transaction.getPeer(linkedMonoforumId) as? TelegramChannel {
+                        sendPaidMessageStars = mainChannel.sendPaidMessageStars
+                    } else {
+                        sendPaidMessageStars = channel.sendPaidMessageStars
+                    }
                 }
             }
             

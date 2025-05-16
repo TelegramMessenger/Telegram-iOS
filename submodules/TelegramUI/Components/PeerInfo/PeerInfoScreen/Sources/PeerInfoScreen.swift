@@ -574,6 +574,7 @@ private final class PeerInfoInteraction {
     let editingOpenStars: () -> Void
     let openParticipantsSection: (PeerInfoParticipantsSection) -> Void
     let openRecentActions: () -> Void
+    let openChannelMessages: () -> Void
     let openStats: (ChannelStatsSection) -> Void
     let editingOpenPreHistorySetup: () -> Void
     let editingOpenAutoremoveMesages: () -> Void
@@ -647,6 +648,7 @@ private final class PeerInfoInteraction {
         editingOpenStars: @escaping () -> Void,
         openParticipantsSection: @escaping (PeerInfoParticipantsSection) -> Void,
         openRecentActions: @escaping () -> Void,
+        openChannelMessages: @escaping () -> Void,
         openStats: @escaping (ChannelStatsSection) -> Void,
         editingOpenPreHistorySetup: @escaping () -> Void,
         editingOpenAutoremoveMesages: @escaping () -> Void,
@@ -719,6 +721,7 @@ private final class PeerInfoInteraction {
         self.editingOpenStars = editingOpenStars
         self.openParticipantsSection = openParticipantsSection
         self.openRecentActions = openRecentActions
+        self.openChannelMessages = openChannelMessages
         self.openStats = openStats
         self.editingOpenPreHistorySetup = editingOpenPreHistorySetup
         self.editingOpenAutoremoveMesages = editingOpenAutoremoveMesages
@@ -2166,8 +2169,9 @@ private func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostSt
                 let ItemBanned = 11
                 let ItemRecentActions = 12
                 let ItemAffiliatePrograms = 13
-                //let ItemPostSuggestionsSettings = 14
+                let ItemPostSuggestionsSettings = 14
                 let ItemPeerAutoTranslate = 15
+                let ItemChannelMessages = 16
                 
                 let isCreator = channel.flags.contains(.isCreator)
                 
@@ -2216,9 +2220,9 @@ private func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostSt
                     }))
                     
                     //TODO:localize
-                    /*items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPostSuggestionsSettings, label: .text("Off"), additionalBadgeLabel: presentationData.strings.Settings_New, text: "Post Suggestions", icon: UIImage(bundleImageName: "Chat/Info/PostSuggestionsIcon"), action: {
+                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPostSuggestionsSettings, label: .text(channel.linkedMonoforumId == nil ? "Off" : "On"), additionalBadgeLabel: presentationData.strings.Settings_New, text: "Message Channel", icon: UIImage(bundleImageName: "Chat/Info/PostSuggestionsIcon"), action: {
                         interaction.editingOpenPostSuggestionsSetup()
-                    }))*/
+                    }))
                 }
                 
                 if isCreator || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
@@ -2351,6 +2355,13 @@ private func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostSt
                     items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemRecentActions, label: .none, text: presentationData.strings.Group_Info_AdminLog, icon: UIImage(bundleImageName: "Chat/Info/RecentActionsIcon"), action: {
                         interaction.openRecentActions()
                     }))
+                    
+                    if channel.linkedMonoforumId != nil {
+                        //TODO:localize
+                        items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemChannelMessages, label: .none, text: "Channel Messages", icon: UIImage(bundleImageName: "Chat/Info/RecentActionsIcon"), action: {
+                            interaction.openChannelMessages()
+                        }))
+                    }
                 }
                 
                 if channel.hasPermission(.changeInfo) {
@@ -3042,6 +3053,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             },
             openRecentActions: { [weak self] in
                 self?.openRecentActions()
+            },
+            openChannelMessages: { [weak self] in
+                self?.openChannelMessages()
             },
             openStats: { [weak self] section in
                 self?.openStats(section: section)
@@ -9293,6 +9307,23 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }
         let controller = self.context.sharedContext.makeChatRecentActionsController(context: self.context, peer: peer, adminPeerId: nil, starsState: self.data?.starsRevenueStatsState)
         self.controller?.push(controller)
+    }
+    
+    private func openChannelMessages() {
+        guard let channel = self.data?.peer as? TelegramChannel, let linkedMonoforumId = channel.linkedMonoforumId else {
+            return
+        }
+        let _ = (self.context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: linkedMonoforumId)
+        )
+        |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
+            guard let self, let peer else {
+                return
+            }
+            if let controller = self.controller, let navigationController = controller.navigationController as? NavigationController {
+                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer)))
+            }
+        })
     }
     
     private func editingOpenPreHistorySetup() {

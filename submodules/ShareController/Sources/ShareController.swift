@@ -1249,7 +1249,7 @@ public final class ShareController: ViewController {
     private func shareModern(text: String, peerIds: [EnginePeer.Id], topicIds: [EnginePeer.Id: Int64], showNames: Bool, silently: Bool) -> Signal<ShareState, ShareControllerError> {
         return self.currentContext.stateManager.postbox.combinedView(
             keys: peerIds.map { peerId in
-                return PostboxViewKey.basicPeer(peerId)
+                return PostboxViewKey.peer(peerId: peerId, components: [])
             } + peerIds.map { peerId in
                 return PostboxViewKey.cachedPeerData(peerId: peerId)
             }
@@ -1259,14 +1259,20 @@ public final class ShareController: ViewController {
             var result: [EnginePeer.Id: EnginePeer?] = [:]
             var requiresStars: [EnginePeer.Id: StarsAmount] = [:]
             for peerId in peerIds {
-                if let view = views.views[PostboxViewKey.basicPeer(peerId)] as? BasicPeerView, let peer = view.peer {
+                if let view = views.views[PostboxViewKey.basicPeer(peerId)] as? PeerView, let peer = peerViewMainPeer(view) {
                     result[peerId] = EnginePeer(peer)
                     if peer is TelegramUser, let cachedPeerDataView = views.views[PostboxViewKey.cachedPeerData(peerId: peerId)] as? CachedPeerDataView {
                         if let cachedData = cachedPeerDataView.cachedPeerData as? CachedUserData {
                             requiresStars[peerId] = cachedData.sendPaidMessageStars
                         }
                     } else if let channel = peer as? TelegramChannel {
-                        requiresStars[peerId] = channel.sendPaidMessageStars
+                        if channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId {
+                            if let mainChannel = view.peers[linkedMonoforumId] as? TelegramChannel {
+                                requiresStars[peerId] = mainChannel.sendPaidMessageStars
+                            }
+                        } else {
+                            requiresStars[peerId] = channel.sendPaidMessageStars
+                        }
                     }
                 }
             }
@@ -1903,7 +1909,7 @@ public final class ShareController: ViewController {
         }
         return currentContext.stateManager.postbox.combinedView(
             keys: peerIds.map { peerId in
-                return PostboxViewKey.basicPeer(peerId)
+                return PostboxViewKey.peer(peerId: peerId, components: [])
             } + peerIds.map { peerId in
                 return PostboxViewKey.cachedPeerData(peerId: peerId)
             }
@@ -1913,14 +1919,20 @@ public final class ShareController: ViewController {
             var result: [EnginePeer.Id: EnginePeer?] = [:]
             var requiresStars: [EnginePeer.Id: StarsAmount] = [:]
             for peerId in peerIds {
-                if let view = views.views[PostboxViewKey.basicPeer(peerId)] as? BasicPeerView, let peer = view.peer {
+                if let view = views.views[PostboxViewKey.basicPeer(peerId)] as? PeerView, let peer = peerViewMainPeer(view) {
                     result[peerId] = EnginePeer(peer)
                     if peer is TelegramUser, let cachedPeerDataView = views.views[PostboxViewKey.cachedPeerData(peerId: peerId)] as? CachedPeerDataView {
                         if let cachedData = cachedPeerDataView.cachedPeerData as? CachedUserData {
                             requiresStars[peerId] = cachedData.sendPaidMessageStars
                         }
                     } else if let channel = peer as? TelegramChannel {
-                        requiresStars[peerId] = channel.sendPaidMessageStars
+                        if channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId {
+                            if let mainChannel = view.peers[linkedMonoforumId] as? TelegramChannel {
+                                requiresStars[peerId] = mainChannel.sendPaidMessageStars
+                            }
+                        } else {
+                            requiresStars[peerId] = channel.sendPaidMessageStars
+                        }
                     }
                 }
             }
@@ -2518,6 +2530,9 @@ public final class ShareController: ViewController {
                             possiblePremiumRequiredPeers.insert(user.id)
                         } else if let channel = peer as? TelegramChannel, let _ = channel.sendPaidMessageStars {
                             possiblePremiumRequiredPeers.insert(channel.id)
+                            if channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = entryData.renderedPeer.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.sendPaidMessageStars != nil {
+                                possiblePremiumRequiredPeers.insert(channel.id)
+                            }
                         }
                     }
                 default:
@@ -2531,7 +2546,7 @@ public final class ShareController: ViewController {
             keys.append(peerPresencesKey)
             
             for id in possiblePremiumRequiredPeers {
-                keys.append(.basicPeer(id))
+                keys.append(.peer(peerId: id, components: []))
                 keys.append(.cachedPeerData(peerId: id))
             }
             
@@ -2549,8 +2564,12 @@ public final class ShareController: ViewController {
                     if let view = views.views[.cachedPeerData(peerId: id)] as? CachedPeerDataView, let data = view.cachedPeerData as? CachedUserData {
                         requiresPremiumForMessaging[id] = data.flags.contains(.premiumRequired)
                         requiresStars[id] = data.sendPaidMessageStars?.value
-                    } else if let view = views.views[.basicPeer(id)] as? BasicPeerView, let channel = view.peer as? TelegramChannel {
-                        requiresStars[id] = channel.sendPaidMessageStars?.value
+                    } else if let view = views.views[.basicPeer(id)] as? PeerView, let channel = peerViewMainPeer(view) as? TelegramChannel {
+                        if channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = view.peers[linkedMonoforumId] as? TelegramChannel {
+                            requiresStars[id] = mainChannel.sendPaidMessageStars?.value
+                        } else {
+                            requiresStars[id] = channel.sendPaidMessageStars?.value
+                        }
                     } else {
                         requiresPremiumForMessaging[id] = false
                     }

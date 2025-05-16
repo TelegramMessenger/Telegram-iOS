@@ -1274,7 +1274,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
         if let context = self.context, let tryShare = self.tryShare {
             let _ = (context.stateManager.postbox.combinedView(
                 keys: peerIds.map { peerId in
-                    return PostboxViewKey.basicPeer(peerId)
+                    return PostboxViewKey.peer(peerId: peerId, components: [])
                 } + peerIds.map { peerId in
                     return PostboxViewKey.cachedPeerData(peerId: peerId)
                 }
@@ -1284,14 +1284,18 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                 var result: [EnginePeer.Id: EnginePeer?] = [:]
                 var requiresStars: [EnginePeer.Id: Int64] = [:]
                 for peerId in peerIds {
-                    if let view = views.views[PostboxViewKey.basicPeer(peerId)] as? BasicPeerView, let peer = view.peer {
+                    if let view = views.views[PostboxViewKey.basicPeer(peerId)] as? PeerView, let peer = peerViewMainPeer(view) {
                         result[peerId] = EnginePeer(peer)
                         if peer is TelegramUser, let cachedPeerDataView = views.views[PostboxViewKey.cachedPeerData(peerId: peerId)] as? CachedPeerDataView {
                             if let cachedData = cachedPeerDataView.cachedPeerData as? CachedUserData {
                                 requiresStars[peerId] = cachedData.sendPaidMessageStars?.value
                             }
                         } else if let channel = peer as? TelegramChannel {
-                            requiresStars[peerId] = channel.sendPaidMessageStars?.value
+                            if channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = view.peers[linkedMonoforumId] as? TelegramChannel {
+                                requiresStars[peerId] = mainChannel.sendPaidMessageStars?.value
+                            } else {
+                                requiresStars[peerId] = channel.sendPaidMessageStars?.value
+                            }
                         }
                     }
                 }

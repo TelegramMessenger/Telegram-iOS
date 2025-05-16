@@ -324,10 +324,12 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
                     if case .replyThread = chatLocation {
                         displayAuthorInfo = false
                     } else {
-                        headerSeparableThreadId = content.firstMessage.threadId
-                        
-                        if let threadId = content.firstMessage.threadId, let peer = content.firstMessage.peers[EnginePeer.Id(threadId)] {
-                            headerDisplayPeer = ChatMessageDateHeader.PeerData(peer: EnginePeer(peer))
+                        if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = content.firstMessage.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.adminRights != nil {
+                            headerSeparableThreadId = content.firstMessage.threadId
+                            
+                            if let threadId = content.firstMessage.threadId, let peer = content.firstMessage.peers[EnginePeer.Id(threadId)] {
+                                headerDisplayPeer = ChatMessageDateHeader.PeerData(peer: EnginePeer(peer))
+                            }
                         }
                     }
                 }

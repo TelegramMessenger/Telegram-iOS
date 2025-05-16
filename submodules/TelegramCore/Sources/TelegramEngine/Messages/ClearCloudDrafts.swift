@@ -20,9 +20,11 @@ func _internal_clearCloudDraftsInteractively(postbox: Postbox, network: Network,
                     
                     for update in updates {
                         switch update {
-                            case let .updateDraftMessage(_, peer, topMsgId, _):
+                            case let .updateDraftMessage(_, peer, topMsgId, savedPeerId, _):
                                 var threadId: Int64?
-                                if let topMsgId = topMsgId {
+                                if let savedPeerId {
+                                    threadId = savedPeerId.peerId.toInt64()
+                                } else if let topMsgId {
                                     threadId = Int64(topMsgId)
                                 }
                                 keys.insert(Key(peerId: peer.peerId, threadId: threadId))
