@@ -5983,11 +5983,12 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func getDialogUnreadMarks() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.DialogPeer]>) {
+                static func getDialogUnreadMarks(flags: Int32, parentPeer: Api.InputPeer?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.DialogPeer]>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(585256482)
-                    
-                    return (FunctionDescription(name: "messages.getDialogUnreadMarks", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Api.DialogPeer]? in
+                    buffer.appendInt32(555754018)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {parentPeer!.serialize(buffer, true)}
+                    return (FunctionDescription(name: "messages.getDialogUnreadMarks", parameters: [("flags", String(describing: flags)), ("parentPeer", String(describing: parentPeer))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Api.DialogPeer]? in
                         let reader = BufferReader(buffer)
                         var result: [Api.DialogPeer]?
                         if let _ = reader.readInt32() {
@@ -7281,12 +7282,13 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func markDialogUnread(flags: Int32, peer: Api.InputDialogPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                static func markDialogUnread(flags: Int32, parentPeer: Api.InputPeer?, peer: Api.InputDialogPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1031349873)
+                    buffer.appendInt32(-1940912392)
                     serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {parentPeer!.serialize(buffer, true)}
                     peer.serialize(buffer, true)
-                    return (FunctionDescription(name: "messages.markDialogUnread", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                    return (FunctionDescription(name: "messages.markDialogUnread", parameters: [("flags", String(describing: flags)), ("parentPeer", String(describing: parentPeer)), ("peer", String(describing: peer))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
@@ -7465,6 +7467,23 @@ public extension Api.functions.messages {
                         var result: Api.messages.AffectedHistory?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.messages.AffectedHistory
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
+                static func readSavedHistory(parentPeer: Api.InputPeer, peer: Api.InputPeer, maxId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1169540261)
+                    parentPeer.serialize(buffer, true)
+                    peer.serialize(buffer, true)
+                    serializeInt32(maxId, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.readSavedHistory", parameters: [("parentPeer", String(describing: parentPeer)), ("peer", String(describing: peer)), ("maxId", String(describing: maxId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
                         }
                         return result
                     })

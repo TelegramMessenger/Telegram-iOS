@@ -48,10 +48,15 @@ final class MutablePeerView: MutablePostboxView {
         var messageIds = Set<MessageId>()
         peerIds.insert(peerId)
         
-        if let peer = getPeer(peerId), let associatedPeerId = peer.associatedPeerId, peer.associatedPeerOverridesIdentity {
+        if let peer = getPeer(peerId), let associatedPeerId = peer.associatedPeerId {
             peerIds.insert(associatedPeerId)
-            self.contactPeerId = associatedPeerId
-            self.peerIsContact = postbox.contactsTable.isContact(peerId: associatedPeerId)
+            
+            if peer.associatedPeerOverridesIdentity {
+                self.contactPeerId = associatedPeerId
+                self.peerIsContact = postbox.contactsTable.isContact(peerId: associatedPeerId)
+            } else {
+                self.contactPeerId = peerId
+            }
         } else {
             self.contactPeerId = peerId
         }
@@ -76,14 +81,18 @@ final class MutablePeerView: MutablePostboxView {
                 self.memberStoryStats[id] = value
             }
         }
-        if let peer = self.peers[peerId], let associatedPeerId = peer.associatedPeerId, peer.associatedPeerOverridesIdentity {
+        if let peer = self.peers[peerId], let associatedPeerId = peer.associatedPeerId {
             if let peer = getPeer(associatedPeerId) {
                 self.peers[associatedPeerId] = peer
             }
             if let presence = getPeerPresence(associatedPeerId) {
                 self.peerPresences[associatedPeerId] = presence
             }
-            self.notificationSettings = postbox.peerNotificationSettingsTable.getEffective(associatedPeerId)
+            if peer.associatedPeerOverridesIdentity {
+                self.notificationSettings = postbox.peerNotificationSettingsTable.getEffective(associatedPeerId)
+            } else {
+                self.notificationSettings = postbox.peerNotificationSettingsTable.getEffective(peerId)
+            }
         } else {
             self.notificationSettings = postbox.peerNotificationSettingsTable.getEffective(peerId)
         }

@@ -385,7 +385,11 @@ public extension TelegramEngine.EngineData.Item {
                 if let cachedPeerData = view.cachedData as? CachedUserData {
                     return cachedPeerData.sendPaidMessageStars
                 } else if let channel = peerViewMainPeer(view) as? TelegramChannel {
-                    return channel.sendPaidMessageStars
+                    if channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = view.peers[linkedMonoforumId] as? TelegramChannel {
+                        return mainChannel.sendPaidMessageStars
+                    } else {
+                        return channel.sendPaidMessageStars
+                    }
                 } else {
                     return nil
                 }

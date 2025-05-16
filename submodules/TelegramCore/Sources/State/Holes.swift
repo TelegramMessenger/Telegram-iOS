@@ -189,11 +189,12 @@ func resolveUnknownEmojiFiles<T>(postbox: Postbox, source: FetchMessageHistoryHo
     }
 }
 
-func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMessageHistoryHoleSource, accountPeerId: PeerId, parsedPeers: AccumulatedPeers, storeMessages: [StoreMessage], _ f: @escaping (Transaction, AccumulatedPeers, [StoreMessage]) -> T) -> Signal<T, NoError> {
+func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMessageHistoryHoleSource, accountPeerId: PeerId, parsedPeers: AccumulatedPeers, storeMessages: [StoreMessage], resolveThreads: Bool, _ f: @escaping (Transaction, AccumulatedPeers, [StoreMessage]) -> T) -> Signal<T, NoError> {
     return postbox.transaction { transaction -> Signal<T, NoError> in
         var storedIds = Set<MessageId>()
         var referencedReplyIds = ReferencedReplyMessageIds()
         var referencedGeneralIds = Set<MessageId>()
+        var threadIds = Set<PeerAndBoundThreadId>()
         for message in storeMessages {
             guard case let .Id(id) = message.id else {
                 continue
@@ -205,6 +206,9 @@ func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMessageHis
                 } else {
                     referencedGeneralIds.formUnion(attribute.associatedMessageIds)
                 }
+            }
+            if let threadId = message.threadId {
+                threadIds.insert(PeerAndBoundThreadId(peerId: id.peerId, threadId: threadId))
             }
         }
         
@@ -220,8 +224,17 @@ func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMessageHis
             |> mapToSignal { _ -> Signal<T, NoError> in
                 return resolveAssociatedStories(postbox: postbox, source: source, accountPeerId: accountPeerId, messages: storeMessages, additionalPeers: parsedPeers, result: Void())
                 |> mapToSignal { _ -> Signal<T, NoError> in
-                    return postbox.transaction { transaction -> T in
-                        return f(transaction, parsedPeers, [])
+                    if resolveThreads && !threadIds.isEmpty {
+                        return resolveForumThreads(accountPeerId: accountPeerId, postbox: postbox, source: source, ids: Array(threadIds))
+                        |> mapToSignal { _ -> Signal<T, NoError> in
+                            return postbox.transaction { transaction -> T in
+                                return f(transaction, parsedPeers, [])
+                            }
+                        }
+                    } else {
+                        return postbox.transaction { transaction -> T in
+                            return f(transaction, parsedPeers, [])
+                        }
                     }
                 }
             }
@@ -309,12 +322,29 @@ func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMessageHis
                         additionalPeers = additionalPeers.union(with: AccumulatedPeers(transaction: transaction, chats: chats, users: users))
                     }
                     
-                    return resolveUnknownEmojiFiles(postbox: postbox, source: source, messages: storeMessages + additionalMessages, reactions: [], result: Void())
+                    let combinedMessages = storeMessages + additionalMessages
+                    return resolveUnknownEmojiFiles(postbox: postbox, source: source, messages: combinedMessages, reactions: [], result: Void())
                     |> mapToSignal { _ -> Signal<T, NoError> in
                         return resolveAssociatedStories(postbox: postbox, source: source, accountPeerId: accountPeerId, messages: storeMessages + additionalMessages, additionalPeers: parsedPeers.union(with: additionalPeers), result: Void())
                         |> mapToSignal { _ -> Signal<T, NoError> in
-                            return postbox.transaction { transaction -> T in
-                                return f(transaction, additionalPeers, additionalMessages)
+                            var threadIds = Set<PeerAndBoundThreadId>()
+                            for message in combinedMessages {
+                                if case let .Id(id) = message.id, let threadId = message.threadId {
+                                    threadIds.insert(PeerAndBoundThreadId(peerId: id.peerId, threadId: threadId))
+                                }
+                            }
+                            
+                            if resolveThreads && !threadIds.isEmpty {
+                                return resolveForumThreads(accountPeerId: accountPeerId, postbox: postbox, source: source, ids: Array(threadIds))
+                                |> mapToSignal { _ -> Signal<T, NoError> in
+                                    return postbox.transaction { transaction -> T in
+                                        return f(transaction, parsedPeers, [])
+                                    }
+                                }
+                            } else {
+                                return postbox.transaction { transaction -> T in
+                                    return f(transaction, additionalPeers, additionalMessages)
+                                }
                             }
                         }
                     }
@@ -916,7 +946,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                         }
                     }
                     
-                    return withResolvedAssociatedMessages(postbox: postbox, source: source, accountPeerId: accountPeerId, parsedPeers: parsedPeers, storeMessages: storeMessages, { transaction, additionalParsedPeers, additionalMessages -> FetchMessageHistoryHoleResult? in
+                    return withResolvedAssociatedMessages(postbox: postbox, source: source, accountPeerId: accountPeerId, parsedPeers: parsedPeers, storeMessages: storeMessages, resolveThreads: true, { transaction, additionalParsedPeers, additionalMessages -> FetchMessageHistoryHoleResult? in
                         let _ = transaction.addMessages(storeMessages, location: .Random)
                         let _ = transaction.addMessages(additionalMessages, location: .Random)
                         var filledRange: ClosedRange<MessageId.Id>
@@ -1076,15 +1106,15 @@ func fetchChatListHole(postbox: Postbox, network: Network, accountPeerId: PeerId
             }
             |> ignoreValues
         }
-        return withResolvedAssociatedMessages(postbox: postbox, source: .network(network), accountPeerId: accountPeerId, parsedPeers: fetchedChats.peers, storeMessages: fetchedChats.storeMessages, { transaction, additionalPeers, additionalMessages -> Void in
+        return withResolvedAssociatedMessages(postbox: postbox, source: .network(network), accountPeerId: accountPeerId, parsedPeers: fetchedChats.peers, storeMessages: fetchedChats.storeMessages, resolveThreads: false, { transaction, additionalPeers, additionalMessages -> Void in
             updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: fetchedChats.peers.union(with: additionalPeers))
             
             for (threadMessageId, data) in fetchedChats.threadInfos {
                 if let entry = StoredMessageHistoryThreadInfo(data.data) {
-                    transaction.setMessageHistoryThreadInfo(peerId: threadMessageId.peerId, threadId: Int64(threadMessageId.id), info: entry)
+                    transaction.setMessageHistoryThreadInfo(peerId: threadMessageId.peerId, threadId: threadMessageId.threadId, info: entry)
                 }
-                transaction.replaceMessageTagSummary(peerId: threadMessageId.peerId, threadId: Int64(threadMessageId.id), tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, customTag: nil, count: data.unreadMentionCount, maxId: data.topMessageId)
-                transaction.replaceMessageTagSummary(peerId: threadMessageId.peerId, threadId: Int64(threadMessageId.id), tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud, customTag: nil, count: data.unreadReactionCount, maxId: data.topMessageId)
+                transaction.replaceMessageTagSummary(peerId: threadMessageId.peerId, threadId: threadMessageId.threadId, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, customTag: nil, count: data.unreadMentionCount, maxId: data.topMessageId)
+                transaction.replaceMessageTagSummary(peerId: threadMessageId.peerId, threadId: threadMessageId.threadId, tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud, customTag: nil, count: data.unreadReactionCount, maxId: data.topMessageId)
             }
             
             transaction.updateCurrentPeerNotificationSettings(fetchedChats.notificationSettings)

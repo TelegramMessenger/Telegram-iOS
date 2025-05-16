@@ -603,6 +603,7 @@ func updateChatPresentationInterfaceStateImpl(
         selfController.chatLocation = selfController.presentationInterfaceState.chatLocation
         selfController.reloadChatLocation()
         selfController.reloadCachedData()
+        selfController.setupChatHistoryNode()
     }
     
     selfController.updateDownButtonVisibility()

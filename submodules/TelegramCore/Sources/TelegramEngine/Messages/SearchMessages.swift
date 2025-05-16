@@ -370,7 +370,7 @@ func _internal_searchMessages(account: Account, location: SearchMessagesLocation
                     subPeer = transaction.getPeer(PeerId(threadId))
                 }
                 
-                return (peer: peer, additionalPeer: additionalPeer, from: fromId.flatMap(transaction.getPeer), subPeer)
+                return (peer: peer, additionalPeer: additionalPeer, from: fromId.flatMap(transaction.getPeer), subPeer: subPeer)
             }
             |> mapToSignal { values -> Signal<(Api.messages.Messages?, Api.messages.Messages?), NoError> in
                 guard let values = values else {
@@ -408,7 +408,7 @@ func _internal_searchMessages(account: Account, location: SearchMessagesLocation
                 } else {
                     let lowerBound = state?.main.messages.last.flatMap({ $0.index })
                     let signal: Signal<Api.messages.Messages, MTRpcError>
-                    if peer.id.namespace == Namespaces.Peer.CloudChannel && query.isEmpty && fromId == nil && tags == nil && minDate == nil && maxDate == nil {
+                    if peer.id.namespace == Namespaces.Peer.CloudChannel && query.isEmpty && fromId == nil && tags == nil && minDate == nil && maxDate == nil && threadId == nil {
                         signal = account.network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: lowerBound?.id.id ?? 0, offsetDate: 0, addOffset: 0, limit: limit, maxId: Int32.max - 1, minId: 0, hash: 0))
                     } else {
                         var savedReactions: [Api.Reaction]?

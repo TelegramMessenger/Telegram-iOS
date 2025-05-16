@@ -99,6 +99,16 @@ func rightNavigationButtonForChatInterfaceState(context: AccountContext, present
         }
     }
     
+    if let channel = presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum, case .peer = presentationInterfaceState.chatLocation {
+        if case .search(false) = currentButton?.action {
+            return currentButton
+        } else {
+            let buttonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCompactSearchIcon(presentationInterfaceState.theme), style: .plain, target: target, action: selector)
+            buttonItem.accessibilityLabel = strings.Conversation_Search
+            return ChatNavigationButton(action: .search(hasTags: false), buttonItem: buttonItem)
+        }
+    }
+    
     if let channel = presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isForumOrMonoForum, let moreInfoNavigationButton = moreInfoNavigationButton {
         if case .replyThread = presentationInterfaceState.chatLocation {
         } else {

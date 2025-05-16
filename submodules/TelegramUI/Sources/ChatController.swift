@@ -543,7 +543,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     var hasEmbeddedTitleContent = false
     var isEmbeddedTitleContentHidden = false
     
-    let chatLocationContextHolder: Atomic<ChatLocationContextHolder?>
+    var chatLocationContextHolder: Atomic<ChatLocationContextHolder?>
     
     weak var attachmentController: AttachmentController?
     
@@ -7921,7 +7921,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum {
                     attributes.removeAll(where: { $0 is SendAsMessageAttribute })
-                    if channel.adminRights != nil, let sendAsPeerId = self.presentationInterfaceState.currentSendAsPeerId {
+                    if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = self.presentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.adminRights != nil, let sendAsPeerId = self.presentationInterfaceState.currentSendAsPeerId {
                         attributes.append(SendAsMessageAttribute(peerId: sendAsPeerId))
                     }
                 }

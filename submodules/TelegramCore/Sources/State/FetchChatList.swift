@@ -204,7 +204,7 @@ struct FetchedChatList {
     var pinnedItemIds: [PeerId]?
     var folderSummaries: [PeerGroupId: PeerGroupUnreadCountersSummary]
     var peerGroupIds: [PeerId: PeerGroupId]
-    var threadInfos: [MessageId: StoreMessageHistoryThreadData]
+    var threadInfos: [PeerAndBoundThreadId: StoreMessageHistoryThreadData]
 }
 
 func fetchChatList(accountPeerId: PeerId, postbox: Postbox, network: Network, location: FetchChatListLocation, upperBound: MessageIndex, hash: Int64, limit: Int32) -> Signal<FetchedChatList?, NoError> {
@@ -398,7 +398,7 @@ func fetchChatList(accountPeerId: PeerId, postbox: Postbox, network: Network, lo
                     return resolveUnknownEmojiFiles(postbox: postbox, source: .network(network), messages: storeMessages, reactions: [], result: result)
                     |> mapToSignal { result in
                         if let result = result {
-                            return resolveForumThreads(accountPeerId: accountPeerId, postbox: postbox, network: network, fetchedChatList: result)
+                            return resolveForumThreads(accountPeerId: accountPeerId, postbox: postbox, source: .network(network), fetchedChatList: result)
                             |> map(Optional.init)
                         } else {
                             return .single(result)

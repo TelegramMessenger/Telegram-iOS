@@ -2138,8 +2138,6 @@ public final class AccountViewTracker {
                     var isSimpleThread = false
                     if peerId == account.peerId {
                         isSimpleThread = true
-                    } else if let channel = peer as? TelegramChannel, channel.flags.contains(.isMonoforum) {
-                        isSimpleThread = true
                     }
                     
                     if isSimpleThread {

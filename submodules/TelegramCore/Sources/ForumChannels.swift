@@ -234,13 +234,13 @@ func _internal_createForumChannelTopic(account: Account, peerId: PeerId, title: 
                 }
             }
             
-            if let topicId = topicId {
+            if let topicId {
                 return account.postbox.transaction { transaction -> Void in
                     transaction.removeHole(peerId: peerId, threadId: topicId, namespace: Namespaces.Message.Cloud, space: .everywhere, range: 1 ... (Int32.max - 1))
                 }
                 |> castError(CreateForumChannelTopicError.self)
                 |> mapToSignal { _ -> Signal<Int64, CreateForumChannelTopicError> in
-                    return resolveForumThreads(accountPeerId: account.peerId, postbox: account.postbox, network: account.network, ids: [MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: topicId))])
+                    return resolveForumThreads(accountPeerId: account.peerId, postbox: account.postbox, source: .network(account.network), ids: [PeerAndBoundThreadId(peerId: peerId, threadId: topicId)])
                     |> castError(CreateForumChannelTopicError.self)
                     |> map { _ -> Int64 in
                         return topicId
@@ -270,7 +270,7 @@ func _internal_fetchForumChannelTopic(account: Account, peerId: PeerId, threadId
         if let info = info {
             return .single(.result(info))
         } else {
-            return .single(.progress) |> then(resolveForumThreads(accountPeerId: account.peerId, postbox: account.postbox, network: account.network, ids: [MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId))])
+            return .single(.progress) |> then(resolveForumThreads(accountPeerId: account.peerId, postbox: account.postbox, source: .network(account.network), ids: [PeerAndBoundThreadId(peerId: peerId, threadId: threadId)])
             |> mapToSignal { _ -> Signal<FetchForumChannelTopicResult, NoError> in
                 return account.postbox.transaction { transaction -> FetchForumChannelTopicResult in
                     if let data = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
@@ -774,6 +774,58 @@ func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Post
                                 maxIncomingReadId: 0,
                                 maxKnownMessageId: topMessage,
                                 maxOutgoingReadId: 0,
+                                isClosed: false,
+                                isHidden: false,
+                                notificationSettings: TelegramPeerNotificationSettings.defaultSettings
+                            )
+                            
+                            var topTimestamp: Int32 = 1
+                            for message in addedMessages {
+                                if message.id.peerId == peerId && message.threadId == peer.peerId.toInt64() {
+                                    topTimestamp = max(topTimestamp, message.timestamp)
+                                }
+                            }
+                            
+                            let topicIndex = StoredPeerThreadCombinedState.Index(timestamp: topTimestamp, threadId: peer.peerId.toInt64(), messageId: topMessage)
+                            if let minIndexValue = minIndex {
+                                if topicIndex < minIndexValue {
+                                    minIndex = topicIndex
+                                }
+                            } else {
+                                minIndex = topicIndex
+                            }
+                            
+                            var threadPeer: Peer?
+                            for user in users {
+                                if user.peerId == peer.peerId {
+                                    threadPeer = TelegramUser(user: user)
+                                    break
+                                }
+                            }
+                            
+                            items.append(LoadMessageHistoryThreadsResult.Item(
+                                threadId: peer.peerId.toInt64(),
+                                data: data,
+                                topMessage: topMessage,
+                                unreadMentionsCount: 0,
+                                unreadReactionsCount: 0,
+                                index: topicIndex,
+                                threadPeer: threadPeer
+                            ))
+                        case let .monoForumDialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _):
+                            let data = MessageHistoryThreadData(
+                                creationDate: 0,
+                                isOwnedByMe: true,
+                                author: accountPeerId,
+                                info: EngineMessageHistoryThread.Info(
+                                    title: "",
+                                    icon: nil,
+                                    iconColor: 0
+                                ),
+                                incomingUnreadCount: unreadCount,
+                                maxIncomingReadId: readInboxMaxId,
+                                maxKnownMessageId: topMessage,
+                                maxOutgoingReadId: readOutboxMaxId,
                                 isClosed: false,
                                 isHidden: false,
                                 notificationSettings: TelegramPeerNotificationSettings.defaultSettings

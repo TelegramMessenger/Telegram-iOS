@@ -136,7 +136,7 @@ class HistoryNodeContainer: ASDisplayNode {
 class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     let context: AccountContext
     private(set) var chatLocation: ChatLocation
-    private let chatLocationContextHolder: Atomic<ChatLocationContextHolder?>
+    private var chatLocationContextHolder: Atomic<ChatLocationContextHolder?>
     let controllerInteraction: ChatControllerInteraction
     private weak var controller: ChatControllerImpl?
     
@@ -4914,6 +4914,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         self.chatLocation = chatLocation
         
+        self.chatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
         let historyNode = ChatHistoryListNodeImpl(
             context: self.context,
             updatedPresentationData: self.controller?.updatedPresentationData ?? (self.context.sharedContext.currentPresentationData.with({ $0 }), self.context.sharedContext.presentationData),

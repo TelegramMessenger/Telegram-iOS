@@ -28,7 +28,19 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
     
     var viewForumAsMessages: Signal<Bool, NoError> = .single(false)
     if case let .peer(peer) = params.chatLocation, case let .channel(channel) = peer, channel.flags.contains(.isMonoforum) {
-        viewForumAsMessages = .single(false)
+        if let linkedMonoforumId = channel.linkedMonoforumId {
+            viewForumAsMessages = params.context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: linkedMonoforumId)
+            )
+            |> map { peer -> Bool in
+                guard case let .channel(channel) = peer else {
+                    return false
+                }
+                return channel.adminRights == nil
+            }
+        } else {
+            viewForumAsMessages = .single(false)
+        }
     } else if case let .peer(peer) = params.chatLocation, case let .channel(channel) = peer, channel.flags.contains(.isForum) {
         viewForumAsMessages = params.context.account.postbox.combinedView(keys: [.cachedPeerData(peerId: peer.id)])
         |> take(1)
@@ -54,11 +66,6 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
     let _ = (viewForumAsMessages
     |> take(1)
     |> deliverOnMainQueue).start(next: { viewForumAsMessages in
-        var viewForumAsMessages = viewForumAsMessages
-        if case let .peer(peer) = params.chatLocation, case let .channel(channel) = peer, channel.flags.contains(.isMonoforum), channel.adminRights == nil {
-            viewForumAsMessages = true
-        }
-        
         if case let .peer(peer) = params.chatLocation, case let .channel(channel) = peer, channel.flags.contains(.isForum), !viewForumAsMessages {
             for controller in params.navigationController.viewControllers.reversed() {
                 var chatListController: ChatListControllerImpl?
