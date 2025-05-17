@@ -2401,7 +2401,6 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     
     private func reportFailedIncomingCallKitCall() {
         if #available(iOS 14.4, *) {
-        } else {
             guard let callKitIntegration = CallKitIntegration.shared else {
                 return
             }
