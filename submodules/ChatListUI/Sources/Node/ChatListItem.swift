@@ -1012,13 +1012,13 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             let makeTopicTitleLayout = TextNode.asyncLayout(currentNode?.topicTitleNode)
             
             return { constrainedWidth, context, theme, threadId, title, iconId, iconColor in
-                let remainingWidth = max(1.0, constrainedWidth - ((iconId == nil ? 1.0 : 18.0) + 2.0))
+                let remainingWidth = max(1.0, constrainedWidth - (((iconId == nil && iconColor == nil) ? 1.0 : 18.0) + 2.0))
                 
                 let topicTitleArguments = TextNodeLayoutArguments(attributedString: title, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: remainingWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0))
                 
                 let topicTitleLayout = makeTopicTitleLayout(topicTitleArguments)
                 
-                return (CGSize(width: (iconId == nil ? 1.0 : 18.0) + 2.0 + topicTitleLayout.0.size.width, height: topicTitleLayout.0.size.height), {
+                return (CGSize(width: ((iconId == nil && iconColor == nil) ? 1.0 : 18.0) + 2.0 + topicTitleLayout.0.size.width, height: topicTitleLayout.0.size.height), {
                     let topicTitleNode = topicTitleLayout.1()
                     
                     let titleTopicIconContent: EmojiStatusComponent.Content?
@@ -1157,7 +1157,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 
                 var topicsSizeAndApply: [(Int64, CGSize, () -> TopicItemNode)] = []
                 for topic in topics {
-                    if remainingWidth <= (topic.iconId == nil ? 8.0 : 22.0) + 2.0 + 10.0 {
+                    if remainingWidth <= ((topic.iconId == nil && topic.iconColor == nil) ? 8.0 : 22.0) + 2.0 + 10.0 {
                         break
                     }
                     
