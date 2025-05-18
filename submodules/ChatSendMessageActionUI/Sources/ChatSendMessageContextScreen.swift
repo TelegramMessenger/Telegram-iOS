@@ -338,8 +338,13 @@ final class ChatSendMessageContextScreenComponent: Component {
                     guard let animateInTimestamp = self.animateInTimestamp, animateInTimestamp < CFAbsoluteTimeGetCurrent() - 0.35 else {
                         return
                     }
-                    
-                    actionsStackNode.highlightGestureMoved(location: actionsStackNode.view.convert(location, from: view))
+                    let localPoint: CGPoint
+                    if let metrics = self.environment?.metrics, metrics.isTablet, availableSize.width > availableSize.height, let view {
+                        localPoint = view.convert(location, to: nil)
+                    } else {
+                        localPoint = self.convert(location, from: view)
+                    }
+                    actionsStackNode.highlightGestureMoved(location: self.convert(localPoint, to: actionsStackNode.view))
                 }
                 component.gesture.externalEnded = { [weak self] viewAndLocation in
                     guard let self, let actionsStackNode = self.actionsStackNode else {

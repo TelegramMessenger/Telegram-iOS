@@ -14333,3 +14333,6 @@ Sorry for the inconvenience.";
 "ChatbotSetup.Gift.Warning.StarsText" = "The bot **%@** will be able to **transfer your stars**.";
 "ChatbotSetup.Gift.Warning.UsernameText" = "The bot **%@** will be able to **set and remove usernames** for your account, which may result in the loss of your current username.";
 "ChatbotSetup.Gift.Warning.Proceed" = "Proceed";
+
+"Gift.Buy.ErrorTooEarly.Title" = "Try Later";
+"Gift.Buy.ErrorTooEarly.Text" = "You will be able to buy this gift on %@.";

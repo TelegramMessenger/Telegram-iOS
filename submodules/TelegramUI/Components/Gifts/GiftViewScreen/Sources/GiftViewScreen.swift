@@ -107,6 +107,7 @@ private final class GiftViewSheetContent: CombinedComponent {
         var buyForm: BotPaymentForm?
         var buyFormDisposable: Disposable?
         var buyDisposable: Disposable?
+        var resellTooEarlyTimestamp: Int32?
         
         var inWearPreview = false
         var pendingWear = false
@@ -180,6 +181,14 @@ private final class GiftViewSheetContent: CombinedComponent {
                             }
                             self.buyForm = paymentForm
                             self.updated()
+                        }, error: { [weak self] error in
+                            guard let self else {
+                                return
+                            }
+                            if case let .starGiftResellTooEarly(remaining) = error {
+                                let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+                                self.resellTooEarlyTimestamp = currentTime + remaining
+                            }
                         })
                     }
                 } else if case let .generic(gift) = arguments.gift {
@@ -871,7 +880,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                             title = nil
                             text = presentationData.strings.Gift_Send_ErrorUnknown
                         case let .starGiftResellTooEarly(canResaleDate):
-                            let dateString = stringForFullDate(timestamp: canResaleDate, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
+                            let dateString = stringForFullDate(timestamp: currentTime + canResaleDate, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
                             title = presentationData.strings.Gift_Resale_Unavailable_Title
                             text = presentationData.strings.Gift_Resale_Unavailable_Text(dateString).string
                         }
@@ -1150,10 +1159,28 @@ private final class GiftViewSheetContent: CombinedComponent {
                 return
             }
             
-            let giftTitle = "\(uniqueGift.title) #\(uniqueGift.number)"
-            
             let context = self.context
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            
+            if let resellTooEarlyTimestamp = self.resellTooEarlyTimestamp {
+                guard let controller = self.getController() else {
+                    return
+                }
+                let dateString = stringForFullDate(timestamp: resellTooEarlyTimestamp, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
+                let alertController = textAlertController(
+                    context: context,
+                    title: presentationData.strings.Gift_Buy_ErrorTooEarly_Title,
+                    text: presentationData.strings.Gift_Buy_ErrorTooEarly_Text(dateString).string,
+                    actions: [
+                        TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
+                    ],
+                    parseMarkdown: true
+                )
+                controller.present(alertController, in: .window(.root))
+                return
+            }
+            
+            let giftTitle = "\(uniqueGift.title) #\(uniqueGift.number)"
             let recipientPeerId = self.recipientPeerId ?? self.context.account.peerId
                         
             let action = {
@@ -1344,6 +1371,12 @@ private final class GiftViewSheetContent: CombinedComponent {
                     } else {
                         proceed()
                     }
+                } else {
+                    guard let controller = self.getController() else {
+                        return
+                    }
+                    let alertController = textAlertController(context: context, title: nil, text: presentationData.strings.Gift_Buy_ErrorUnknown, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})], parseMarkdown: true)
+                    controller.present(alertController, in: .window(.root))
                 }
             }
             

@@ -1539,8 +1539,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                             strongSelf.videoNode?.playOnceWithSound(playAndRecord: false, seek: .none, actionAtEnd: isAnimated ? .loop : strongSelf.actionAtEnd)
                         }
 
-                        if let playbackRate = strongSelf.playbackRate {
-                            strongSelf.videoNode?.setBaseRate(playbackRate)
+                        Queue.mainQueue().after(0.1) {
+                            if let playbackRate = strongSelf.playbackRate {
+                                strongSelf.videoNode?.setBaseRate(playbackRate)
+                            }
                         }
                     }
                 }
