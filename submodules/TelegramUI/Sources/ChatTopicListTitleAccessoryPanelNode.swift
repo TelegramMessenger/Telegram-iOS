@@ -27,7 +27,7 @@ private final class CustomBadgeComponent: Component {
         font: UIFont,
         background: UIColor,
         foreground: UIColor,
-        insets: UIEdgeInsets,
+        insets: UIEdgeInsets
     ) {
         self.text = text
         self.font = font
