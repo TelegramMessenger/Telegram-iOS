@@ -556,7 +556,7 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                         let avatarSize: CGFloat = 40.0
                         avatarNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor((leftInset - params.leftInset - avatarSize) / 2.0), y: floor((height - avatarSize) / 2.0)), size: CGSize(width: avatarSize, height: avatarSize))
                         var clipStyle: AvatarNodeClipStyle = .round
-                        if case let .channel(channel) = iconPeer, channel.flags.contains(.isForum) {
+                        if case let .channel(channel) = iconPeer, channel.isForumOrMonoForum {
                             clipStyle = .roundedRect
                         }
                         var overrideImage: AvatarNodeImageOverride?

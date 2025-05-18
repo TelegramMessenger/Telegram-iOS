@@ -30,10 +30,10 @@ class ChartView: UIControl {
     
     var renderers: [ChartViewRenderer] = [] {
         willSet {
-            renderers.forEach { $0.containerViews.removeAll(where: { $0 == self }) }
+            renderers.forEach { $0.containerViews.removeAll(where: { $0.value == self || $0.value == nil }) }
         }
         didSet {
-            renderers.forEach { $0.containerViews.append(self) }
+            renderers.forEach { $0.containerViews.append(ContainerViewReference(value: self)) }
             setNeedsDisplay()
         }
     }

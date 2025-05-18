@@ -271,6 +271,22 @@ public extension Peer {
         }
     }
     
+    var isMonoForum: Bool {
+        if let channel = self as? TelegramChannel {
+            return channel.flags.contains(.isMonoforum)
+        } else {
+            return false
+        }
+    }
+    
+    var isForumOrMonoForum: Bool {
+        if let channel = self as? TelegramChannel {
+            return channel.flags.contains(.isForum) || channel.flags.contains(.isMonoforum)
+        } else {
+            return false
+        }
+    }
+    
     var nameColor: PeerNameColor? {
         switch self {
         case let user as TelegramUser:
@@ -463,6 +479,14 @@ public extension RenderedPeer {
             }
         } else {
             return nil
+        }
+    }
+    
+    var chatOrMonoforumMainPeer: Peer? {
+        if let channel = self.peer as? TelegramChannel, channel.flags.contains(.isMonoforum), let linkedMonoforumId = channel.linkedMonoforumId {
+            return self.peers[linkedMonoforumId]
+        } else {
+            return self.chatMainPeer
         }
     }
 }

@@ -576,7 +576,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                     strongSelf.controllerInteraction!.selectedPeerIds.remove(peer.peerId)
                     strongSelf.controllerInteraction!.selectedPeers = strongSelf.controllerInteraction!.selectedPeers.filter({ $0.peerId != peer.peerId })
                 } else {
-                    if case let .channel(channel) = peer.peer, channel.flags.contains(.isForum) {
+                    if case let .channel(channel) = peer.peer, channel.isForumOrMonoForum {
                         if strongSelf.controllerInteraction!.selectedTopics[peer.peerId] != nil {
                             strongSelf.controllerInteraction!.selectedTopics[peer.peerId] = nil
                             strongSelf.peersContentNode?.update()
@@ -1274,7 +1274,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
         if let context = self.context, let tryShare = self.tryShare {
             let _ = (context.stateManager.postbox.combinedView(
                 keys: peerIds.map { peerId in
-                    return PostboxViewKey.basicPeer(peerId)
+                    return PostboxViewKey.peer(peerId: peerId, components: [])
                 } + peerIds.map { peerId in
                     return PostboxViewKey.cachedPeerData(peerId: peerId)
                 }
@@ -1284,7 +1284,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                 var result: [EnginePeer.Id: EnginePeer?] = [:]
                 var requiresStars: [EnginePeer.Id: Int64] = [:]
                 for peerId in peerIds {
-                    if let view = views.views[PostboxViewKey.basicPeer(peerId)] as? BasicPeerView, let peer = view.peer {
+                    if let view = views.views[PostboxViewKey.basicPeer(peerId)] as? PeerView, let peer = peerViewMainPeer(view) {
                         result[peerId] = EnginePeer(peer)
                         if peer is TelegramUser, let cachedPeerDataView = views.views[PostboxViewKey.cachedPeerData(peerId: peerId)] as? CachedPeerDataView {
                             if let cachedData = cachedPeerDataView.cachedPeerData as? CachedUserData {

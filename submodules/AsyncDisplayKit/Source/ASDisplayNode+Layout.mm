@@ -909,7 +909,10 @@ ASLayoutElementStyleExtensibilityForwarding
 
   MutexLocker l(__instanceLock__);
   NSArray<ASLayout *> *sublayouts = _calculatedDisplayNodeLayout.layout.sublayouts;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wvla-cxx-extension"
   unowned ASLayout *cSublayouts[sublayouts.count];
+#pragma clang diagnostic pop
   [sublayouts getObjects:cSublayouts range:NSMakeRange(0, AS_ARRAY_SIZE(cSublayouts))];
 
   // Fast-path if we are in the correct state (likely).
@@ -927,7 +930,10 @@ ASLayoutElementStyleExtensibilityForwarding
     }
   }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wvla-cxx-extension"
   NSArray<ASDisplayNode *> *layoutNodes = ASArrayByFlatMapping(sublayouts, ASLayout *layout, (ASDisplayNode *)layout.layoutElement);
+#pragma clang diagnostic pop
   NSIndexSet *insertions, *deletions;
   [_subnodes asdk_diffWithArray:layoutNodes insertions:&insertions deletions:&deletions];
   if (insertions.count > 0) {

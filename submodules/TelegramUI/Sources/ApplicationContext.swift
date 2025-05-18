@@ -325,7 +325,7 @@ final class AuthorizedApplicationContext {
                     let chatLocation: NavigateToChatControllerParams.Location
                     if let _ = threadData, let threadId = firstMessage.threadId {
                         chatLocation = .replyThread(ChatReplyThreadMessage(
-                            peerId: firstMessage.id.peerId, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false
+                            peerId: firstMessage.id.peerId, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, isMonoforumPost: false, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false
                         ).normalized)
                     } else {
                         guard let peer = firstMessage.peers[firstMessage.id.peerId] else {
@@ -941,7 +941,7 @@ final class AuthorizedApplicationContext {
                     let chatLocation: NavigateToChatControllerParams.Location
                     if let threadId = threadId {
                         chatLocation = .replyThread(ChatReplyThreadMessage(
-                            peerId: peerId, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false
+                            peerId: peerId, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, isMonoforumPost: false, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false
                         ))
                     } else {
                         chatLocation = .peer(peer)

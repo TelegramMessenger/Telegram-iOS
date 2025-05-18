@@ -32,19 +32,43 @@ import MultilineTextWithEntitiesComponent
 import ShimmerEffect
 
 public enum ChatListItemContent {
-    public struct ThreadInfo: Equatable {
-        public var id: Int64
-        public var info: EngineMessageHistoryThread.Info
-        public var isOwnedByMe: Bool
-        public var isClosed: Bool
-        public var isHidden: Bool
+    public final class ThreadInfo: Equatable {
+        public let id: Int64
+        public let info: EngineMessageHistoryThread.Info
+        public let isOwnedByMe: Bool
+        public let isClosed: Bool
+        public let isHidden: Bool
+        public let threadPeer: EnginePeer?
         
-        public init(id: Int64, info: EngineMessageHistoryThread.Info, isOwnedByMe: Bool, isClosed: Bool, isHidden: Bool) {
+        public init(id: Int64, info: EngineMessageHistoryThread.Info, isOwnedByMe: Bool, isClosed: Bool, isHidden: Bool, threadPeer: EnginePeer?) {
             self.id = id
             self.info = info
             self.isOwnedByMe = isOwnedByMe
             self.isClosed = isClosed
             self.isHidden = isHidden
+            self.threadPeer = threadPeer
+        }
+        
+        public static func ==(lhs: ThreadInfo, rhs: ThreadInfo) -> Bool {
+            if lhs.id != rhs.id {
+                return false
+            }
+            if lhs.info != rhs.info {
+                return false
+            }
+            if lhs.isOwnedByMe != rhs.isOwnedByMe {
+                return false
+            }
+            if lhs.isClosed != rhs.isClosed {
+                return false
+            }
+            if lhs.isHidden != rhs.isHidden {
+                return false
+            }
+            if lhs.threadPeer != rhs.threadPeer {
+                return false
+            }
+            return true
         }
     }
     
@@ -536,7 +560,7 @@ public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
                 if case let .forum(_, _, threadIdValue, _, _) = self.index {
                     threadId = threadIdValue
                 }
-                if threadId == nil, self.interaction.searchTextHighightState != nil, case let .channel(channel) = peerData.peer.peer, channel.flags.contains(.isForum) {
+                if threadId == nil, self.interaction.searchTextHighightState != nil, case let .channel(channel) = peerData.peer.peer, channel.isForumOrMonoForum {
                     threadId = message.threadId
                 }
                 self.interaction.messageSelected(peer, threadId, message, peerData.promoInfo)
@@ -768,7 +792,7 @@ private func leftRevealOptions(strings: PresentationStrings, theme: Presentation
                 options.append(ItemListRevealOption(key: RevealOptionKey.toggleMarkedUnread.rawValue, title: strings.DialogList_Read, icon: readIcon, color: theme.list.itemDisclosureActions.inactive.fillColor, textColor: theme.list.itemDisclosureActions.neutral1.foregroundColor))
             } else {
                 var canMarkUnread = true
-                if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+                if case let .channel(channel) = peer, channel.isForumOrMonoForum {
                     canMarkUnread = false
                 }
                 
@@ -953,23 +977,25 @@ private let loginCodeRegex = try? NSRegularExpression(pattern: "\\b\\d{5,8}\\b",
 public class ChatListItemNode: ItemListRevealOptionsItemNode {
     final class TopicItemNode: ASDisplayNode {
         let topicTitleNode: TextNode
-        let titleTopicIconView: ComponentHostView<Empty>
-        var titleTopicIconComponent: EmojiStatusComponent
+        let titleTopicIconView: ComponentHostView<Empty>?
+        var titleTopicIconComponent: EmojiStatusComponent?
         
         var visibilityStatus: Bool = false {
             didSet {
                 if self.visibilityStatus != oldValue {
-                    let _ = self.titleTopicIconView.update(
-                        transition: .immediate,
-                        component: AnyComponent(self.titleTopicIconComponent.withVisibleForAnimations(self.visibilityStatus)),
-                        environment: {},
-                        containerSize: self.titleTopicIconView.bounds.size
-                    )
+                    if let titleTopicIconView = self.titleTopicIconView, let titleTopicIconComponent = self.titleTopicIconComponent {
+                        let _ = titleTopicIconView.update(
+                            transition: .immediate,
+                            component: AnyComponent(titleTopicIconComponent.withVisibleForAnimations(self.visibilityStatus)),
+                            environment: {},
+                            containerSize: titleTopicIconView.bounds.size
+                        )
+                    }
                 }
             }
         }
         
-        private init(topicTitleNode: TextNode, titleTopicIconView: ComponentHostView<Empty>, titleTopicIconComponent: EmojiStatusComponent) {
+        private init(topicTitleNode: TextNode, titleTopicIconView: ComponentHostView<Empty>?, titleTopicIconComponent: EmojiStatusComponent?) {
             self.topicTitleNode = topicTitleNode
             self.titleTopicIconView = titleTopicIconView
             self.titleTopicIconComponent = titleTopicIconComponent
@@ -977,60 +1003,72 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             super.init()
             
             self.addSubnode(self.topicTitleNode)
-            self.view.addSubview(self.titleTopicIconView)
+            if let titleTopicIconView = self.titleTopicIconView {
+                self.view.addSubview(titleTopicIconView)
+            }
         }
         
-        static func asyncLayout(_ currentNode: TopicItemNode?) -> (_ constrainedWidth: CGFloat, _ context: AccountContext, _ theme: PresentationTheme, _ threadId: Int64, _ title: NSAttributedString, _ iconId: Int64?, _ iconColor: Int32) -> (CGSize, () -> TopicItemNode) {
+        static func asyncLayout(_ currentNode: TopicItemNode?) -> (_ constrainedWidth: CGFloat, _ context: AccountContext, _ theme: PresentationTheme, _ threadId: Int64, _ title: NSAttributedString, _ iconId: Int64?, _ iconColor: Int32?) -> (CGSize, () -> TopicItemNode) {
             let makeTopicTitleLayout = TextNode.asyncLayout(currentNode?.topicTitleNode)
             
             return { constrainedWidth, context, theme, threadId, title, iconId, iconColor in
-                let remainingWidth = max(1.0, constrainedWidth - (18.0 + 2.0))
+                let remainingWidth = max(1.0, constrainedWidth - ((iconId == nil ? 1.0 : 18.0) + 2.0))
                 
                 let topicTitleArguments = TextNodeLayoutArguments(attributedString: title, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: remainingWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0))
                 
                 let topicTitleLayout = makeTopicTitleLayout(topicTitleArguments)
                 
-                return (CGSize(width: 18.0 + 2.0 + topicTitleLayout.0.size.width, height: topicTitleLayout.0.size.height), {
+                return (CGSize(width: (iconId == nil ? 1.0 : 18.0) + 2.0 + topicTitleLayout.0.size.width, height: topicTitleLayout.0.size.height), {
                     let topicTitleNode = topicTitleLayout.1()
                     
-                    let titleTopicIconView: ComponentHostView<Empty>
-                    if let current = currentNode?.titleTopicIconView {
-                        titleTopicIconView = current
-                    } else {
-                        titleTopicIconView = ComponentHostView<Empty>()
-                    }
-                    
-                    let titleTopicIconContent: EmojiStatusComponent.Content
+                    let titleTopicIconContent: EmojiStatusComponent.Content?
                     if threadId == 1 {
                         titleTopicIconContent = .image(image: PresentationResourcesChatList.generalTopicSmallIcon(theme))
                     } else if let fileId = iconId, fileId != 0 {
                         titleTopicIconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 36.0, height: 36.0), placeholderColor: theme.list.mediaPlaceholderColor, themeColor: theme.list.itemAccentColor, loopMode: .count(0))
-                    } else {
+                    } else if let iconColor {
                         titleTopicIconContent = .topic(title: String(title.string.prefix(1)), color: iconColor, size: CGSize(width: 18.0, height: 18.0))
+                    } else {
+                        titleTopicIconContent = nil
                     }
                     
-                    let titleTopicIconComponent = EmojiStatusComponent(
-                        context: context,
-                        animationCache: context.animationCache,
-                        animationRenderer: context.animationRenderer,
-                        content: titleTopicIconContent,
-                        isVisibleForAnimations: (currentNode?.visibilityStatus ?? false) && context.sharedContext.energyUsageSettings.loopEmoji,
-                        action: nil
-                    )
+                    var titleTopicIconComponent: EmojiStatusComponent?
+                    var titleTopicIconView: ComponentHostView<Empty>?
+                    
+                    if let titleTopicIconContent {
+                        titleTopicIconComponent = EmojiStatusComponent(
+                            context: context,
+                            animationCache: context.animationCache,
+                            animationRenderer: context.animationRenderer,
+                            content: titleTopicIconContent,
+                            isVisibleForAnimations: (currentNode?.visibilityStatus ?? false) && context.sharedContext.energyUsageSettings.loopEmoji,
+                            action: nil
+                        )
+                        
+                        if let current = currentNode?.titleTopicIconView {
+                            titleTopicIconView = current
+                        } else {
+                            titleTopicIconView = ComponentHostView<Empty>()
+                        }
+                    }
                     
                     let targetNode = currentNode ?? TopicItemNode(topicTitleNode: topicTitleNode, titleTopicIconView: titleTopicIconView, titleTopicIconComponent: titleTopicIconComponent)
                     
                     targetNode.titleTopicIconComponent = titleTopicIconComponent
                     
-                    let iconSize = titleTopicIconView.update(
-                        transition: .immediate,
-                        component: AnyComponent(titleTopicIconComponent),
-                        environment: {},
-                        containerSize: CGSize(width: 18.0, height: 18.0)
-                    )
-                    titleTopicIconView.frame = CGRect(origin: CGPoint(x: 0.0, y: 2.0), size: iconSize)
-                    
-                    topicTitleNode.frame = CGRect(origin: CGPoint(x: 18.0 + 2.0, y: 0.0), size: topicTitleLayout.0.size)
+                    if let titleTopicIconView, let titleTopicIconComponent {
+                        let iconSize = titleTopicIconView.update(
+                            transition: .immediate,
+                            component: AnyComponent(titleTopicIconComponent),
+                            environment: {},
+                            containerSize: CGSize(width: 18.0, height: 18.0)
+                        )
+                        titleTopicIconView.frame = CGRect(origin: CGPoint(x: 0.0, y: 2.0), size: iconSize)
+                        
+                        topicTitleNode.frame = CGRect(origin: CGPoint(x: 18.0 + 2.0, y: 0.0), size: topicTitleLayout.0.size)
+                    } else {
+                        topicTitleNode.frame = CGRect(origin: CGPoint(x: 1.0, y: 0.0), size: topicTitleLayout.0.size)
+                    }
                     
                     return targetNode
                 })
@@ -1090,9 +1128,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
         }
         
-        func asyncLayout() -> (_ context: AccountContext, _ constrainedWidth: CGFloat, _ theme: PresentationTheme, _ authorTitle: NSAttributedString?, _ topics: [(id: Int64, title: NSAttributedString, iconId: Int64?, iconColor: Int32)]) -> (CGSize, () -> CGRect?) {
+        func asyncLayout() -> (_ context: AccountContext, _ constrainedWidth: CGFloat, _ theme: PresentationTheme, _ authorTitle: NSAttributedString?, _ topics: [(id: Int64, title: NSAttributedString, iconId: Int64?, iconColor: Int32?)]) -> (CGSize, () -> CGRect?) {
             let makeAuthorLayout = TextNode.asyncLayout(self.authorNode)
-            var makeExistingTopicLayouts: [Int64: (_ constrainedWidth: CGFloat, _ context: AccountContext, _ theme: PresentationTheme, _ threadId: Int64, _ title: NSAttributedString, _ iconId: Int64?, _ iconColor: Int32) -> (CGSize, () -> TopicItemNode)] = [:]
+            var makeExistingTopicLayouts: [Int64: (_ constrainedWidth: CGFloat, _ context: AccountContext, _ theme: PresentationTheme, _ threadId: Int64, _ title: NSAttributedString, _ iconId: Int64?, _ iconColor: Int32?) -> (CGSize, () -> TopicItemNode)] = [:]
             for (topicId, topicNode) in self.topicNodes {
                 makeExistingTopicLayouts[topicId] = TopicItemNode.asyncLayout(topicNode)
             }
@@ -1119,7 +1157,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 
                 var topicsSizeAndApply: [(Int64, CGSize, () -> TopicItemNode)] = []
                 for topic in topics {
-                    if remainingWidth <= 22.0 + 2.0 + 10.0 {
+                    if remainingWidth <= (topic.iconId == nil ? 8.0 : 22.0) + 2.0 + 10.0 {
                         break
                     }
                     
@@ -1347,7 +1385,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     return result
                 case let .peer(peerData):
-                    guard let chatMainPeer = peerData.peer.chatMainPeer else {
+                    guard let chatMainPeer = peerData.peer.chatOrMonoforumMainPeer else {
                         return nil
                     }
                     var result = ""
@@ -1394,7 +1432,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         var result = ""
                         var isFirst = true
                         for peer in peers {
-                            if let chatMainPeer = peer.peer.chatMainPeer {
+                            if let chatMainPeer = peer.peer.chatOrMonoforumMainPeer {
                                 let peerTitle = chatMainPeer.compactDisplayTitle
                                 if !peerTitle.isEmpty {
                                     if isFirst {
@@ -1670,6 +1708,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
         var peer: EnginePeer?
         var displayAsMessage = false
         var enablePreview = true
+        var peerIsMonoforum = false
         switch item.content {
         case .loading:
             displayAsMessage = true
@@ -1679,7 +1718,10 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             if displayAsMessage, case let .user(author) = peerData.messages.last?.author {
                 peer = .user(author)
             } else {
-                peer = peerData.peer.chatMainPeer
+                peer = peerData.peer.chatOrMonoforumMainPeer
+                if case let .channel(channel) = peerData.peer.peer, channel.isMonoForum {
+                    peerIsMonoforum = true
+                }
             }
             if peerData.peer.peerId.namespace == Namespaces.Peer.SecretChat {
                 enablePreview = false
@@ -1726,7 +1768,10 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 overrideImage = .deletedIcon
             }
             var isForumAvatar = false
-            if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+            if peerIsMonoforum {
+                isForumAvatar = true
+            }
+            if case let .channel(channel) = peer, channel.isForumOrMonoForum {
                 isForumAvatar = true
             }
             if case let .peer(data) = item.content {
@@ -2055,7 +2100,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     topForumTopicItems = topForumTopicItemsValue
                 
                     if item.interaction.searchTextHighightState != nil, threadInfo == nil, topForumTopicItems.isEmpty, let message = messagesValue.first, let threadId = message.threadId, let associatedThreadInfo = message.associatedThreadInfo {
-                        topForumTopicItems = [EngineChatList.ForumTopicData(id: threadId, title: associatedThreadInfo.title, iconFileId: associatedThreadInfo.icon, iconColor: associatedThreadInfo.iconColor, maxOutgoingReadMessageId: message.id, isUnread: false)]
+                        topForumTopicItems = [EngineChatList.ForumTopicData(id: threadId, title: associatedThreadInfo.title, iconFileId: associatedThreadInfo.icon, iconColor: associatedThreadInfo.iconColor, maxOutgoingReadMessageId: message.id, isUnread: false, threadPeer: nil)]
                     }
                     
                     switch peerValue.peer {
@@ -2325,7 +2370,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             var contentImageSpecs: [ContentImageSpec] = []
             var avatarContentImageSpec: ContentImageSpec?
-            var forumThread: (id: Int64, title: String, iconId: Int64?, iconColor: Int32, isUnread: Bool)?
+            var forumThread: (id: Int64, title: String, iconId: Int64?, iconColor: Int32, threadPeer: EnginePeer?, isUnread: Bool)?
             
             var displayForwardedIcon = false
             var displayStoryReplyIcon = false
@@ -2392,11 +2437,11 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         }
                     }
                 
-                    if let _ = peerText, case let .channel(channel) = itemPeer.chatMainPeer, channel.flags.contains(.isForum), threadInfo == nil {
-                        if let forumTopicData = forumTopicData {
-                            forumThread = (forumTopicData.id, forumTopicData.title, forumTopicData.iconFileId, forumTopicData.iconColor, forumTopicData.isUnread)
-                        } else if let threadInfo = threadInfo {
-                            forumThread = (threadInfo.id, threadInfo.info.title, threadInfo.info.icon, threadInfo.info.iconColor, false)
+                    if let _ = peerText, case let .channel(channel) = itemPeer.chatMainPeer, channel.isForumOrMonoForum, threadInfo == nil {
+                        if let forumTopicData {
+                            forumThread = (forumTopicData.id, forumTopicData.title, forumTopicData.iconFileId, forumTopicData.iconColor, forumTopicData.threadPeer, forumTopicData.isUnread)
+                        } else if let threadInfo {
+                            forumThread = (threadInfo.id, threadInfo.info.title, threadInfo.info.icon, threadInfo.info.iconColor, nil, false)
                         }
                     }
                     
@@ -2906,14 +2951,19 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                          titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_Replies, font: titleFont, textColor: theme.titleColor)
                     } else if let id = itemPeer.chatMainPeer?.id, id.isAnonymousSavedMessages {
                         titleAttributedString = NSAttributedString(string: item.presentationData.strings.ChatList_AuthorHidden, font: titleFont, textColor: theme.titleColor)
-                    } else if let displayTitle = itemPeer.chatMainPeer?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder) {
+                    } else if let displayTitle = itemPeer.chatOrMonoforumMainPeer?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder) {
                         let textColor: UIColor
                         if case let .chatList(index) = item.index, index.messageIndex.id.peerId.namespace == Namespaces.Peer.SecretChat {
                             textColor = theme.secretTitleColor
                         } else {
                             textColor = theme.titleColor
                         }
-                        titleAttributedString = NSAttributedString(string: displayTitle, font: titleFont, textColor: textColor)
+                        //TODO:localize
+                        if case let .channel(channel) = itemPeer.peer, channel.flags.contains(.isMonoforum) {
+                            titleAttributedString = NSAttributedString(string: "\(displayTitle) Messages", font: titleFont, textColor: textColor)
+                        } else {
+                            titleAttributedString = NSAttributedString(string: displayTitle, font: titleFont, textColor: textColor)
+                        }
                     }
                 case .group:
                     titleAttributedString = NSAttributedString(string: item.presentationData.strings.ChatList_ArchivedChatsTitle, font: titleFont, textColor: theme.titleColor)
@@ -3137,7 +3187,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     if case let .peer(peerData) = item.content, peerData.customMessageListData?.hidePeerStatus == true {
                         currentCredibilityIconContent = nil
-                    } else if case .savedMessagesChats = item.chatListLocation, peer.id == item.context.account.peerId {
+                    } else if case let .savedMessagesChats(peerId) = item.chatListLocation, peer.id == peerId {
                         currentCredibilityIconContent = nil
                     } else if peer.isScam {
                         currentCredibilityIconContent = .text(color: item.presentationData.theme.chat.message.incoming.scamColor, string: item.presentationData.strings.Message_ScamAccount.uppercased())
@@ -3271,8 +3321,30 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             let isSearching = item.interaction.searchTextHighightState != nil
             
             var isFirstForumThreadSelectable = false
-            var forumThreads: [(id: Int64, title: NSAttributedString, iconId: Int64?, iconColor: Int32)] = []
+            var forumThreads: [(id: Int64, title: NSAttributedString, iconId: Int64?, iconColor: Int32?)] = []
             if case .savedMessagesChats = item.chatListLocation {
+            } else if case let .peer(peer) = item.content, case let .channel(channel) = peer.peer.peer, channel.flags.contains(.isMonoforum) {
+                if forumThread != nil || !topForumTopicItems.isEmpty {
+                    if let forumThread {
+                        isFirstForumThreadSelectable = forumThread.isUnread
+                        forumThreads.append((id: forumThread.id, title: NSAttributedString(string: forumThread.threadPeer?.compactDisplayTitle ?? " ", font: textFont, textColor: forumThread.isUnread || isSearching ? theme.authorNameColor : theme.messageTextColor), iconId: nil, iconColor: nil))
+                    }
+                    for topicItem in topForumTopicItems {
+                        if forumThread?.id != topicItem.id {
+                            forumThreads.append((id: topicItem.id, title: NSAttributedString(string: topicItem.threadPeer?.compactDisplayTitle ?? " ", font: textFont, textColor: topicItem.isUnread || isSearching ? theme.authorNameColor : theme.messageTextColor), iconId: nil, iconColor: nil))
+                        }
+                    }
+                    
+                    if let effectiveAuthorTitle, let textAttributedStringValue = textAttributedString {
+                        let mutableTextAttributedString = NSMutableAttributedString()
+                        mutableTextAttributedString.append(NSAttributedString(string: effectiveAuthorTitle.string + ": ", font: textFont, textColor: theme.authorNameColor))
+                        mutableTextAttributedString.append(textAttributedStringValue)
+                        
+                        textAttributedString = mutableTextAttributedString
+                    }
+                    
+                    effectiveAuthorTitle = nil
+                }
             } else if forumThread != nil || !topForumTopicItems.isEmpty {
                 if let forumThread = forumThread {
                     isFirstForumThreadSelectable = forumThread.isUnread

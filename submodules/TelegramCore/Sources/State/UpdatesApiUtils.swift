@@ -186,7 +186,7 @@ extension Api.Chat {
                 return PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(id))
             case let .chatForbidden(id, _):
                 return PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(id))
-            case let .channel(_, _, id, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+            case let .channel(_, _, id, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
                 return PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(id))
             case let .channelForbidden(_, id, _, _, _):
                 return PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(id))
@@ -336,7 +336,7 @@ extension Api.Update {
                 } else {
                     return []
                 }
-            case let .updateDraftMessage(_, peer, _, _):
+        case let .updateDraftMessage(_, peer, _, _, _):
                 return [peer.peerId]
             case let .updateNewScheduledMessage(message):
                 return apiMessagePeerIds(message)

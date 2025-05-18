@@ -14,7 +14,7 @@ func _internal_forwardGameWithScore(account: Account, messageId: MessageId, to p
                 flags |= (1 << 13)
             }
             
-            return account.network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: fromInputPeer, id: [messageId.id], randomId: [Int64.random(in: Int64.min ... Int64.max)], toPeer: toInputPeer, topMsgId: threadId.flatMap { Int32(clamping: $0) }, scheduleDate: nil, sendAs: sendAsInputPeer, quickReplyShortcut: nil, videoTimestamp: nil, allowPaidStars: nil))
+            return account.network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: fromInputPeer, id: [messageId.id], randomId: [Int64.random(in: Int64.min ... Int64.max)], toPeer: toInputPeer, topMsgId: threadId.flatMap { Int32(clamping: $0) }, replyTo: nil, scheduleDate: nil, sendAs: sendAsInputPeer, quickReplyShortcut: nil, videoTimestamp: nil, allowPaidStars: nil))
             |> map(Optional.init)
             |> `catch` { _ -> Signal<Api.Updates?, NoError> in
                 return .single(nil)

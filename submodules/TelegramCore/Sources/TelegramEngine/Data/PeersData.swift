@@ -391,6 +391,34 @@ public extension TelegramEngine.EngineData.Item {
                 }
             }
         }
+        
+        public struct SendMessageToChannelPrice: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
+            public typealias Result = Optional<StarsAmount>
+
+            fileprivate var id: EnginePeer.Id
+            public var mapKey: EnginePeer.Id {
+                return self.id
+            }
+
+            public init(id: EnginePeer.Id) {
+                self.id = id
+            }
+
+            var key: PostboxViewKey {
+                return .peer(peerId: self.id, components: [])
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? PeerView else {
+                    preconditionFailure()
+                }
+                if let channel = peerViewMainPeer(view) as? TelegramChannel {
+                    return channel.sendPaidMessageStars
+                } else {
+                    return nil
+                }
+            }
+        }
 
         public struct GroupCallDescription: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
             public typealias Result = Optional<EngineGroupCallDescription>

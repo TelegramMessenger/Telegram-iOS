@@ -203,7 +203,7 @@ public final class SelectablePeerNode: ASDisplayNode {
         }
         
         var isForum = false
-        if let peer = peer.chatMainPeer, case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+        if let peer = peer.chatMainPeer, case let .channel(channel) = peer, channel.isForumOrMonoForum {
             isForum = true
         }
         
@@ -375,7 +375,7 @@ public final class SelectablePeerNode: ASDisplayNode {
             }
             
             var isForum = false
-            if let peer = self.peer?.chatMainPeer, case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+            if let peer = self.peer?.chatMainPeer, case let .channel(channel) = peer, channel.isForumOrMonoForum {
                 isForum = true
             }
             

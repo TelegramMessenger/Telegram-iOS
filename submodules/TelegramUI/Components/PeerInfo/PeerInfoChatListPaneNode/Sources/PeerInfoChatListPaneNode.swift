@@ -149,7 +149,7 @@ public final class PeerInfoChatListPaneNode: ASDisplayNode, PeerInfoPaneNode, AS
         
         self.chatListNode = ChatListNode(
             context: self.context,
-            location: .savedMessagesChats,
+            location: .savedMessagesChats(peerId: context.account.peerId),
             chatListFilter: nil,
             previewing: false,
             fillPreloadItems: false,
@@ -210,6 +210,7 @@ public final class PeerInfoChatListPaneNode: ASDisplayNode, PeerInfoPaneNode, AS
                     channelMessageId: nil,
                     isChannelPost: false,
                     isForumPost: false,
+                    isMonoforumPost: false,
                     maxMessage: nil,
                     maxReadIncomingMessageId: nil,
                     maxReadOutgoingMessageId: nil,
@@ -378,7 +379,7 @@ public final class PeerInfoChatListPaneNode: ASDisplayNode, PeerInfoPaneNode, AS
             if case let .peer(peerData) = item.content {
                 let threadId = peerData.peer.peerId.toInt64()
                 let chatController = self.context.sharedContext.makeChatController(context: self.context, chatLocation: .replyThread(message: ChatReplyThreadMessage(
-                    peerId: self.context.account.peerId, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: false, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false
+                    peerId: self.context.account.peerId, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: false, isMonoforumPost: false, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false
                 )), subject: nil, botStart: nil, mode: .standard(.previewing), params: nil)
                 chatController.canReadHistory.set(false)
                 let source: ContextContentSource = .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: parentController.navigationController as? NavigationController))

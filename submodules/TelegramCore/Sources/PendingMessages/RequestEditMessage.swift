@@ -179,9 +179,6 @@ private func requestEditMessageInternal(accountPeerId: PeerId, postbox: Postbox,
                 if messageId.namespace == Namespaces.Message.QuickReplyCloud {
                     quickReplyShortcutId = Int32(clamping: message.threadId ?? 0)
                     flags |= Int32(1 << 17)
-                } else if messageId.namespace == Namespaces.Message.SuggestedPostLocal {
-                    //TODO:release
-                    preconditionFailure()
                 }
                 
                 return network.request(Api.functions.messages.editMessage(flags: flags, peer: inputPeer, id: messageId.id, message: text, media: inputMedia, replyMarkup: nil, entities: apiEntities, scheduleDate: effectiveScheduleTime, quickReplyShortcutId: quickReplyShortcutId))
@@ -211,7 +208,7 @@ private func requestEditMessageInternal(accountPeerId: PeerId, postbox: Postbox,
                     if let result = result {
                         return postbox.transaction { transaction -> RequestEditMessageResult in
                             var toMedia: Media?
-                            if let message = result.messages.first.flatMap({ StoreMessage(apiMessage: $0, accountPeerId: accountPeerId, peerIsForum: peer.isForum) }) {
+                            if let message = result.messages.first.flatMap({ StoreMessage(apiMessage: $0, accountPeerId: accountPeerId, peerIsForum: peer.isForumOrMonoForum) }) {
                                 toMedia = message.media.first
                             }
                             
@@ -227,7 +224,7 @@ private func requestEditMessageInternal(accountPeerId: PeerId, postbox: Postbox,
                                         let peers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                                         updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: peers)
                                         
-                                        if let message = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForum), case let .Id(id) = message.id {
+                                        if let message = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForumOrMonoForum), case let .Id(id) = message.id {
                                             transaction.updateMessage(id, update: { previousMessage in
                                                 var updatedFlags = message.flags
                                                 var updatedLocalTags = message.localTags

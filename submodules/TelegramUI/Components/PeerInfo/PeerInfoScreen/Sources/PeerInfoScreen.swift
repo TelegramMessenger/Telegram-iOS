@@ -436,6 +436,8 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, openBoostToUnrestrict: {
         }, updateVideoTrimRange: { _, _, _, _ in
         }, updateHistoryFilter: { _ in
+        }, updateChatLocationThread: { _ in
+        }, toggleChatSidebarMode: {
         }, updateDisplayHistoryFilterAsList: { _ in
         }, requestLayout: { _ in
         }, chatController: {
@@ -572,6 +574,7 @@ private final class PeerInfoInteraction {
     let editingOpenStars: () -> Void
     let openParticipantsSection: (PeerInfoParticipantsSection) -> Void
     let openRecentActions: () -> Void
+    let openChannelMessages: () -> Void
     let openStats: (ChannelStatsSection) -> Void
     let editingOpenPreHistorySetup: () -> Void
     let editingOpenAutoremoveMesages: () -> Void
@@ -645,6 +648,7 @@ private final class PeerInfoInteraction {
         editingOpenStars: @escaping () -> Void,
         openParticipantsSection: @escaping (PeerInfoParticipantsSection) -> Void,
         openRecentActions: @escaping () -> Void,
+        openChannelMessages: @escaping () -> Void,
         openStats: @escaping (ChannelStatsSection) -> Void,
         editingOpenPreHistorySetup: @escaping () -> Void,
         editingOpenAutoremoveMesages: @escaping () -> Void,
@@ -717,6 +721,7 @@ private final class PeerInfoInteraction {
         self.editingOpenStars = editingOpenStars
         self.openParticipantsSection = openParticipantsSection
         self.openRecentActions = openRecentActions
+        self.openChannelMessages = openChannelMessages
         self.openStats = openStats
         self.editingOpenPreHistorySetup = editingOpenPreHistorySetup
         self.editingOpenAutoremoveMesages = editingOpenAutoremoveMesages
@@ -2164,8 +2169,9 @@ private func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostSt
                 let ItemBanned = 11
                 let ItemRecentActions = 12
                 let ItemAffiliatePrograms = 13
-                //let ItemPostSuggestionsSettings = 14
+                let ItemPostSuggestionsSettings = 14
                 let ItemPeerAutoTranslate = 15
+                let ItemChannelMessages = 16
                 
                 let isCreator = channel.flags.contains(.isCreator)
                 
@@ -2214,9 +2220,9 @@ private func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostSt
                     }))
                     
                     //TODO:localize
-                    /*items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPostSuggestionsSettings, label: .text("Off"), additionalBadgeLabel: presentationData.strings.Settings_New, text: "Post Suggestions", icon: UIImage(bundleImageName: "Chat/Info/PostSuggestionsIcon"), action: {
+                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPostSuggestionsSettings, label: .text(channel.linkedMonoforumId == nil ? "Off" : "On"), additionalBadgeLabel: presentationData.strings.Settings_New, text: "Message Channel", icon: UIImage(bundleImageName: "Chat/Info/PostSuggestionsIcon"), action: {
                         interaction.editingOpenPostSuggestionsSetup()
-                    }))*/
+                    }))
                 }
                 
                 if isCreator || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
@@ -2349,6 +2355,13 @@ private func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostSt
                     items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemRecentActions, label: .none, text: presentationData.strings.Group_Info_AdminLog, icon: UIImage(bundleImageName: "Chat/Info/RecentActionsIcon"), action: {
                         interaction.openRecentActions()
                     }))
+                    
+                    if channel.linkedMonoforumId != nil {
+                        //TODO:localize
+                        items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemChannelMessages, label: .none, text: "Channel Messages", icon: UIImage(bundleImageName: "Chat/Info/RecentActionsIcon"), action: {
+                            interaction.openChannelMessages()
+                        }))
+                    }
                 }
                 
                 if channel.hasPermission(.changeInfo) {
@@ -2541,7 +2554,7 @@ private func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostSt
                         }))
                     }
                     
-                    if (isCreator || (channel.adminRights != nil && channel.hasPermission(.banMembers))) && cachedData.peerGeoLocation == nil, !isPublic, case .known(nil) = cachedData.linkedDiscussionPeerId, !channel.flags.contains(.isForum) {
+                    if (isCreator || (channel.adminRights != nil && channel.hasPermission(.banMembers))) && cachedData.peerGeoLocation == nil, !isPublic, case .known(nil) = cachedData.linkedDiscussionPeerId, !channel.isForumOrMonoForum {
                         items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPreHistory, label: .text(cachedData.flags.contains(.preHistoryEnabled) ? presentationData.strings.GroupInfo_GroupHistoryVisible : presentationData.strings.GroupInfo_GroupHistoryHidden), text: presentationData.strings.GroupInfo_GroupHistoryShort, icon: UIImage(bundleImageName: "Chat/Info/GroupDiscussionIcon"), action: {
                             interaction.editingOpenPreHistorySetup()
                         }))
@@ -3043,6 +3056,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             openRecentActions: { [weak self] in
                 self?.openRecentActions()
             },
+            openChannelMessages: { [weak self] in
+                self?.openChannelMessages()
+            },
             openStats: { [weak self] section in
                 self?.openStats(section: section)
             },
@@ -3285,7 +3301,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
                     c?.dismiss(completion: {
                         if let strongSelf = self, let currentPeer = strongSelf.data?.peer, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
-                            if let channel = currentPeer as? TelegramChannel, channel.flags.contains(.isForum), let threadId = message.threadId {
+                            if let channel = currentPeer as? TelegramChannel, channel.isForumOrMonoForum, let threadId = message.threadId {
                                 let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: currentPeer.id, threadId: threadId, messageId: message.id, navigationController: navigationController, activateInput: nil, scrollToEndIfExists: false, keepStack: .default).startStandalone()
                             } else {
                                 let targetLocation: NavigateToChatControllerParams.Location
@@ -3447,7 +3463,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         items.append(.action(ContextMenuActionItem(text: strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor) }, action: { c, f in
                             c?.dismiss(completion: {
                                 if let strongSelf = self, let currentPeer = strongSelf.data?.peer, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
-                                    if let channel = currentPeer as? TelegramChannel, channel.flags.contains(.isForum), let threadId = message.threadId {
+                                    if let channel = currentPeer as? TelegramChannel, channel.isForumOrMonoForum, let threadId = message.threadId {
                                         let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: currentPeer.id, threadId: threadId, messageId: message.id, navigationController: navigationController, activateInput: nil, scrollToEndIfExists: false, keepStack: .default).startStandalone()
                                     } else {
                                         let targetLocation: NavigateToChatControllerParams.Location
@@ -3790,6 +3806,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }, forceUpdateWarpContents: {
         }, playShakeAnimation: {
         }, displayQuickShare: { _, _ ,_ in
+        }, updateChatLocationThread: { _ in
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
         pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(), presentationContext: ChatPresentationContext(context: context, backgroundNode: nil))
         self.hiddenMediaDisposable = context.sharedContext.mediaManager.galleryHiddenMediaManager.hiddenIds().startStrict(next: { [weak self] ids in
@@ -5149,7 +5166,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
         }
         
-        if let channel = data.peer as? TelegramChannel, channel.flags.contains(.isForum), self.chatLocation.threadId == nil {
+        if let channel = data.peer as? TelegramChannel, channel.isForumOrMonoForum, self.chatLocation.threadId == nil {
             if self.forumTopicNotificationExceptionsDisposable == nil {
                 self.forumTopicNotificationExceptionsDisposable = (self.context.engine.peers.forumChannelTopicNotificationExceptions(id: channel.id)
                 |> deliverOnMainQueue).startStrict(next: { [weak self] list in
@@ -5937,7 +5954,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             } else {
                 displayCustomNotificationSettings = true
             }
-            if self.data?.threadData == nil, let channel = self.data?.peer as? TelegramChannel, channel.flags.contains(.isForum) {
+            if self.data?.threadData == nil, let channel = self.data?.peer as? TelegramChannel, channel.isForumOrMonoForum {
                 displayCustomNotificationSettings = true
             }
             
@@ -7090,7 +7107,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     
     private func openChatForReporting(title: String, option: Data, message: String?) {
         if let peer = self.data?.peer, let navigationController = (self.controller?.navigationController as? NavigationController) {
-            if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {
+            if let channel = peer as? TelegramChannel, channel.isForumOrMonoForum {
                 //let _ = self.context.engine.peers.reportPeer(peerId: peer.id, reason: reason, message: "").startStandalone()
                 //self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .emoji(name: "PoliceCar", text: self.presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), in: .current)
             } else {
@@ -9140,11 +9157,20 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
     
     private func editingOpenPostSuggestionsSetup() {
-        guard let data = self.data, let peer = data.peer else {
-            return
+        if #available(iOS 13.0, *) {
+            guard let data = self.data, let peer = data.peer else {
+                return
+            }
+            let context = self.context
+            Task { @MainActor [weak self] in
+                let postSettingsScreen = await context.sharedContext.makePostSuggestionsSettingsScreen(context: context, peerId: peer.id)
+                
+                guard let self else {
+                    return
+                }
+                self.controller?.push(postSettingsScreen)
+            }
         }
-        let _ = peer
-        self.controller?.push(self.context.sharedContext.makePostSuggestionsSettingsScreen(context: self.context))
     }
     
     private func editingOpenRevenue() {
@@ -9217,7 +9243,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             if isEnabled {
                 let context = self.context
                 let signal: Signal<EnginePeer.Id?, NoError> = self.context.engine.peers.convertGroupToSupergroup(peerId: self.peerId, additionalProcessing: { upgradedPeerId -> Signal<Never, NoError> in
-                    return context.engine.peers.setChannelForumMode(id: upgradedPeerId, isForum: isEnabled)
+                    return context.engine.peers.setChannelForumMode(id: upgradedPeerId, isForum: isEnabled, displayForumAsTabs: false)
                 })
                 |> map(Optional.init)
                 |> `catch` { [weak self] error -> Signal<PeerId?, NoError> in
@@ -9247,7 +9273,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         return
                     }
                     
-                    let _ = (self.context.engine.peers.setChannelForumMode(id: resultPeerId, isForum: isEnabled)
+                    let _ = (self.context.engine.peers.setChannelForumMode(id: resultPeerId, isForum: isEnabled, displayForumAsTabs: false)
                     |> deliverOnMainQueue).startStandalone(completed: { [weak self] in
                         guard let self, let controller = self.controller else {
                             return
@@ -9260,7 +9286,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 })
             }
         } else {
-            let _ = self.context.engine.peers.setChannelForumMode(id: self.peerId, isForum: isEnabled).startStandalone()
+            let _ = self.context.engine.peers.setChannelForumMode(id: self.peerId, isForum: isEnabled, displayForumAsTabs: false).startStandalone()
         }
     }
         
@@ -9290,6 +9316,23 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }
         let controller = self.context.sharedContext.makeChatRecentActionsController(context: self.context, peer: peer, adminPeerId: nil, starsState: self.data?.starsRevenueStatsState)
         self.controller?.push(controller)
+    }
+    
+    private func openChannelMessages() {
+        guard let channel = self.data?.peer as? TelegramChannel, let linkedMonoforumId = channel.linkedMonoforumId else {
+            return
+        }
+        let _ = (self.context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: linkedMonoforumId)
+        )
+        |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
+            guard let self, let peer else {
+                return
+            }
+            if let controller = self.controller, let navigationController = controller.navigationController as? NavigationController {
+                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer)))
+            }
+        })
     }
     
     private func editingOpenPreHistorySetup() {
@@ -9866,7 +9909,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
             
             var isForum = false
-            if let peer = strongSelf.data?.peer as? TelegramChannel, peer.flags.contains(.isForum) {
+            if let peer = strongSelf.data?.peer as? TelegramChannel, peer.isForumOrMonoForum {
                 isForum = true
             }
             
@@ -11014,7 +11057,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 self?.deactivateSearch()
             })
         } else if let currentPaneKey = self.paneContainerNode.currentPaneKey, case .savedMessagesChats = currentPaneKey {
-            let contentNode = ChatListSearchContainerNode(context: self.context, animationCache: self.context.animationCache, animationRenderer: self.context.animationRenderer, filter: [.removeSearchHeader], requestPeerType: nil, location: .savedMessagesChats, displaySearchFilters: false, hasDownloads: false, initialFilter: .chats, openPeer: { [weak self] peer, _, _, _ in
+            let contentNode = ChatListSearchContainerNode(context: self.context, animationCache: self.context.animationCache, animationRenderer: self.context.animationRenderer, filter: [.removeSearchHeader], requestPeerType: nil, location: .savedMessagesChats(peerId: self.context.account.peerId), displaySearchFilters: false, hasDownloads: false, initialFilter: .chats, openPeer: { [weak self] peer, _, _, _ in
                 guard let self else {
                     return
                 }
@@ -11030,6 +11073,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         channelMessageId: nil,
                         isChannelPost: false,
                         isForumPost: false,
+                        isMonoforumPost: false,
                         maxMessage: nil,
                         maxReadIncomingMessageId: nil,
                         maxReadOutgoingMessageId: nil,
@@ -11059,6 +11103,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         channelMessageId: nil,
                         isChannelPost: false,
                         isForumPost: false,
+                        isMonoforumPost: false,
                         maxMessage: nil,
                         maxReadIncomingMessageId: nil,
                         maxReadOutgoingMessageId: nil,
@@ -13372,7 +13417,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
                     let navigateChatLocation: NavigateToChatControllerParams.Location
                     if let threadId = item.threadId {
                         navigateChatLocation = .replyThread(ChatReplyThreadMessage(
-                            peerId: item.peerId, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false
+                            peerId: item.peerId, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, isMonoforumPost: false,maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false
                         ))
                     } else {
                         navigateChatLocation = .peer(itemPeer)

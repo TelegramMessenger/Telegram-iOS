@@ -277,7 +277,7 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, ASGestureReco
         }
     }
     
-    override public func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
+    override public func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: ChatMessageHeaderSpec) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
         let layoutConstants = self.layoutConstants
         
         let makeVideoLayout = self.interactiveVideoNode.asyncLayout()
@@ -296,7 +296,7 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, ASGestureReco
         let currentForwardInfo = self.appliedForwardInfo
         let currentPlaying = self.appliedCurrentlyPlaying
         
-        func continueAsyncLayout(_ weakSelf: Weak<ChatMessageInstantVideoItemNode>, _ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
+        func continueAsyncLayout(_ weakSelf: Weak<ChatMessageInstantVideoItemNode>, _ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: ChatMessageHeaderSpec) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
             let accessibilityData = ChatMessageAccessibilityData(item: item, isSelected: nil)
             
             let layoutConstants = chatMessageItemLayoutConstants(layoutConstants, params: params, presentationData: item.presentationData)
@@ -391,8 +391,15 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, ASGestureReco
             }
             
             var layoutInsets = layoutConstants.instantVideo.insets
-            if dateHeaderAtBottom {
-                layoutInsets.top += layoutConstants.timestampHeaderHeight
+            if dateHeaderAtBottom.hasDate && dateHeaderAtBottom.hasTopic {
+                layoutInsets.top += layoutConstants.timestampDateAndTopicHeaderHeight
+            } else {
+                if dateHeaderAtBottom.hasDate {
+                    layoutInsets.top += layoutConstants.timestampHeaderHeight
+                }
+                if dateHeaderAtBottom.hasTopic {
+                    layoutInsets.top += layoutConstants.timestampHeaderHeight
+                }
             }
             
             var deliveryFailedInset: CGFloat = 0.0

@@ -71,7 +71,7 @@ final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
         let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .linear)
         
         let clipStyle: AvatarNodeClipStyle
-        if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {
+        if let channel = peer as? TelegramChannel, channel.isForumOrMonoForum {
             clipStyle = .roundedRect
         } else {
             clipStyle = .round

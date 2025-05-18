@@ -10,13 +10,10 @@ public struct Namespaces {
         public static let ScheduledLocal: Int32 = 4
         public static let QuickReplyCloud: Int32 = 5
         public static let QuickReplyLocal: Int32 = 6
-        public static let SuggestedPostLocal: Int32 = 7
-        public static let SuggestedPostCloud: Int32 = 8
         
         public static let allScheduled: Set<Int32> = Set([Namespaces.Message.ScheduledCloud, Namespaces.Message.ScheduledLocal])
         public static let allQuickReply: Set<Int32> = Set([Namespaces.Message.QuickReplyCloud, Namespaces.Message.QuickReplyLocal])
-        public static let allSuggestedPost: Set<Int32> = Set([Namespaces.Message.SuggestedPostCloud, Namespaces.Message.SuggestedPostLocal])
-        public static let allNonRegular: Set<Int32> = Set([Namespaces.Message.ScheduledCloud, Namespaces.Message.ScheduledLocal, Namespaces.Message.QuickReplyCloud, Namespaces.Message.QuickReplyLocal, Namespaces.Message.SuggestedPostCloud, Namespaces.Message.SuggestedPostLocal])
+        public static let allNonRegular: Set<Int32> = Set([Namespaces.Message.ScheduledCloud, Namespaces.Message.ScheduledLocal, Namespaces.Message.QuickReplyCloud, Namespaces.Message.QuickReplyLocal])
         public static let allLocal: [Int32] = [
             Namespaces.Message.Local,
             Namespaces.Message.SecretIncoming,

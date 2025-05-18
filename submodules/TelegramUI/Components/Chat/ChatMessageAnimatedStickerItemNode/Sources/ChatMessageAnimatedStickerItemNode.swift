@@ -801,7 +801,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     }
         
-    override public func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
+    override public func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: ChatMessageHeaderSpec) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
         var displaySize = CGSize(width: 180.0, height: 180.0)
         let telegramFile = self.telegramFile
         let emojiFile = self.emojiFile
@@ -823,7 +823,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         
         let textLayout = TextNodeWithEntities.asyncLayout(self.textNode)
         
-        func continueAsyncLayout(_ weakSelf: Weak<ChatMessageAnimatedStickerItemNode>, _ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
+        func continueAsyncLayout(_ weakSelf: Weak<ChatMessageAnimatedStickerItemNode>, _ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: ChatMessageHeaderSpec) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
             let accessibilityData = ChatMessageAccessibilityData(item: item, isSelected: nil)
             let layoutConstants = chatMessageItemLayoutConstants(layoutConstants, params: params, presentationData: item.presentationData)
             let incoming = item.content.effectivelyIncoming(item.context.account.peerId, associatedData: item.associatedData)
@@ -1005,8 +1005,15 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
                         
             var layoutInsets = UIEdgeInsets(top: mergedTop.merged ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, left: 0.0, bottom: mergedBottom.merged ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, right: 0.0)
-            if dateHeaderAtBottom {
-                layoutInsets.top += layoutConstants.timestampHeaderHeight
+            if dateHeaderAtBottom.hasDate && dateHeaderAtBottom.hasTopic {
+                layoutInsets.top += layoutConstants.timestampDateAndTopicHeaderHeight
+            } else {
+                if dateHeaderAtBottom.hasDate {
+                    layoutInsets.top += layoutConstants.timestampHeaderHeight
+                }
+                if dateHeaderAtBottom.hasTopic {
+                    layoutInsets.top += layoutConstants.timestampHeaderHeight
+                }
             }
             
             var deliveryFailedInset: CGFloat = 0.0
@@ -1161,7 +1168,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
             
             var hasReply = replyMessage != nil || replyForward != nil || replyStory != nil
-            if case let .peer(peerId) = item.chatLocation, (peerId == replyMessage?.id.peerId || item.message.threadId == 1), let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum), item.message.associatedThreadInfo != nil {
+            if case let .peer(peerId) = item.chatLocation, (peerId == replyMessage?.id.peerId || item.message.threadId == 1), let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.isForumOrMonoForum, item.message.associatedThreadInfo != nil {
                 if let threadId = item.message.threadId, let replyMessage = replyMessage, Int64(replyMessage.id.id) == threadId {
                     hasReply = false
                 }
@@ -1376,6 +1383,8 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 if let strongSelf = weakSelf.value {
                     strongSelf.appliedForwardInfo = (forwardSource, forwardAuthorSignature)
                     strongSelf.updateAccessibilityData(accessibilityData)
+                    
+                    strongSelf.updateAttachedDateHeader(hasDate: dateHeaderAtBottom.hasDate, hasPeer: dateHeaderAtBottom.hasTopic)
                     
                     strongSelf.messageAccessibilityArea.frame = CGRect(origin: CGPoint(), size: layoutSize)
                     strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
@@ -1829,7 +1838,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
         
         let weakSelf = Weak(self)
-        return { (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) in
+        return { (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: ChatMessageHeaderSpec) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) in
             return continueAsyncLayout(weakSelf, item, params, mergedTop, mergedBottom, dateHeaderAtBottom)
         }
     }

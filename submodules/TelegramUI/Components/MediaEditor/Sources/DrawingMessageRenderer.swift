@@ -326,7 +326,7 @@ public final class DrawingMessageRenderer {
                 }
              
                 avatarHeaderNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 3.0), size: CGSize(width: layout.size.width, height: avatarHeaderItem.height))
-                avatarHeaderNode.updateLayout(size: size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right)
+                avatarHeaderNode.updateLayout(size: size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: .immediate)
             }
             
             var finalWidth: CGFloat = width

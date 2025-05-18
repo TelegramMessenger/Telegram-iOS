@@ -1037,8 +1037,8 @@ public extension Api {
         case updateDialogFilterOrder(order: [Int32])
         case updateDialogFilters
         case updateDialogPinned(flags: Int32, folderId: Int32?, peer: Api.DialogPeer)
-        case updateDialogUnreadMark(flags: Int32, peer: Api.DialogPeer)
-        case updateDraftMessage(flags: Int32, peer: Api.Peer, topMsgId: Int32?, draft: Api.DraftMessage)
+        case updateDialogUnreadMark(flags: Int32, peer: Api.DialogPeer, savedPeerId: Api.Peer?)
+        case updateDraftMessage(flags: Int32, peer: Api.Peer, topMsgId: Int32?, savedPeerId: Api.Peer?, draft: Api.DraftMessage)
         case updateEditChannelMessage(message: Api.Message, pts: Int32, ptsCount: Int32)
         case updateEditMessage(message: Api.Message, pts: Int32, ptsCount: Int32)
         case updateEncryptedChatTyping(chatId: Int32)
@@ -1096,6 +1096,8 @@ public extension Api {
         case updateReadHistoryInbox(flags: Int32, folderId: Int32?, peer: Api.Peer, maxId: Int32, stillUnreadCount: Int32, pts: Int32, ptsCount: Int32)
         case updateReadHistoryOutbox(peer: Api.Peer, maxId: Int32, pts: Int32, ptsCount: Int32)
         case updateReadMessagesContents(flags: Int32, messages: [Int32], pts: Int32, ptsCount: Int32, date: Int32?)
+        case updateReadMonoForumInbox(flags: Int32, channelId: Int64, savedPeerId: Api.Peer, readMaxId: Int32)
+        case updateReadMonoForumOutbox(channelId: Int64, savedPeerId: Api.Peer, readMaxId: Int32)
         case updateReadStories(peer: Api.Peer, maxId: Int32)
         case updateRecentEmojiStatuses
         case updateRecentReactions
@@ -1653,20 +1655,22 @@ public extension Api {
                     if Int(flags) & Int(1 << 1) != 0 {serializeInt32(folderId!, buffer: buffer, boxed: false)}
                     peer.serialize(buffer, true)
                     break
-                case .updateDialogUnreadMark(let flags, let peer):
+                case .updateDialogUnreadMark(let flags, let peer, let savedPeerId):
                     if boxed {
-                        buffer.appendInt32(-513517117)
+                        buffer.appendInt32(-1235684802)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 1) != 0 {savedPeerId!.serialize(buffer, true)}
                     break
-                case .updateDraftMessage(let flags, let peer, let topMsgId, let draft):
+                case .updateDraftMessage(let flags, let peer, let topMsgId, let savedPeerId, let draft):
                     if boxed {
-                        buffer.appendInt32(457829485)
+                        buffer.appendInt32(-302247650)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(topMsgId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {savedPeerId!.serialize(buffer, true)}
                     draft.serialize(buffer, true)
                     break
                 case .updateEditChannelMessage(let message, let pts, let ptsCount):
@@ -2164,6 +2168,23 @@ public extension Api {
                     serializeInt32(ptsCount, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(date!, buffer: buffer, boxed: false)}
                     break
+                case .updateReadMonoForumInbox(let flags, let channelId, let savedPeerId, let readMaxId):
+                    if boxed {
+                        buffer.appendInt32(-1124907246)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(channelId, buffer: buffer, boxed: false)
+                    savedPeerId.serialize(buffer, true)
+                    serializeInt32(readMaxId, buffer: buffer, boxed: false)
+                    break
+                case .updateReadMonoForumOutbox(let channelId, let savedPeerId, let readMaxId):
+                    if boxed {
+                        buffer.appendInt32(-1532521610)
+                    }
+                    serializeInt64(channelId, buffer: buffer, boxed: false)
+                    savedPeerId.serialize(buffer, true)
+                    serializeInt32(readMaxId, buffer: buffer, boxed: false)
+                    break
                 case .updateReadStories(let peer, let maxId):
                     if boxed {
                         buffer.appendInt32(-145845461)
@@ -2491,10 +2512,10 @@ public extension Api {
                 return ("updateDialogFilters", [])
                 case .updateDialogPinned(let flags, let folderId, let peer):
                 return ("updateDialogPinned", [("flags", flags as Any), ("folderId", folderId as Any), ("peer", peer as Any)])
-                case .updateDialogUnreadMark(let flags, let peer):
-                return ("updateDialogUnreadMark", [("flags", flags as Any), ("peer", peer as Any)])
-                case .updateDraftMessage(let flags, let peer, let topMsgId, let draft):
-                return ("updateDraftMessage", [("flags", flags as Any), ("peer", peer as Any), ("topMsgId", topMsgId as Any), ("draft", draft as Any)])
+                case .updateDialogUnreadMark(let flags, let peer, let savedPeerId):
+                return ("updateDialogUnreadMark", [("flags", flags as Any), ("peer", peer as Any), ("savedPeerId", savedPeerId as Any)])
+                case .updateDraftMessage(let flags, let peer, let topMsgId, let savedPeerId, let draft):
+                return ("updateDraftMessage", [("flags", flags as Any), ("peer", peer as Any), ("topMsgId", topMsgId as Any), ("savedPeerId", savedPeerId as Any), ("draft", draft as Any)])
                 case .updateEditChannelMessage(let message, let pts, let ptsCount):
                 return ("updateEditChannelMessage", [("message", message as Any), ("pts", pts as Any), ("ptsCount", ptsCount as Any)])
                 case .updateEditMessage(let message, let pts, let ptsCount):
@@ -2609,6 +2630,10 @@ public extension Api {
                 return ("updateReadHistoryOutbox", [("peer", peer as Any), ("maxId", maxId as Any), ("pts", pts as Any), ("ptsCount", ptsCount as Any)])
                 case .updateReadMessagesContents(let flags, let messages, let pts, let ptsCount, let date):
                 return ("updateReadMessagesContents", [("flags", flags as Any), ("messages", messages as Any), ("pts", pts as Any), ("ptsCount", ptsCount as Any), ("date", date as Any)])
+                case .updateReadMonoForumInbox(let flags, let channelId, let savedPeerId, let readMaxId):
+                return ("updateReadMonoForumInbox", [("flags", flags as Any), ("channelId", channelId as Any), ("savedPeerId", savedPeerId as Any), ("readMaxId", readMaxId as Any)])
+                case .updateReadMonoForumOutbox(let channelId, let savedPeerId, let readMaxId):
+                return ("updateReadMonoForumOutbox", [("channelId", channelId as Any), ("savedPeerId", savedPeerId as Any), ("readMaxId", readMaxId as Any)])
                 case .updateReadStories(let peer, let maxId):
                 return ("updateReadStories", [("peer", peer as Any), ("maxId", maxId as Any)])
                 case .updateRecentEmojiStatuses:
@@ -3783,10 +3808,15 @@ public extension Api {
             if let signature = reader.readInt32() {
                 _2 = Api.parse(reader, signature: signature) as? Api.DialogPeer
             }
+            var _3: Api.Peer?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.Peer
+            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.Update.updateDialogUnreadMark(flags: _1!, peer: _2!)
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.Update.updateDialogUnreadMark(flags: _1!, peer: _2!, savedPeerId: _3)
             }
             else {
                 return nil
@@ -3801,16 +3831,21 @@ public extension Api {
             }
             var _3: Int32?
             if Int(_1!) & Int(1 << 0) != 0 {_3 = reader.readInt32() }
-            var _4: Api.DraftMessage?
+            var _4: Api.Peer?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.Peer
+            } }
+            var _5: Api.DraftMessage?
             if let signature = reader.readInt32() {
-                _4 = Api.parse(reader, signature: signature) as? Api.DraftMessage
+                _5 = Api.parse(reader, signature: signature) as? Api.DraftMessage
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.Update.updateDraftMessage(flags: _1!, peer: _2!, topMsgId: _3, draft: _4!)
+            let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.Update.updateDraftMessage(flags: _1!, peer: _2!, topMsgId: _3, savedPeerId: _4, draft: _5!)
             }
             else {
                 return nil
@@ -4797,6 +4832,47 @@ public extension Api {
             let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
                 return Api.Update.updateReadMessagesContents(flags: _1!, messages: _2!, pts: _3!, ptsCount: _4!, date: _5)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateReadMonoForumInbox(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Api.Peer?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _4: Int32?
+            _4 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.Update.updateReadMonoForumInbox(flags: _1!, channelId: _2!, savedPeerId: _3!, readMaxId: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateReadMonoForumOutbox(_ reader: BufferReader) -> Update? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Api.Peer?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.Update.updateReadMonoForumOutbox(channelId: _1!, savedPeerId: _2!, readMaxId: _3!)
             }
             else {
                 return nil

@@ -1070,6 +1070,16 @@ public struct PeerAndThreadId: Hashable {
     }
 }
 
+public struct PeerAndBoundThreadId: Hashable {
+    public var peerId: PeerId
+    public var threadId: Int64
+    
+    public init(peerId: PeerId, threadId: Int64) {
+        self.peerId = peerId
+        self.threadId = threadId
+    }
+}
+
 public struct MessageAndThreadId: Hashable {
     public var messageId: MessageId
     public var threadId: Int64?

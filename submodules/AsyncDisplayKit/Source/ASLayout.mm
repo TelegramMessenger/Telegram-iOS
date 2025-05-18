@@ -235,7 +235,10 @@ static std::atomic_bool static_retainsSublayoutLayoutElements = ATOMIC_VAR_INIT(
       }
     } else if (sublayoutsCount > 0) {
       // Fast-reverse-enumerate the sublayouts array by copying it into a C-array and push_front'ing each into the queue.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wvla-cxx-extension"
       unowned ASLayout *rawSublayouts[sublayoutsCount];
+#pragma clang diagnostic pop
       [layout->_sublayouts getObjects:rawSublayouts range:NSMakeRange(0, sublayoutsCount)];
       for (NSInteger i = sublayoutsCount - 1; i >= 0; i--) {
         queue.push_front({rawSublayouts[i], absolutePosition + rawSublayouts[i].position});

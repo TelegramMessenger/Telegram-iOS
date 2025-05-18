@@ -119,3 +119,19 @@ public final class Signal<T, E> {
         }
     }
 }
+
+@available(iOS 13.0, macOS 10.15, *)
+public extension Signal where E == NoError {
+    func get() async -> T {
+        let disposable = MetaDisposable()
+        return await withTaskCancellationHandler(operation: {
+            return await withCheckedContinuation { continuation in
+                disposable.set((self |> take(1)).startStandalone(next: { value in
+                    continuation.resume(returning: value)
+                }))
+            }
+        }, onCancel: {
+            disposable.dispose()
+        })
+    }
+}

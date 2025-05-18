@@ -10,6 +10,7 @@ public enum ListViewItemHeaderStickDirection {
 
 public protocol ListViewItemHeader: AnyObject {
     var id: ListViewItemNode.HeaderId { get }
+    var stackingId: ListViewItemNode.HeaderId? { get }
     var stickDirection: ListViewItemHeaderStickDirection { get }
     var height: CGFloat { get }
     var stickOverInsets: Bool { get }
@@ -28,6 +29,9 @@ open class ListViewItemHeaderNode: ASDisplayNode {
     final var internalStickLocationDistance: CGFloat = 0.0
     private var isFlashingOnScrolling = false
     weak var attachedToItemNode: ListViewItemNode?
+    
+    var offsetByHeaderNodeId: ListViewItemNode.HeaderId?
+    var naturalOriginY: CGFloat?
     
     public var item: ListViewItemHeader?
     
@@ -61,7 +65,7 @@ open class ListViewItemHeaderNode: ASDisplayNode {
         self.isLayerBacked = layerBacked
     }
     
-    open func updateStickDistanceFactor(_ factor: CGFloat, transition: ContainedViewLayoutTransition) {
+    open func updateStickDistanceFactor(_ factor: CGFloat, distance: CGFloat, transition: ContainedViewLayoutTransition) {
     }
     
     final func addScrollingOffset(_ scrollingOffset: CGFloat) {
@@ -128,7 +132,7 @@ open class ListViewItemHeaderNode: ASDisplayNode {
     
     private var cachedLayout: (CGSize, CGFloat, CGFloat)?
     
-    public func updateLayoutInternal(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
+    public func updateLayoutInternal(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
         var update = false
         if let cachedLayout = self.cachedLayout {
             if cachedLayout.0 != size || cachedLayout.1 != leftInset || cachedLayout.2 != rightInset {
@@ -139,11 +143,11 @@ open class ListViewItemHeaderNode: ASDisplayNode {
         }
         if update {
             self.cachedLayout = (size, leftInset, rightInset)
-            self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset)
+            self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: transition)
         }
     }
     
-    open func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
+    open func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
     }
     
     open func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {

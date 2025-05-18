@@ -1,6 +1,64 @@
-###############################################################################
-# Bazel now uses Bzlmod by default to manage external dependencies.
-# Please consider migrating your external dependencies from WORKSPACE to MODULE.bazel.
-#
-# For more details, please check https://github.com/bazelbuild/bazel/issues/18958
-###############################################################################
+http_file = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_file")
+
+bazel_dep(name = "bazel_features", version = "1.29.0")
+bazel_dep(name = "bazel_skylib", version = "1.7.1")
+bazel_dep(name = "platforms", version = "0.0.11")
+
+bazel_dep(name = "rules_xcodeproj")
+local_path_override(
+    module_name = "rules_xcodeproj",
+    path = "./build-system/bazel-rules/rules_xcodeproj",
+)
+
+bazel_dep(name = "rules_apple", repo_name = "build_bazel_rules_apple")
+local_path_override(
+    module_name = "rules_apple",
+    path = "./build-system/bazel-rules/rules_apple",
+)
+
+bazel_dep(name = "rules_swift", repo_name = "build_bazel_rules_swift")
+local_path_override(
+    module_name = "rules_swift",
+    path = "./build-system/bazel-rules/rules_swift",
+)
+
+bazel_dep(name = "apple_support", repo_name = "build_bazel_apple_support")
+local_path_override(
+    module_name = "apple_support",
+    path = "./build-system/bazel-rules/apple_support",
+)
+
+http_file(
+    name = "cmake_tar_gz",
+    urls = ["https://github.com/Kitware/CMake/releases/download/v3.23.1/cmake-3.23.1-macos-universal.tar.gz"],
+    sha256 = "f794ed92ccb4e9b6619a77328f313497d7decf8fb7e047ba35a348b838e0e1e2",
+)
+
+http_file(
+    name = "meson_tar_gz",
+    urls = ["https://github.com/mesonbuild/meson/releases/download/1.6.0/meson-1.6.0.tar.gz"],
+    sha256 = "999b65f21c03541cf11365489c1fad22e2418bb0c3d50ca61139f2eec09d5496",
+)
+
+http_file(
+    name = "ninja-mac_zip",
+    urls = ["https://github.com/ninja-build/ninja/releases/download/v1.12.1/ninja-mac.zip"],
+    sha256 = "89a287444b5b3e98f88a945afa50ce937b8ffd1dcc59c555ad9b1baf855298c9",
+)
+
+http_file(
+    name = "flatbuffers_zip",
+    urls = ["https://github.com/google/flatbuffers/archive/refs/tags/v24.12.23.zip"],
+    sha256 = "c5cd6a605ff20350c7faa19d8eeb599df6117ea4aabd16ac58a7eb5ba82df4e7",
+)
+
+provisioning_profile_repository = use_extension("@build_bazel_rules_apple//apple:apple.bzl", "provisioning_profile_repository_extension")
+#provisioning_profile_repository.setup(
+#    fallback_profiles = "//path/to/some:filegroup", # Profiles to use if one isn't found locally
+#)
+
+bazel_dep(name = "build_configuration")
+local_path_override(
+    module_name = "build_configuration",
+    path = "./build-input/configuration-repository",
+)

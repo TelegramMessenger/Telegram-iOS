@@ -299,8 +299,8 @@ public final class AccountStateManager {
             return self.authorizationListUpdatesPipe.signal()
         }
         
-        private let threadReadStateUpdatesPipe = ValuePipe<(incoming: [MessageId: MessageId.Id], outgoing: [MessageId: MessageId.Id])>()
-        var threadReadStateUpdates: Signal<(incoming: [MessageId: MessageId.Id], outgoing: [MessageId: MessageId.Id]), NoError> {
+        private let threadReadStateUpdatesPipe = ValuePipe<(incoming: [PeerAndBoundThreadId: MessageId.Id], outgoing: [PeerAndBoundThreadId: MessageId.Id])>()
+        var threadReadStateUpdates: Signal<(incoming: [PeerAndBoundThreadId: MessageId.Id], outgoing: [PeerAndBoundThreadId: MessageId.Id]), NoError> {
             return self.threadReadStateUpdatesPipe.signal()
         }
         
@@ -1916,7 +1916,7 @@ public final class AccountStateManager {
         }
     }
     
-    var threadReadStateUpdates: Signal<(incoming: [MessageId: MessageId.Id], outgoing: [MessageId: MessageId.Id]), NoError> {
+    var threadReadStateUpdates: Signal<(incoming: [PeerAndBoundThreadId: MessageId.Id], outgoing: [PeerAndBoundThreadId: MessageId.Id]), NoError> {
         return self.impl.signalWith { impl, subscriber in
             return impl.threadReadStateUpdates.start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
         }
@@ -2336,7 +2336,7 @@ public func messagesForNotification(transaction: Transaction, id: MessageId, alw
     
     var notificationPeerId = id.peerId
     let peer = transaction.getPeer(id.peerId)
-    if let peer = peer, let associatedPeerId = peer.associatedPeerId {
+    if let peer, peer is TelegramSecretChat, let associatedPeerId = peer.associatedPeerId {
         notificationPeerId = associatedPeerId
     }
     if message.personal, let author = message.author {

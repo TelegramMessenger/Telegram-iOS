@@ -147,16 +147,20 @@ public enum RequestWebViewError {
     case generic
 }
 
-private func keepWebViewSignal(network: Network, stateManager: AccountStateManager, flags: Int32, peer: Api.InputPeer, bot: Api.InputUser, queryId: Int64, replyToMessageId: MessageId?, threadId: Int64?, sendAs: Api.InputPeer?) -> Signal<Never, KeepWebViewError> {
+private func keepWebViewSignal(network: Network, stateManager: AccountStateManager, flags: Int32, peer: Api.InputPeer, monoforumPeerId: Api.InputPeer?, bot: Api.InputUser, queryId: Int64, replyToMessageId: MessageId?, threadId: Int64?, sendAs: Api.InputPeer?) -> Signal<Never, KeepWebViewError> {
     let signal = Signal<Never, KeepWebViewError> { subscriber in
         let poll = Signal<Never, KeepWebViewError> { subscriber in
             var replyTo: Api.InputReplyTo?
-            if let replyToMessageId = replyToMessageId {
+            if let replyToMessageId {
                 var replyFlags: Int32 = 0
-                if threadId != nil {
+                var topMsgId: Int32?
+                if monoforumPeerId != nil {
+                    replyFlags |= 1 << 5
+                } else if let threadId {
                     replyFlags |= 1 << 0
+                    topMsgId = Int32(clamping: threadId)
                 }
-                replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyToMessageId.id, topMsgId: threadId.flatMap(Int32.init(clamping:)), replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil)
+                replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyToMessageId.id, topMsgId: topMsgId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: monoforumPeerId)
             }
             let signal: Signal<Never, KeepWebViewError> = network.request(Api.functions.messages.prolongWebView(flags: flags, peer: peer, bot: bot, queryId: queryId, replyTo: replyTo, sendAs: sendAs))
             |> mapError { _ -> KeepWebViewError in
@@ -223,14 +227,30 @@ func _internal_requestWebView(postbox: Postbox, network: Network, stateManager: 
         }
         
         var replyTo: Api.InputReplyTo?
+        
+        var monoforumPeerId: Api.InputPeer?
+        var topMsgId: Int32?
+        if let threadId {
+            if let channel = peer as? TelegramChannel, channel.flags.contains(.isMonoforum) {
+                monoforumPeerId = transaction.getPeer(PeerId(threadId)).flatMap(apiInputPeer)
+            } else {
+                topMsgId = Int32(clamping: threadId)
+            }
+        }
+        
         if let replyToMessageId = replyToMessageId {
             flags |= (1 << 0)
             
             var replyFlags: Int32 = 0
-            if threadId != nil {
+            
+            if monoforumPeerId != nil {
+                replyFlags |= 1 << 5
+            } else if topMsgId != nil {
                 replyFlags |= 1 << 0
             }
-            replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyToMessageId.id, topMsgId: threadId.flatMap(Int32.init(clamping:)), replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil)
+            replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyToMessageId.id, topMsgId: topMsgId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: monoforumPeerId)
+        } else if let monoforumPeerId {
+            replyTo = .inputReplyToMonoForum(monoforumPeerId: monoforumPeerId)
         }
 
         return network.request(Api.functions.messages.requestWebView(flags: flags, peer: inputPeer, bot: inputBot, url: url, startParam: payload, themeParams: serializedThemeParams, platform: botWebViewPlatform, replyTo: replyTo, sendAs: nil))
@@ -249,7 +269,7 @@ func _internal_requestWebView(postbox: Postbox, network: Network, stateManager: 
                 }
                 let keepAlive: Signal<Never, KeepWebViewError>?
                 if let queryId {
-                    keepAlive = keepWebViewSignal(network: network, stateManager: stateManager, flags: flags, peer: inputPeer, bot: inputBot, queryId: queryId, replyToMessageId: replyToMessageId, threadId: threadId, sendAs: nil)
+                    keepAlive = keepWebViewSignal(network: network, stateManager: stateManager, flags: flags, peer: inputPeer, monoforumPeerId: monoforumPeerId, bot: inputBot, queryId: queryId, replyToMessageId: replyToMessageId, threadId: threadId, sendAs: nil)
                 } else {
                     keepAlive = nil
                 }

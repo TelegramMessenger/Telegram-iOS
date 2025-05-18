@@ -5,7 +5,6 @@ objc_library(
     module_name = "OpenSSLEncryptionProvider",
     srcs = glob([
         "Sources/**/*.m",
-        "Sources/**/*.h",
     ]),
     hdrs = glob([
         "PublicHeaders/**/*.h",

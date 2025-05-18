@@ -141,8 +141,9 @@ public struct ListViewUpdateSizeAndInsets {
     public var duration: Double
     public var curve: ListViewAnimationCurve
     public var ensureTopInsetForOverlayHighlightedItems: CGFloat?
+    public var customAnimationTransition: ControlledTransition?
     
-    public init(size: CGSize, insets: UIEdgeInsets, headerInsets: UIEdgeInsets? = nil, scrollIndicatorInsets: UIEdgeInsets? = nil, duration: Double, curve: ListViewAnimationCurve, ensureTopInsetForOverlayHighlightedItems: CGFloat? = nil) {
+    public init(size: CGSize, insets: UIEdgeInsets, headerInsets: UIEdgeInsets? = nil, scrollIndicatorInsets: UIEdgeInsets? = nil, duration: Double, curve: ListViewAnimationCurve, ensureTopInsetForOverlayHighlightedItems: CGFloat? = nil, customAnimationTransition: ControlledTransition? = nil) {
         self.size = size
         self.insets = insets
         self.headerInsets = headerInsets
@@ -150,6 +151,7 @@ public struct ListViewUpdateSizeAndInsets {
         self.duration = duration
         self.curve = curve
         self.ensureTopInsetForOverlayHighlightedItems = ensureTopInsetForOverlayHighlightedItems
+        self.customAnimationTransition = customAnimationTransition
     }
 }
 

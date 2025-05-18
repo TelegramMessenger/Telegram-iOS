@@ -60,12 +60,43 @@ func _internal_addNoPaidMessagesException(account: Account, peerId: PeerId, refu
     }
 }
 
-func _internal_updateChannelPaidMessagesStars(account: Account, peerId: PeerId, stars: StarsAmount?) -> Signal<Never, NoError> {
+func _internal_updateChannelPaidMessagesStars(account: Account, peerId: PeerId, stars: StarsAmount?, broadcastMessagesAllowed: Bool) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Signal<Never, NoError> in
         guard let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) else {
             return .complete()
         }
-        return account.network.request(Api.functions.channels.updatePaidMessagesPrice(channel: inputChannel, sendPaidMessagesStars: stars?.value ?? 0))
+        var flags: Int32 = 0
+        var stars = stars
+        if broadcastMessagesAllowed {
+            flags |= (1 << 0)
+            if stars == nil {
+                stars = StarsAmount(value: 0, nanos: 0)
+            }
+        }
+        
+        if let channel = peer as? TelegramChannel, case let .broadcast(broadcastInfo) = channel.info {
+            var infoFlags = broadcastInfo.flags
+            if broadcastMessagesAllowed {
+                infoFlags.insert(.hasMonoforum)
+            } else {
+                infoFlags.remove(.hasMonoforum)
+            }
+            let channel = channel
+                .withUpdatedInfo(.broadcast(TelegramChannelBroadcastInfo(flags: infoFlags)))
+            transaction.updatePeersInternal([channel], update: { _, channel in
+                return channel
+            })
+            
+            if let linkedMonoforumId = channel.linkedMonoforumId, let monoforumChannel = transaction.getPeer(linkedMonoforumId) as? TelegramChannel {
+                let monoforumChannel = monoforumChannel
+                    .withUpdatedSendPaidMessageStars(stars)
+                transaction.updatePeersInternal([monoforumChannel], update: { _, channel in
+                    return monoforumChannel
+                })
+            }
+        }
+        
+        return account.network.request(Api.functions.channels.updatePaidMessagesPrice(flags: flags, channel: inputChannel, sendPaidMessagesStars: stars?.value ?? 0))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
             return .single(nil)
