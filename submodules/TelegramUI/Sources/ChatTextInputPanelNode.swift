@@ -1273,27 +1273,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                 }
             }
         }
-        recognizer.waitForTouchUp = { [weak self] in
-            guard let strongSelf = self, let textInputNode = strongSelf.textInputNode else {
-                return true
-            }
-            
-            if textInputNode.textView.isFirstResponder {
-                return true
-            } else if let (_, _, _, bottomInset, _, _, metrics, _, _) = strongSelf.validLayout {
-                let textFieldWaitsForTouchUp: Bool
-                if case .regular = metrics.widthClass, bottomInset.isZero {
-                    textFieldWaitsForTouchUp = true
-                } else if !textInputNode.textView.text.isEmpty {
-                    textFieldWaitsForTouchUp = true
-                } else {
-                    textFieldWaitsForTouchUp = false
-                }
-                
-                return textFieldWaitsForTouchUp
-            } else {
-                return false
-            }
+        recognizer.waitForTouchUp = {
+            return true
         }
         textInputNode.view.addGestureRecognizer(recognizer)
         self.touchDownGestureRecognizer = recognizer
@@ -4086,6 +4067,10 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         }
         
         self.inputMenu.activate()
+        
+        if let touchDownGestureRecognizer = self.touchDownGestureRecognizer {
+            self.textInputNode?.view.addGestureRecognizer(touchDownGestureRecognizer)
+        }
     }
     
     @objc func editableTextNodeDidBeginEditing(_ editableTextNode: ASEditableTextNode) {
@@ -4119,6 +4104,10 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                     break
                 }
             }
+        }
+        
+        if let touchDownGestureRecognizer = self.touchDownGestureRecognizer {
+            self.textInputNode?.view.removeGestureRecognizer(touchDownGestureRecognizer)
         }
     }
     

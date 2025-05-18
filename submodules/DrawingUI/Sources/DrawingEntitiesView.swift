@@ -109,6 +109,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
 
     public var onInteractionUpdated: (Bool) -> Void = { _ in }
     public var edgePreviewUpdated: (Bool) -> Void = { _ in }
+    public var onTextEditingEnded: (Bool) -> Void = { _ in }
     
     private let hapticFeedback = HapticFeedback()
     

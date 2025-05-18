@@ -855,6 +855,7 @@ public enum TransferStarGiftError {
 public enum BuyStarGiftError {
     case generic
     case priceChanged(Int64)
+    case starGiftResellTooEarly(Int32)
 }
 
 public enum UpdateStarGiftPriceError {
@@ -871,6 +872,9 @@ func _internal_buyStarGift(account: Account, slug: String, peerId: EnginePeer.Id
     return _internal_fetchBotPaymentForm(accountPeerId: account.peerId, postbox: account.postbox, network: account.network, source: source, themeParams: nil)
     |> map(Optional.init)
     |> `catch` { error -> Signal<BotPaymentForm?, BuyStarGiftError> in
+        if case let .starGiftResellTooEarly(timestamp) = error {
+            return .fail(.starGiftResellTooEarly(timestamp))
+        }
         return .fail(.generic)
     }
     |> mapToSignal { paymentForm in

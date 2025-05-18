@@ -128,7 +128,7 @@ final class ChatbotSearchResultItemComponent: Component {
                         animateScale: false
                     )),
                     environment: {},
-                    containerSize: CGSize(width: 100.0, height: 100.0)
+                    containerSize: CGSize(width: 140.0, height: 100.0)
                 )
             } else {
                 if let addButton = self.addButton {

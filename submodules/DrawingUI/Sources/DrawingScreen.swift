@@ -3078,6 +3078,11 @@ public final class DrawingToolsInteraction {
                 self.onInteractionUpdated(isInteracting)
             }
         }
+        self.entitiesView.onTextEditingEnded = { [weak self] reset in
+            if let self {
+                self.onTextEditingEnded(reset)
+            }
+        }
         self.entitiesView.requestedMenuForEntityView = { [weak self] entityView, isTopmost in
             guard let self, let node = self.getControllerNode() else {
                 return
@@ -3267,7 +3272,6 @@ public final class DrawingToolsInteraction {
     public func endTextEditing(reset: Bool) {
         if let entityView = self.entitiesView.selectedEntityView as? DrawingTextEntityView {
             entityView.endEditing(reset: reset)
-            self.onTextEditingEnded(reset)
         }
     }
     
