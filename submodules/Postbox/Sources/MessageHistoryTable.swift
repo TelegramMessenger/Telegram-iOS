@@ -2713,6 +2713,12 @@ final class MessageHistoryTable: Table {
         
         var associatedStories: [StoryId: CodableEntry] = [:]
         
+        if let threadId = message.threadId {
+            if let peer = peerTable.get(PeerId(threadId)) {
+                peers[peer.id] = peer
+            }
+        }
+        
         for media in parsedMedia {
             for peerId in media.peerIds {
                 if let peer = peerTable.get(peerId) {
@@ -2801,6 +2807,12 @@ final class MessageHistoryTable: Table {
                 if let peer = peerTable.get(associatedPeerId) {
                     peers[peer.id] = peer
                 }
+            }
+        }
+        
+        if let threadId = message.threadId {
+            if let peer = peerTable.get(PeerId(threadId)) {
+                peers[peer.id] = peer
             }
         }
         
