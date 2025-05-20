@@ -424,10 +424,10 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
     }
 
     open func updateNavigationBarLayout(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
-        self.applyNavigationBarLayout(layout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: 0.0, transition: transition)
+        self.applyNavigationBarLayout(layout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: 0.0, additionalCutout: nil, transition: transition)
     }
     
-    public func applyNavigationBarLayout(_ layout: ContainerViewLayout, navigationLayout: NavigationLayout, additionalBackgroundHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+    public func applyNavigationBarLayout(_ layout: ContainerViewLayout, navigationLayout: NavigationLayout, additionalBackgroundHeight: CGFloat, additionalCutout: CGSize?, transition: ContainedViewLayoutTransition) {
         let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0
 
         var navigationBarFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: navigationLayout.navigationFrame.maxY))

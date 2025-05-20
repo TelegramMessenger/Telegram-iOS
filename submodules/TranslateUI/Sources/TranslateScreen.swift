@@ -1151,7 +1151,7 @@ public class TranslateScreen: ViewController {
         
         layout.statusBarHeight = nil
         
-        self.applyNavigationBarLayout(layout, navigationLayout: navigationLayout, additionalBackgroundHeight: 0.0, transition: transition)
+        self.applyNavigationBarLayout(layout, navigationLayout: navigationLayout, additionalBackgroundHeight: 0.0, additionalCutout: nil, transition: transition)
     }
     
     override open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

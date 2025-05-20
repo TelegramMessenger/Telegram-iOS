@@ -2238,6 +2238,13 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         )
     }
     
+    public func subscribeChatListData(context: AccountContext, location: ChatListControllerLocation) -> Signal<EngineChatList, NoError> {
+        return chatListViewForLocation(chatListLocation: location, location: .initial(count: 100, filter: nil), account: context.account, shouldLoadCanMessagePeer: false)
+        |> map { update -> EngineChatList in
+            return update.list
+        }
+    }
+    
     public func makePeerSharedMediaController(context: AccountContext, peerId: PeerId) -> ViewController? {
         return nil
     }

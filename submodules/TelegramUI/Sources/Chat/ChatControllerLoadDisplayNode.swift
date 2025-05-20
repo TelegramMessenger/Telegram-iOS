@@ -2729,9 +2729,10 @@ extension ChatControllerImpl {
                         }
                         
                         mappedTransition = (ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: deleteItems, insertItems: insertItems, updateItems: transition.updateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: transition.initialData, keyboardButtonsMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, cachedDataMessages: transition.cachedDataMessages, readStateData: transition.readStateData, scrolledToIndex: transition.scrolledToIndex, scrolledToSomeIndex: transition.scrolledToSomeIndex, peerType: transition.peerType, networkType: transition.networkType, animateIn: false, reason: transition.reason, flashIndicators: transition.flashIndicators, animateFromPreviousFilter: false), updateSizeAndInsets)
-                    }, updateExtraNavigationBarBackgroundHeight: { value, hitTestSlop, _ in
+                    }, updateExtraNavigationBarBackgroundHeight: { value, hitTestSlop, cutout, _ in
                         strongSelf.additionalNavigationBarBackgroundHeight = value
                         strongSelf.additionalNavigationBarHitTestSlop = hitTestSlop
+                        strongSelf.additionalNavigationBarCutout = cutout
                     })
                     
                     if let mappedTransition = mappedTransition {

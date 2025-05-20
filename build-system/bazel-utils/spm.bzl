@@ -95,6 +95,7 @@ _IGNORE_OBJC_LIBRARY_ATTRS = [
     "toolchains",
     "transitive_configs",
     "visibility",
+    "package_metadata",
 ]
 
 _IGNORE_OBJC_LIBRARY_EMPTY_ATTRS = [
@@ -106,6 +107,8 @@ _IGNORE_OBJC_LIBRARY_EMPTY_ATTRS = [
     "restricted_to",
     "textual_hdrs",
     "sdk_includes",
+    "conlyopts",
+    "cxxopts",
 ]
 
 _OBJC_LIBRARY_ATTRS = {
@@ -154,6 +157,8 @@ _IGNORE_SWIFT_LIBRARY_ATTRS = [
     "toolchains",
     "transitive_configs",
     "visibility",
+    "library_evolution",
+    "package_metadata",
 ]
 
 _IGNORE_SWIFT_LIBRARY_EMPTY_ATTRS = [
@@ -332,9 +337,9 @@ def _collect_spm_modules_impl(target, ctx):
         
         # Extract the path from the label
         # Example: @//path/ModuleName:ModuleSubname -> path/ModuleName
-        if not str(ctx.label).startswith("@//"):
+        if not str(ctx.label).startswith("@@//"):
             fail("Invalid label: {}".format(ctx.label))
-        module_path = str(ctx.label).split(":")[0].split("@//")[1]
+        module_path = str(ctx.label).split(":")[0].split("@@//")[1]
 
         if module_type == "objc_library":
             module_info = {

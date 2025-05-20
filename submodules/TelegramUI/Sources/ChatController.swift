@@ -7072,13 +7072,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     var suspendedNavigationBarLayout: ContainerViewLayout?
     var additionalNavigationBarBackgroundHeight: CGFloat = 0.0
     var additionalNavigationBarHitTestSlop: CGFloat = 0.0
+    var additionalNavigationBarCutout: CGSize?
 
     override public func updateNavigationBarLayout(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         if self.suspendNavigationBarLayout {
             self.suspendedNavigationBarLayout = layout
             return
         }
-        self.applyNavigationBarLayout(layout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, transition: transition)
+        self.applyNavigationBarLayout(layout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, additionalCutout: self.additionalNavigationBarCutout, transition: transition)
     }
     
     override public func preferredContentSizeForLayout(_ layout: ContainerViewLayout) -> CGSize? {
@@ -7116,10 +7117,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         var navigationBarTransition = transition
         self.chatDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition, listViewTransaction: { updateSizeAndInsets, additionalScrollDistance, scrollToTop, completion in
             self.chatDisplayNode.historyNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, additionalScrollDistance: additionalScrollDistance, scrollToTop: scrollToTop, completion: completion)
-        }, updateExtraNavigationBarBackgroundHeight: { value, hitTestSlop, extraNavigationTransition in
+        }, updateExtraNavigationBarBackgroundHeight: { value, hitTestSlop, cutout, extraNavigationTransition in
             navigationBarTransition = extraNavigationTransition
             self.additionalNavigationBarBackgroundHeight = value
             self.additionalNavigationBarHitTestSlop = hitTestSlop
+            self.additionalNavigationBarCutout = cutout
         })
         
         if case .compact = layout.metrics.widthClass {
@@ -7138,7 +7140,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.suspendNavigationBarLayout = false
         if let suspendedNavigationBarLayout = self.suspendedNavigationBarLayout {
             self.suspendedNavigationBarLayout = suspendedNavigationBarLayout
-            self.applyNavigationBarLayout(suspendedNavigationBarLayout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, transition: navigationBarTransition)
+            self.applyNavigationBarLayout(suspendedNavigationBarLayout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, additionalCutout: self.additionalNavigationBarCutout, transition: navigationBarTransition)
         }
         self.navigationBar?.additionalContentNode.hitTestSlop = UIEdgeInsets(top: 0.0, left: 0.0, bottom: self.additionalNavigationBarHitTestSlop, right: 0.0)
     }
