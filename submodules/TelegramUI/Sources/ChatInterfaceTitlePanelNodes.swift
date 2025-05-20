@@ -279,8 +279,8 @@ func sidePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceState
                     togglePanel: { [weak interfaceInteraction] in
                         interfaceInteraction?.toggleChatSidebarMode()
                     },
-                    updateTopicId: { [weak interfaceInteraction] topicId in
-                        interfaceInteraction?.updateChatLocationThread(topicId)
+                    updateTopicId: { [weak interfaceInteraction] topicId, direction in
+                        interfaceInteraction?.updateChatLocationThread(topicId, direction ? .down : .up)
                     }
                 ))
             )
@@ -300,8 +300,8 @@ func sidePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceState
                     togglePanel: { [weak interfaceInteraction] in
                         interfaceInteraction?.toggleChatSidebarMode()
                     },
-                    updateTopicId: { [weak interfaceInteraction] topicId in
-                        interfaceInteraction?.updateChatLocationThread(topicId)
+                    updateTopicId: { [weak interfaceInteraction] topicId, direction in
+                        interfaceInteraction?.updateChatLocationThread(topicId, direction ? .down : .up)
                     }
                 ))
             )

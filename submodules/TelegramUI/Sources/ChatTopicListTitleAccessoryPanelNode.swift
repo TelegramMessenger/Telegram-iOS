@@ -330,7 +330,7 @@ final class ChatTopicListTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, C
                         avatarIconContent = .topic(title: String(threadData.info.title.prefix(1)), color: threadData.info.iconColor, size: iconSize)
                     }
                 } else {
-                    avatarIconContent = .image(image: PresentationResourcesChatList.generalTopicIcon(theme))
+                    avatarIconContent = .image(image: PresentationResourcesChatList.generalTopicIcon(theme), tintColor: theme.rootController.navigationBar.secondaryTextColor)
                 }
             }
             
@@ -908,7 +908,7 @@ final class ChatTopicListTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, C
                     guard let self else {
                         return
                     }
-                    self.interfaceInteraction?.updateChatLocationThread(nil)
+                    self.interfaceInteraction?.updateChatLocationThread(nil, .left)
                 })
                 self.allItemView = itemView
                 self.scrollView.addSubview(itemView)
@@ -958,12 +958,20 @@ final class ChatTopicListTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, C
                     guard let self else {
                         return
                     }
-                    if case let .forum(topicId) = chatListItem.id {
-                        self.interfaceInteraction?.updateChatLocationThread(topicId)
+                    
+                    let topicId: Int64
+                    if case let .forum(topicIdValue) = chatListItem.id {
+                        topicId = topicIdValue
                     } else {
-                        let topicId = chatListItem.renderedPeer.peerId.toInt64()
-                        self.interfaceInteraction?.updateChatLocationThread(topicId)
+                        topicId = chatListItem.renderedPeer.peerId.toInt64()
                     }
+                    
+                    var direction = true
+                    if let params = self.params, let lhsIndex = self.topicIndex(threadId:  params.interfaceState.chatLocation.threadId), let rhsIndex = self.topicIndex(threadId: topicId) {
+                        direction = lhsIndex < rhsIndex
+                    }
+                    
+                    self.interfaceInteraction?.updateChatLocationThread(topicId, direction ? .right : .left)
                 }, contextGesture: { gesture, sourceNode in
                 })
                 self.itemViews[itemId] = itemView

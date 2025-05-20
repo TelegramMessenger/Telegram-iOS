@@ -294,7 +294,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                 }
                 let content: EmojiStatusComponent.Content
                 if threadId == 1 {
-                    content = .image(image: PresentationResourcesChat.chatGeneralThreadIcon(theme))
+                    content = .image(image: PresentationResourcesChat.chatGeneralThreadIcon(theme), tintColor: nil)
                 } else if let iconFileId = threadInfo.icon {
                     content = .animation(content: .customEmoji(fileId: iconFileId), size: CGSize(width: avatarSize, height: avatarSize), placeholderColor: theme.list.mediaPlaceholderColor, themeColor: theme.list.itemAccentColor, loopMode: .forever)
                 } else {

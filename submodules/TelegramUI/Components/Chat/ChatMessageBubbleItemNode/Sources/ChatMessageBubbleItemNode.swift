@@ -2413,8 +2413,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         var boostNodeSizeApply: (CGSize, () -> TextNode?) = (CGSize(), { nil })
         var viaWidth: CGFloat = 0.0
 
-        var threadInfoOriginY: CGFloat = 0.0
-        var threadInfoSizeApply: (CGSize, (Bool) -> ChatMessageThreadInfoNode?) = (CGSize(), {  _ in nil })
+        let threadInfoOriginY: CGFloat = 0.0
+        let threadInfoSizeApply: (CGSize, (Bool) -> ChatMessageThreadInfoNode?) = (CGSize(), {  _ in nil })
         
         var replyInfoOriginY: CGFloat = 0.0
         var replyInfoSizeApply: (CGSize, (CGSize, Bool, ListViewItemUpdateAnimation) -> ChatMessageReplyInfoNode?) = (CGSize(), { _, _, _ in nil })
@@ -2625,8 +2625,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
             }
             
-            var hasThreadInfo = false
-            if case let .peer(peerId) = item.chatLocation, (peerId == replyMessage?.id.peerId || item.message.threadId == 1 || item.associatedData.isRecentActions), let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.isForum, item.message.associatedThreadInfo != nil {
+            let hasThreadInfo = !"".isEmpty
+            /*if case let .peer(peerId) = item.chatLocation, (peerId == replyMessage?.id.peerId || item.message.threadId == 1 || item.associatedData.isRecentActions), let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.isForum, item.message.associatedThreadInfo != nil {
                 hasThreadInfo = true
             } else if case let .customChatContents(contents) = item.associatedData.subject, case .hashTagSearch = contents.kind {
                 if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
@@ -2634,7 +2634,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 } else {
                     hasThreadInfo = true
                 }
-            }
+            }*/
                         
             var hasReply = replyMessage != nil || replyForward != nil || replyStory != nil
             if !isInstantVideo, hasThreadInfo {
@@ -2642,7 +2642,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     hasReply = false
                 }
                     
-                if !mergedTop.merged {
+                /*if !mergedTop.merged {
                     if headerSize.height.isZero {
                         headerSize.height += 14.0
                     } else {
@@ -2666,7 +2666,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     threadInfoOriginY = headerSize.height
                     headerSize.width = max(headerSize.width, threadInfoSizeApply.0.width + bubbleWidthInsets)
                     headerSize.height += threadInfoSizeApply.0.height + 5.0
-                }
+                }*/
             }
             
             if !isInstantVideo, hasReply, (replyMessage != nil || replyForward != nil || replyStory != nil) {
@@ -3549,7 +3549,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         guard let strongSelf, let item = strongSelf.item else {
                             return
                         }
-                        item.controllerInteraction.updateChatLocationThread(item.content.firstMessage.threadId)
+                        item.controllerInteraction.updateChatLocationThread(item.content.firstMessage.threadId, nil)
                     }
                 }
                 
@@ -6000,7 +6000,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     }
                 }
             } else if let channel = item.message.peers[item.message.id.peerId], channel.isMonoForum, case .peer = item.chatLocation {
-                item.controllerInteraction.updateChatLocationThread(item.message.threadId)
+                item.controllerInteraction.updateChatLocationThread(item.message.threadId, nil)
             } else {
                 if !self.disablesComments {
                     if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {

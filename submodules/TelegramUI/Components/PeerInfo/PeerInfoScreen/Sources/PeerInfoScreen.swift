@@ -436,7 +436,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, openBoostToUnrestrict: {
         }, updateVideoTrimRange: { _, _, _, _ in
         }, updateHistoryFilter: { _ in
-        }, updateChatLocationThread: { _ in
+        }, updateChatLocationThread: { _, _ in
         }, toggleChatSidebarMode: {
         }, updateDisplayHistoryFilterAsList: { _ in
         }, requestLayout: { _ in
@@ -3302,7 +3302,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     c?.dismiss(completion: {
                         if let strongSelf = self, let currentPeer = strongSelf.data?.peer, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
                             if let channel = currentPeer as? TelegramChannel, channel.isForumOrMonoForum, let threadId = message.threadId {
-                                let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: currentPeer.id, threadId: threadId, messageId: message.id, navigationController: navigationController, activateInput: nil, scrollToEndIfExists: false, keepStack: .default).startStandalone()
+                                let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: currentPeer.id, threadId: threadId, messageId: message.id, navigationController: navigationController, activateInput: nil, scrollToEndIfExists: false, keepStack: .default, animated: true).startStandalone()
                             } else {
                                 let targetLocation: NavigateToChatControllerParams.Location
                                 if case let .replyThread(message) = strongSelf.chatLocation {
@@ -3464,7 +3464,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                             c?.dismiss(completion: {
                                 if let strongSelf = self, let currentPeer = strongSelf.data?.peer, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
                                     if let channel = currentPeer as? TelegramChannel, channel.isForumOrMonoForum, let threadId = message.threadId {
-                                        let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: currentPeer.id, threadId: threadId, messageId: message.id, navigationController: navigationController, activateInput: nil, scrollToEndIfExists: false, keepStack: .default).startStandalone()
+                                        let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: currentPeer.id, threadId: threadId, messageId: message.id, navigationController: navigationController, activateInput: nil, scrollToEndIfExists: false, keepStack: .default, animated: true).startStandalone()
                                     } else {
                                         let targetLocation: NavigateToChatControllerParams.Location
                                         if case let .replyThread(message) = strongSelf.chatLocation {
@@ -3806,7 +3806,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }, forceUpdateWarpContents: {
         }, playShakeAnimation: {
         }, displayQuickShare: { _, _ ,_ in
-        }, updateChatLocationThread: { _ in
+        }, updateChatLocationThread: { _, _ in
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
         pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(), presentationContext: ChatPresentationContext(context: context, backgroundNode: nil))
         self.hiddenMediaDisposable = context.sharedContext.mediaManager.galleryHiddenMediaManager.hiddenIds().startStrict(next: { [weak self] ids in
@@ -13111,7 +13111,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
                 if let allowsCustomTransition = other.allowsCustomTransition, !allowsCustomTransition() {
                     return nil
                 }
-                if let tag = other.userInfo as? PeerInfoNavigationSourceTag, tag.peerId == peerId {
+                if let tag = other.userInfo as? PeerInfoNavigationSourceTag, (tag.peerId == peerId || tag.threadId == peerId.toInt64()) {
                     return PeerInfoNavigationTransitionNode(screenNode: strongSelf.controllerNode, presentationData: strongSelf.presentationData, headerNode: strongSelf.controllerNode.headerNode)
                 }
                 return nil

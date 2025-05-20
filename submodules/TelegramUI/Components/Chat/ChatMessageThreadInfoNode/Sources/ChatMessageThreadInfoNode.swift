@@ -514,7 +514,7 @@ public class ChatMessageThreadInfoNode: ASDisplayNode {
                     var containerSize: CGSize = CGSize(width: 22.0, height: 22.0)
                     var iconX: CGFloat = 0.0
                     if arguments.threadId == 1 {
-                        titleTopicIconContent = .image(image: generalThreadIcon)
+                        titleTopicIconContent = .image(image: generalThreadIcon, tintColor: nil)
                         containerSize = CGSize(width: 18.0, height: 18.0)
                         iconX = 3.0
                     } else if let fileId = topicIconId, fileId != 0 {

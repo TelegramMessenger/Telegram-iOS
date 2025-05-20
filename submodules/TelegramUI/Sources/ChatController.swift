@@ -233,7 +233,7 @@ struct ScrolledToMessageId: Equatable {
     var allowedReplacementDirection: AllowedReplacementDirections
 }
 
-public final class ChatControllerImpl: TelegramBaseController, ChatController, GalleryHiddenMediaTarget, UIDropInteractionDelegate {
+public final class ChatControllerImpl: TelegramBaseController, ChatController, GalleryHiddenMediaTarget, UIDropInteractionDelegate {    
     var validLayout: ContainerViewLayout?
     
     public weak var parentController: ViewController?
@@ -2059,7 +2059,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self?.navigateToMessage(from: nil, to: .id(id, NavigateToMessageParams(timestamp: nil, quote: nil)), forceInCurrentChat: false)
         }, navigateToThreadMessage: { [weak self] peerId, threadId, messageId in
             if let context = self?.context, let navigationController = self?.effectiveNavigationController {
-                let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: threadId, messageId: messageId, navigationController: navigationController, activateInput: nil, scrollToEndIfExists: false, keepStack: .always).startStandalone()
+                let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: threadId, messageId: messageId, navigationController: navigationController, activateInput: nil, scrollToEndIfExists: false, keepStack: .always, animated: true).startStandalone()
             }
         }, tapMessage: nil, clickThroughMessage: { [weak self] view, location in
             self?.chatDisplayNode.dismissInput(view: view, location: location)
@@ -4828,38 +4828,31 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             self.displayQuickShare(id: messageId, node: node, gesture: gesture)
-        }, updateChatLocationThread: { [weak self] threadId in
+        }, updateChatLocationThread: { [weak self] threadId, animationDirection in
             guard let self else {
                 return
             }
-            self.interfaceInteraction?.updateChatLocationThread(threadId)
+            let defaultDirection: ChatControllerAnimateInnerChatSwitchDirection? = self.chatDisplayNode.chatLocationTabSwitchDirection(from: self.chatLocation.threadId, to: self.presentationInterfaceState.chatLocation.threadId).flatMap { direction -> ChatControllerAnimateInnerChatSwitchDirection in
+                return direction ? .right : .left
+            }
+            self.updateChatLocationThread(threadId: threadId, animationDirection: animationDirection ?? defaultDirection)
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: self.stickerSettings, presentationContext: ChatPresentationContext(context: context, backgroundNode: self.chatBackgroundNode))
         controllerInteraction.enableFullTranslucency = context.sharedContext.energyUsageSettings.fullTranslucency
         
         self.controllerInteraction = controllerInteraction
         
-        //if chatLocation.threadId == nil {
-            if let peerId = chatLocation.peerId, peerId != context.account.peerId {
-                switch subject {
-                case .pinnedMessages, .scheduledMessages, .messageOptions:
-                    break
-                default:
-                    self.navigationBar?.userInfo = PeerInfoNavigationSourceTag(peerId: peerId)
-                }
+        self.navigationBar?.allowsCustomTransition = { [weak self] in
+            guard let strongSelf = self else {
+                return false
             }
-            self.navigationBar?.allowsCustomTransition = { [weak self] in
-                guard let strongSelf = self else {
-                    return false
-                }
-                if strongSelf.navigationBar?.userInfo == nil {
-                    return false
-                }
-                if strongSelf.navigationBar?.contentNode != nil {
-                    return false
-                }
-                return true
+            if strongSelf.navigationBar?.userInfo == nil {
+                return false
             }
-        //}
+            if strongSelf.navigationBar?.contentNode != nil {
+                return false
+            }
+            return true
+        }
         
         self.chatTitleView = ChatTitleView(context: self.context, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, animationCache: controllerInteraction.presentationContext.animationCache, animationRenderer: controllerInteraction.presentationContext.animationRenderer)
         
@@ -5306,7 +5299,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             })
         }
         
-        self.reloadChatLocation()
+        self.reloadChatLocation(chatLocation: self.chatLocation, isReady: nil)
         
         self.botCallbackAlertMessageDisposable = (self.botCallbackAlertMessage.get()
         |> deliverOnMainQueue).startStrict(next: { [weak self] message in
@@ -5906,6 +5899,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.networkSpeedEventsDisposable?.dispose()
             self.postedScheduledMessagesEventsDisposable?.dispose()
             self.premiumOrStarsRequiredDisposable?.dispose()
+            self.updateChatLocationThreadDisposable?.dispose()
         }
         deallocate()
     }
@@ -9815,6 +9809,122 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.chatDisplayNode.historyNode.scrollToEndOfHistory()
             return true
         }
+    }
+    
+    private var updateChatLocationThreadDisposable: Disposable?
+    private var isUpdatingChatLocationThread: Bool = false
+    var currentChatSwitchDirection: ChatControllerAnimateInnerChatSwitchDirection?
+    
+    public func updateChatLocationThread(threadId: Int64?, animationDirection: ChatControllerAnimateInnerChatSwitchDirection? = nil) {
+        if self.isUpdatingChatLocationThread {
+            return
+        }
+        
+        guard let peerId = self.chatLocation.peerId else {
+            return
+        }
+        if self.chatLocation.threadId == threadId {
+            return
+        }
+        guard let peer = self.presentationInterfaceState.renderedPeer?.chatMainPeer else {
+            return
+        }
+        
+        let navigationSnapshot = self.chatTitleView?.prepareSnapshotState()
+        
+        let rightBarButtonItemSnapshots: [(UIView, CGRect)] = (self.navigationItem.rightBarButtonItems ?? []).compactMap { item -> (UIView, CGRect)? in
+            guard let view = item.customDisplayNode?.view, let snapshotView = view.snapshotView(afterScreenUpdates: false) else {
+                return nil
+            }
+            return (snapshotView, view.convert(view.bounds, to: self.view))
+        }
+        
+        let updatedChatLocation: ChatLocation
+        if let threadId {
+            var isMonoforum = false
+            if let channel = peer as? TelegramChannel, channel.flags.contains(.isMonoforum) {
+                isMonoforum = true
+            }
+            
+            updatedChatLocation = .replyThread(message: ChatReplyThreadMessage(
+                peerId: peerId,
+                threadId: threadId,
+                channelMessageId: nil,
+                isChannelPost: false,
+                isForumPost: true,
+                isMonoforumPost: isMonoforum,
+                maxMessage: nil,
+                maxReadIncomingMessageId: nil,
+                maxReadOutgoingMessageId: nil,
+                unreadCount: 0,
+                initialFilledHoles: IndexSet(),
+                initialAnchor: .automatic,
+                isNotAvailable: false
+            ))
+        } else {
+            updatedChatLocation = .peer(id: peerId)
+        }
+        
+        let isReady = Promise<Bool>()
+        self.reloadChatLocation(chatLocation: updatedChatLocation, isReady: isReady)
+        
+        self.isUpdatingChatLocationThread = true
+        self.updateChatLocationThreadDisposable?.dispose()
+        self.updateChatLocationThreadDisposable = (isReady.get()
+        |> filter { $0 }
+        |> take(1)
+        |> deliverOnMainQueue).startStrict(next: { [weak self] _ in
+            guard let self else {
+                return
+            }
+            self.isUpdatingChatLocationThread = false
+            
+            self.currentChatSwitchDirection = animationDirection
+            self.updateChatPresentationInterfaceState(animated: animationDirection != nil, interactive: false, { presentationInterfaceState in
+                return presentationInterfaceState.updatedChatLocation(updatedChatLocation)
+            })
+            
+            if let navigationSnapshot, let animationDirection {
+                let mappedAnimationDirection: ChatTitleView.AnimateFromSnapshotDirection
+                switch animationDirection {
+                case .up:
+                    mappedAnimationDirection = .up
+                case .down:
+                    mappedAnimationDirection = .down
+                case .left:
+                    mappedAnimationDirection = .left
+                case .right:
+                    mappedAnimationDirection = .right
+                }
+                
+                self.chatTitleView?.animateFromSnapshot(navigationSnapshot, direction: mappedAnimationDirection)
+                if let rightBarButtonItems = self.navigationItem.rightBarButtonItems {
+                    for i in 0 ..< rightBarButtonItems.count {
+                        let item = rightBarButtonItems[i]
+                        if let customDisplayNode = item.customDisplayNode {
+                            customDisplayNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                            //customDisplayNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+                            
+                            let _ = rightBarButtonItemSnapshots
+                            /*if i < rightBarButtonItemSnapshots.count {
+                                let (snapshotItem, snapshotFrame) = rightBarButtonItemSnapshots[i]
+                                if let targetSuperview = customDisplayNode.view.superview {
+                                    snapshotItem.frame = targetSuperview.convert(snapshotFrame, from: self.view)
+                                    targetSuperview.addSubview(snapshotItem)
+                                    
+                                    snapshotItem.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.18, completion: { [weak snapshotItem] _ in
+                                        snapshotItem?.removeFromSuperview()
+                                    })
+                                    snapshotItem.layer.animateScale(from: 1.0, to: 0.1, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+                                }
+                            }*/
+                        }
+                    }
+                }
+            }
+            
+            self.currentChatSwitchDirection = nil
+        })
     }
     
     public var contentContainerNode: ASDisplayNode {

@@ -138,7 +138,15 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                     isFirst = false
                     continue
                 }
-                if controller.chatLocation.peerId == params.chatLocation.asChatLocation.peerId && controller.chatLocation.threadId == params.chatLocation.asChatLocation.threadId && (controller.subject != .scheduledMessages || controller.subject == params.subject) {
+                
+                var canMatchThread = controller.chatLocation.threadId == params.chatLocation.asChatLocation.threadId
+                var switchToThread = false
+                if !canMatchThread && controller.chatLocation.peerId == params.chatLocation.asChatLocation.peerId && controller.subject == nil {
+                    canMatchThread = true
+                    switchToThread = true
+                }
+                
+                if controller.chatLocation.peerId == params.chatLocation.asChatLocation.peerId && canMatchThread && (controller.subject != .scheduledMessages || controller.subject == params.subject) {
                     if let updateTextInputState = params.updateTextInputState {
                         controller.updateTextInputState(updateTextInputState)
                     }
@@ -162,6 +170,10 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                         controller.activateSearch(domain: search.0, query: search.1)
                     } else if let reportReason = params.reportReason {
                         controller.beginReportSelection(reason: reportReason)
+                    }
+                    
+                    if switchToThread {
+                        controller.updateChatLocationThread(threadId: params.chatLocation.threadId, animationDirection: nil)
                     }
                     
                     if popAndComplete {
@@ -376,7 +388,7 @@ public func isOverlayControllerForChatNotificationOverlayPresentation(_ controll
     return false
 }
 
-public func navigateToForumThreadImpl(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64, messageId: EngineMessage.Id?, navigationController: NavigationController, activateInput: ChatControllerActivateInput?, scrollToEndIfExists: Bool, keepStack: NavigateToChatKeepStack) -> Signal<Never, NoError> {
+public func navigateToForumThreadImpl(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64, messageId: EngineMessage.Id?, navigationController: NavigationController, activateInput: ChatControllerActivateInput?, scrollToEndIfExists: Bool, keepStack: NavigateToChatKeepStack, animated: Bool) -> Signal<Never, NoError> {
     return fetchAndPreloadReplyThreadInfo(context: context, subject: .groupMessage(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId))), atMessageId: messageId, preload: false)
     |> deliverOnMainQueue
     |> beforeNext { [weak context, weak navigationController] result in
@@ -399,7 +411,7 @@ public func navigateToForumThreadImpl(context: AccountContext, peerId: EnginePee
                 activateInput: actualActivateInput,
                 keepStack: keepStack,
                 scrollToEndIfExists: scrollToEndIfExists,
-                animated: !scrollToEndIfExists
+                animated: !scrollToEndIfExists && animated
             )
         )
     }

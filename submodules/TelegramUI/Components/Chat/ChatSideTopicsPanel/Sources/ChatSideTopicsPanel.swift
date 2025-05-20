@@ -40,7 +40,7 @@ public final class ChatSideTopicsPanel: Component {
     let isMonoforum: Bool
     let topicId: Int64?
     let togglePanel: () -> Void
-    let updateTopicId: (Int64?) -> Void
+    let updateTopicId: (Int64?, Bool) -> Void
     
     public init(
         context: AccountContext,
@@ -50,7 +50,7 @@ public final class ChatSideTopicsPanel: Component {
         isMonoforum: Bool,
         topicId: Int64?,
         togglePanel: @escaping () -> Void,
-        updateTopicId: @escaping (Int64?) -> Void
+        updateTopicId: @escaping (Int64?, Bool) -> Void
     ) {
         self.context = context
         self.theme = theme
@@ -196,7 +196,7 @@ public final class ChatSideTopicsPanel: Component {
                         avatarIconContent = .topic(title: String(threadData.info.title.prefix(1)), color: threadData.info.iconColor, size: iconSize)
                     }
                 } else {
-                    avatarIconContent = .image(image: PresentationResourcesChatList.generalTopicIcon(theme))
+                    avatarIconContent = .image(image: PresentationResourcesChatList.generalTopicIcon(theme), tintColor: theme.rootController.navigationBar.secondaryTextColor)
                 }
             }
             
@@ -801,7 +801,8 @@ public final class ChatSideTopicsPanel: Component {
                         guard let self, let component = self.component else {
                             return
                         }
-                        component.updateTopicId(nil)
+                        
+                        component.updateTopicId(nil, false)
                     })
                     self.allItemView = itemView
                     self.scrollView.addSubview(itemView)
@@ -851,12 +852,20 @@ public final class ChatSideTopicsPanel: Component {
                         guard let self, let component = self.component else {
                             return
                         }
-                        if case let .forum(topicId) = item.item.id {
-                            component.updateTopicId(topicId)
+                        
+                        let topicId: Int64
+                        if case let .forum(topicIdValue) = chatListItem.id {
+                            topicId = topicIdValue
                         } else {
-                            let topicId = chatListItem.renderedPeer.peerId.toInt64()
-                            component.updateTopicId(topicId)
+                            topicId = chatListItem.renderedPeer.peerId.toInt64()
                         }
+                        
+                        var direction = true
+                        if let lhsIndex = self.topicIndex(threadId: component.topicId), let rhsIndex = self.topicIndex(threadId: topicId) {
+                            direction = lhsIndex < rhsIndex
+                        }
+                        
+                        component.updateTopicId(topicId, direction)
                     }, contextGesture: { gesture, sourceNode in
                     })
                     self.itemViews[itemId] = itemView
@@ -886,6 +895,9 @@ public final class ChatSideTopicsPanel: Component {
                 
                 contentSize.height += itemSize.height
             }
+            
+            contentSize.height += 12.0
+            
             var removedIds: [Item.Id] = []
             for (id, itemView) in self.itemViews {
                 if !validIds.contains(id) {
