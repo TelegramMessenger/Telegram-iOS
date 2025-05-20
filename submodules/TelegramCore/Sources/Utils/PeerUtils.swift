@@ -455,6 +455,18 @@ public func peerViewMainPeer(_ view: PeerView) -> Peer? {
     }
 }
 
+public func peerViewMonoforumMainPeer(_ view: PeerView) -> Peer? {
+    if let peer = peerViewMainPeer(view) {
+        if let channel = peer as? TelegramChannel, channel.flags.contains(.isMonoforum), let linkedMonoforumId = channel.linkedMonoforumId {
+            return view.peers[linkedMonoforumId]
+        } else {
+            return peer
+        }
+    } else {
+        return nil
+    }
+}
+
 public extension RenderedPeer {
     convenience init(message: Message) {
         var peers = SimpleDictionary<PeerId, Peer>()
