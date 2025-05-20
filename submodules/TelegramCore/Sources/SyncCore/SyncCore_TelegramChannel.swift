@@ -184,6 +184,7 @@ public struct TelegramChannelFlags: OptionSet {
     public static let isForum = TelegramChannelFlags(rawValue: 1 << 11)
     public static let autoTranslateEnabled = TelegramChannelFlags(rawValue: 1 << 12)
     public static let isMonoforum = TelegramChannelFlags(rawValue: 1 << 13)
+    public static let displayForumAsTabs = TelegramChannelFlags(rawValue: 1 << 14)
 }
 
 public final class TelegramChannel: Peer, Equatable {
