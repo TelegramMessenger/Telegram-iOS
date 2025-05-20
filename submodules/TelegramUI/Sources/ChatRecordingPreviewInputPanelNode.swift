@@ -66,6 +66,68 @@ final class ChatRecordingPreviewViewForOverlayContent: UIView, ChatInputPanelVie
     }
 }
 
+final class PlayButtonNode: ASDisplayNode {
+    let backgroundNode: ASDisplayNode
+    let playButton: HighlightableButtonNode
+    fileprivate let playPauseIconNode: PlayPauseIconNode
+    let durationLabel: MediaPlayerTimeTextNode
+    
+    var pressed: () -> Void = {}
+    
+    init(theme: PresentationTheme) {
+        self.backgroundNode = ASDisplayNode()
+        self.backgroundNode.clipsToBounds = true
+        self.backgroundNode.backgroundColor = theme.chat.inputPanel.actionControlFillColor
+        self.backgroundNode.cornerRadius = 11.0
+        self.backgroundNode.displaysAsynchronously = false
+        
+        self.playButton = HighlightableButtonNode()
+        self.playButton.displaysAsynchronously = false
+        
+        self.playPauseIconNode = PlayPauseIconNode()
+        self.playPauseIconNode.enqueueState(.play, animated: false)
+        self.playPauseIconNode.customColor = theme.chat.inputPanel.actionControlForegroundColor
+        
+        self.durationLabel = MediaPlayerTimeTextNode(textColor: theme.chat.inputPanel.actionControlForegroundColor, textFont: Font.with(size: 13.0, weight: .semibold, traits: .monospacedNumbers))
+        self.durationLabel.alignment = .right
+        self.durationLabel.mode = .normal
+        self.durationLabel.showDurationIfNotStarted = true
+        
+        super.init()
+                
+        self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.playButton)
+        self.backgroundNode.addSubnode(self.playPauseIconNode)
+        self.backgroundNode.addSubnode(self.durationLabel)
+        
+        self.playButton.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
+    }
+    
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        return self.backgroundNode.frame.contains(point)
+    }
+    
+    @objc private func buttonPressed() {
+        self.pressed()
+    }
+    
+    func update(size: CGSize, transition: ContainedViewLayoutTransition) {
+        var buttonSize = CGSize(width: 63.0, height: 22.0)
+        if size.width < 70.0 {
+            buttonSize.width = 27.0
+        }
+        
+        transition.updateFrame(node: self.backgroundNode, frame: buttonSize.centered(in: CGRect(origin: .zero, size: size)))
+                
+        self.playPauseIconNode.frame = CGRect(origin: CGPoint(x: 4.0, y: 1.0 - UIScreenPixel), size: CGSize(width: 21.0, height: 21.0))
+                               
+        transition.updateFrame(node: self.durationLabel, frame: CGRect(origin: CGPoint(x: 18.0, y: 3.0), size: CGSize(width: 35.0, height: 20.0)))
+        transition.updateAlpha(node: self.durationLabel, alpha: buttonSize.width > 27.0 ? 1.0 : 0.0)
+        
+        self.playButton.frame = CGRect(origin: .zero, size: size)
+    }
+}
+
 final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
     let deleteButton: HighlightableButtonNode
     let binNode: AnimationNode
@@ -75,10 +137,11 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
     let textNode: ImmediateAnimatedCountLabelNode
     
     private var sendButtonRadialStatusNode: ChatSendButtonRadialStatusNode?
-    let playButton: HighlightableButtonNode
-    private let playPauseIconNode: PlayPauseIconNode
     private let waveformButton: ASButtonNode
     let waveformBackgroundNode: ASImageNode
+    
+    let trimView: TrimView
+    let playButtonNode: PlayButtonNode
     
     let scrubber = ComponentView<Empty>()
     
@@ -93,7 +156,6 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
     private var presentationInterfaceState: ChatPresentationInterfaceState?
     
     private var mediaPlayer: MediaPlayer?
-    let durationLabel: MediaPlayerTimeTextNode
     
     private let statusDisposable = MetaDisposable()
     
@@ -139,13 +201,6 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         self.waveformBackgroundNode.displayWithoutProcessing = true
         self.waveformBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 33.0, color: theme.chat.inputPanel.actionControlFillColor)
         
-        self.playButton = HighlightableButtonNode()
-        self.playButton.displaysAsynchronously = false
-        
-        self.playPauseIconNode = PlayPauseIconNode()
-        self.playPauseIconNode.enqueueState(.play, animated: false)
-        self.playPauseIconNode.customColor = theme.chat.inputPanel.actionControlForegroundColor
-        
         self.waveformButton = ASButtonNode()
         self.waveformButton.accessibilityTraits.insert(.startsMediaSession)
         
@@ -156,9 +211,9 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         
         self.waveformScrubberNode = MediaPlayerScrubbingNode(content: .custom(backgroundNode: self.waveformNode, foregroundContentNode: self.waveformForegroundNode))
         
-        self.durationLabel = MediaPlayerTimeTextNode(textColor: theme.chat.inputPanel.actionControlForegroundColor)
-        self.durationLabel.alignment = .right
-        self.durationLabel.mode = .normal
+        self.trimView = TrimView(frame: .zero)
+        self.trimView.isHollow = true
+        self.playButtonNode = PlayButtonNode(theme: theme)
         
         super.init()
         
@@ -185,10 +240,10 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         self.sendButton.addSubnode(self.sendIconNode)
         self.sendButton.addSubnode(self.textNode)
         self.addSubnode(self.waveformScrubberNode)
-        self.addSubnode(self.playButton)
-        self.addSubnode(self.durationLabel)
-        self.addSubnode(self.waveformButton)
-        self.playButton.addSubnode(self.playPauseIconNode)
+        //self.addSubnode(self.waveformButton)
+        
+        //self.view.addSubview(self.trimView)
+        self.addSubnode(self.playButtonNode)
         
         self.sendButton.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -199,7 +254,21 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
                 }
             }
         }
+        
+        self.playButtonNode.pressed = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.waveformPressed()
+        }
                 
+        self.waveformScrubberNode.seek = { [weak self] timestamp in
+            guard let self else {
+                return
+            }
+            self.mediaPlayer?.seek(timestamp: timestamp)
+        }
+        
         self.deleteButton.addTarget(self, action: #selector(self.deletePressed), forControlEvents: [.touchUpInside])
         self.sendButton.addTarget(self, action: #selector(self.sendPressed), forControlEvents: [.touchUpInside])
         self.viewOnceButton.addTarget(self, action: #selector(self.viewOncePressed), forControlEvents: [.touchUpInside])
@@ -315,6 +384,8 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
             transition.updateFrame(node: self.sendIconNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((innerSize.width - icon.size.width) / 2.0), y: floorToScreenPixels((innerSize.height - icon.size.height) / 2.0)), size: icon.size))
         }
         
+        let waveformBackgroundFrame = CGRect(origin: CGPoint(x: leftInset + 45.0, y: 7.0 - UIScreenPixel), size: CGSize(width: width - leftInset - rightInset - 45.0 - innerSize.width - 1.0, height: 33.0))
+        
         if self.presentationInterfaceState != interfaceState {
             var updateWaveform = false
             if self.presentationInterfaceState?.interfaceState.mediaDraftState != interfaceState.interfaceState.mediaDraftState {
@@ -335,8 +406,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
                     self.waveformBackgroundNode.isHidden = false
                     self.waveformForegroundNode.isHidden = false
                     self.waveformScrubberNode.isHidden = false
-                    self.playButton.isHidden = false
-                    self.durationLabel.isHidden = false
+                    self.playButtonNode.isHidden = false
                     
                     if let view = self.scrubber.view, view.superview != nil {
                         view.removeFromSuperview()
@@ -350,32 +420,71 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
                         }
                         let mediaManager = context.sharedContext.mediaManager
                         let mediaPlayer = MediaPlayer(audioSessionManager: mediaManager.audioSession, postbox: context.account.postbox, userLocation: .other, userContentType: .audio, resourceReference: .standalone(resource: audio.resource), streamable: .none, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true)
-                        mediaPlayer.actionAtEnd = .action { [weak mediaPlayer] in
-                            mediaPlayer?.seek(timestamp: 0.0)
+                        mediaPlayer.actionAtEnd = .action { [weak self] in
+                            guard let self, let interfaceState = self.presentationInterfaceState else {
+                                return
+                            }
+                            var timestamp: Double = 0.0
+                            if let recordedMediaPreview = interfaceState.interfaceState.mediaDraftState, case let .audio(audio) = recordedMediaPreview, let trimRange = audio.trimRange {
+                                timestamp = trimRange.lowerBound
+                            }
+                            self.mediaPlayer?.seek(timestamp: timestamp)
                         }
                         self.mediaPlayer = mediaPlayer
-                        self.durationLabel.defaultDuration = Double(audio.duration)
-                        self.durationLabel.status = mediaPlayer.status
+                        self.playButtonNode.durationLabel.defaultDuration = Double(audio.duration)
+                        self.playButtonNode.durationLabel.status = mediaPlayer.status
+                        self.playButtonNode.durationLabel.trimRange = audio.trimRange
                         self.waveformScrubberNode.status = mediaPlayer.status
                         self.statusDisposable.set((mediaPlayer.status
                         |> deliverOnMainQueue).startStrict(next: { [weak self] status in
                             if let strongSelf = self {
                                 switch status.status {
                                 case .playing, .buffering(_, true, _, _):
-                                    strongSelf.playPauseIconNode.enqueueState(.pause, animated: true)
+                                    strongSelf.playButtonNode.playPauseIconNode.enqueueState(.pause, animated: true)
                                 default:
-                                    strongSelf.playPauseIconNode.enqueueState(.play, animated: true)
+                                    strongSelf.playButtonNode.playPauseIconNode.enqueueState(.play, animated: true)
                                 }
                             }
                         }))
                     }
+                    
+                    let (leftHandleFrame, rightHandleFrame) = self.trimView.update(
+                        style: .voiceMessage,
+                        theme: interfaceState.theme,
+                        visualInsets: .zero,
+                        scrubberSize: waveformBackgroundFrame.size,
+                        duration: Double(audio.duration),
+                        startPosition: audio.trimRange?.lowerBound ?? 0.0,
+                        endPosition: audio.trimRange?.upperBound ?? Double(audio.duration),
+                        position: 0.0,
+                        minDuration: 2.0,
+                        maxDuration: Double(audio.duration),
+                        transition: .immediate
+                    )
+                    self.trimView.trimUpdated = { [weak self] start, end, updatedEnd, apply in
+                        if let self {
+                            self.mediaPlayer?.pause()
+                            self.interfaceInteraction?.updateVideoTrimRange(start, end, updatedEnd, apply)
+                            if apply {
+                                if !updatedEnd {
+                                    self.mediaPlayer?.seek(timestamp: start, play: true)
+                                } else {
+                                    self.mediaPlayer?.seek(timestamp: end - 1.0, play: true)
+                                }
+                            }
+                        }
+                    }
+                    self.trimView.frame = waveformBackgroundFrame
+                    
+                    let playButtonSize = CGSize(width: rightHandleFrame.minX - leftHandleFrame.maxX, height: waveformBackgroundFrame.height)
+                    self.playButtonNode.update(size: playButtonSize, transition: transition)
+                    transition.updateFrame(node: self.playButtonNode, frame: CGRect(origin: CGPoint(x: waveformBackgroundFrame.minX + leftHandleFrame.maxX, y: waveformBackgroundFrame.minY), size: playButtonSize))
                 case let .video(video):
                     self.waveformButton.isHidden = true
                     self.waveformBackgroundNode.isHidden = true
                     self.waveformForegroundNode.isHidden = true
                     self.waveformScrubberNode.isHidden = true
-                    self.playButton.isHidden = true
-                    self.durationLabel.isHidden = true
+                    self.playButtonNode.isHidden = true
                     
                     let scrubberSize = self.scrubber.update(
                         transition: .immediate,
@@ -412,7 +521,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
                         ),
                         environment: {},
                         forceUpdate: false,
-                        containerSize: CGSize(width: min(424, width - leftInset - rightInset - 45.0 - innerSize.width - 1.0), height: 33.0)
+                        containerSize: CGSize(width: min(424.0, width - leftInset - rightInset - 45.0 - innerSize.width - 1.0), height: 33.0)
                     )
 
                     if let view = self.scrubber.view {
@@ -475,14 +584,9 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
             transition.updateSublayerTransformScale(layer: self.sendButton.layer, scale: CGPoint(x: 1.0, y: 1.0))
         }
         
-        transition.updateFrame(node: self.playButton, frame: CGRect(origin: CGPoint(x: leftInset + 52.0, y: 10.0), size: CGSize(width: 26.0, height: 26.0)))
-        self.playPauseIconNode.frame = CGRect(origin: CGPoint(x: -2.0, y: -1.0), size: CGSize(width: 26.0, height: 26.0))
-
-        let waveformBackgroundFrame = CGRect(origin: CGPoint(x: leftInset + 45.0, y: 7.0 - UIScreenPixel), size: CGSize(width: width - leftInset - rightInset - 45.0 - innerSize.width - 1.0, height: 33.0))
         transition.updateFrame(node: self.waveformBackgroundNode, frame: waveformBackgroundFrame)
         transition.updateFrame(node: self.waveformButton, frame: CGRect(origin: CGPoint(x: leftInset + 45.0, y: 0.0), size: CGSize(width: width - leftInset - rightInset - 45.0 - innerSize.width - 1.0, height: panelHeight)))
-        transition.updateFrame(node: self.waveformScrubberNode, frame: CGRect(origin: CGPoint(x: leftInset + 45.0 + 35.0, y: 7.0 + floor((33.0 - 13.0) / 2.0)), size: CGSize(width: width - leftInset - rightInset - 45.0 - innerSize.width - 1.0 - 45.0 - 40.0, height: 13.0)))
-        transition.updateFrame(node: self.durationLabel, frame: CGRect(origin: CGPoint(x: width - rightInset - 45.0 - innerSize.width - 1.0 - 4.0, y: 15.0), size: CGSize(width: 35.0, height: 20.0)))
+        transition.updateFrame(node: self.waveformScrubberNode, frame: CGRect(origin: CGPoint(x: leftInset + 45.0 + 21.0, y: 7.0 + floor((33.0 - 13.0) / 2.0)), size: CGSize(width: width - leftInset - rightInset - 45.0 - innerSize.width - 41.0, height: 13.0)))
         
         prevInputPanelNode?.frame = CGRect(origin: .zero, size: CGSize(width: width, height: panelHeight))
         if let prevTextInputPanelNode = self.prevInputPanelNode as? ChatTextInputPanelNode {
@@ -536,10 +640,10 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
             self.deleteButton.layer.animateScale(from: 0.3, to: 1.0, duration: 0.15)
             self.deleteButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
             
-            self.playButton.layer.animateScale(from: 0.01, to: 1.0, duration: 0.3, delay: 0.1)
-            self.playButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: 0.1)
-                        
-            self.durationLabel.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, delay: 0.1)
+            self.playButtonNode.layer.animateScale(from: 0.01, to: 1.0, duration: 0.3, delay: 0.1)
+            self.playButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: 0.1)
+                                    
+            self.trimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: 0.1)
             
             self.waveformScrubberNode.layer.animateScaleY(from: 0.1, to: 1.0, duration: 0.3, delay: 0.1)
             self.waveformScrubberNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: 0.1)
@@ -664,7 +768,7 @@ private final class PlayPauseIconNode: ManagedAnimationNode {
     private var iconState: PlayPauseIconNodeState = .pause
     
     init() {
-        super.init(size: CGSize(width: 28.0, height: 28.0))
+        super.init(size: CGSize(width: 21.0, height: 21.0))
         
         self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 41, endFrame: 41), duration: 0.01))
     }

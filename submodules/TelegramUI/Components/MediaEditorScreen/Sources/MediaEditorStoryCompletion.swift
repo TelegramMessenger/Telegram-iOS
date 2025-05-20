@@ -47,9 +47,10 @@ extension MediaEditorScreenImpl {
                 let end = values.videoTrimRange?.upperBound ?? (min(originalDuration, start + storyMaxCombinedVideoDuration))
                 
                 for i in 0 ..< storyCount {
+                    guard var editingItem = EditingItem(subject: .asset(asset)) else {
+                        continue
+                    }
                     let trimmedValues = values.withUpdatedVideoTrimRange(start ..< min(end, start + storyMaxVideoDuration))
-                    
-                    var editingItem = EditingItem(asset: asset)
                     if i == 0 {
                         editingItem.caption = self.node.getCaption()
                     }
@@ -176,7 +177,7 @@ extension MediaEditorScreenImpl {
                 duration = 3.0
                 
                 firstFrame = .single((image, nil))
-            case let .image(image, _, _, _):
+            case let .image(image, _, _, _, _):
                 let tempImagePath = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max)).jpg"
                 if let data = image.jpegData(compressionQuality: 0.85) {
                     try? data.write(to: URL(fileURLWithPath: tempImagePath))
@@ -185,7 +186,7 @@ extension MediaEditorScreenImpl {
                 duration = 5.0
                 
                 firstFrame = .single((image, nil))
-            case let .video(path, _, mirror, additionalPath, _, _, durationValue, _, _):
+            case let .video(path, _, mirror, additionalPath, _, _, durationValue, _, _, _):
                 videoIsMirrored = mirror
                 videoResult = .single(.videoFile(path: path))
                 if let videoTrimRange = mediaEditor.values.videoTrimRange {
@@ -426,7 +427,7 @@ extension MediaEditorScreenImpl {
                 duration = 3.0
                 
                 firstFrame = .single((image, nil))
-            case .assets:
+            case .multiple:
                 fatalError()
             }
             
@@ -528,7 +529,7 @@ extension MediaEditorScreenImpl {
         }
         
         var items = items
-        if !isLongVideo, let mediaEditor = self.node.mediaEditor, case let .asset(asset) = self.node.subject, let currentItemIndex = items.firstIndex(where: { $0.asset.localIdentifier == asset.localIdentifier }) {
+        if !isLongVideo, let mediaEditor = self.node.mediaEditor, let subject = self.node.subject, let currentItemIndex = items.firstIndex(where: { $0.source.identifier == subject.sourceIdentifier }) {
             var updatedCurrentItem = items[currentItemIndex]
             updatedCurrentItem.caption = self.node.getCaption()
             updatedCurrentItem.values = mediaEditor.values
@@ -563,7 +564,7 @@ extension MediaEditorScreenImpl {
             let randomId = Int64.random(in: .min ... .max)
             order.append(randomId)
             
-            if item.asset.mediaType == .video {
+            if item.source.isVideo {
                 processVideoItem(item: item, index: index, randomId: randomId, isLongVideo: isLongVideo) { result in
                     let _ = multipleResults.modify { results in
                         var updatedResults = results
@@ -573,7 +574,7 @@ extension MediaEditorScreenImpl {
                                                     
                     dispatchGroup.leave()
                 }
-            } else if item.asset.mediaType == .image {
+            } else {
                 processImageItem(item: item, index: index, randomId: randomId) { result in
                     let _ = multipleResults.modify { results in
                         var updatedResults = results
@@ -583,8 +584,6 @@ extension MediaEditorScreenImpl {
                                         
                     dispatchGroup.leave()
                 }
-            } else {
-                dispatchGroup.leave()
             }
         }
         
@@ -610,13 +609,8 @@ extension MediaEditorScreenImpl {
     }
     
     private func processVideoItem(item: EditingItem, index: Int, randomId: Int64, isLongVideo: Bool, completion: @escaping (MediaEditorScreenImpl.Result) -> Void) {
-        let asset = item.asset
-        
         let itemMediaEditor = setupMediaEditorForItem(item: item)
-    
-        var caption = item.caption
-        caption = convertMarkdownToAttributes(caption)
-        
+            
         var mediaAreas: [MediaArea] = []
         var stickers: [TelegramMediaFile] = []
         
@@ -636,12 +630,13 @@ extension MediaEditorScreenImpl {
             firstFrameTime = CMTime(seconds: item.values?.videoTrimRange?.lowerBound ?? 0.0, preferredTimescale: CMTimeScale(60))
         }
         
-        PHImageManager.default().requestAVAsset(forVideo: asset, options: nil) { [weak self] avAsset, _, _ in
+        let process: (AVAsset?, MediaResult.VideoResult) -> Void = { [weak self] avAsset, videoResult in
+            guard let self else {
+                return
+            }
             guard let avAsset else {
-                DispatchQueue.main.async {
-                    if let self {
-                        completion(self.createEmptyResult(randomId: randomId))
-                    }
+                Queue.mainQueue().async {
+                    completion(self.createEmptyResult(randomId: randomId))
                 }
                 return
             }
@@ -650,16 +645,16 @@ extension MediaEditorScreenImpl {
             if let videoTrimRange = item.values?.videoTrimRange {
                 duration = videoTrimRange.upperBound - videoTrimRange.lowerBound
             } else {
-                duration = min(asset.duration, storyMaxVideoDuration)
+                duration = min(avAsset.duration.seconds, storyMaxVideoDuration)
             }
-            
+                        
             let avAssetGenerator = AVAssetImageGenerator(asset: avAsset)
             avAssetGenerator.appliesPreferredTrackTransform = true
             avAssetGenerator.generateCGImagesAsynchronously(forTimes: [NSValue(time: firstFrameTime)]) { [weak self] _, cgImage, _, _, _ in
                 guard let self else {
                     return
                 }
-                DispatchQueue.main.async {
+                Queue.mainQueue().async {
                     if let cgImage {
                         let image = UIImage(cgImage: cgImage)
                         itemMediaEditor.replaceSource(image, additionalImage: nil, time: firstFrameTime, mirror: false)
@@ -677,14 +672,14 @@ extension MediaEditorScreenImpl {
                                 if let coverImage = coverImage {
                                     let result = MediaEditorScreenImpl.Result(
                                         media: .video(
-                                            video: .asset(localIdentifier: asset.localIdentifier),
+                                            video: videoResult,
                                             coverImage: coverImage,
                                             values: itemMediaEditor.values,
                                             duration: duration,
                                             dimensions: itemMediaEditor.values.resultDimensions
                                         ),
                                         mediaAreas: mediaAreas,
-                                        caption: caption,
+                                        caption: convertMarkdownToAttributes(item.caption),
                                         coverTimestamp: itemMediaEditor.values.coverImageTimestamp,
                                         options: self.state.privacy,
                                         stickers: stickers,
@@ -704,11 +699,21 @@ extension MediaEditorScreenImpl {
                 }
             }
         }
+        
+        switch item.source {
+        case let .video(videoPath, _, _, _):
+            let avAsset = AVURLAsset(url: URL(fileURLWithPath: videoPath))
+            process(avAsset, .videoFile(path: videoPath))
+        case let .asset(asset):
+            PHImageManager.default().requestAVAsset(forVideo: asset, options: nil) { avAsset, _, _ in
+                process(avAsset, .asset(localIdentifier: asset.localIdentifier))
+            }
+        default:
+            fatalError()
+        }
     }
 
     private func processImageItem(item: EditingItem, index: Int, randomId: Int64, completion: @escaping (MediaEditorScreenImpl.Result) -> Void) {
-        let asset = item.asset
-        
         let itemMediaEditor = setupMediaEditorForItem(item: item)
         
         var caption = item.caption
@@ -726,56 +731,67 @@ extension MediaEditorScreenImpl {
             }
         }
         
-        let options = PHImageRequestOptions()
-        options.deliveryMode = .highQualityFormat
-        options.isNetworkAccessAllowed = true
-        
-        PHImageManager.default().requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode: .default, options: options) { [weak self] image, _ in
+        let process: (UIImage?) -> Void = { [weak self] image in
             guard let self else {
                 return
             }
-            DispatchQueue.main.async {
-                if let image {
-                    itemMediaEditor.replaceSource(image, additionalImage: nil, time: .zero, mirror: false)
-                    if itemMediaEditor.values.gradientColors == nil {
-                        itemMediaEditor.setGradientColors(mediaEditorGetGradientColors(from: image))
-                    }
-                    
-                    if let resultImage = itemMediaEditor.resultImage {
-                        makeEditorImageComposition(
-                            context: self.node.ciContext,
-                            postbox: self.context.account.postbox,
-                            inputImage: resultImage,
-                            dimensions: storyDimensions,
-                            values: itemMediaEditor.values,
-                            time: .zero,
-                            textScale: 2.0
-                        ) { resultImage in
-                            if let resultImage = resultImage {
-                                let result = MediaEditorScreenImpl.Result(
-                                    media: .image(
-                                        image: resultImage,
-                                        dimensions: PixelDimensions(resultImage.size)
-                                    ),
-                                    mediaAreas: mediaAreas,
-                                    caption: caption,
-                                    coverTimestamp: nil,
-                                    options: self.state.privacy,
-                                    stickers: stickers,
-                                    randomId: randomId
-                                )
-                                completion(result)
-                            } else {
-                                completion(self.createEmptyResult(randomId: randomId))
-                            }
-                        }
+            guard let image else {
+                completion(self.createEmptyResult(randomId: randomId))
+                return
+            }
+            itemMediaEditor.replaceSource(image, additionalImage: nil, time: .zero, mirror: false)
+            if itemMediaEditor.values.gradientColors == nil {
+                itemMediaEditor.setGradientColors(mediaEditorGetGradientColors(from: image))
+            }
+            
+            if let resultImage = itemMediaEditor.resultImage {
+                makeEditorImageComposition(
+                    context: self.node.ciContext,
+                    postbox: self.context.account.postbox,
+                    inputImage: resultImage,
+                    dimensions: storyDimensions,
+                    values: itemMediaEditor.values,
+                    time: .zero,
+                    textScale: 2.0
+                ) { resultImage in
+                    if let resultImage = resultImage {
+                        let result = MediaEditorScreenImpl.Result(
+                            media: .image(
+                                image: resultImage,
+                                dimensions: PixelDimensions(resultImage.size)
+                            ),
+                            mediaAreas: mediaAreas,
+                            caption: caption,
+                            coverTimestamp: nil,
+                            options: self.state.privacy,
+                            stickers: stickers,
+                            randomId: randomId
+                        )
+                        completion(result)
                     } else {
                         completion(self.createEmptyResult(randomId: randomId))
                     }
-                } else {
-                    completion(self.createEmptyResult(randomId: randomId))
+                }
+            } else {
+                completion(self.createEmptyResult(randomId: randomId))
+            }
+        }
+        
+        switch item.source {
+        case let .image(image, _):
+            process(image)
+        case let .asset(asset):
+            let options = PHImageRequestOptions()
+            options.deliveryMode = .highQualityFormat
+            options.isNetworkAccessAllowed = true
+            
+            PHImageManager.default().requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode: .default, options: options) { image, _ in
+                Queue.mainQueue().async {
+                    process(image)
                 }
             }
+        default:
+            fatalError()
         }
     }
 
@@ -784,10 +800,21 @@ extension MediaEditorScreenImpl {
         if values?.videoTrimRange == nil {
             values = values?.withUpdatedVideoTrimRange(0 ..< storyMaxVideoDuration)
         }
+        
+        let editorSubject: MediaEditor.Subject
+        switch item.source {
+        case let .image(image, dimensions):
+            editorSubject = .image(image, dimensions)
+        case let .video(videoPath, thumbnailImage, dimensions, duration):
+            editorSubject = .video(videoPath, thumbnailImage, false, nil, dimensions, duration)
+        case let .asset(asset):
+            editorSubject = .asset(asset)
+        }
+        
         return MediaEditor(
             context: self.context,
             mode: .default,
-            subject: .asset(item.asset),
+            subject: editorSubject,
             values: values,
             hasHistogram: false,
             isStandalone: true

@@ -15,6 +15,8 @@ import ContextUI
 import ChatListHeaderComponent
 import ChatListTitleView
 import ComponentFlow
+import SwiftUI
+import ContactsUI
 
 private final class ContextControllerContentSourceImpl: ContextControllerContentSource {
     let controller: ViewController
@@ -241,6 +243,10 @@ final class ContactsControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
                 return
             }
             self.openStories?(peer, sourceNode)
+        }
+        
+        self.contactListNode.openContactAccessPicker = {
+            presentContactAccessPicker(context: context)
         }
     }
     
@@ -538,5 +544,46 @@ private final class ContactContextExtractedContentSource: ContextExtractedConten
     
     func putBack() -> ContextControllerPutBackViewInfo? {
         return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+}
+
+private func presentContactAccessPicker(context: AccountContext) {
+    if #available(iOS 18.0, *), let rootViewController = context.sharedContext.mainWindow?.viewController?.view.window?.rootViewController {
+        var dismissImpl: (() -> Void)?
+        let pickerView = ContactAccessPickerHostingView(completionHandler: { [weak rootViewController] ids in
+            DispatchQueue.main.async(execute: {
+                guard let presentedController = rootViewController?.presentedViewController, presentedController.isBeingDismissed == false else { return }
+                dismissImpl?()
+            })
+        })
+        let hostingController = UIHostingController(rootView: pickerView)
+        hostingController.view.isHidden = true
+        hostingController.modalPresentationStyle = .overCurrentContext
+        rootViewController.present(hostingController, animated: true)
+        dismissImpl = { [weak hostingController] in
+            Queue.mainQueue().after(0.4, {
+                hostingController?.dismiss(animated: false)
+            })
+        }
+    }
+}
+
+@available(iOS 18.0, *)
+struct ContactAccessPickerHostingView: View {
+    @State var presented = true
+    var handler: ([String]) -> ()
+    
+    init(completionHandler: @escaping ([String]) -> ()) {
+        self.handler = completionHandler
+    }
+    
+    var body: some View {
+        Spacer()
+            .contactAccessPicker(isPresented: $presented, completionHandler: handler)
+            .onChange(of: presented) { newValue in
+                if newValue == false {
+                    handler([])
+                }
+            }
     }
 }

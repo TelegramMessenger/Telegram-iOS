@@ -11,6 +11,7 @@
 #import "TGModernGalleryEditableItemView.h"
 #import "TGMediaPickerGalleryItem.h"
 #import <LegacyComponents/TGModernGalleryZoomableItemView.h>
+#import "TGMediaPickerGalleryPhotoItem.h"
 #import "TGMediaPickerGalleryVideoItem.h"
 #import "TGMediaPickerGalleryVideoItemView.h"
 
@@ -195,8 +196,14 @@
                  return;
              
              __strong TGModernGalleryController *controller = strongSelf.controller;
-             if ([controller.currentItem conformsToProtocol:@protocol(TGModernGalleryEditableItem)])
-                 [strongSelf presentPhotoEditorForItem:(id<TGModernGalleryEditableItem>)controller.currentItem tab:tab];
+             if ([controller.currentItem conformsToProtocol:@protocol(TGModernGalleryEditableItem)]) {
+                 if (tab == TGPhotoEditorQualityTab && [controller.currentItem isKindOfClass:[TGMediaPickerGalleryFetchResultItem class]] && [((TGMediaPickerGalleryFetchResultItem *)controller.currentItem).backingItem isKindOfClass:[TGMediaPickerGalleryPhotoItem class]]) {
+                     [strongSelf->_editingContext setHighQualityPhoto:!strongSelf->_editingContext.isHighQualityPhoto];
+                     [strongSelf->_interfaceView showPhotoQualityTooltip:strongSelf->_editingContext.isHighQualityPhoto];
+                 } else {
+                     [strongSelf presentPhotoEditorForItem:(id<TGModernGalleryEditableItem>)controller.currentItem tab:tab];
+                 }
+             }
         }];
         _interfaceView.photoStripItemSelected = ^(NSInteger index)
         {

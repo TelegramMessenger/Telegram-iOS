@@ -25,6 +25,7 @@ private let anonymousSavedMessagesIcon = generateTintedImage(image: UIImage(bund
 private let anonymousSavedMessagesDarkIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/AnonymousSenderIcon"), color: UIColor(white: 1.0, alpha: 0.4))
 private let myNotesIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/MyNotesIcon"), color: .white)
 private let cameraIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/CameraIcon"), color: .white)
+private let storyIcon = generateTintedImage(image: UIImage(bundleImageName: "Share/Story"), color: .white)
 
 public func avatarPlaceholderFont(size: CGFloat) -> UIFont {
     return Font.with(size: size, design: .round, weight: .bold)
@@ -95,6 +96,8 @@ public func calculateAvatarColors(context: AccountContext?, explicitColorIndex: 
         } else if case .savedMessagesIcon = icon {
             colors = AvatarNode.savedMessagesColors
         } else if case .repostIcon = icon {
+            colors = AvatarNode.repostColors
+        } else if case .storyIcon = icon {
             colors = AvatarNode.repostColors
         } else if case .repliesIcon = icon {
             colors = AvatarNode.savedMessagesColors
@@ -200,6 +203,7 @@ public enum AvatarNodeIcon: Equatable {
     case phoneIcon
     case repostIcon
     case cameraIcon
+    case storyIcon
 }
 
 public enum AvatarNodeImageOverride: Equatable {
@@ -215,6 +219,7 @@ public enum AvatarNodeImageOverride: Equatable {
     case phoneIcon
     case repostIcon
     case cameraIcon
+    case storyIcon
 }
 
 public enum AvatarNodeColorOverride {
@@ -575,6 +580,9 @@ public final class AvatarNode: ASDisplayNode {
                 case .cameraIcon:
                     representation = nil
                     icon = .cameraIcon
+                case .storyIcon:
+                    representation = nil
+                    icon = .storyIcon
                 }
             } else if peer?.restrictionText(platform: "ios", contentSettings: contentSettings) == nil {
                 representation = peer?.smallProfileImage
@@ -755,6 +763,9 @@ public final class AvatarNode: ASDisplayNode {
                 case .cameraIcon:
                     representation = nil
                     icon = .cameraIcon
+                case .storyIcon:
+                    representation = nil
+                    icon = .storyIcon
                 }
             } else if peer?.restrictionText(platform: "ios", contentSettings: genericContext.currentContentSettings.with { $0 }) == nil {
                 representation = peer?.smallProfileImage
@@ -1006,6 +1017,15 @@ public final class AvatarNode: ASDisplayNode {
                     
                     if let cameraIcon = cameraIcon {
                         context.draw(cameraIcon.cgImage!, in: CGRect(origin: CGPoint(x: floor((bounds.size.width - cameraIcon.size.width) / 2.0), y: floor((bounds.size.height - cameraIcon.size.height) / 2.0)), size: cameraIcon.size))
+                    }
+                } else if case .storyIcon = parameters.icon {
+                    let factor = bounds.size.width / 60.0
+                    context.translateBy(x: bounds.size.width / 2.0, y: bounds.size.height / 2.0)
+                    context.scaleBy(x: factor, y: -factor)
+                    context.translateBy(x: -bounds.size.width / 2.0, y: -bounds.size.height / 2.0)
+                    
+                    if let storyIcon = storyIcon {
+                        context.draw(storyIcon.cgImage!, in: CGRect(origin: CGPoint(x: floor((bounds.size.width - storyIcon.size.width) / 2.0), y: floor((bounds.size.height - storyIcon.size.height) / 2.0)), size: storyIcon.size))
                     }
                 } else if case .editAvatarIcon = parameters.icon, let theme = parameters.theme, !parameters.hasImage {
                     context.translateBy(x: bounds.size.width / 2.0, y: bounds.size.height / 2.0)

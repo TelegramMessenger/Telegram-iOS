@@ -30,6 +30,7 @@ public enum AccessType {
     case denied
     case restricted
     case unreachable
+    case limited
 }
 
 public enum TelegramAppBuildType {
@@ -323,6 +324,7 @@ public enum ResolvedUrl {
     case collectible(gift: StarGift.UniqueGift?)
     case messageLink(link: TelegramResolvedMessageLink?)
     case stars
+    case shareStory(Int64)
 }
 
 public enum ResolveUrlResult {
@@ -803,6 +805,9 @@ public protocol MediaPickerScreen: ViewController {
     func dismissAnimated()
 }
 
+public protocol ChatQrCodeScreen: ViewController {
+}
+
 public protocol MediaEditorScreenResult {
     var target: Stories.PendingTarget { get }
 }
@@ -1155,7 +1160,7 @@ public protocol SharedAccountContext: AnyObject {
     
     func makeMediaPickerScreen(context: AccountContext, hasSearch: Bool, completion: @escaping (Any) -> Void) -> ViewController
     
-    func makeStoryMediaEditorScreen(context: AccountContext, source: Any?, text: String?, link: (url: String, name: String?)?, completion: @escaping (MediaEditorScreenResult, @escaping (@escaping () -> Void) -> Void) -> Void) -> ViewController
+    func makeStoryMediaEditorScreen(context: AccountContext, source: Any?, text: String?, link: (url: String, name: String?)?, completion: @escaping ([MediaEditorScreenResult], @escaping (@escaping () -> Void) -> Void) -> Void) -> ViewController
     
     func makeBotPreviewEditorScreen(context: AccountContext, source: Any?, target: Stories.PendingTarget, transitionArguments: (UIView, CGRect, UIImage?)?, transitionOut: @escaping () -> BotPreviewEditorTransitionOut?, externalState: MediaEditorTransitionOutExternalState, completion: @escaping (MediaEditorScreenResult, @escaping (@escaping () -> Void) -> Void) -> Void, cancelled: @escaping () -> Void) -> ViewController
     
@@ -1228,6 +1233,8 @@ public protocol SharedAccountContext: AnyObject {
     @available(iOS 13.0, *)
     func makePostSuggestionsSettingsScreen(context: AccountContext, peerId: EnginePeer.Id) async -> ViewController
     
+    func makeForumSettingsScreen(context: AccountContext, peerId: EnginePeer.Id) -> ViewController
+        
     func makeDebugSettingsController(context: AccountContext?) -> ViewController?
     
     func openCreateGroupCallUI(context: AccountContext, peerIds: [EnginePeer.Id], parentController: ViewController)

@@ -72,6 +72,7 @@ public final class MediaScrubberComponent: Component {
     public enum Style {
         case editor
         case videoMessage
+        case voiceMessage
         case cover
     }
     
@@ -519,7 +520,7 @@ public final class MediaScrubberComponent: Component {
             switch component.style {
             case .editor:
                 self.cursorView.isHidden = false
-            case .videoMessage:
+            case .videoMessage, .voiceMessage:
                 self.cursorView.isHidden = true
             case .cover:
                 self.cursorView.isHidden = false
@@ -748,7 +749,7 @@ public final class MediaScrubberComponent: Component {
             switch component.style {
             case .editor, .cover:
                 fullTrackHeight = trackHeight
-            case .videoMessage:
+            case .videoMessage, .voiceMessage:
                 fullTrackHeight = 33.0
             }
             let scrubberSize = CGSize(width: availableSize.width, height: fullTrackHeight)
@@ -1207,7 +1208,7 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
             fullTrackHeight = trackHeight
             framesCornerRadius = 9.0
             self.videoTransparentFramesContainer.alpha = 0.35
-        case .videoMessage:
+        case .videoMessage, .voiceMessage:
             fullTrackHeight = 33.0
             framesCornerRadius = fullTrackHeight / 2.0
             self.videoTransparentFramesContainer.alpha = 0.5
@@ -1620,7 +1621,7 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
 }
 
 
-private class TrimView: UIView {
+public class TrimView: UIView {
     fileprivate let leftHandleView = HandleView()
     fileprivate let rightHandleView = HandleView()
     private let borderView = UIImageView()
@@ -1631,12 +1632,12 @@ private class TrimView: UIView {
     
     fileprivate var isPanningTrimHandle = false
     
-    var isHollow = false
+    public var isHollow = false
     
-    var trimUpdated: (Double, Double, Bool, Bool) -> Void = { _, _, _, _ in }
+    public var trimUpdated: (Double, Double, Bool, Bool) -> Void = { _, _, _, _ in }
     var updated: (ComponentTransition) -> Void = { _ in }
     
-    override init(frame: CGRect) {
+    public override init(frame: CGRect) {
         super.init(frame: .zero)
         
         self.zoneView.image = UIImage()
@@ -1792,7 +1793,7 @@ private class TrimView: UIView {
         self.updated(transition)
     }
     
-    var params: (
+    private var params: (
         scrubberSize: CGSize,
         duration: Double,
         startPosition: Double,
@@ -1802,7 +1803,7 @@ private class TrimView: UIView {
         maxDuration: Double
     )?
     
-    func update(
+    public func update(
         style: MediaScrubberComponent.Style,
         theme: PresentationTheme,
         visualInsets: UIEdgeInsets,
@@ -1823,6 +1824,7 @@ private class TrimView: UIView {
         let capsuleOffset: CGFloat
         let color: UIColor
         let highlightColor: UIColor
+        var borderColor: UIColor
         
         switch style {
         case .editor, .cover:
@@ -1883,12 +1885,38 @@ private class TrimView: UIView {
                 self.leftCapsuleView.backgroundColor = .white
                 self.rightCapsuleView.backgroundColor = .white
             }
+            
+        case .voiceMessage:
+            effectiveHandleWidth = 16.0
+            fullTrackHeight = 33.0
+            capsuleOffset = 8.0
+            color = .clear
+            highlightColor = .clear
+        
+            self.zoneView.backgroundColor = UIColor(white: 1.0, alpha: 0.4)
+            
+            if isFirstTime {
+                self.borderView.image = generateImage(CGSize(width: 3.0, height: fullTrackHeight), rotatedContext: { size, context in
+                    context.clear(CGRect(origin: .zero, size: size))
+                    context.setFillColor(UIColor.white.cgColor)
+                    context.fill(CGRect(origin: .zero, size: CGSize(width: 1.0, height: size.height)))
+                    context.fill(CGRect(origin: CGPoint(x: size.width - 1.0, y: 0.0), size: CGSize(width: 1.0, height: size.height)))
+                })?.withRenderingMode(.alwaysTemplate).resizableImage(withCapInsets: UIEdgeInsets(top: 0.0, left: 1.0, bottom: 0.0, right: 1.0))
+                                
+                self.leftCapsuleView.backgroundColor = .white
+                self.rightCapsuleView.backgroundColor = .white
+            }
         }
         
         let trimColor = self.isPanningTrimHandle ? highlightColor : color
+        borderColor = trimColor
+        if case .voiceMessage = style {
+            borderColor = theme.chat.inputPanel.panelBackgroundColor
+        }
+        
         transition.setTintColor(view: self.leftHandleView, color: trimColor)
         transition.setTintColor(view: self.rightHandleView, color: trimColor)
-        transition.setTintColor(view: self.borderView, color: trimColor)
+        transition.setTintColor(view: self.borderView, color: borderColor)
         
         let totalWidth = scrubberSize.width
         let totalRange = totalWidth - effectiveHandleWidth
@@ -1919,7 +1947,7 @@ private class TrimView: UIView {
         return (leftHandleFrame, rightHandleFrame)
     }
     
-    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+    public override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
         let leftHandleFrame = self.leftHandleView.frame.insetBy(dx: -8.0, dy: -9.0)
         let rightHandleFrame = self.rightHandleView.frame.insetBy(dx: -8.0, dy: -9.0)
         let areaFrame = CGRect(x: leftHandleFrame.minX, y: leftHandleFrame.minY, width: rightHandleFrame.maxX - leftHandleFrame.minX, height: rightHandleFrame.maxY - rightHandleFrame.minY)

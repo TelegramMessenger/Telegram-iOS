@@ -136,6 +136,16 @@ public enum MediaManagerPlayerType {
     case file
 }
 
+public struct AudioRecorderResumeData {
+    public let compressedData: Data
+    public let resumeData: Data
+    
+    public init(compressedData: Data, resumeData: Data) {
+        self.compressedData = compressedData
+        self.resumeData = resumeData
+    }
+}
+
 public protocol MediaManager: AnyObject {
     var audioSession: ManagedAudioSession { get }
     var galleryHiddenMediaManager: GalleryHiddenMediaManager { get }
@@ -157,7 +167,12 @@ public protocol MediaManager: AnyObject {
     func setOverlayVideoNode(_ node: OverlayMediaItemNode?)
     func hasOverlayVideoNode(_ node: OverlayMediaItemNode) -> Bool
     
-    func audioRecorder(beginWithTone: Bool, applicationBindings: TelegramApplicationBindings, beganWithTone: @escaping (Bool) -> Void) -> Signal<ManagedAudioRecorder?, NoError>
+    func audioRecorder(
+        resumeData: AudioRecorderResumeData?,
+        beginWithTone: Bool,
+        applicationBindings: TelegramApplicationBindings,
+        beganWithTone: @escaping (Bool) -> Void
+    ) -> Signal<ManagedAudioRecorder?, NoError>
 }
 
 public enum GalleryHiddenMediaId: Hashable {
@@ -215,13 +230,17 @@ public enum AudioRecordingState: Equatable {
 
 public struct RecordedAudioData {
     public let compressedData: Data
+    public let resumeData: Data?
     public let duration: Double
     public let waveform: Data?
+    public let trimRange: Range<Double>?
     
-    public init(compressedData: Data, duration: Double, waveform: Data?) {
+    public init(compressedData: Data, resumeData: Data?, duration: Double, waveform: Data?, trimRange: Range<Double>?) {
         self.compressedData = compressedData
+        self.resumeData = resumeData
         self.duration = duration
         self.waveform = waveform
+        self.trimRange = trimRange
     }
 }
 
@@ -235,4 +254,6 @@ public protocol ManagedAudioRecorder: AnyObject {
     func resume()
     func stop()
     func takenRecordedData() -> Signal<RecordedAudioData?, NoError>
+    
+    func updateTrimRange(start: Double, end: Double, updatedEnd: Bool, apply: Bool)
 }

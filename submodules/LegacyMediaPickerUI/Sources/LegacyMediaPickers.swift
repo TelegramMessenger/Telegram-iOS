@@ -140,14 +140,16 @@ private final class LegacyAssetItemWrapper: NSObject {
     let timer: Int?
     let spoiler: Bool?
     let price: Int64?
+    let forceHd: Bool
     let groupedId: Int64?
     let uniqueId: String?
     
-    init(item: LegacyAssetItem, timer: Int?, spoiler: Bool?, price: Int64?, groupedId: Int64?, uniqueId: String?) {
+    init(item: LegacyAssetItem, timer: Int?, spoiler: Bool?, price: Int64?, forceHd: Bool = false, groupedId: Int64?, uniqueId: String?) {
         self.item = item
         self.timer = timer
         self.spoiler = spoiler
         self.price = price
+        self.forceHd = forceHd
         self.groupedId = groupedId
         self.uniqueId = uniqueId
         
@@ -202,10 +204,10 @@ public func legacyAssetPickerItemGenerator() -> ((Any?, NSAttributedString?, Str
                 if let customName = dict["fileName"] as? String {
                     name = customName
                 }
-                
                 result["item" as NSString] = LegacyAssetItemWrapper(item: .file(data: .asset(asset.backingAsset), thumbnail: thumbnail, mimeType: mimeType, name: name, caption: caption), timer: nil, spoiler: nil, price: price, groupedId: (dict["groupedId"] as? NSNumber)?.int64Value, uniqueId: uniqueId)
             } else {
-                result["item" as NSString] = LegacyAssetItemWrapper(item: .image(data: .asset(asset.backingAsset), thumbnail: thumbnail, caption: caption, stickers: []), timer: (dict["timer"] as? NSNumber)?.intValue, spoiler: (dict["spoiler"] as? NSNumber)?.boolValue, price: price, groupedId: (dict["groupedId"] as? NSNumber)?.int64Value, uniqueId: uniqueId)
+                let forceHd = (dict["hd"] as? NSNumber)?.boolValue ?? false
+                result["item" as NSString] = LegacyAssetItemWrapper(item: .image(data: .asset(asset.backingAsset), thumbnail: thumbnail, caption: caption, stickers: []), timer: (dict["timer"] as? NSNumber)?.intValue, spoiler: (dict["spoiler"] as? NSNumber)?.boolValue, price: price, forceHd: forceHd, groupedId: (dict["groupedId"] as? NSNumber)?.int64Value, uniqueId: uniqueId)
             }
             return result
         } else if (dict["type"] as! NSString) == "file" {
@@ -578,7 +580,7 @@ public func legacyAssetPickerEnqueueMessages(context: AccountContext, account: A
                                         arc4random_buf(&randomId, 8)
                                         let size = CGSize(width: CGFloat(asset.pixelWidth), height: CGFloat(asset.pixelHeight))
                                         let scaledSize = size.aspectFittedOrSmaller(CGSize(width: 1280.0, height: 1280.0))
-                                        let resource = PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier, uniqueId: Int64.random(in: Int64.min ... Int64.max))
+                                        let resource = PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier, uniqueId: Int64.random(in: Int64.min ... Int64.max), forceHd: item.forceHd)
                                     
                                         let media: Media
                                         representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(scaledSize), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false))

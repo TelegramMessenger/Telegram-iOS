@@ -29,6 +29,7 @@
 + (UIImage *)gifActiveIcon;
 + (UIImage *)muteIcon;
 + (UIImage *)muteActiveIcon;
++ (UIImage *)qualityIconForHighQuality:(bool)highQuality filled:(bool)filled;
 + (UIImage *)qualityIconForPreset:(TGMediaVideoConversionPreset)preset;
 + (UIImage *)timerIconForValue:(NSInteger)value;
 + (UIImage *)eraserIcon;

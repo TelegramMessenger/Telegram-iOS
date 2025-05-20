@@ -147,6 +147,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
     private let arrowContainer: ASDisplayNode
     private let animatedStickerNode: DefaultAnimatedStickerNodeImpl
     private var downArrowsNode: DownArrowsIconNode?
+    private var iconNode: ASImageNode?
     private var avatarNode: AvatarNode?
     private var avatarStoryIndicator: ComponentView<Empty>?
     private let textView = ComponentView<Empty>()
@@ -408,6 +409,11 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             self.animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(name: animationName), width: Int(70 * UIScreenScale), height: Int(70 * UIScreenScale), playbackMode: .once, mode: .direct(cachePathPrefix: nil))
             self.animatedStickerNode.automaticallyLoadFirstFrame = true
             self.animatedStickerNode.dynamicColor = animationTintColor
+        case let .image(image):
+            self.iconNode = ASImageNode()
+            self.iconNode?.image = image
+            self.iconNode?.contentMode = .center
+            self.iconNode?.displaysAsynchronously = false
         case .downArrows:
             self.downArrowsNode = DownArrowsIconNode()
         case let .peer(peer, _):
@@ -437,7 +443,9 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         if let closeButtonNode = self.closeButtonNode {
             self.containerNode.addSubnode(closeButtonNode)
         }
-        
+        if let iconNode = self.iconNode {
+            self.containerNode.addSubnode(iconNode)
+        }
         if let downArrowsNode = self.downArrowsNode {
             self.containerNode.addSubnode(downArrowsNode)
         }
@@ -504,6 +512,10 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             } else {
                 animationInset = 0.0
             }
+            animationSpacing = 8.0
+        case .image:
+            animationSize = CGSize(width: 32.0, height: 32.0)
+            animationInset = 0.0
             animationSpacing = 8.0
         case .peer:
             animationSize = CGSize(width: 32.0, height: 32.0)
@@ -869,6 +881,11 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         let animationFrame = CGRect(origin: CGPoint(x: contentInset - animationInset, y: floorToScreenPixels((backgroundHeight - animationSize.height - animationInset * 2.0) / 2.0) + animationOffset), size: CGSize(width: animationSize.width + animationInset * 2.0, height: animationSize.height + animationInset * 2.0))
         transition.updateFrame(node: self.animatedStickerNode, frame: animationFrame)
         self.animatedStickerNode.updateLayout(size: CGSize(width: animationSize.width + animationInset * 2.0, height: animationSize.height + animationInset * 2.0))
+
+        if let iconNode = self.iconNode {
+            let iconSize = CGSize(width: 32.0, height: 32.0)
+            transition.updateFrame(node: iconNode, frame: CGRect(origin: CGPoint(x: animationFrame.midX - iconSize.width / 2.0, y: animationFrame.midY - iconSize.height / 2.0), size: iconSize))
+        }
         
         if let downArrowsNode = self.downArrowsNode {
             let arrowsSize = CGSize(width: 16.0, height: 16.0)
@@ -1068,7 +1085,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             animationDelay = delay
         case .none, .downArrows:
             animationDelay = 0.0
-        case .peer:
+        case .peer, .image:
             animationDelay = 0.0
         }
         
@@ -1148,6 +1165,7 @@ public final class TooltipScreen: ViewController {
     
     public enum Icon {
         case animation(name: String, delay: Double, tintColor: UIColor?)
+        case image(UIImage)
         case peer(peer: EnginePeer, isStory: Bool)
         case downArrows
     }

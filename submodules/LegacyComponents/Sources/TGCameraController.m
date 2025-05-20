@@ -184,6 +184,8 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         if (iosMajorVersion() >= 10) {
             _feedbackGenerator = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
         }
+        
+        _camera.zoomLevels = context.cameraZoomLevels;
     }
     return self;
 }
@@ -307,12 +309,12 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     
     if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPhone)
     {
-        _interfaceView = [[TGCameraMainPhoneView alloc] initWithFrame:screenBounds avatar:_intent == TGCameraControllerAvatarIntent videoModeByDefault:_intent == TGCameraControllerGenericVideoOnlyIntent hasUltrawideCamera:_camera.hasUltrawideCamera hasTelephotoCamera:_camera.hasTelephotoCamera camera:_camera];
+        _interfaceView = [[TGCameraMainPhoneView alloc] initWithFrame:screenBounds avatar:_intent == TGCameraControllerAvatarIntent videoModeByDefault:_intent == TGCameraControllerGenericVideoOnlyIntent camera:_camera];
         [_interfaceView setInterfaceOrientation:interfaceOrientation animated:false];
     }
     else
     {
-        _interfaceView = [[TGCameraMainTabletView alloc] initWithFrame:screenBounds avatar:_intent == TGCameraControllerAvatarIntent videoModeByDefault:_intent == TGCameraControllerGenericVideoOnlyIntent hasUltrawideCamera:_camera.hasUltrawideCamera hasTelephotoCamera:_camera.hasTelephotoCamera camera:_camera];
+        _interfaceView = [[TGCameraMainTabletView alloc] initWithFrame:screenBounds avatar:_intent == TGCameraControllerAvatarIntent videoModeByDefault:_intent == TGCameraControllerGenericVideoOnlyIntent camera:_camera];
         [_interfaceView setInterfaceOrientation:interfaceOrientation animated:false];
         
         CGSize referenceSize = [self referenceViewSizeForOrientation:interfaceOrientation];

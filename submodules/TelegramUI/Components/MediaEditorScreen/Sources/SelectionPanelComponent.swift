@@ -84,13 +84,20 @@ final class SelectionPanelComponent: Component {
                 let previousItem = self.item
                 self.item = item
                 
-                if previousItem?.asset.localIdentifier != item.asset.localIdentifier || previousItem?.version != item.version {
+                if previousItem?.identifier != item.identifier || previousItem?.version != item.version {
                     let imageSignal: Signal<UIImage?, NoError>
                     if let thumbnail = item.thumbnail {
                         imageSignal = .single(thumbnail)
                         self.imageNode.contentMode = .scaleAspectFill
                     } else {
-                        imageSignal = assetImage(asset: item.asset, targetSize:CGSize(width: 128.0 * UIScreenScale, height: 128.0 * UIScreenScale), exact: false, synchronous: true)
+                        switch item.source {
+                        case let .image(image, _):
+                            imageSignal = .single(image)
+                        case let .video(_, image, _, _):
+                            imageSignal = .single(image)
+                        case let .asset(asset):
+                            imageSignal = assetImage(asset: asset, targetSize:CGSize(width: 128.0 * UIScreenScale, height: 128.0 * UIScreenScale), exact: false, synchronous: true)
+                        }
                         self.imageNode.contentUpdated = { [weak self] image in
                             if let self {
                                 if self.backgroundNode.image == nil {
@@ -249,8 +256,8 @@ final class SelectionPanelComponent: Component {
             self.reorderRecognizer?.isEnabled = true
             
             let location = gestureRecognizer.location(in: self)
-            if let itemView = self.item(at: location), let item = itemView.item, item.asset.localIdentifier != component.selectedItemId {
-                component.itemTapped(item.asset.localIdentifier)
+            if let itemView = self.item(at: location), let item = itemView.item, item.identifier != component.selectedItemId {
+                component.itemTapped(item.identifier)
             } else {
                 component.itemTapped(nil)
             }
@@ -346,12 +353,12 @@ final class SelectionPanelComponent: Component {
                 
                 let mappedPosition = self.convert(targetPosition, to: self.scrollView)
                 
-                if let visibleReorderingItem = self.itemViews[id], let fromId = self.itemViews[id]?.item?.asset.localIdentifier {
+                if let visibleReorderingItem = self.itemViews[id], let fromId = self.itemViews[id]?.item?.identifier {
                     for (_, visibleItem) in self.itemViews {
                         if visibleItem === visibleReorderingItem {
                             continue
                         }
-                        if visibleItem.frame.contains(mappedPosition), let toId = visibleItem.item?.asset.localIdentifier {
+                        if visibleItem.frame.contains(mappedPosition), let toId = visibleItem.item?.identifier {
                             component.itemReordered(fromId, toId)
                             break
                         }
@@ -381,7 +388,7 @@ final class SelectionPanelComponent: Component {
             let mainCircleDelay: Double = 0.02
             let backgroundWidth = self.backgroundMaskPanelView.frame.width
             for item in component.items {
-                guard let itemView = self.itemViews[item.asset.localIdentifier] else {
+                guard let itemView = self.itemViews[item.identifier] else {
                     continue
                 }
                 
@@ -433,7 +440,7 @@ final class SelectionPanelComponent: Component {
             let backgroundWidth = self.backgroundMaskPanelView.frame.width
             
             for item in component.items {
-                guard let itemView = self.itemViews[item.asset.localIdentifier] else {
+                guard let itemView = self.itemViews[item.identifier] else {
                     continue
                 }
                 let distance = abs(itemView.frame.center.x - backgroundWidth)
@@ -478,7 +485,7 @@ final class SelectionPanelComponent: Component {
            
             var index = 1
             for item in component.items {
-                let id = item.asset.localIdentifier
+                let id = item.identifier
                 validIds.insert(id)
                             
                 var itemTransition = transition
@@ -498,7 +505,7 @@ final class SelectionPanelComponent: Component {
                     }
                     component.itemSelectionToggled(id)
                 }
-                itemView.update(item: item, number: index, isSelected: item.asset.localIdentifier == component.selectedItemId, isEnabled: item.isEnabled, size: itemFrame.size, portalView: self.portalView, transition: itemTransition)
+                itemView.update(item: item, number: index, isSelected: item.identifier == component.selectedItemId, isEnabled: item.isEnabled, size: itemFrame.size, portalView: self.portalView, transition: itemTransition)
  
                 itemTransition.setBounds(view: itemView, bounds: CGRect(origin: .zero, size: itemFrame.size))
                 itemTransition.setPosition(view: itemView, position: itemFrame.center)

@@ -2,6 +2,7 @@
 
 @interface TGDataItem : NSObject
 
+- (instancetype)initWithData:(NSData *)data;
 - (void)appendData:(NSData *)data;
 - (NSData *)data;
 

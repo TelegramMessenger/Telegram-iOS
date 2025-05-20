@@ -1491,12 +1491,12 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                     isPeerArchived: false,
                                     transitionOut: nil
                                 )
-                                let controller = self.context.sharedContext.makeStoryMediaEditorScreen(context: self.context, source: source, text: text, link: linkUrl.flatMap { ($0, linkName) }, completion: { result, commit in
-                                    let target: Stories.PendingTarget = result.target
+                                let controller = self.context.sharedContext.makeStoryMediaEditorScreen(context: self.context, source: source, text: text, link: linkUrl.flatMap { ($0, linkName) }, completion: { results, commit in
+                                    let target: Stories.PendingTarget = results.first!.target
                                     externalState.storyTarget = target
                                     
                                     if let rootController = self.context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
-                                        rootController.proceedWithStoryUpload(target: target, results: [result], existingMedia: nil, forwardInfo: nil, externalState: externalState, commit: commit)
+                                        rootController.proceedWithStoryUpload(target: target, results: results, existingMedia: nil, forwardInfo: nil, externalState: externalState, commit: commit)
                                     }
                                 })
                                 if let navigationController = self.controller?.getNavigationController() {

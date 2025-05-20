@@ -1573,7 +1573,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
     
     func updatePeers(context: ShareControllerAccountContext, switchableAccounts: [ShareControllerSwitchableAccount], peers: [(peer: EngineRenderedPeer, presence: EnginePeer.Presence?, requiresPremiumForMessaging: Bool, requiresStars: Int64?)], accountPeer: EnginePeer, defaultAction: ShareControllerAction?) {
         self.context = context
-        
+                
         if let peersContentNode = self.peersContentNode, peersContentNode.accountPeer.id == accountPeer.id {
             peersContentNode.peersValue.set(.single(peers))
             return
@@ -1610,7 +1610,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
         }
         
         let animated = self.peersContentNode == nil
-        let peersContentNode = SharePeersContainerNode(environment: self.environment, context: context, switchableAccounts: switchableAccounts, theme: self.presentationData.theme, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder, peers: peers, accountPeer: accountPeer, controllerInteraction: self.controllerInteraction!, externalShare: self.externalShare, switchToAnotherAccount: { [weak self] in
+        let peersContentNode = SharePeersContainerNode(environment: self.environment, context: context, switchableAccounts: switchableAccounts, theme: self.presentationData.theme, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder, peers: peers, accountPeer: accountPeer, controllerInteraction: self.controllerInteraction!, externalShare: self.externalShare, isMainApp: self.environment.isMainApp, switchToAnotherAccount: { [weak self] in
             self?.switchToAnotherAccount?()
         }, debugAction: { [weak self] in
             self?.debugAction?()

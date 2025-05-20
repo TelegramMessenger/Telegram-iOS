@@ -760,17 +760,10 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
     {
         if (self.disabled)
             return;
-        
+     
+        self.captureSession.zoomLevels = self.zoomLevels;
         [self.captureSession setZoomLevel:zoomLevel animated:animated];
     }];
-}
-
-- (int32_t)maxMarkZoomValue {
-    return self.captureSession.maxMarkZoomValue;
-}
-
-- (int32_t)secondMarkZoomValue {
-    return self.captureSession.secondMarkZoomValue;
 }
 
 #pragma mark - Device Angle

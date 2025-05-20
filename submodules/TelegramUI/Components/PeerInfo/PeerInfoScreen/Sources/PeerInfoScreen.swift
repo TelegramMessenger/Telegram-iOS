@@ -600,7 +600,7 @@ private final class PeerInfoInteraction {
     let openQrCode: () -> Void
     let editingOpenReactionsSetup: () -> Void
     let dismissInput: () -> Void
-    let toggleForumTopics: (Bool) -> Void
+    let openForumSettings: () -> Void
     let displayTopicsLimited: (TopicsLimitedReason) -> Void
     let openPeerMention: (String, ChatControllerInteractionNavigateToPeer) -> Void
     let openBotApp: (AttachMenuBot) -> Void
@@ -674,7 +674,7 @@ private final class PeerInfoInteraction {
         openQrCode: @escaping () -> Void,
         editingOpenReactionsSetup: @escaping () -> Void,
         dismissInput: @escaping () -> Void,
-        toggleForumTopics: @escaping (Bool) -> Void,
+        openForumSettings: @escaping () -> Void,
         displayTopicsLimited: @escaping (TopicsLimitedReason) -> Void,
         openPeerMention: @escaping (String, ChatControllerInteractionNavigateToPeer) -> Void,
         openBotApp: @escaping (AttachMenuBot) -> Void,
@@ -747,7 +747,7 @@ private final class PeerInfoInteraction {
         self.openQrCode = openQrCode
         self.editingOpenReactionsSetup = editingOpenReactionsSetup
         self.dismissInput = dismissInput
-        self.toggleForumTopics = toggleForumTopics
+        self.openForumSettings = openForumSettings
         self.displayTopicsLimited = displayTopicsLimited
         self.openPeerMention = openPeerMention
         self.openBotApp = openBotApp
@@ -2581,11 +2581,13 @@ private func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostSt
                         }
                         
                         if canSetupTopics {
-                            items[.peerDataSettings]!.append(PeerInfoScreenSwitchItem(id: ItemTopics, text: presentationData.strings.PeerInfo_OptionTopics, value: channel.flags.contains(.isForum), icon: UIImage(bundleImageName: "Settings/Menu/Topics"), isLocked: topicsLimitedReason != nil, toggled: { value in
+                            //TODO:localize
+                            let label = channel.flags.contains(.isForum) ? "Enabled" : "Disabled"
+                            items[.peerDataSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemTopics, label: .text(label), text: presentationData.strings.PeerInfo_OptionTopics, icon: UIImage(bundleImageName: "Settings/Menu/Topics"), action: {
                                 if let topicsLimitedReason = topicsLimitedReason {
                                     interaction.displayTopicsLimited(topicsLimitedReason)
                                 } else {
-                                    interaction.toggleForumTopics(value)
+                                    interaction.openForumSettings()
                                 }
                             }))
                             
@@ -2708,11 +2710,12 @@ private func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostSt
                 }
                 
                 if canSetupTopics {
-                    items[.peerPublicSettings]!.append(PeerInfoScreenSwitchItem(id: ItemTopics, text: presentationData.strings.PeerInfo_OptionTopics, value: false, icon: UIImage(bundleImageName: "Settings/Menu/Topics"), isLocked: topicsLimitedReason != nil, toggled: { value in
+                    //TODO:localize
+                    items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemTopics, label: .text("Disabled"), text: presentationData.strings.PeerInfo_OptionTopics, icon: UIImage(bundleImageName: "Settings/Menu/Topics"), action: {
                         if let topicsLimitedReason = topicsLimitedReason {
                             interaction.displayTopicsLimited(topicsLimitedReason)
                         } else {
-                            interaction.toggleForumTopics(value)
+                            interaction.openForumSettings()
                         }
                     }))
                     
@@ -3134,11 +3137,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             dismissInput: { [weak self] in
                 self?.view.endEditing(true)
             },
-            toggleForumTopics: { [weak self] value in
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.toggleForumTopics(isEnabled: value)
+            openForumSettings: { [weak self] in
+                self?.openForumSettings()
             },
             displayTopicsLimited: { [weak self] reason in
                 guard let self else {
@@ -9235,6 +9235,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         })
     }
     
+    private func openForumSettings() {
+        guard let controller = self.controller else {
+            return
+        }
+        let settingsController = self.context.sharedContext.makeForumSettingsScreen(context: self.context, peerId: self.peerId)
+        controller.push(settingsController)
+    }
+    
     private func toggleForumTopics(isEnabled: Bool) {
         guard let data = self.data, let peer = data.peer else {
             return
@@ -10071,7 +10079,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         if (self.isSettings || self.isMyProfile) && self.data?.globalSettings?.privacySettings?.phoneDiscoveryEnabled == false && (self.data?.peer?.addressName ?? "").isEmpty {
             temporary = true
         }
-        controller.present(self.context.sharedContext.makeChatQrCodeScreen(context: self.context, peer: peer, threadId: threadId, temporary: temporary), in: .window(.root))
+        let qrController = self.context.sharedContext.makeChatQrCodeScreen(context: self.context, peer: peer, threadId: threadId, temporary: temporary)
+        controller.push(qrController)
     }
     
     private func openPremiumGift() {

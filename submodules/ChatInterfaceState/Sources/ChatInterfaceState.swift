@@ -284,17 +284,23 @@ public enum ChatInterfaceMediaDraftState: Codable, Equatable {
         public let fileSize: Int32
         public let duration: Int32
         public let waveform: AudioWaveform
+        public let trimRange: Range<Double>?
+        public let resumeData: Data?
         
         public init(
             resource: LocalFileMediaResource,
             fileSize: Int32,
             duration: Int32,
-            waveform: AudioWaveform
+            waveform: AudioWaveform,
+            trimRange: Range<Double>?,
+            resumeData: Data?
         ) {
             self.resource = resource
             self.fileSize = fileSize
             self.duration = duration
             self.waveform = waveform
+            self.trimRange = trimRange
+            self.resumeData = resumeData
         }
         
         public init(from decoder: Decoder) throws {
@@ -309,6 +315,14 @@ public enum ChatInterfaceMediaDraftState: Codable, Equatable {
             let waveformData = try container.decode(Data.self, forKey: "wd")
             let waveformPeak = try container.decode(Int32.self, forKey: "wp")
             self.waveform = AudioWaveform(samples: waveformData, peak: waveformPeak)
+            
+            if let trimLowerBound = try container.decodeIfPresent(Double.self, forKey: "tl"), let trimUpperBound = try container.decodeIfPresent(Double.self, forKey: "tu") {
+                self.trimRange = trimLowerBound ..< trimUpperBound
+            } else {
+                self.trimRange = nil
+            }
+            
+            self.resumeData = try container.decode(Data.self, forKey: "rd")
         }
 
         public func encode(to encoder: Encoder) throws {
@@ -319,6 +333,15 @@ public enum ChatInterfaceMediaDraftState: Codable, Equatable {
             try container.encode(self.duration, forKey: "d")
             try container.encode(self.waveform.samples, forKey: "wd")
             try container.encode(self.waveform.peak, forKey: "wp")
+            
+            if let trimRange = self.trimRange {
+                try container.encode(trimRange.lowerBound, forKey: "tl")
+                try container.encode(trimRange.upperBound, forKey: "tu")
+            }
+            
+            if let resumeData = self.resumeData {
+                try container.encode(resumeData, forKey: "rd")
+            }
         }
         
         public static func ==(lhs: Audio, rhs: Audio) -> Bool {
@@ -332,6 +355,12 @@ public enum ChatInterfaceMediaDraftState: Codable, Equatable {
                 return false
             }
             if lhs.waveform != rhs.waveform {
+                return false
+            }
+            if lhs.trimRange != rhs.trimRange {
+                return false
+            }
+            if lhs.resumeData != rhs.resumeData {
                 return false
             }
             return true

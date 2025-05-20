@@ -84,6 +84,7 @@ import InviteLinksUI
 import GiftStoreScreen
 import SendInviteLinkScreen
 import PostSuggestionsSettingsScreen
+import ForumSettingsScreen
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -2465,7 +2466,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func makeChatQrCodeScreen(context: AccountContext, peer: Peer, threadId: Int64?, temporary: Bool) -> ViewController {
-        return ChatQrCodeScreen(context: context, subject: .peer(peer: peer, threadId: threadId, temporary: temporary))
+        return ChatQrCodeScreenImpl(context: context, subject: .peer(peer: peer, threadId: threadId, temporary: temporary))
     }
     
     public func makePrivacyAndSecurityController(context: AccountContext) -> ViewController {
@@ -3433,7 +3434,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         if let asset = source as? PHAsset {
             subject = .single(.asset(asset))
         } else if let image = source as? UIImage {
-            subject = .single(.image(image: image, dimensions: PixelDimensions(image.size), additionalImage: nil, additionalImagePosition: .bottomRight))
+            subject = .single(.image(image: image, dimensions: PixelDimensions(image.size), additionalImage: nil, additionalImagePosition: .bottomRight, fromCamera: false))
         } else {
             subject = .single(.empty(PixelDimensions(width: 1080, height: 1920)))
         }
@@ -3486,7 +3487,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             subject = .single(.asset(asset))
             mode = .addingToPack
         } else if let image = source as? UIImage {
-            subject = .single(.image(image: image, dimensions: PixelDimensions(image.size), additionalImage: nil, additionalImagePosition: .bottomRight))
+            subject = .single(.image(image: image, dimensions: PixelDimensions(image.size), additionalImage: nil, additionalImagePosition: .bottomRight, fromCamera: false))
             mode = .addingToPack
         } else if let source = source as? Signal<CameraScreenImpl.Result, NoError> {
             subject = source
@@ -3495,7 +3496,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 case .pendingImage:
                     return nil
                 case let .image(image):
-                    return .image(image: image.image, dimensions: PixelDimensions(image.image.size), additionalImage: nil, additionalImagePosition: .topLeft)
+                    return .image(image: image.image, dimensions: PixelDimensions(image.image.size), additionalImage: nil, additionalImagePosition: .topLeft, fromCamera: false)
                 default:
                     return nil
                 }
@@ -3543,12 +3544,16 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return editorController
     }
         
-    public func makeStoryMediaEditorScreen(context: AccountContext, source: Any?, text: String?, link: (url: String, name: String?)?, completion: @escaping (MediaEditorScreenResult, @escaping (@escaping () -> Void) -> Void) -> Void) -> ViewController {
+    public func makeStoryMediaEditorScreen(context: AccountContext, source: Any?, text: String?, link: (url: String, name: String?)?, completion: @escaping ([MediaEditorScreenResult], @escaping (@escaping () -> Void) -> Void) -> Void) -> ViewController {
         let subject: Signal<MediaEditorScreenImpl.Subject?, NoError>
         if let image = source as? UIImage {
-            subject = .single(.image(image: image, dimensions: PixelDimensions(image.size), additionalImage: nil, additionalImagePosition: .bottomRight))
+            subject = .single(.image(image: image, dimensions: PixelDimensions(image.size), additionalImage: nil, additionalImagePosition: .bottomRight, fromCamera: false))
         } else if let path = source as? String {
-            subject = .single(.video(videoPath: path, thumbnail: nil, mirror: false, additionalVideoPath: nil, additionalThumbnail: nil, dimensions: PixelDimensions(width: 1080, height: 1920), duration: 0.0, videoPositionChanges: [], additionalVideoPosition: .bottomRight))
+            subject = .single(.video(videoPath: path, thumbnail: nil, mirror: false, additionalVideoPath: nil, additionalThumbnail: nil, dimensions: PixelDimensions(width: 1080, height: 1920), duration: 0.0, videoPositionChanges: [], additionalVideoPosition: .bottomRight, fromCamera: false))
+        } else if let subjects = source as? [MediaEditorScreenImpl.Subject] {
+            subject = .single(.multiple(subjects))
+        } else if let subjectValue = source as? MediaEditorScreenImpl.Subject {
+            subject = .single(subjectValue)
         } else {
             subject = .single(.empty(PixelDimensions(width: 1080, height: 1920)))
         }
@@ -3563,7 +3568,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             transitionOut: { finished, isNew in
                 return nil
             }, completion: { results, commit in
-                completion(results.first!, commit)
+                completion(results, commit)
             } as ([MediaEditorScreenImpl.Result], @escaping (@escaping () -> Void) -> Void) -> Void
         )
         return editorController
@@ -3853,6 +3858,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     @available(iOS 13.0, *)
     public func makePostSuggestionsSettingsScreen(context: AccountContext, peerId: EnginePeer.Id) async -> ViewController {
         return await PostSuggestionsSettingsScreen(context: context, peerId: peerId, completion: {})
+    }
+    
+    public func makeForumSettingsScreen(context: AccountContext, peerId: EnginePeer.Id) -> ViewController {
+        return ForumSettingsScreen(context: context, peerId: peerId)
     }
 }
 
