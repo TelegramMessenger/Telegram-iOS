@@ -1370,6 +1370,13 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 hasTranslationPanel = true
             }
         }
+        
+        #if DEBUG
+        if "".isEmpty {
+            hasTranslationPanel = true
+        }
+        #endif
+        
         if hasTranslationPanel {
             let translationPanelNode: ChatTranslationPanelNode
             if let current = self.chatTranslationPanel {
@@ -2403,14 +2410,15 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             let previousFrame = chatTranslationPanel.frame
             chatTranslationPanel.frame = translationPanelFrame
             if transition.isAnimated && previousFrame.width != translationPanelFrame.width {
-            } else {
+            } else if immediatelyLayoutTranslationPanelNodeAndAnimateAppearance {
                 transition.animatePositionAdditive(node: chatTranslationPanel, offset: CGPoint(x: 0.0, y: -translationPanelFrame.height))
+            } else if previousFrame.minY != translationPanelFrame.minY {
+                transition.animatePositionAdditive(node: chatTranslationPanel, offset: CGPoint(x: 0.0, y: previousFrame.minY - translationPanelFrame.minY))
             }
         }
         
         if let chatImportStatusPanel = self.chatImportStatusPanel, let importStatusPanelFrame, !chatImportStatusPanel.frame.equalTo(importStatusPanelFrame) {
             chatImportStatusPanel.frame = importStatusPanelFrame
-            //transition.animatePositionAdditive(node: chatImportStatusPanel, offset: CGPoint(x: 0.0, y: -titleAccessoryPanelFrame.height))
         }
         
         if let adPanelNode = self.adPanelNode, let adPanelFrame, !adPanelNode.frame.equalTo(adPanelFrame) {
