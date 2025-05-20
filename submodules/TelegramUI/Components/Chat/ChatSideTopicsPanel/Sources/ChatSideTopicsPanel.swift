@@ -37,23 +37,26 @@ public final class ChatSideTopicsPanel: Component {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let peerId: EnginePeer.Id
+    let isMonoforum: Bool
     let topicId: Int64?
     let togglePanel: () -> Void
-    let updateTopicId: (Int64?) -> Void
+    let updateTopicId: (Int64?, Bool) -> Void
     
     public init(
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
         peerId: EnginePeer.Id,
+        isMonoforum: Bool,
         topicId: Int64?,
         togglePanel: @escaping () -> Void,
-        updateTopicId: @escaping (Int64?) -> Void
+        updateTopicId: @escaping (Int64?, Bool) -> Void
     ) {
         self.context = context
         self.theme = theme
         self.strings = strings
         self.peerId = peerId
+        self.isMonoforum = isMonoforum
         self.topicId = topicId
         self.togglePanel = togglePanel
         self.updateTopicId = updateTopicId
@@ -70,6 +73,9 @@ public final class ChatSideTopicsPanel: Component {
             return false
         }
         if lhs.peerId != rhs.peerId {
+            return false
+        }
+        if lhs.isMonoforum != rhs.isMonoforum {
             return false
         }
         if lhs.topicId != rhs.topicId {
@@ -111,7 +117,7 @@ public final class ChatSideTopicsPanel: Component {
         
         private let containerButton: HighlightTrackingButton
         
-        private let icon = ComponentView<Empty>()
+        private var icon: ComponentView<Empty>?
         private var avatarNode: AvatarNode?
         private let title = ComponentView<Empty>()
         
@@ -179,34 +185,78 @@ public final class ChatSideTopicsPanel: Component {
         
         func update(context: AccountContext, item: Item, isSelected: Bool, theme: PresentationTheme, width: CGFloat, transition: ComponentTransition) -> CGSize {
             let spacing: CGFloat = 3.0
+            let iconSize = CGSize(width: 30.0, height: 30.0)
             
-            let avatarIconContent: EmojiStatusComponent.Content
-            if case let .forum(topicId) = item.item.id, topicId != 1, let threadData = item.item.threadData {
-                if let fileId = threadData.info.icon, fileId != 0 {
-                    avatarIconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 18.0, height: 18.0), placeholderColor: theme.list.mediaPlaceholderColor, themeColor: theme.list.itemAccentColor, loopMode: .count(0))
+            var avatarIconContent: EmojiStatusComponent.Content?
+            if case let .forum(topicId) = item.item.id {
+                if topicId != 1, let threadData = item.item.threadData {
+                    if let fileId = threadData.info.icon, fileId != 0 {
+                        avatarIconContent = .animation(content: .customEmoji(fileId: fileId), size: iconSize, placeholderColor: theme.list.mediaPlaceholderColor, themeColor: theme.list.itemAccentColor, loopMode: .count(0))
+                    } else {
+                        avatarIconContent = .topic(title: String(threadData.info.title.prefix(1)), color: threadData.info.iconColor, size: iconSize)
+                    }
                 } else {
-                    avatarIconContent = .topic(title: String(threadData.info.title.prefix(1)), color: threadData.info.iconColor, size: CGSize(width: 18.0, height: 18.0))
+                    avatarIconContent = .image(image: PresentationResourcesChatList.generalTopicIcon(theme), tintColor: theme.rootController.navigationBar.secondaryTextColor)
                 }
-            } else {
-                avatarIconContent = .image(image: PresentationResourcesChatList.generalTopicIcon(theme))
             }
             
-            let avatarIconComponent = EmojiStatusComponent(
-                context: context,
-                animationCache: context.animationCache,
-                animationRenderer: context.animationRenderer,
-                content: avatarIconContent,
-                isVisibleForAnimations: false,
-                action: nil
-            )
-            let iconSize = self.icon.update(
-                transition: .immediate,
-                component: AnyComponent(avatarIconComponent),
-                environment: {},
-                containerSize: CGSize(width: 30.0, height: 30.0)
-            )
+            if let avatarIconContent {
+                let avatarIconComponent = EmojiStatusComponent(
+                    context: context,
+                    animationCache: context.animationCache,
+                    animationRenderer: context.animationRenderer,
+                    content: avatarIconContent,
+                    isVisibleForAnimations: false,
+                    action: nil
+                )
+                let icon: ComponentView<Empty>
+                if let current = self.icon {
+                    icon = current
+                } else {
+                    icon = ComponentView()
+                    self.icon = icon
+                }
+                let _ = icon.update(
+                    transition: .immediate,
+                    component: AnyComponent(avatarIconComponent),
+                    environment: {},
+                    containerSize: iconSize
+                )
+            } else if let icon = self.icon {
+                self.icon = nil
+                icon.view?.removeFromSuperview()
+            }
             
-            let titleText: String = item.item.renderedPeer.chatMainPeer?.compactDisplayTitle ?? " "
+            let titleText: String
+            if case let .forum(topicId) = item.item.id {
+                let _ = topicId
+                if let threadData = item.item.threadData {
+                    titleText = threadData.info.title
+                } else {
+                    //TODO:localize
+                    titleText = "General"
+                }
+            } else {
+                titleText = item.item.renderedPeer.chatMainPeer?.compactDisplayTitle ?? " "
+            }
+            
+            if let avatarIconContent, let icon = self.icon {
+                let avatarIconComponent = EmojiStatusComponent(
+                    context: context,
+                    animationCache: context.animationCache,
+                    animationRenderer: context.animationRenderer,
+                    content: avatarIconContent,
+                    isVisibleForAnimations: false,
+                    action: nil
+                )
+                let _ = icon.update(
+                    transition: .immediate,
+                    component: AnyComponent(avatarIconComponent),
+                    environment: {},
+                    containerSize: iconSize
+                )
+            }
+            
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
@@ -224,39 +274,38 @@ public final class ChatSideTopicsPanel: Component {
             let iconFrame = CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) * 0.5), y: 0.0), size: iconSize)
             let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) * 0.5), y: iconFrame.maxY + spacing), size: titleSize)
             
-            if let iconView = self.icon.view {
-                if iconView.superview == nil {
-                    iconView.isUserInteractionEnabled = false
-                    self.containerButton.addSubview(iconView)
-                }
-                iconView.frame = iconFrame
-                
-                if "".isEmpty {
-                    iconView.isHidden = true
-                    
-                    let avatarNode: AvatarNode
-                    if let current = self.avatarNode {
-                        avatarNode = current
-                    } else {
-                        avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 11.0))
-                        avatarNode.isUserInteractionEnabled = false
-                        self.avatarNode = avatarNode
-                        self.containerButton.addSubview(avatarNode.view)
-                    }
-                    avatarNode.frame = iconFrame
-                    avatarNode.updateSize(size: iconFrame.size)
-                    
-                    if let peer = item.item.renderedPeer.chatMainPeer {
-                        if peer.smallProfileImage != nil {
-                            avatarNode.setPeerV2(context: context, theme: theme, peer: peer, overrideImage: nil, emptyColor: .gray, clipStyle: .round, synchronousLoad: false, displayDimensions: iconFrame.size)
-                        } else {
-                            avatarNode.setPeer(context: context, theme: theme, peer: peer, overrideImage: nil, emptyColor: .gray, clipStyle: .round, synchronousLoad: false, displayDimensions: iconFrame.size)
-                        }
-                    }
-                } else if let avatarNode = self.avatarNode {
+            if let icon = self.icon {
+                if let avatarNode = self.avatarNode {
                     self.avatarNode = nil
                     avatarNode.view.removeFromSuperview()
-                    iconView.isHidden = false
+                }
+                
+                if let iconView = icon.view {
+                    if iconView.superview == nil {
+                        iconView.isUserInteractionEnabled = false
+                        self.containerButton.addSubview(iconView)
+                    }
+                    iconView.frame = iconFrame
+                }
+            } else {
+                let avatarNode: AvatarNode
+                if let current = self.avatarNode {
+                    avatarNode = current
+                } else {
+                    avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 11.0))
+                    avatarNode.isUserInteractionEnabled = false
+                    self.avatarNode = avatarNode
+                    self.containerButton.addSubview(avatarNode.view)
+                }
+                avatarNode.frame = iconFrame
+                avatarNode.updateSize(size: iconFrame.size)
+                
+                if let peer = item.item.renderedPeer.chatMainPeer {
+                    if peer.smallProfileImage != nil {
+                        avatarNode.setPeerV2(context: context, theme: theme, peer: peer, overrideImage: nil, emptyColor: .gray, clipStyle: .round, synchronousLoad: false, displayDimensions: iconFrame.size)
+                    } else {
+                        avatarNode.setPeer(context: context, theme: theme, peer: peer, overrideImage: nil, emptyColor: .gray, clipStyle: .round, synchronousLoad: false, displayDimensions: iconFrame.size)
+                    }
                 }
             }
             
@@ -600,7 +649,15 @@ public final class ChatSideTopicsPanel: Component {
         
         public func topicIndex(threadId: Int64?) -> Int? {
             if let threadId {
-                if let value = self.items.firstIndex(where: { $0.id == .chatList(PeerId(threadId)) }) {
+                if let value = self.items.firstIndex(where: { item in
+                    if item.id == .chatList(PeerId(threadId)) {
+                        return true
+                    } else if item.id == .forum(threadId) {
+                        return true
+                    } else {
+                        return false
+                    }
+                }) {
                     return value + 1
                 } else {
                     return nil
@@ -619,77 +676,7 @@ public final class ChatSideTopicsPanel: Component {
             self.state = state
             
             if self.component == nil {
-                let viewKey: PostboxViewKey = .savedMessagesIndex(peerId: component.peerId)
-                let interfaceStateKey: PostboxViewKey = .chatInterfaceState(peerId: component.peerId)
-                
-                let accountPeerId = component.context.account.peerId
-                let threadListSignal: Signal<EngineChatList, NoError> = component.context.account.postbox.combinedView(keys: [viewKey, interfaceStateKey])
-                |> map { views -> EngineChatList in
-                    guard let view = views.views[viewKey] as? MessageHistorySavedMessagesIndexView else {
-                        preconditionFailure()
-                    }
-                    
-                    var draft: EngineChatList.Draft?
-                    if let interfaceStateView = views.views[interfaceStateKey] as? ChatInterfaceStateView {
-                        if let embeddedState = interfaceStateView.value, let _ = embeddedState.overrideChatTimestamp {
-                            if let opaqueState = _internal_decodeStoredChatInterfaceState(state: embeddedState) {
-                                if let text = opaqueState.synchronizeableInputState?.text {
-                                    draft = EngineChatList.Draft(text: text, entities: opaqueState.synchronizeableInputState?.entities ?? [])
-                                }
-                            }
-                        }
-                    }
-                     
-                    var items: [EngineChatList.Item] = []
-                    for item in view.items {
-                        guard let sourcePeer = item.peer else {
-                            continue
-                        }
-                        
-                        let sourceId = PeerId(item.id)
-                        
-                        var messages: [EngineMessage] = []
-                        if let topMessage = item.topMessage {
-                            messages.append(EngineMessage(topMessage))
-                        }
-                        
-                        let mappedMessageIndex = MessageIndex(id: MessageId(peerId: sourceId, namespace: item.index.id.namespace, id: item.index.id.id), timestamp: item.index.timestamp)
-                        
-                        items.append(EngineChatList.Item(
-                            id: .chatList(sourceId),
-                            index: .chatList(ChatListIndex(pinningIndex: item.pinnedIndex.flatMap(UInt16.init), messageIndex: mappedMessageIndex)),
-                            messages: messages,
-                            readCounters: nil,
-                            isMuted: false,
-                            draft: sourceId == accountPeerId ? draft : nil,
-                            threadData: nil,
-                            renderedPeer: EngineRenderedPeer(peer: EnginePeer(sourcePeer)),
-                            presence: nil,
-                            hasUnseenMentions: false,
-                            hasUnseenReactions: false,
-                            forumTopicData: nil,
-                            topForumTopicItems: [],
-                            hasFailed: false,
-                            isContact: false,
-                            autoremoveTimeout: nil,
-                            storyStats: nil,
-                            displayAsTopicList: false,
-                            isPremiumRequiredToMessage: false,
-                            mediaDraftContentType: nil
-                        ))
-                    }
-                    
-                    let list = EngineChatList(
-                        items: items.reversed(),
-                        groupItems: [],
-                        additionalItems: [],
-                        hasEarlier: false,
-                        hasLater: false,
-                        isLoading: view.isLoading
-                    )
-                    
-                    return list
-                }
+                let threadListSignal: Signal<EngineChatList, NoError> = component.context.sharedContext.subscribeChatListData(context: component.context, location: component.isMonoforum ? .savedMessagesChats(peerId: component.peerId) : .forum(peerId: component.peerId))
                 
                 self.itemsDisposable = (threadListSignal
                 |> deliverOnMainQueue).startStrict(next: { [weak self] chatList in
@@ -814,7 +801,8 @@ public final class ChatSideTopicsPanel: Component {
                         guard let self, let component = self.component else {
                             return
                         }
-                        component.updateTopicId(nil)
+                        
+                        component.updateTopicId(nil, false)
                     })
                     self.allItemView = itemView
                     self.scrollView.addSubview(itemView)
@@ -864,8 +852,20 @@ public final class ChatSideTopicsPanel: Component {
                         guard let self, let component = self.component else {
                             return
                         }
-                        let topicId = chatListItem.renderedPeer.peerId.toInt64()
-                        component.updateTopicId(topicId)
+                        
+                        let topicId: Int64
+                        if case let .forum(topicIdValue) = chatListItem.id {
+                            topicId = topicIdValue
+                        } else {
+                            topicId = chatListItem.renderedPeer.peerId.toInt64()
+                        }
+                        
+                        var direction = true
+                        if let lhsIndex = self.topicIndex(threadId: component.topicId), let rhsIndex = self.topicIndex(threadId: topicId) {
+                            direction = lhsIndex < rhsIndex
+                        }
+                        
+                        component.updateTopicId(topicId, direction)
                     }, contextGesture: { gesture, sourceNode in
                     })
                     self.itemViews[itemId] = itemView
@@ -873,8 +873,10 @@ public final class ChatSideTopicsPanel: Component {
                 }
                     
                 var isSelected = false
-                if component.topicId == item.item.renderedPeer.peerId.toInt64() {
-                    isSelected = true
+                if case let .forum(topicId) = item.item.id {
+                    isSelected = component.topicId == topicId
+                } else {
+                    isSelected = component.topicId == item.item.renderedPeer.peerId.toInt64()
                 }
                 let itemSize = itemView.update(context: component.context, item: item, isSelected: isSelected, theme: component.theme, width: panelWidth, transition: .immediate)
                 let itemFrame = CGRect(origin: CGPoint(x: containerInsets.left, y: contentSize.height), size: itemSize)
@@ -893,6 +895,9 @@ public final class ChatSideTopicsPanel: Component {
                 
                 contentSize.height += itemSize.height
             }
+            
+            contentSize.height += 12.0
+            
             var removedIds: [Item.Id] = []
             for (id, itemView) in self.itemViews {
                 if !validIds.contains(id) {

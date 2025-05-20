@@ -816,7 +816,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         let makeForwardInfoLayout = ChatMessageForwardInfoNode.asyncLayout(self.forwardInfoNode)
         
         let viaBotLayout = TextNode.asyncLayout(self.viaBotNode)
-        let makeThreadInfoLayout = ChatMessageThreadInfoNode.asyncLayout(self.threadInfoNode)
+        //let makeThreadInfoLayout = ChatMessageThreadInfoNode.asyncLayout(self.threadInfoNode)
         let makeReplyInfoLayout = ChatMessageReplyInfoNode.asyncLayout(self.replyInfoNode)
         let currentShareButtonNode = self.shareButtonNode
         let currentForwardInfo = self.appliedForwardInfo
@@ -1107,7 +1107,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             let (dateAndStatusSize, dateAndStatusApply) = statusSuggestedWidthAndContinue.1(statusSuggestedWidthAndContinue.0)
             
             var viaBotApply: (TextNodeLayout, () -> TextNode)?
-            var threadInfoApply: (CGSize, (Bool) -> ChatMessageThreadInfoNode)?
+            let threadInfoApply: (CGSize, (Bool) -> ChatMessageThreadInfoNode)? = nil
             var replyInfoApply: (CGSize, (CGSize, Bool, ListViewItemUpdateAnimation) -> ChatMessageReplyInfoNode)?
             var replyMarkup: ReplyMarkupMessageAttribute?
             
@@ -1173,7 +1173,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     hasReply = false
                 }
                     
-                threadInfoApply = makeThreadInfoLayout(ChatMessageThreadInfoNode.Arguments(
+                /*threadInfoApply = makeThreadInfoLayout(ChatMessageThreadInfoNode.Arguments(
                     presentationData: item.presentationData,
                     strings: item.presentationData.strings,
                     context: item.context,
@@ -1185,7 +1185,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     constrainedSize: CGSize(width: availableContentWidth, height: CGFloat.greatestFiniteMagnitude),
                     animationCache: item.controllerInteraction.presentationContext.animationCache,
                     animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
-                ))
+                ))*/
             }
             
             if hasReply, (replyMessage != nil || replyForward != nil || replyStory != nil) {

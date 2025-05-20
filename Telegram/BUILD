@@ -1785,8 +1785,10 @@ ios_application(
         #"//submodules/TelegramApi",
         #"//submodules/TelegramCore",
         #"//submodules/FFMpegBinding",
-        "//submodules/Display",
+        #"//submodules/Display",
         #"//third-party/webrtc",
+        "//submodules/AsyncDisplayKit",
+        "//submodules/ObjCRuntimeUtils",
     ],
 )
 

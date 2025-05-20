@@ -172,7 +172,7 @@ public final class ChatPanelInterfaceInteraction {
     public let openStarsPurchase: (Int64?) -> Void
     public let openMessagePayment: () -> Void
     public let updateHistoryFilter: ((ChatPresentationInterfaceState.HistoryFilter?) -> ChatPresentationInterfaceState.HistoryFilter?) -> Void
-    public let updateChatLocationThread: (Int64?) -> Void
+    public let updateChatLocationThread: (Int64?, ChatControllerAnimateInnerChatSwitchDirection?) -> Void
     public let toggleChatSidebarMode: () -> Void
     public let updateDisplayHistoryFilterAsList: (Bool) -> Void
     public let openBoostToUnrestrict: () -> Void
@@ -294,7 +294,7 @@ public final class ChatPanelInterfaceInteraction {
         openBoostToUnrestrict: @escaping () -> Void,
         updateVideoTrimRange: @escaping (Double, Double, Bool, Bool) -> Void,
         updateHistoryFilter: @escaping ((ChatPresentationInterfaceState.HistoryFilter?) -> ChatPresentationInterfaceState.HistoryFilter?) -> Void,
-        updateChatLocationThread: @escaping (Int64?) -> Void,
+        updateChatLocationThread: @escaping (Int64?, ChatControllerAnimateInnerChatSwitchDirection?) -> Void,
         toggleChatSidebarMode: @escaping () -> Void,
         updateDisplayHistoryFilterAsList: @escaping (Bool) -> Void,
         requestLayout: @escaping (ContainedViewLayoutTransition) -> Void,
@@ -540,7 +540,7 @@ public final class ChatPanelInterfaceInteraction {
         }, openBoostToUnrestrict: {
         }, updateVideoTrimRange: { _, _, _, _ in
         }, updateHistoryFilter: { _ in
-        }, updateChatLocationThread: { _ in
+        }, updateChatLocationThread: { _, _ in
         }, toggleChatSidebarMode: {
         }, updateDisplayHistoryFilterAsList: { _ in
         }, requestLayout: { _ in

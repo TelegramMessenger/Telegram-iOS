@@ -280,7 +280,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let forceUpdateWarpContents: () -> Void
     public let playShakeAnimation:  () -> Void
     public let displayQuickShare: (MessageId, ASDisplayNode, ContextGesture) -> Void
-    public let updateChatLocationThread: (Int64?) -> Void
+    public let updateChatLocationThread: (Int64?, ChatControllerAnimateInnerChatSwitchDirection?) -> Void
     
     public var canPlayMedia: Bool = false
     public var hiddenMedia: [MessageId: [Media]] = [:]
@@ -443,7 +443,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         forceUpdateWarpContents: @escaping () -> Void,
         playShakeAnimation: @escaping () -> Void,
         displayQuickShare: @escaping (MessageId, ASDisplayNode, ContextGesture) -> Void,
-        updateChatLocationThread: @escaping (Int64?) -> Void,
+        updateChatLocationThread: @escaping (Int64?, ChatControllerAnimateInnerChatSwitchDirection?) -> Void,
         automaticMediaDownloadSettings: MediaAutoDownloadSettings,
         pollActionState: ChatInterfacePollActionState,
         stickerSettings: ChatInterfaceStickerSettings,

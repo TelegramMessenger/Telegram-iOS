@@ -426,6 +426,23 @@ extension ChatControllerImpl {
                         if let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: peer, mode: .forumTopic(thread: replyThreadMessage), avatarInitiallyExpanded: false, fromChat: true, requestsContext: nil) {
                             self.effectiveNavigationController?.pushViewController(infoController)
                         }
+                    } else if let peer = self.presentationInterfaceState.renderedPeer?.peer, case let .replyThread(replyThreadMessage) = self.chatLocation, peer.isMonoForum {
+                        let context = self.context
+                        if #available(iOS 13.0, *) {
+                            Task { @MainActor [weak self] in
+                                guard let peer = await context.engine.data.get(
+                                    TelegramEngine.EngineData.Item.Peer.Peer(id: PeerId(replyThreadMessage.threadId))
+                                ).get() else {
+                                    return
+                                }
+                                guard let self else {
+                                    return
+                                }
+                                if let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: true, requestsContext: nil) {
+                                    self.effectiveNavigationController?.pushViewController(infoController)
+                                }
+                            }
+                        }
                     } else if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isForumOrMonoForum, case let .replyThread(message) = self.chatLocation {
                         if let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: channel, mode: .forumTopic(thread: message), avatarInitiallyExpanded: false, fromChat: true, requestsContext: self.inviteRequestsContext) {
                             self.effectiveNavigationController?.pushViewController(infoController)

@@ -71,6 +71,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
         case empty
         case tag(MemoryBuffer)
         case search(query: String, includeSavedPeers: Bool)
+        case monoforumChats(query: String)
     }
     
     public let context: AccountContext
@@ -85,6 +86,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
     public let loadTagMessages: (MemoryBuffer, MessageIndex?) -> Signal<MessageHistoryView, NoError>?
     public let getSearchResult: () -> Signal<SearchMessagesResult?, NoError>?
     public let getSavedPeers: (String) -> Signal<[(EnginePeer, MessageIndex?)], NoError>?
+    public let getChats: (String) -> Signal<EngineChatList?, NoError>?
     public let loadMoreSearchResults: () -> Void
     
     public init(
@@ -100,6 +102,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
         loadTagMessages: @escaping (MemoryBuffer, MessageIndex?) -> Signal<MessageHistoryView, NoError>?,
         getSearchResult: @escaping () -> Signal<SearchMessagesResult?, NoError>?,
         getSavedPeers: @escaping (String) -> Signal<[(EnginePeer, MessageIndex?)], NoError>?,
+        getChats: @escaping (String) -> Signal<EngineChatList?, NoError>?,
         loadMoreSearchResults: @escaping () -> Void
     ) {
         self.context = context
@@ -114,6 +117,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
         self.loadTagMessages = loadTagMessages
         self.getSearchResult = getSearchResult
         self.getSavedPeers = getSavedPeers
+        self.getChats = getChats
         self.loadMoreSearchResults = loadMoreSearchResults
     }
     
@@ -146,10 +150,12 @@ public final class ChatInlineSearchResultsListComponent: Component {
         enum Id: Hashable {
             case peer(EnginePeer.Id)
             case message(EngineMessage.Id)
+            case chat(EngineChatList.Item.Id)
         }
         
         case peer(EnginePeer)
         case message(EngineMessage)
+        case chat(EngineChatList.Item)
         
         var id: Id {
             switch self {
@@ -157,6 +163,8 @@ public final class ChatInlineSearchResultsListComponent: Component {
                 return .peer(peer.id)
             case let .message(message):
                 return .message(message.id)
+            case let .chat(chat):
+                return .chat(chat.id)
             }
         }
         
@@ -170,6 +178,12 @@ public final class ChatInlineSearchResultsListComponent: Component {
                 }
             case let .message(message):
                 if case .message(message) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .chat(chat):
+                if case .chat(chat) = rhs {
                     return true
                 } else {
                     return false
@@ -188,13 +202,26 @@ public final class ChatInlineSearchResultsListComponent: Component {
                     return lhsPeer.id < rhsPeer.id
                 case .message:
                     return true
+                case .chat:
+                    return true
                 }
             case let .message(lhsMessage):
                 switch rhs {
                 case .peer:
                     return false
+                case .chat:
+                    return false
                 case let .message(rhsMessage):
                     return lhsMessage.index > rhsMessage.index
+                }
+            case let .chat(lhsChat):
+                switch rhs {
+                case let .chat(rhsChat):
+                    return lhsChat.index > rhsChat.index
+                case .peer:
+                    return false
+                case .message:
+                    return true
                 }
             }
         }
@@ -418,6 +445,8 @@ public final class ChatInlineSearchResultsListComponent: Component {
                             }
                         case .search:
                             break
+                        case .monoforumChats:
+                            break
                         }
                     }
                 } else if let (currentIndex, disposable) = self.searchContents {
@@ -431,6 +460,8 @@ public final class ChatInlineSearchResultsListComponent: Component {
                             self.searchContents = (loadAroundIndex, disposable)
                             
                             component.loadMoreSearchResults()
+                        case .monoforumChats:
+                            break
                         }
                     }
                 }
@@ -581,6 +612,127 @@ public final class ChatInlineSearchResultsListComponent: Component {
                         }))
                     }
                 }
+            case let .monoforumChats(query):
+                let _ = query
+                
+                if previousComponent?.contents != component.contents {
+                    self.tagContents?.disposable?.dispose()
+                    self.tagContents = nil
+                    
+                    self.searchContents?.disposable?.dispose()
+                    self.searchContents = nil
+                    
+                    let disposable = MetaDisposable()
+                    self.searchContents = (nil, disposable)
+                    
+                    let savedPeers: Signal<EngineChatList?, NoError>
+                    if let savedPeersSignal = component.getChats(query) {
+                        savedPeers = savedPeersSignal
+                    } else {
+                        savedPeers = .single(nil)
+                    }
+                    
+                    disposable.set((savedPeers
+                    |> deliverOnMainQueue).startStrict(next: { [weak self] chatList in
+                        guard let self else {
+                            return
+                        }
+                        
+                        let messages: [EngineMessage] = [] /*result?.messages.map { entry in
+                            return EngineMessage(entry)
+                        } ?? []*/
+                        
+                        var entries: [Entry] = []
+                        if let chatList {
+                            for item in chatList.items {
+                                entries.append(.chat(item))
+                            }
+                        }
+                        for message in messages {
+                            entries.append(.message(message))
+                        }
+                        entries.sort()
+                        
+                        let contentsId = self.nextContentsId
+                        self.nextContentsId += 1
+                        self.contentsState = ContentsState(
+                            id: contentsId,
+                            contentId: .search(query),
+                            entries: entries,
+                            messages: messages,
+                            hasEarlier: false, //!(result?.completed ?? true),
+                            hasLater: false
+                        )
+                        if !self.isUpdating {
+                            self.state?.updated(transition: .immediate)
+                        }
+                        
+                        if !self.didSetReady {
+                            self.didSetReady = true
+                            self.isReadyPromise.set(.single(true))
+                        }
+                    }))
+                    
+                    /*if !query.isEmpty, let savedPeersSignal = component.getSavedPeers(query) {
+                        savedPeers = savedPeersSignal
+                    } else {
+                        savedPeers = .single([])
+                    }*/
+                    
+                    /*if let historySignal = component.getSearchResult() {
+                        disposable.set((savedPeers
+                        |> mapToSignal { savedPeers -> Signal<([(EnginePeer, MessageIndex?)], SearchMessagesResult?), NoError> in
+                            if savedPeers.isEmpty {
+                                return historySignal
+                                |> map { result in
+                                    return ([], result)
+                                }
+                            } else {
+                                return (.single(nil) |> then(historySignal))
+                                |> map { result in
+                                    return (savedPeers, result)
+                                }
+                            }
+                        }
+                        |> deliverOnMainQueue).startStrict(next: { [weak self] savedPeers, result in
+                            guard let self else {
+                                return
+                            }
+                            
+                            let messages: [EngineMessage] = result?.messages.map { entry in
+                                return EngineMessage(entry)
+                            } ?? []
+                            
+                            var entries: [Entry] = []
+                            for (peer, _) in savedPeers {
+                                entries.append(.peer(peer))
+                            }
+                            for message in messages {
+                                entries.append(.message(message))
+                            }
+                            entries.sort()
+                            
+                            let contentsId = self.nextContentsId
+                            self.nextContentsId += 1
+                            self.contentsState = ContentsState(
+                                id: contentsId,
+                                contentId: .search(query),
+                                entries: entries,
+                                messages: messages,
+                                hasEarlier: !(result?.completed ?? true),
+                                hasLater: false
+                            )
+                            if !self.isUpdating {
+                                self.state?.updated(transition: .immediate)
+                            }
+                            
+                            if !self.didSetReady {
+                                self.didSetReady = true
+                                self.isReadyPromise.set(.single(true))
+                            }
+                        }))
+                    }*/
+                }
             }
             
             if let contentsState = self.contentsState, self.contentsState != self.appliedContentsState {
@@ -607,13 +759,17 @@ public final class ChatInlineSearchResultsListComponent: Component {
                         },
                         additionalCategorySelected: { _ in
                         },
-                        messageSelected: { [weak self] _, _, message, _ in
-                            guard let self else {
+                        messageSelected: { [weak self] peer, _, message, _ in
+                            guard let self, let component = self.component else {
                                 return
                             }
                             self.listNode.clearHighlightAnimated(true)
                             
-                            self.component?.messageSelected(message)
+                            if case .monoforumChats = component.contents {
+                                component.peerSelected(peer)
+                            } else {
+                                component.messageSelected(message)
+                            }
                         },
                         groupSelected: { _ in
                         },
@@ -841,6 +997,45 @@ public final class ChatInlineSearchResultsListComponent: Component {
                             hasActiveRevealControls: false,
                             selected: false,
                             header: displayMessagesHeader ? ChatListSearchItemHeader(type: .messages(location: nil), theme: listPresentationData.theme, strings: listPresentationData.strings) : nil,
+                            enableContextActions: false,
+                            hiddenOffset: false,
+                            interaction: chatListNodeInteraction
+                        )
+                    case let .chat(item):
+                        return ChatListItem(
+                            presentationData: chatListPresentationData,
+                            context: component.context,
+                            chatListLocation: component.peerId.flatMap { peerId in .savedMessagesChats(peerId: peerId) } ?? .chatList(groupId: .root),
+                            filterData: nil,
+                            index: item.index,
+                            content: .peer(ChatListItemContent.PeerData(
+                                messages: item.messages,
+                                peer: item.renderedPeer,
+                                threadInfo: nil,
+                                combinedReadState: nil,
+                                isRemovedFromTotalUnreadCount: false,
+                                presence: nil,
+                                hasUnseenMentions: false,
+                                hasUnseenReactions: false,
+                                draftState: nil,
+                                mediaDraftContentType: nil,
+                                inputActivities: nil,
+                                promoInfo: nil,
+                                ignoreUnreadBadge: false,
+                                displayAsMessage: component.peerId != component.context.account.peerId && !component.showEmptyResults,
+                                hasFailedMessages: false,
+                                forumTopicData: nil,
+                                topForumTopicItems: [],
+                                autoremoveTimeout: nil,
+                                storyState: nil,
+                                requiresPremiumForMessaging: false,
+                                displayAsTopicList: false,
+                                tags: []
+                            )),
+                            editing: false,
+                            hasActiveRevealControls: false,
+                            selected: false,
+                            header: nil,
                             enableContextActions: false,
                             hiddenOffset: false,
                             interaction: chatListNodeInteraction

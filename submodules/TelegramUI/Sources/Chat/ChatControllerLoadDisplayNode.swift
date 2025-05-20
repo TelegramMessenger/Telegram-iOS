@@ -127,10 +127,21 @@ import PostSuggestionsSettingsScreen
 import ChatSendStarsScreen
 
 extension ChatControllerImpl {
-    func reloadChatLocation() {
+    func reloadChatLocation(chatLocation: ChatLocation, isReady: Promise<Bool>?) {
+        self._chatLocationInfoReady.set(.single(false))
+        self.didSetChatLocationInfoReady = false
+        
+        if let peerId = chatLocation.peerId, peerId != self.context.account.peerId {
+            switch subject {
+            case .pinnedMessages, .scheduledMessages, .messageOptions:
+                break
+            default:
+                self.navigationBar?.userInfo = PeerInfoNavigationSourceTag(peerId: peerId, threadId: chatLocation.threadId)
+            }
+        }
+        
         let context = self.context
-        let chatLocation = self.chatLocation
-        let chatLocationPeerId: PeerId? = self.chatLocation.peerId
+        let chatLocationPeerId: PeerId? = chatLocation.peerId
         let mode = self.mode
         let subject = self.subject
         let peerId = chatLocationPeerId
@@ -157,7 +168,7 @@ extension ChatControllerImpl {
         }
         
         let managingBot: Signal<ChatManagingBot?, NoError>
-        if let peerId = self.chatLocation.peerId, peerId.namespace == Namespaces.Peer.CloudUser {
+        if let peerId = chatLocation.peerId, peerId.namespace == Namespaces.Peer.CloudUser {
             managingBot = self.context.engine.data.subscribe(
                 TelegramEngine.EngineData.Item.Peer.ChatManagingBot(id: peerId)
             )
@@ -505,7 +516,7 @@ extension ChatControllerImpl {
             }))
             
             let threadInfo: Signal<EngineMessageHistoryThread.Info?, NoError>
-            if let threadId = self.chatLocation.threadId {
+            if let threadId = chatLocation.threadId {
                 let viewKey: PostboxViewKey = .messageHistoryThreadInfo(peerId: peerId, threadId: threadId)
                 threadInfo = context.account.postbox.combinedView(keys: [viewKey])
                 |> map { views -> EngineMessageHistoryThread.Info? in
@@ -523,9 +534,9 @@ extension ChatControllerImpl {
             }
             
             let hasSearchTags: Signal<Bool, NoError>
-            if let peerId = self.chatLocation.peerId, peerId == context.account.peerId {
+            if let peerId = chatLocation.peerId, peerId == context.account.peerId {
                 hasSearchTags = context.engine.data.subscribe(
-                    TelegramEngine.EngineData.Item.Messages.SavedMessageTagStats(peerId: context.account.peerId, threadId: self.chatLocation.threadId)
+                    TelegramEngine.EngineData.Item.Messages.SavedMessageTagStats(peerId: context.account.peerId, threadId: chatLocation.threadId)
                 )
                 |> map { tags -> Bool in
                     return !tags.isEmpty
@@ -536,14 +547,14 @@ extension ChatControllerImpl {
             }
             
             let hasSavedChats: Signal<Bool, NoError>
-            if case .peer(context.account.peerId) = self.chatLocation {
+            if case .peer(context.account.peerId) = chatLocation {
                 hasSavedChats = context.engine.messages.savedMessagesHasPeersOtherThanSaved()
             } else {
                 hasSavedChats = .single(false)
             }
             
             let isPremiumRequiredForMessaging: Signal<Bool, NoError>
-            if let peerId = self.chatLocation.peerId {
+            if let peerId = chatLocation.peerId {
                 isPremiumRequiredForMessaging = context.engine.peers.subscribeIsPremiumRequiredForMessaging(id: peerId)
                 |> distinctUntilChanged
             } else {
@@ -558,7 +569,7 @@ extension ChatControllerImpl {
             }
             
             let displayedPeerVerification: Signal<Bool, NoError>
-            if let peerId = self.chatLocation.peerId {
+            if let peerId = chatLocation.peerId {
                 displayedPeerVerification = ApplicationSpecificNotice.displayedPeerVerification(accountManager: context.sharedContext.accountManager, peerId: peerId)
                 |> take(1)
             } else {
@@ -906,7 +917,7 @@ extension ChatControllerImpl {
                         boostsToUnrestrict = cachedChannelData.boostsToUnrestrict
                     }
                     
-                    if strongSelf.premiumOrStarsRequiredDisposable == nil, sendPaidMessageStars != nil, let peerId = strongSelf.chatLocation.peerId {
+                    if strongSelf.premiumOrStarsRequiredDisposable == nil, sendPaidMessageStars != nil, let peerId = chatLocation.peerId {
                         strongSelf.premiumOrStarsRequiredDisposable = ((strongSelf.context.engine.peers.isPremiumRequiredToContact([peerId]) |> then(.complete() |> suspendAwareDelay(60.0, queue: Queue.concurrentDefaultQueue()))) |> restart).startStandalone()
                     }
                     
@@ -992,7 +1003,7 @@ extension ChatControllerImpl {
                         } else {
                             isRegularChat = true
                         }
-                        if strongSelf.nextChannelToReadDisposable == nil, let peerId = strongSelf.chatLocation.peerId, let customChatNavigationStack = strongSelf.customChatNavigationStack {
+                        if strongSelf.nextChannelToReadDisposable == nil, let peerId = chatLocation.peerId, let customChatNavigationStack = strongSelf.customChatNavigationStack {
                             if let index = customChatNavigationStack.firstIndex(of: peerId), index != customChatNavigationStack.count - 1 {
                                 let nextPeerId = customChatNavigationStack[index + 1]
                                 strongSelf.nextChannelToReadDisposable = (combineLatest(queue: .mainQueue(),
@@ -1074,6 +1085,7 @@ extension ChatControllerImpl {
                         strongSelf.didSetChatLocationInfoReady = true
                         strongSelf._chatLocationInfoReady.set(.single(true))
                     }
+                    isReady?.set(.single(true))
                     strongSelf.updateReminderActivity()
                     if let upgradedToPeerId = upgradedToPeerId {
                         if let navigationController = strongSelf.effectiveNavigationController {
@@ -1267,9 +1279,9 @@ extension ChatControllerImpl {
             }
             
             let hasSearchTags: Signal<Bool, NoError>
-            if let peerId = self.chatLocation.peerId, peerId == context.account.peerId {
+            if let peerId = chatLocation.peerId, peerId == context.account.peerId {
                 hasSearchTags = context.engine.data.subscribe(
-                    TelegramEngine.EngineData.Item.Messages.SavedMessageTagStats(peerId: context.account.peerId, threadId: self.chatLocation.threadId)
+                    TelegramEngine.EngineData.Item.Messages.SavedMessageTagStats(peerId: context.account.peerId, threadId: chatLocation.threadId)
                 )
                 |> map { tags -> Bool in
                     return !tags.isEmpty
@@ -1280,14 +1292,14 @@ extension ChatControllerImpl {
             }
             
             let hasSavedChats: Signal<Bool, NoError>
-            if case .peer(context.account.peerId) = self.chatLocation {
+            if case .peer(context.account.peerId) = chatLocation {
                 hasSavedChats = context.engine.messages.savedMessagesHasPeersOtherThanSaved()
             } else {
                 hasSavedChats = .single(false)
             }
             
             let isPremiumRequiredForMessaging: Signal<Bool, NoError>
-            if let peerId = self.chatLocation.peerId {
+            if let peerId = chatLocation.peerId {
                 isPremiumRequiredForMessaging = context.engine.peers.subscribeIsPremiumRequiredForMessaging(id: peerId)
                 |> distinctUntilChanged
             } else {
@@ -1456,8 +1468,8 @@ extension ChatControllerImpl {
                             strongSelf.chatTitleView?.titleContent = .peer(peerView: ChatTitleContent.PeerData(peerView: peerView), customTitle: threadInfo.title, onlineMemberCount: onlineMemberCount, isScheduledMessages: false, isMuted: peerIsMuted, customMessageCount: messageAndTopic.messageCount == 0 ? nil : messageAndTopic.messageCount, isEnabled: true)
                             
                             let avatarContent: EmojiStatusComponent.Content
-                            if strongSelf.chatLocation.threadId == 1 {
-                                avatarContent = .image(image: PresentationResourcesChat.chatGeneralThreadIcon(strongSelf.presentationData.theme))
+                            if chatLocation.threadId == 1 {
+                                avatarContent = .image(image: PresentationResourcesChat.chatGeneralThreadIcon(strongSelf.presentationData.theme), tintColor: nil)
                             } else if let fileId = threadInfo.icon {
                                 avatarContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 48.0, height: 48.0), placeholderColor: strongSelf.presentationData.theme.list.mediaPlaceholderColor, themeColor: strongSelf.presentationData.theme.list.itemAccentColor, loopMode: .count(1))
                             } else {
@@ -1633,7 +1645,7 @@ extension ChatControllerImpl {
                             boostsToUnrestrict = cachedChannelData.boostsToUnrestrict
                         }
                         
-                        if strongSelf.premiumOrStarsRequiredDisposable == nil, sendPaidMessageStars != nil, let peerId = strongSelf.chatLocation.peerId {
+                        if strongSelf.premiumOrStarsRequiredDisposable == nil, sendPaidMessageStars != nil, let peerId = chatLocation.peerId {
                             strongSelf.premiumOrStarsRequiredDisposable = ((strongSelf.context.engine.peers.isPremiumRequiredToContact([peerId]) |> then(.complete() |> suspendAwareDelay(60.0, queue: Queue.concurrentDefaultQueue()))) |> restart).startStandalone()
                         }
                         
@@ -1709,6 +1721,7 @@ extension ChatControllerImpl {
                         strongSelf.didSetChatLocationInfoReady = true
                         strongSelf._chatLocationInfoReady.set(.single(true))
                     }
+                    isReady?.set(.single(true))
                 }
             }))
         } else if case .customChatContents = self.chatLocationInfoData {
@@ -1785,6 +1798,7 @@ extension ChatControllerImpl {
                     self.didSetChatLocationInfoReady = true
                     self._chatLocationInfoReady.set(.single(true))
                 }
+                isReady?.set(.single(true))
             }))
         }
     }
@@ -2729,9 +2743,10 @@ extension ChatControllerImpl {
                         }
                         
                         mappedTransition = (ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: deleteItems, insertItems: insertItems, updateItems: transition.updateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: transition.initialData, keyboardButtonsMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, cachedDataMessages: transition.cachedDataMessages, readStateData: transition.readStateData, scrolledToIndex: transition.scrolledToIndex, scrolledToSomeIndex: transition.scrolledToSomeIndex, peerType: transition.peerType, networkType: transition.networkType, animateIn: false, reason: transition.reason, flashIndicators: transition.flashIndicators, animateFromPreviousFilter: false), updateSizeAndInsets)
-                    }, updateExtraNavigationBarBackgroundHeight: { value, hitTestSlop, _ in
+                    }, updateExtraNavigationBarBackgroundHeight: { value, hitTestSlop, cutout, _ in
                         strongSelf.additionalNavigationBarBackgroundHeight = value
                         strongSelf.additionalNavigationBarHitTestSlop = hitTestSlop
+                        strongSelf.additionalNavigationBarCutout = cutout
                     })
                     
                     if let mappedTransition = mappedTransition {
@@ -6041,44 +6056,14 @@ extension ChatControllerImpl {
             } else {
                 apply()
             }
-        }, updateChatLocationThread: { [weak self] threadId in
+        }, updateChatLocationThread: { [weak self] threadId, animationDirection in
             guard let self else {
                 return
             }
-            guard let peerId = self.chatLocation.peerId else {
-                return
+            let defaultDirection: ChatControllerAnimateInnerChatSwitchDirection? = self.chatDisplayNode.chatLocationTabSwitchDirection(from: self.chatLocation.threadId, to: threadId).flatMap { direction -> ChatControllerAnimateInnerChatSwitchDirection in
+                return direction ? .right : .left
             }
-            guard let peer = self.presentationInterfaceState.renderedPeer?.chatMainPeer else {
-                return
-            }
-            let updatedChatLocation: ChatLocation
-            if let threadId {
-                var isMonoforum = false
-                if let channel = peer as? TelegramChannel, channel.flags.contains(.isMonoforum) {
-                    isMonoforum = true
-                }
-                
-                updatedChatLocation = .replyThread(message: ChatReplyThreadMessage(
-                    peerId: peerId,
-                    threadId: threadId,
-                    channelMessageId: nil,
-                    isChannelPost: false,
-                    isForumPost: true,
-                    isMonoforumPost: isMonoforum,
-                    maxMessage: nil,
-                    maxReadIncomingMessageId: nil,
-                    maxReadOutgoingMessageId: nil,
-                    unreadCount: 0,
-                    initialFilledHoles: IndexSet(),
-                    initialAnchor: .automatic,
-                    isNotAvailable: false
-                ))
-            } else {
-                updatedChatLocation = .peer(id: peerId)
-            }
-            self.updateChatPresentationInterfaceState(animated: true, interactive: false, { presentationInterfaceState in
-                return presentationInterfaceState.updatedChatLocation(updatedChatLocation)
-            })
+            self.updateChatLocationThread(threadId: threadId, animationDirection: animationDirection ?? defaultDirection)
         }, toggleChatSidebarMode: { [weak self] in
             guard let self else {
                 return
