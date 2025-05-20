@@ -1096,7 +1096,7 @@ public extension Api {
         case updateReadHistoryInbox(flags: Int32, folderId: Int32?, peer: Api.Peer, maxId: Int32, stillUnreadCount: Int32, pts: Int32, ptsCount: Int32)
         case updateReadHistoryOutbox(peer: Api.Peer, maxId: Int32, pts: Int32, ptsCount: Int32)
         case updateReadMessagesContents(flags: Int32, messages: [Int32], pts: Int32, ptsCount: Int32, date: Int32?)
-        case updateReadMonoForumInbox(flags: Int32, channelId: Int64, savedPeerId: Api.Peer, readMaxId: Int32)
+        case updateReadMonoForumInbox(channelId: Int64, savedPeerId: Api.Peer, readMaxId: Int32)
         case updateReadMonoForumOutbox(channelId: Int64, savedPeerId: Api.Peer, readMaxId: Int32)
         case updateReadStories(peer: Api.Peer, maxId: Int32)
         case updateRecentEmojiStatuses
@@ -2168,11 +2168,10 @@ public extension Api {
                     serializeInt32(ptsCount, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(date!, buffer: buffer, boxed: false)}
                     break
-                case .updateReadMonoForumInbox(let flags, let channelId, let savedPeerId, let readMaxId):
+                case .updateReadMonoForumInbox(let channelId, let savedPeerId, let readMaxId):
                     if boxed {
-                        buffer.appendInt32(-1124907246)
+                        buffer.appendInt32(2008081266)
                     }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(channelId, buffer: buffer, boxed: false)
                     savedPeerId.serialize(buffer, true)
                     serializeInt32(readMaxId, buffer: buffer, boxed: false)
@@ -2630,8 +2629,8 @@ public extension Api {
                 return ("updateReadHistoryOutbox", [("peer", peer as Any), ("maxId", maxId as Any), ("pts", pts as Any), ("ptsCount", ptsCount as Any)])
                 case .updateReadMessagesContents(let flags, let messages, let pts, let ptsCount, let date):
                 return ("updateReadMessagesContents", [("flags", flags as Any), ("messages", messages as Any), ("pts", pts as Any), ("ptsCount", ptsCount as Any), ("date", date as Any)])
-                case .updateReadMonoForumInbox(let flags, let channelId, let savedPeerId, let readMaxId):
-                return ("updateReadMonoForumInbox", [("flags", flags as Any), ("channelId", channelId as Any), ("savedPeerId", savedPeerId as Any), ("readMaxId", readMaxId as Any)])
+                case .updateReadMonoForumInbox(let channelId, let savedPeerId, let readMaxId):
+                return ("updateReadMonoForumInbox", [("channelId", channelId as Any), ("savedPeerId", savedPeerId as Any), ("readMaxId", readMaxId as Any)])
                 case .updateReadMonoForumOutbox(let channelId, let savedPeerId, let readMaxId):
                 return ("updateReadMonoForumOutbox", [("channelId", channelId as Any), ("savedPeerId", savedPeerId as Any), ("readMaxId", readMaxId as Any)])
                 case .updateReadStories(let peer, let maxId):
@@ -4838,22 +4837,19 @@ public extension Api {
             }
         }
         public static func parse_updateReadMonoForumInbox(_ reader: BufferReader) -> Update? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: Api.Peer?
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Api.Peer?
             if let signature = reader.readInt32() {
-                _3 = Api.parse(reader, signature: signature) as? Api.Peer
+                _2 = Api.parse(reader, signature: signature) as? Api.Peer
             }
-            var _4: Int32?
-            _4 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.Update.updateReadMonoForumInbox(flags: _1!, channelId: _2!, savedPeerId: _3!, readMaxId: _4!)
+            if _c1 && _c2 && _c3 {
+                return Api.Update.updateReadMonoForumInbox(channelId: _1!, savedPeerId: _2!, readMaxId: _3!)
             }
             else {
                 return nil

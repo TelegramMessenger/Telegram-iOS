@@ -1216,7 +1216,7 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 updatedState.readThread(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId)), threadId: Int64(topMsgId), readMaxId: readMaxId, isIncoming: true, mainChannelMessage: mainChannelMessage)
             case let .updateReadChannelDiscussionOutbox(channelId, topMsgId, readMaxId):
                 updatedState.readThread(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId)), threadId: Int64(topMsgId), readMaxId: readMaxId, isIncoming: false, mainChannelMessage: nil)
-            case let .updateReadMonoForumInbox(_, channelId, savedPeerId, readMaxId):
+            case let .updateReadMonoForumInbox(channelId, savedPeerId, readMaxId):
                 updatedState.readThread(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId)), threadId: savedPeerId.peerId.toInt64(), readMaxId: readMaxId, isIncoming: true, mainChannelMessage: nil)
             case let .updateReadMonoForumOutbox(channelId, savedPeerId, readMaxId):
                 updatedState.readThread(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId)), threadId: savedPeerId.peerId.toInt64(), readMaxId: readMaxId, isIncoming: false, mainChannelMessage: nil)
@@ -2019,31 +2019,10 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                     }
                     
                     if peer.flags.contains(.isMonoforum) {
-                        //TODO:release
-                        let signal = source.request(Api.functions.messages.getSavedDialogs(flags: 1 << 1, parentPeer: inputPeer, offsetDate: 0, offsetId: 0, offsetPeer: .inputPeerEmpty, limit: 100, hash: 0))
+                        let signal = source.request(Api.functions.messages.getSavedDialogsByID(flags: 1 << 1, parentPeer: inputPeer, ids: threadIds.compactMap { transaction.getPeer(PeerId($0)).flatMap(apiInputPeer(_:)) }))
                         |> map { result -> (Peer, FetchedForumThreads)? in
                             let result = FetchedForumThreads(savedDialogs: result)
-                            return (peer, FetchedForumThreads(
-                                items: result.items.filter({ item -> Bool in
-                                    switch item {
-                                    case let .savedDialog(savedDialog):
-                                        switch savedDialog {
-                                        case let .monoForumDialog(_, peer, _, _, _, _, _):
-                                            return threadIds.contains(peer.peerId.toInt64())
-                                        case .savedDialog:
-                                            return false
-                                        }
-                                    case .forum:
-                                        return false
-                                    }
-                                }),
-                                totalCount: result.totalCount,
-                                orderByDate: result.orderByDate,
-                                pts: result.pts,
-                                messages: result.messages,
-                                users: result.users,
-                                chats: result.chats
-                            ))
+                            return (peer, result)
                         }
                         |> `catch` { _ -> Signal<(Peer, FetchedForumThreads)?, NoError> in
                             return .single(nil)
@@ -2191,30 +2170,10 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                     }
                     
                     if peer.flags.contains(.isMonoforum) {
-                        let signal = source.request(Api.functions.messages.getSavedDialogs(flags: 1 << 1, parentPeer: inputPeer, offsetDate: 0, offsetId: 0, offsetPeer: .inputPeerEmpty, limit: 100, hash: 0))
+                        let signal = source.request(Api.functions.messages.getSavedDialogsByID(flags: 1 << 1, parentPeer: inputPeer, ids: threadIds.compactMap { transaction.getPeer(PeerId($0)).flatMap(apiInputPeer(_:)) }))
                         |> map { result -> (Peer, FetchedForumThreads)? in
                             let result = FetchedForumThreads(savedDialogs: result)
-                            return (peer, FetchedForumThreads(
-                                items: result.items.filter({ item -> Bool in
-                                    switch item {
-                                    case let .savedDialog(savedDialog):
-                                        switch savedDialog {
-                                        case let .monoForumDialog(_, peer, _, _, _, _, _):
-                                            return threadIds.contains(peer.peerId.toInt64())
-                                        case .savedDialog:
-                                            return false
-                                        }
-                                    case .forum:
-                                        return false
-                                    }
-                                }),
-                                totalCount: result.totalCount,
-                                orderByDate: result.orderByDate,
-                                pts: result.pts,
-                                messages: result.messages,
-                                users: result.users,
-                                chats: result.chats
-                            ))
+                            return (peer, result)
                         }
                         |> `catch` { _ -> Signal<(Peer, FetchedForumThreads)?, NoError> in
                             return .single(nil)
@@ -2366,31 +2325,10 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                     }
                     
                     if peer.flags.contains(.isMonoforum) {
-                        //TODO:release
-                        let signal = source.request(Api.functions.messages.getSavedDialogs(flags: 1 << 1, parentPeer: inputPeer, offsetDate: 0, offsetId: 0, offsetPeer: .inputPeerEmpty, limit: 100, hash: 0))
+                        let signal = source.request(Api.functions.messages.getSavedDialogsByID(flags: 1 << 1, parentPeer: inputPeer, ids: threadIds.compactMap { transaction.getPeer(PeerId($0)).flatMap(apiInputPeer(_:)) }))
                         |> map { result -> (Peer, FetchedForumThreads)? in
                             let result = FetchedForumThreads(savedDialogs: result)
-                            return (peer, FetchedForumThreads(
-                                items: result.items.filter({ item -> Bool in
-                                    switch item {
-                                    case let .savedDialog(savedDialog):
-                                        switch savedDialog {
-                                        case let .monoForumDialog(_, peer, _, _, _, _, _):
-                                            return threadIds.contains(peer.peerId.toInt64())
-                                        case .savedDialog:
-                                            return false
-                                        }
-                                    case .forum:
-                                        return false
-                                    }
-                                }),
-                                totalCount: result.totalCount,
-                                orderByDate: result.orderByDate,
-                                pts: result.pts,
-                                messages: result.messages,
-                                users: result.users,
-                                chats: result.chats
-                            ))
+                            return (peer, result)
                         }
                         |> `catch` { _ -> Signal<(Peer, FetchedForumThreads)?, NoError> in
                             return .single(nil)

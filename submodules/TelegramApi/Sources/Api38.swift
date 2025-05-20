@@ -6857,6 +6857,27 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
+                static func getSavedDialogsByID(flags: Int32, parentPeer: Api.InputPeer?, ids: [Api.InputPeer]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.SavedDialogs>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1869585558)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {parentPeer!.serialize(buffer, true)}
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(ids.count))
+                    for item in ids {
+                        item.serialize(buffer, true)
+                    }
+                    return (FunctionDescription(name: "messages.getSavedDialogsByID", parameters: [("flags", String(describing: flags)), ("parentPeer", String(describing: parentPeer)), ("ids", String(describing: ids))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.SavedDialogs? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.SavedDialogs?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.SavedDialogs
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
                 static func getSavedGifs(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.SavedGifs>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1559270965)
