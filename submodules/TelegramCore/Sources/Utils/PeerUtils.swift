@@ -460,7 +460,7 @@ public func peerViewMonoforumMainPeer(_ view: PeerView) -> Peer? {
         if let channel = peer as? TelegramChannel, channel.flags.contains(.isMonoforum), let linkedMonoforumId = channel.linkedMonoforumId {
             return view.peers[linkedMonoforumId]
         } else {
-            return peer
+            return nil
         }
     } else {
         return nil
