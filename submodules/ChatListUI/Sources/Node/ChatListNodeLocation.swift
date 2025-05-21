@@ -6,12 +6,12 @@ import Display
 import TelegramUIPreferences
 import AccountContext
 
-enum ChatListNodeLocation: Equatable {
+public enum ChatListNodeLocation: Equatable {
     case initial(count: Int, filter: ChatListFilter?)
     case navigation(index: EngineChatList.Item.Index, filter: ChatListFilter?)
     case scroll(index: EngineChatList.Item.Index, sourceIndex: EngineChatList.Item.Index, scrollPosition: ListViewScrollPosition, animated: Bool, filter: ChatListFilter?)
     
-    var filter: ChatListFilter? {
+    public var filter: ChatListFilter? {
         switch self {
         case let .initial(_, filter):
             return filter
@@ -23,10 +23,16 @@ enum ChatListNodeLocation: Equatable {
     }
 }
 
-struct ChatListNodeViewUpdate {
-    let list: EngineChatList
-    let type: ViewUpdateType
-    let scrollPosition: ChatListNodeViewScrollPosition?
+public struct ChatListNodeViewUpdate {
+    public let list: EngineChatList
+    public let type: ViewUpdateType
+    public let scrollPosition: ChatListNodeViewScrollPosition?
+    
+    public init(list: EngineChatList, type: ViewUpdateType, scrollPosition: ChatListNodeViewScrollPosition?) {
+        self.list = list
+        self.type = type
+        self.scrollPosition = scrollPosition
+    }
 }
 
 public func chatListFilterPredicate(filter: ChatListFilterData, accountPeerId: EnginePeer.Id) -> ChatListFilterPredicate {
@@ -113,7 +119,7 @@ public func chatListFilterPredicate(filter: ChatListFilterData, accountPeerId: E
     })
 }
 
-func chatListViewForLocation(chatListLocation: ChatListControllerLocation, location: ChatListNodeLocation, account: Account, shouldLoadCanMessagePeer: Bool) -> Signal<ChatListNodeViewUpdate, NoError> {
+public func chatListViewForLocation(chatListLocation: ChatListControllerLocation, location: ChatListNodeLocation, account: Account, shouldLoadCanMessagePeer: Bool) -> Signal<ChatListNodeViewUpdate, NoError> {
     let accountPeerId = account.peerId
     
     switch chatListLocation {

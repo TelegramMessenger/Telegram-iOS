@@ -1893,7 +1893,7 @@ extension ChatControllerImpl {
                 if let asset = result as? PHAsset {
                     subject = .single(.asset(asset))
                 } else if let image = result as? UIImage {
-                    subject = .single(.image(image: image, dimensions: PixelDimensions(image.size), additionalImage: nil, additionalImagePosition: .bottomRight))
+                    subject = .single(.image(image: image, dimensions: PixelDimensions(image.size), additionalImage: nil, additionalImagePosition: .bottomRight, fromCamera: false))
                 } else if let result = result as? Signal<CameraScreenImpl.Result, NoError> {
                     subject = result
                     |> map { value -> MediaEditorScreenImpl.Subject? in
@@ -1901,7 +1901,7 @@ extension ChatControllerImpl {
                         case .pendingImage:
                             return nil
                         case let .image(image):
-                            return .image(image: image.image, dimensions: PixelDimensions(image.image.size), additionalImage: nil, additionalImagePosition: .topLeft)
+                            return .image(image: image.image, dimensions: PixelDimensions(image.image.size), additionalImage: nil, additionalImagePosition: .topLeft, fromCamera: false)
                         default:
                             return nil
                         }

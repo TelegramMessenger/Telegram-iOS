@@ -1,4 +1,5 @@
 #import "RuntimeUtils.h"
+#include <Foundation/Foundation.h>
 
 #import <objc/runtime.h>
 

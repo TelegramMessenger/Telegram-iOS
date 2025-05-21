@@ -214,6 +214,74 @@ public final class LocalFileVideoMediaResource: TelegramMediaResource {
     }
 }
 
+public struct LocalFileAudioMediaResourceId {
+    public let randomId: Int64
+    
+    public var uniqueId: String {
+        return "lad-\(self.randomId)"
+    }
+    
+    public var hashValue: Int {
+        return self.randomId.hashValue
+    }
+}
+
+public final class LocalFileAudioMediaResource: TelegramMediaResource {
+    public var size: Int64? {
+        return nil
+    }
+    
+    public let randomId: Int64
+    public let path: String
+    public let trimRange: Range<Double>?
+    
+    public var headerSize: Int32 {
+        return 32 * 1024
+    }
+    
+    public init(randomId: Int64, path: String, trimRange: Range<Double>?) {
+        self.randomId = randomId
+        self.path = path
+        self.trimRange = trimRange
+    }
+    
+    public required init(decoder: PostboxDecoder) {
+        self.randomId = decoder.decodeInt64ForKey("i", orElse: 0)
+        self.path = decoder.decodeStringForKey("p", orElse: "")
+        
+        if let trimLowerBound = decoder.decodeOptionalDoubleForKey("tl"), let trimUpperBound = decoder.decodeOptionalDoubleForKey("tu") {
+            self.trimRange = trimLowerBound ..< trimUpperBound
+        } else {
+            self.trimRange = nil
+        }
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeInt64(self.randomId, forKey: "i")
+        encoder.encodeString(self.path, forKey: "p")
+        
+        if let trimRange = self.trimRange {
+            encoder.encodeDouble(trimRange.lowerBound, forKey: "tl")
+            encoder.encodeDouble(trimRange.upperBound, forKey: "tu")
+        } else {
+            encoder.encodeNil(forKey: "tl")
+            encoder.encodeNil(forKey: "tu")
+        }
+    }
+    
+    public var id: MediaResourceId {
+        return MediaResourceId(LocalFileAudioMediaResourceId(randomId: self.randomId).uniqueId)
+    }
+    
+    public func isEqual(to: MediaResource) -> Bool {
+        if let to = to as? LocalFileAudioMediaResource {
+            return self.randomId == to.randomId && self.path == to.path && self.trimRange == to.trimRange
+        } else {
+            return false
+        }
+    }
+}
+
 public struct PhotoLibraryMediaResourceId {
     public let localIdentifier: String
     public let resourceId: Int64
@@ -247,14 +315,16 @@ public class PhotoLibraryMediaResource: TelegramMediaResource {
     public let height: Int32?
     public let format: MediaImageFormat?
     public let quality: Int32?
+    public let forceHd: Bool
     
-    public init(localIdentifier: String, uniqueId: Int64, width: Int32? = nil, height: Int32? = nil, format: MediaImageFormat? = nil, quality: Int32? = nil) {
+    public init(localIdentifier: String, uniqueId: Int64, width: Int32? = nil, height: Int32? = nil, format: MediaImageFormat? = nil, quality: Int32? = nil, forceHd: Bool = false) {
         self.localIdentifier = localIdentifier
         self.uniqueId = uniqueId
         self.width = width
         self.height = height
         self.format = format
         self.quality = quality
+        self.forceHd = forceHd
     }
     
     public required init(decoder: PostboxDecoder) {
@@ -264,6 +334,7 @@ public class PhotoLibraryMediaResource: TelegramMediaResource {
         self.height = decoder.decodeOptionalInt32ForKey("h")
         self.format = decoder.decodeOptionalInt32ForKey("f").flatMap(MediaImageFormat.init(rawValue:))
         self.quality = decoder.decodeOptionalInt32ForKey("q")
+        self.forceHd = decoder.decodeBoolForKey("hd", orElse: false)
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -289,6 +360,7 @@ public class PhotoLibraryMediaResource: TelegramMediaResource {
         } else {
             encoder.encodeNil(forKey: "q")
         }
+        encoder.encodeBool(self.forceHd, forKey: "hd")
     }
     
     public var id: MediaResourceId {
@@ -313,6 +385,9 @@ public class PhotoLibraryMediaResource: TelegramMediaResource {
                 return false
             }
             if self.quality != to.quality {
+                return false
+            }
+            if self.forceHd != to.forceHd {
                 return false
             }
             return true

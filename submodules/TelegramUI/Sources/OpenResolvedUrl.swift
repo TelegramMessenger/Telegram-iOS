@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import AVFoundation
 import AsyncDisplayKit
 import TelegramCore
 import Postbox
@@ -35,6 +36,7 @@ import WallpaperGalleryScreen
 import TelegramStringFormatting
 import TextFormat
 import BrowserUI
+import MediaEditorScreen
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {
@@ -218,7 +220,7 @@ func openResolvedUrlImpl(
             }
         case let .replyThread(messageId):
             if let navigationController = navigationController {
-                let _ = context.sharedContext.navigateToForumThread(context: context, peerId: messageId.peerId, threadId: Int64(messageId.id), messageId: nil, navigationController: navigationController, activateInput: nil, scrollToEndIfExists: false, keepStack: .always).startStandalone()
+                let _ = context.sharedContext.navigateToForumThread(context: context, peerId: messageId.peerId, threadId: Int64(messageId.id), messageId: nil, navigationController: navigationController, activateInput: nil, scrollToEndIfExists: false, keepStack: .always, animated: true).startStandalone()
             }
         case let .stickerPack(name, _):
             dismissInput()
@@ -864,6 +866,83 @@ func openResolvedUrlImpl(
                 Queue.mainQueue().after(0.3) {
                     present(controller, nil)
                 }
+            }
+        case let .shareStory(sessionId):
+            dismissInput()
+        
+            let rootPath = context.sharedContext.applicationBindings.containerPath + "/telegram-data"
+            let storiesPath = rootPath + "/share/stories/\(sessionId)"
+        
+            var filePaths: [String] = []
+            do {
+                let directoryContents = try FileManager.default.contentsOfDirectory(atPath: storiesPath)
+                
+                for item in directoryContents {
+                    let fullPath = storiesPath + "/" + item
+                    
+                    var isDirectory: ObjCBool = false
+                    if FileManager.default.fileExists(atPath: fullPath, isDirectory: &isDirectory) && !isDirectory.boolValue {
+                        filePaths.append(fullPath)
+                    }
+                }
+                filePaths.sort { lhs, rhs in
+                    let lhsName = ((lhs as NSString).lastPathComponent as NSString).deletingPathExtension
+                    let rhsName = ((rhs as NSString).lastPathComponent as NSString).deletingPathExtension
+                    if let lhsValue = Int(lhsName), let rhsValue = Int(rhsName) {
+                        return lhsValue < rhsValue
+                    }
+                    return lhsName < rhsName
+                }
+            } catch {
+            }
+        
+            func subject(for path: String) -> MediaEditorScreenImpl.Subject? {
+                if path.hasSuffix(".jpg") {
+                    if let image = UIImage(contentsOfFile: path) {
+                        return .image(image: image, dimensions: PixelDimensions(image.size), additionalImage: nil, additionalImagePosition: .topLeft, fromCamera: false)
+                    }
+                } else {
+                    let asset = AVURLAsset(url: URL(fileURLWithPath: path))
+                    var dimensions = PixelDimensions(width: 1080, height: 1920)
+                    if let videoTrack = asset.tracks(withMediaType: .video).first {
+                        dimensions = PixelDimensions(videoTrack.naturalSize)
+                    }
+                    return .video(videoPath: path, thumbnail: nil, mirror: false, additionalVideoPath: nil, additionalThumbnail: nil, dimensions: dimensions, duration: asset.duration.seconds, videoPositionChanges: [], additionalVideoPosition: .bottomLeft, fromCamera: false)
+                }
+                return nil
+            }
+    
+            var source: Any?
+            if filePaths.count > 1 {
+                var subjects: [MediaEditorScreenImpl.Subject] = []
+                for path in filePaths {
+                    if let subject = subject(for: path) {
+                        subjects.append(subject)
+                    }
+                }
+                source = subjects
+            } else if let path = filePaths.first {
+                if let subject = subject(for: path) {
+                    source = subject
+                }
+            }
+    
+            let externalState = MediaEditorTransitionOutExternalState(
+                storyTarget: nil,
+                isForcedTarget: false,
+                isPeerArchived: false,
+                transitionOut: nil
+            )
+            let controller = context.sharedContext.makeStoryMediaEditorScreen(context: context, source: source, text: nil, link: nil, completion: { results, commit in
+                let target: Stories.PendingTarget = results.first!.target
+                externalState.storyTarget = target
+                
+                if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
+                    rootController.proceedWithStoryUpload(target: target, results: results, existingMedia: nil, forwardInfo: nil, externalState: externalState, commit: commit)
+                }
+            })
+            if let navigationController {
+                navigationController.pushViewController(controller)
             }
         case let .startAttach(peerId, payload, choose):
             let presentError: (String) -> Void = { errorText in

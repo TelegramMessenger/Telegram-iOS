@@ -458,6 +458,56 @@ open class BlurredBackgroundView: UIView {
 public protocol NavigationBarHeaderView: UIView {
 }
 
+private final class NavigationBackgroundCutoutView: UIView {
+    private let topLayer: SimpleLayer
+    private let rightLayer: SimpleLayer
+    
+    weak var targetNode: ASDisplayNode?
+    
+    override init(frame: CGRect) {
+        self.topLayer = SimpleLayer()
+        self.topLayer.backgroundColor = UIColor.white.cgColor
+        
+        self.rightLayer = SimpleLayer()
+        self.rightLayer.backgroundColor = UIColor.white.cgColor
+        
+        super.init(frame: frame)
+        
+        self.layer.addSublayer(self.topLayer)
+        self.layer.addSublayer(self.rightLayer)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    func update(size: CGSize, cutout: CGSize?, transition: ContainedViewLayoutTransition) {
+        let cutout = cutout ?? CGSize()
+        
+        let topFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: cutout.height))
+        let rightFrame = CGRect(origin: CGPoint(x: cutout.width, y: 0.0), size: CGSize(width: max(0.0, size.width - cutout.width), height: size.height))
+        
+        if self.topLayer.frame != topFrame || self.rightLayer.frame != rightFrame {
+            if cutout.width != 0.0 && cutout.height != 0.0 {
+                self.targetNode?.view.mask = self
+                //self.targetNode?.view.addSubview(self)
+            }
+            
+            transition.updateFrame(layer: self.topLayer, frame: topFrame)
+            transition.updateFrame(layer: self.rightLayer, frame: rightFrame, completion: { [weak self] completed in
+                guard let self, completed else {
+                    return
+                }
+                
+                if !(cutout.width != 0.0 && cutout.height != 0.0) {
+                    self.targetNode?.view.mask = nil
+                    //self.removeFromSuperview()
+                }
+            })
+        }
+    }
+}
+
 open class NavigationBar: ASDisplayNode {
     public static var defaultSecondaryContentHeight: CGFloat {
         return 38.0
@@ -489,7 +539,7 @@ open class NavigationBar: ASDisplayNode {
     
     var presentationData: NavigationBarPresentationData
     
-    private var validLayout: (size: CGSize, defaultHeight: CGFloat, additionalTopHeight: CGFloat, additionalContentHeight: CGFloat, additionalBackgroundHeight: CGFloat, leftInset: CGFloat, rightInset: CGFloat, appearsHidden: Bool, isLandscape: Bool)?
+    private var validLayout: (size: CGSize, defaultHeight: CGFloat, additionalTopHeight: CGFloat, additionalContentHeight: CGFloat, additionalBackgroundHeight: CGFloat, additionalCutout: CGSize?, leftInset: CGFloat, rightInset: CGFloat, appearsHidden: Bool, isLandscape: Bool)?
     private var requestedLayout: Bool = false
     var requestContainerLayout: (ContainedViewLayoutTransition) -> Void = { _ in }
     
@@ -1013,6 +1063,8 @@ open class NavigationBar: ASDisplayNode {
     public let leftButtonNode: NavigationButtonNode
     public let rightButtonNode: NavigationButtonNode
     public let additionalContentNode: SparseNode
+    
+    private let navigationBackgroundCutoutView: NavigationBackgroundCutoutView
 
     public func reattachAdditionalContentNode() {
         if self.additionalContentNode.supernode !== self {
@@ -1139,6 +1191,9 @@ open class NavigationBar: ASDisplayNode {
         
         self.secondaryContentHeight = NavigationBar.defaultSecondaryContentHeight
         
+        self.navigationBackgroundCutoutView = NavigationBackgroundCutoutView(frame: CGRect())
+        self.navigationBackgroundCutoutView.targetNode = self.backgroundNode
+        
         super.init()
 
         self.addSubnode(self.backgroundNode)
@@ -1246,22 +1301,25 @@ open class NavigationBar: ASDisplayNode {
         
         if let validLayout = self.validLayout, self.requestedLayout {
             self.requestedLayout = false
-            self.updateLayout(size: validLayout.size, defaultHeight: validLayout.defaultHeight, additionalTopHeight: validLayout.additionalTopHeight, additionalContentHeight: validLayout.additionalContentHeight, additionalBackgroundHeight: validLayout.additionalBackgroundHeight, leftInset: validLayout.leftInset, rightInset: validLayout.rightInset, appearsHidden: validLayout.appearsHidden, isLandscape: validLayout.isLandscape, transition: .immediate)
+            self.updateLayout(size: validLayout.size, defaultHeight: validLayout.defaultHeight, additionalTopHeight: validLayout.additionalTopHeight, additionalContentHeight: validLayout.additionalContentHeight, additionalBackgroundHeight: validLayout.additionalBackgroundHeight, additionalCutout: validLayout.additionalCutout, leftInset: validLayout.leftInset, rightInset: validLayout.rightInset, appearsHidden: validLayout.appearsHidden, isLandscape: validLayout.isLandscape, transition: .immediate)
         }
     }
     
-    func updateLayout(size: CGSize, defaultHeight: CGFloat, additionalTopHeight: CGFloat, additionalContentHeight: CGFloat, additionalBackgroundHeight: CGFloat, leftInset: CGFloat, rightInset: CGFloat, appearsHidden: Bool, isLandscape: Bool, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, defaultHeight: CGFloat, additionalTopHeight: CGFloat, additionalContentHeight: CGFloat, additionalBackgroundHeight: CGFloat, additionalCutout: CGSize?, leftInset: CGFloat, rightInset: CGFloat, appearsHidden: Bool, isLandscape: Bool, transition: ContainedViewLayoutTransition) {
         if self.layoutSuspended {
             return
         }
         
-        self.validLayout = (size, defaultHeight, additionalTopHeight, additionalContentHeight, additionalBackgroundHeight, leftInset, rightInset, appearsHidden, isLandscape)
+        self.validLayout = (size, defaultHeight, additionalTopHeight, additionalContentHeight, additionalBackgroundHeight, additionalCutout, leftInset, rightInset, appearsHidden, isLandscape)
 
         let backgroundFrame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height + additionalBackgroundHeight))
         if self.backgroundNode.frame != backgroundFrame {
             transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
             self.backgroundNode.update(size: backgroundFrame.size, transition: transition)
+            
+            transition.updateFrame(view: self.navigationBackgroundCutoutView, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
         }
+        self.navigationBackgroundCutoutView.update(size: backgroundFrame.size, cutout: additionalCutout, transition: transition)
         
         let apparentAdditionalHeight: CGFloat = self.secondaryContentNode != nil ? (self.secondaryContentHeight * self.secondaryContentNodeDisplayFraction) : 0.0
         
@@ -1293,7 +1351,7 @@ open class NavigationBar: ASDisplayNode {
             contentNode.updateLayout(size: contentNodeFrame.size, leftInset: leftInset, rightInset: rightInset, transition: transition)
         }
         
-        transition.updateFrame(node: self.stripeNode, frame: CGRect(x: 0.0, y: size.height + additionalBackgroundHeight, width: size.width, height: UIScreenPixel))
+        transition.updateFrame(node: self.stripeNode, frame: CGRect(x: (additionalCutout?.width ?? 0.0), y: size.height + additionalBackgroundHeight, width: size.width - (additionalCutout?.width ?? 0.0), height: UIScreenPixel))
         
         let nominalHeight: CGFloat = defaultHeight
         let contentVerticalOrigin = additionalTopHeight

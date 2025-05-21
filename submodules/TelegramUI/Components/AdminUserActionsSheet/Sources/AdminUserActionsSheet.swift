@@ -517,6 +517,38 @@ private final class AdminUserActionsSheetComponent: Component {
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
             
             if self.component == nil {
+                let _ = (component.context.account.postbox.peerView(id: component.chatPeer.id)
+                |> take(1)).start(next: { [weak self] peerView in
+                    guard let self else{
+                        return
+                    }
+                    
+                    var selectAll = false
+                    if let cachedData = peerView.cachedData as? CachedChannelData {
+                        if let memberCount = cachedData.participantsSummary.memberCount, memberCount >= 1000 {
+                            selectAll = true
+                        } else if case let .known(peerId) = cachedData.linkedDiscussionPeerId, let _ = peerId {
+                            selectAll = true
+                        } else if case let .channel(channel) = component.chatPeer, let _ = channel.addressName {
+                            selectAll = true
+                        }
+                    }
+                    
+                    if selectAll {
+                        var selectedPeers = Set<EnginePeer.Id>()
+                        for peer in component.peers {
+                            selectedPeers.insert(peer.peer.id)
+                        }
+                        self.optionReportSelectedPeers = selectedPeers
+                        self.optionDeleteAllSelectedPeers = selectedPeers
+                        self.optionBanSelectedPeers = selectedPeers
+                    }
+                    
+                    if !self.isUpdating {
+                        self.state?.updated()
+                    }
+                })
+                
                 var (allowedParticipantRights, allowedMediaRights) = rightsFromBannedRights([])
                 if case let .channel(channel) = component.chatPeer {
                     (allowedParticipantRights, allowedMediaRights) = rightsFromBannedRights(channel.defaultBannedRights?.flags ?? [])

@@ -50,7 +50,7 @@ public final class EmojiStatusComponent: Component {
         case text(color: UIColor, string: String)
         case animation(content: AnimationContent, size: CGSize, placeholderColor: UIColor, themeColor: UIColor?, loopMode: LoopMode)
         case topic(title: String, color: Int32, size: CGSize)
-        case image(image: UIImage?)
+        case image(image: UIImage?, tintColor: UIColor?)
     }
     
     public let postbox: Postbox
@@ -335,8 +335,9 @@ public final class EmojiStatusComponent: Component {
                     } else {
                         iconImage = nil
                     }
-                case let .image(image):
+                case let .image(image, tintColor):
                     iconImage = image
+                    iconTintColor = tintColor
                 case let .verified(fillColor, foregroundColor, sizeType):
                     let imageNamePrefix: String
                     switch sizeType {

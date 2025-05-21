@@ -2376,16 +2376,24 @@ open class ListView: ASDisplayNode, ASScrollViewDelegate, ASGestureRecognizerDel
             } else {
                 let updateItem = updateIndicesAndItems[0]
                 if let previousNode = previousNodes[updateItem.index] {
+                    let threadId = pthread_self()
+                    var tailRecurse = false
                     self.nodeForItem(synchronous: synchronous, synchronousLoads: synchronousLoads, item: updateItem.item, previousNode: previousNode, index: updateItem.index, previousItem: updateItem.index == 0 ? nil : self.items[updateItem.index - 1], nextItem: updateItem.index == (self.items.count - 1) ? nil : self.items[updateItem.index + 1], params: ListViewItemLayoutParams(width: state.visibleSize.width, leftInset: state.insets.left, rightInset: state.insets.right, availableHeight: state.visibleSize.height - state.insets.top - state.insets.bottom), updateAnimationIsAnimated: animated, updateAnimationIsCrossfade: crossfade, customAnimationTransition: customAnimationTransition, completion: { _, layout, apply in
                         state.updateNodeAtItemIndex(updateItem.index, layout: layout, direction: updateItem.directionHint, isAnimated: animated, apply: apply, operations: &operations)
                         
                         updateIndicesAndItems.remove(at: 0)
-                        self.updateNodes(synchronous: synchronous, synchronousLoads: synchronousLoads, crossfade: crossfade, customAnimationTransition: customAnimationTransition, animated: animated, updateIndicesAndItems: updateIndicesAndItems, inputState: state, previousNodes: previousNodes, inputOperations: operations, completion: completion)
+                        if pthread_equal(pthread_self(), threadId) != 0 && !tailRecurse {
+                            tailRecurse = true
+                        } else {
+                            self.updateNodes(synchronous: synchronous, synchronousLoads: synchronousLoads, crossfade: crossfade, customAnimationTransition: customAnimationTransition, animated: animated, updateIndicesAndItems: updateIndicesAndItems, inputState: state, previousNodes: previousNodes, inputOperations: operations, completion: completion)
+                        }
                     })
-                    break
+                    if !tailRecurse {
+                        tailRecurse = true
+                        break
+                    }
                 } else {
                     updateIndicesAndItems.remove(at: 0)
-                    //self.updateNodes(synchronous: synchronous, animated: animated, updateIndicesAndItems: updateIndicesAndItems, inputState: state, previousNodes: previousNodes, inputOperations: operations, completion: completion)
                 }
             }
         }

@@ -1023,7 +1023,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     let titleTopicIconContent: EmojiStatusComponent.Content?
                     if threadId == 1 {
-                        titleTopicIconContent = .image(image: PresentationResourcesChatList.generalTopicSmallIcon(theme))
+                        titleTopicIconContent = .image(image: PresentationResourcesChatList.generalTopicSmallIcon(theme), tintColor: nil)
                     } else if let fileId = iconId, fileId != 0 {
                         titleTopicIconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 36.0, height: 36.0), placeholderColor: theme.list.mediaPlaceholderColor, themeColor: theme.list.itemAccentColor, loopMode: .count(0))
                     } else if let iconColor {
@@ -3850,7 +3850,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         
                         let avatarIconContent: EmojiStatusComponent.Content
                         if threadInfo.id == 1 {
-                            avatarIconContent = .image(image: PresentationResourcesChatList.generalTopicIcon(item.presentationData.theme))
+                            avatarIconContent = .image(image: PresentationResourcesChatList.generalTopicIcon(item.presentationData.theme), tintColor: nil)
                         } else if let fileId = threadInfo.info.icon, fileId != 0 {
                             avatarIconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 48.0, height: 48.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(0))
                         } else {

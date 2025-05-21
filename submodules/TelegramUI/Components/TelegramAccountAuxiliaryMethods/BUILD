@@ -25,6 +25,7 @@ swift_library(
         "//submodules/SSignalKit/SwiftSignalKit",
         "//submodules/ICloudResources",
         "//submodules/TelegramUI/Components/Resources/FetchVideoMediaResource",
+        "//submodules/TelegramUI/Components/Resources/FetchAudioMediaResource",
     ],
     visibility = [
         "//visibility:public",

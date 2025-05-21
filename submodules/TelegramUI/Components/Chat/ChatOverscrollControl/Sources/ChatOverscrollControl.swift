@@ -526,7 +526,7 @@ final class AvatarComponent: Component {
                 
                 let avatarIconContent: EmojiStatusComponent.Content
                 if threadData.id == 1 {
-                    avatarIconContent = .image(image: PresentationResourcesChatList.generalTopicIcon(theme))
+                    avatarIconContent = .image(image: PresentationResourcesChatList.generalTopicIcon(theme), tintColor: nil)
                 } else if let fileId = threadData.data.info.icon, fileId != 0 {
                     avatarIconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 48.0, height: 48.0), placeholderColor: theme.list.mediaPlaceholderColor, themeColor: theme.list.itemAccentColor, loopMode: .count(0))
                 } else {

@@ -1267,7 +1267,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
         }, openBoostToUnrestrict: {
         }, updateVideoTrimRange: { _, _, _, _ in
         }, updateHistoryFilter: { _ in
-        }, updateChatLocationThread: { _ in
+        }, updateChatLocationThread: { _, _ in
         }, toggleChatSidebarMode: {
         }, updateDisplayHistoryFilterAsList: { _ in
         }, requestLayout: { _ in

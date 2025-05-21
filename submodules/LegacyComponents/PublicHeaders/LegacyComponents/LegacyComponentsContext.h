@@ -64,6 +64,8 @@ typedef enum {
 - (TGMediaAssetsPallete *)mediaAssetsPallete;
 - (TGCheckButtonPallete *)checkButtonPallete;
 
+- (NSArray<NSNumber *> *)cameraZoomLevels;
+
 @required
 
 - (CGFloat)applicationStatusBarAlpha;
@@ -89,7 +91,9 @@ typedef enum {
 - (NSDictionary *)serverMediaDataForAssetUrl:(NSString *)url;
 
 - (void)presentActionSheet:(NSArray<LegacyComponentsActionSheetAction *> *)actions view:(UIView *)view completion:(void (^)(LegacyComponentsActionSheetAction *))completion;
-- (void)presentActionSheet:(NSArray<LegacyComponentsActionSheetAction *> *)actions view:(UIView *)view sourceRect:(CGRect (^)(void))sourceRect completion:(void (^)(LegacyComponentsActionSheetAction *))completion ;
+- (void)presentActionSheet:(NSArray<LegacyComponentsActionSheetAction *> *)actions view:(UIView *)view sourceRect:(CGRect (^)(void))sourceRect completion:(void (^)(LegacyComponentsActionSheetAction *))completion;
+
+- (void)presentTooltip:(NSString *)text icon:(UIImage *)icon sourceRect:(CGRect)sourceRect;
 
 - (id<LegacyComponentsOverlayWindowManager>)makeOverlayWindowManager;
 

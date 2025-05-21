@@ -20,7 +20,7 @@ extension MediaEditorScreenImpl {
         if case .coverEditor = self.mode {
             return false
         }
-        if case .assets = self.node.actualSubject {
+        if case .multiple = self.node.actualSubject {
             return false
         }
         guard let mediaEditor = self.node.mediaEditor else {
@@ -208,11 +208,11 @@ extension MediaEditorScreenImpl {
                 switch subject {
                 case .empty:
                     break
-                case let .image(image, dimensions, _, _):
+                case let .image(image, dimensions, _, _, _):
                     if let draft = innerSaveDraft(media: .image(image: image, dimensions: dimensions)) {
                         completion?(draft)
                     }
-                case let .video(path, _, _, _, _, dimensions, _, _, _):
+                case let .video(path, _, _, _, _, dimensions, _, _, _, _):
                     if let draft = innerSaveDraft(media: .video(path: path, dimensions: dimensions, duration: duration)) {
                         completion?(draft)
                     }
@@ -256,7 +256,7 @@ extension MediaEditorScreenImpl {
                     }
                 case .sticker:
                     break
-                case .assets:
+                case .multiple:
                     break
                 }
                 

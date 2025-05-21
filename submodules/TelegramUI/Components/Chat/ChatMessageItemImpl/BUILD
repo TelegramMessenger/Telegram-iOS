@@ -35,6 +35,8 @@ swift_library(
         "//submodules/Components/HierarchyTrackingLayer",
         "//submodules/WallpaperBackgroundNode",
         "//submodules/AvatarVideoNode",
+        "//submodules/ComponentFlow",
+        "//submodules/TelegramUI/Components/EmojiStatusComponent",
     ],
     visibility = [
         "//visibility:public",

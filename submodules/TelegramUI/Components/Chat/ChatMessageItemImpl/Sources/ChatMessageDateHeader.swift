@@ -17,6 +17,8 @@ import ChatControllerInteraction
 import AvatarVideoNode
 import ChatMessageItem
 import AvatarNode
+import ComponentFlow
+import EmojiStatusComponent
 
 private let timezoneOffset: Int32 = {
     let nowTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
@@ -39,18 +41,23 @@ public final class ChatMessageDateHeader: ListViewItemHeader {
         }
     }
     
-    public final class PeerData {
-        public let peer: EnginePeer
+    public final class HeaderData {
+        public enum Contents {
+            case peer(EnginePeer)
+            case thread(id: Int64, info: Message.AssociatedThreadInfo)
+        }
         
-        public init(peer: EnginePeer) {
-            self.peer = peer
+        public let contents: Contents
+        
+        public init(contents: Contents) {
+            self.contents = contents
         }
     }
     
     private let timestamp: Int32
     private let roundedTimestamp: Int32
     private let scheduled: Bool
-    public let displayPeer: PeerData?
+    public let displayHeader: HeaderData?
     
     public let id: ListViewItemNode.HeaderId
     public let stackingId: ListViewItemNode.HeaderId?
@@ -60,16 +67,16 @@ public final class ChatMessageDateHeader: ListViewItemHeader {
     public let context: AccountContext
     public let action: ((Int32, Bool) -> Void)?
     
-    public init(timestamp: Int32, separableThreadId: Int64?, scheduled: Bool, displayPeer: PeerData?, presentationData: ChatPresentationData, controllerInteraction: ChatControllerInteraction?, context: AccountContext, action: ((Int32, Bool) -> Void)? = nil) {
+    public init(timestamp: Int32, separableThreadId: Int64?, scheduled: Bool, displayHeader: HeaderData?, presentationData: ChatPresentationData, controllerInteraction: ChatControllerInteraction?, context: AccountContext, action: ((Int32, Bool) -> Void)? = nil) {
         self.timestamp = timestamp
         self.scheduled = scheduled
-        self.displayPeer = displayPeer
+        self.displayHeader = displayHeader
         self.presentationData = presentationData
         self.controllerInteraction = controllerInteraction
         self.context = context
         self.action = action
         self.roundedTimestamp = dateHeaderTimestampId(timestamp: timestamp)
-        if let _ = self.displayPeer {
+        if let _ = self.displayHeader {
             self.idValue = ChatMessageDateHeader.Id(roundedTimestamp: 0, separableThreadId: separableThreadId)
             self.id = ListViewItemNode.HeaderId(space: 3, id: self.idValue)
             self.stackingId = ListViewItemNode.HeaderId(space: 2, id: ChatMessageDateHeader.Id(roundedTimestamp: Int64(self.roundedTimestamp), separableThreadId: nil))
@@ -98,7 +105,7 @@ public final class ChatMessageDateHeader: ListViewItemHeader {
     }
     
     public func node(synchronousLoad: Bool) -> ListViewItemHeaderNode {
-        return ChatMessageDateHeaderNodeImpl(localTimestamp: self.roundedTimestamp, scheduled: self.scheduled, displayPeer: self.displayPeer, presentationData: self.presentationData, controllerInteraction: self.controllerInteraction, context: self.context, action: self.action)
+        return ChatMessageDateHeaderNodeImpl(localTimestamp: self.roundedTimestamp, scheduled: self.scheduled, displayHeader: self.displayHeader, presentationData: self.presentationData, controllerInteraction: self.controllerInteraction, context: self.context, action: self.action)
     }
     
     public func updateNode(_ node: ListViewItemHeaderNode, previous: ListViewItemHeader?, next: ListViewItemHeader?) {
@@ -362,9 +369,11 @@ private final class ChatMessagePeerContentNode: ASDisplayNode {
     private let context: AccountContext
     private var presentationData: ChatPresentationData
     private let controllerInteraction: ChatControllerInteraction?
-    private let peer: EnginePeer
+    private let displayHeader: ChatMessageDateHeader.HeaderData
     
-    private let avatarNode: AvatarNode
+    private var avatarNode: AvatarNode?
+    private var icon: ComponentView<Empty>?
+    
     public let labelNode: TextNode
     public let backgroundNode: NavigationBackgroundNode
     public let stickBackgroundNode: ASImageNode
@@ -372,13 +381,11 @@ private final class ChatMessagePeerContentNode: ASDisplayNode {
     private var backgroundContent: WallpaperBubbleBackgroundNode?
     private var text: String
     
-    init(context: AccountContext, presentationData: ChatPresentationData, controllerInteraction: ChatControllerInteraction?, peer: EnginePeer) {
+    init(context: AccountContext, presentationData: ChatPresentationData, controllerInteraction: ChatControllerInteraction?, displayHeader: ChatMessageDateHeader.HeaderData) {
         self.context = context
         self.presentationData = presentationData
         self.controllerInteraction = controllerInteraction
-        self.peer = peer
-        
-        self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 8.0))
+        self.displayHeader = displayHeader
         
         self.labelNode = TextNode()
         self.labelNode.isUserInteractionEnabled = false
@@ -397,7 +404,13 @@ private final class ChatMessagePeerContentNode: ASDisplayNode {
         self.stickBackgroundNode.displayWithoutProcessing = true
         self.stickBackgroundNode.displaysAsynchronously = false
         
-        let text = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+        let text: String
+        switch displayHeader.contents {
+        case let .peer(peer):
+            text = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+        case let .thread(_, info):
+            text = info.title
+        }
         self.text = text
         
         super.init()
@@ -415,7 +428,50 @@ private final class ChatMessagePeerContentNode: ASDisplayNode {
         } else {
             self.addSubnode(self.backgroundNode)
         }
-        self.addSubnode(self.avatarNode)
+        
+        switch displayHeader.contents {
+        case let .peer(peer):
+            let avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 8.0))
+            self.avatarNode = avatarNode
+            self.addSubnode(avatarNode)
+            
+            if peer.smallProfileImage != nil {
+                avatarNode.setPeerV2(context: context, theme: presentationData.theme.theme, peer: peer, displayDimensions: CGSize(width: 16.0, height: 16.0))
+            } else {
+                avatarNode.setPeer(context: context, theme: presentationData.theme.theme, peer: peer, displayDimensions: CGSize(width: 16.0, height: 16.0))
+            }
+        case let .thread(id, info):
+            let avatarIconContent: EmojiStatusComponent.Content
+            if id != 1 {
+                if let fileId = info.icon, fileId != 0 {
+                    avatarIconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 16.0, height: 16.0), placeholderColor: presentationData.theme.theme.list.mediaPlaceholderColor, themeColor: presentationData.theme.theme.list.itemAccentColor, loopMode: .count(0))
+                } else {
+                    avatarIconContent = .topic(title: String(info.title.prefix(1)), color: info.iconColor, size: CGSize(width: 16.0, height: 16.0))
+                }
+            } else {
+                avatarIconContent = .image(image: PresentationResourcesChatList.generalTopicIcon(presentationData.theme.theme)?.withRenderingMode(.alwaysTemplate), tintColor: bubbleVariableColor(variableColor: presentationData.theme.theme.chat.serviceMessage.dateTextColor, wallpaper: presentationData.theme.wallpaper))
+            }
+            
+            let avatarIconComponent = EmojiStatusComponent(
+                context: context,
+                animationCache: context.animationCache,
+                animationRenderer: context.animationRenderer,
+                content: avatarIconContent,
+                isVisibleForAnimations: false,
+                action: nil
+            )
+            let icon = ComponentView<Empty>()
+            self.icon = icon
+            let _ = icon.update(
+                transition: .immediate,
+                component: AnyComponent(avatarIconComponent),
+                environment: {},
+                containerSize: CGSize(width: 16.0, height: 16.0)
+            )
+            if let iconView = icon.view {
+                self.view.addSubview(iconView)
+            }
+        }
         self.addSubnode(self.labelNode)
                 
         let titleFont = Font.medium(min(18.0, floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0)))
@@ -461,7 +517,13 @@ private final class ChatMessagePeerContentNode: ASDisplayNode {
         let chatDateInset: CGFloat = 6.0
         
         let avatarDiameter: CGFloat = 16.0
-        let avatarInset: CGFloat = 2.0
+        let avatarInset: CGFloat
+        switch self.displayHeader.contents {
+        case .peer:
+            avatarInset = 2.0
+        case .thread:
+            avatarInset = 4.0
+        }
         let avatarSpacing: CGFloat = 4.0
         
         let labelSize = self.labelNode.bounds.size
@@ -469,14 +531,14 @@ private final class ChatMessagePeerContentNode: ASDisplayNode {
         
         let backgroundFrame = CGRect(origin: CGPoint(x: leftInset + floorToScreenPixels((size.width - leftInset - rightInset - backgroundSize.width) / 2.0), y: (size.height - chatDateSize) / 2.0), size: backgroundSize)
         
-        let avatarFrame = CGRect(origin: CGPoint(x: backgroundFrame.minX + avatarInset, y: backgroundFrame.origin.y + floorToScreenPixels((backgroundSize.height - avatarDiameter) / 2.0)), size: CGSize(width: avatarDiameter, height: avatarDiameter))
-        transition.updateFrame(node: self.avatarNode, frame: avatarFrame)
-        self.avatarNode.updateSize(size: avatarFrame.size)
+        let iconFrame = CGRect(origin: CGPoint(x: backgroundFrame.minX + avatarInset, y: backgroundFrame.origin.y + floorToScreenPixels((backgroundSize.height - avatarDiameter) / 2.0)), size: CGSize(width: avatarDiameter, height: avatarDiameter))
         
-        if self.peer.smallProfileImage != nil {
-            self.avatarNode.setPeerV2(context: self.context, theme: self.presentationData.theme.theme, peer: self.peer, displayDimensions: avatarFrame.size)
-        } else {
-            self.avatarNode.setPeer(context: self.context, theme: self.presentationData.theme.theme, peer: self.peer, displayDimensions: avatarFrame.size)
+        if let avatarNode = self.avatarNode {
+            transition.updateFrame(node: avatarNode, frame: iconFrame)
+            avatarNode.updateSize(size: iconFrame.size)
+        }
+        if let iconView = self.icon?.view {
+            transition.updateFrame(view: iconView, frame: iconFrame)
         }
         
         transition.updateFrame(node: self.stickBackgroundNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
@@ -517,7 +579,7 @@ public final class ChatMessageDateHeaderNodeImpl: ListViewItemHeaderNode, ChatMe
     private let context: AccountContext
     private let localTimestamp: Int32
     private let scheduled: Bool
-    private let displayPeer: ChatMessageDateHeader.PeerData?
+    private let displayHeader: ChatMessageDateHeader.HeaderData?
     private var presentationData: ChatPresentationData
     private let controllerInteraction: ChatControllerInteraction?
     
@@ -528,14 +590,14 @@ public final class ChatMessageDateHeaderNodeImpl: ListViewItemHeaderNode, ChatMe
     private var params: (size: CGSize, leftInset: CGFloat, rightInset: CGFloat)?
     private var absolutePosition: (CGRect, CGSize)?
     
-    public init(localTimestamp: Int32, scheduled: Bool, displayPeer: ChatMessageDateHeader.PeerData?, presentationData: ChatPresentationData, controllerInteraction: ChatControllerInteraction?, context: AccountContext, action: ((Int32, Bool) -> Void)? = nil) {
+    public init(localTimestamp: Int32, scheduled: Bool, displayHeader: ChatMessageDateHeader.HeaderData?, presentationData: ChatPresentationData, controllerInteraction: ChatControllerInteraction?, context: AccountContext, action: ((Int32, Bool) -> Void)? = nil) {
         self.context = context
         self.presentationData = presentationData
         self.controllerInteraction = controllerInteraction
         
         self.localTimestamp = localTimestamp
         self.scheduled = scheduled
-        self.displayPeer = displayPeer
+        self.displayHeader = displayHeader
         self.action = action
         
         let isRotated = controllerInteraction?.chatIsRotated ?? true
@@ -546,13 +608,13 @@ public final class ChatMessageDateHeaderNodeImpl: ListViewItemHeaderNode, ChatMe
             self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
         }
         
-        if let displayPeer {
+        if let displayHeader {
             if self.peerContentNode == nil {
                 let sectionSeparator = ChatMessageDateSectionSeparatorNode(controllerInteraction: controllerInteraction, presentationData: presentationData)
                 self.sectionSeparator = sectionSeparator
                 self.addSubnode(sectionSeparator)
                 
-                let peerContentNode = ChatMessagePeerContentNode(context: self.context, presentationData: self.presentationData, controllerInteraction: self.controllerInteraction, peer: displayPeer.peer)
+                let peerContentNode = ChatMessagePeerContentNode(context: self.context, presentationData: self.presentationData, controllerInteraction: self.controllerInteraction, displayHeader: displayHeader)
                 self.peerContentNode = peerContentNode
                 self.addSubnode(peerContentNode)
             }

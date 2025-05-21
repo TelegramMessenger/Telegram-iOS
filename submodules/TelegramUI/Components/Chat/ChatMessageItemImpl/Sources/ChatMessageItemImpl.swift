@@ -92,10 +92,10 @@ private func messagesShouldBeMerged(accountPeerId: PeerId, _ lhs: Message, _ rhs
         isPaid = true
     }
     
-    var sameThread = true
-    if let lhsPeer = lhs.peers[lhs.id.peerId], let rhsPeer = rhs.peers[rhs.id.peerId], arePeersEqual(lhsPeer, rhsPeer), let channel = lhsPeer as? TelegramChannel, channel.isForumOrMonoForum, lhs.threadId != rhs.threadId {
+    let sameThread = true
+    /*if let lhsPeer = lhs.peers[lhs.id.peerId], let rhsPeer = rhs.peers[rhs.id.peerId], arePeersEqual(lhsPeer, rhsPeer), let channel = lhsPeer as? TelegramChannel, channel.isForumOrMonoForum, lhs.threadId != rhs.threadId {
         sameThread = false
-    }
+    }*/
         
     var sameAuthor = false
     if lhsEffectiveAuthor?.id == rhsEffectiveAuthor?.id && lhs.effectivelyIncoming(accountPeerId) == rhs.effectivelyIncoming(accountPeerId) {
@@ -288,7 +288,7 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
         
         let messagePeerId: PeerId = chatLocation.peerId ?? content.firstMessage.id.peerId
         var headerSeparableThreadId: Int64?
-        var headerDisplayPeer: ChatMessageDateHeader.PeerData?
+        var headerDisplayPeer: ChatMessageDateHeader.HeaderData?
         
         do {
             let peerId = messagePeerId
@@ -320,15 +320,22 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
                 }
                 displayAuthorInfo = incoming && peerId.isGroupOrChannel && effectiveAuthor != nil
                 
-                if let channel = content.firstMessage.peers[content.firstMessage.id.peerId] as? TelegramChannel, channel.isMonoForum {
+                if let channel = content.firstMessage.peers[content.firstMessage.id.peerId] as? TelegramChannel, channel.isForumOrMonoForum {
                     if case .replyThread = chatLocation {
                         displayAuthorInfo = false
                     } else {
-                        if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = content.firstMessage.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.adminRights != nil {
-                            headerSeparableThreadId = content.firstMessage.threadId
-                            
-                            if let threadId = content.firstMessage.threadId, let peer = content.firstMessage.peers[EnginePeer.Id(threadId)] {
-                                headerDisplayPeer = ChatMessageDateHeader.PeerData(peer: EnginePeer(peer))
+                        if channel.isMonoForum {
+                            if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = content.firstMessage.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.adminRights != nil {
+                                headerSeparableThreadId = content.firstMessage.threadId
+                                
+                                if let threadId = content.firstMessage.threadId, let peer = content.firstMessage.peers[EnginePeer.Id(threadId)] {
+                                    headerDisplayPeer = ChatMessageDateHeader.HeaderData(contents: .peer(EnginePeer(peer)))
+                                }
+                            }
+                        } else if let threadId = content.firstMessage.threadId {
+                            if let threadInfo = content.firstMessage.associatedThreadInfo {
+                                headerSeparableThreadId = content.firstMessage.threadId
+                                headerDisplayPeer = ChatMessageDateHeader.HeaderData(contents: .thread(id: threadId, info: threadInfo))
                             }
                         }
                     }
@@ -343,7 +350,7 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
             isScheduledMessages = true
         }
         
-        self.dateHeader = ChatMessageDateHeader(timestamp: content.index.timestamp, separableThreadId: nil, scheduled: isScheduledMessages, displayPeer: nil, presentationData: presentationData, controllerInteraction: controllerInteraction, context: context, action: { timestamp, alreadyThere in
+        self.dateHeader = ChatMessageDateHeader(timestamp: content.index.timestamp, separableThreadId: nil, scheduled: isScheduledMessages, displayHeader: nil, presentationData: presentationData, controllerInteraction: controllerInteraction, context: context, action: { timestamp, alreadyThere in
             var calendar = NSCalendar.current
             calendar.timeZone = TimeZone(abbreviation: "UTC")!
             let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
@@ -355,8 +362,8 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
         })
         
         if let headerSeparableThreadId, let headerDisplayPeer {
-            self.topicHeader = ChatMessageDateHeader(timestamp: content.index.timestamp, separableThreadId: headerSeparableThreadId, scheduled: false, displayPeer: headerDisplayPeer, presentationData: presentationData, controllerInteraction: controllerInteraction, context: context, action: { _, _ in
-                controllerInteraction.updateChatLocationThread(headerSeparableThreadId)
+            self.topicHeader = ChatMessageDateHeader(timestamp: content.index.timestamp, separableThreadId: headerSeparableThreadId, scheduled: false, displayHeader: headerDisplayPeer, presentationData: presentationData, controllerInteraction: controllerInteraction, context: context, action: { _, _ in
+                controllerInteraction.updateChatLocationThread(headerSeparableThreadId, nil)
             })
         } else {
             self.topicHeader = nil

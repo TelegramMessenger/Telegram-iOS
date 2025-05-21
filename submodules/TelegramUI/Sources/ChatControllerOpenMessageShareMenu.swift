@@ -143,7 +143,7 @@ extension ChatControllerImpl {
             guard let self else {
                 return
             }
-            self.present(ChatQrCodeScreen(context: self.context, subject: .messages(messages)), in: .window(.root))
+            self.present(ChatQrCodeScreenImpl(context: self.context, subject: .messages(messages)), in: .window(.root))
         }
         shareController.dismissed = { [weak self] shared in
             if shared {

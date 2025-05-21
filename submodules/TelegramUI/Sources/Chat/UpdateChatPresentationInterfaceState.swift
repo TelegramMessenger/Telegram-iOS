@@ -437,7 +437,10 @@ func updateChatPresentationInterfaceStateImpl(
     selfController.presentationInterfaceState = updatedChatPresentationInterfaceState
     
     if selfController.chatDisplayNode.chatLocation != selfController.presentationInterfaceState.chatLocation {
-        let tabSwitchDirection = selfController.chatDisplayNode.chatLocationTabSwitchDirection(from: selfController.chatDisplayNode.chatLocation, to: selfController.presentationInterfaceState.chatLocation)
+        let defaultDirection: ChatControllerAnimateInnerChatSwitchDirection? = selfController.chatDisplayNode.chatLocationTabSwitchDirection(from: selfController.chatLocation.threadId, to: selfController.presentationInterfaceState.chatLocation.threadId).flatMap { direction -> ChatControllerAnimateInnerChatSwitchDirection in
+            return direction ? .right : .left
+        }
+        let tabSwitchDirection = selfController.currentChatSwitchDirection ?? defaultDirection
         selfController.chatDisplayNode.updateChatLocation(chatLocation: selfController.presentationInterfaceState.chatLocation, transition: transition, tabSwitchDirection: tabSwitchDirection)
     }
     
@@ -488,17 +491,18 @@ func updateChatPresentationInterfaceStateImpl(
                 animated = false
             }
             animated = false
-            selfController.navigationItem.setLeftBarButton(button.buttonItem, animated: animated)
+            selfController.navigationItem.setLeftBarButton(button.buttonItem, animated: animated && selfController.currentChatSwitchDirection == nil)
             selfController.leftNavigationButton = button
         }
     } else if let _ = selfController.leftNavigationButton {
-        selfController.navigationItem.setLeftBarButton(nil, animated: transition.isAnimated)
+        selfController.navigationItem.setLeftBarButton(nil, animated: transition.isAnimated && selfController.currentChatSwitchDirection == nil)
         selfController.leftNavigationButton = nil
     }
     
-    /*if let channel = selfController.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isForumOrMonoForum {
-    } else {*/
     var buttonsAnimated = transition.isAnimated
+    if selfController.currentChatSwitchDirection != nil {
+        buttonsAnimated = false
+    }
     if let button = rightNavigationButtonForChatInterfaceState(context: selfController.context, presentationInterfaceState: updatedChatPresentationInterfaceState, strings: updatedChatPresentationInterfaceState.strings, currentButton: selfController.rightNavigationButton, target: selfController, selector: #selector(selfController.rightNavigationButtonAction), chatInfoNavigationButton: selfController.chatInfoNavigationButton, moreInfoNavigationButton: selfController.moreInfoNavigationButton) {
         if selfController.rightNavigationButton != button {
             if let currentButton = selfController.rightNavigationButton?.action, currentButton == button.action {
@@ -601,7 +605,6 @@ func updateChatPresentationInterfaceStateImpl(
     
     if previousChatLocation != selfController.presentationInterfaceState.chatLocation {
         selfController.chatLocation = selfController.presentationInterfaceState.chatLocation
-        selfController.reloadChatLocation()
         selfController.reloadCachedData()
         selfController.setupChatHistoryNode()
     }

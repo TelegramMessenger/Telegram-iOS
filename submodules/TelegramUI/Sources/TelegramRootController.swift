@@ -365,9 +365,9 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                     case .pendingImage:
                         return nil
                     case let .image(image):
-                        return .image(image: image.image, dimensions: PixelDimensions(image.image.size), additionalImage: image.additionalImage, additionalImagePosition: editorPIPPosition(image.additionalImagePosition))
+                        return .image(image: image.image, dimensions: PixelDimensions(image.image.size), additionalImage: image.additionalImage, additionalImagePosition: editorPIPPosition(image.additionalImagePosition), fromCamera: true)
                     case let .video(video):
-                        return .video(videoPath: video.videoPath, thumbnail: video.coverImage, mirror: video.mirror, additionalVideoPath: video.additionalVideoPath, additionalThumbnail: video.additionalCoverImage, dimensions: video.dimensions, duration: video.duration, videoPositionChanges: video.positionChangeTimestamps, additionalVideoPosition: editorPIPPosition(video.additionalVideoPosition))
+                        return .video(videoPath: video.videoPath, thumbnail: video.coverImage, mirror: video.mirror, additionalVideoPath: video.additionalVideoPath, additionalThumbnail: video.additionalCoverImage, dimensions: video.dimensions, duration: video.duration, videoPositionChanges: video.positionChangeTimestamps, additionalVideoPosition: editorPIPPosition(video.additionalVideoPosition), fromCamera: true)
                     case let .videoCollage(collage):
                         func editorCollageItem(_ item: CameraScreenImpl.Result.VideoCollage.Item) -> MediaEditorScreenImpl.Subject.VideoCollageItem {
                             let content: MediaEditorScreenImpl.Subject.VideoCollageItem.Content
@@ -392,7 +392,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                     case let .draft(draft):
                         return .draft(draft, nil)
                     case let .assets(assets):
-                        return .assets(assets)
+                        return .multiple(assets.map { .asset($0) })
                     }
                 }
                 

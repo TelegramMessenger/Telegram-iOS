@@ -150,6 +150,8 @@ final class ManagedAudioRecorderContext {
     private let beginWithTone: Bool
     private let beganWithTone: (Bool) -> Void
     
+    private var trimRange: Range<Double>?
+    
     private var paused = true
     
     private let queue: Queue
@@ -184,7 +186,16 @@ final class ManagedAudioRecorderContext {
     private var toneTimer: SwiftSignalKit.Timer?
     private var idleTimerExtensionDisposable: Disposable?
     
-    init(queue: Queue, mediaManager: MediaManager, pushIdleTimerExtension: @escaping () -> Disposable, micLevel: ValuePromise<Float>, recordingState: ValuePromise<AudioRecordingState>, beginWithTone: Bool, beganWithTone: @escaping (Bool) -> Void) {
+    init(
+        queue: Queue,
+        mediaManager: MediaManager,
+        resumeData: AudioRecorderResumeData?,
+        pushIdleTimerExtension: @escaping () -> Disposable,
+        micLevel: ValuePromise<Float>,
+        recordingState: ValuePromise<AudioRecordingState>,
+        beginWithTone: Bool,
+        beganWithTone: @escaping (Bool) -> Void
+    ) {
         assert(queue.isCurrent())
         
         self.id = getNextRecorderContextId()
@@ -196,8 +207,13 @@ final class ManagedAudioRecorderContext {
         
         self.queue = queue
         self.mediaManager = mediaManager
-        self.dataItem = TGDataItem()
         self.oggWriter = TGOggOpusWriter()
+        
+        if let resumeData {
+            self.dataItem = TGDataItem(data: resumeData.compressedData)
+        } else {
+            self.dataItem = TGDataItem()
+        }
         
         if beginWithTone, let toneData = audioRecordingToneData {
             self.processSamples = false
@@ -313,7 +329,19 @@ final class ManagedAudioRecorderContext {
         addAudioRecorderContext(self.id, self)
         addAudioUnitHolder(self.id, queue, self.audioUnit)
         
-        self.oggWriter.begin(with: self.dataItem)
+        if let resumeData {
+            guard let stateDict = try? JSONSerialization.jsonObject(with: resumeData.resumeData, options: []) as? [String: Any] else {
+                Logger.shared.log("ManagedAudioRecorder", "Failed to deserialize JSON")
+                return
+            }
+            let success = self.oggWriter.resume(with: self.dataItem, encoderState: stateDict)
+            if !success {
+                Logger.shared.log("ManagedAudioRecorder", "Failed to resume OggWriter")
+                return
+            }
+        } else {
+            self.oggWriter.begin(with: self.dataItem)
+        }
         
         self.idleTimerExtensionDisposable = (Signal<Void, NoError> { subscriber in
             return pushIdleTimerExtension()
@@ -453,7 +481,7 @@ final class ManagedAudioRecorderContext {
     func pause() {
         assert(self.queue.isCurrent())
         
-        self.stop()
+        return self.stop()
     }
     
     func resume() {
@@ -462,8 +490,11 @@ final class ManagedAudioRecorderContext {
         self.start()
     }
     
+    private var resumeData: Data?
     func stop() {
         assert(self.queue.isCurrent())
+        
+        let state = self.oggWriter.pause()
         
         self.paused = true
         
@@ -494,6 +525,19 @@ final class ManagedAudioRecorderContext {
         let audioSessionDisposable = self.audioSessionDisposable
         self.audioSessionDisposable = nil
         audioSessionDisposable?.dispose()
+        
+        if let stateDict = state as? [String: Any] {
+            do {
+                let jsonData = try JSONSerialization.data(withJSONObject: stateDict, options: [])
+                self.resumeData = jsonData
+            } catch {
+                Logger.shared.log("ManagedAudioRecorder", "Failed to JSON: \(error)")
+            }
+        }
+    }
+    
+    func updateTrimRange(start: Double, end: Double, updatedEnd: Bool, apply: Bool) {
+        self.trimRange = start..<end
     }
     
     func processAndDisposeAudioBuffer(_ buffer: AudioBuffer) {
@@ -668,11 +712,21 @@ final class ManagedAudioRecorderContext {
                 waveform = AudioWaveform(bitstream: bitstream, bitsPerSample: 5).makeBitstream()
             }
             
-            return RecordedAudioData(compressedData: self.dataItem.data(), duration: self.oggWriter.encodedDuration(), waveform: waveform)
+            return RecordedAudioData(
+                compressedData: self.dataItem.data(),
+                resumeData: self.resumeData,
+                duration: self.oggWriter.encodedDuration(),
+                waveform: waveform,
+                trimRange: nil
+            )
         } else {
             return nil
         }
     }
+}
+
+struct AudioPreviewState: Equatable {
+    let trimRange: Range<Double>?
 }
 
 final class ManagedAudioRecorderImpl: ManagedAudioRecorder {
@@ -680,6 +734,7 @@ final class ManagedAudioRecorderImpl: ManagedAudioRecorder {
     private var contextRef: Unmanaged<ManagedAudioRecorderContext>?
     private let micLevelValue = ValuePromise<Float>(0.0)
     private let recordingStateValue = ValuePromise<AudioRecordingState>(.paused(duration: 0.0))
+    private let previewStateValue = ValuePromise<AudioPreviewState>(AudioPreviewState(trimRange: nil))
     
     let beginWithTone: Bool
     
@@ -691,10 +746,16 @@ final class ManagedAudioRecorderImpl: ManagedAudioRecorder {
         return self.recordingStateValue.get()
     }
     
-    init(mediaManager: MediaManager, pushIdleTimerExtension: @escaping () -> Disposable, beginWithTone: Bool, beganWithTone: @escaping (Bool) -> Void) {
+    init(
+        mediaManager: MediaManager,
+        resumeData: AudioRecorderResumeData?,
+        pushIdleTimerExtension: @escaping () -> Disposable,
+        beginWithTone: Bool,
+        beganWithTone: @escaping (Bool) -> Void
+    ) {
         self.beginWithTone = beginWithTone
         self.queue.async {
-            let context = ManagedAudioRecorderContext(queue: self.queue, mediaManager: mediaManager, pushIdleTimerExtension: pushIdleTimerExtension, micLevel: self.micLevelValue, recordingState: self.recordingStateValue, beginWithTone: beginWithTone, beganWithTone: beganWithTone)
+            let context = ManagedAudioRecorderContext(queue: self.queue, mediaManager: mediaManager, resumeData: resumeData, pushIdleTimerExtension: pushIdleTimerExtension, micLevel: self.micLevelValue, recordingState: self.recordingStateValue, beginWithTone: beginWithTone, beganWithTone: beganWithTone)
             self.contextRef = Unmanaged.passRetained(context)
         }
     }
@@ -739,7 +800,7 @@ final class ManagedAudioRecorderImpl: ManagedAudioRecorder {
     }
     
     func takenRecordedData() -> Signal<RecordedAudioData?, NoError> {
-        return Signal { subscriber in
+        let dataState: Signal<RecordedAudioData?, NoError> = Signal { subscriber in
             self.queue.async {
                 if let context = self.contextRef?.takeUnretainedValue() {
                     subscriber.putNext(context.takeData())
@@ -750,6 +811,33 @@ final class ManagedAudioRecorderImpl: ManagedAudioRecorder {
                 }
             }
             return EmptyDisposable
+        }
+        let previewState = self.previewStateValue.get()
+        
+        return combineLatest(
+            dataState,
+            previewState
+        ) |> map { data, preview -> RecordedAudioData? in
+            if let data {
+                return RecordedAudioData(
+                    compressedData: data.compressedData,
+                    resumeData: data.resumeData,
+                    duration: data.duration,
+                    waveform: data.waveform,
+                    trimRange: preview.trimRange
+                )
+            } else {
+                return nil
+            }
+        }
+    }
+    
+    func updateTrimRange(start: Double, end: Double, updatedEnd: Bool, apply: Bool) {
+        self.previewStateValue.set(AudioPreviewState(trimRange: start ..< end))
+        self.queue.async {
+            if let context = self.contextRef?.takeUnretainedValue() {
+                context.updateTrimRange(start: start, end: end, updatedEnd: updatedEnd, apply: apply)
+            }
         }
     }
 }

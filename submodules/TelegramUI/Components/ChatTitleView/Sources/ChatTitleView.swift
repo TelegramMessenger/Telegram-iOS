@@ -155,6 +155,13 @@ private enum ChatTitleCredibilityIcon: Equatable {
 }
 
 public final class ChatTitleView: UIView, NavigationBarTitleView {
+    public enum AnimateFromSnapshotDirection {
+        case up
+        case down
+        case left
+        case right
+    }
+    
     private let context: AccountContext
     
     private var theme: PresentationTheme
@@ -1111,25 +1118,40 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
         }
     }
 
-    public func prepareSnapshotState() -> SnapshotState {
-        let snapshotView = self.snapshotView(afterScreenUpdates: false)!
+    public func prepareSnapshotState() -> SnapshotState? {
+        guard let snapshotView = self.snapshotView(afterScreenUpdates: false) else {
+            return nil
+        }
         return SnapshotState(
             snapshotView: snapshotView
         )
     }
 
-    public func animateFromSnapshot(_ snapshotState: SnapshotState) {
-        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-        self.layer.animatePosition(from: CGPoint(x: 0.0, y: 20.0), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: true, additive: true)
+    public func animateFromSnapshot(_ snapshotState: SnapshotState, direction: AnimateFromSnapshotDirection = .up) {
+        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        
+        var offset = CGPoint()
+        switch direction {
+        case .up:
+            offset.y = -20.0
+        case .down:
+            offset.y = 20.0
+        case .left:
+            offset.x = -20.0
+        case .right:
+            offset.x = 20.0
+        }
+        
+        self.layer.animatePosition(from: offset, to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: true, additive: true)
 
         snapshotState.snapshotView.frame = self.frame
         self.superview?.insertSubview(snapshotState.snapshotView, belowSubview: self)
 
         let snapshotView = snapshotState.snapshotView
-        snapshotState.snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+        snapshotState.snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.12, removeOnCompletion: false, completion: { [weak snapshotView] _ in
             snapshotView?.removeFromSuperview()
         })
-        snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -20.0), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+        snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: -offset.x, y: -offset.y), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
     }
 }
 

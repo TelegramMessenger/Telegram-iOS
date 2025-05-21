@@ -47,7 +47,7 @@ struct ChatListNodeViewTransition {
     let animateCrossfade: Bool
 }
 
-enum ChatListNodeViewScrollPosition {
+public enum ChatListNodeViewScrollPosition {
     case index(index: ChatListIndex, position: ListViewScrollPosition, directionHint: ListViewScrollToItemDirectionHint, animated: Bool)
 }
 

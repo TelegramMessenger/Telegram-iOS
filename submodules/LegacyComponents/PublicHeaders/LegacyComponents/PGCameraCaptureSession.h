@@ -30,8 +30,7 @@
 @property (nonatomic, readonly) CGFloat minZoomLevel;
 @property (nonatomic, readonly) CGFloat maxZoomLevel;
 
-@property (nonatomic, readonly) int32_t maxMarkZoomValue;
-@property (nonatomic, readonly) int32_t secondMarkZoomValue;
+@property (nonatomic, strong) NSArray<NSNumber *> *zoomLevels;
 
 - (void)setZoomLevel:(CGFloat)zoomLevel animated:(bool)animated;
 
