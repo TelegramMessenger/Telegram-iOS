@@ -314,6 +314,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     
     private var loadMoreSearchResultsDisposable: Disposable?
     
+    let adMessagesContext: AdMessagesHistoryContext?
+    
     private var isLoadingValue: Bool = false
     private var isLoadingEarlier: Bool = false
     private func updateIsLoading(isLoading: Bool, earlier: Bool, animated: Bool) {
@@ -667,9 +669,26 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         
         self.controllerInteraction.chatIsRotated = historyNodeRotated
+        
+        var displayAdPeer: PeerId?
+        if !isChatPreview {
+            switch subject {
+            case .none, .message:
+                if case let .peer(peerId) = chatLocation {
+                    displayAdPeer = peerId
+                }
+            default:
+                break
+            }
+        }
+        if let displayAdPeer {
+            self.adMessagesContext = context.engine.messages.adMessages(peerId: displayAdPeer)
+        } else {
+            self.adMessagesContext = nil
+        }
 
         var getMessageTransitionNode: (() -> ChatMessageTransitionNodeImpl?)?
-        self.historyNode = ChatHistoryListNodeImpl(context: context, updatedPresentationData: controller?.updatedPresentationData ?? (context.sharedContext.currentPresentationData.with({ $0 }), context.sharedContext.presentationData), chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, tag: nil, source: source, subject: subject, controllerInteraction: controllerInteraction, selectedMessages: self.selectedMessagesPromise.get(), rotated: historyNodeRotated, isChatPreview: isChatPreview, messageTransitionNode: {
+        self.historyNode = ChatHistoryListNodeImpl(context: context, updatedPresentationData: controller?.updatedPresentationData ?? (context.sharedContext.currentPresentationData.with({ $0 }), context.sharedContext.presentationData), chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, adMessagesContext: self.adMessagesContext, tag: nil, source: source, subject: subject, controllerInteraction: controllerInteraction, selectedMessages: self.selectedMessagesPromise.get(), rotated: historyNodeRotated, isChatPreview: isChatPreview, messageTransitionNode: {
             return getMessageTransitionNode?()
         })
 
@@ -1371,11 +1390,11 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             }
         }
         
-        #if DEBUG
+        /*#if DEBUG
         if "".isEmpty {
             hasTranslationPanel = true
         }
-        #endif
+        #endif*/
         
         if hasTranslationPanel {
             let translationPanelNode: ChatTranslationPanelNode
@@ -4330,7 +4349,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 
                 let effectiveInputText = expandedInputStateAttributedString(effectivePresentationInterfaceState.interfaceState.composeInputState.inputText)
                 
-                let peerSpecificEmojiPack = (self.controller?.peerView?.cachedData as? CachedChannelData)?.emojiPack
+                let peerSpecificEmojiPack = (self.controller?.contentData?.state.peerView?.cachedData as? CachedChannelData)?.emojiPack
                 
                 var inlineStickers: [MediaId: Media] = [:]
                 var firstLockedPremiumEmoji: TelegramMediaFile?
@@ -5041,6 +5060,27 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         return leftIndex < rightIndex
     }
     
+    func createHistoryNodeForChatLocation(chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>) -> ChatHistoryListNodeImpl {
+        let historyNode = ChatHistoryListNodeImpl(
+            context: self.context,
+            updatedPresentationData: self.controller?.updatedPresentationData ?? (self.context.sharedContext.currentPresentationData.with({ $0 }), self.context.sharedContext.presentationData),
+            chatLocation: chatLocation,
+            chatLocationContextHolder: chatLocationContextHolder,
+            adMessagesContext: self.adMessagesContext,
+            tag: nil,
+            source: .default,
+            subject: nil,
+            controllerInteraction: self.controllerInteraction,
+            selectedMessages: self.selectedMessagesPromise.get(),
+            rotated: self.controllerInteraction.chatIsRotated,
+            isChatPreview: false,
+            messageTransitionNode: {
+                return nil
+            }
+        )
+        return historyNode
+    }
+    
     func updateChatLocation(chatLocation: ChatLocation, transition: ContainedViewLayoutTransition, tabSwitchDirection: ChatControllerAnimateInnerChatSwitchDirection?) {
         if chatLocation == self.chatLocation {
             return
@@ -5053,6 +5093,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             updatedPresentationData: self.controller?.updatedPresentationData ?? (self.context.sharedContext.currentPresentationData.with({ $0 }), self.context.sharedContext.presentationData),
             chatLocation: chatLocation,
             chatLocationContextHolder: self.chatLocationContextHolder,
+            adMessagesContext: self.adMessagesContext,
             tag: nil,
             source: .default,
             subject: nil,

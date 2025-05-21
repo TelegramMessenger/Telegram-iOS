@@ -1085,7 +1085,6 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
                 })
                 strongSelf.present(controller)
             }
-        }, reportPeerIrrelevantGeoLocation: {
         }, displaySlowmodeTooltip: { _, _ in
         }, displaySendMessageOptions: { [weak self] node, gesture in
             guard let strongSelf = self, let textInputPanelNode = strongSelf.textInputPanelNode else {

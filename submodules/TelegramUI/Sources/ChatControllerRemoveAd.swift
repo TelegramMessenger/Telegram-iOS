@@ -20,6 +20,6 @@ public extension ChatControllerImpl {
         if let foundItemNode, let message = foundItemNode.item?.message {
             self.chatDisplayNode.historyNode.setCurrentDeleteAnimationCorrelationIds(Set([message.stableId]))
         }
-        self.chatDisplayNode.historyNode.adMessagesContext?.remove(opaqueId: opaqueId)
+        self.chatDisplayNode.adMessagesContext?.remove(opaqueId: opaqueId)
     }
 }

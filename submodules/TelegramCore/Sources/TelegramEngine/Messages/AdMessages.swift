@@ -559,6 +559,7 @@ private class AdMessagesHistoryContextImpl {
 public class AdMessagesHistoryContext {
     private let queue = Queue()
     private let impl: QueueLocalObject<AdMessagesHistoryContextImpl>
+    public let peerId: EnginePeer.Id
     
     public var state: Signal<(interPostInterval: Int32?, messages: [Message]), NoError> {
         return Signal { subscriber in
@@ -576,6 +577,7 @@ public class AdMessagesHistoryContext {
     }
     
     public init(account: Account, peerId: PeerId) {
+        self.peerId = peerId
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
             return AdMessagesHistoryContextImpl(queue: queue, account: account, peerId: peerId)

@@ -850,7 +850,7 @@ extension ChatControllerImpl {
             let controller = legacyAttachmentMenu(
                 context: strongSelf.context,
                 peer: strongSelf.presentationInterfaceState.renderedPeer?.peer,
-                threadTitle: strongSelf.threadInfo?.title, chatLocation: strongSelf.chatLocation,
+                threadTitle: strongSelf.contentData?.state.threadInfo?.title, chatLocation: strongSelf.chatLocation,
                 editMediaOptions: menuEditMediaOptions,
                 addingMedia: editMediaOptions == nil,
                 saveEditedPhotos: settings.storeEditedPhotos,
@@ -1203,14 +1203,14 @@ extension ChatControllerImpl {
             isScheduledMessages = true
         }
         var paidMediaAllowed = false
-        if let cachedData = self.peerView?.cachedData as? CachedChannelData, cachedData.flags.contains(.paidMediaAllowed) {
+        if let cachedData = self.contentData?.state.peerView?.cachedData as? CachedChannelData, cachedData.flags.contains(.paidMediaAllowed) {
             paidMediaAllowed = true
         }
         let controller = MediaPickerScreenImpl(
             context: self.context,
             updatedPresentationData: self.updatedPresentationData,
             peer: (self.presentationInterfaceState.renderedPeer?.peer).flatMap(EnginePeer.init),
-            threadTitle: self.threadInfo?.title,
+            threadTitle: self.contentData?.state.threadInfo?.title,
             chatLocation: self.chatLocation,
             isScheduledMessages: isScheduledMessages, 
             bannedSendPhotos: bannedSendPhotos,
@@ -1369,7 +1369,7 @@ extension ChatControllerImpl {
                 slowModeEnabled = true
             }
             
-            let _ = legacyAssetPicker(context: strongSelf.context, presentationData: strongSelf.presentationData, editingMedia: editingMedia, fileMode: fileMode, peer: peer, threadTitle: strongSelf.threadInfo?.title, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, selectionLimit: selectionLimit).startStandalone(next: { generator in
+            let _ = legacyAssetPicker(context: strongSelf.context, presentationData: strongSelf.presentationData, editingMedia: editingMedia, fileMode: fileMode, peer: peer, threadTitle: strongSelf.contentData?.state.threadInfo?.title, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, selectionLimit: selectionLimit).startStandalone(next: { generator in
                 if let strongSelf = self {
                     let legacyController = LegacyController(presentation: fileMode ? .navigation : .custom, theme: strongSelf.presentationData.theme, initialLayout: strongSelf.validLayout)
                     legacyController.navigationPresentation = .modal

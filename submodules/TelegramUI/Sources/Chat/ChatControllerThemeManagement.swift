@@ -168,7 +168,7 @@ extension ChatControllerImpl {
             }
             
             var canResetWallpaper = false
-            if let cachedUserData = strongSelf.peerView?.cachedData as? CachedUserData {
+            if let cachedUserData = strongSelf.contentData?.state.peerView?.cachedData as? CachedUserData {
                 canResetWallpaper = cachedUserData.wallpaper != nil
             }
             

@@ -2227,6 +2227,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             updatedPresentationData: updatedPresentationData,
             chatLocation: chatLocation,
             chatLocationContextHolder: chatLocationContextHolder,
+            adMessagesContext: nil,
             tag: tag,
             source: source,
             subject: subject,
