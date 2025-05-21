@@ -11,6 +11,10 @@ NS_ASSUME_NONNULL_BEGIN
 - (NSUInteger)encodedBytes;
 - (NSTimeInterval)encodedDuration;
 
+- (NSDictionary *)pause;
+- (bool)resumeWithDataItem:(TGDataItem *)dataItem encoderState:(NSDictionary *)state;
+
+
 @end
 
 NS_ASSUME_NONNULL_END

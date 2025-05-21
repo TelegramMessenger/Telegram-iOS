@@ -926,7 +926,7 @@ final class StoryItemSetContainerSendMessage {
                     }
                 } else {
                     if self.audioRecorderValue == nil {
-                        self.audioRecorder.set(component.context.sharedContext.mediaManager.audioRecorder(beginWithTone: false, applicationBindings: component.context.sharedContext.applicationBindings, beganWithTone: { _ in
+                        self.audioRecorder.set(component.context.sharedContext.mediaManager.audioRecorder(resumeData: nil, beginWithTone: false, applicationBindings: component.context.sharedContext.applicationBindings, beganWithTone: { _ in
                         }))
                     }
                 }

@@ -585,7 +585,7 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
         
         var emojiStatus: PeerEmojiStatus?
         if let user = interfaceState.renderedPeer?.peer as? TelegramUser, let emojiStatusValue = user.emojiStatus {
-            if user.isFake || user.isScam {
+            if user.isFake || user.isScam { 
             } else {
                 emojiStatus = emojiStatusValue
             }
@@ -596,7 +596,8 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
             }
         }
         
-        if let emojiStatus = emojiStatus, case let .emoji(fileId) = emojiStatus.content {
+        if let emojiStatus {
+            let fileId = emojiStatus.fileId
             if self.emojiStatusFileId != fileId {
                 self.emojiStatusFileId = fileId
                 

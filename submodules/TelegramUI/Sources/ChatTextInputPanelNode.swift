@@ -2804,8 +2804,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                 
                 animatePosition(for: prevPreviewInputPanelNode.waveformBackgroundNode.layer)
                 animatePosition(for: prevPreviewInputPanelNode.waveformScrubberNode.layer)
-                animatePosition(for: prevPreviewInputPanelNode.durationLabel.layer)
-                animatePosition(for: prevPreviewInputPanelNode.playButton.layer)
+                animatePosition(for: prevPreviewInputPanelNode.playButtonNode.layer)
+                animatePosition(for: prevPreviewInputPanelNode.trimView.layer)
                 if let view = prevPreviewInputPanelNode.scrubber.view {
                     animatePosition(for: view.layer)
                 }
@@ -2821,8 +2821,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             }
             animateAlpha(for: prevPreviewInputPanelNode.waveformBackgroundNode.layer)
             animateAlpha(for: prevPreviewInputPanelNode.waveformScrubberNode.layer)
-            animateAlpha(for: prevPreviewInputPanelNode.durationLabel.layer)
-            animateAlpha(for: prevPreviewInputPanelNode.playButton.layer)
+            animateAlpha(for: prevPreviewInputPanelNode.playButtonNode.layer)
+            animateAlpha(for: prevPreviewInputPanelNode.trimView.layer)
             if let view = prevPreviewInputPanelNode.scrubber.view {
                 animateAlpha(for: view.layer)
             }

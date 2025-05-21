@@ -1358,7 +1358,7 @@ final class MediaEditorScreenComponent: Component {
                 
                 var canRecordVideo = true
                 if let subject = controller.node.subject {
-                    if case let .video(_, _, _, additionalPath, _, _, _, _, _) = subject, additionalPath != nil {
+                    if case let .video(_, _, _, additionalPath, _, _, _, _, _, _) = subject, additionalPath != nil {
                         canRecordVideo = false
                     }
                     if case .videoCollage = subject {
@@ -2348,8 +2348,8 @@ final class MediaEditorScreenComponent: Component {
                             )
                             
                             var selectedItemId = ""
-                            if case let .asset(asset) = controller.node.subject {
-                                selectedItemId = asset.localIdentifier
+                            if let subject = controller.node.subject, let item = controller.node.items.first(where: { $0.source.identifier == subject.sourceIdentifier }) {
+                                selectedItemId = item.identifier
                             }
                             
                             let selectionPanel: ComponentView<Empty>
@@ -2385,7 +2385,7 @@ final class MediaEditorScreenComponent: Component {
                                             guard let self, let controller else {
                                                 return
                                             }
-                                            if let itemIndex = controller.node.items.firstIndex(where: { $0.asset.localIdentifier == id }) {
+                                            if let itemIndex = controller.node.items.firstIndex(where: { $0.identifier == id }) {
                                                 controller.node.items[itemIndex].isEnabled = !controller.node.items[itemIndex].isEnabled
                                             }
                                             self.state?.updated(transition: .spring(duration: 0.3))
@@ -2394,7 +2394,7 @@ final class MediaEditorScreenComponent: Component {
                                             guard let self, let controller else {
                                                 return
                                             }
-                                            guard let fromIndex = controller.node.items.firstIndex(where: { $0.asset.localIdentifier == fromId }), let toIndex = controller.node.items.firstIndex(where: { $0.asset.localIdentifier == toId }), toIndex < controller.node.items.count else {
+                                            guard let fromIndex = controller.node.items.firstIndex(where: { $0.identifier == fromId }), let toIndex = controller.node.items.firstIndex(where: { $0.identifier == toId }), toIndex < controller.node.items.count else {
                                                 return
                                             }
                                             let fromItem = controller.node.items[fromIndex]
@@ -2928,19 +2928,87 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
     }
     
     struct EditingItem: Equatable {
-        let asset: PHAsset
+        enum Source: Equatable {
+            case image(UIImage, PixelDimensions)
+            case video(String, UIImage?, PixelDimensions, Double)
+            case asset(PHAsset)
+            
+            static func ==(lhs: Source, rhs: Source) -> Bool {
+                switch lhs {
+                case let .image(lhsImage, _):
+                    if case let .image(rhsImage, _) = rhs {
+                        return lhsImage === rhsImage
+                    }
+                case let .video(lhsPath, _, _, _):
+                    if case let .video(rhsPath, _, _, _) = rhs {
+                        return lhsPath == rhsPath
+                    }
+                case let .asset(lhsAsset):
+                    if case let .asset(rhsAsset) = rhs {
+                        return lhsAsset.localIdentifier == rhsAsset.localIdentifier
+                    }
+                }
+                return false
+            }
+            
+            var identifier: String {
+                switch self {
+                case let .image(image, _):
+                    return "\(Unmanaged.passUnretained(image).toOpaque())"
+                case let .video(videoPath, _, _, _):
+                    return videoPath
+                case let .asset(asset):
+                    return asset.localIdentifier
+                }
+            }
+            
+            var subject: MediaEditorScreenImpl.Subject {
+                switch self {
+                case let .image(image, dimensions):
+                    return .image(image: image, dimensions: dimensions, additionalImage: nil, additionalImagePosition: .bottomLeft, fromCamera: false)
+                case let .video(videoPath, thumbnail, dimensions, duration):
+                    return .video(videoPath: videoPath, thumbnail: thumbnail, mirror: false, additionalVideoPath: nil, additionalThumbnail: nil, dimensions: dimensions, duration: duration, videoPositionChanges: [], additionalVideoPosition: .bottomLeft, fromCamera: false)
+                case let .asset(asset):
+                    return .asset(asset)
+                }
+            }
+            
+            var isVideo: Bool {
+                switch self {
+                case .image:
+                    return false
+                case .video:
+                    return true
+                case let .asset(asset):
+                    return asset.mediaType == .video
+                }
+            }
+        }
+        
+        var identifier: String
+        var source: Source
         var values: MediaEditorValues?
         var caption = NSAttributedString()
         var thumbnail: UIImage?
         var isEnabled = true
         var version: Int = 0
         
-        init(asset: PHAsset) {
-            self.asset = asset
+        init?(subject: MediaEditorScreenImpl.Subject) {
+            self.identifier = "\(Int64.random(in: 0 ..< .max))"
+            switch subject {
+            case let .image(image, dimensions, _, _, _):
+                self.source = .image(image, dimensions)
+            case let .video(videoPath, thumbnail, _, _, _, dimensions, duration, _, _, _):
+                self.source = .video(videoPath, thumbnail, dimensions, duration)
+            case let .asset(asset):
+                self.source = .asset(asset)
+            default:
+                return nil
+            }
         }
         
         public static func ==(lhs: EditingItem, rhs: EditingItem) -> Bool {
-            if lhs.asset.localIdentifier != rhs.asset.localIdentifier {
+            if lhs.source != rhs.source {
                 return false
             }
             if lhs.values != rhs.values {
@@ -3235,9 +3303,9 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                     
                     var effectiveSubject = subject
                     switch subject {
-                    case let .assets(assets):
-                        effectiveSubject = .asset(assets.first!)
-                        self.items = assets.map { EditingItem(asset: $0) }
+                    case let .multiple(subjects):
+                        effectiveSubject = subjects.first!
+                        self.items = subjects.compactMap { EditingItem(subject: $0) }
                     case let .draft(draft, _):
                         for entity in draft.values.entities {
                             if case let .sticker(sticker) = entity {
@@ -3415,9 +3483,12 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             var isFromCamera = false
             let isSavingAvailable: Bool
             switch subject {
-            case .image, .video:
+            case let .image(_, _, _, _, fromCamera):
+                isFromCamera = fromCamera
                 isSavingAvailable = !controller.isEmbeddedEditor
-                isFromCamera = true
+            case let .video(_, _, _, _, _, _, _, _, _, fromCamera):
+                isFromCamera = fromCamera
+                isSavingAvailable = !controller.isEmbeddedEditor
             case .draft, .message,. gift:
                 isSavingAvailable = true
             default:
@@ -3599,7 +3670,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             }
             
             switch subject {
-            case let .image(_, _, additionalImage, position):
+            case let .image(_, _, additionalImage, position, _):
                 if let additionalImage {
                     let image = generateImage(CGSize(width: additionalImage.size.width, height: additionalImage.size.width), contextGenerator: { size, context in
                         let bounds = CGRect(origin: .zero, size: size)
@@ -3617,7 +3688,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                     imageEntity.position = position.getPosition(storyDimensions)
                     self.entitiesView.add(imageEntity, announce: false)
                 }
-            case let .video(_, _, mirror, additionalVideoPath, _, _, _, changes, position):
+            case let .video(_, _, mirror, additionalVideoPath, _, _, _, changes, position, _):
                 mediaEditor.setVideoIsMirrored(mirror)
                 if let additionalVideoPath {
                     let videoEntity = DrawingStickerEntity(content: .dualVideoReference(false))
@@ -3784,7 +3855,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                                         self.backgroundDimView.isHidden = false
                                     })
                                 }
-                            } else if CACurrentMediaTime() - self.initializationTimestamp > 0.2, case .image = subject {
+                            } else if CACurrentMediaTime() - self.initializationTimestamp > 0.2, case .image = subject, self.items.isEmpty {
                                 self.previewContainerView.alpha = 1.0
                                 self.previewContainerView.layer.allowsGroupOpacity = true
                                 self.previewContainerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, completion: { _ in
@@ -4427,7 +4498,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 case .camera:
                     self.componentHostView?.animateIn(from: .camera, completion: completion)
                     
-                    if let subject = self.subject, case let .video(_, mainTransitionImage, _, _, additionalTransitionImage, _, _, positionChangeTimestamps, pipPosition) = subject, let mainTransitionImage {
+                    if let subject = self.subject, case let .video(_, mainTransitionImage, _, _, additionalTransitionImage, _, _, positionChangeTimestamps, pipPosition, _) = subject, let mainTransitionImage {
                         var transitionImage = mainTransitionImage
                         if let additionalTransitionImage {
                             var backgroundImage = mainTransitionImage
@@ -5448,7 +5519,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         }
         
         func switchToItem(_ identifier: String) {
-            guard let controller = self.controller, let mediaEditor = self.mediaEditor, let itemIndex = self.items.firstIndex(where: { $0.asset.localIdentifier == identifier }), case let .asset(asset) = self.subject, let currentItemIndex = self.items.firstIndex(where: { $0.asset.localIdentifier == asset.localIdentifier }) else {
+            guard let controller = self.controller, let mediaEditor = self.mediaEditor, let itemIndex = self.items.firstIndex(where: { $0.identifier == identifier }), let subject = self.subject, let currentItemIndex = self.items.firstIndex(where: { $0.source.identifier == subject.sourceIdentifier }) else {
                 return
             }
             
@@ -5489,7 +5560,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             
             let targetItem = self.items[itemIndex]
             controller.node.setup(
-                subject: .asset(targetItem.asset),
+                subject: targetItem.source.subject,
                 values: targetItem.values,
                 caption: targetItem.caption
             )
@@ -6448,27 +6519,40 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         }
         
         case empty(PixelDimensions)
-        case image(image: UIImage, dimensions: PixelDimensions, additionalImage: UIImage?, additionalImagePosition: PIPPosition)
-        case video(videoPath: String, thumbnail: UIImage?, mirror: Bool, additionalVideoPath: String?, additionalThumbnail: UIImage?, dimensions: PixelDimensions, duration: Double, videoPositionChanges: [(Bool, Double)], additionalVideoPosition: PIPPosition)
+        case image(image: UIImage, dimensions: PixelDimensions, additionalImage: UIImage?, additionalImagePosition: PIPPosition, fromCamera: Bool)
+        case video(videoPath: String, thumbnail: UIImage?, mirror: Bool, additionalVideoPath: String?, additionalThumbnail: UIImage?, dimensions: PixelDimensions, duration: Double, videoPositionChanges: [(Bool, Double)], additionalVideoPosition: PIPPosition, fromCamera: Bool)
         case videoCollage(items: [VideoCollageItem])
         case asset(PHAsset)
         case draft(MediaEditorDraft, Int64?)
         case message([MessageId])
         case gift(StarGift.UniqueGift)
         case sticker(TelegramMediaFile, [String])
-        case assets([PHAsset])
+        case multiple([Subject])
+        
+        var sourceIdentifier: String {
+            switch self {
+            case let .image(image, _, _, _, _):
+                return "\(Unmanaged.passUnretained(image).toOpaque())"
+            case let .video(videoPath, _, _, _, _, _, _, _, _, _):
+                return videoPath
+            case let .asset(asset):
+                return asset.localIdentifier
+            default:
+                fatalError()
+            }
+        }
         
         var dimensions: PixelDimensions {
             switch self {
             case let .empty(dimensions):
                 return dimensions
-            case let .image(_, dimensions, _, _), let .video(_, _, _, _, _, dimensions, _, _, _):
+            case let .image(_, dimensions, _, _, _), let .video(_, _, _, _, _, dimensions, _, _, _, _):
                 return dimensions
             case let .asset(asset):
                 return PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight))
             case let .draft(draft, _):
                 return draft.dimensions
-            case .message, .gift, .sticker, .videoCollage, .assets:
+            case .message, .gift, .sticker, .videoCollage, .multiple:
                 return PixelDimensions(storyDimensions)
             }
         }
@@ -6480,9 +6564,9 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                     context.clear(CGRect(origin: .zero, size: size))
                 })!
                 return .image(image, dimensions)
-            case let .image(image, dimensions, _, _):
+            case let .image(image, dimensions, _, _, _):
                 return .image(image, dimensions)
-            case let .video(videoPath, transitionImage, mirror, additionalVideoPath, _, dimensions, duration, _, _):
+            case let .video(videoPath, transitionImage, mirror, additionalVideoPath, _, dimensions, duration, _, _, _):
                 return .video(videoPath, transitionImage, mirror, additionalVideoPath, dimensions, duration)
             case let .videoCollage(items):
                 return .videoCollage(items.map { $0.editorItem })
@@ -6496,8 +6580,8 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 return .gift(gift)
             case let .sticker(sticker, _):
                 return .sticker(sticker)
-            case let .assets(assets):
-                return .asset(assets.first!)
+            case let .multiple(subjects):
+                return subjects.first!.editorSubject
             }
         }
         
@@ -6525,7 +6609,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 return false
             case .sticker:
                 return false
-            case .assets:
+            case .multiple:
                 return false
             }
         }
@@ -8113,7 +8197,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                     context.clear(CGRect(origin: .zero, size: size))
                 })!
                 exportSubject = .single(.image(image: image))
-            case let .video(path, _, _, _, _, _, _, _, _):
+            case let .video(path, _, _, _, _, _, _, _, _, _):
                 let asset = AVURLAsset(url: NSURL(fileURLWithPath: path) as URL)
                 exportSubject = .single(.video(asset: asset, isStory: true))
             case let .videoCollage(items):
@@ -8164,7 +8248,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 |> map { asset in
                     return .video(asset: asset, isStory: true)
                 }
-            case let .image(image, _, _, _):
+            case let .image(image, _, _, _, _):
                 exportSubject = .single(.image(image: image))
             case let .asset(asset):
                 exportSubject = Signal { subscriber in
@@ -8222,7 +8306,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 }
             case let .sticker(file, _):
                 exportSubject = .single(.sticker(file: file))
-            case .assets:
+            case .multiple:
                 fatalError()
             }
             

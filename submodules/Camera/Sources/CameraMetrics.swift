@@ -14,7 +14,7 @@ public extension Camera {
         case iPhone15ProMax
         case unknown
         
-        init(model: DeviceModel) {
+        public init(model: DeviceModel) {
             switch model {
             case  .iPodTouch1, .iPodTouch2, .iPodTouch3, .iPodTouch4, .iPodTouch5, .iPodTouch6, .iPodTouch7:
                 self = .singleCamera

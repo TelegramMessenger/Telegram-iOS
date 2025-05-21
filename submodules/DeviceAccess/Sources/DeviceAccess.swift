@@ -161,6 +161,8 @@ public final class DeviceAccess {
                                 subscriber.putNext(.notDetermined)
                             case .authorized:
                                 subscriber.putNext(.allowed)
+                            case .limited:
+                                subscriber.putNext(.limited)
                             default:
                                 subscriber.putNext(.denied)
                         }
@@ -181,7 +183,7 @@ public final class DeviceAccess {
                 return status
                 |> then(self.contacts
                     |> mapToSignal { authorized -> Signal<AccessType, NoError> in
-                        if let authorized = authorized {
+                        if let authorized {
                             return .single(authorized ? .allowed : .denied)
                         } else {
                             return .complete()
@@ -538,6 +540,9 @@ public final class DeviceAccess {
                                             completion(authorized)
                                         })
                                     case .authorized:
+                                        self.contactsPromise.set(.single(true))
+                                        completion(true)
+                                    case .limited:
                                         self.contactsPromise.set(.single(true))
                                         completion(true)
                                     default:

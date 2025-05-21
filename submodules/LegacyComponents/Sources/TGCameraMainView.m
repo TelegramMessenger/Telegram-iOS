@@ -70,7 +70,7 @@
 @dynamic thumbnailSignalForItem;
 @dynamic editingContext;
 
-- (instancetype)initWithFrame:(CGRect)frame avatar:(bool)avatar hasUltrawideCamera:(bool)hasUltrawideCamera hasTelephotoCamera:(bool)hasTelephotoCamera camera:(PGCamera *)camera {
+- (instancetype)initWithFrame:(CGRect)frame avatar:(bool)avatar camera:(PGCamera *)camera {
     self = [super init];
     if (self != nil) {
     }

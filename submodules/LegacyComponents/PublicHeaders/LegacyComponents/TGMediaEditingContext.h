@@ -110,11 +110,13 @@
 - (bool)setPaintingData:(NSData *)data entitiesData:(NSData *)entitiesData image:(UIImage *)image stillImage:(UIImage *)stillImage forItem:(NSObject<TGMediaEditableItem> *)item dataUrl:(NSURL **)dataOutUrl entitiesDataUrl:(NSURL **)entitiesDataOutUrl imageUrl:(NSURL **)imageOutUrl forVideo:(bool)video;
 - (void)clearPaintingData;
 
-
 - (bool)isCaptionAbove;
 - (SSignal *)captionAbove;
 - (void)setCaptionAbove:(bool)captionAbove;
 
+- (bool)isHighQualityPhoto;
+- (SSignal *)highQualityPhoto;
+- (void)setHighQualityPhoto:(bool)highQualityPhoto;
 
 - (SSignal *)facesForItem:(NSObject<TGMediaEditableItem> *)item;
 - (void)setFaces:(NSArray *)faces forItem:(NSObject<TGMediaEditableItem> *)item;

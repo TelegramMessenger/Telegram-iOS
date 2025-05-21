@@ -5310,9 +5310,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         audioRecorder.start()
                         strongSelf.audioRecorderStatusDisposable = (audioRecorder.recordingState
-                        |> deliverOnMainQueue).startStrict(next: { value in
-                            if case .stopped = value {
-                                self?.stopMediaRecorder()
+                        |> deliverOnMainQueue).startStrict(next: { [weak self] value in
+                            if let self, case .stopped = value {
+                                if self.presentationInterfaceState.interfaceState.mediaDraftState != nil {
+                                    
+                                } else {
+                                    self.stopMediaRecorder()
+                                }
                             }
                         })
                     } else {

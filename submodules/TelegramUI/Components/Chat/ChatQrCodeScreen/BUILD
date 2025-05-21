@@ -44,6 +44,7 @@ swift_library(
         "//submodules/SegmentedControlNode",
         "//submodules/AnimatedCountLabelNode",
         "//submodules/HexColor",
+        "//submodules/QrCodeUI",
     ],
     visibility = [
         "//visibility:public",

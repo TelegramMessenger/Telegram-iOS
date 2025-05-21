@@ -146,7 +146,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     }
     private let tick = ValuePromise<Int>(0)
     
-    init(environment: ShareControllerEnvironment, context: ShareControllerAccountContext, switchableAccounts: [ShareControllerSwitchableAccount], theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, peers: [(peer: EngineRenderedPeer, presence: EnginePeer.Presence?, requiresPremiumForMessaging: Bool, requiresStars: Int64?)], accountPeer: EnginePeer, controllerInteraction: ShareControllerInteraction, externalShare: Bool, switchToAnotherAccount: @escaping () -> Void, debugAction: @escaping () -> Void, extendedInitialReveal: Bool, segmentedValues: [ShareControllerSegmentedValue]?, fromPublicChannel: Bool) {
+    init(environment: ShareControllerEnvironment, context: ShareControllerAccountContext, switchableAccounts: [ShareControllerSwitchableAccount], theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, peers: [(peer: EngineRenderedPeer, presence: EnginePeer.Presence?, requiresPremiumForMessaging: Bool, requiresStars: Int64?)], accountPeer: EnginePeer, controllerInteraction: ShareControllerInteraction, externalShare: Bool, isMainApp: Bool, switchToAnotherAccount: @escaping () -> Void, debugAction: @escaping () -> Void, extendedInitialReveal: Bool, segmentedValues: [ShareControllerSegmentedValue]?, fromPublicChannel: Bool) {
         self.environment = environment
         self.context = context
         self.theme = theme
@@ -171,7 +171,17 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
             var index: Int32 = 0
             
             if canShareStory {
-                entries.append(SharePeerEntry(index: index, item: .story(isMessage: fromPublicChannel), theme: theme, strings: strings))
+                let storyMode: ShareControllerPeerGridItem.ShareItem.StoryMode
+                if fromPublicChannel {
+                    storyMode = .repostMessage
+                } else {
+                    if !isMainApp {
+                        storyMode = .createStory
+                    } else {
+                        storyMode = .repostStory
+                    }
+                }
+                entries.append(SharePeerEntry(index: index, item: .story(mode: storyMode), theme: theme, strings: strings))
                 index += 1
             }
             
