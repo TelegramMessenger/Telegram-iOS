@@ -22,6 +22,11 @@ objc_library(
         "-Werror",
         "-I{}/lottiecpp/Sources".format(package_name()),
     ],
+    cxxopts = [
+        "-Werror",
+        "-std=c++17",
+        "-I{}/lottiecpp/Sources".format(package_name()),
+    ],
     hdrs = glob([
         "lottiecpp/PublicHeaders/**/*.h",
     ]),
@@ -49,6 +54,9 @@ cc_library(
         "PublicHeaders",
     ],
     copts = [],
+    cxxopts = [
+        "-std=c++17",
+    ],
     visibility = ["//visibility:public"],
     linkstatic = 1,
 )

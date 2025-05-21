@@ -3473,6 +3473,9 @@ cc_library(
         "-DWEBRTC_HAVE_DCSCTP",
         "-DWEBRTC_HAVE_SCTP",
     ] + arch_specific_cflags + optimization_flags,
+    cxxopts = [
+        "-std=c++17",
+    ],
     deps = [
         "//third-party/boringssl:crypto",
         "//third-party/boringssl:ssl",
@@ -3602,6 +3605,9 @@ objc_library(
         "-DRTC_DISABLE_TRACE_EVENTS",
         "-DRTC_DISABLE_METRICS",
     ] + arch_specific_cflags + optimization_flags,
+    cxxopts = [
+        "-std=c++17",
+    ],
     deps = [
         "//third-party/boringssl:crypto",
         "//third-party/boringssl:ssl",
