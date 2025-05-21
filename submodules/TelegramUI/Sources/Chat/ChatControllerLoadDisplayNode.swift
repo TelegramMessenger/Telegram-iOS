@@ -293,8 +293,11 @@ extension ChatControllerImpl {
         if self.presentationInterfaceState.search != nil && contentData.state.hasSearchTags {
             displayActionsPanel = true
         }
-        
         if displayActionsPanel != didDisplayActionsPanel {
+            animated = true
+        }
+        
+        if previousState.pinnedMessage != contentData.state.pinnedMessage {
             animated = true
         }
         
