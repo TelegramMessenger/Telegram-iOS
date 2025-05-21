@@ -682,7 +682,6 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                 })
                 strongSelf.present(controller, nil)
             }
-        }, reportPeerIrrelevantGeoLocation: {
         }, displaySlowmodeTooltip: { _, _ in
         }, displaySendMessageOptions: { [weak self] node, gesture in
             guard let strongSelf = self else {

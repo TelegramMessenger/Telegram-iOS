@@ -162,6 +162,9 @@ genrule(
 cc_library(
     name = "openssl_lib",
     srcs = [":" + x for x in openssl_libs],
+    cxxopts = [
+        "-std=c++17",
+    ],
 )
 
 objc_library(

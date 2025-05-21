@@ -153,8 +153,6 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
                     displayActionsPanel = true
                 } else if peerStatusSettings.contains(.canShareContact) {
                     displayActionsPanel = true
-                } else if contactStatus.canReportIrrelevantLocation && peerStatusSettings.contains(.canReportIrrelevantGeoLocation) {
-                    displayActionsPanel = true
                 } else if peerStatusSettings.contains(.suggestAddMembers) {
                     displayActionsPanel = true
                 }
@@ -232,6 +230,10 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
 }
 
 func titleTopicsPanelForChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: ChatTitleAccessoryPanelNode?, controllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?, force: Bool) -> ChatTopicListTitleAccessoryPanelNode? {
+    //TODO:release
+    if "".isEmpty {
+        return nil
+    }
     if let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isForumOrMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = chatPresentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.adminRights != nil, chatPresentationInterfaceState.search == nil {
         let topicListDisplayMode = chatPresentationInterfaceState.topicListDisplayMode ?? .top
         if case .top = topicListDisplayMode, let peerId = chatPresentationInterfaceState.chatLocation.peerId {

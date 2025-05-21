@@ -17,6 +17,10 @@ objc_library(
     copts = [
         "-Werror",
     ],
+    cxxopts = [
+        "-Werror",
+        "-std=c++17",
+    ],
     hdrs = public_headers,
     defines = [
         "MINIMAL_ASDK",
