@@ -96,6 +96,7 @@ public final class MediaPlayerTimeTextNode: ASDisplayNode {
     }
     
     public var showDurationIfNotStarted = false
+    public var isScrubbing = false
     
     private var updateTimer: SwiftSignalKit.Timer?
     
@@ -175,13 +176,13 @@ public final class MediaPlayerTimeTextNode: ASDisplayNode {
         }
                 
         if let statusValue = self.statusValue, Double(0.0).isLess(than: statusValue.duration) {
-            let timestamp = statusValue.timestamp - (self.trimRange?.lowerBound ?? 0.0)
+            let timestamp = max(0.0, statusValue.timestamp - (self.trimRange?.lowerBound ?? 0.0))
             var duration = statusValue.duration
             if let trimRange = self.trimRange {
                 duration = trimRange.upperBound - trimRange.lowerBound
             }
             
-            if self.showDurationIfNotStarted && timestamp < .ulpOfOne {
+            if self.showDurationIfNotStarted && (timestamp < .ulpOfOne || self.isScrubbing) {
                 let timestamp = Int32(duration)
                 self.state = MediaPlayerTimeTextNodeState(hours: timestamp / (60 * 60), minutes: timestamp % (60 * 60) / 60, seconds: timestamp % 60)
             } else {
