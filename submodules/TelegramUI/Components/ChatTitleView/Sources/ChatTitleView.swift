@@ -1021,16 +1021,16 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                 if activitySize.width < size.width {
                     activityFrame.origin.x = -clearBounds.minX + floor((size.width - activityFrame.width) / 2.0)
                 }
-                self.activityNode.frame = activityFrame
+                titleTransition.updateFrameAdditiveToCenter(node: self.activityNode, frame: activityFrame)
             }
             
             if let image = self.titleLeftIconNode.image {
-                self.titleLeftIconNode.frame = CGRect(origin: CGPoint(x: -image.size.width - 3.0 - UIScreenPixel, y: 4.0), size: image.size)
+                titleTransition.updateFrame(node: self.titleLeftIconNode, frame: CGRect(origin: CGPoint(x: -image.size.width - 3.0 - UIScreenPixel, y: 4.0), size: image.size))
             }
             
             var nextIconX: CGFloat = titleFrame.width
             
-            self.titleVerifiedIconView.frame = CGRect(origin: CGPoint(x: 0.0, y: floor((titleFrame.height - titleVerifiedSize.height) / 2.0)), size: titleVerifiedSize)
+            titleTransition.updateFrame(view: self.titleVerifiedIconView, frame: CGRect(origin: CGPoint(x: 0.0, y: floor((titleFrame.height - titleVerifiedSize.height) / 2.0)), size: titleVerifiedSize))
             
             self.titleCredibilityIconView.frame = CGRect(origin: CGPoint(x: nextIconX - titleCredibilitySize.width, y: floor((titleFrame.height - titleCredibilitySize.height) / 2.0)), size: titleCredibilitySize)
             nextIconX -= titleCredibilitySize.width
@@ -1056,7 +1056,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
             titleTransition.updateFrameAdditiveToCenter(view: self.titleContainerView, frame: titleFrame)
             titleTransition.updateFrameAdditiveToCenter(node: self.titleTextNode, frame: CGRect(origin: CGPoint(), size: titleFrame.size))
             
-            self.activityNode.frame = CGRect(origin: CGPoint(x: floor((clearBounds.width - combinedWidth) / 2.0 + titleSize.width + leftIconWidth + credibilityIconWidth + verifiedIconWidth + statusIconWidth + rightIconWidth + titleInfoSpacing), y: floor((size.height - activitySize.height) / 2.0)), size: activitySize)
+            titleTransition.updateFrameAdditiveToCenter(node: self.activityNode, frame: CGRect(origin: CGPoint(x: floor((clearBounds.width - combinedWidth) / 2.0 + titleSize.width + leftIconWidth + credibilityIconWidth + verifiedIconWidth + statusIconWidth + rightIconWidth + titleInfoSpacing), y: floor((size.height - activitySize.height) / 2.0)), size: activitySize))
             
             if let image = self.titleLeftIconNode.image {
                 self.titleLeftIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.minX, y: titleFrame.minY + 4.0), size: image.size)
@@ -1069,11 +1069,11 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
             self.titleCredibilityIconView.frame = CGRect(origin: CGPoint(x: nextIconX - titleCredibilitySize.width, y: floor((titleFrame.height - titleCredibilitySize.height) / 2.0)), size: titleCredibilitySize)
             nextIconX -= titleCredibilitySize.width
             
-            self.titleStatusIconView.frame = CGRect(origin: CGPoint(x: nextIconX - titleStatusSize.width, y: floor((titleFrame.height - titleStatusSize.height) / 2.0)), size: titleStatusSize)
+            titleTransition.updateFrame(view: self.titleStatusIconView, frame: CGRect(origin: CGPoint(x: nextIconX - titleStatusSize.width, y: floor((titleFrame.height - titleStatusSize.height) / 2.0)), size: titleStatusSize))
             nextIconX -= titleStatusSize.width
             
             if let image = self.titleRightIconNode.image {
-                self.titleRightIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.maxX - image.size.width, y: titleFrame.minY + 6.0), size: image.size)
+                titleTransition.updateFrame(node: self.titleRightIconNode, frame: CGRect(origin: CGPoint(x: titleFrame.maxX - image.size.width, y: titleFrame.minY + 6.0), size: image.size))
             }
         }
         
