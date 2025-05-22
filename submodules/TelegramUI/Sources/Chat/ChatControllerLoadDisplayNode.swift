@@ -153,7 +153,8 @@ extension ChatControllerImpl {
             currentChatListFilter: self.currentChatListFilter,
             customChatNavigationStack: self.customChatNavigationStack,
             presentationData: self.presentationData,
-            historyNode: historyNode
+            historyNode: historyNode,
+            inviteRequestsContext: self.contentData?.inviteRequestsContext
         )
         self.pendingContentData = (contentData, historyNode)
         self.contentDataDisposable = (contentData.isReady.get()
@@ -248,7 +249,16 @@ extension ChatControllerImpl {
         
         self.chatDisplayNode.overlayTitle = contentData.overlayTitle
         
-        self.chatDisplayNode.historyNode.nextChannelToRead = contentData.state.nextChannelToRead
+        self.chatDisplayNode.historyNode.nextChannelToRead = contentData.state.nextChannelToRead.flatMap { nextChannelToRead -> (peer: EnginePeer, threadData: (id: Int64, data: MessageHistoryThreadData)?, unreadCount: Int, location: TelegramEngine.NextUnreadChannelLocation)? in
+            return (
+                nextChannelToRead.peer,
+                nextChannelToRead.threadData.flatMap { threadData -> (id: Int64, data: MessageHistoryThreadData) in
+                    return (threadData.id, threadData.data)
+                },
+                nextChannelToRead.unreadCount,
+                nextChannelToRead.location
+            )
+        }
         self.chatDisplayNode.historyNode.nextChannelToReadDisplayName = contentData.state.nextChannelToReadDisplayName
         self.updateNextChannelToReadVisibility()
         
@@ -286,6 +296,18 @@ extension ChatControllerImpl {
             didDisplayActionsPanel = true
         }
         
+        var previousInvitationPeers: [EnginePeer] = []
+        if let requestsState = previousState.requestsState {
+            previousInvitationPeers = Array(requestsState.importers.compactMap({ $0.peer.peer.flatMap({ EnginePeer($0) }) }).prefix(3))
+        }
+        var previousInvitationRequestsPeersDismissed = false
+        if let dismissedInvitationRequests = previousState.dismissedInvitationRequests, Set(previousInvitationPeers.map({ $0.id.toInt64() })) == Set(dismissedInvitationRequests) {
+            previousInvitationRequestsPeersDismissed = true
+        }
+        if let requestsState = previousState.requestsState, requestsState.count > 0 && !previousInvitationRequestsPeersDismissed {
+            didDisplayActionsPanel = true
+        }
+        
         var displayActionsPanel = false
         if let contactStatus = contentData.state.contactStatus, !contactStatus.isEmpty, let peerStatusSettings = contactStatus.peerStatusSettings {
             if !peerStatusSettings.flags.isEmpty {
@@ -304,6 +326,18 @@ extension ChatControllerImpl {
             displayActionsPanel = true
         }
         if self.presentationInterfaceState.search != nil && contentData.state.hasSearchTags {
+            displayActionsPanel = true
+        }
+        
+        var invitationPeers: [EnginePeer] = []
+        if let requestsState = contentData.state.requestsState {
+            invitationPeers = Array(requestsState.importers.compactMap({ $0.peer.peer.flatMap({ EnginePeer($0) }) }).prefix(3))
+        }
+        var invitationRequestsPeersDismissed = false
+        if let dismissedInvitationRequests = contentData.state.dismissedInvitationRequests, Set(invitationPeers.map({ $0.id.toInt64() })) == Set(dismissedInvitationRequests) {
+            invitationRequestsPeersDismissed = true
+        }
+        if let requestsState = contentData.state.requestsState, requestsState.count > 0 && !invitationRequestsPeersDismissed {
             displayActionsPanel = true
         }
         
@@ -411,7 +445,6 @@ extension ChatControllerImpl {
                 if let dismissedInvitationRequests = contentData.state.dismissedInvitationRequests, Set(peers.map({ $0.id.toInt64() })) == Set(dismissedInvitationRequests) {
                     peersDismissed = true
                 }
-                
                 if let requestsState = contentData.state.requestsState, requestsState.count > 0 && !peersDismissed {
                     if !context.contains(where: {
                         switch $0 {

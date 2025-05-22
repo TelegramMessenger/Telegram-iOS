@@ -331,6 +331,8 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
 public final class NavigationButtonNode: ContextControllerSourceNode {
     private var nodes: [NavigationButtonItemNode] = []
     
+    private var disappearingNodes: [(frame: CGRect, size: CGSize, node: NavigationButtonItemNode)] = []
+    
     public var singleCustomNode: ASDisplayNode? {
         for node in self.nodes {
             return node.node
@@ -452,7 +454,7 @@ public final class NavigationButtonNode: ContextControllerSourceNode {
         }
     }
     
-    func updateItems(_ items: [UIBarButtonItem]) {
+    func updateItems(_ items: [UIBarButtonItem], animated: Bool) {
         for i in 0 ..< items.count {
             let node: NavigationButtonItemNode
             if self.nodes.count > i {
@@ -486,16 +488,41 @@ public final class NavigationButtonNode: ContextControllerSourceNode {
             node.bold = items[i].style == .done
             node.isEnabled = items[i].isEnabled
             node.node = items[i].customDisplayNode
+            
+            if animated {
+                node.layer.animateAlpha(from: 0.0, to: self.manualAlpha, duration: 0.16)
+                node.layer.animateScale(from: 0.001, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+            }
         }
         if items.count < self.nodes.count {
             for i in items.count ..< self.nodes.count {
-                self.nodes[i].removeFromSupernode()
+                let itemNode = self.nodes[i]
+                if animated {
+                    disappearingNodes.append((itemNode.frame, self.bounds.size, itemNode))
+                    itemNode.layer.animateAlpha(from: self.manualAlpha, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak self, weak itemNode] _ in
+                        guard let itemNode else {
+                            return
+                        }
+                            
+                        itemNode.removeFromSupernode()
+                        
+                        guard let self else {
+                            return
+                        }
+                        if let index = self.disappearingNodes.firstIndex(where: { $0.node === itemNode }) {
+                            self.disappearingNodes.remove(at: index)
+                        }
+                    })
+                    itemNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                } else {
+                    itemNode.removeFromSupernode()
+                }
             }
             self.nodes.removeSubrange(items.count...)
         }
     }
     
-    public func updateLayout(constrainedSize: CGSize, isLandscape: Bool) -> CGSize {
+    public func updateLayout(constrainedSize: CGSize, isLandscape: Bool, isLeftAligned: Bool) -> CGSize {
         var nodeOrigin = CGPoint()
         var totalHeight: CGFloat = 0.0
         for i in 0 ..< self.nodes.count {
@@ -520,6 +547,13 @@ public final class NavigationButtonNode: ContextControllerSourceNode {
                 nodeOrigin.x -= 5.0
             }
         }
+        
+        if !isLeftAligned {
+            for disappearingNode in self.disappearingNodes {
+                disappearingNode.node.frame = disappearingNode.frame.offsetBy(dx: nodeOrigin.x - disappearingNode.size.width, dy: (totalHeight - disappearingNode.size.height) * 0.5)
+            }
+        }
+        
         return CGSize(width: nodeOrigin.x, height: totalHeight)
     }
     
