@@ -9,12 +9,14 @@ private final class AudioWaveformNodeParameters: NSObject {
     let color: UIColor?
     let gravity: AudioWaveformNode.Gravity?
     let progress: CGFloat?
+    let trimRange: Range<CGFloat>?
     
-    init(waveform: AudioWaveform?, color: UIColor?, gravity: AudioWaveformNode.Gravity?, progress: CGFloat?) {
+    init(waveform: AudioWaveform?, color: UIColor?, gravity: AudioWaveformNode.Gravity?, progress: CGFloat?, trimRange: Range<CGFloat>?) {
         self.waveform = waveform
         self.color = color
         self.gravity = gravity
         self.progress = progress
+        self.trimRange = trimRange
         
         super.init()
     }
@@ -33,6 +35,14 @@ public final class AudioWaveformNode: ASDisplayNode {
     public var progress: CGFloat? {
         didSet {
             if self.progress != oldValue {
+                self.setNeedsDisplay()
+            }
+        }
+    }
+    
+    public var trimRange: Range<CGFloat>? {
+        didSet {
+            if self.trimRange != oldValue {
                 self.setNeedsDisplay()
             }
         }
@@ -67,7 +77,7 @@ public final class AudioWaveformNode: ASDisplayNode {
     }
     
     override public func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
-        return AudioWaveformNodeParameters(waveform: self.waveform, color: self.color, gravity: self.gravity, progress: self.progress)
+        return AudioWaveformNodeParameters(waveform: self.waveform, color: self.color, gravity: self.gravity, progress: self.progress, trimRange: self.trimRange)
     }
     
     @objc override public class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
@@ -164,8 +174,19 @@ public final class AudioWaveformNode: ASDisplayNode {
                     
                     let invScale = 1.0 / max(1.0, CGFloat(maxSample))
                     
+                    var clipRange: Range<CGFloat>?
+                    if let trimRange = parameters.trimRange {
+                        clipRange = trimRange.lowerBound * size.width ..< trimRange.upperBound * size.width
+                    }
+                    
                     for i in 0 ..< numSamples {
                         let offset = CGFloat(i) * (sampleWidth + distance)
+                        if let clipRange {
+                            if !clipRange.contains(offset) {
+                                continue
+                            }
+                        }
+                        
                         let peakSample = adjustedSamples[i]
                         
                         var sampleHeight = CGFloat(peakSample) * peakHeight * invScale
