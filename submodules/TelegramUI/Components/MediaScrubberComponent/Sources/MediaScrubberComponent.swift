@@ -1890,8 +1890,8 @@ public class TrimView: UIView {
             effectiveHandleWidth = 16.0
             fullTrackHeight = 33.0
             capsuleOffset = 8.0
-            color = .clear
-            highlightColor = .clear
+            color = theme.chat.inputPanel.panelControlAccentColor
+            highlightColor = theme.chat.inputPanel.panelControlAccentColor
         
             self.zoneView.backgroundColor = UIColor(white: 1.0, alpha: 0.4)
             
@@ -1902,7 +1902,19 @@ public class TrimView: UIView {
                     context.fill(CGRect(origin: .zero, size: CGSize(width: 1.0, height: size.height)))
                     context.fill(CGRect(origin: CGPoint(x: size.width - 1.0, y: 0.0), size: CGSize(width: 1.0, height: size.height)))
                 })?.withRenderingMode(.alwaysTemplate).resizableImage(withCapInsets: UIEdgeInsets(top: 0.0, left: 1.0, bottom: 0.0, right: 1.0))
-                                
+                              
+                let handleImage = generateImage(CGSize(width: effectiveHandleWidth, height: fullTrackHeight), rotatedContext: { size, context in
+                    context.clear(CGRect(origin: .zero, size: size))
+                    context.setFillColor(UIColor.white.cgColor)
+                    
+                    let path = UIBezierPath(roundedRect: CGRect(origin: .zero, size: CGSize(width: size.width * 2.0, height: size.height)), cornerRadius: 16.5)
+                    context.addPath(path.cgPath)
+                    context.fillPath()
+                })?.withRenderingMode(.alwaysTemplate)
+                
+                self.leftHandleView.image = handleImage
+                self.rightHandleView.image = handleImage
+                
                 self.leftCapsuleView.backgroundColor = .white
                 self.rightCapsuleView.backgroundColor = .white
             }
