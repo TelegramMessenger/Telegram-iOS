@@ -23,7 +23,6 @@ private enum ChatReportPeerTitleButton: Equatable {
     case shareMyPhoneNumber
     case reportSpam
     case reportUserSpam
-    case reportIrrelevantGeoLocation
     case unarchive
     case addMembers
     case restartTopic
@@ -48,8 +47,6 @@ private enum ChatReportPeerTitleButton: Equatable {
             return strings.Conversation_ReportSpamAndLeave
         case .reportUserSpam:
             return strings.Conversation_ReportSpam
-        case .reportIrrelevantGeoLocation:
-            return strings.Conversation_ReportGroupLocation
         case .unarchive:
             return strings.Conversation_Unarchive
         case .addMembers:
@@ -125,8 +122,6 @@ private func peerButtons(_ state: ChatPresentationInterfaceState) -> [ChatReport
         if case .peer = state.chatLocation {
             if let contactStatus = state.contactStatus, let peerStatusSettings = contactStatus.peerStatusSettings, peerStatusSettings.contains(.suggestAddMembers) {
                 buttons.append(.addMembers)
-            } else if let contactStatus = state.contactStatus, contactStatus.canReportIrrelevantLocation, let peerStatusSettings = contactStatus.peerStatusSettings, peerStatusSettings.contains(.canReportIrrelevantGeoLocation) {
-                buttons.append(.reportIrrelevantGeoLocation)
             } else if let contactStatus = state.contactStatus, let peerStatusSettings = contactStatus.peerStatusSettings, peerStatusSettings.contains(.autoArchived) {
                 buttons.append(.reportUserSpam)
                 buttons.append(.unarchive)
@@ -792,8 +787,6 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
                     self.interfaceInteraction?.presentInviteMembers()
                 case .addContact:
                     self.interfaceInteraction?.presentPeerContact()
-                case .reportIrrelevantGeoLocation:
-                    self.interfaceInteraction?.reportPeerIrrelevantGeoLocation()
                 case .restartTopic:
                     self.interfaceInteraction?.restartTopic()
                 }

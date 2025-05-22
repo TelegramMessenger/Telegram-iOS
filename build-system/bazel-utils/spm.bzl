@@ -54,10 +54,14 @@ _IGNORE_CC_LIBRARY_EMPTY_ATTRS = [
     "include_prefix",
     "strip_include_prefix",
     "local_defines",
+    "conlyopts",
+    "module_interfaces",
+    "package_metadata",
 ]
 
 _CC_LIBRARY_ATTRS = {
     "copts": [],
+    "cxxopts": [],
     "defines": [],
     "deps": [],
     "hdrs": [],
@@ -108,11 +112,11 @@ _IGNORE_OBJC_LIBRARY_EMPTY_ATTRS = [
     "textual_hdrs",
     "sdk_includes",
     "conlyopts",
-    "cxxopts",
 ]
 
 _OBJC_LIBRARY_ATTRS = {
     "copts": [],
+    "cxxopts": [],
     "defines": [],
     "deps": [],
     "hdrs": [],
@@ -351,6 +355,7 @@ def _collect_spm_modules_impl(target, ctx):
                 "sources": sorted(sources + headers),
                 "module_name": module_name,
                 "copts": result_attrs["copts"],
+                "cxxopts": result_attrs["cxxopts"],
                 "sdk_frameworks": result_attrs["sdk_frameworks"],
                 "sdk_dylibs": result_attrs["sdk_dylibs"],
                 "weak_sdk_frameworks": result_attrs["weak_sdk_frameworks"],
@@ -366,6 +371,7 @@ def _collect_spm_modules_impl(target, ctx):
                 "sources": sorted(sources + headers),
                 "module_name": module_name,
                 "copts": result_attrs["copts"],
+                "cxxopts": result_attrs["cxxopts"],
                 "includes": result_attrs["includes"],
             }
         elif module_type == "swift_library":
@@ -373,6 +379,7 @@ def _collect_spm_modules_impl(target, ctx):
                 "name": result_attrs["name"],
                 "type": module_type,
                 "path": module_path,
+                "defines": result_attrs["defines"],
                 "deps": dep_names,
                 "sources": sorted(sources),
                 "module_name": module_name,

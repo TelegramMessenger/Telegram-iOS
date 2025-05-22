@@ -13,6 +13,5 @@
         ".git/**": true
     },
     "files.associations": {
-        "memory": "cpp"
     }
 }

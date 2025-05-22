@@ -29,6 +29,7 @@ objc_library(
         "-DNDEBUG=1",
         "-DSQLITE_MAX_MMAP_SIZE=0",
         "-Wno-all",
+        "-Wno-#warnings",
     ],
     sdk_frameworks = [
       "Foundation",

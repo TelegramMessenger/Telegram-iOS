@@ -16,6 +16,11 @@ objc_library(
         "-Werror",
         "-I{}/Sources".format(package_name()),
     ],
+    cxxopts = [
+        "-Werror",
+        "-std=c++17",
+        "-I{}/Sources".format(package_name()),
+    ],
     hdrs = glob([
         "PublicHeaders/**/*.h",
     ]),

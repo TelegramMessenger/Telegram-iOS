@@ -266,14 +266,12 @@ public final class ChatManagingBot: Equatable {
 
 public struct ChatContactStatus: Equatable {
     public var canAddContact: Bool
-    public var canReportIrrelevantLocation: Bool
     public var peerStatusSettings: PeerStatusSettings?
     public var invitedBy: Peer?
     public var managingBot: ChatManagingBot?
     
-    public init(canAddContact: Bool, canReportIrrelevantLocation: Bool, peerStatusSettings: PeerStatusSettings?, invitedBy: Peer?, managingBot: ChatManagingBot?) {
+    public init(canAddContact: Bool, peerStatusSettings: PeerStatusSettings?, invitedBy: Peer?, managingBot: ChatManagingBot?) {
         self.canAddContact = canAddContact
-        self.canReportIrrelevantLocation = canReportIrrelevantLocation
         self.peerStatusSettings = peerStatusSettings
         self.invitedBy = invitedBy
         self.managingBot = managingBot
@@ -286,17 +284,11 @@ public struct ChatContactStatus: Equatable {
         if !self.canAddContact {
             peerStatusSettings.flags.remove(.canAddContact)
         }
-        if !self.canReportIrrelevantLocation {
-            peerStatusSettings.flags.remove(.canReportIrrelevantGeoLocation)
-        }
         return peerStatusSettings.flags.isEmpty
     }
     
     public static func ==(lhs: ChatContactStatus, rhs: ChatContactStatus) -> Bool {
         if lhs.canAddContact != rhs.canAddContact {
-            return false
-        }
-        if lhs.canReportIrrelevantLocation != rhs.canReportIrrelevantLocation {
             return false
         }
         if lhs.peerStatusSettings != rhs.peerStatusSettings {
@@ -454,6 +446,34 @@ public final class ChatPresentationInterfaceState: Equatable {
         case side
     }
     
+    public final class ReportReasonData: Equatable {
+        public let title: String
+        public let option: Data
+        public let message: String?
+        
+        public init(title: String, option: Data, message: String?) {
+            self.title = title
+            self.option = option
+            self.message = message
+        }
+        
+        public static func ==(lhs: ReportReasonData, rhs: ReportReasonData) -> Bool {
+            if lhs === rhs {
+                return true
+            }
+            if lhs.title != rhs.title {
+                return false
+            }
+            if lhs.option != rhs.option {
+                return false
+            }
+            if lhs.message != rhs.message {
+                return false
+            }
+            return true
+        }
+    }
+    
     public let interfaceState: ChatInterfaceState
     public let chatLocation: ChatLocation
     public let renderedPeer: RenderedPeer?
@@ -505,7 +525,7 @@ public final class ChatPresentationInterfaceState: Equatable {
     public let activeGroupCallInfo: ChatActiveGroupCallInfo?
     public let hasActiveGroupCall: Bool
     public let importState: ChatPresentationImportState?
-    public let reportReason: (String, Data, String?)?
+    public let reportReason: ReportReasonData?
     public let showCommands: Bool
     public let hasBotCommands: Bool
     public let showSendAsPeers: Bool
@@ -638,7 +658,7 @@ public final class ChatPresentationInterfaceState: Equatable {
         self.topicListDisplayMode = nil
     }
     
-    public init(interfaceState: ChatInterfaceState, chatLocation: ChatLocation, renderedPeer: RenderedPeer?, isNotAccessible: Bool, explicitelyCanPinMessages: Bool, contactStatus: ChatContactStatus?, hasBots: Bool, isArchived: Bool, inputTextPanelState: ChatTextInputPanelState, editMessageState: ChatEditInterfaceMessageState?, inputQueryResults: [ChatPresentationInputQueryKind: ChatPresentationInputQueryResult], inputMode: ChatInputMode, titlePanelContexts: [ChatTitlePanelContext], keyboardButtonsMessage: Message?, pinnedMessageId: MessageId?, pinnedMessage: ChatPinnedMessage?, peerIsBlocked: Bool, peerIsMuted: Bool, peerDiscussionId: PeerId?, peerGeoLocation: PeerGeoLocation?, callsAvailable: Bool, callsPrivate: Bool, slowmodeState: ChatSlowmodeState?, chatHistoryState: ChatHistoryNodeHistoryState?, botStartPayload: String?, urlPreview: UrlPreview?, editingUrlPreview: UrlPreview?, search: ChatSearchData?, searchQuerySuggestionResult: ChatPresentationInputQueryResult?, historyFilter: HistoryFilter?, displayHistoryFilterAsList: Bool, presentationReady: Bool, chatWallpaper: TelegramWallpaper, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, limitsConfiguration: LimitsConfiguration, fontSize: PresentationFontSize, bubbleCorners: PresentationChatBubbleCorners, accountPeerId: PeerId, mode: ChatControllerPresentationMode, hasScheduledMessages: Bool, autoremoveTimeout: Int32?, subject: ChatControllerSubject?, peerNearbyData: ChatPeerNearbyData?, greetingData: ChatGreetingData?, pendingUnpinnedAllMessages: Bool, activeGroupCallInfo: ChatActiveGroupCallInfo?, hasActiveGroupCall: Bool, importState: ChatPresentationImportState?, reportReason: (String, Data, String?)?, showCommands: Bool, hasBotCommands: Bool, showSendAsPeers: Bool, sendAsPeers: [SendAsPeer]?, botMenuButton: BotMenuButton, showWebView: Bool, currentSendAsPeerId: PeerId?, copyProtectionEnabled: Bool, hasAtLeast3Messages: Bool, hasPlentyOfMessages: Bool, isPremium: Bool, premiumGiftOptions: [CachedPremiumGiftOption], suggestPremiumGift: Bool, forceInputCommandsHidden: Bool, voiceMessagesAvailable: Bool, customEmojiAvailable: Bool, threadData: ThreadData?, forumTopicData: ThreadData?, isGeneralThreadClosed: Bool?, translationState: ChatPresentationTranslationState?, replyMessage: Message?, accountPeerColor: AccountPeerColor?, savedMessagesTopicPeer: EnginePeer?, hasSearchTags: Bool, isPremiumRequiredForMessaging: Bool, sendPaidMessageStars: StarsAmount?, acknowledgedPaidMessage: Bool, hasSavedChats: Bool, appliedBoosts: Int32?, boostsToUnrestrict: Int32?, businessIntro: TelegramBusinessIntro?, hasBirthdayToday: Bool, adMessage: Message?, peerVerification: PeerVerification?, starGiftsAvailable: Bool, alwaysShowGiftButton: Bool, disallowedGifts: TelegramDisallowedGifts?, topicListDisplayMode: TopicListDisplayMode?) {
+    public init(interfaceState: ChatInterfaceState, chatLocation: ChatLocation, renderedPeer: RenderedPeer?, isNotAccessible: Bool, explicitelyCanPinMessages: Bool, contactStatus: ChatContactStatus?, hasBots: Bool, isArchived: Bool, inputTextPanelState: ChatTextInputPanelState, editMessageState: ChatEditInterfaceMessageState?, inputQueryResults: [ChatPresentationInputQueryKind: ChatPresentationInputQueryResult], inputMode: ChatInputMode, titlePanelContexts: [ChatTitlePanelContext], keyboardButtonsMessage: Message?, pinnedMessageId: MessageId?, pinnedMessage: ChatPinnedMessage?, peerIsBlocked: Bool, peerIsMuted: Bool, peerDiscussionId: PeerId?, peerGeoLocation: PeerGeoLocation?, callsAvailable: Bool, callsPrivate: Bool, slowmodeState: ChatSlowmodeState?, chatHistoryState: ChatHistoryNodeHistoryState?, botStartPayload: String?, urlPreview: UrlPreview?, editingUrlPreview: UrlPreview?, search: ChatSearchData?, searchQuerySuggestionResult: ChatPresentationInputQueryResult?, historyFilter: HistoryFilter?, displayHistoryFilterAsList: Bool, presentationReady: Bool, chatWallpaper: TelegramWallpaper, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, limitsConfiguration: LimitsConfiguration, fontSize: PresentationFontSize, bubbleCorners: PresentationChatBubbleCorners, accountPeerId: PeerId, mode: ChatControllerPresentationMode, hasScheduledMessages: Bool, autoremoveTimeout: Int32?, subject: ChatControllerSubject?, peerNearbyData: ChatPeerNearbyData?, greetingData: ChatGreetingData?, pendingUnpinnedAllMessages: Bool, activeGroupCallInfo: ChatActiveGroupCallInfo?, hasActiveGroupCall: Bool, importState: ChatPresentationImportState?, reportReason: ReportReasonData?, showCommands: Bool, hasBotCommands: Bool, showSendAsPeers: Bool, sendAsPeers: [SendAsPeer]?, botMenuButton: BotMenuButton, showWebView: Bool, currentSendAsPeerId: PeerId?, copyProtectionEnabled: Bool, hasAtLeast3Messages: Bool, hasPlentyOfMessages: Bool, isPremium: Bool, premiumGiftOptions: [CachedPremiumGiftOption], suggestPremiumGift: Bool, forceInputCommandsHidden: Bool, voiceMessagesAvailable: Bool, customEmojiAvailable: Bool, threadData: ThreadData?, forumTopicData: ThreadData?, isGeneralThreadClosed: Bool?, translationState: ChatPresentationTranslationState?, replyMessage: Message?, accountPeerColor: AccountPeerColor?, savedMessagesTopicPeer: EnginePeer?, hasSearchTags: Bool, isPremiumRequiredForMessaging: Bool, sendPaidMessageStars: StarsAmount?, acknowledgedPaidMessage: Bool, hasSavedChats: Bool, appliedBoosts: Int32?, boostsToUnrestrict: Int32?, businessIntro: TelegramBusinessIntro?, hasBirthdayToday: Bool, adMessage: Message?, peerVerification: PeerVerification?, starGiftsAvailable: Bool, alwaysShowGiftButton: Bool, disallowedGifts: TelegramDisallowedGifts?, topicListDisplayMode: TopicListDisplayMode?) {
         self.interfaceState = interfaceState
         self.chatLocation = chatLocation
         self.renderedPeer = renderedPeer
@@ -894,7 +914,7 @@ public final class ChatPresentationInterfaceState: Equatable {
         if lhs.importState != rhs.importState {
             return false
         }
-        if lhs.reportReason?.0 != rhs.reportReason?.0 || lhs.reportReason?.1 != rhs.reportReason?.1 || lhs.reportReason?.2 != rhs.reportReason?.2 {
+        if lhs.reportReason != rhs.reportReason {
             return false
         }
         if lhs.showCommands != rhs.showCommands {
@@ -1207,7 +1227,7 @@ public final class ChatPresentationInterfaceState: Equatable {
         return ChatPresentationInterfaceState(interfaceState: self.interfaceState, chatLocation: self.chatLocation, renderedPeer: self.renderedPeer, isNotAccessible: self.isNotAccessible, explicitelyCanPinMessages: self.explicitelyCanPinMessages, contactStatus: self.contactStatus, hasBots: self.hasBots, isArchived: self.isArchived, inputTextPanelState: self.inputTextPanelState, editMessageState: self.editMessageState, inputQueryResults: self.inputQueryResults, inputMode: self.inputMode, titlePanelContexts: self.titlePanelContexts, keyboardButtonsMessage: self.keyboardButtonsMessage, pinnedMessageId: self.pinnedMessageId, pinnedMessage: self.pinnedMessage, peerIsBlocked: self.peerIsBlocked, peerIsMuted: self.peerIsMuted, peerDiscussionId: self.peerDiscussionId, peerGeoLocation: self.peerGeoLocation, callsAvailable: self.callsAvailable, callsPrivate: self.callsPrivate, slowmodeState: self.slowmodeState,  chatHistoryState: self.chatHistoryState, botStartPayload: self.botStartPayload, urlPreview: self.urlPreview, editingUrlPreview: self.editingUrlPreview, search: self.search, searchQuerySuggestionResult: self.searchQuerySuggestionResult, historyFilter: self.historyFilter, displayHistoryFilterAsList: self.displayHistoryFilterAsList, presentationReady: self.presentationReady, chatWallpaper: self.chatWallpaper, theme: self.theme, strings: self.strings, dateTimeFormat: self.dateTimeFormat, nameDisplayOrder: self.nameDisplayOrder, limitsConfiguration: self.limitsConfiguration, fontSize: self.fontSize, bubbleCorners: self.bubbleCorners, accountPeerId: self.accountPeerId, mode: self.mode, hasScheduledMessages: self.hasScheduledMessages, autoremoveTimeout: self.autoremoveTimeout, subject: self.subject, peerNearbyData: self.peerNearbyData, greetingData: self.greetingData, pendingUnpinnedAllMessages: self.pendingUnpinnedAllMessages, activeGroupCallInfo: self.activeGroupCallInfo, hasActiveGroupCall: self.hasActiveGroupCall, importState: importState, reportReason: self.reportReason, showCommands: self.showCommands, hasBotCommands: self.hasBotCommands, showSendAsPeers: self.showSendAsPeers, sendAsPeers: self.sendAsPeers, botMenuButton: self.botMenuButton, showWebView: self.showWebView, currentSendAsPeerId: self.currentSendAsPeerId, copyProtectionEnabled: self.copyProtectionEnabled, hasAtLeast3Messages: self.hasAtLeast3Messages, hasPlentyOfMessages: self.hasPlentyOfMessages, isPremium: self.isPremium, premiumGiftOptions: self.premiumGiftOptions, suggestPremiumGift: self.suggestPremiumGift, forceInputCommandsHidden: self.forceInputCommandsHidden, voiceMessagesAvailable: self.voiceMessagesAvailable, customEmojiAvailable: self.customEmojiAvailable, threadData: self.threadData, forumTopicData: self.forumTopicData, isGeneralThreadClosed: self.isGeneralThreadClosed, translationState: self.translationState, replyMessage: self.replyMessage, accountPeerColor: self.accountPeerColor, savedMessagesTopicPeer: self.savedMessagesTopicPeer, hasSearchTags: self.hasSearchTags, isPremiumRequiredForMessaging: self.isPremiumRequiredForMessaging, sendPaidMessageStars: self.sendPaidMessageStars, acknowledgedPaidMessage: self.acknowledgedPaidMessage, hasSavedChats: self.hasSavedChats, appliedBoosts: self.appliedBoosts, boostsToUnrestrict: self.boostsToUnrestrict, businessIntro: self.businessIntro, hasBirthdayToday: self.hasBirthdayToday, adMessage: self.adMessage, peerVerification: self.peerVerification, starGiftsAvailable: self.starGiftsAvailable, alwaysShowGiftButton: self.alwaysShowGiftButton, disallowedGifts: self.disallowedGifts, topicListDisplayMode: self.topicListDisplayMode)
     }
     
-    public func updatedReportReason(_ reportReason: (String, Data, String?)?) -> ChatPresentationInterfaceState {
+    public func updatedReportReason(_ reportReason: ReportReasonData?) -> ChatPresentationInterfaceState {
         return ChatPresentationInterfaceState(interfaceState: self.interfaceState, chatLocation: self.chatLocation, renderedPeer: self.renderedPeer, isNotAccessible: self.isNotAccessible, explicitelyCanPinMessages: self.explicitelyCanPinMessages, contactStatus: self.contactStatus, hasBots: self.hasBots, isArchived: self.isArchived, inputTextPanelState: self.inputTextPanelState, editMessageState: self.editMessageState, inputQueryResults: self.inputQueryResults, inputMode: self.inputMode, titlePanelContexts: self.titlePanelContexts, keyboardButtonsMessage: self.keyboardButtonsMessage, pinnedMessageId: self.pinnedMessageId, pinnedMessage: self.pinnedMessage, peerIsBlocked: self.peerIsBlocked, peerIsMuted: self.peerIsMuted, peerDiscussionId: self.peerDiscussionId, peerGeoLocation: self.peerGeoLocation, callsAvailable: self.callsAvailable, callsPrivate: self.callsPrivate, slowmodeState: self.slowmodeState,  chatHistoryState: self.chatHistoryState, botStartPayload: self.botStartPayload, urlPreview: self.urlPreview, editingUrlPreview: self.editingUrlPreview, search: self.search, searchQuerySuggestionResult: self.searchQuerySuggestionResult, historyFilter: self.historyFilter, displayHistoryFilterAsList: self.displayHistoryFilterAsList, presentationReady: self.presentationReady, chatWallpaper: self.chatWallpaper, theme: self.theme, strings: self.strings, dateTimeFormat: self.dateTimeFormat, nameDisplayOrder: self.nameDisplayOrder, limitsConfiguration: self.limitsConfiguration, fontSize: self.fontSize, bubbleCorners: self.bubbleCorners, accountPeerId: self.accountPeerId, mode: self.mode, hasScheduledMessages: self.hasScheduledMessages, autoremoveTimeout: self.autoremoveTimeout, subject: self.subject, peerNearbyData: self.peerNearbyData, greetingData: self.greetingData, pendingUnpinnedAllMessages: self.pendingUnpinnedAllMessages, activeGroupCallInfo: self.activeGroupCallInfo, hasActiveGroupCall: self.hasActiveGroupCall, importState: self.importState, reportReason: reportReason, showCommands: self.showCommands, hasBotCommands: self.hasBotCommands, showSendAsPeers: self.showSendAsPeers, sendAsPeers: self.sendAsPeers, botMenuButton: self.botMenuButton, showWebView: self.showWebView, currentSendAsPeerId: self.currentSendAsPeerId, copyProtectionEnabled: self.copyProtectionEnabled, hasAtLeast3Messages: self.hasAtLeast3Messages, hasPlentyOfMessages: self.hasPlentyOfMessages, isPremium: self.isPremium, premiumGiftOptions: self.premiumGiftOptions, suggestPremiumGift: self.suggestPremiumGift, forceInputCommandsHidden: self.forceInputCommandsHidden, voiceMessagesAvailable: self.voiceMessagesAvailable, customEmojiAvailable: self.customEmojiAvailable, threadData: self.threadData, forumTopicData: self.forumTopicData, isGeneralThreadClosed: self.isGeneralThreadClosed, translationState: self.translationState, replyMessage: self.replyMessage, accountPeerColor: self.accountPeerColor, savedMessagesTopicPeer: self.savedMessagesTopicPeer, hasSearchTags: self.hasSearchTags, isPremiumRequiredForMessaging: self.isPremiumRequiredForMessaging, sendPaidMessageStars: self.sendPaidMessageStars, acknowledgedPaidMessage: self.acknowledgedPaidMessage, hasSavedChats: self.hasSavedChats, appliedBoosts: self.appliedBoosts, boostsToUnrestrict: self.boostsToUnrestrict, businessIntro: self.businessIntro, hasBirthdayToday: self.hasBirthdayToday, adMessage: self.adMessage, peerVerification: self.peerVerification, starGiftsAvailable: self.starGiftsAvailable, alwaysShowGiftButton: self.alwaysShowGiftButton, disallowedGifts: self.disallowedGifts, topicListDisplayMode: self.topicListDisplayMode)
     }
     
@@ -1364,14 +1384,18 @@ public final class ChatPresentationInterfaceState: Equatable {
     }
 }
 
-public func canBypassRestrictions(chatPresentationInterfaceState: ChatPresentationInterfaceState) -> Bool {
-    guard let boostsToUnrestrict = chatPresentationInterfaceState.boostsToUnrestrict, boostsToUnrestrict > 0 else {
+public func canBypassRestrictions(boostsToUnrestrict: Int32?, appliedBoosts: Int32?) -> Bool {
+    guard let boostsToUnrestrict, boostsToUnrestrict > 0 else {
         return false
     }
-    if let appliedBoosts = chatPresentationInterfaceState.appliedBoosts, appliedBoosts >= boostsToUnrestrict {
+    if let appliedBoosts, appliedBoosts >= boostsToUnrestrict {
         return true
     }
     return false
+}
+
+public func canBypassRestrictions(chatPresentationInterfaceState: ChatPresentationInterfaceState) -> Bool {
+    return canBypassRestrictions(boostsToUnrestrict: chatPresentationInterfaceState.boostsToUnrestrict, appliedBoosts: chatPresentationInterfaceState.appliedBoosts)
 }
 
 public func canSendMessagesToChat(_ state: ChatPresentationInterfaceState) -> Bool {

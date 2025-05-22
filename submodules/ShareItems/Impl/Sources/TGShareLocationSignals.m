@@ -64,12 +64,15 @@ NSString *const TGShareGoogleProvider = @"google";
 
 NSString * TGURLEncodedStringFromStringWithEncoding(NSString *string, NSStringEncoding encoding) {
     static NSString * const kAFLegalCharactersToBeEscaped = @"?!@#$^&%*+=,:;'\"`<>()[]{}/\\|~ ";
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     NSString *unescapedString = [string stringByReplacingPercentEscapesUsingEncoding:encoding];
     if (unescapedString) {
         string = unescapedString;
     }
     
     return (__bridge NSString *)CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault, (__bridge CFStringRef)string, NULL, (__bridge CFStringRef)kAFLegalCharactersToBeEscaped, CFStringConvertNSStringEncodingToEncoding(encoding));
+#pragma clang diagnostic pop
 }
 
 @implementation TGQueryStringComponent

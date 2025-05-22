@@ -46,7 +46,7 @@
         }
     }
     
-    NSInteger providerIndex = -1;
+    __unused NSInteger providerIndex = -1;
     for (NSItemProvider *provider in providers)
     {
         providerIndex++;
@@ -140,7 +140,7 @@
     }];
 }
 
-static UIImage *TGScaleImageToPixelSize(UIImage *image, CGSize size) {
+__unused static UIImage *TGScaleImageToPixelSize(UIImage *image, CGSize size) {
     UIGraphicsBeginImageContextWithOptions(size, true, 1.0f);
     [image drawInRect:CGRectMake(0, 0, size.width, size.height) blendMode:kCGBlendModeCopy alpha:1.0f];
     UIImage *result = UIGraphicsGetImageFromCurrentImageContext();
@@ -149,7 +149,7 @@ static UIImage *TGScaleImageToPixelSize(UIImage *image, CGSize size) {
     return result;
 }
 
-static CGSize TGFitSize(CGSize size, CGSize maxSize) {
+__unused static CGSize TGFitSize(CGSize size, CGSize maxSize) {
     if (size.width < 1)
         size.width = 1;
     if (size.height < 1)
