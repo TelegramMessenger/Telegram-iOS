@@ -80,6 +80,26 @@ public final class AudioWaveform: Equatable {
         return result
     }
     
+    public func subwaveform(from start: Double, to end: Double) -> AudioWaveform {
+        let normalizedStart = max(0.0, min(1.0, start))
+        let normalizedEnd = max(normalizedStart, min(1.0, end))
+        
+        let numSamples = self.samples.count / 2
+        let startIndex = Int(Double(numSamples) * normalizedStart) * 2
+        let endIndex = Int(Double(numSamples) * normalizedEnd) * 2
+        
+        let rangeLength = endIndex - startIndex
+        let subData: Data
+        
+        if rangeLength > 0 {
+            subData = self.samples.subdata(in: startIndex..<endIndex)
+        } else {
+            subData = Data()
+        }
+        
+        return AudioWaveform(samples: subData, peak: self.peak)
+    }
+    
     public static func ==(lhs: AudioWaveform, rhs: AudioWaveform) -> Bool {
         return lhs.peak == rhs.peak && lhs.samples == rhs.samples
     }

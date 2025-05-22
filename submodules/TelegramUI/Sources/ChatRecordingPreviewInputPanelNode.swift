@@ -157,7 +157,11 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
     
     private var mediaPlayer: MediaPlayer?
     
+    private var statusValue: MediaPlayerStatus?
     private let statusDisposable = MetaDisposable()
+    private var scrubbingDisposable: Disposable?
+    
+    private var positionTimer: SwiftSignalKit.Timer?
     
     private(set) var gestureRecognizer: ContextGesture?
     
@@ -242,7 +246,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         self.addSubnode(self.waveformScrubberNode)
         //self.addSubnode(self.waveformButton)
         
-        //self.view.addSubview(self.trimView)
+        self.view.addSubview(self.trimView)
         self.addSubnode(self.playButtonNode)
         
         self.sendButton.highligthedChanged = { [weak self] highlighted in
@@ -266,8 +270,21 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
             guard let self else {
                 return
             }
+            var timestamp = timestamp
+            if let recordedMediaPreview = self.presentationInterfaceState?.interfaceState.mediaDraftState, case let .audio(audio) = recordedMediaPreview, let trimRange = audio.trimRange {
+                timestamp = max(trimRange.lowerBound, min(timestamp, trimRange.upperBound))
+            }
             self.mediaPlayer?.seek(timestamp: timestamp)
         }
+        
+        self.scrubbingDisposable = (self.waveformScrubberNode.scrubbingPosition
+        |> deliverOnMainQueue).startStrict(next: { [weak self] value in
+            guard let self else {
+                return
+            }
+            let transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .easeInOut)
+            transition.updateAlpha(node: self.playButtonNode, alpha: value != nil ? 0.0 : 1.0)
+        })
         
         self.deleteButton.addTarget(self, action: #selector(self.deletePressed), forControlEvents: [.touchUpInside])
         self.sendButton.addTarget(self, action: #selector(self.sendPressed), forControlEvents: [.touchUpInside])
@@ -280,6 +297,8 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
     deinit {
         self.mediaPlayer?.pause()
         self.statusDisposable.dispose()
+        self.scrubbingDisposable?.dispose()
+        self.positionTimer?.invalidate()
     }
     
     override func didLoad() {
@@ -307,6 +326,36 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         }
         
         self.view.disablesInteractiveTransitionGestureRecognizer = true
+    }
+    
+    private func ensureHasTimer() {
+        if self.positionTimer == nil {
+            let timer = SwiftSignalKit.Timer(timeout: 0.5, repeat: true, completion: { [weak self] in
+                self?.checkPosition()
+            }, queue: Queue.mainQueue())
+            self.positionTimer = timer
+            timer.start()
+        }
+    }
+    
+    func checkPosition() {
+        guard let statusValue = self.statusValue, let recordedMediaPreview = self.presentationInterfaceState?.interfaceState.mediaDraftState, case let .audio(audio) = recordedMediaPreview, let trimRange = audio.trimRange, let mediaPlayer = self.mediaPlayer else {
+            return
+        }
+        let timestampSeconds: Double
+        if !statusValue.generationTimestamp.isZero {
+            timestampSeconds = statusValue.timestamp + (CACurrentMediaTime() - statusValue.generationTimestamp)
+        } else {
+            timestampSeconds = statusValue.timestamp
+        }
+        if timestampSeconds >= trimRange.upperBound {
+            mediaPlayer.seek(timestamp: trimRange.lowerBound, play: false)
+        }
+    }
+    
+    private func stopTimer() {
+        self.positionTimer?.invalidate()
+        self.positionTimer = nil
     }
     
     private func maybePresentViewOnceTooltip() {
@@ -421,28 +470,40 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
                         let mediaManager = context.sharedContext.mediaManager
                         let mediaPlayer = MediaPlayer(audioSessionManager: mediaManager.audioSession, postbox: context.account.postbox, userLocation: .other, userContentType: .audio, resourceReference: .standalone(resource: audio.resource), streamable: .none, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true)
                         mediaPlayer.actionAtEnd = .action { [weak self] in
-                            guard let self, let interfaceState = self.presentationInterfaceState else {
+                            guard let self else {
                                 return
                             }
-                            var timestamp: Double = 0.0
-                            if let recordedMediaPreview = interfaceState.interfaceState.mediaDraftState, case let .audio(audio) = recordedMediaPreview, let trimRange = audio.trimRange {
-                                timestamp = trimRange.lowerBound
+                            Queue.mainQueue().async {
+                                guard let interfaceState = self.presentationInterfaceState else {
+                                    return
+                                }
+                                var timestamp: Double = 0.0
+                                if let recordedMediaPreview = interfaceState.interfaceState.mediaDraftState, case let .audio(audio) = recordedMediaPreview, let trimRange = audio.trimRange {
+                                    timestamp = trimRange.lowerBound
+                                }
+                                self.mediaPlayer?.seek(timestamp: timestamp, play: false)
                             }
-                            self.mediaPlayer?.seek(timestamp: timestamp)
                         }
                         self.mediaPlayer = mediaPlayer
                         self.playButtonNode.durationLabel.defaultDuration = Double(audio.duration)
                         self.playButtonNode.durationLabel.status = mediaPlayer.status
                         self.playButtonNode.durationLabel.trimRange = audio.trimRange
                         self.waveformScrubberNode.status = mediaPlayer.status
+                        
                         self.statusDisposable.set((mediaPlayer.status
                         |> deliverOnMainQueue).startStrict(next: { [weak self] status in
-                            if let strongSelf = self {
+                            if let self {
                                 switch status.status {
                                 case .playing, .buffering(_, true, _, _):
-                                    strongSelf.playButtonNode.playPauseIconNode.enqueueState(.pause, animated: true)
+                                    self.statusValue = status
+                                    if let recordedMediaPreview = self.presentationInterfaceState?.interfaceState.mediaDraftState, case let .audio(audio) = recordedMediaPreview, let _ = audio.trimRange {
+                                        self.ensureHasTimer()
+                                    }
+                                    self.playButtonNode.playPauseIconNode.enqueueState(.pause, animated: true)
                                 default:
-                                    strongSelf.playButtonNode.playPauseIconNode.enqueueState(.play, animated: true)
+                                    self.statusValue = nil
+                                    self.stopTimer()
+                                    self.playButtonNode.playPauseIconNode.enqueueState(.play, animated: true)
                                 }
                             }
                         }))
@@ -471,7 +532,18 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
                                 } else {
                                     self.mediaPlayer?.seek(timestamp: end - 1.0, play: true)
                                 }
+                                self.playButtonNode.durationLabel.isScrubbing = false
+                                Queue.mainQueue().after(0.1) {
+                                    self.waveformForegroundNode.alpha = 1.0
+                                }
+                            } else {
+                                self.playButtonNode.durationLabel.isScrubbing = true
+                                self.waveformForegroundNode.alpha = 0.0
                             }
+                            
+                            let startFraction = start / Double(audio.duration)
+                            let endFraction = end / Double(audio.duration)
+                            self.waveformForegroundNode.trimRange = startFraction ..< endFraction
                         }
                     }
                     self.trimView.frame = waveformBackgroundFrame
@@ -746,7 +818,26 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
     }
     
     @objc func waveformPressed() {
-        self.mediaPlayer?.togglePlayPause()
+        guard let mediaPlayer = self.mediaPlayer else {
+            return
+        }
+        if let recordedMediaPreview = self.presentationInterfaceState?.interfaceState.mediaDraftState, case let .audio(audio) = recordedMediaPreview, let trimRange = audio.trimRange {
+            let _ = (mediaPlayer.status
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] status in
+                guard let self else {
+                    return
+                }
+
+                if case .playing = status.status {
+                    self.mediaPlayer?.pause()
+                } else if status.timestamp <= trimRange.lowerBound {
+                    self.mediaPlayer?.seek(timestamp: trimRange.lowerBound, play: true)
+                }
+            })
+        } else {
+            mediaPlayer.togglePlayPause()
+        }
     }
     
     override func minimalHeight(interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {

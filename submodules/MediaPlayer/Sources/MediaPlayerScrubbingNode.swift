@@ -674,6 +674,8 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                             if let statusValue = strongSelf.statusValue, Double(0.0).isLess(than: statusValue.duration) {
                                 strongSelf.scrubbingBeginTimestamp = statusValue.timestamp
                                 strongSelf.scrubbingTimestampValue = statusValue.timestamp
+                                strongSelf._scrubbingTimestamp.set(.single(strongSelf.scrubbingTimestampValue))
+                                strongSelf._scrubbingPosition.set(.single(strongSelf.scrubbingTimestampValue.flatMap { $0 / statusValue.duration }))
                                 strongSelf.updateProgressAnimations()
                             }
                         }
@@ -682,6 +684,8 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                         if let strongSelf = self {
                             if let statusValue = strongSelf.statusValue, let scrubbingBeginTimestamp = strongSelf.scrubbingBeginTimestamp, Double(0.0).isLess(than: statusValue.duration) {
                                 strongSelf.scrubbingTimestampValue = scrubbingBeginTimestamp + (statusValue.duration * Double(addedFraction)) * multiplier
+                                strongSelf._scrubbingTimestamp.set(.single(strongSelf.scrubbingTimestampValue))
+                                strongSelf._scrubbingPosition.set(.single(strongSelf.scrubbingTimestampValue.flatMap { $0 / statusValue.duration }))
                                 strongSelf.updateProgressAnimations()
                             }
                         }
@@ -697,7 +701,11 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                         if let strongSelf = self {
                             strongSelf.scrubbingBeginTimestamp = nil
                             let scrubbingTimestampValue = strongSelf.scrubbingTimestampValue
-                            strongSelf.scrubbingTimestampValue = nil
+                            Queue.mainQueue().after(0.05, {
+                                strongSelf._scrubbingTimestamp.set(.single(nil))
+                                strongSelf._scrubbingPosition.set(.single(nil))
+                                strongSelf.scrubbingTimestampValue = nil
+                            })
                             if let scrubbingTimestampValue = scrubbingTimestampValue, apply {
                                 strongSelf.seek?(scrubbingTimestampValue)
                             }

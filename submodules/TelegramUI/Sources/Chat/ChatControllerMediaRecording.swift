@@ -555,7 +555,7 @@ extension ChatControllerImpl {
                 return
             }
             
-            let waveformBuffer = audio.waveform.makeBitstream()
+            
             
             self.chatDisplayNode.setupSendActionOnViewUpdate({ [weak self] in
                 if let strongSelf = self {
@@ -578,17 +578,20 @@ extension ChatControllerImpl {
             }
             
             let resource: TelegramMediaResource
+            var waveform = audio.waveform
             var finalDuration: Int = Int(audio.duration)
             if let trimRange = audio.trimRange, trimRange.lowerBound > 0.0 || trimRange.upperBound < Double(audio.duration)  {
                 let randomId = Int64.random(in: Int64.min ... Int64.max)
                 let tempPath = NSTemporaryDirectory() + "\(Int64.random(in: 0 ..< .max)).ogg"
-                resource = LocalFileAudioMediaResource(randomId: randomId, path: tempPath, trimRange: audio.trimRange)
+                resource = LocalFileAudioMediaResource(randomId: randomId, path: tempPath, trimRange: trimRange)
                 self.context.account.postbox.mediaBox.moveResourceData(audio.resource.id, toTempPath: tempPath)
-                
+                waveform = waveform.subwaveform(from: trimRange.lowerBound / Double(audio.duration), to: trimRange.upperBound / Double(audio.duration))
                 finalDuration = Int(trimRange.upperBound - trimRange.lowerBound)
             } else {
                 resource = audio.resource
             }
+            
+            let waveformBuffer = waveform.makeBitstream()
             
             let messages: [EnqueueMessage] = [.message(text: "", attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: Int64(audio.fileSize), attributes: [.Audio(isVoice: true, duration: finalDuration, title: nil, performer: nil, waveform: waveformBuffer)], alternativeRepresentations: [])), threadId: self.chatLocation.threadId, replyToMessageId: self.presentationInterfaceState.interfaceState.replyMessageSubject?.subjectModel, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]
             
