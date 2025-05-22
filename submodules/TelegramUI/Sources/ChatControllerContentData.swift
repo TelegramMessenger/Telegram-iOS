@@ -71,7 +71,7 @@ extension ChatControllerImpl {
             var isPremiumRequiredForMessaging: Bool = false
             var contactStatus: ChatContactStatus?
             var adMessage: Message?
-            var offerNextChannelToRead: Bool = true
+            var offerNextChannelToRead: Bool = false
             var nextChannelToRead: (peer: EnginePeer, threadData: (id: Int64, data: MessageHistoryThreadData)?, unreadCount: Int, location: TelegramEngine.NextUnreadChannelLocation)?
             var nextChannelToReadDisplayName: Bool = false
             var isNotAccessible: Bool = false
@@ -1789,6 +1789,7 @@ extension ChatControllerImpl {
                 self.isPeerInfoReady.get(),
                 self.isChatLocationInfoReady.get(),
                 self.isCachedDataReady.get(),
+                historyNode.isReady,
                 initialData |> map { _ -> Bool in true }
             ])
             |> map { values in
