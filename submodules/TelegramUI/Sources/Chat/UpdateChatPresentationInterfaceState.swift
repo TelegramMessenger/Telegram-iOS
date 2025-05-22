@@ -23,8 +23,6 @@ func updateChatPresentationInterfaceStateImpl(
     _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState,
     completion externalCompletion: @escaping (ContainedViewLayoutTransition) -> Void
 ) {
-    let previousChatLocation = selfController.chatDisplayNode.historyNode.chatLocation
-    
     var completion = externalCompletion
     var temporaryChatPresentationInterfaceState = f(selfController.presentationInterfaceState)
     
@@ -436,13 +434,13 @@ func updateChatPresentationInterfaceStateImpl(
     
     selfController.presentationInterfaceState = updatedChatPresentationInterfaceState
     
-    if selfController.chatDisplayNode.chatLocation != selfController.presentationInterfaceState.chatLocation {
+    /*if selfController.chatDisplayNode.chatLocation != selfController.presentationInterfaceState.chatLocation {
         let defaultDirection: ChatControllerAnimateInnerChatSwitchDirection? = selfController.chatDisplayNode.chatLocationTabSwitchDirection(from: selfController.chatLocation.threadId, to: selfController.presentationInterfaceState.chatLocation.threadId).flatMap { direction -> ChatControllerAnimateInnerChatSwitchDirection in
             return direction ? .right : .left
         }
         let tabSwitchDirection = selfController.currentChatSwitchDirection ?? defaultDirection
         selfController.chatDisplayNode.updateChatLocation(chatLocation: selfController.presentationInterfaceState.chatLocation, transition: transition, tabSwitchDirection: tabSwitchDirection)
-    }
+    }*/
     
     selfController.updateSlowmodeStatus()
     
@@ -601,12 +599,6 @@ func updateChatPresentationInterfaceStateImpl(
         } else {
             selfController.chatDisplayNode.historyNode.updateTag(tag: nil)
         }
-    }
-    
-    if previousChatLocation != selfController.presentationInterfaceState.chatLocation {
-        selfController.chatLocation = selfController.presentationInterfaceState.chatLocation
-        selfController.reloadCachedData()
-        selfController.setupChatHistoryNode()
     }
     
     selfController.updateDownButtonVisibility()

@@ -1105,7 +1105,7 @@ public struct PresentationResourcesChat {
     
     public static func chatFreeNavigateButtonIcon(_ theme: PresentationTheme, wallpaper: TelegramWallpaper) -> UIImage? {
         return theme.image(PresentationResourceKey.chatFreeNavigateButtonIcon.rawValue, { _ in
-            return generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: bubbleVariableColor(variableColor: theme.chat.message.shareButtonForegroundColor, wallpaper: wallpaper))
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/NavigateToMessageIcon"), color: bubbleVariableColor(variableColor: theme.chat.message.shareButtonForegroundColor, wallpaper: wallpaper))
         })
     }
     

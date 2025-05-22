@@ -667,7 +667,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
     public var contentPositionChanged: (ListViewVisibleContentOffset) -> Void = { _ in }
     
     public private(set) var loadState: ChatHistoryNodeLoadState?
-    private var loadStateUpdated: ((ChatHistoryNodeLoadState, Bool) -> Void)?
+    public private(set) var loadStateUpdated: ((ChatHistoryNodeLoadState, Bool) -> Void)?
     private var additionalLoadStateUpdated: [(ChatHistoryNodeLoadState, Bool) -> Void] = []
     
     public private(set) var hasAtLeast3Messages: Bool = false
@@ -1830,11 +1830,6 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
             let initialData: ChatHistoryCombinedInitialData?
             switch update.0 {
             case let .Loading(combinedInitialData, type):
-                if case .Generic(.FillHole) = type {
-                    applyHole()
-                    return
-                }
-                
                 initialData = combinedInitialData
                 
                 if resetScrolling, let previousViewValue = previousView.with({ $0 })?.0 {
@@ -1891,13 +1886,6 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                 
                 Queue.mainQueue().async {
                     if let strongSelf = self {
-                        if !strongSelf.didSetInitialData {
-                            strongSelf.didSetInitialData = true
-                            var combinedInitialData = combinedInitialData
-                            combinedInitialData?.cachedData = nil
-                            strongSelf._initialData.set(.single(combinedInitialData))
-                        }
-                        
                         let cachedData = initialData?.cachedData
                         let cachedDataMessages = initialData?.cachedDataMessages
                         
@@ -1917,8 +1905,30 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                             strongSelf.currentHistoryState = historyState
                             strongSelf.historyState.set(historyState)
                         }
+                        
+                        if !strongSelf.didSetInitialData {
+                            strongSelf.didSetInitialData = true
+                            var combinedInitialData = combinedInitialData
+                            combinedInitialData?.cachedData = nil
+                            strongSelf._initialData.set(.single(combinedInitialData))
+                        }
+                        
+                        strongSelf._isReady.set(true)
+                        if !strongSelf.didSetReady {
+                            strongSelf.didSetReady = true
+                            #if DEBUG
+                            let deltaTime = (CFAbsoluteTimeGetCurrent() - strongSelf.initTimestamp) * 1000.0
+                            print("Chat init to dequeue time: \(deltaTime) ms")
+                            #endif
+                        }
                     }
                 }
+                
+                if case .Generic(.FillHole) = type {
+                    applyHole()
+                    return
+                }
+                
                 return
             case let .HistoryView(view, type, scrollPosition, flashIndicators, originalScrollPosition, data, id):
                 if case .Generic(.FillHole) = type {

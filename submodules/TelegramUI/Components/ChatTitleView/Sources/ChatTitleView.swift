@@ -1148,7 +1148,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
         self.superview?.insertSubview(snapshotState.snapshotView, belowSubview: self)
 
         let snapshotView = snapshotState.snapshotView
-        snapshotState.snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.12, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+        snapshotState.snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.14, removeOnCompletion: false, completion: { [weak snapshotView] _ in
             snapshotView?.removeFromSuperview()
         })
         snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: -offset.x, y: -offset.y), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
