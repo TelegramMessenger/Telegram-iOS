@@ -1766,6 +1766,7 @@ plist_fragment(
         <string>yandexmaps</string>
         <string>yandexnavi</string>
         <string>comgooglemaps</string>
+        <string>om</string>
         <string>youtube</string>
         <string>twitter</string>
         <string>vk</string>
