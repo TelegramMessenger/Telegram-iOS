@@ -2437,7 +2437,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     headerSize.height += 7.0
                 }
                 
-                if isSidePanelOpen {
+                if isSidePanelOpen && incoming {
                     hasTitleAvatar = true
                 }
                 
