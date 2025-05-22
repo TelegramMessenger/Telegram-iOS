@@ -144,6 +144,7 @@ extension ChatControllerImpl {
         private let isChatLocationInfoReady = ValuePromise<Bool>(false, ignoreRepeated: true)
         private let isCachedDataReady = ValuePromise<Bool>(false, ignoreRepeated: true)
         
+        let chatLocation: ChatLocation
         let chatLocationInfoData: ChatLocationInfoData
         
         private(set) var state: State = State()
@@ -172,6 +173,8 @@ extension ChatControllerImpl {
             }
         }
         
+        var historyNavigationStack = ChatHistoryNavigationStack()
+        
         let chatThemeEmoticonPromise = Promise<String?>()
         let chatWallpaperPromise = Promise<TelegramWallpaper?>()
         
@@ -191,6 +194,7 @@ extension ChatControllerImpl {
             presentationData: PresentationData,
             historyNode: ChatHistoryListNodeImpl
         ) {
+            self.chatLocation = chatLocation
             self.presentationData = presentationData
             let strings = self.presentationData.strings
             

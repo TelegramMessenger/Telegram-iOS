@@ -531,7 +531,11 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
                         avatarNode.frame = CGRect(origin: CGPoint(x: leftOffset, y: titleLayout.size.height + titleAuthorSpacing), size: avatarSize)
                         avatarNode.updateSize(size: avatarSize)
                         if let peer {
-                            avatarNode.setPeer(context: context, theme: presentationData.theme.theme, peer: EnginePeer(peer), displayDimensions: avatarSize)
+                            if peer.smallProfileImage != nil {
+                                avatarNode.setPeerV2(context: context, theme: presentationData.theme.theme, peer: EnginePeer(peer), displayDimensions: avatarSize)
+                            } else {
+                                avatarNode.setPeer(context: context, theme: presentationData.theme.theme, peer: EnginePeer(peer), displayDimensions: avatarSize)
+                            }
                         } else if let authorName, !authorName.isEmpty {
                             avatarNode.setCustomLetters([String(authorName[authorName.startIndex])])
                         } else {
