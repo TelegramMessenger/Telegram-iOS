@@ -195,7 +195,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     private var emptyNode: ChatEmptyNode?
     private(set) var emptyType: ChatHistoryNodeLoadState.EmptyType?
     private var didDisplayEmptyGreeting = false
-    private var validEmptyNodeLayout: (CGSize, UIEdgeInsets)?
+    private var validEmptyNodeLayout: (CGSize, UIEdgeInsets, CGFloat, CGFloat)?
     var restrictedNode: ChatRecentActionsEmptyNode?
     
     private(set) var validLayout: (ContainerViewLayout, CGFloat)?
@@ -1019,7 +1019,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 self.contentContainerNode.contentNode.insertSubnode(emptyNode, aboveSubnode: self.historyNodeContainer)
             }
             
-            if let (size, insets) = self.validEmptyNodeLayout {
+            if let (size, insets, leftInset, rightInset) = self.validEmptyNodeLayout {
                 let mappedType: ChatEmptyNode.Subject.EmptyType
                 switch emptyType {
                 case .generic:
@@ -1033,7 +1033,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 case .botInfo:
                     mappedType = .botInfo
                 }
-                emptyNode.updateLayout(interfaceState: self.chatPresentationInterfaceState, subject: .emptyChat(mappedType), loadingNode: wasLoading && self.loadingNode.supernode != nil ? self.loadingNode : nil, backgroundNode: self.backgroundNode, size: size, insets: insets, transition: .immediate)
+                emptyNode.updateLayout(interfaceState: self.chatPresentationInterfaceState, subject: .emptyChat(mappedType), loadingNode: wasLoading && self.loadingNode.supernode != nil ? self.loadingNode : nil, backgroundNode: self.backgroundNode, size: size, insets: insets, leftInset: leftInset, rightInset: rightInset, transition: .immediate)
                 emptyNode.frame = CGRect(origin: CGPoint(), size: size)
             }
             if animated {
@@ -2199,28 +2199,6 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             }
         }
         
-        var emptyNodeInsets = insets
-        emptyNodeInsets.bottom += inputPanelsHeight
-        self.validEmptyNodeLayout = (contentBounds.size, emptyNodeInsets)
-        if let emptyNode = self.emptyNode, let emptyType = self.emptyType {
-            let mappedType: ChatEmptyNode.Subject.EmptyType
-            switch emptyType {
-            case .generic:
-                mappedType = .generic
-            case .joined:
-                mappedType = .joined
-            case .clearedHistory:
-                mappedType = .clearedHistory
-            case .topic:
-                mappedType = .topic
-            case .botInfo:
-                mappedType = .botInfo
-            }
-            emptyNode.updateLayout(interfaceState: self.chatPresentationInterfaceState, subject: .emptyChat(mappedType), loadingNode: nil, backgroundNode: self.backgroundNode, size: contentBounds.size, insets: emptyNodeInsets, transition: transition)
-            transition.updateFrame(node: emptyNode, frame: contentBounds)
-            emptyNode.update(rect: contentBounds, within: contentBounds.size, transition: transition)
-        }
-        
         var contentBottomInset: CGFloat = inputPanelsHeight + 4.0
         
         if let scrollContainerNode = self.scrollContainerNode {
@@ -2239,10 +2217,17 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         
         let visibleAreaInset = UIEdgeInsets(top: containerInsets.top, left: 0.0, bottom: containerInsets.bottom + inputPanelsHeight, right: 0.0)
         self.visibleAreaInset = visibleAreaInset
-        self.loadingNode.updateLayout(size: contentBounds.size, insets: visibleAreaInset, transition: transition)
+        
+        var loadingNodeInsets = visibleAreaInset
+        loadingNodeInsets.left = layout.safeInsets.left
+        loadingNodeInsets.right = layout.safeInsets.right
+        if let leftPanelSize {
+            loadingNodeInsets.left += leftPanelSize.width
+        }
+        self.loadingNode.updateLayout(size: contentBounds.size, insets: loadingNodeInsets, transition: transition)
         
         if let loadingPlaceholderNode = self.loadingPlaceholderNode {
-            loadingPlaceholderNode.updateLayout(size: contentBounds.size, insets: visibleAreaInset, metrics: layout.metrics, transition: transition)
+            loadingPlaceholderNode.updateLayout(size: contentBounds.size, insets: loadingNodeInsets, metrics: layout.metrics, transition: transition)
             loadingPlaceholderNode.update(rect: contentBounds, within: contentBounds.size, transition: transition)
         }
         
@@ -2291,6 +2276,28 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         
         if let leftPanelSize {
             listInsets.left += leftPanelSize.width
+        }
+        
+        var emptyNodeInsets = insets
+        emptyNodeInsets.bottom += inputPanelsHeight
+        self.validEmptyNodeLayout = (contentBounds.size, emptyNodeInsets, listInsets.left, listInsets.right)
+        if let emptyNode = self.emptyNode, let emptyType = self.emptyType {
+            let mappedType: ChatEmptyNode.Subject.EmptyType
+            switch emptyType {
+            case .generic:
+                mappedType = .generic
+            case .joined:
+                mappedType = .joined
+            case .clearedHistory:
+                mappedType = .clearedHistory
+            case .topic:
+                mappedType = .topic
+            case .botInfo:
+                mappedType = .botInfo
+            }
+            emptyNode.updateLayout(interfaceState: self.chatPresentationInterfaceState, subject: .emptyChat(mappedType), loadingNode: nil, backgroundNode: self.backgroundNode, size: contentBounds.size, insets: emptyNodeInsets, leftInset: listInsets.left, rightInset: listInsets.right, transition: transition)
+            transition.updateFrame(node: emptyNode, frame: contentBounds)
+            emptyNode.update(rect: contentBounds, within: contentBounds.size, transition: transition)
         }
         
         var displayTopDimNode = false

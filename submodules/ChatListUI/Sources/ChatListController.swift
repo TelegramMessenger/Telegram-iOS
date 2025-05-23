@@ -1067,6 +1067,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 
                 if case let .channel(channel) = peer, channel.flags.contains(.isMonoforum) {
                     openAsInlineForum = false
+                } else if case let .channel(channel) = peer, channel.flags.contains(.displayForumAsTabs) {
+                    openAsInlineForum = false
                 } else {
                     if let cachedData = cachedDataView.cachedPeerData as? CachedChannelData, case let .known(viewForumAsMessages) = cachedData.viewForumAsMessages, viewForumAsMessages {
                         openAsInlineForum = false

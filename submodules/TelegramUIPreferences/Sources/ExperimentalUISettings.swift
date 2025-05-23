@@ -66,6 +66,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var fakeAds: Bool
     public var conferenceDebug: Bool
     public var checkSerializedData: Bool
+    public var allForumsHaveTabs: Bool
     
     public static var defaultSettings: ExperimentalUISettings {
         return ExperimentalUISettings(
@@ -109,7 +110,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
             devRequests: false,
             fakeAds: false,
             conferenceDebug: false,
-            checkSerializedData: false
+            checkSerializedData: false,
+            allForumsHaveTabs: false
         )
     }
     
@@ -154,7 +156,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
         devRequests: Bool,
         fakeAds: Bool,
         conferenceDebug: Bool,
-        checkSerializedData: Bool
+        checkSerializedData: Bool,
+        allForumsHaveTabs: Bool
     ) {
         self.keepChatNavigationStack = keepChatNavigationStack
         self.skipReadHistory = skipReadHistory
@@ -197,6 +200,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.fakeAds = fakeAds
         self.conferenceDebug = conferenceDebug
         self.checkSerializedData = checkSerializedData
+        self.allForumsHaveTabs = allForumsHaveTabs
     }
     
     public init(from decoder: Decoder) throws {
@@ -243,6 +247,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.fakeAds = try container.decodeIfPresent(Bool.self, forKey: "fakeAds") ?? false
         self.conferenceDebug = try container.decodeIfPresent(Bool.self, forKey: "conferenceDebug") ?? false
         self.checkSerializedData = try container.decodeIfPresent(Bool.self, forKey: "checkSerializedData") ?? false
+        self.allForumsHaveTabs = try container.decodeIfPresent(Bool.self, forKey: "allForumsHaveTabs") ?? false
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -289,6 +294,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encodeIfPresent(self.fakeAds, forKey: "fakeAds")
         try container.encodeIfPresent(self.conferenceDebug, forKey: "conferenceDebug")
         try container.encodeIfPresent(self.checkSerializedData, forKey: "checkSerializedData")
+        try container.encodeIfPresent(self.allForumsHaveTabs, forKey: "allForumsHaveTabs")
     }
 }
 
