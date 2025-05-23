@@ -73,7 +73,7 @@ enum AccountStateMutationOperation {
     case ReadOutbox(MessageId, Int32?)
     case ResetReadState(peerId: PeerId, namespace: MessageId.Namespace, maxIncomingReadId: MessageId.Id, maxOutgoingReadId: MessageId.Id, maxKnownId: MessageId.Id, count: Int32, markedUnread: Bool?)
     case ResetIncomingReadState(groupId: PeerGroupId, peerId: PeerId, namespace: MessageId.Namespace, maxIncomingReadId: MessageId.Id, count: Int32, pts: Int32)
-    case UpdatePeerChatUnreadMark(PeerId, MessageId.Namespace, Bool)
+    case UpdatePeerChatUnreadMark(PeerId, Int64?, MessageId.Namespace, Bool)
     case ResetMessageTagSummary(PeerId, MessageTags, MessageId.Namespace, Int32, MessageHistoryTagNamespaceCountValidityRange)
     case ReadGroupFeedInbox(PeerGroupId, MessageIndex)
     case UpdateState(AuthorizedAccountState.State)
@@ -424,8 +424,8 @@ struct AccountMutableState {
         self.addOperation(.ResetIncomingReadState(groupId: groupId, peerId: peerId, namespace: namespace, maxIncomingReadId: maxIncomingReadId, count: count, pts: pts))
     }
     
-    mutating func updatePeerChatUnreadMark(_ peerId: PeerId, namespace: MessageId.Namespace, value: Bool) {
-        self.addOperation(.UpdatePeerChatUnreadMark(peerId, namespace, value))
+    mutating func updatePeerChatUnreadMark(_ peerId: PeerId, threadId: Int64?, namespace: MessageId.Namespace, value: Bool) {
+        self.addOperation(.UpdatePeerChatUnreadMark(peerId, threadId, namespace, value))
     }
     
     mutating func resetMessageTagSummary(_ peerId: PeerId, tag: MessageTags, namespace: MessageId.Namespace, count: Int32, range: MessageHistoryTagNamespaceCountValidityRange) {

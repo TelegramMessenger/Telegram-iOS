@@ -1195,7 +1195,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                         requiresPremiumForMessaging: requiresPremiumForMessaging,
                         displayAsTopicList: false,
                         tags: []
-                    )), editing: false, hasActiveRevealControls: false, selected: false, header: tagMask == nil ? header : nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)
+                    )), editing: false, hasActiveRevealControls: false, selected: false, header: tagMask == nil ? header : nil, enabledContextActions: nil, hiddenOffset: false, interaction: interaction)
                 }
             case let .messagePlaceholder(_, presentationData, searchScope):
                 var actionTitle: String?
@@ -1215,7 +1215,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                 let header = ChatListSearchItemHeader(type: .messages(location: nil), theme: presentationData.theme, strings: presentationData.strings, actionTitle: actionTitle, action: { sourceNode in
                     openMessagesFilter(sourceNode)
                 })
-                return ChatListItem(presentationData: presentationData, context: context, chatListLocation: location, filterData: nil, index: EngineChatList.Item.Index.chatList(ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(id: MessageId(peerId: PeerId(0), namespace: Namespaces.Message.Cloud, id: 0), timestamp: 0))), content: .loading, editing: false, hasActiveRevealControls: false, selected: false, header: header, enableContextActions: false, hiddenOffset: false, interaction: interaction)
+                return ChatListItem(presentationData: presentationData, context: context, chatListLocation: location, filterData: nil, index: EngineChatList.Item.Index.chatList(ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(id: MessageId(peerId: PeerId(0), namespace: Namespaces.Message.Cloud, id: 0), timestamp: 0))), content: .loading, editing: false, hasActiveRevealControls: false, selected: false, header: header, enabledContextActions: nil, hiddenOffset: false, interaction: interaction)
             case let .emptyMessagesFooter(presentationData, searchScope, searchQuery):
                 var actionTitle: String?
                 let filterTitle: String
@@ -5426,7 +5426,7 @@ public final class ChatListSearchShimmerNode: ASDisplayNode {
                             requiresPremiumForMessaging: false,
                             displayAsTopicList: false,
                             tags: []
-                        )), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)
+                        )), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enabledContextActions: nil, hiddenOffset: false, interaction: interaction)
                     case .media:
                         return nil
                     case .links:

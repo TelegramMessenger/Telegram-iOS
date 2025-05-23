@@ -459,7 +459,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 hasActiveRevealControls: false,
                 selected: false,
                 header: nil,
-                enableContextActions: false,
+                enabledContextActions: nil,
                 hiddenOffset: false,
                 interaction: interaction
             )

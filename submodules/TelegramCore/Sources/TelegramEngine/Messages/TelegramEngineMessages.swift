@@ -740,6 +740,13 @@ public extension TelegramEngine {
             |> ignoreValues
         }
         
+        public func togglePeerUnreadMarkInteractively(peerId: EnginePeer.Id, threadId: Int64, setToValue: Bool?) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                _internal_toggleForumThreadUnreadMarkInteractively(transaction: transaction, network: self.account.network, viewTracker: self.account.viewTracker, peerId: peerId, threadId: threadId, setToValue: setToValue)
+            }
+            |> ignoreValues
+        }
+        
         public func markForumThreadAsRead(peerId: EnginePeer.Id, threadId: Int64) -> Signal<Never, NoError> {
             return self.account.postbox.transaction { transaction -> Void in
                 _internal_markForumThreadAsReadInteractively(transaction: transaction, network: self.account.network, viewTracker: self.account.viewTracker, peerId: peerId, threadId: threadId)
