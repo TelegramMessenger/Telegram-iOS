@@ -1224,11 +1224,11 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 switch peer {
                 case let .dialogPeer(peer):
                     let peerId = peer.peerId
-                    //TODO:release
                     if let savedPeerId {
+                        updatedState.updatePeerChatUnreadMark(peerId, threadId: savedPeerId.peerId.toInt64(), namespace: Namespaces.Message.Cloud, value: (flags & (1 << 0)) != 0)
                         let _ = savedPeerId
                     } else {
-                        updatedState.updatePeerChatUnreadMark(peerId, namespace: Namespaces.Message.Cloud, value: (flags & (1 << 0)) != 0)
+                        updatedState.updatePeerChatUnreadMark(peerId, threadId: nil, namespace: Namespaces.Message.Cloud, value: (flags & (1 << 0)) != 0)
                     }
                 case .dialogPeerFolder:
                     break
@@ -2080,6 +2080,7 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                                                         iconColor: iconColor
                                                     ),
                                                     incomingUnreadCount: unreadCount,
+                                                    isMarkedUnread: false,
                                                     maxIncomingReadId: readInboxMaxId,
                                                     maxKnownMessageId: topMessage,
                                                     maxOutgoingReadId: readOutboxMaxId,
@@ -2098,7 +2099,7 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                                     }
                                 case let .savedDialog(savedDialog):
                                     switch savedDialog {
-                                    case let .monoForumDialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _):
+                                    case let .monoForumDialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _):
                                         
                                         state.operations.append(.ResetForumTopic(
                                             topicId: PeerAndBoundThreadId(peerId: peerId, threadId: peer.peerId.toInt64()),
@@ -2113,6 +2114,7 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                                                         iconColor: 0
                                                     ),
                                                     incomingUnreadCount: unreadCount,
+                                                    isMarkedUnread: (flags & (1 << 3)) != 0,
                                                     maxIncomingReadId: readInboxMaxId,
                                                     maxKnownMessageId: topMessage,
                                                     maxOutgoingReadId: readOutboxMaxId,
@@ -2229,6 +2231,7 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                                                     iconColor: iconColor
                                                 ),
                                                 incomingUnreadCount: unreadCount,
+                                                isMarkedUnread: false,
                                                 maxIncomingReadId: readInboxMaxId,
                                                 maxKnownMessageId: topMessage,
                                                 maxOutgoingReadId: readOutboxMaxId,
@@ -2247,7 +2250,7 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                                         }
                                     case let .savedDialog(savedDialog):
                                         switch savedDialog {
-                                        case let .monoForumDialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _):
+                                        case let .monoForumDialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _):
                                             let data = MessageHistoryThreadData(
                                                 creationDate: 0,
                                                 isOwnedByMe: true,
@@ -2258,6 +2261,7 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                                                     iconColor: 0
                                                 ),
                                                 incomingUnreadCount: unreadCount,
+                                                isMarkedUnread: (flags & (1 << 3)) != 0,
                                                 maxIncomingReadId: readInboxMaxId,
                                                 maxKnownMessageId: topMessage,
                                                 maxOutgoingReadId: readOutboxMaxId,
@@ -2381,6 +2385,7 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                                                     iconColor: iconColor
                                                 ),
                                                 incomingUnreadCount: unreadCount,
+                                                isMarkedUnread: false,
                                                 maxIncomingReadId: readInboxMaxId,
                                                 maxKnownMessageId: topMessage,
                                                 maxOutgoingReadId: readOutboxMaxId,
@@ -2397,7 +2402,7 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                                     }
                                 case let .savedDialog(savedDialog):
                                     switch savedDialog {
-                                    case let .monoForumDialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _):
+                                    case let .monoForumDialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _):
                                         
                                         fetchedChatList.threadInfos[PeerAndBoundThreadId(peerId: peerId, threadId: peer.peerId.toInt64())] = StoreMessageHistoryThreadData(
                                             data: MessageHistoryThreadData(
@@ -2410,6 +2415,7 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                                                     iconColor: 0
                                                 ),
                                                 incomingUnreadCount: unreadCount,
+                                                isMarkedUnread: (flags & (1 << 3)) != 0,
                                                 maxIncomingReadId: readInboxMaxId,
                                                 maxKnownMessageId: topMessage,
                                                 maxOutgoingReadId: readOutboxMaxId,
@@ -4360,8 +4366,17 @@ func replayFinalState(
                     transaction.setNeedsIncomingReadStateSynchronization(peerId)
                     invalidateGroupStats.insert(groupId)
                 }
-            case let .UpdatePeerChatUnreadMark(peerId, namespace, value):
-                transaction.applyMarkUnread(peerId: peerId, namespace: namespace, value: value, interactive: false)
+            case let .UpdatePeerChatUnreadMark(peerId, threadId, namespace, value):
+                if let threadId {
+                    if var data = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
+                        data.isMarkedUnread = value
+                        if let entry = StoredMessageHistoryThreadInfo(data) {
+                            transaction.setMessageHistoryThreadInfo(peerId: peerId, threadId: threadId, info: entry)
+                        }
+                    }
+                } else {
+                    transaction.applyMarkUnread(peerId: peerId, namespace: namespace, value: value, interactive: false)
+                }
             case let .ResetMessageTagSummary(peerId, tag, namespace, count, range):
                 transaction.replaceMessageTagSummary(peerId: peerId, threadId: nil, tagMask: tag, namespace: namespace, customTag: nil, count: count, maxId: range.maxId)
                 if count == 0 {

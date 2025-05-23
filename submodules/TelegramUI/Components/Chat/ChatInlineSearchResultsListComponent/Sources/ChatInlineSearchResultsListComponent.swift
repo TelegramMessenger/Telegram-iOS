@@ -277,6 +277,9 @@ public final class ChatInlineSearchResultsListComponent: Component {
             return self.isReadyPromise.get()
         }
         
+        private var hintDeletedChats = Set<EnginePeer.Id>()
+        private var hintAnimateListTransition: Bool = false
+        
         override public init(frame: CGRect) {
             self.listNode = ListView()
             
@@ -328,6 +331,34 @@ public final class ChatInlineSearchResultsListComponent: Component {
                 self.listNode.layer.filters = [blurFilter]
                 self.listNode.layer.animate(from: 0.0 as NSNumber, to: 30.0 as NSNumber, keyPath: "filters.gaussianBlur.inputRadius", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.3, removeOnCompletion: false)
             }
+        }
+        
+        private func performDeleteAction(peerId: EnginePeer.Id, threadId: Int64?) {
+            guard let component = self.component else {
+                return
+            }
+            guard let mainPeerId = component.peerId else {
+                return
+            }
+            if case .monoforumChats = component.contents {
+                let threadId = threadId ?? peerId.toInt64()
+                
+                self.hintDeletedChats.insert(peerId)
+                let _ = component.context.engine.peers.removeForumChannelThread(id: mainPeerId, threadId: threadId).startStandalone()
+            }
+        }
+        
+        private func performToggleUnreadAction(peerId: EnginePeer.Id, threadId: Int64?) {
+            guard let component = self.component else {
+                return
+            }
+            guard let mainPeerId = component.peerId, case .monoforumChats = component.contents else {
+                return
+            }
+            
+            let threadId = threadId ?? peerId.toInt64()
+            
+            let _ = component.context.engine.messages.togglePeerUnreadMarkInteractively(peerId: mainPeerId, threadId: threadId, setToValue: nil).startStandalone()
         }
         
         override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -655,9 +686,33 @@ public final class ChatInlineSearchResultsListComponent: Component {
                         
                         let contentsId = self.nextContentsId
                         self.nextContentsId += 1
+                        
+                        let contentId: ContentsState.ContentId = .search(query)
+                        
+                        if let previousContentsState = self.contentsState, previousContentsState.contentId == contentId {
+                            for deletedPeerId in self.hintDeletedChats {
+                                if previousContentsState.entries.contains(where: { entry in
+                                    if case let .chat(id) = entry.id, case .chatList(deletedPeerId) = id {
+                                        return true
+                                    }
+                                    return false
+                                }) && !entries.contains(where: { entry in
+                                    if case let .chat(id) = entry.id, case .chatList(deletedPeerId) = id {
+                                        return true
+                                    }
+                                    return false
+                                }) {
+                                    self.hintAnimateListTransition = true
+                                    break
+                                }
+                            }
+                        }
+                        
+                        self.hintDeletedChats.removeAll()
+                        
                         self.contentsState = ContentsState(
                             id: contentsId,
-                            contentId: .search(query),
+                            contentId: contentId,
                             entries: entries,
                             messages: messages,
                             hasEarlier: false, //!(result?.completed ?? true),
@@ -783,9 +838,17 @@ public final class ChatInlineSearchResultsListComponent: Component {
                         },
                         setPeerThreadMuted: { _, _, _ in
                         },
-                        deletePeer: { _, _ in
+                        deletePeer: { [weak self] peerId, _ in
+                            guard let self else {
+                                return
+                            }
+                            self.performDeleteAction(peerId: peerId, threadId: nil)
                         },
-                        deletePeerThread: { _, _ in
+                        deletePeerThread: { [weak self] peerId, threadId in
+                            guard let self else {
+                                return
+                            }
+                            self.performDeleteAction(peerId: peerId, threadId: nil)
                         },
                         setPeerThreadStopped: { _, _, _ in
                         },
@@ -795,7 +858,11 @@ public final class ChatInlineSearchResultsListComponent: Component {
                         },
                         updatePeerGrouping: { _, _ in
                         },
-                        togglePeerMarkedUnread: { _, _ in
+                        togglePeerMarkedUnread: { [weak self] peerId, _ in
+                            guard let self else {
+                                return
+                            }
+                            self.performToggleUnreadAction(peerId: peerId, threadId: nil)
                         },
                         toggleArchivedFolderHiddenByDefault: {
                         },
@@ -960,7 +1027,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
                         return ChatListItem(
                             presentationData: chatListPresentationData,
                             context: component.context,
-                            chatListLocation: component.peerId == component.context.account.peerId ? .savedMessagesChats(peerId: component.context.account.peerId) : .chatList(groupId: .root),
+                            chatListLocation: .savedMessagesChats(peerId: component.peerId ?? component.context.account.peerId),
                             filterData: nil,
                             index: .forum(
                                 pinnedIndex: .none,
@@ -997,7 +1064,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
                             hasActiveRevealControls: false,
                             selected: false,
                             header: displayMessagesHeader ? ChatListSearchItemHeader(type: .messages(location: nil), theme: listPresentationData.theme, strings: listPresentationData.strings) : nil,
-                            enableContextActions: false,
+                            enabledContextActions: nil,
                             hiddenOffset: false,
                             interaction: chatListNodeInteraction
                         )
@@ -1012,12 +1079,12 @@ public final class ChatInlineSearchResultsListComponent: Component {
                                 messages: item.messages,
                                 peer: item.renderedPeer,
                                 threadInfo: nil,
-                                combinedReadState: nil,
+                                combinedReadState: item.readCounters,
                                 isRemovedFromTotalUnreadCount: false,
                                 presence: nil,
                                 hasUnseenMentions: false,
                                 hasUnseenReactions: false,
-                                draftState: nil,
+                                draftState: item.draft.flatMap(ChatListItemContent.DraftState.init(draft:)),
                                 mediaDraftContentType: nil,
                                 inputActivities: nil,
                                 promoInfo: nil,
@@ -1036,7 +1103,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
                             hasActiveRevealControls: false,
                             selected: false,
                             header: nil,
-                            enableContextActions: false,
+                            enabledContextActions: .custom([.toggleUnread, .delete]),
                             hiddenOffset: false,
                             interaction: chatListNodeInteraction
                         )
@@ -1044,6 +1111,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
                 }
                 
                 var scrollToItem: ListViewScrollToItem?
+                var listTransactionOptions: ListViewDeleteAndInsertOptions = [.Synchronous, .LowLatency, .PreferSynchronousDrawing, .PreferSynchronousResourceLoading]
                 if previousContentsState?.contentId != contentsState.contentId && !contentsState.entries.isEmpty {
                     scrollToItem = ListViewScrollToItem(
                         index: 0,
@@ -1053,6 +1121,11 @@ public final class ChatInlineSearchResultsListComponent: Component {
                         directionHint: .Up
                     )
                 }
+                
+                if previousContentsState?.contentId == contentsState.contentId && self.hintAnimateListTransition {
+                    listTransactionOptions.insert(.AnimateInsertion)
+                }
+                self.hintAnimateListTransition = false
                 
                 self.listNode.transaction(
                     deleteIndices: deleteIndices.map { index in
@@ -1075,7 +1148,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
                             directionHint: nil
                         )
                     },
-                    options: [.Synchronous, .LowLatency, .PreferSynchronousDrawing, .PreferSynchronousResourceLoading],
+                    options: listTransactionOptions,
                     scrollToItem: scrollToItem,
                     updateSizeAndInsets: nil,
                     updateOpaqueState: contentsState.id

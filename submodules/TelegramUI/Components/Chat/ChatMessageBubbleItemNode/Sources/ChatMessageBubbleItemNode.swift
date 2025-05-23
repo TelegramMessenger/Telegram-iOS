@@ -1713,7 +1713,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
         } else if item.message.id.peerId.isRepliesOrVerificationCodes {
             needsShareButton = false
-        } else if let channel = item.content.firstMessage.peers[item.content.firstMessage.id.peerId] as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = item.content.firstMessage.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.adminRights != nil, case .peer = item.chatLocation {
+        } else if let channel = item.content.firstMessage.peers[item.content.firstMessage.id.peerId] as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = item.content.firstMessage.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething), case .peer = item.chatLocation {
             if incoming {
                 needsShareButton = true
             }

@@ -264,7 +264,7 @@ final class GreetingMessageListItemComponent: Component {
                 hasActiveRevealControls: false,
                 selected: false,
                 header: nil,
-                enableContextActions: false,
+                enabledContextActions: nil,
                 hiddenOffset: false,
                 interaction: chatListNodeInteraction
             )

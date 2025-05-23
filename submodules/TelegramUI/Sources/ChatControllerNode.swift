@@ -2999,10 +2999,18 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 displayInlineSearch = true
             }
         }
-        if self.chatLocation.threadId == nil, let channel = self.chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = self.chatPresentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.adminRights != nil {
+        if self.chatLocation.threadId == nil, let channel = self.chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = self.chatPresentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
             if self.chatPresentationInterfaceState.search != nil {
                 displayInlineSearch = true
             }
+        }
+        
+        var showNavigateButtons = true
+        if let _ = chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState {
+            showNavigateButtons = false
+        }
+        if chatPresentationInterfaceState.displayHistoryFilterAsList {
+            showNavigateButtons = false
         }
         
         if displayInlineSearch {
@@ -3029,12 +3037,17 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 } else {
                     mappedContents = .empty
                 }
-            } else if self.chatLocation.threadId == nil, let channel = self.chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = self.chatPresentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.adminRights != nil {
+            } else if self.chatLocation.threadId == nil, let channel = self.chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = self.chatPresentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
                 mappedContents = .monoforumChats(query: self.chatPresentationInterfaceState.search?.query ?? "")
             } else if case .peer(self.context.account.peerId) = self.chatPresentationInterfaceState.chatLocation {
                 mappedContents = .tag(MemoryBuffer())
             } else {
                 mappedContents = .empty
+            }
+            
+            if case .empty = mappedContents {
+            } else {
+                showNavigateButtons = false
             }
             
             let context = self.context
@@ -3148,7 +3161,12 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                             self.controller?.alwaysShowSearchResultsAsList = false
                             self.alwaysShowSearchResultsAsList = false
                             self.controller?.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
-                                return state.updatedDisplayHistoryFilterAsList(false)
+                                var state = state
+                                state = state.updatedDisplayHistoryFilterAsList(false)
+                                if let channel = state.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = self.chatPresentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
+                                    state = state.updatedSearch(nil)
+                                }
+                                return state
                             })
                         }
                     },
@@ -3270,26 +3288,13 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                         }
                         
                         let viewKey: PostboxViewKey = .savedMessagesIndex(peerId: peerId)
-                        let interfaceStateKey: PostboxViewKey = .chatInterfaceState(peerId: peerId)
                         
-                        let accountPeerId = self.context.account.peerId
-                        let threadListSignal: Signal<EngineChatList?, NoError> = self.context.account.postbox.combinedView(keys: [viewKey, interfaceStateKey])
+                        let threadListSignal: Signal<EngineChatList?, NoError> = self.context.account.postbox.combinedView(keys: [viewKey])
                         |> map { views -> EngineChatList? in
                             guard let view = views.views[viewKey] as? MessageHistorySavedMessagesIndexView else {
                                 preconditionFailure()
                             }
                             
-                            var draft: EngineChatList.Draft?
-                            if let interfaceStateView = views.views[interfaceStateKey] as? ChatInterfaceStateView {
-                                if let embeddedState = interfaceStateView.value, let _ = embeddedState.overrideChatTimestamp {
-                                    if let opaqueState = _internal_decodeStoredChatInterfaceState(state: embeddedState) {
-                                        if let text = opaqueState.synchronizeableInputState?.text {
-                                            draft = EngineChatList.Draft(text: text, entities: opaqueState.synchronizeableInputState?.entities ?? [])
-                                        }
-                                    }
-                                }
-                            }
-                             
                             var items: [EngineChatList.Item] = []
                             for item in view.items {
                                 guard let sourcePeer = item.peer else {
@@ -3310,9 +3315,9 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                                     index: .chatList(ChatListIndex(pinningIndex: item.pinnedIndex.flatMap(UInt16.init), messageIndex: mappedMessageIndex)),
                                     messages: messages,
                                     readCounters: EnginePeerReadCounters(
-                                        incomingReadId: 0, outgoingReadId: 0, count: Int32(item.unreadCount), markedUnread: false),
+                                        incomingReadId: 0, outgoingReadId: 0, count: Int32(item.unreadCount), markedUnread: item.markedUnread),
                                     isMuted: false,
-                                    draft: sourceId == accountPeerId ? draft : nil,
+                                    draft: nil,
                                     threadData: nil,
                                     renderedPeer: EngineRenderedPeer(peer: EnginePeer(sourcePeer)),
                                     presence: nil,
@@ -3465,6 +3470,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             transition.updateAlpha(node: self.historyNode, alpha: 1.0)
             transition.updateAlpha(node: self.backgroundNode, alpha: 1.0)
         }
+        
+        transition.updateAlpha(node: self.navigateButtons, alpha: showNavigateButtons ? 1.0 : 0.0)
 
         let listBottomInset = self.historyNode.insets.top
         if let previousListBottomInset = previousListBottomInset, listBottomInset != previousListBottomInset {
@@ -3693,15 +3700,6 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 self.loadingNode.isHidden = false
                 self.emptyNode?.isHidden = false
             }
-            
-            var showNavigateButtons = true
-            if let _ = chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState {
-                showNavigateButtons = false
-            }
-            if chatPresentationInterfaceState.displayHistoryFilterAsList {
-                showNavigateButtons = false
-            }
-            transition.updateAlpha(node: self.navigateButtons, alpha: showNavigateButtons ? 1.0 : 0.0)
             
             if let openStickersDisposable = self.openStickersDisposable {
                 if case .media = chatPresentationInterfaceState.inputMode {

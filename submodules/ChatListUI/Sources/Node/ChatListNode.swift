@@ -463,7 +463,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             hasActiveRevealControls: hasActiveRevealControls,
                             selected: selected,
                             header: nil,
-                            enableContextActions: true,
+                            enabledContextActions: .auto,
                             hiddenOffset: threadInfo?.isHidden == true && !revealed,
                             interaction: nodeInteraction
                         ), directionHint: entry.directionHint)
@@ -709,7 +709,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                     hasActiveRevealControls: false,
                     selected: false,
                     header: nil,
-                    enableContextActions: true,
+                    enabledContextActions: .auto,
                     hiddenOffset: groupReferenceEntry.hiddenByDefault && !groupReferenceEntry.revealed,
                     interaction: nodeInteraction
                 ), directionHint: entry.directionHint)
@@ -862,7 +862,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             hasActiveRevealControls: hasActiveRevealControls,
                             selected: selected,
                             header: nil,
-                            enableContextActions: true,
+                            enabledContextActions: .auto,
                             hiddenOffset: threadInfo?.isHidden == true && !revealed,
                             interaction: nodeInteraction
                     ), directionHint: entry.directionHint)
@@ -1059,7 +1059,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                         hasActiveRevealControls: false,
                         selected: false,
                         header: nil,
-                        enableContextActions: true,
+                        enabledContextActions: .auto,
                         hiddenOffset: groupReferenceEntry.hiddenByDefault && !groupReferenceEntry.revealed,
                         interaction: nodeInteraction
                 ), directionHint: entry.directionHint)

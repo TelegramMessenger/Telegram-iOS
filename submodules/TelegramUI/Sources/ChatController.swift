@@ -4761,7 +4761,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let self else {
                 return
             }
-            let defaultDirection: ChatControllerAnimateInnerChatSwitchDirection? = self.chatDisplayNode.chatLocationTabSwitchDirection(from: self.chatLocation.threadId, to: self.presentationInterfaceState.chatLocation.threadId).flatMap { direction -> ChatControllerAnimateInnerChatSwitchDirection in
+            let defaultDirection: ChatControllerAnimateInnerChatSwitchDirection? = self.chatDisplayNode.chatLocationTabSwitchDirection(from: self.chatLocation.threadId, to: threadId).flatMap { direction -> ChatControllerAnimateInnerChatSwitchDirection in
                 return direction ? .right : .left
             }
             self.updateChatLocationThread(threadId: threadId, animationDirection: animationDirection ?? defaultDirection)
@@ -7835,7 +7835,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum {
                     attributes.removeAll(where: { $0 is SendAsMessageAttribute })
-                    if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = self.presentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.adminRights != nil, let sendAsPeerId = self.presentationInterfaceState.currentSendAsPeerId {
+                    if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = self.presentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething), let sendAsPeerId = self.presentationInterfaceState.currentSendAsPeerId {
                         attributes.append(SendAsMessageAttribute(peerId: sendAsPeerId))
                     }
                 }

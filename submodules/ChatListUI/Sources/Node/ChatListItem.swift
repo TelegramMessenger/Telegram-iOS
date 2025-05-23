@@ -453,6 +453,22 @@ private final class ChatListItemTagListComponent: Component {
 }
 
 public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
+    public enum EnabledContextActions {
+        public struct Actions: OptionSet {
+            public var rawValue: Int32
+            
+            public init(rawValue: Int32) {
+                self.rawValue = rawValue
+            }
+            
+            public static let toggleUnread = Actions(rawValue: 1 << 0)
+            public static let delete = Actions(rawValue: 1 << 1)
+        }
+        
+        case custom(Actions)
+        case auto
+    }
+    
     let presentationData: ChatListPresentationData
     let context: AccountContext
     let chatListLocation: ChatListControllerLocation
@@ -462,7 +478,7 @@ public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
     let editing: Bool
     let hasActiveRevealControls: Bool
     let selected: Bool
-    let enableContextActions: Bool
+    let enabledContextActions: EnabledContextActions?
     let hiddenOffset: Bool
     let interaction: ChatListNodeInteraction
     
@@ -487,7 +503,7 @@ public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
         }
     }
     
-    public init(presentationData: ChatListPresentationData, context: AccountContext, chatListLocation: ChatListControllerLocation, filterData: ChatListItemFilterData?, index: EngineChatList.Item.Index, content: ChatListItemContent, editing: Bool, hasActiveRevealControls: Bool, selected: Bool, header: ListViewItemHeader?, enableContextActions: Bool, hiddenOffset: Bool, interaction: ChatListNodeInteraction) {
+    public init(presentationData: ChatListPresentationData, context: AccountContext, chatListLocation: ChatListControllerLocation, filterData: ChatListItemFilterData?, index: EngineChatList.Item.Index, content: ChatListItemContent, editing: Bool, hasActiveRevealControls: Bool, selected: Bool, header: ListViewItemHeader?, enabledContextActions: EnabledContextActions?, hiddenOffset: Bool, interaction: ChatListNodeInteraction) {
         self.presentationData = presentationData
         self.chatListLocation = chatListLocation
         self.filterData = filterData
@@ -498,7 +514,7 @@ public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
         self.hasActiveRevealControls = hasActiveRevealControls
         self.selected = selected
         self.header = header
-        self.enableContextActions = enableContextActions
+        self.enabledContextActions = enabledContextActions
         self.hiddenOffset = hiddenOffset
         self.interaction = interaction
     }
@@ -3493,57 +3509,74 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         }
                     }
                     
-                    if item.enableContextActions {
-                        if case .forum = item.chatListLocation {
-                            if case let .chat(itemPeer) = contentPeer, case let .channel(channel) = itemPeer.peer {
-                                var canOpenClose = false
-                                if channel.flags.contains(.isCreator) {
-                                    canOpenClose = true
-                                } else if channel.hasPermission(.manageTopics) {
-                                    canOpenClose = true
-                                } else if let threadInfo = threadInfo, threadInfo.isOwnedByMe {
-                                    canOpenClose = true
-                                }
-                                let canDelete = channel.hasPermission(.deleteAllMessages)
-                                var isClosed = false
-                                if let threadInfo {
-                                    isClosed = threadInfo.isClosed
-                                }
-                                if let threadInfo, threadInfo.id == 1 {
-                                    peerRevealOptions = forumGeneralRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isMuted: (currentMutedIconImage != nil), isClosed: isClosed, isEditing: item.editing, canOpenClose: canOpenClose, canHide: channel.flags.contains(.isCreator) || channel.hasPermission(.manageTopics), hiddenByDefault: threadInfo.isHidden)
+                    if let enabledContextActions = item.enabledContextActions {
+                        switch enabledContextActions {
+                        case .auto:
+                            if case .forum = item.chatListLocation {
+                                if case let .chat(itemPeer) = contentPeer, case let .channel(channel) = itemPeer.peer {
+                                    var canOpenClose = false
+                                    if channel.flags.contains(.isCreator) {
+                                        canOpenClose = true
+                                    } else if channel.hasPermission(.manageTopics) {
+                                        canOpenClose = true
+                                    } else if let threadInfo = threadInfo, threadInfo.isOwnedByMe {
+                                        canOpenClose = true
+                                    }
+                                    let canDelete = channel.hasPermission(.deleteAllMessages)
+                                    var isClosed = false
+                                    if let threadInfo {
+                                        isClosed = threadInfo.isClosed
+                                    }
+                                    if let threadInfo, threadInfo.id == 1 {
+                                        peerRevealOptions = forumGeneralRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isMuted: (currentMutedIconImage != nil), isClosed: isClosed, isEditing: item.editing, canOpenClose: canOpenClose, canHide: channel.flags.contains(.isCreator) || channel.hasPermission(.manageTopics), hiddenByDefault: threadInfo.isHidden)
+                                    } else {
+                                        peerRevealOptions = forumThreadRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isMuted: (currentMutedIconImage != nil), isClosed: isClosed, isEditing: item.editing, canOpenClose: canOpenClose, canDelete: canDelete)
+                                    }
+                                    peerLeftRevealOptions = []
                                 } else {
-                                    peerRevealOptions = forumThreadRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isMuted: (currentMutedIconImage != nil), isClosed: isClosed, isEditing: item.editing, canOpenClose: canOpenClose, canDelete: canDelete)
+                                    peerRevealOptions = []
+                                    peerLeftRevealOptions = []
                                 }
-                                peerLeftRevealOptions = []
-                            } else {
-                                peerRevealOptions = []
-                                peerLeftRevealOptions = []
-                            }
-                        } else if case .psa = promoInfo {
-                            peerRevealOptions = [
-                                ItemListRevealOption(key: RevealOptionKey.hidePsa.rawValue, title: item.presentationData.strings.ChatList_HideAction, icon: deleteIcon, color: item.presentationData.theme.list.itemDisclosureActions.inactive.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.neutral1.foregroundColor)
-                            ]
-                            peerLeftRevealOptions = []
-                        } else if case let .peer(peerData) = item.content, let customMessageListData = peerData.customMessageListData {
-                            peerLeftRevealOptions = []
-                            if customMessageListData.commandPrefix != nil {
+                            } else if case .psa = promoInfo {
                                 peerRevealOptions = [
-                                    ItemListRevealOption(key: RevealOptionKey.edit.rawValue, title: item.presentationData.strings.ChatList_ItemMenuEdit, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.neutral2.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.neutral2.foregroundColor),
-                                    ItemListRevealOption(key: RevealOptionKey.delete.rawValue, title: item.presentationData.strings.ChatList_ItemMenuDelete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor)
+                                    ItemListRevealOption(key: RevealOptionKey.hidePsa.rawValue, title: item.presentationData.strings.ChatList_HideAction, icon: deleteIcon, color: item.presentationData.theme.list.itemDisclosureActions.inactive.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.neutral1.foregroundColor)
                                 ]
+                                peerLeftRevealOptions = []
+                            } else if case let .peer(peerData) = item.content, let customMessageListData = peerData.customMessageListData {
+                                peerLeftRevealOptions = []
+                                if customMessageListData.commandPrefix != nil {
+                                    peerRevealOptions = [
+                                        ItemListRevealOption(key: RevealOptionKey.edit.rawValue, title: item.presentationData.strings.ChatList_ItemMenuEdit, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.neutral2.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.neutral2.foregroundColor),
+                                        ItemListRevealOption(key: RevealOptionKey.delete.rawValue, title: item.presentationData.strings.ChatList_ItemMenuDelete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor)
+                                    ]
+                                } else {
+                                    peerRevealOptions = []
+                                }
+                            } else if promoInfo == nil {
+                                peerRevealOptions = revealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isPinned: isPinned, isMuted: !isAccountPeer ? (currentMutedIconImage != nil) : nil, location: item.chatListLocation, peerId: renderedPeer.peerId, accountPeerId: item.context.account.peerId, canDelete: true, isEditing: item.editing, filterData: item.filterData)
+                                if case let .chat(itemPeer) = contentPeer {
+                                    peerLeftRevealOptions = leftRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isUnread: unreadCount.unread, isEditing: item.editing, isPinned: isPinned, isSavedMessages: itemPeer.peerId == item.context.account.peerId, location: item.chatListLocation, peer: itemPeer.peers[itemPeer.peerId]!, filterData: item.filterData)
+                                } else {
+                                    peerLeftRevealOptions = []
+                                }
                             } else {
                                 peerRevealOptions = []
-                            }
-                        } else if promoInfo == nil {
-                            peerRevealOptions = revealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isPinned: isPinned, isMuted: !isAccountPeer ? (currentMutedIconImage != nil) : nil, location: item.chatListLocation, peerId: renderedPeer.peerId, accountPeerId: item.context.account.peerId, canDelete: true, isEditing: item.editing, filterData: item.filterData)
-                            if case let .chat(itemPeer) = contentPeer {
-                                peerLeftRevealOptions = leftRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isUnread: unreadCount.unread, isEditing: item.editing, isPinned: isPinned, isSavedMessages: itemPeer.peerId == item.context.account.peerId, location: item.chatListLocation, peer: itemPeer.peers[itemPeer.peerId]!, filterData: item.filterData)
-                            } else {
                                 peerLeftRevealOptions = []
                             }
-                        } else {
+                        case let .custom(actions):
                             peerRevealOptions = []
                             peerLeftRevealOptions = []
+                            
+                            if actions.contains(.toggleUnread) {
+                                if unreadCount.unread {
+                                    peerLeftRevealOptions.append(ItemListRevealOption(key: RevealOptionKey.toggleMarkedUnread.rawValue, title: item.presentationData.strings.DialogList_Read, icon: readIcon, color: item.presentationData.theme.list.itemDisclosureActions.inactive.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.neutral1.foregroundColor))
+                                } else {
+                                    peerLeftRevealOptions.append(ItemListRevealOption(key: RevealOptionKey.toggleMarkedUnread.rawValue, title: item.presentationData.strings.DialogList_Unread, icon: unreadIcon, color: item.presentationData.theme.list.itemDisclosureActions.accent.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.accent.foregroundColor))
+                                }
+                            }
+                            if actions.contains(.delete) {
+                                peerRevealOptions.append(ItemListRevealOption(key: RevealOptionKey.delete.rawValue, title: item.presentationData.strings.Common_Delete, icon: deleteIcon, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor))
+                            }
                         }
                     } else {
                         peerRevealOptions = []

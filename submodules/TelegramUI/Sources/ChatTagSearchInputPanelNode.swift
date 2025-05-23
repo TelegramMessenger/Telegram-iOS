@@ -262,6 +262,10 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
             canChangeListMode = true
         }
         
+        if let channel = params.interfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum, params.interfaceState.chatLocation.threadId == nil, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = params.interfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
+            canChangeListMode = false
+        }
+        
         let height: CGFloat
         if case .regular = params.metrics.widthClass {
             height = 49.0
