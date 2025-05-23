@@ -463,6 +463,7 @@ public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
             
             public static let toggleUnread = Actions(rawValue: 1 << 0)
             public static let delete = Actions(rawValue: 1 << 1)
+            public static let togglePinned = Actions(rawValue: 1 << 2)
         }
         
         case custom(Actions)

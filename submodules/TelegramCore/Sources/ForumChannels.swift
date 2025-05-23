@@ -247,7 +247,7 @@ func _internal_createForumChannelTopic(account: Account, peerId: PeerId, title: 
                 }
                 |> castError(CreateForumChannelTopicError.self)
                 |> mapToSignal { _ -> Signal<Int64, CreateForumChannelTopicError> in
-                    return resolveForumThreads(accountPeerId: account.peerId, postbox: account.postbox, source: .network(account.network), ids: [PeerAndBoundThreadId(peerId: peerId, threadId: topicId)])
+                    return resolveForumThreads(accountPeerId: account.peerId, postbox: account.postbox, source: .network(account.network), additionalPeers: AccumulatedPeers(), ids: [PeerAndBoundThreadId(peerId: peerId, threadId: topicId)])
                     |> castError(CreateForumChannelTopicError.self)
                     |> map { _ -> Int64 in
                         return topicId
@@ -277,7 +277,7 @@ func _internal_fetchForumChannelTopic(account: Account, peerId: PeerId, threadId
         if let info = info {
             return .single(.result(info))
         } else {
-            return .single(.progress) |> then(resolveForumThreads(accountPeerId: account.peerId, postbox: account.postbox, source: .network(account.network), ids: [PeerAndBoundThreadId(peerId: peerId, threadId: threadId)])
+            return .single(.progress) |> then(resolveForumThreads(accountPeerId: account.peerId, postbox: account.postbox, source: .network(account.network), additionalPeers: AccumulatedPeers(), ids: [PeerAndBoundThreadId(peerId: peerId, threadId: threadId)])
             |> mapToSignal { _ -> Signal<FetchForumChannelTopicResult, NoError> in
                 return account.postbox.transaction { transaction -> FetchForumChannelTopicResult in
                     if let data = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {

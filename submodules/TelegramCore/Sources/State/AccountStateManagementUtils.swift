@@ -2019,7 +2019,16 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                     }
                     
                     if peer.flags.contains(.isMonoforum) {
-                        let signal = source.request(Api.functions.messages.getSavedDialogsByID(flags: 1 << 1, parentPeer: inputPeer, ids: threadIds.compactMap { transaction.getPeer(PeerId($0)).flatMap(apiInputPeer(_:)) }))
+                        let signal = source.request(Api.functions.messages.getSavedDialogsByID(flags: 1 << 1, parentPeer: inputPeer, ids: threadIds.compactMap { threadId in
+                            let threadPeerId = PeerId(threadId)
+                            if let threadPeer = state.peers[threadPeerId] {
+                                return apiInputPeer(threadPeer)
+                            } else if let threadPeer = transaction.getPeer(threadPeerId) {
+                                return apiInputPeer(threadPeer)
+                            } else {
+                                return nil
+                            }
+                        }))
                         |> map { result -> (Peer, FetchedForumThreads)? in
                             let result = FetchedForumThreads(savedDialogs: result)
                             return (peer, result)
@@ -2146,7 +2155,7 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
     }
 }
 
-func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchMessageHistoryHoleSource, ids: [PeerAndBoundThreadId]) -> Signal<Void, NoError> {
+func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchMessageHistoryHoleSource, additionalPeers: AccumulatedPeers, ids: [PeerAndBoundThreadId]) -> Signal<Void, NoError> {
     let forumThreadIds = Set(ids)
     
     if forumThreadIds.isEmpty {
@@ -2172,7 +2181,16 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                     }
                     
                     if peer.flags.contains(.isMonoforum) {
-                        let signal = source.request(Api.functions.messages.getSavedDialogsByID(flags: 1 << 1, parentPeer: inputPeer, ids: threadIds.compactMap { transaction.getPeer(PeerId($0)).flatMap(apiInputPeer(_:)) }))
+                        let signal = source.request(Api.functions.messages.getSavedDialogsByID(flags: 1 << 1, parentPeer: inputPeer, ids: threadIds.compactMap { threadId in
+                            let threadPeerId = PeerId(threadId)
+                            if let threadPeer = additionalPeers.get(threadPeerId) {
+                                return apiInputPeer(threadPeer)
+                            } else if let threadPeer = transaction.getPeer(threadPeerId) {
+                                return apiInputPeer(threadPeer)
+                            } else {
+                                return nil
+                            }
+                        }))
                         |> map { result -> (Peer, FetchedForumThreads)? in
                             let result = FetchedForumThreads(savedDialogs: result)
                             return (peer, result)
@@ -2329,7 +2347,16 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                     }
                     
                     if peer.flags.contains(.isMonoforum) {
-                        let signal = source.request(Api.functions.messages.getSavedDialogsByID(flags: 1 << 1, parentPeer: inputPeer, ids: threadIds.compactMap { transaction.getPeer(PeerId($0)).flatMap(apiInputPeer(_:)) }))
+                        let signal = source.request(Api.functions.messages.getSavedDialogsByID(flags: 1 << 1, parentPeer: inputPeer, ids: threadIds.compactMap { threadId in
+                            let threadPeerId = PeerId(threadId)
+                            if let threadPeer = fetchedChatList.peers.get(threadPeerId) {
+                                return apiInputPeer(threadPeer)
+                            } else if let threadPeer = transaction.getPeer(threadPeerId) {
+                                return apiInputPeer(threadPeer)
+                            } else {
+                                return nil
+                            }
+                        }))
                         |> map { result -> (Peer, FetchedForumThreads)? in
                             let result = FetchedForumThreads(savedDialogs: result)
                             return (peer, result)

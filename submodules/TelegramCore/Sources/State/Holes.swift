@@ -225,7 +225,7 @@ func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMessageHis
                 return resolveAssociatedStories(postbox: postbox, source: source, accountPeerId: accountPeerId, messages: storeMessages, additionalPeers: parsedPeers, result: Void())
                 |> mapToSignal { _ -> Signal<T, NoError> in
                     if resolveThreads && !threadIds.isEmpty {
-                        return resolveForumThreads(accountPeerId: accountPeerId, postbox: postbox, source: source, ids: Array(threadIds))
+                        return resolveForumThreads(accountPeerId: accountPeerId, postbox: postbox, source: source, additionalPeers: parsedPeers, ids: Array(threadIds))
                         |> mapToSignal { _ -> Signal<T, NoError> in
                             return postbox.transaction { transaction -> T in
                                 return f(transaction, parsedPeers, [])
@@ -325,7 +325,8 @@ func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMessageHis
                     let combinedMessages = storeMessages + additionalMessages
                     return resolveUnknownEmojiFiles(postbox: postbox, source: source, messages: combinedMessages, reactions: [], result: Void())
                     |> mapToSignal { _ -> Signal<T, NoError> in
-                        return resolveAssociatedStories(postbox: postbox, source: source, accountPeerId: accountPeerId, messages: storeMessages + additionalMessages, additionalPeers: parsedPeers.union(with: additionalPeers), result: Void())
+                        let additionalPeers = parsedPeers.union(with: additionalPeers)
+                        return resolveAssociatedStories(postbox: postbox, source: source, accountPeerId: accountPeerId, messages: storeMessages + additionalMessages, additionalPeers: additionalPeers, result: Void())
                         |> mapToSignal { _ -> Signal<T, NoError> in
                             var threadIds = Set<PeerAndBoundThreadId>()
                             for message in combinedMessages {
@@ -335,7 +336,7 @@ func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMessageHis
                             }
                             
                             if resolveThreads && !threadIds.isEmpty {
-                                return resolveForumThreads(accountPeerId: accountPeerId, postbox: postbox, source: source, ids: Array(threadIds))
+                                return resolveForumThreads(accountPeerId: accountPeerId, postbox: postbox, source: source, additionalPeers: additionalPeers, ids: Array(threadIds))
                                 |> mapToSignal { _ -> Signal<T, NoError> in
                                     return postbox.transaction { transaction -> T in
                                         return f(transaction, parsedPeers, [])

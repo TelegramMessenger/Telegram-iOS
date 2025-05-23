@@ -1426,7 +1426,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         strongSelf.textNode.textNode.frame = imageFrame
                     }
                     
-                    strongSelf.imageNode.frame = updatedContentFrame
+                    animation.animator.updateFrame(layer: strongSelf.imageNode.layer, frame: updatedContentFrame, completion: nil)
                     
                     strongSelf.contextSourceNode.contentRect = contextContentFrame
                     strongSelf.containerNode.targetNodeForActivationProgressContentRect = strongSelf.contextSourceNode.contentRect
@@ -1458,11 +1458,13 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         let foregroundColor: UIColor = .clear// = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderColor, wallpaper: item.presentationData.theme.wallpaper)
                         let shimmeringColor = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderShimmerColor, wallpaper: item.presentationData.theme.wallpaper)
                         strongSelf.placeholderNode.update(backgroundColor: nil, foregroundColor: foregroundColor, shimmeringColor: shimmeringColor, data: immediateThumbnailData, size: animationNodeFrame.size, enableEffect: item.context.sharedContext.energyUsageSettings.fullTranslucency, imageSize: file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0))
-                        strongSelf.placeholderNode.frame = animationNodeFrame
+                        animation.animator.updateFrame(layer: strongSelf.placeholderNode.layer, frame: animationNodeFrame, completion: nil)
                     }
                     
                     if strongSelf.animationNode?.supernode === strongSelf.contextSourceNode.contentNode {
-                        strongSelf.animationNode?.frame = animationNodeFrame
+                        if let animationNode = strongSelf.animationNode {
+                            animation.animator.updateFrame(layer: animationNode.layer, frame: animationNodeFrame, completion: nil)
+                        }
                         if let animationNode = strongSelf.animationNode as? AnimatedStickerNode {
                             animationNode.updateLayout(size: updatedContentFrame.insetBy(dx: imageInset, dy: imageInset).size)
                             
@@ -1494,7 +1496,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             }
                         }
                         let buttonSize = updatedShareButtonNode.update(presentationData: item.presentationData, controllerInteraction: item.controllerInteraction, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account)
-                        updatedShareButtonNode.frame = CGRect(origin: CGPoint(x: !incoming ? updatedImageFrame.minX - buttonSize.width - 6.0 : updatedImageFrame.maxX + 8.0, y: updatedImageFrame.maxY - buttonSize.height - 4.0 + imageBottomPadding), size: buttonSize)
+                        animation.animator.updateFrame(layer: updatedShareButtonNode.layer, frame: CGRect(origin: CGPoint(x: !incoming ? updatedImageFrame.minX - buttonSize.width - 6.0 : updatedImageFrame.maxX + 8.0, y: updatedImageFrame.maxY - buttonSize.height - 4.0 + imageBottomPadding), size: buttonSize), completion: nil)
                     } else if let shareButtonNode = strongSelf.shareButtonNode {
                         shareButtonNode.removeFromSupernode()
                         strongSelf.shareButtonNode = nil

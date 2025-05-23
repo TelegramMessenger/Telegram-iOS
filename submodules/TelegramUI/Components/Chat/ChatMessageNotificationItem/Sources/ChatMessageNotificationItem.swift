@@ -178,6 +178,9 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             if firstMessage.id.peerId.isRepliesOrVerificationCodes, let author = firstMessage.forwardInfo?.author {
                 avatarPeer = EnginePeer(author)
             }
+            if case let .channel(channel) = avatarPeer, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = firstMessage.peers[linkedMonoforumId] as? TelegramChannel {
+                avatarPeer = .channel(mainChannel)
+            }
             self.avatarNode.setPeer(context: item.context, theme: presentationData.theme, peer: avatarPeer, overrideImage: peer.id == item.context.account.peerId ? .savedMessagesIcon : nil, emptyColor: presentationData.theme.list.mediaPlaceholderColor)
         }
         
