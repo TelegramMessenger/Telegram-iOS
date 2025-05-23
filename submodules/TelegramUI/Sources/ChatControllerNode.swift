@@ -2046,6 +2046,10 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             transition.updatePosition(node: self.historyNode, position: CGPoint(x: contentBounds.size.width / 2.0, y: contentBounds.size.height / 2.0))
         }
         
+        if immediatelyLayoutLeftPanelNodeAndAnimateAppearance || dismissedLeftPanel != nil || immediatelyLayoutTitleTopicsAccessoryPanelNodeAndAnimateAppearance || dismissedTitleTopicsAccessoryPanelNode != nil {
+            self.historyNode.resetScrolledToItem()
+        }
+        
         if let blurredHistoryNode = self.blurredHistoryNode {
             transition.updateFrame(node: blurredHistoryNode, frame: contentBounds)
         }

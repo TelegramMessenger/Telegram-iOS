@@ -1423,7 +1423,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             strongSelf.contextSourceNode.contentNode.insertSubnode(strongSelf.textNode.textNode, aboveSubnode: strongSelf.imageNode)
                         }
 
-                        strongSelf.textNode.textNode.frame = imageFrame
+                        animation.animator.updateFrame(layer: strongSelf.textNode.textNode.layer, frame: imageFrame, completion: nil)
                     }
                     
                     animation.animator.updateFrame(layer: strongSelf.imageNode.layer, frame: updatedContentFrame, completion: nil)
