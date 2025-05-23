@@ -1816,7 +1816,7 @@ public final class ChatEmptyNode: ASDisplayNode {
                     contentType = .secret
                 } else if let group = peer as? TelegramGroup, case .creator = group.role {
                     contentType = .group
-                } else if let channel = peer as? TelegramChannel, case .group = channel.info, channel.flags.contains(.isCreator) && !channel.flags.contains(.isGigagroup) {
+                } else if let channel = peer as? TelegramChannel, case .group = channel.info, channel.flags.contains(.isCreator) && !channel.flags.contains(.isGigagroup) && !channel.isMonoForum {
                     contentType = .group
                 } else if let _ = interfaceState.peerNearbyData {
                     contentType = .peerNearby
@@ -1835,6 +1835,8 @@ public final class ChatEmptyNode: ASDisplayNode {
                             }
                         }
                     }
+                } else if let channel = peer as? TelegramChannel, channel.isMonoForum, let sendPaidMessageStars = interfaceState.sendPaidMessageStars {
+                    contentType = .starsRequired(sendPaidMessageStars.value)
                 } else {
                     contentType = .regular
                 }

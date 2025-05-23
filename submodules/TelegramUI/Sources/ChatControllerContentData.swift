@@ -1857,8 +1857,6 @@ extension ChatControllerImpl {
                         }
                         if globalRemainingUnreadChatCount > 0 {
                             strongSelf.initialNavigationBadge = "\(globalRemainingUnreadChatCount)"
-                        } else {
-                            strongSelf.initialNavigationBadge = ""
                         }
                     }
                 }

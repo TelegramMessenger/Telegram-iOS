@@ -1409,11 +1409,11 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             }
         }
         
-        #if DEBUG
+        /*#if DEBUG
         if "".isEmpty {
             hasTranslationPanel = true
         }
-        #endif
+        #endif*/
         
         if hasTranslationPanel {
             let translationPanelNode: ChatTranslationPanelNode

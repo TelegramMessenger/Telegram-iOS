@@ -2429,6 +2429,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         var mediaInfoSizeApply: (CGSize, (Bool) -> ChatMessageStarsMediaInfoNode?) = (CGSize(), {  _ in nil })
         
         var hasTitleAvatar = false
+        var hasTitleTopicNavigation = false
         
         if displayHeader {
             let bubbleWidthInsets: CGFloat = mosaicRange == nil ? layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right : 0.0
@@ -2439,6 +2440,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 
                 if isSidePanelOpen && incoming {
                     hasTitleAvatar = true
+                    hasTitleTopicNavigation = item.chatLocation.threadId == nil
                 }
                 
                 let inlineBotNameColor = messageTheme.accentTextColor
@@ -2544,7 +2546,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 var nameAvatarSpaceWidth: CGFloat = 0.0
                 if hasTitleAvatar {
                     headerSize.height += 12.0
-                    nameAvatarSpaceWidth += 26.0 + 5.0 + 4.0 + 26.0
+                    nameAvatarSpaceWidth += 26.0 + 5.0
+                    if hasTitleTopicNavigation {
+                        nameAvatarSpaceWidth += 4.0 + 26.0
+                    }
                     nameNodeOriginY += 5.0
                 }
                                 
@@ -3285,6 +3290,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 contentOrigin: contentOrigin,
                 nameNodeOriginY: nameNodeOriginY + detachedContentNodesHeight + additionalTopHeight,
                 hasTitleAvatar: hasTitleAvatar,
+                hasTitleTopicNavigation: hasTitleTopicNavigation,
                 authorNameColor: authorNameColor,
                 layoutConstants: layoutConstants,
                 currentCredibilityIcon: currentCredibilityIcon,
@@ -3348,6 +3354,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         contentOrigin: CGPoint,
         nameNodeOriginY: CGFloat,
         hasTitleAvatar: Bool,
+        hasTitleTopicNavigation: Bool,
         authorNameColor: UIColor?,
         layoutConstants: ChatMessageItemLayoutConstants,
         currentCredibilityIcon: (EmojiStatusComponent.Content, UIColor?)?,
@@ -3538,21 +3545,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     strongSelf.clippingNode.addSubnode(nameAvatarNode)
                 }
                 
-                let nameNavigateButton: NameNavigateButton
-                if let current = strongSelf.nameNavigateButton {
-                    nameNavigateButton = current
-                } else {
-                    nameNavigateButton = NameNavigateButton(frame: CGRect())
-                    strongSelf.nameNavigateButton = nameNavigateButton
-                    strongSelf.clippingNode.view.addSubview(nameNavigateButton)
-                    nameNavigateButton.action = { [weak strongSelf] in
-                        guard let strongSelf, let item = strongSelf.item else {
-                            return
-                        }
-                        item.controllerInteraction.updateChatLocationThread(item.content.firstMessage.threadId, nil)
-                    }
-                }
-                
                 let nameAvatarFrame = CGRect(origin: CGPoint(x: nameNodeFrame.minX, y: nameNodeFrame.minY - 4.0), size: CGSize(width: 26.0, height: 26.0))
                 let nameNavigateFrame = CGRect(origin: CGPoint(x: nameNodeFrame.maxX + 4.0 + nameNavigateButtonOffset, y: nameNodeFrame.minY - 4.0), size: CGSize(width: 26.0, height: 26.0))
                 
@@ -3563,11 +3555,38 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
                 nameAvatarNode.updateSize(size: nameAvatarFrame.size)
                 
-                nameNavigateButton.update(size: nameNavigateFrame.size, color: authorNameColor ?? item.presentationData.theme.theme.chat.message.incoming.accentTextColor)
+                if hasTitleTopicNavigation {
+                    let nameNavigateButton: NameNavigateButton
+                    if let current = strongSelf.nameNavigateButton {
+                        nameNavigateButton = current
+                    } else {
+                        nameNavigateButton = NameNavigateButton(frame: CGRect())
+                        strongSelf.nameNavigateButton = nameNavigateButton
+                        strongSelf.clippingNode.view.addSubview(nameNavigateButton)
+                        nameNavigateButton.action = { [weak strongSelf] in
+                            guard let strongSelf, let item = strongSelf.item else {
+                                return
+                            }
+                            item.controllerInteraction.updateChatLocationThread(item.content.firstMessage.threadId, nil)
+                        }
+                    }
+                    nameNavigateButton.update(size: nameNavigateFrame.size, color: authorNameColor ?? item.presentationData.theme.theme.chat.message.incoming.accentTextColor)
+                } else {
+                    if let nameNavigateButton = strongSelf.nameNavigateButton {
+                        strongSelf.nameNavigateButton = nil
+                        nameNavigateButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak nameNavigateButton] _ in
+                            nameNavigateButton?.removeFromSuperview()
+                        })
+                        animation.animator.updateFrame(layer: nameNavigateButton.layer, frame: CGRect(origin: CGPoint(x: nameNodeFrame.maxX + nameNavigateButtonOffset - 26.0 * 0.5, y: nameNodeFrame.minY - 4.0), size: CGSize(width: 26.0, height: 26.0)), completion: nil)
+                        animation.transition.updateTransformScale(layer: nameNavigateButton.layer, scale: CGPoint(x: 0.001, y: 0.001))
+                    }
+                }
                 
                 if animateNameAvatar {
                     animation.animator.updateFrame(layer: nameAvatarNode.layer, frame: nameAvatarFrame, completion: nil)
-                    animation.animator.updateFrame(layer: nameNavigateButton.layer, frame: nameNavigateFrame, completion: nil)
+                    if let nameNavigateButton = strongSelf.nameNavigateButton {
+                        animation.animator.updateFrame(layer: nameNavigateButton.layer, frame: nameNavigateFrame, completion: nil)
+                    }
                 } else {
                     nameAvatarNode.frame = CGRect(origin: CGPoint(x: previousNameNodeFrame.minX - 26.0 * 0.5, y: previousNameNodeFrame.minY - 4.0), size: CGSize(width: 26.0, height: 26.0))
                     animation.animator.updateFrame(layer: nameAvatarNode.layer, frame: nameAvatarFrame, completion: nil)
@@ -3576,11 +3595,13 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         nameAvatarNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
                     }
                     
-                    nameNavigateButton.frame = CGRect(origin: CGPoint(x: previousNameNodeFrame.maxX + nameNavigateButtonOffset - 26.0 * 0.5, y: previousNameNodeFrame.minY - 4.0), size: CGSize(width: 26.0, height: 26.0))
-                    animation.animator.updateFrame(layer: nameNavigateButton.layer, frame: nameNavigateFrame, completion: nil)
-                    if animation.isAnimated {
-                        animation.transition.animateTransformScale(view: nameNavigateButton, from: 0.001)
-                        nameNavigateButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+                    if let nameNavigateButton = strongSelf.nameNavigateButton {
+                        nameNavigateButton.frame = CGRect(origin: CGPoint(x: previousNameNodeFrame.maxX + nameNavigateButtonOffset - 26.0 * 0.5, y: previousNameNodeFrame.minY - 4.0), size: CGSize(width: 26.0, height: 26.0))
+                        animation.animator.updateFrame(layer: nameNavigateButton.layer, frame: nameNavigateFrame, completion: nil)
+                        if animation.isAnimated {
+                            animation.transition.animateTransformScale(view: nameNavigateButton, from: 0.001)
+                            nameNavigateButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+                        }
                     }
                 }
                 

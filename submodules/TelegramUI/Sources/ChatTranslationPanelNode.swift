@@ -167,7 +167,7 @@ final class ChatTranslationPanelNode: ASDisplayNode {
         let buttonTextSize = self.buttonTextNode.updateLayout(CGSize(width: width - contentRightInset - moreButtonSize.width, height: panelHeight))
         if let icon = self.buttonIconNode.image {
             let buttonSize = CGSize(width: buttonTextSize.width + icon.size.width + buttonSpacing + buttonPadding * 2.0, height: panelHeight)
-            transition.updateFrame(node: self.button, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((width - buttonSize.width) / 2.0), y: 0.0), size: buttonSize))
+            transition.updateFrame(node: self.button, frame: CGRect(origin: CGPoint(x: leftInset + floorToScreenPixels((width - leftInset - rightInset - buttonSize.width) / 2.0), y: 0.0), size: buttonSize))
             
             transition.updateFrame(node: self.buttonIconNode, frame: CGRect(origin: CGPoint(x: buttonPadding, y: floorToScreenPixels((buttonSize.height - icon.size.height) / 2.0)), size: icon.size))
             
