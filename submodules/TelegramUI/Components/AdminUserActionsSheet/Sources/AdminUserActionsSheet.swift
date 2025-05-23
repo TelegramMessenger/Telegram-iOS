@@ -529,12 +529,10 @@ private final class AdminUserActionsSheetComponent: Component {
                             selectAll = true
                         } else if case let .known(peerId) = cachedData.linkedDiscussionPeerId, let _ = peerId {
                             selectAll = true
-                        } else if case let .channel(channel) = component.chatPeer, let _ = channel.addressName {
-                            selectAll = true
                         }
                     }
                     
-                    if selectAll {
+                    if selectAll && !"".isEmpty {
                         var selectedPeers = Set<EnginePeer.Id>()
                         for peer in component.peers {
                             selectedPeers.insert(peer.peer.id)
