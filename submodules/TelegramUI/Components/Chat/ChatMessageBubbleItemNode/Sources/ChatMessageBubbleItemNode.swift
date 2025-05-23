@@ -1926,7 +1926,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     inlineBotNameString = attribute.title
                 }
             } else if let attribute = attribute as? ReplyMessageAttribute {
-                if case let .replyThread(replyThreadMessage) = item.chatLocation, Int32(clamping: replyThreadMessage.threadId) == attribute.messageId.id {
+                if let threadId = firstMessage.threadId, Int32(clamping: threadId) == attribute.messageId.id {
                 } else {
                     replyMessage = firstMessage.associatedMessages[attribute.messageId]
                 }
@@ -2437,7 +2437,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     headerSize.height += 7.0
                 }
                 
-                if isSidePanelOpen {
+                if isSidePanelOpen && incoming {
                     hasTitleAvatar = true
                 }
                 

@@ -1763,7 +1763,7 @@ private final class NotificationServiceHandler {
                                     |> mapToSignal { content, _ -> Signal<(NotificationContent, Media?), NoError> in
                                         return stateManager.postbox.transaction { transaction -> (NotificationContent, Media?) in
                                             var parsedMedia: Media?
-                                            if let messageId, let message = transaction.getMessage(messageId), !message.containsSecretMedia {
+                                            if let messageId, let message = transaction.getMessage(messageId), !message.containsSecretMedia, !message.attributes.contains(where: { $0 is MediaSpoilerMessageAttribute }) {
                                                 if let media = message.media.first {
                                                     parsedMedia = media
                                                 }

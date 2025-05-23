@@ -389,8 +389,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     var searchDisposable: MetaDisposable?
     
-    var historyNavigationStack = ChatHistoryNavigationStack()
-    
     public let canReadHistory = ValuePromise<Bool>(true, ignoreRepeated: true)
     public let hasBrowserOrAppInFront = Promise<Bool>(false)
     
@@ -5230,7 +5228,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             })
         }
         
-        self.reloadChatLocation(chatLocation: self.chatLocation, chatLocationContextHolder: self.chatLocationContextHolder, historyNode: self.chatDisplayNode.historyNode, isReady: nil)
+        self.reloadChatLocation(chatLocation: self.chatLocation, chatLocationContextHolder: self.chatLocationContextHolder, historyNode: self.chatDisplayNode.historyNode, apply: { $0(false) })
         
         self.botCallbackAlertMessageDisposable = (self.botCallbackAlertMessage.get()
         |> deliverOnMainQueue).startStrict(next: { [weak self] message in
@@ -9711,10 +9709,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     var currentChatSwitchDirection: ChatControllerAnimateInnerChatSwitchDirection?
     
     public func updateChatLocationThread(threadId: Int64?, animationDirection: ChatControllerAnimateInnerChatSwitchDirection? = nil) {
-        /*if self.isUpdatingChatLocationThread {
+        if self.isUpdatingChatLocationThread {
             return
         }
-        
         guard let peerId = self.chatLocation.peerId else {
             return
         }
@@ -9725,16 +9722,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return
         }
         
-        let navigationSnapshot = self.chatTitleView?.prepareSnapshotState()
-        
-        //let historyNode = self.chatDisplayNode.createHistoryNodeForChatLocation(chatLocation: self.chatLocation, chatLocationContextHolder: )
-        
-        let rightBarButtonItemSnapshots: [(UIView, CGRect)] = (self.navigationItem.rightBarButtonItems ?? []).compactMap { item -> (UIView, CGRect)? in
-            guard let view = item.customDisplayNode?.view, let snapshotView = view.snapshotView(afterScreenUpdates: false) else {
-                return nil
-            }
-            return (snapshotView, view.convert(view.bounds, to: self.view))
-        }
+        self.saveInterfaceState()
         
         let updatedChatLocation: ChatLocation
         if let threadId {
@@ -9762,25 +9750,22 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             updatedChatLocation = .peer(id: peerId)
         }
         
-        let isReady = Promise<Bool>()
-        let chatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
-        self.reloadChatLocation(chatLocation: updatedChatLocation, chatLocationContextHolder: chatLocationContextHolder, historyNode: historyNode, isReady: isReady)
+        let navigationSnapshot = self.chatTitleView?.prepareSnapshotState()
+        let avatarSnapshot = self.chatInfoNavigationButton?.buttonItem.customDisplayNode?.view.window != nil ? (self.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.prepareSnapshotState() : nil
         
+        let chatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
+        let historyNode = self.chatDisplayNode.createHistoryNodeForChatLocation(chatLocation: updatedChatLocation, chatLocationContextHolder: chatLocationContextHolder)
         self.isUpdatingChatLocationThread = true
-        self.updateChatLocationThreadDisposable?.dispose()
-        self.updateChatLocationThreadDisposable = (isReady.get()
-        |> filter { $0 }
-        |> take(1)
-        |> deliverOnMainQueue).startStrict(next: { [weak self] _ in
-            guard let self else {
+        self.reloadChatLocation(chatLocation: updatedChatLocation, chatLocationContextHolder: chatLocationContextHolder, historyNode: historyNode, apply: { [weak self, weak historyNode] apply in
+            guard let self, let historyNode else {
                 return
             }
-            self.isUpdatingChatLocationThread = false
             
             self.currentChatSwitchDirection = animationDirection
-            self.updateChatPresentationInterfaceState(animated: animationDirection != nil, interactive: false, { presentationInterfaceState in
-                return presentationInterfaceState.updatedChatLocation(updatedChatLocation)
-            })
+            self.chatLocation = updatedChatLocation
+            self.chatDisplayNode.prepareSwitchToChatLocation(historyNode: historyNode, animationDirection: animationDirection)
+            
+            apply(true)
             
             if let navigationSnapshot, let animationDirection {
                 let mappedAnimationDirection: ChatTitleView.AnimateFromSnapshotDirection
@@ -9796,33 +9781,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 
                 self.chatTitleView?.animateFromSnapshot(navigationSnapshot, direction: mappedAnimationDirection)
-                if let rightBarButtonItems = self.navigationItem.rightBarButtonItems {
-                    for i in 0 ..< rightBarButtonItems.count {
-                        let item = rightBarButtonItems[i]
-                        if let customDisplayNode = item.customDisplayNode {
-                            customDisplayNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                            //customDisplayNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
-                            
-                            let _ = rightBarButtonItemSnapshots
-                            /*if i < rightBarButtonItemSnapshots.count {
-                                let (snapshotItem, snapshotFrame) = rightBarButtonItemSnapshots[i]
-                                if let targetSuperview = customDisplayNode.view.superview {
-                                    snapshotItem.frame = targetSuperview.convert(snapshotFrame, from: self.view)
-                                    targetSuperview.addSubview(snapshotItem)
-                                    
-                                    snapshotItem.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.18, completion: { [weak snapshotItem] _ in
-                                        snapshotItem?.removeFromSuperview()
-                                    })
-                                    snapshotItem.layer.animateScale(from: 1.0, to: 0.1, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
-                                }
-                            }*/
-                        }
-                    }
-                }
+            }
+            
+            if let avatarSnapshot, self.chatInfoNavigationButton?.buttonItem.customDisplayNode?.view.window != nil {
+                (self.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.animateFromSnapshot(avatarSnapshot)
             }
             
             self.currentChatSwitchDirection = nil
-        })*/
+            self.isUpdatingChatLocationThread = false
+        })
     }
     
     public var contentContainerNode: ASDisplayNode {

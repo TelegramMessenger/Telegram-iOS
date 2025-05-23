@@ -57,6 +57,30 @@ extension ChatControllerImpl {
             case dismiss
         }
         
+        struct NextChannelToRead: Equatable {
+            struct ThreadData: Equatable {
+                let id: Int64
+                let data: MessageHistoryThreadData
+                
+                init(id: Int64, data: MessageHistoryThreadData) {
+                    self.id = id
+                    self.data = data
+                }
+            }
+            
+            let peer: EnginePeer
+            let threadData: ThreadData?
+            let unreadCount: Int
+            let location: TelegramEngine.NextUnreadChannelLocation
+            
+            init(peer: EnginePeer, threadData: ThreadData?, unreadCount: Int, location: TelegramEngine.NextUnreadChannelLocation) {
+                self.peer = peer
+                self.threadData = threadData
+                self.unreadCount = unreadCount
+                self.location = location
+            }
+        }
+        
         struct State {
             var peerView: PeerView?
             var threadInfo: EngineMessageHistoryThread.Info?
@@ -72,7 +96,7 @@ extension ChatControllerImpl {
             var contactStatus: ChatContactStatus?
             var adMessage: Message?
             var offerNextChannelToRead: Bool = false
-            var nextChannelToRead: (peer: EnginePeer, threadData: (id: Int64, data: MessageHistoryThreadData)?, unreadCount: Int, location: TelegramEngine.NextUnreadChannelLocation)?
+            var nextChannelToRead: NextChannelToRead?
             var nextChannelToReadDisplayName: Bool = false
             var isNotAccessible: Bool = false
             var hasBots: Bool = false
@@ -144,6 +168,7 @@ extension ChatControllerImpl {
         private let isChatLocationInfoReady = ValuePromise<Bool>(false, ignoreRepeated: true)
         private let isCachedDataReady = ValuePromise<Bool>(false, ignoreRepeated: true)
         
+        let chatLocation: ChatLocation
         let chatLocationInfoData: ChatLocationInfoData
         
         private(set) var state: State = State()
@@ -172,11 +197,13 @@ extension ChatControllerImpl {
             }
         }
         
+        var historyNavigationStack = ChatHistoryNavigationStack()
+        
         let chatThemeEmoticonPromise = Promise<String?>()
         let chatWallpaperPromise = Promise<TelegramWallpaper?>()
         
-        var inviteRequestsContext: PeerInvitationImportersContext?
-        private var inviteRequestsDisposable = MetaDisposable()
+        private(set) var inviteRequestsContext: PeerInvitationImportersContext?
+        private var inviteRequestsDisposable: Disposable?
         
         init(
             context: AccountContext,
@@ -189,9 +216,14 @@ extension ChatControllerImpl {
             currentChatListFilter: Int32?,
             customChatNavigationStack: [EnginePeer.Id]?,
             presentationData: PresentationData,
-            historyNode: ChatHistoryListNodeImpl
+            historyNode: ChatHistoryListNodeImpl,
+            inviteRequestsContext: PeerInvitationImportersContext?
         ) {
+            self.chatLocation = chatLocation
             self.presentationData = presentationData
+            
+            self.inviteRequestsContext = inviteRequestsContext
+            
             let strings = self.presentationData.strings
             
             let chatLocationPeerId: PeerId? = chatLocation.peerId
@@ -968,11 +1000,23 @@ extension ChatControllerImpl {
                                     
                                     let previousState = strongSelf.state
 
-                                    strongSelf.state.offerNextChannelToRead = true
-                                    strongSelf.state.nextChannelToRead = nextPeer.flatMap { nextPeer -> (peer: EnginePeer, threadData: (id: Int64, data: MessageHistoryThreadData)?, unreadCount: Int, location: TelegramEngine.NextUnreadChannelLocation) in
-                                        return (peer: nextPeer, threadData: nil, unreadCount: 0, location: .same)
+                                    var isUpdated = false
+                                    
+                                    if !strongSelf.state.offerNextChannelToRead {
+                                        strongSelf.state.offerNextChannelToRead = true
+                                        isUpdated = true
                                     }
-                                    strongSelf.state.nextChannelToReadDisplayName = nextChatSuggestionTip >= 3
+                                    let nextChannelToRead = nextPeer.flatMap { nextPeer -> NextChannelToRead in
+                                        return NextChannelToRead(peer: nextPeer, threadData: nil, unreadCount: 0, location: .same)
+                                    }
+                                    if strongSelf.state.nextChannelToRead != nextChannelToRead {
+                                        strongSelf.state.nextChannelToRead = nextChannelToRead
+                                        isUpdated = true
+                                    }
+                                    if strongSelf.state.nextChannelToReadDisplayName != (nextChatSuggestionTip >= 3) {
+                                        strongSelf.state.nextChannelToReadDisplayName = nextChatSuggestionTip >= 3
+                                        isUpdated = true
+                                    }
 
                                     let nextPeerId = nextPeer?.id
 
@@ -988,7 +1032,9 @@ extension ChatControllerImpl {
                                         }
                                     }
                                     
-                                    strongSelf.onUpdated?(previousState)
+                                    if isUpdated {
+                                        strongSelf.onUpdated?(previousState)
+                                    }
                                 })
                             }
                         } else if isRegularChat, strongSelf.nextChannelToReadDisposable == nil {
@@ -1008,11 +1054,23 @@ extension ChatControllerImpl {
                                 
                                 let previousState = strongSelf.state
 
-                                strongSelf.state.offerNextChannelToRead = true
-                                strongSelf.state.nextChannelToRead = nextPeer.flatMap { nextPeer -> (peer: EnginePeer, threadData: (id: Int64, data: MessageHistoryThreadData)?, unreadCount: Int, location: TelegramEngine.NextUnreadChannelLocation) in
-                                    return (peer: nextPeer.peer, threadData: nil, unreadCount: nextPeer.unreadCount, location: nextPeer.location)
+                                var isUpdated = false
+                                
+                                if !strongSelf.state.offerNextChannelToRead {
+                                    strongSelf.state.offerNextChannelToRead = true
+                                    isUpdated = true
                                 }
-                                strongSelf.state.nextChannelToReadDisplayName = nextChatSuggestionTip >= 3
+                                let nextChannelToRead = nextPeer.flatMap { nextPeer -> NextChannelToRead in
+                                    return NextChannelToRead(peer: nextPeer.peer, threadData: nil, unreadCount: nextPeer.unreadCount, location: nextPeer.location)
+                                }
+                                if strongSelf.state.nextChannelToRead != nextChannelToRead {
+                                    strongSelf.state.nextChannelToRead = nextChannelToRead
+                                    isUpdated = true
+                                }
+                                if strongSelf.state.nextChannelToReadDisplayName != (nextChatSuggestionTip >= 3) {
+                                    strongSelf.state.nextChannelToReadDisplayName = nextChatSuggestionTip >= 3
+                                    isUpdated = true
+                                }
 
                                 let nextPeerId = nextPeer?.peer.id
 
@@ -1028,7 +1086,9 @@ extension ChatControllerImpl {
                                     }
                                 }
                                 
-                                strongSelf.onUpdated?(previousState)
+                                if isUpdated {
+                                    strongSelf.onUpdated?(previousState)
+                                }
                             })
                         }
                     }
@@ -1566,13 +1626,27 @@ extension ChatControllerImpl {
                                 
                                 let previousState = strongSelf.state
 
-                                strongSelf.state.offerNextChannelToRead = true
-                                strongSelf.state.nextChannelToRead = nextThreadData.flatMap { nextThreadData -> (peer: EnginePeer, threadData: (id: Int64, data: MessageHistoryThreadData)?, unreadCount: Int, location: TelegramEngine.NextUnreadChannelLocation) in
-                                    return (peer: EnginePeer(channel), threadData: nextThreadData, unreadCount: Int(nextThreadData.data.incomingUnreadCount), location: .same)
-                                }
-                                strongSelf.state.nextChannelToReadDisplayName = nextChatSuggestionTip >= 3
+                                var isUpdated = false
                                 
-                                strongSelf.onUpdated?(previousState)
+                                if !strongSelf.state.offerNextChannelToRead {
+                                    strongSelf.state.offerNextChannelToRead = true
+                                    isUpdated = true
+                                }
+                                let nextChannelToRead = nextThreadData.flatMap { nextThreadData -> NextChannelToRead in
+                                    return NextChannelToRead(peer: EnginePeer(channel), threadData: NextChannelToRead.ThreadData(id: nextThreadData.id, data: nextThreadData.data), unreadCount: Int(nextThreadData.data.incomingUnreadCount), location: .same)
+                                }
+                                if strongSelf.state.nextChannelToRead != nextChannelToRead {
+                                    strongSelf.state.nextChannelToRead = nextChannelToRead
+                                    isUpdated = true
+                                }
+                                if strongSelf.state.nextChannelToReadDisplayName != (nextChatSuggestionTip >= 3) {
+                                    strongSelf.state.nextChannelToReadDisplayName = nextChatSuggestionTip >= 3
+                                    isUpdated = true
+                                }
+                                
+                                if isUpdated {
+                                    strongSelf.onUpdated?(previousState)
+                                }
                             })
                         }
                     }
@@ -2125,19 +2199,6 @@ extension ChatControllerImpl {
                         if strongSelf.inviteRequestsContext == nil {
                             let inviteRequestsContext = context.engine.peers.peerInvitationImporters(peerId: peerId, subject: .requests(query: nil))
                             strongSelf.inviteRequestsContext = inviteRequestsContext
-                                                    
-                            strongSelf.inviteRequestsDisposable.set((combineLatest(queue: Queue.mainQueue(), inviteRequestsContext.state, ApplicationSpecificNotice.dismissedInvitationRequests(accountManager: context.sharedContext.accountManager, peerId: peerId))).startStrict(next: { [weak strongSelf] requestsState, dismissedInvitationRequests in
-                                guard let strongSelf else {
-                                    return
-                                }
-                                
-                                let previousState = strongSelf.state
-                                
-                                strongSelf.state.requestsState = requestsState
-                                strongSelf.state.dismissedInvitationRequests = dismissedInvitationRequests
-                                
-                                strongSelf.onUpdated?(previousState)
-                            }))
                         } else if let inviteRequestsContext = strongSelf.inviteRequestsContext {
                             let _ = (inviteRequestsContext.state
                             |> take(1)
@@ -2147,6 +2208,30 @@ extension ChatControllerImpl {
                                 }
                             })
                         }
+                        
+                        if chatLocation.threadId == nil {
+                            if strongSelf.inviteRequestsDisposable == nil, let inviteRequestsContext = strongSelf.inviteRequestsContext {
+                                strongSelf.inviteRequestsDisposable = combineLatest(queue: Queue.mainQueue(), inviteRequestsContext.state, ApplicationSpecificNotice.dismissedInvitationRequests(accountManager: context.sharedContext.accountManager, peerId: peerId)).startStrict(next: { [weak strongSelf] requestsState, dismissedInvitationRequests in
+                                    guard let strongSelf else {
+                                        return
+                                    }
+                                    
+                                    let previousState = strongSelf.state
+                                    
+                                    strongSelf.state.requestsState = requestsState
+                                    strongSelf.state.dismissedInvitationRequests = dismissedInvitationRequests
+                                    
+                                    strongSelf.onUpdated?(previousState)
+                                })
+                            }
+                        } else {
+                            strongSelf.state.requestsState = nil
+                            strongSelf.state.dismissedInvitationRequests = []
+                        }
+                    } else {
+                        strongSelf.inviteRequestsContext = nil
+                        strongSelf.state.requestsState = nil
+                        strongSelf.state.dismissedInvitationRequests = []
                     }
                 
                     var isUpdated = false
@@ -2192,7 +2277,7 @@ extension ChatControllerImpl {
             self.cachedDataDisposable?.dispose()
             self.premiumGiftSuggestionDisposable?.dispose()
             self.translationStateDisposable?.dispose()
-            self.inviteRequestsDisposable.dispose()
+            self.inviteRequestsDisposable?.dispose()
         }
     }
 }

@@ -477,7 +477,7 @@ final class ComposePollScreenComponent: Component {
             defer {
                 self.isUpdating = false
             }
-            
+                        
             var alphaTransition = transition
             if !transition.animation.isImmediate {
                 alphaTransition = alphaTransition.withAnimation(.curve(duration: 0.25, curve: .easeInOut))
@@ -850,7 +850,7 @@ final class ComposePollScreenComponent: Component {
                 }
             }
             
-            if self.pollOptions.count < 10, let lastOption = self.pollOptions.last {
+            if self.pollOptions.count < component.initialData.maxPollAnswersCount, let lastOption = self.pollOptions.last {
                 if lastOption.textInputState.text.length != 0 {
                     self.pollOptions.append(PollOption(id: self.nextPollOptionId))
                     self.nextPollOptionId += 1
@@ -921,7 +921,7 @@ final class ComposePollScreenComponent: Component {
             
             contentHeight += 7.0
             
-            let pollOptionsLimitReached = self.pollOptions.count >= 10
+            let pollOptionsLimitReached = self.pollOptions.count >= component.initialData.maxPollAnswersCount
             var animatePollOptionsFooterIn = false
             var pollOptionsFooterTransition = transition
             if self.currentPollOptionsLimitReached != pollOptionsLimitReached {
@@ -944,7 +944,7 @@ final class ComposePollScreenComponent: Component {
                     maximumNumberOfLines: 0
                 ))
             } else {
-                let remainingCount = 10 - self.pollOptions.count
+                let remainingCount = component.initialData.maxPollAnswersCount - self.pollOptions.count
                 let rawString = environment.strings.CreatePoll_OptionCountFooterFormat(Int32(remainingCount))
                 
                 var pollOptionsFooterItems: [AnimatedTextComponent.Item] = []
@@ -1476,13 +1476,16 @@ public class ComposePollScreen: ViewControllerComponentContainer, AttachmentCont
     public final class InitialData {
         fileprivate let maxPollTextLength: Int
         fileprivate let maxPollOptionLength: Int
+        fileprivate let maxPollAnswersCount: Int
         
         fileprivate init(
             maxPollTextLength: Int,
-            maxPollOptionLength: Int
+            maxPollOptionLength: Int,
+            maxPollAnwsersCount: Int
         ) {
             self.maxPollTextLength = maxPollTextLength
             self.maxPollOptionLength = maxPollOptionLength
+            self.maxPollAnswersCount = maxPollAnwsersCount
         }
     }
     
@@ -1577,9 +1580,14 @@ public class ComposePollScreen: ViewControllerComponentContainer, AttachmentCont
     }
     
     public static func initialData(context: AccountContext) -> InitialData {
+        var maxPollAnwsersCount: Int = 10
+        if let data = context.currentAppConfiguration.with({ $0 }).data, let value = data["poll_answers_max"] as? Double {
+            maxPollAnwsersCount = Int(value)
+        }
         return InitialData(
             maxPollTextLength: Int(200),
-            maxPollOptionLength: 100
+            maxPollOptionLength: 100,
+            maxPollAnwsersCount: maxPollAnwsersCount
         )
     }
     

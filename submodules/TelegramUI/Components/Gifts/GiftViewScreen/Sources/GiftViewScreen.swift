@@ -1657,6 +1657,10 @@ private final class GiftViewSheetContent: CombinedComponent {
                 convertStars = nil
                 titleString = ""
             }
+            
+            if !canUpgrade, let gift = state.starGiftsMap[giftId], let _ = gift.upgradeStars {
+                canUpgrade = true
+            }
                         
             var showUpgradePreview = false
             if state.inUpgradePreview, let _ = state.sampleGiftAttributes {

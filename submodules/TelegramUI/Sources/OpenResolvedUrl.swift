@@ -898,7 +898,7 @@ func openResolvedUrlImpl(
         
             func subject(for path: String) -> MediaEditorScreenImpl.Subject? {
                 if path.hasSuffix(".jpg") {
-                    if let image = UIImage(contentsOfFile: path) {
+                    if let image = UIImage(contentsOfFile: path)?.fixedOrientation() {
                         return .image(image: image, dimensions: PixelDimensions(image.size), additionalImage: nil, additionalImagePosition: .topLeft, fromCamera: false)
                     }
                 } else {

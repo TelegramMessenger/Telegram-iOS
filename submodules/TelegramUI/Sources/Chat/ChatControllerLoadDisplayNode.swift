@@ -127,7 +127,7 @@ import PostSuggestionsSettingsScreen
 import ChatSendStarsScreen
 
 extension ChatControllerImpl {
-    func reloadChatLocation(chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, historyNode: ChatHistoryListNodeImpl, isReady: Promise<Bool>?) {
+    func reloadChatLocation(chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, historyNode: ChatHistoryListNodeImpl, apply: @escaping ((Bool) -> Void) -> Void) {
         self.contentDataReady.set(false)
         
         self.contentDataDisposable?.dispose()
@@ -153,35 +153,49 @@ extension ChatControllerImpl {
             currentChatListFilter: self.currentChatListFilter,
             customChatNavigationStack: self.customChatNavigationStack,
             presentationData: self.presentationData,
-            historyNode: historyNode
+            historyNode: historyNode,
+            inviteRequestsContext: self.contentData?.inviteRequestsContext
         )
         self.pendingContentData = (contentData, historyNode)
         self.contentDataDisposable = (contentData.isReady.get()
         |> filter { $0 }
         |> take(1)
-        |> deliverOnMainQueue).startStrict(next: { [weak self, weak contentData] _ in
+        |> deliverOnMainQueue).startStrict(next: { [weak self, weak contentData, weak historyNode] _ in
             guard let self, let contentData, self.pendingContentData?.contentData === contentData else {
                 return
             }
-            self.contentData = contentData
-            self.pendingContentData = nil
-            self.contentDataUpdated(synchronous: true, previousState: contentData.state)
             
-            self.chatThemeEmoticonPromise.set(contentData.chatThemeEmoticonPromise.get())
-            self.chatWallpaperPromise.set(contentData.chatWallpaperPromise.get())
-            
-            self.contentDataReady.set(true)
-            
-            contentData.onUpdated = { [weak self, weak contentData] previousState in
-                guard let self, let contentData, self.contentData === contentData else {
+            apply({ [weak self, weak contentData] forceAnimation in
+                guard let self, let contentData, self.pendingContentData?.contentData === contentData else {
                     return
                 }
-                self.contentDataUpdated(synchronous: false, previousState: previousState)
-            }
+                
+                self.contentData = contentData
+                self.pendingContentData = nil
+                self.contentDataUpdated(synchronous: true, forceAnimation: forceAnimation, previousState: contentData.state)
+                
+                self.chatThemeEmoticonPromise.set(contentData.chatThemeEmoticonPromise.get())
+                self.chatWallpaperPromise.set(contentData.chatWallpaperPromise.get())
+                
+                if let historyNode {
+                    self.setupChatHistoryNode(historyNode: historyNode)
+                    
+                    historyNode.contentPositionChanged(historyNode.visibleContentOffset())
+                }
+                
+                self.contentDataReady.set(true)
+                
+                contentData.onUpdated = { [weak self, weak contentData] previousState in
+                    guard let self, let contentData, self.contentData === contentData else {
+                        return
+                    }
+                    self.contentDataUpdated(synchronous: false, forceAnimation: false, previousState: previousState)
+                }
+            })
         })
     }
     
-    func contentDataUpdated(synchronous: Bool, previousState: ContentData.State) {
+    func contentDataUpdated(synchronous: Bool, forceAnimation: Bool, previousState: ContentData.State) {
         guard let contentData = self.contentData else {
             return
         }
@@ -235,7 +249,16 @@ extension ChatControllerImpl {
         
         self.chatDisplayNode.overlayTitle = contentData.overlayTitle
         
-        self.chatDisplayNode.historyNode.nextChannelToRead = contentData.state.nextChannelToRead
+        self.chatDisplayNode.historyNode.nextChannelToRead = contentData.state.nextChannelToRead.flatMap { nextChannelToRead -> (peer: EnginePeer, threadData: (id: Int64, data: MessageHistoryThreadData)?, unreadCount: Int, location: TelegramEngine.NextUnreadChannelLocation)? in
+            return (
+                nextChannelToRead.peer,
+                nextChannelToRead.threadData.flatMap { threadData -> (id: Int64, data: MessageHistoryThreadData) in
+                    return (threadData.id, threadData.data)
+                },
+                nextChannelToRead.unreadCount,
+                nextChannelToRead.location
+            )
+        }
         self.chatDisplayNode.historyNode.nextChannelToReadDisplayName = contentData.state.nextChannelToReadDisplayName
         self.updateNextChannelToReadVisibility()
         
@@ -273,6 +296,18 @@ extension ChatControllerImpl {
             didDisplayActionsPanel = true
         }
         
+        var previousInvitationPeers: [EnginePeer] = []
+        if let requestsState = previousState.requestsState {
+            previousInvitationPeers = Array(requestsState.importers.compactMap({ $0.peer.peer.flatMap({ EnginePeer($0) }) }).prefix(3))
+        }
+        var previousInvitationRequestsPeersDismissed = false
+        if let dismissedInvitationRequests = previousState.dismissedInvitationRequests, Set(previousInvitationPeers.map({ $0.id.toInt64() })) == Set(dismissedInvitationRequests) {
+            previousInvitationRequestsPeersDismissed = true
+        }
+        if let requestsState = previousState.requestsState, requestsState.count > 0 && !previousInvitationRequestsPeersDismissed {
+            didDisplayActionsPanel = true
+        }
+        
         var displayActionsPanel = false
         if let contactStatus = contentData.state.contactStatus, !contactStatus.isEmpty, let peerStatusSettings = contactStatus.peerStatusSettings {
             if !peerStatusSettings.flags.isEmpty {
@@ -293,11 +328,26 @@ extension ChatControllerImpl {
         if self.presentationInterfaceState.search != nil && contentData.state.hasSearchTags {
             displayActionsPanel = true
         }
+        
+        var invitationPeers: [EnginePeer] = []
+        if let requestsState = contentData.state.requestsState {
+            invitationPeers = Array(requestsState.importers.compactMap({ $0.peer.peer.flatMap({ EnginePeer($0) }) }).prefix(3))
+        }
+        var invitationRequestsPeersDismissed = false
+        if let dismissedInvitationRequests = contentData.state.dismissedInvitationRequests, Set(invitationPeers.map({ $0.id.toInt64() })) == Set(dismissedInvitationRequests) {
+            invitationRequestsPeersDismissed = true
+        }
+        if let requestsState = contentData.state.requestsState, requestsState.count > 0 && !invitationRequestsPeersDismissed {
+            displayActionsPanel = true
+        }
+        
         if displayActionsPanel != didDisplayActionsPanel {
             animated = true
         }
-        
         if previousState.pinnedMessage != contentData.state.pinnedMessage {
+            animated = true
+        }
+        if forceAnimation {
             animated = true
         }
         
@@ -306,6 +356,7 @@ extension ChatControllerImpl {
             presentationInterfaceState = presentationInterfaceState.updatedPeer({ _ in
                 return contentData.state.renderedPeer
             })
+            presentationInterfaceState = presentationInterfaceState.updatedChatLocation(contentData.chatLocation)
             presentationInterfaceState = presentationInterfaceState.updatedIsNotAccessible(contentData.state.isNotAccessible)
             presentationInterfaceState = presentationInterfaceState.updatedContactStatus(contentData.state.contactStatus)
             presentationInterfaceState = presentationInterfaceState.updatedHasBots(contentData.state.hasBots)
@@ -394,7 +445,6 @@ extension ChatControllerImpl {
                 if let dismissedInvitationRequests = contentData.state.dismissedInvitationRequests, Set(peers.map({ $0.id.toInt64() })) == Set(dismissedInvitationRequests) {
                     peersDismissed = true
                 }
-                
                 if let requestsState = contentData.state.requestsState, requestsState.count > 0 && !peersDismissed {
                     if !context.contains(where: {
                         switch $0 {
@@ -749,7 +799,7 @@ extension ChatControllerImpl {
             })).startStandalone()
         }
         
-        self.setupChatHistoryNode()
+        self.setupChatHistoryNode(historyNode: self.chatDisplayNode.historyNode)
         
         self.chatDisplayNode.requestLayout = { [weak self] transition in
             self?.requestLayout(transition: transition)
@@ -1206,7 +1256,7 @@ extension ChatControllerImpl {
                     self.scrollToEndOfHistory()
                 }
             } else {
-                if let messageId = self.historyNavigationStack.removeLast() {
+                if let messageId = self.contentData?.historyNavigationStack.removeLast() {
                     self.navigateToMessage(from: nil, to: .id(messageId.id, NavigateToMessageParams(timestamp: nil, quote: nil)), rememberInStack: false)
                 } else {
                     if case .known = self.chatDisplayNode.historyNode.visibleContentOffset() {
@@ -4295,7 +4345,7 @@ extension ChatControllerImpl {
         self.displayNodeDidLoad()
     }
     
-    func setupChatHistoryNode() {
+    func setupChatHistoryNode(historyNode: ChatHistoryListNodeImpl) {
         do {
             let peerId = self.chatLocation.peerId
             if let subject = self.subject, case .scheduledMessages = subject {
@@ -4582,8 +4632,10 @@ extension ChatControllerImpl {
             }
         }
         
-        self.chatDisplayNode.historyNode.contentPositionChanged = { [weak self] offset in
-            guard let strongSelf = self else { return }
+        historyNode.contentPositionChanged = { [weak self, weak historyNode] offset in
+            guard let strongSelf = self, let historyNode, strongSelf.chatDisplayNode.historyNode === historyNode else {
+                return
+            }
 
             var minOffsetForNavigation: CGFloat = 40.0
             strongSelf.chatDisplayNode.historyNode.enumerateItemNodes { itemNode in
@@ -4632,7 +4684,7 @@ extension ChatControllerImpl {
             strongSelf.chatDisplayNode.updatePlainInputSeparatorAlpha(plainInputSeparatorAlpha, transition: .animated(duration: 0.2, curve: .easeInOut))
         }
         
-        self.chatDisplayNode.historyNode.scrolledToIndex = { [weak self] toSubject, initial in
+        historyNode.scrolledToIndex = { [weak self] toSubject, initial in
             if let strongSelf = self, case let .message(index) = toSubject.index {
                 if case let .message(messageSubject, _, _, _) = strongSelf.subject, initial, case let .id(messageId) = messageSubject, messageId != index.id {
                     if messageId.peerId == index.id.peerId {
@@ -4693,16 +4745,16 @@ extension ChatControllerImpl {
             }
         }
         
-        self.chatDisplayNode.historyNode.scrolledToSomeIndex = { [weak self] in
+        historyNode.scrolledToSomeIndex = { [weak self] in
             guard let strongSelf = self else {
                 return
             }
             strongSelf.contentData?.scrolledToMessageIdValue = nil
         }
         
-        self.chatDisplayNode.historyNode.maxVisibleMessageIndexUpdated = { [weak self] index in
-            if let strongSelf = self, !strongSelf.historyNavigationStack.isEmpty {
-                strongSelf.historyNavigationStack.filterOutIndicesLessThan(index)
+        historyNode.maxVisibleMessageIndexUpdated = { [weak self] index in
+            if let strongSelf = self, let contentData = strongSelf.contentData, !contentData.historyNavigationStack.isEmpty {
+                contentData.historyNavigationStack.filterOutIndicesLessThan(index)
             }
         }
         
@@ -4723,7 +4775,7 @@ extension ChatControllerImpl {
             hasActiveCalls = .single(false)
         }
         
-        let shouldBeActive = combineLatest(self.context.sharedContext.mediaManager.audioSession.isPlaybackActive() |> deliverOnMainQueue, self.chatDisplayNode.historyNode.hasVisiblePlayableItemNodes, hasActiveCalls)
+        let shouldBeActive = combineLatest(self.context.sharedContext.mediaManager.audioSession.isPlaybackActive() |> deliverOnMainQueue, historyNode.hasVisiblePlayableItemNodes, hasActiveCalls)
         |> mapToSignal { [weak self] isPlaybackActive, hasVisiblePlayableItemNodes, hasActiveCalls -> Signal<Bool, NoError> in
             if hasVisiblePlayableItemNodes && !isPlaybackActive && !hasActiveCalls {
                 return Signal<Bool, NoError> { [weak self] subscriber in
@@ -4776,7 +4828,7 @@ extension ChatControllerImpl {
             downPressed: buttonAction
         )
 
-        self.chatDisplayNode.historyNode.openNextChannelToRead = { [weak self] peer, threadData, location in
+        historyNode.openNextChannelToRead = { [weak self] peer, threadData, location in
             guard let strongSelf = self else {
                 return
             }
@@ -4831,7 +4883,7 @@ extension ChatControllerImpl {
             }
         }
         
-        self.chatDisplayNode.historyNode.beganDragging = { [weak self] in
+        historyNode.beganDragging = { [weak self] in
             guard let self else {
                 return
             }
@@ -4846,7 +4898,7 @@ extension ChatControllerImpl {
             }
         }
     
-        self.chatDisplayNode.historyNode.didScrollWithOffset = { [weak self] offset, transition, itemNode, isTracking in
+        historyNode.didScrollWithOffset = { [weak self] offset, transition, itemNode, isTracking in
             guard let strongSelf = self else {
                 return
             }
@@ -4876,23 +4928,22 @@ extension ChatControllerImpl {
                 strongSelf.chatDisplayNode.loadingPlaceholderNode?.addContentOffset(offset: offset, transition: transition)
             }
             strongSelf.chatDisplayNode.messageTransitionNode.addExternalOffset(offset: offset, transition: transition, itemNode: itemNode, isRotated: strongSelf.chatDisplayNode.historyNode.rotated)
-            
         }
         
-        self.chatDisplayNode.historyNode.hasAtLeast3MessagesUpdated = { [weak self] hasAtLeast3Messages in
+        historyNode.hasAtLeast3MessagesUpdated = { [weak self] hasAtLeast3Messages in
             if let strongSelf = self {
                 strongSelf.updateChatPresentationInterfaceState(interactive: false, { $0.updatedHasAtLeast3Messages(hasAtLeast3Messages) })
             }
         }
         
-        self.chatDisplayNode.historyNode.hasPlentyOfMessagesUpdated = { [weak self] hasPlentyOfMessages in
+        historyNode.hasPlentyOfMessagesUpdated = { [weak self] hasPlentyOfMessages in
             if let strongSelf = self {
                 strongSelf.updateChatPresentationInterfaceState(interactive: false, { $0.updatedHasPlentyOfMessages(hasPlentyOfMessages) })
             }
         }
         
         if self.didAppear {
-            self.chatDisplayNode.historyNode.canReadHistory.set(self.computedCanReadHistoryPromise.get())
+            historyNode.canReadHistory.set(self.computedCanReadHistoryPromise.get())
         }
     }
 }

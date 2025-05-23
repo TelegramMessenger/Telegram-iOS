@@ -426,7 +426,9 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
             let text = strings.Contacts_PermissionsText
             switch authorizationStatus {
                 case .limited:
-                    entries.append(.permissionLimited(theme, strings))
+                    if displaySortOptions {
+                        entries.append(.permissionLimited(theme, strings))
+                    }
                 case .denied:
                     entries.append(.permissionInfo(theme, title, text, suppressed))
                     entries.append(.permissionEnable(theme, strings.Permissions_ContactsAllowInSettings_v0))

@@ -322,7 +322,9 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
                 
                 if let channel = content.firstMessage.peers[content.firstMessage.id.peerId] as? TelegramChannel, channel.isForumOrMonoForum {
                     if case .replyThread = chatLocation {
-                        displayAuthorInfo = false
+                        if channel.isMonoForum && chatLocation.threadId != context.account.peerId.toInt64() {
+                            displayAuthorInfo = false
+                        }
                     } else {
                         if channel.isMonoForum {
                             if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = content.firstMessage.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.adminRights != nil {

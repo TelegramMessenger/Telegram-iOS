@@ -317,7 +317,7 @@ extension ChatControllerImpl {
             })
         } else if forceInCurrentChat {
             if let _ = fromId, let fromIndex = fromIndex, rememberInStack {
-                self.historyNavigationStack.add(fromIndex)
+                self.contentData?.historyNavigationStack.add(fromIndex)
             }
             
             let scrollFromIndex: MessageIndex?
@@ -505,7 +505,7 @@ extension ChatControllerImpl {
                         return
                 }
                 if let _ = fromId, rememberInStack {
-                    self.historyNavigationStack.add(fromIndex)
+                    self.contentData?.historyNavigationStack.add(fromIndex)
                 }
                 self.loadingMessage.set(.single(statusSubject) |> delay(0.1, queue: .mainQueue()))
                 
