@@ -67,6 +67,7 @@ public struct MessageHistoryThreadData: Codable, Equatable {
         case isClosed
         case isHidden
         case notificationSettings
+        case isMarkedUnread
     }
     
     public var creationDate: Int32
@@ -74,7 +75,8 @@ public struct MessageHistoryThreadData: Codable, Equatable {
     public var author: PeerId
     public var info: EngineMessageHistoryThread.Info
     public var incomingUnreadCount: Int32
-    public var maxIncomingReadId: Int32 
+    public var isMarkedUnread: Bool
+    public var maxIncomingReadId: Int32
     public var maxKnownMessageId: Int32
     public var maxOutgoingReadId: Int32
     public var isClosed: Bool
@@ -87,6 +89,7 @@ public struct MessageHistoryThreadData: Codable, Equatable {
         author: PeerId,
         info: EngineMessageHistoryThread.Info,
         incomingUnreadCount: Int32,
+        isMarkedUnread: Bool,
         maxIncomingReadId: Int32,
         maxKnownMessageId: Int32,
         maxOutgoingReadId: Int32,
@@ -99,6 +102,7 @@ public struct MessageHistoryThreadData: Codable, Equatable {
         self.author = author
         self.info = info
         self.incomingUnreadCount = incomingUnreadCount
+        self.isMarkedUnread = isMarkedUnread
         self.maxIncomingReadId = maxIncomingReadId
         self.maxKnownMessageId = maxKnownMessageId
         self.maxOutgoingReadId = maxOutgoingReadId
@@ -115,6 +119,7 @@ public struct MessageHistoryThreadData: Codable, Equatable {
         self.author = try container.decode(PeerId.self, forKey: .author)
         self.info = try container.decode(EngineMessageHistoryThread.Info.self, forKey: .info)
         self.incomingUnreadCount = try container.decode(Int32.self, forKey: .incomingUnreadCount)
+        self.isMarkedUnread = try container.decodeIfPresent(Bool.self, forKey: .isMarkedUnread) ?? false
         self.maxIncomingReadId = try container.decode(Int32.self, forKey: .maxIncomingReadId)
         self.maxKnownMessageId = try container.decode(Int32.self, forKey: .maxKnownMessageId)
         self.maxOutgoingReadId = try container.decode(Int32.self, forKey: .maxOutgoingReadId)
@@ -131,6 +136,7 @@ public struct MessageHistoryThreadData: Codable, Equatable {
         try container.encode(self.author, forKey: .author)
         try container.encode(self.info, forKey: .info)
         try container.encode(self.incomingUnreadCount, forKey: .incomingUnreadCount)
+        try container.encode(self.isMarkedUnread, forKey: .isMarkedUnread)
         try container.encode(self.maxIncomingReadId, forKey: .maxIncomingReadId)
         try container.encode(self.maxKnownMessageId, forKey: .maxKnownMessageId)
         try container.encode(self.maxOutgoingReadId, forKey: .maxOutgoingReadId)
@@ -154,6 +160,7 @@ extension StoredMessageHistoryThreadInfo {
         }
         self.init(data: entry, summary: Summary(
             totalUnreadCount: data.incomingUnreadCount,
+            isMarkedUnread: data.isMarkedUnread,
             mutedUntil: mutedUntil
         ))
     }
@@ -654,6 +661,7 @@ public func _internal_fillSavedMessageHistory(accountPeerId: PeerId, postbox: Po
                     author: accountPeerId,
                     info: EngineMessageHistoryThread.Info(title: "", icon: nil, iconColor: 0),
                     incomingUnreadCount: 0,
+                    isMarkedUnread: false,
                     maxIncomingReadId: 0,
                     maxKnownMessageId: 0,
                     maxOutgoingReadId: 0,
@@ -771,6 +779,7 @@ func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Post
                                     iconColor: 0
                                 ),
                                 incomingUnreadCount: 0,
+                                isMarkedUnread: false,
                                 maxIncomingReadId: 0,
                                 maxKnownMessageId: topMessage,
                                 maxOutgoingReadId: 0,
@@ -812,7 +821,8 @@ func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Post
                                 index: topicIndex,
                                 threadPeer: threadPeer
                             ))
-                        case let .monoForumDialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _):
+                        case let .monoForumDialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _):
+                            let isMarkedUnread = (flags & (1 << 3)) != 0
                             let data = MessageHistoryThreadData(
                                 creationDate: 0,
                                 isOwnedByMe: true,
@@ -823,6 +833,7 @@ func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Post
                                     iconColor: 0
                                 ),
                                 incomingUnreadCount: unreadCount,
+                                isMarkedUnread: isMarkedUnread,
                                 maxIncomingReadId: readInboxMaxId,
                                 maxKnownMessageId: topMessage,
                                 maxOutgoingReadId: readOutboxMaxId,
@@ -971,6 +982,7 @@ func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Post
                                         iconColor: iconColor
                                     ),
                                     incomingUnreadCount: unreadCount,
+                                    isMarkedUnread: false,
                                     maxIncomingReadId: readInboxMaxId,
                                     maxKnownMessageId: topMessage,
                                     maxOutgoingReadId: readOutboxMaxId,

@@ -244,7 +244,7 @@ public final class LoadingOverlayNode: ASDisplayNode {
                     requiresPremiumForMessaging: false,
                     displayAsTopicList: false,
                     tags: []
-                )), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)
+                )), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enabledContextActions: nil, hiddenOffset: false, interaction: interaction)
             }
             
             var itemNodes: [ChatListItemNode] = []
@@ -616,7 +616,7 @@ private final class PeerInfoScreenPersonalChannelItemNode: PeerInfoScreenItemNod
             hasActiveRevealControls: false,
             selected: false,
             header: nil,
-            enableContextActions: false,
+            enabledContextActions: nil,
             hiddenOffset: false,
             interaction: chatListNodeInteraction
         )

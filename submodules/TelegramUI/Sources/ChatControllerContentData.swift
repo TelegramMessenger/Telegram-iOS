@@ -866,7 +866,7 @@ extension ChatControllerImpl {
                             }
                         } else if let cachedChannelData = peerView.cachedData as? CachedChannelData {
                             if let channel = peer as? TelegramChannel, channel.isMonoForum {
-                                if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = peerView.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.adminRights != nil {
+                                if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = peerView.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
                                     currentSendAsPeerId = channel.linkedMonoforumId
                                 } else {
                                     currentSendAsPeerId = nil
@@ -1365,9 +1365,16 @@ extension ChatControllerImpl {
                             contactStatus = ChatContactStatus(canAddContact: false, peerStatusSettings: cachedData.peerStatusSettings, invitedBy: invitedBy, managingBot: managingBot)
                            
                             if let channel = peerView.peers[peerView.peerId] as? TelegramChannel {
-                                if channel.flags.contains(.isCreator) || channel.adminRights != nil {
+                                if channel.isMonoForum {
+                                    if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = peerView.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
+                                    } else {
+                                        sendPaidMessageStars = channel.sendPaidMessageStars
+                                    }
                                 } else {
-                                    sendPaidMessageStars = channel.sendPaidMessageStars
+                                    if channel.flags.contains(.isCreator) || channel.adminRights != nil {
+                                    } else {
+                                        sendPaidMessageStars = channel.sendPaidMessageStars
+                                    }
                                 }
                             }
                         }
@@ -1524,7 +1531,7 @@ extension ChatControllerImpl {
                         var currentSendAsPeerId: PeerId?
                         if let peer = peerView.peers[peerView.peerId] as? TelegramChannel, let cachedData = peerView.cachedData as? CachedChannelData {
                             if peer.isMonoForum {
-                                if let linkedMonoforumId = peer.linkedMonoforumId, let mainChannel = peerView.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.adminRights != nil {
+                                if let linkedMonoforumId = peer.linkedMonoforumId, let mainChannel = peerView.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
                                     currentSendAsPeerId = peer.linkedMonoforumId
                                 } else {
                                     currentSendAsPeerId = nil

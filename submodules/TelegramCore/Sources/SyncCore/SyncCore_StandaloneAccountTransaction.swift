@@ -190,7 +190,7 @@ public let telegramPostboxSeedConfiguration: SeedConfiguration = {
         },
         automaticThreadIndexInfo: { peerId, _ in
             if peerId.namespace == Namespaces.Peer.CloudUser {
-                return StoredMessageHistoryThreadInfo(data: CodableEntry(data: Data()), summary: StoredMessageHistoryThreadInfo.Summary(totalUnreadCount: 0, mutedUntil: nil))
+                return StoredMessageHistoryThreadInfo(data: CodableEntry(data: Data()), summary: StoredMessageHistoryThreadInfo.Summary(totalUnreadCount: 0, isMarkedUnread: false, mutedUntil: nil))
             } else {
                 return nil
             }
