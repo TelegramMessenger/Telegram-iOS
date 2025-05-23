@@ -61,8 +61,10 @@ extension ChatControllerImpl {
         
         var canSendPolls = true
         if let peer = self.presentationInterfaceState.renderedPeer?.peer {
-            if let peer = peer as? TelegramUser, peer.botInfo == nil {
-                canSendPolls = false
+            if let peer = peer as? TelegramUser {
+                if peer.botInfo == nil && peer.id != self.context.account.peerId {
+                    canSendPolls = false
+                }
             } else if peer is TelegramSecretChat {
                 canSendPolls = false
             } else if let channel = peer as? TelegramChannel {
