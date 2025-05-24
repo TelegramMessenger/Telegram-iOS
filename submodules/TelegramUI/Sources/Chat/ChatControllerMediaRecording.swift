@@ -309,6 +309,13 @@ extension ChatControllerImpl {
                                         strongSelf.context.account.postbox.mediaBox.storeResourceData(resource!.id, data: data.compressedData)
                                     }
                                     
+                                    let audioWaveform: AudioWaveform
+                                    if let recordedMediaPreview = strongSelf.presentationInterfaceState.interfaceState.mediaDraftState, case let .audio(audio) = recordedMediaPreview {
+                                        audioWaveform = audio.waveform
+                                    } else {
+                                        audioWaveform = AudioWaveform(bitstream: waveform, bitsPerSample: 5)
+                                    }
+                                    
                                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
                                         $0.updatedInterfaceState {
                                             $0.withUpdatedMediaDraftState(.audio(
@@ -316,7 +323,7 @@ extension ChatControllerImpl {
                                                     resource: resource!,
                                                     fileSize: Int32(data.compressedData.count),
                                                     duration: Int32(data.duration),
-                                                    waveform: AudioWaveform(bitstream: waveform, bitsPerSample: 5),
+                                                    waveform: audioWaveform,
                                                     trimRange: data.trimRange,
                                                     resumeData: data.resumeData
                                                 )
@@ -465,29 +472,9 @@ extension ChatControllerImpl {
     }
     
     func resumeMediaRecorder() {
-        self.context.sharedContext.mediaManager.playlistControl(.playback(.pause), type: nil)
+        self.recorderDataDisposable.set(nil)
         
-        if let audioRecorderValue = self.audioRecorderValue {
-            audioRecorderValue.resume()
-            
-            self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                $0.updatedInputTextPanelState { panelState in
-                    return panelState.withUpdatedMediaRecordingState(.audio(recorder: audioRecorderValue, isLocked: true))
-                }.updatedInterfaceState { $0.withUpdatedMediaDraftState(nil) }
-            })
-        } else if let recordedMediaPreview = self.presentationInterfaceState.interfaceState.mediaDraftState, case let .audio(audio) = recordedMediaPreview {
-            self.requestAudioRecorder(beginWithTone: false, existingDraft: audio)
-            
-            if let audioRecorderValue = self.audioRecorderValue {
-                audioRecorderValue.resume()
-                
-                self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                    $0.updatedInputTextPanelState { panelState in
-                        return panelState.withUpdatedMediaRecordingState(.audio(recorder: audioRecorderValue, isLocked: true))
-                    }.updatedInterfaceState { $0.withUpdatedMediaDraftState(nil) }
-                })
-            }
-        }
+        self.context.sharedContext.mediaManager.playlistControl(.playback(.pause), type: nil)
         
         if let videoRecorderValue = self.videoRecorderValue {
             self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
@@ -496,6 +483,36 @@ extension ChatControllerImpl {
                     return panelState.withUpdatedMediaRecordingState(.video(status: .recording(InstantVideoControllerRecordingStatus(micLevel: recordingStatus.micLevel, duration: recordingStatus.duration)), isLocked: true))
                 }.updatedInterfaceState { $0.withUpdatedMediaDraftState(nil) }
             })
+        } else {
+            let proceed = {
+                self.withAudioRecorder({ audioRecorder in
+                    audioRecorder.resume()
+                    
+                    self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                        $0.updatedInputTextPanelState { panelState in
+                            return panelState.withUpdatedMediaRecordingState(.audio(recorder: audioRecorder, isLocked: true))
+                        }.updatedInterfaceState { $0.withUpdatedMediaDraftState(nil) }
+                    })
+                })
+            }
+            
+            if let recordedMediaPreview = self.presentationInterfaceState.interfaceState.mediaDraftState, case let .audio(audio) = recordedMediaPreview, let _ = audio.trimRange {
+                self.present(
+                    textAlertController(
+                        context: self.context,
+                        title: "Trim to selected range?",
+                        text: "Audio outside that range will be discarded, and recording will start immediately.",
+                        actions: [
+                            TextAlertAction(type: .genericAction, title: "Cancel", action: {}),
+                            TextAlertAction(type: .defaultAction, title: "Proceed", action: {
+                                proceed()
+                            })
+                        ]
+                    ), in: .window(.root)
+                )
+            } else {
+                proceed()
+            }
         }
     }
     
@@ -524,6 +541,27 @@ extension ChatControllerImpl {
             $0.updatedInterfaceState { $0.withUpdatedMediaDraftState(nil) }
         })
         self.updateDownButtonVisibility()
+    }
+    
+    private func withAudioRecorder(_ f: (ManagedAudioRecorder) -> Void) {
+        if let audioRecorder = self.audioRecorderValue {
+            f(audioRecorder)
+        } else if let recordedMediaPreview = self.presentationInterfaceState.interfaceState.mediaDraftState, case let .audio(audio) = recordedMediaPreview {
+            self.requestAudioRecorder(beginWithTone: false, existingDraft: audio)
+            if let audioRecorder = self.audioRecorderValue {
+                f(audioRecorder)
+            }
+        }
+    }
+    
+    func updateTrimRange(start: Double, end: Double, updatedEnd: Bool, apply: Bool) {
+        if let videoRecorder = self.videoRecorderValue {
+            videoRecorder.updateTrimRange(start: start, end: end, updatedEnd: updatedEnd, apply: apply)
+        } else {
+            self.withAudioRecorder({ audioRecorder in
+                audioRecorder.updateTrimRange(start: start, end: end, updatedEnd: updatedEnd, apply: apply)
+            })
+        }
     }
     
     func sendMediaRecording(

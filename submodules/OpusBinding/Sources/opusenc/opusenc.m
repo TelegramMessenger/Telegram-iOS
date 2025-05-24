@@ -110,6 +110,8 @@ static inline int writeOggPage(ogg_page *page, TGDataItem *fileItem)
     opus_int32 lookahead;
 }
 
+@property (nonatomic) ogg_sync_state syncState;
+
 @end
 
 @implementation TGOggOpusWriter
@@ -341,6 +343,174 @@ static inline int writeOggPage(ogg_page *page, TGDataItem *fileItem)
     free(inopt.comments);
     
     return true;
+}
+
+- (bool)parseExistingOpusFile:(NSData *)data
+{
+    ogg_sync_init(&_syncState);
+    
+    char *buffer = ogg_sync_buffer(&_syncState, (long)data.length);
+    memcpy(buffer, data.bytes, data.length);
+    ogg_sync_wrote(&_syncState, (long)data.length);
+    
+    ogg_stream_state tempStream;
+    ogg_page page;
+    ogg_packet packet;
+    bool headerParsed = false;
+    bool foundStream = false;
+    ogg_int64_t finalGranulePos = 0;
+    
+    while (ogg_sync_pageout(&_syncState, &page) == 1) {
+        if (!foundStream) {
+            serialno = ogg_page_serialno(&page);
+            if (ogg_stream_init(&tempStream, serialno) != 0) {
+                ogg_sync_clear(&_syncState);
+                return false;
+            }
+            foundStream = true;
+        }
+        
+        if (ogg_page_serialno(&page) == serialno) {
+            ogg_stream_pagein(&tempStream, &page);
+            
+            if (ogg_page_granulepos(&page) != -1) {
+                finalGranulePos = ogg_page_granulepos(&page);
+            }
+            
+            while (ogg_stream_packetout(&tempStream, &packet) == 1) {
+                if (!headerParsed && packet.packetno == 0) {
+                    if (![self parseOpusHeader:packet.packet length:packet.bytes]) {
+                        ogg_stream_clear(&tempStream);
+                        ogg_sync_clear(&_syncState);
+                        return false;
+                    }
+                    headerParsed = true;
+                }
+                
+                _packetId = (ogg_int32_t)packet.packetno;
+                if (packet.granulepos != -1) {
+                    enc_granulepos = packet.granulepos;
+                    last_granulepos = packet.granulepos;
+                    finalGranulePos = packet.granulepos;
+                }
+            }
+        }
+    }
+    
+    if (finalGranulePos > header.preskip) {
+         opus_int64 samples = finalGranulePos - header.preskip;
+         total_samples = (samples * rate) / 48000;
+     } else {
+         total_samples = 0;
+     }
+    
+    ogg_stream_clear(&tempStream);
+    ogg_sync_clear(&_syncState);
+    
+    if (!headerParsed) {
+        return false;
+    }
+    
+    return true;
+}
+
+- (bool)parseOpusHeader:(unsigned char *)data length:(long)length
+{
+    if (length < 19) {
+        NSLog(@"Opus header too short");
+        return false;
+    }
+    
+    if (memcmp(data, "OpusHead", 8) != 0) {
+        NSLog(@"Invalid Opus header signature");
+        return false;
+    }
+    
+    header.channels = data[9];
+    header.preskip = data[10] | (data[11] << 8);
+    header.input_sample_rate = data[12] | (data[13] << 8) | (data[14] << 16) | (data[15] << 24);
+    header.gain = (signed short)(data[16] | (data[17] << 8));
+    header.channel_mapping = data[18];
+    
+    if (header.channels == 0) {
+        return false;
+    }
+    
+    rate = header.input_sample_rate;
+    coding_rate = rate;
+    
+    if (rate > 24000)
+        coding_rate = 48000;
+    else if (rate > 16000)
+        coding_rate = 24000;
+    else if (rate > 12000)
+        coding_rate = 16000;
+    else if (rate > 8000)
+        coding_rate = 12000;
+    else
+        coding_rate = 8000;
+    
+    header.nb_streams = 1;
+    
+    return true;
+}
+
+- (bool)initializeEncoderForAppend
+{
+    bytes_written = _dataItem.data.length;
+    
+    inopt.channels = header.channels;
+    inopt.rate = rate;
+    inopt.gain = header.gain;
+    inopt.samplesize = 16;
+    inopt.endianness = 0;
+    inopt.rawmode = 0;
+    inopt.ignorelength = 0;
+    inopt.copy_comments = 0;
+    
+    int result = OPUS_OK;
+    _encoder = opus_encoder_create(coding_rate, header.channels, OPUS_APPLICATION_AUDIO, &result);
+    if (result != OPUS_OK) {
+        NSLog(@"Error cannot create encoder: %s", opus_strerror(result));
+        return false;
+    }
+    
+    bitrate = 30 * 1024;
+    frame_size = 960;
+    
+    opus_encoder_ctl(_encoder, OPUS_SET_BITRATE(bitrate));
+    
+#ifdef OPUS_SET_LSB_DEPTH
+    opus_encoder_ctl(_encoder, OPUS_SET_LSB_DEPTH(16));
+#endif
+    
+    opus_encoder_ctl(_encoder, OPUS_GET_LOOKAHEAD(&lookahead));
+    
+    if (ogg_stream_init(&os, serialno) == -1) {
+        NSLog(@"Error: stream init failed");
+        return false;
+    }
+    
+    max_frame_bytes = (1275 * 3 + 7) * header.nb_streams;
+    _packet = malloc(max_frame_bytes);
+        
+    return true;
+}
+
+
+- (bool)beginAppendWithDataItem:(TGDataItem *)dataItem
+{
+    if (dataItem.data.length == 0) {
+        return [self beginWithDataItem:dataItem];
+    }
+    
+    _dataItem = dataItem;
+    
+    if (![self parseExistingOpusFile:_dataItem.data]) {
+        return false;
+    }
+    
+    return [self initializeEncoderForAppend];
 }
 
 - (bool)writeFrame:(uint8_t *)framePcmBytes frameByteCount:(NSUInteger)frameByteCount

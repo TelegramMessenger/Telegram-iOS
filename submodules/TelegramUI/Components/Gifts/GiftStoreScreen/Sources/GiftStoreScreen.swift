@@ -1070,11 +1070,10 @@ final class GiftStoreScreenComponent: Component {
             var modelTitle = environment.strings.Gift_Store_Filter_Model
             var backdropTitle = environment.strings.Gift_Store_Filter_Backdrop
             var symbolTitle = environment.strings.Gift_Store_Filter_Symbol
+            var modelCount: Int32 = 0
+            var backdropCount: Int32 = 0
+            var symbolCount: Int32 = 0
             if let filterAttributes = self.state?.starGiftsState?.filterAttributes {
-                var modelCount: Int32 = 0
-                var backdropCount: Int32 = 0
-                var symbolCount: Int32 = 0
-                
                 for attribute in filterAttributes {
                     switch attribute {
                     case .model:
@@ -1099,6 +1098,7 @@ final class GiftStoreScreenComponent: Component {
             
             filterItems.append(FilterSelectorComponent.Item(
                 id: AnyHashable(FilterItemId.model),
+                index: Int(modelCount),
                 title: modelTitle,
                 action: { [weak self] view in
                     if let self {
@@ -1110,6 +1110,7 @@ final class GiftStoreScreenComponent: Component {
             ))
             filterItems.append(FilterSelectorComponent.Item(
                 id: AnyHashable(FilterItemId.backdrop),
+                index: Int(backdropCount),
                 title: backdropTitle,
                 action: { [weak self] view in
                     if let self {
@@ -1121,6 +1122,7 @@ final class GiftStoreScreenComponent: Component {
             ))
             filterItems.append(FilterSelectorComponent.Item(
                 id: AnyHashable(FilterItemId.symbol),
+                index: Int(symbolCount),
                 title: symbolTitle,
                 action: { [weak self] view in
                     if let self {

@@ -175,7 +175,7 @@ public final class ChatPanelInterfaceInteraction {
     public let toggleChatSidebarMode: () -> Void
     public let updateDisplayHistoryFilterAsList: (Bool) -> Void
     public let openBoostToUnrestrict: () -> Void
-    public let updateVideoTrimRange: (Double, Double, Bool, Bool) -> Void
+    public let updateRecordingTrimRange: (Double, Double, Bool, Bool) -> Void
     public let requestLayout: (ContainedViewLayoutTransition) -> Void
     public let chatController: () -> ViewController?
     public let statuses: ChatPanelInterfaceInteractionStatuses?
@@ -290,7 +290,7 @@ public final class ChatPanelInterfaceInteraction {
         openStarsPurchase: @escaping (Int64?) -> Void,
         openMessagePayment: @escaping () -> Void,
         openBoostToUnrestrict: @escaping () -> Void,
-        updateVideoTrimRange: @escaping (Double, Double, Bool, Bool) -> Void,
+        updateRecordingTrimRange: @escaping (Double, Double, Bool, Bool) -> Void,
         updateHistoryFilter: @escaping ((ChatPresentationInterfaceState.HistoryFilter?) -> ChatPresentationInterfaceState.HistoryFilter?) -> Void,
         updateChatLocationThread: @escaping (Int64?, ChatControllerAnimateInnerChatSwitchDirection?) -> Void,
         toggleChatSidebarMode: @escaping () -> Void,
@@ -408,7 +408,7 @@ public final class ChatPanelInterfaceInteraction {
         self.openStarsPurchase = openStarsPurchase
         self.openMessagePayment = openMessagePayment
         self.openBoostToUnrestrict = openBoostToUnrestrict
-        self.updateVideoTrimRange = updateVideoTrimRange
+        self.updateRecordingTrimRange = updateRecordingTrimRange
         self.updateHistoryFilter = updateHistoryFilter
         self.updateChatLocationThread = updateChatLocationThread
         self.toggleChatSidebarMode = toggleChatSidebarMode
@@ -535,7 +535,7 @@ public final class ChatPanelInterfaceInteraction {
         }, openStarsPurchase: { _ in
         }, openMessagePayment: {
         }, openBoostToUnrestrict: {
-        }, updateVideoTrimRange: { _, _, _, _ in
+        }, updateRecordingTrimRange: { _, _, _, _ in
         }, updateHistoryFilter: { _ in
         }, updateChatLocationThread: { _, _ in
         }, toggleChatSidebarMode: {

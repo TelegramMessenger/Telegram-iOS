@@ -9,6 +9,7 @@ import AccountContext
 import OpusBinding
 import ChatPresentationInterfaceState
 import AudioWaveform
+import FFMpegBinding
 
 private let kOutputBus: UInt32 = 0
 private let kInputBus: UInt32 = 1
@@ -147,6 +148,8 @@ final class ManagedAudioRecorderContext {
     private let id: Int32
     private let micLevel: ValuePromise<Float>
     private let recordingState: ValuePromise<AudioRecordingState>
+    private let previewState: ValuePromise<AudioPreviewState>
+
     private let beginWithTone: Bool
     private let beganWithTone: (Bool) -> Void
     
@@ -156,8 +159,8 @@ final class ManagedAudioRecorderContext {
     
     private let queue: Queue
     private let mediaManager: MediaManager
-    private let oggWriter: TGOggOpusWriter
-    private let dataItem: TGDataItem
+    private var oggWriter: TGOggOpusWriter
+    private var dataItem: TGDataItem
     private var audioBuffer = Data()
     
     private let audioUnit = Atomic<AudioUnit?>(value: nil)
@@ -193,6 +196,7 @@ final class ManagedAudioRecorderContext {
         pushIdleTimerExtension: @escaping () -> Disposable,
         micLevel: ValuePromise<Float>,
         recordingState: ValuePromise<AudioRecordingState>,
+        previewState: ValuePromise<AudioPreviewState>,
         beginWithTone: Bool,
         beganWithTone: @escaping (Bool) -> Void
     ) {
@@ -204,6 +208,7 @@ final class ManagedAudioRecorderContext {
         self.beganWithTone = beganWithTone
         
         self.recordingState = recordingState
+        self.previewState = previewState
         
         self.queue = queue
         self.mediaManager = mediaManager
@@ -487,6 +492,29 @@ final class ManagedAudioRecorderContext {
     func resume() {
         assert(self.queue.isCurrent())
         
+        if let trimRange = self.trimRange, trimRange.upperBound < self.oggWriter.encodedDuration() {
+            if self.oggWriter.writeFrame(nil, frameByteCount: 0), let data = self.dataItem.data() {
+                let tempSourceFile = EngineTempBox.shared.tempFile(fileName: "audio.ogg")
+                let tempDestinationFile = EngineTempBox.shared.tempFile(fileName: "audio.ogg")
+                
+                try? data.write(to: URL(fileURLWithPath: tempSourceFile.path))
+                
+                FFMpegOpusTrimmer.trim(tempSourceFile.path, to: tempDestinationFile.path, start: trimRange.lowerBound, end: trimRange.upperBound)
+                
+                if let trimmedData = try? Data(contentsOf: URL(fileURLWithPath: tempDestinationFile.path), options: []) {
+                    self.dataItem = TGDataItem(data: trimmedData)
+                    self.oggWriter = TGOggOpusWriter()
+                    self.oggWriter.beginAppend(with: self.dataItem)
+                }
+                                          
+                EngineTempBox.shared.dispose(tempSourceFile)
+                EngineTempBox.shared.dispose(tempDestinationFile)
+                
+                self.trimRange = nil
+                self.previewState.set(AudioPreviewState(trimRange: self.trimRange))
+            }
+        }
+        
         self.start()
     }
     
@@ -755,7 +783,7 @@ final class ManagedAudioRecorderImpl: ManagedAudioRecorder {
     ) {
         self.beginWithTone = beginWithTone
         self.queue.async {
-            let context = ManagedAudioRecorderContext(queue: self.queue, mediaManager: mediaManager, resumeData: resumeData, pushIdleTimerExtension: pushIdleTimerExtension, micLevel: self.micLevelValue, recordingState: self.recordingStateValue, beginWithTone: beginWithTone, beganWithTone: beganWithTone)
+            let context = ManagedAudioRecorderContext(queue: self.queue, mediaManager: mediaManager, resumeData: resumeData, pushIdleTimerExtension: pushIdleTimerExtension, micLevel: self.micLevelValue, recordingState: self.recordingStateValue, previewState: self.previewStateValue, beginWithTone: beginWithTone, beganWithTone: beganWithTone)
             self.contextRef = Unmanaged.passRetained(context)
         }
     }
