@@ -4107,12 +4107,11 @@ extension ChatControllerImpl {
                 )
                 self.push(boostController)
             })
-        }, updateVideoTrimRange: { [weak self] start, end, updatedEnd, apply in
-            if let videoRecorder = self?.videoRecorderValue {
-                videoRecorder.updateTrimRange(start: start, end: end, updatedEnd: updatedEnd, apply: apply)
-            } else if let audioRecorder = self?.audioRecorderValue {
-                audioRecorder.updateTrimRange(start: start, end: end, updatedEnd: updatedEnd, apply: apply)
+        }, updateRecordingTrimRange: { [weak self] start, end, updatedEnd, apply in
+            guard let self else {
+                return
             }
+            self.updateTrimRange(start: start, end: end, updatedEnd: updatedEnd, apply: apply)
         }, updateHistoryFilter: { [weak self] update in
             guard let self else {
                 return

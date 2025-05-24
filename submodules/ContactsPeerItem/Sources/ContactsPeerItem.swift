@@ -804,6 +804,12 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                 rightInset -= 6.0 + rightLabelTextLayoutAndApplyValue.0.size.width
             }
             
+            var searchAdIcon: UIImage?
+            if item.isAd, let icon = PresentationResourcesChatList.searchAdIcon(item.presentationData.theme, strings: item.presentationData.strings) {
+                searchAdIcon = icon
+                rightInset += icon.size.width + 12.0
+            }
+            
             let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.context.currentAppConfiguration.with { $0 })
             
             var credibilityIcon: EmojiStatusComponent.Content?
@@ -1824,7 +1830,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                     adButton.addTarget(strongSelf, action: #selector(strongSelf.adButtonPressed), forControlEvents: .touchUpInside)
                                 }
                                 if updatedTheme != nil || adButton.image(for: .normal) == nil {
-                                    adButton.setImage(PresentationResourcesChatList.searchAdIcon(item.presentationData.theme, strings: item.presentationData.strings), for: .normal)
+                                    adButton.setImage(searchAdIcon, for: .normal)
                                 }
                                 if let icon = adButton.image(for: .normal) {
                                     adButton.frame = CGRect(origin: CGPoint(x: params.width - 20.0 - icon.size.width - 13.0, y: 11.0), size: icon.size).insetBy(dx: -11.0, dy: -11.0)
