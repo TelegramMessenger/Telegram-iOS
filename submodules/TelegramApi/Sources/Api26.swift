@@ -1012,7 +1012,7 @@ public extension Api {
         case updateChannelParticipant(flags: Int32, channelId: Int64, date: Int32, actorId: Int64, userId: Int64, prevParticipant: Api.ChannelParticipant?, newParticipant: Api.ChannelParticipant?, invite: Api.ExportedChatInvite?, qts: Int32)
         case updateChannelPinnedTopic(flags: Int32, channelId: Int64, topicId: Int32)
         case updateChannelPinnedTopics(flags: Int32, channelId: Int64, order: [Int32]?)
-        case updateChannelReadMessagesContents(flags: Int32, channelId: Int64, topMsgId: Int32?, messages: [Int32])
+        case updateChannelReadMessagesContents(flags: Int32, channelId: Int64, topMsgId: Int32?, savedPeerId: Api.Peer?, messages: [Int32])
         case updateChannelTooLong(flags: Int32, channelId: Int64, pts: Int32?)
         case updateChannelUserTyping(flags: Int32, channelId: Int64, topMsgId: Int32?, fromId: Api.Peer, action: Api.SendMessageAction)
         case updateChannelViewForumAsMessages(channelId: Int64, enabled: Api.Bool)
@@ -1059,7 +1059,7 @@ public extension Api {
         case updateMessageID(id: Int32, randomId: Int64)
         case updateMessagePoll(flags: Int32, pollId: Int64, poll: Api.Poll?, results: Api.PollResults)
         case updateMessagePollVote(pollId: Int64, peer: Api.Peer, options: [Buffer], qts: Int32)
-        case updateMessageReactions(flags: Int32, peer: Api.Peer, msgId: Int32, topMsgId: Int32?, reactions: Api.MessageReactions)
+        case updateMessageReactions(flags: Int32, peer: Api.Peer, msgId: Int32, topMsgId: Int32?, savedPeerId: Api.Peer?, reactions: Api.MessageReactions)
         case updateMoveStickerSetToTop(flags: Int32, stickerset: Int64)
         case updateNewAuthorization(flags: Int32, hash: Int64, date: Int32?, device: String?, location: String?)
         case updateNewChannelMessage(message: Api.Message, pts: Int32, ptsCount: Int32)
@@ -1426,13 +1426,14 @@ public extension Api {
                         serializeInt32(item, buffer: buffer, boxed: false)
                     }}
                     break
-                case .updateChannelReadMessagesContents(let flags, let channelId, let topMsgId, let messages):
+                case .updateChannelReadMessagesContents(let flags, let channelId, let topMsgId, let savedPeerId, let messages):
                     if boxed {
-                        buffer.appendInt32(-366410403)
+                        buffer.appendInt32(636691703)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(channelId, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(topMsgId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {savedPeerId!.serialize(buffer, true)}
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(messages.count))
                     for item in messages {
@@ -1846,14 +1847,15 @@ public extension Api {
                     }
                     serializeInt32(qts, buffer: buffer, boxed: false)
                     break
-                case .updateMessageReactions(let flags, let peer, let msgId, let topMsgId, let reactions):
+                case .updateMessageReactions(let flags, let peer, let msgId, let topMsgId, let savedPeerId, let reactions):
                     if boxed {
-                        buffer.appendInt32(1578843320)
+                        buffer.appendInt32(506035194)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
                     serializeInt32(msgId, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(topMsgId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {savedPeerId!.serialize(buffer, true)}
                     reactions.serialize(buffer, true)
                     break
                 case .updateMoveStickerSetToTop(let flags, let stickerset):
@@ -2461,8 +2463,8 @@ public extension Api {
                 return ("updateChannelPinnedTopic", [("flags", flags as Any), ("channelId", channelId as Any), ("topicId", topicId as Any)])
                 case .updateChannelPinnedTopics(let flags, let channelId, let order):
                 return ("updateChannelPinnedTopics", [("flags", flags as Any), ("channelId", channelId as Any), ("order", order as Any)])
-                case .updateChannelReadMessagesContents(let flags, let channelId, let topMsgId, let messages):
-                return ("updateChannelReadMessagesContents", [("flags", flags as Any), ("channelId", channelId as Any), ("topMsgId", topMsgId as Any), ("messages", messages as Any)])
+                case .updateChannelReadMessagesContents(let flags, let channelId, let topMsgId, let savedPeerId, let messages):
+                return ("updateChannelReadMessagesContents", [("flags", flags as Any), ("channelId", channelId as Any), ("topMsgId", topMsgId as Any), ("savedPeerId", savedPeerId as Any), ("messages", messages as Any)])
                 case .updateChannelTooLong(let flags, let channelId, let pts):
                 return ("updateChannelTooLong", [("flags", flags as Any), ("channelId", channelId as Any), ("pts", pts as Any)])
                 case .updateChannelUserTyping(let flags, let channelId, let topMsgId, let fromId, let action):
@@ -2555,8 +2557,8 @@ public extension Api {
                 return ("updateMessagePoll", [("flags", flags as Any), ("pollId", pollId as Any), ("poll", poll as Any), ("results", results as Any)])
                 case .updateMessagePollVote(let pollId, let peer, let options, let qts):
                 return ("updateMessagePollVote", [("pollId", pollId as Any), ("peer", peer as Any), ("options", options as Any), ("qts", qts as Any)])
-                case .updateMessageReactions(let flags, let peer, let msgId, let topMsgId, let reactions):
-                return ("updateMessageReactions", [("flags", flags as Any), ("peer", peer as Any), ("msgId", msgId as Any), ("topMsgId", topMsgId as Any), ("reactions", reactions as Any)])
+                case .updateMessageReactions(let flags, let peer, let msgId, let topMsgId, let savedPeerId, let reactions):
+                return ("updateMessageReactions", [("flags", flags as Any), ("peer", peer as Any), ("msgId", msgId as Any), ("topMsgId", topMsgId as Any), ("savedPeerId", savedPeerId as Any), ("reactions", reactions as Any)])
                 case .updateMoveStickerSetToTop(let flags, let stickerset):
                 return ("updateMoveStickerSetToTop", [("flags", flags as Any), ("stickerset", stickerset as Any)])
                 case .updateNewAuthorization(let flags, let hash, let date, let device, let location):
@@ -3367,16 +3369,21 @@ public extension Api {
             _2 = reader.readInt64()
             var _3: Int32?
             if Int(_1!) & Int(1 << 0) != 0 {_3 = reader.readInt32() }
-            var _4: [Int32]?
+            var _4: Api.Peer?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.Peer
+            } }
+            var _5: [Int32]?
             if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+                _5 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.Update.updateChannelReadMessagesContents(flags: _1!, channelId: _2!, topMsgId: _3, messages: _4!)
+            let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.Update.updateChannelReadMessagesContents(flags: _1!, channelId: _2!, topMsgId: _3, savedPeerId: _4, messages: _5!)
             }
             else {
                 return nil
@@ -4202,17 +4209,22 @@ public extension Api {
             _3 = reader.readInt32()
             var _4: Int32?
             if Int(_1!) & Int(1 << 0) != 0 {_4 = reader.readInt32() }
-            var _5: Api.MessageReactions?
+            var _5: Api.Peer?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _5 = Api.parse(reader, signature: signature) as? Api.Peer
+            } }
+            var _6: Api.MessageReactions?
             if let signature = reader.readInt32() {
-                _5 = Api.parse(reader, signature: signature) as? Api.MessageReactions
+                _6 = Api.parse(reader, signature: signature) as? Api.MessageReactions
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
-            let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.Update.updateMessageReactions(flags: _1!, peer: _2!, msgId: _3!, topMsgId: _4, reactions: _5!)
+            let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.Update.updateMessageReactions(flags: _1!, peer: _2!, msgId: _3!, topMsgId: _4, savedPeerId: _5, reactions: _6!)
             }
             else {
                 return nil

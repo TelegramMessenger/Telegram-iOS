@@ -870,7 +870,7 @@ public final class AccountViewTracker {
                                         }
                                         for update in updateList {
                                             switch update {
-                                            case let .updateMessageReactions(_, peer, msgId, _, reactions):
+                                            case let .updateMessageReactions(_, peer, msgId, _, _, reactions):
                                                 transaction.updateMessage(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: msgId), update: { currentMessage in
                                                     var updatedReactions = ReactionsMessageAttribute(apiReactions: reactions)
                                                     
@@ -1689,7 +1689,7 @@ public final class AccountViewTracker {
                     }
                     
                     transaction.replaceMessageTagSummary(peerId: peerId, threadId: threadId, tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud, customTag: nil, count: 0, maxId: maxId)
-                    addSynchronizeMarkAllUnseenReactionsOperation(transaction: transaction, peerId: peerId, maxId: summary.range.maxId)
+                    addSynchronizeMarkAllUnseenReactionsOperation(transaction: transaction, peerId: peerId, maxId: summary.range.maxId, threadId: threadId)
                 }
                 
                 return ids

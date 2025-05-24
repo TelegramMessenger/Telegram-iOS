@@ -821,7 +821,7 @@ func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Post
                                 index: topicIndex,
                                 threadPeer: threadPeer
                             ))
-                        case let .monoForumDialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _):
+                        case let .monoForumDialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadReactionsCount, _):
                             let isMarkedUnread = (flags & (1 << 3)) != 0
                             let data = MessageHistoryThreadData(
                                 creationDate: 0,
@@ -871,7 +871,7 @@ func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Post
                                 data: data,
                                 topMessage: topMessage,
                                 unreadMentionsCount: 0,
-                                unreadReactionsCount: 0,
+                                unreadReactionsCount: unreadReactionsCount,
                                 index: topicIndex,
                                 threadPeer: threadPeer
                             ))
