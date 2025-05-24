@@ -995,7 +995,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                         
                         let placeholderFrame = updatedImageFrame.insetBy(dx: innerImageInset, dy: innerImageInset)
                         strongSelf.placeholderNode.update(backgroundColor: nil, foregroundColor: foregroundColor, shimmeringColor: shimmeringColor, data: immediateThumbnailData, size: placeholderFrame.size, enableEffect: item.context.sharedContext.energyUsageSettings.fullTranslucency)
-                        strongSelf.placeholderNode.frame = placeholderFrame
+                        animation.animator.updateFrame(layer: strongSelf.placeholderNode.layer, frame: placeholderFrame, completion: nil)
                     }
                     
                     strongSelf.messageAccessibilityArea.frame = CGRect(origin: CGPoint(), size: layoutSize)
@@ -1067,7 +1067,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                             strongSelf.contextSourceNode.contentNode.addSubnode(threadInfoNode)
                         }
                         let threadInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + 6.0) : (params.width - params.rightInset - threadInfoSize.width - layoutConstants.bubble.edgeInset - 8.0)), y: 8.0), size: threadInfoSize)
-                        threadInfoNode.frame = threadInfoFrame
+                        animation.animator.updateFrame(layer: threadInfoNode.layer, frame: threadInfoFrame, completion: nil)
                         
                         headersOffset += threadInfoSize.height + 10.0
                     } else if let replyInfoNode = strongSelf.replyInfoNode {
@@ -1120,7 +1120,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                             }
                         }
                         let forwardInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + 12.0 + 5.0) : (params.width - params.rightInset - messageInfoSize.width - layoutConstants.bubble.edgeInset - 8.0 - 5.0)), y: headersOffset + 8.0 + messageInfoSize.height), size: forwardInfoSize)
-                        forwardInfoNode.frame = forwardInfoFrame
+                        animation.animator.updateFrame(layer: forwardInfoNode.layer, frame: forwardInfoFrame, completion: nil)
                         
                         messageInfoSize = CGSize(width: messageInfoSize.width, height: messageInfoSize.height + forwardInfoSize.height + 8.0)
                         

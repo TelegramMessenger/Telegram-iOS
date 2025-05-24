@@ -241,7 +241,7 @@ func titleTopicsPanelForChatPresentationInterfaceState(_ chatPresentationInterfa
                 return panel
             }
         }
-    } else if let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isForum, chatPresentationInterfaceState.search == nil {
+    } else if let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isForum, (channel.flags.contains(.displayForumAsTabs) || context.sharedContext.immediateExperimentalUISettings.allForumsHaveTabs), chatPresentationInterfaceState.search == nil {
         let topicListDisplayMode = chatPresentationInterfaceState.topicListDisplayMode ?? .top
         if case .top = topicListDisplayMode, let peerId = chatPresentationInterfaceState.chatLocation.peerId {
             if let currentPanel = currentPanel as? ChatTopicListTitleAccessoryPanelNode {

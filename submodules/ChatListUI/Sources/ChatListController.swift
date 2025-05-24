@@ -1067,6 +1067,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 
                 if case let .channel(channel) = peer, channel.flags.contains(.isMonoforum) {
                     openAsInlineForum = false
+                } else if case let .channel(channel) = peer, channel.flags.contains(.displayForumAsTabs) {
+                    openAsInlineForum = false
                 } else {
                     if let cachedData = cachedDataView.cachedPeerData as? CachedChannelData, case let .known(viewForumAsMessages) = cachedData.viewForumAsMessages, viewForumAsMessages {
                         openAsInlineForum = false
@@ -1519,7 +1521,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         if let threadId = threadId {
                             let source: ContextContentSource
                             let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .replyThread(message: ChatReplyThreadMessage(
-                                peerId: peer.peerId, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: !channel.isMonoForum, isMonoforumPost: channel.isMonoForum, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false
+                                peerId: peer.peerId, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: channel.isForumOrMonoForum, isMonoforumPost: channel.isMonoForum, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false
                             )), subject: nil, botStart: nil, mode: .standard(.previewing), params: nil)
                             chatController.canReadHistory.set(false)
                             source = .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController))

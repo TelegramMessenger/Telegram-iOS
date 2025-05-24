@@ -810,9 +810,16 @@ extension ChatControllerImpl {
                             contactStatus = ChatContactStatus(canAddContact: false, peerStatusSettings: cachedData.peerStatusSettings, invitedBy: invitedBy, managingBot: managingBot)
                             
                             if let channel = peerView.peers[peerView.peerId] as? TelegramChannel {
-                                if channel.flags.contains(.isCreator) || channel.adminRights != nil {
+                                if channel.isMonoForum {
+                                    if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = peerView.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
+                                    } else {
+                                        sendPaidMessageStars = channel.sendPaidMessageStars
+                                    }
                                 } else {
-                                    sendPaidMessageStars = channel.sendPaidMessageStars
+                                    if channel.flags.contains(.isCreator) || channel.adminRights != nil {
+                                    } else {
+                                        sendPaidMessageStars = channel.sendPaidMessageStars
+                                    }
                                 }
                             }
                         }
@@ -1857,8 +1864,6 @@ extension ChatControllerImpl {
                         }
                         if globalRemainingUnreadChatCount > 0 {
                             strongSelf.initialNavigationBadge = "\(globalRemainingUnreadChatCount)"
-                        } else {
-                            strongSelf.initialNavigationBadge = ""
                         }
                     }
                 }

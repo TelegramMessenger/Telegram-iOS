@@ -862,6 +862,10 @@ open class ListView: ASDisplayNode, ASScrollViewDelegate, ASGestureRecognizerDel
         }
     }
     
+    public func resetScrolledToItem() {
+        self.scrolledToItem = nil
+    }
+    
     public func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
         if let shouldStopScrolling = self.shouldStopScrolling, shouldStopScrolling(velocity.y) {
             targetContentOffset.pointee.y = scrollView.contentOffset.y

@@ -182,7 +182,7 @@ private final class CustomBadgeComponent: Component {
     }
 }
 
-final class ChatTopicListTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, ChatControllerCustomNavigationPanelNode, ASScrollViewDelegate {
+final class ChatTopicListTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, ChatControllerCustomNavigationPanelNode {
     private struct Params: Equatable {
         var width: CGFloat
         var leftInset: CGFloat
@@ -736,6 +736,8 @@ final class ChatTopicListTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, C
     private let isMonoforum: Bool
     
     private let scrollView: ScrollView
+    private let scrollViewContainer: UIView
+    private let scrollViewMask: UIImageView
     
     private var params: Params?
     
@@ -756,12 +758,18 @@ final class ChatTopicListTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, C
         self.selectedLineView = UIImageView()
         
         self.scrollView = ScrollView(frame: CGRect())
+        self.scrollViewMask = UIImageView(image: generateGradientImage(size: CGSize(width: 8.0, height: 8.0), colors: [
+            UIColor(white: 1.0, alpha: 0.0),
+            UIColor(white: 1.0, alpha: 1.0)
+        ], locations: [0.0, 1.0], direction: .horizontal)?.stretchableImage(withLeftCapWidth: 8, topCapHeight: 0))
+        
+        self.scrollViewContainer = UIView()
         
         super.init()
         
         self.scrollView.delaysContentTouches = false
         self.scrollView.canCancelContentTouches = true
-        self.scrollView.clipsToBounds = false
+        self.scrollView.clipsToBounds = true
         self.scrollView.contentInsetAdjustmentBehavior = .never
         if #available(iOS 13.0, *) {
             self.scrollView.automaticallyAdjustsScrollIndicatorInsets = false
@@ -771,9 +779,11 @@ final class ChatTopicListTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, C
         self.scrollView.alwaysBounceHorizontal = false
         self.scrollView.alwaysBounceVertical = false
         self.scrollView.scrollsToTop = false
-        self.scrollView.delegate = self.wrappedScrollViewDelegate
         
-        self.view.addSubview(self.scrollView)
+        self.scrollViewContainer.addSubview(self.scrollView)
+        self.scrollViewContainer.mask = self.scrollViewMask
+        
+        self.view.addSubview(self.scrollViewContainer)
         
         self.scrollView.addSubview(self.selectedLineView)
         
@@ -843,20 +853,9 @@ final class ChatTopicListTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, C
         let containerInsets = UIEdgeInsets(top: 0.0, left: params.leftInset + 16.0, bottom: 0.0, right: params.rightInset + 16.0)
         let itemSpacing: CGFloat = 24.0
         
-        var contentSize = CGSize(width: 0.0, height: panelHeight)
-        contentSize.width += containerInsets.left + 8.0
-        
-        var validIds: [Item.Id] = []
-        var isFirst = true
-        var selectedItemFrame: CGRect?
+        var leftContentInset: CGFloat = containerInsets.left + 8.0
         
         do {
-            if isFirst {
-                isFirst = false
-            } else {
-                contentSize.width += itemSpacing
-            }
-            
             var itemTransition = transition
             var animateIn = false
             let itemView: TabItemView
@@ -872,11 +871,11 @@ final class ChatTopicListTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, C
                     self.interfaceInteraction?.toggleChatSidebarMode()
                 })
                 self.tabItemView = itemView
-                self.scrollView.addSubview(itemView)
+                self.view.addSubview(itemView)
             }
                 
             let itemSize = itemView.update(context: self.context, theme: params.interfaceState.theme, height: panelHeight, transition: .immediate)
-            let itemFrame = CGRect(origin: CGPoint(x: contentSize.width, y: -5.0), size: itemSize)
+            let itemFrame = CGRect(origin: CGPoint(x: leftContentInset, y: -5.0), size: itemSize)
             
             itemTransition.updatePosition(layer: itemView.layer, position: itemFrame.center)
             itemTransition.updateBounds(layer: itemView.layer, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
@@ -886,8 +885,14 @@ final class ChatTopicListTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, C
                 transition.animateTransformScale(view: itemView, from: 0.001)
             }
             
-            contentSize.width += itemSize.width
+            leftContentInset += itemSize.width + 8.0
         }
+        
+        var contentSize = CGSize(width: itemSpacing - 8.0, height: panelHeight)
+        
+        var validIds: [Item.Id] = []
+        var isFirst = true
+        var selectedItemFrame: CGRect?
         
         do {
             if isFirst {
@@ -1034,9 +1039,12 @@ final class ChatTopicListTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, C
         
         contentSize.width += containerInsets.right
         
-        let scrollSize = CGSize(width: params.width, height: contentSize.height)
+        let scrollSize = CGSize(width: params.width - leftContentInset, height: contentSize.height)
+        self.scrollViewContainer.frame = CGRect(origin: CGPoint(x: leftContentInset, y: 0.0), size: scrollSize)
+        self.scrollViewMask.frame = CGRect(origin: CGPoint(), size: scrollSize)
+        
         if self.scrollView.bounds.size != scrollSize {
-            self.scrollView.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: scrollSize)
+            self.scrollView.frame = CGRect(origin: CGPoint(), size: scrollSize)
         }
         if self.scrollView.contentSize != contentSize {
             self.scrollView.contentSize = contentSize
