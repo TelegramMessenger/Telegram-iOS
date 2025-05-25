@@ -1108,7 +1108,7 @@
     TGPhotoEditorButton *qualityButton = [_portraitToolbarView buttonForTab:TGPhotoEditorQualityTab];
     if (qualityButton != nil)
     {
-        bool isPhoto = [_currentItemView isKindOfClass:[TGMediaPickerGalleryPhotoItemView class]];
+        bool isPhoto = [_currentItemView isKindOfClass:[TGMediaPickerGalleryPhotoItemView class]] || [_currentItem isKindOfClass:[TGCameraCapturedPhoto class]];
         if (isPhoto) {
             bool isHd = _editingContext.isHighQualityPhoto;
             UIImage *icon = [TGPhotoEditorInterfaceAssets qualityIconForHighQuality:isHd filled: false];
