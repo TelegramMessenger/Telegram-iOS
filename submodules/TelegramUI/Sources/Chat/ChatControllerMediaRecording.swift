@@ -297,12 +297,13 @@ extension ChatControllerImpl {
                                 if data.duration < 0.5 {
                                     strongSelf.recorderFeedback?.error()
                                     strongSelf.recorderFeedback = nil
+                                    strongSelf.audioRecorder.set(.single(nil))
+                                    strongSelf.recorderDataDisposable.set(nil)
                                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
                                         $0.updatedInputTextPanelState { panelState in
                                             return panelState.withUpdatedMediaRecordingState(nil)
                                         }
                                     })
-                                    strongSelf.recorderDataDisposable.set(nil)
                                 } else if let waveform = data.waveform {
                                     if resource == nil {
                                         resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max), size: Int64(data.compressedData.count))
@@ -351,6 +352,7 @@ extension ChatControllerImpl {
                             strongSelf.recorderFeedback?.error()
                             strongSelf.recorderFeedback = nil
                             strongSelf.audioRecorder.set(.single(nil))
+                            strongSelf.recorderDataDisposable.set(nil)
                         } else {
                             let randomId = Int64.random(in: Int64.min ... Int64.max)
                             

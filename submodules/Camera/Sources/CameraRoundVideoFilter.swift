@@ -78,7 +78,7 @@ func allocateOutputBufferPool(with inputFormatDescription: CMFormatDescription, 
         return (pixelBufferPool, cgColorSpace, outputFormatDescription)
 }
 
-private func preallocateBuffers(pool: CVPixelBufferPool, allocationThreshold: Int) {
+func preallocateBuffers(pool: CVPixelBufferPool, allocationThreshold: Int) {
     var pixelBuffers = [CVPixelBuffer]()
     var error: CVReturn = kCVReturnSuccess
     let auxAttributes = [kCVPixelBufferPoolAllocationThresholdKey as String: allocationThreshold] as NSDictionary

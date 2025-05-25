@@ -1487,13 +1487,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                 }
                             }
                             if let source {
-                                let externalState = MediaEditorTransitionOutExternalState(
-                                    storyTarget: nil,
-                                    isForcedTarget: false,
-                                    isPeerArchived: false,
-                                    transitionOut: nil
-                                )
-                                let controller = self.context.sharedContext.makeStoryMediaEditorScreen(context: self.context, source: source, text: text, link: linkUrl.flatMap { ($0, linkName) }, completion: { results, commit in
+                                let controller = self.context.sharedContext.makeStoryMediaEditorScreen(context: self.context, source: source, text: text, link: linkUrl.flatMap { ($0, linkName) }, remainingCount: 1, completion: { results, externalState, commit in
                                     let target: Stories.PendingTarget = results.first!.target
                                     externalState.storyTarget = target
                                     
