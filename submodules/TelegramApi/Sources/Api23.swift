@@ -48,14 +48,14 @@ public extension Api {
 }
 public extension Api {
     indirect enum SavedDialog: TypeConstructorDescription {
-        case monoForumDialog(flags: Int32, peer: Api.Peer, topMessage: Int32, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, draft: Api.DraftMessage?)
+        case monoForumDialog(flags: Int32, peer: Api.Peer, topMessage: Int32, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, unreadReactionsCount: Int32, draft: Api.DraftMessage?)
         case savedDialog(flags: Int32, peer: Api.Peer, topMessage: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .monoForumDialog(let flags, let peer, let topMessage, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let draft):
+                case .monoForumDialog(let flags, let peer, let topMessage, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let unreadReactionsCount, let draft):
                     if boxed {
-                        buffer.appendInt32(2099641667)
+                        buffer.appendInt32(1681948327)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
@@ -63,6 +63,7 @@ public extension Api {
                     serializeInt32(readInboxMaxId, buffer: buffer, boxed: false)
                     serializeInt32(readOutboxMaxId, buffer: buffer, boxed: false)
                     serializeInt32(unreadCount, buffer: buffer, boxed: false)
+                    serializeInt32(unreadReactionsCount, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 1) != 0 {draft!.serialize(buffer, true)}
                     break
                 case .savedDialog(let flags, let peer, let topMessage):
@@ -78,8 +79,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .monoForumDialog(let flags, let peer, let topMessage, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let draft):
-                return ("monoForumDialog", [("flags", flags as Any), ("peer", peer as Any), ("topMessage", topMessage as Any), ("readInboxMaxId", readInboxMaxId as Any), ("readOutboxMaxId", readOutboxMaxId as Any), ("unreadCount", unreadCount as Any), ("draft", draft as Any)])
+                case .monoForumDialog(let flags, let peer, let topMessage, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let unreadReactionsCount, let draft):
+                return ("monoForumDialog", [("flags", flags as Any), ("peer", peer as Any), ("topMessage", topMessage as Any), ("readInboxMaxId", readInboxMaxId as Any), ("readOutboxMaxId", readOutboxMaxId as Any), ("unreadCount", unreadCount as Any), ("unreadReactionsCount", unreadReactionsCount as Any), ("draft", draft as Any)])
                 case .savedDialog(let flags, let peer, let topMessage):
                 return ("savedDialog", [("flags", flags as Any), ("peer", peer as Any), ("topMessage", topMessage as Any)])
     }
@@ -100,9 +101,11 @@ public extension Api {
             _5 = reader.readInt32()
             var _6: Int32?
             _6 = reader.readInt32()
-            var _7: Api.DraftMessage?
+            var _7: Int32?
+            _7 = reader.readInt32()
+            var _8: Api.DraftMessage?
             if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
-                _7 = Api.parse(reader, signature: signature) as? Api.DraftMessage
+                _8 = Api.parse(reader, signature: signature) as? Api.DraftMessage
             } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
@@ -110,9 +113,10 @@ public extension Api {
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             let _c6 = _6 != nil
-            let _c7 = (Int(_1!) & Int(1 << 1) == 0) || _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.SavedDialog.monoForumDialog(flags: _1!, peer: _2!, topMessage: _3!, readInboxMaxId: _4!, readOutboxMaxId: _5!, unreadCount: _6!, draft: _7)
+            let _c7 = _7 != nil
+            let _c8 = (Int(_1!) & Int(1 << 1) == 0) || _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.SavedDialog.monoForumDialog(flags: _1!, peer: _2!, topMessage: _3!, readInboxMaxId: _4!, readOutboxMaxId: _5!, unreadCount: _6!, unreadReactionsCount: _7!, draft: _8)
             }
             else {
                 return nil

@@ -718,8 +718,16 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                         flags |= (1 << 0)
                         topMsgId = Int32(clamping: threadId)
                     }
+                    var savedPeerId: Api.InputPeer?
+                    if let subPeerId = peerInput.requestSubPeerId(accountPeerId: accountPeerId, peer: peer), let subPeer = subPeer, subPeer.id == subPeerId {
+                        flags |= (1 << 1)
+                        if let inputPeer = apiInputPeer(subPeer) {
+                            flags |= 1 << 2
+                            savedPeerId = inputPeer
+                        }
+                    }
                     
-                    request = source.request(Api.functions.messages.getUnreadReactions(flags: flags, peer: inputPeer, topMsgId: topMsgId, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId))
+                    request = source.request(Api.functions.messages.getUnreadReactions(flags: flags, peer: inputPeer, topMsgId: topMsgId, savedPeerId: savedPeerId, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId))
                 } else if tag == .liveLocation {
                     let selectedLimit = count
                     

@@ -25,13 +25,13 @@ func addSynchronizeMarkAllUnseenPersonalMessagesOperation(transaction: Transacti
     transaction.operationLogAddEntry(peerId: peerId, tag: tag, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SynchronizeMarkAllUnseenPersonalMessagesOperation(maxId: maxId))
 }
 
-func addSynchronizeMarkAllUnseenReactionsOperation(transaction: Transaction, peerId: PeerId, maxId: MessageId.Id) {
+func addSynchronizeMarkAllUnseenReactionsOperation(transaction: Transaction, peerId: PeerId, maxId: MessageId.Id, threadId: Int64?) {
     let tag: PeerOperationLogTag = OperationLogTags.SynchronizeMarkAllUnseenReactions
     var topLocalIndex: Int32?
     var currentMaxId: MessageId.Id?
     transaction.operationLogEnumerateEntries(peerId: peerId, tag: tag, { entry in
         topLocalIndex = entry.tagLocalIndex
-        if let operation = entry.contents as? SynchronizeMarkAllUnseenReactionsOperation {
+        if let operation = entry.contents as? SynchronizeMarkAllUnseenReactionsOperation, operation.threadId == threadId {
             currentMaxId = operation.maxId
         }
         return false
@@ -44,5 +44,5 @@ func addSynchronizeMarkAllUnseenReactionsOperation(transaction: Transaction, pee
         let _ = transaction.operationLogRemoveEntry(peerId: peerId, tag: tag, tagLocalIndex: topLocalIndex)
     }
     
-    transaction.operationLogAddEntry(peerId: peerId, tag: tag, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SynchronizeMarkAllUnseenReactionsOperation(maxId: maxId))
+    transaction.operationLogAddEntry(peerId: peerId, tag: tag, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SynchronizeMarkAllUnseenReactionsOperation(threadId: threadId, maxId: maxId))
 }
