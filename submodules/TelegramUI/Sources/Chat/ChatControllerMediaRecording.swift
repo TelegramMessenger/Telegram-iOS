@@ -496,6 +496,7 @@ extension ChatControllerImpl {
                 })
             }
             
+            //TODO:localize
             if let recordedMediaPreview = self.presentationInterfaceState.interfaceState.mediaDraftState, case let .audio(audio) = recordedMediaPreview, let _ = audio.trimRange {
                 self.present(
                     textAlertController(
@@ -503,7 +504,7 @@ extension ChatControllerImpl {
                         title: "Trim to selected range?",
                         text: "Audio outside that range will be discarded, and recording will start immediately.",
                         actions: [
-                            TextAlertAction(type: .genericAction, title: "Cancel", action: {}),
+                            TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {}),
                             TextAlertAction(type: .defaultAction, title: "Proceed", action: {
                                 proceed()
                             })
