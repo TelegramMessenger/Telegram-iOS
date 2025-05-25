@@ -1199,6 +1199,8 @@ public class VideoMessageCameraScreen: ViewController {
                 self.currentLiveUploadData = nil
             }
             
+            let _ = ApplicationSpecificNotice.incrementVideoMessagesPauseSuggestion(accountManager: self.context.sharedContext.accountManager, count: 3).startStandalone()
+            
             self.pauseCameraCapture()
             
             self.results.append(result)
@@ -1251,22 +1253,35 @@ public class VideoMessageCameraScreen: ViewController {
             return result
         }
         
-        fileprivate func maybePresentViewOnceTooltip() {
+        fileprivate func maybePresentTooltips() {
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-            let _ = (ApplicationSpecificNotice.getVideoMessagesPlayOnceSuggestion(accountManager: context.sharedContext.accountManager)
-            |> deliverOnMainQueue).startStandalone(next: { [weak self] counter in
+            
+            let _ = (ApplicationSpecificNotice.getVideoMessagesPauseSuggestion(accountManager: self.context.sharedContext.accountManager)
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] pauseCounter in
                 guard let self else {
                     return
                 }
-                if counter >= 3 {
-                    return
+                
+                if pauseCounter >= 3 {
+                    let _ = (ApplicationSpecificNotice.getVideoMessagesPlayOnceSuggestion(accountManager: self.context.sharedContext.accountManager)
+                    |> deliverOnMainQueue).startStandalone(next: { [weak self] counter in
+                        guard let self else {
+                            return
+                        }
+                        if counter >= 3 {
+                            return
+                        }
+                        Queue.mainQueue().after(0.3) {
+                            self.displayViewOnceTooltip(text: presentationData.strings.Chat_TapToPlayVideoMessageOnceTooltip, hasIcon: true)
+                        }
+                        let _ = ApplicationSpecificNotice.incrementVideoMessagesPlayOnceSuggestion(accountManager: self.context.sharedContext.accountManager).startStandalone()
+                    })
+                } else {
+                    Queue.mainQueue().after(0.3) {
+                        self.displayPauseTooltip(text: presentationData.strings.Chat_PauseVideoMessageTooltip)
+                    }
+                    let _ = ApplicationSpecificNotice.incrementVideoMessagesPauseSuggestion(accountManager: self.context.sharedContext.accountManager).startStandalone()
                 }
-
-                Queue.mainQueue().after(0.3) {
-                    self.displayViewOnceTooltip(text: presentationData.strings.Chat_TapToPlayVideoMessageOnceTooltip, hasIcon: true)
-                }
-            
-                let _ = ApplicationSpecificNotice.incrementVideoMessagesPlayOnceSuggestion(accountManager: self.context.sharedContext.accountManager).startStandalone()
             })
         }
         
@@ -1289,6 +1304,36 @@ public class VideoMessageCameraScreen: ViewController {
                 style: .customBlur(UIColor(rgb: 0x18181a), 0.0),
                 arrowStyle: .small,
                 icon: hasIcon ? .animation(name: "anim_autoremove_on", delay: 0.1, tintColor: nil) : nil,
+                location: .point(location, .right),
+                displayDuration: .default,
+                inset: 8.0,
+                cornerRadius: 8.0,
+                shouldDismissOnTouch: { _, _ in
+                    return .ignore
+                }
+            )
+            controller.present(tooltipController, in: .window(.root))
+        }
+        
+        private func displayPauseTooltip(text: String) {
+            guard let controller = self.controller, let sourceView = self.componentHost.findTaggedView(tag: viewOnceButtonTag) else {
+                return
+            }
+            
+            self.dismissAllTooltips()
+            
+            let absoluteFrame = sourceView.convert(sourceView.bounds, to: self.view)
+            let location = CGRect(origin: CGPoint(x: absoluteFrame.midX - 20.0, y: absoluteFrame.midY + 53.0), size: CGSize())
+            
+            let tooltipController = TooltipScreen(
+                account: context.account,
+                sharedContext: context.sharedContext,
+                text: .markdown(text: text),
+                balancedTextLayout: true,
+                constrainWidth: 240.0,
+                style: .customBlur(UIColor(rgb: 0x18181a), 0.0),
+                arrowStyle: .small,
+                icon: nil,
                 location: .point(location, .right),
                 displayDuration: .default,
                 inset: 8.0,
@@ -1934,7 +1979,7 @@ public class VideoMessageCameraScreen: ViewController {
             self.updateCameraState({ $0.updatedRecording(.handsFree) }, transition: .spring(duration: 0.4))
         }
         
-        self.node.maybePresentViewOnceTooltip()
+        self.node.maybePresentTooltips()
     }
     
     public func discardVideo() {

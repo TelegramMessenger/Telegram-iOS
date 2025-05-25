@@ -4112,6 +4112,11 @@ extension ChatControllerImpl {
                 return
             }
             self.updateTrimRange(start: start, end: end, updatedEnd: updatedEnd, apply: apply)
+        }, dismissAllTooltips: { [weak self] in
+            guard let self else {
+                return
+            }
+            self.dismissAllTooltips()
         }, updateHistoryFilter: { [weak self] update in
             guard let self else {
                 return

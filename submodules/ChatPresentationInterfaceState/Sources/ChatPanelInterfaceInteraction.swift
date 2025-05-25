@@ -176,6 +176,7 @@ public final class ChatPanelInterfaceInteraction {
     public let updateDisplayHistoryFilterAsList: (Bool) -> Void
     public let openBoostToUnrestrict: () -> Void
     public let updateRecordingTrimRange: (Double, Double, Bool, Bool) -> Void
+    public let dismissAllTooltips: () -> Void
     public let requestLayout: (ContainedViewLayoutTransition) -> Void
     public let chatController: () -> ViewController?
     public let statuses: ChatPanelInterfaceInteractionStatuses?
@@ -291,6 +292,7 @@ public final class ChatPanelInterfaceInteraction {
         openMessagePayment: @escaping () -> Void,
         openBoostToUnrestrict: @escaping () -> Void,
         updateRecordingTrimRange: @escaping (Double, Double, Bool, Bool) -> Void,
+        dismissAllTooltips: @escaping () -> Void,
         updateHistoryFilter: @escaping ((ChatPresentationInterfaceState.HistoryFilter?) -> ChatPresentationInterfaceState.HistoryFilter?) -> Void,
         updateChatLocationThread: @escaping (Int64?, ChatControllerAnimateInnerChatSwitchDirection?) -> Void,
         toggleChatSidebarMode: @escaping () -> Void,
@@ -409,6 +411,7 @@ public final class ChatPanelInterfaceInteraction {
         self.openMessagePayment = openMessagePayment
         self.openBoostToUnrestrict = openBoostToUnrestrict
         self.updateRecordingTrimRange = updateRecordingTrimRange
+        self.dismissAllTooltips = dismissAllTooltips
         self.updateHistoryFilter = updateHistoryFilter
         self.updateChatLocationThread = updateChatLocationThread
         self.toggleChatSidebarMode = toggleChatSidebarMode
@@ -536,6 +539,7 @@ public final class ChatPanelInterfaceInteraction {
         }, openMessagePayment: {
         }, openBoostToUnrestrict: {
         }, updateRecordingTrimRange: { _, _, _, _ in
+        }, dismissAllTooltips: {
         }, updateHistoryFilter: { _ in
         }, updateChatLocationThread: { _, _ in
         }, toggleChatSidebarMode: {

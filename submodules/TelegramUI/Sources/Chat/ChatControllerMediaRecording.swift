@@ -276,6 +276,8 @@ extension ChatControllerImpl {
                 audioRecorderValue.stop()
             }
             
+            self.dismissAllTooltips()
+            
             switch updatedAction {
             case .dismiss:
                 self.recorderDataDisposable.set(nil)
@@ -528,7 +530,11 @@ extension ChatControllerImpl {
             })
         }
         
-        self.videoRecorderValue?.lockVideoRecording()
+        if let _ = self.audioRecorderValue {
+            self.maybePresentAudioPauseTooltip()
+        } else if let videoRecorderValue = self.videoRecorderValue {
+            videoRecorderValue.lockVideoRecording()
+        }
     }
     
     func deleteMediaRecording() {
@@ -544,6 +550,56 @@ extension ChatControllerImpl {
             $0.updatedInterfaceState { $0.withUpdatedMediaDraftState(nil) }
         })
         self.updateDownButtonVisibility()
+        
+        self.dismissAllTooltips()
+    }
+    
+    private func maybePresentAudioPauseTooltip() {
+        let _ = (ApplicationSpecificNotice.getVoiceMessagesPauseSuggestion(accountManager: self.context.sharedContext.accountManager)
+        |> deliverOnMainQueue).startStandalone(next: { [weak self] pauseCounter in
+            guard let self else {
+                return
+            }
+            
+            if pauseCounter >= 3 {
+                return
+            } else {
+                Queue.mainQueue().after(0.3) {
+                    self.displayPauseTooltip(text: self.presentationData.strings.Chat_PauseVoiceMessageTooltip)
+                }
+                let _ = ApplicationSpecificNotice.incrementVoiceMessagesPauseSuggestion(accountManager: self.context.sharedContext.accountManager).startStandalone()
+            }
+        })
+    }
+    
+    private func displayPauseTooltip(text: String) {
+        guard let layout = self.validLayout else {
+            return
+        }
+        
+        self.dismissAllTooltips()
+        
+        let insets = layout.insets(options: [.input])
+        let location = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.right - 42.0 - UIScreenPixel, y: layout.size.height - insets.bottom - 122.0), size: CGSize())
+        
+        let tooltipController = TooltipScreen(
+            account: self.context.account,
+            sharedContext: self.context.sharedContext,
+            text: .markdown(text: text),
+            balancedTextLayout: true,
+            constrainWidth: 240.0,
+            style: .customBlur(UIColor(rgb: 0x18181a), 0.0),
+            arrowStyle: .small,
+            icon: nil,
+            location: .point(location, .right),
+            displayDuration: .default,
+            inset: 8.0,
+            cornerRadius: 8.0,
+            shouldDismissOnTouch: { _, _ in
+                return .ignore
+            }
+        )
+        self.present(tooltipController, in: .window(.root))
     }
     
     private func withAudioRecorder(_ f: (ManagedAudioRecorder) -> Void) {

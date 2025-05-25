@@ -14338,3 +14338,6 @@ Sorry for the inconvenience.";
 
 "Gift.Buy.ErrorTooEarly.Title" = "Try Later";
 "Gift.Buy.ErrorTooEarly.Text" = "You will be able to buy this gift on %@.";
+
+"Chat.PauseVoiceMessageTooltip" = "Pause to trim or replay.";
+"Chat.PauseVideoMessageTooltip" = "Pause to trim or replay.";

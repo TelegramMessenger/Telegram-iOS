@@ -1265,6 +1265,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
         }, openMessagePayment: {
         }, openBoostToUnrestrict: {
         }, updateRecordingTrimRange: { _, _, _, _ in
+        }, dismissAllTooltips: {  
         }, updateHistoryFilter: { _ in
         }, updateChatLocationThread: { _, _ in
         }, toggleChatSidebarMode: {
