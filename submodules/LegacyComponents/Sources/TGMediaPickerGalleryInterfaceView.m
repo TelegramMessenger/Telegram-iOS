@@ -1239,8 +1239,7 @@
         [self tooltipTimerTick];
     }
     
-    //TODO:localize
-    NSString *text = hd ? @"The photo will be sent in high quality." : @"The photo will be sent in standard quality.";
+    NSString *text = hd ? TGLocalized(@"Media.PhotoHdOn") : TGLocalized(@"Media.PhotoHdOff");
     [_context presentTooltip:text icon:[TGPhotoEditorInterfaceAssets qualityIconForHighQuality:hd filled: true] sourceRect:rect];
 }
 

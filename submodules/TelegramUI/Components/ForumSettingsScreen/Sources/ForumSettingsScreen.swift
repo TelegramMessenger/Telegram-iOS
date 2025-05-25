@@ -153,7 +153,7 @@ final class ForumSettingsScreenComponent: Component {
                 if case .legacyGroup = peer {
                     let context = component.context
                     let signal: Signal<EnginePeer.Id?, NoError> = context.engine.peers.convertGroupToSupergroup(peerId: peer.id, additionalProcessing: { upgradedPeerId -> Signal<Never, NoError> in
-                        return context.engine.peers.setChannelForumMode(id: upgradedPeerId, isForum: true, displayForumAsTabs: false)
+                        return context.engine.peers.setChannelForumMode(id: upgradedPeerId, isForum: true, displayForumAsTabs: displayForumAsTabs)
                     })
                     |> map(Optional.init)
                     |> `catch` { [weak self] error -> Signal<PeerId?, NoError> in
@@ -244,11 +244,10 @@ final class ForumSettingsScreenComponent: Component {
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             
-            //TODO:localize
             let navigationTitleSize = self.navigationTitle.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "Topics", font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
+                    text: .plain(NSAttributedString(string: environment.strings.PeerInfo_Topics_Title, font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
                     horizontalAlignment: .center
                 )),
                 environment: {},
@@ -293,7 +292,7 @@ final class ForumSettingsScreenComponent: Component {
             
             contentHeight += 124.0
             
-            let subtitleString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString("The group chat will be divided into topics created by admins or users.", attributes: MarkdownAttributes(
+            let subtitleString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(environment.strings.PeerInfo_Topics_EnableTopicsInfo, attributes: MarkdownAttributes(
                 body: MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.freeTextColor),
                 bold: MarkdownAttributeSet(font: Font.semibold(15.0), textColor: environment.theme.list.freeTextColor),
                 link: MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.itemAccentColor),
@@ -344,7 +343,7 @@ final class ForumSettingsScreenComponent: Component {
                 title: AnyComponent(VStack([
                     AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Enable Topics",
+                            string: environment.strings.PeerInfo_Topics_EnableTopics,
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                             textColor: environment.theme.list.itemPrimaryTextColor
                         )),
@@ -389,7 +388,7 @@ final class ForumSettingsScreenComponent: Component {
                     theme: environment.theme,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "DISPLAY AS",
+                            string: environment.strings.PeerInfo_Topics_DisplayAs,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -397,7 +396,7 @@ final class ForumSettingsScreenComponent: Component {
                     )),
                     footer: AnyComponent(MultilineTextComponent(
                         text: .markdown(
-                            text: "Choose how topics appear for all members.",
+                            text: environment.strings.PeerInfo_Topics_DisplayAsInfo,
                             attributes: MarkdownAttributes(
                                 body: MarkdownAttributeSet(font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: environment.theme.list.freeTextColor),
                                 bold: MarkdownAttributeSet(font: Font.semibold(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: environment.theme.list.freeTextColor),

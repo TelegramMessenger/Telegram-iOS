@@ -190,8 +190,7 @@ public final class SelectablePeerNode: ASDisplayNode {
 
         switch storyMode {
         case .createStory:
-            //TODO:localize
-            title = "Post\nto Story"
+            title = strings.Share_PostToStory
             overrideImage = .storyIcon
         case .repostStory:
             title = strings.Share_RepostStory

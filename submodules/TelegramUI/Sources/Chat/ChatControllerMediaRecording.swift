@@ -505,11 +505,11 @@ extension ChatControllerImpl {
                 self.present(
                     textAlertController(
                         context: self.context,
-                        title: "Trim to selected range?",
-                        text: "Audio outside that range will be discarded, and recording will start immediately.",
+                        title: self.presentationData.strings.Chat_TrimVoiceMessageToResume_Title,
+                        text: self.presentationData.strings.Chat_TrimVoiceMessageToResume_Text,
                         actions: [
                             TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {}),
-                            TextAlertAction(type: .defaultAction, title: "Proceed", action: {
+                            TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Chat_TrimVoiceMessageToResume_Proceed, action: {
                                 proceed()
                             })
                         ]
