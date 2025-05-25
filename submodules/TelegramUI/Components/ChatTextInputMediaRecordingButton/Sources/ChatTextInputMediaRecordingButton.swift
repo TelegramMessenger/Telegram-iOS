@@ -580,7 +580,8 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
             self.previousSize = size
             if let view = self.animationView.view {
                 let iconSize = view.bounds.size
-                view.frame = CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0)), size: iconSize)
+                view.bounds = CGRect(origin: .zero, size: iconSize)
+                view.center = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
             }
         }
     }

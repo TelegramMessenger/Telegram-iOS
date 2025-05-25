@@ -2225,7 +2225,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                         hideInfo = true
                     }
                 case .waitingForPreview:
-                    Queue.mainQueue().after(0.3, {
+                    Queue.mainQueue().after(0.5, {
                         self.actionButtons.micButton.audioRecorder = nil
                     })
                 }

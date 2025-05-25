@@ -121,39 +121,61 @@ private func preparedShareItem(postbox: Postbox, network: Network, to peerId: Pe
             }
         }
         
+        func getThumbnail(_ avAsset: AVURLAsset) -> Signal<UIImage?, NoError> {
+            return Signal { subscriber in
+                let imageGenerator = AVAssetImageGenerator(asset: asset)
+                imageGenerator.appliesPreferredTrackTransform = true
+                imageGenerator.maximumSize = CGSize(width: 640, height: 640)
+                imageGenerator.generateCGImagesAsynchronously(forTimes: [NSValue(time: CMTime(seconds: 0, preferredTimescale: CMTimeScale(30.0)))]) { _, image, _, _, _ in
+                    subscriber.putNext(image.flatMap { UIImage(cgImage: $0) })
+                    subscriber.putCompletion()
+                }
+                return ActionDisposable {
+                    imageGenerator.cancelAllCGImageGeneration()
+                }
+            }
+            
+        }
+        
         return .single(.preparing(true))
         |> then(
             loadValues(asset)
             |> mapToSignal { asset -> Signal<PreparedShareItem, PreparedShareItemError> in
-                let preset = adjustments?.preset ?? TGMediaVideoConversionPresetCompressedMedium
-                let finalDimensions = TGMediaVideoConverter.dimensions(for: asset.originalSize, adjustments: adjustments, preset: preset)
-                
-                var resourceAdjustments: VideoMediaResourceAdjustments?
-                if let adjustments = adjustments {
-                    if adjustments.trimApplied() {
-                        finalDuration = adjustments.trimEndValue - adjustments.trimStartValue
+                return getThumbnail(asset)
+                |> castError(PreparedShareItemError.self)
+                |> mapToSignal { thumbnail -> Signal<PreparedShareItem, PreparedShareItemError> in
+                    let preset = adjustments?.preset ?? TGMediaVideoConversionPresetCompressedMedium
+                    let finalDimensions = TGMediaVideoConverter.dimensions(for: asset.originalSize, adjustments: adjustments, preset: preset)
+                    
+                    var resourceAdjustments: VideoMediaResourceAdjustments?
+                    if let adjustments = adjustments {
+                        if adjustments.trimApplied() {
+                            finalDuration = adjustments.trimEndValue - adjustments.trimStartValue
+                        }
+                        
+                        if let dict = adjustments.dictionary(), let data = try? NSKeyedArchiver.archivedData(withRootObject: dict, requiringSecureCoding: false) {
+                            let adjustmentsData = MemoryBuffer(data: data)
+                            let digest = MemoryBuffer(data: adjustmentsData.md5Digest())
+                            resourceAdjustments = VideoMediaResourceAdjustments(data: adjustmentsData, digest: digest, isStory: false)
+                        }
                     }
                     
-                    if let dict = adjustments.dictionary(), let data = try? NSKeyedArchiver.archivedData(withRootObject: dict, requiringSecureCoding: false) {
-                        let adjustmentsData = MemoryBuffer(data: data)
-                        let digest = MemoryBuffer(data: adjustmentsData.md5Digest())
-                        resourceAdjustments = VideoMediaResourceAdjustments(data: adjustmentsData, digest: digest, isStory: false)
+                    let estimatedSize = TGMediaVideoConverter.estimatedSize(for: preset, duration: finalDuration, hasAudio: true)
+                    
+                    let thumbnailData = thumbnail?.jpegData(compressionQuality: 0.6)
+                    
+                    let resource = LocalFileVideoMediaResource(randomId: Int64.random(in: Int64.min ... Int64.max), path: asset.url.path, adjustments: resourceAdjustments)
+                    return standaloneUploadedFile(postbox: postbox, network: network, peerId: peerId, text: "", source: .resource(.standalone(resource: resource)), thumbnailData: thumbnailData, mimeType: "video/mp4", attributes: [.Video(duration: finalDuration, size: PixelDimensions(width: Int32(finalDimensions.width), height: Int32(finalDimensions.height)), flags: flags, preloadSize: nil, coverTime: 0.0, videoCodec: nil)], hintFileIsLarge: estimatedSize > 10 * 1024 * 1024)
+                    |> mapError { _ -> PreparedShareItemError in
+                        return .generic
                     }
-                }
-                
-                let estimatedSize = TGMediaVideoConverter.estimatedSize(for: preset, duration: finalDuration, hasAudio: true)
-                
-                let resource = LocalFileVideoMediaResource(randomId: Int64.random(in: Int64.min ... Int64.max), path: asset.url.path, adjustments: resourceAdjustments)
-                return standaloneUploadedFile(postbox: postbox, network: network, peerId: peerId, text: "", source: .resource(.standalone(resource: resource)), mimeType: "video/mp4", attributes: [.Video(duration: finalDuration, size: PixelDimensions(width: Int32(finalDimensions.width), height: Int32(finalDimensions.height)), flags: flags, preloadSize: nil, coverTime: nil, videoCodec: nil)], hintFileIsLarge: estimatedSize > 10 * 1024 * 1024)
-                |> mapError { _ -> PreparedShareItemError in
-                    return .generic
-                }
-                |> mapToSignal { event -> Signal<PreparedShareItem, PreparedShareItemError> in
-                    switch event {
-                        case let .progress(value):
-                            return .single(.progress(value))
-                        case let .result(media):
-                            return .single(.done(.media(media)))
+                    |> mapToSignal { event -> Signal<PreparedShareItem, PreparedShareItemError> in
+                        switch event {
+                            case let .progress(value):
+                                return .single(.progress(value))
+                            case let .result(media):
+                                return .single(.done(.media(media)))
+                        }
                     }
                 }
             }
