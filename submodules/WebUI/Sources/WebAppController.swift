@@ -858,15 +858,17 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 }
                 
                 if previousLayout != nil && (previousLayout?.inputHeight ?? 0.0).isZero, let inputHeight = layout.inputHeight, inputHeight > 44.0, transition.isAnimated {
-                    webView.scrollToActiveElement(layout: layout, completion: { [weak self] contentOffset in
-                        self?.targetContentOffset = contentOffset
-                    }, transition: transition)
                     Queue.mainQueue().after(0.4, {
                         if let inputHeight = self.validLayout?.0.inputHeight, inputHeight > 44.0 {
+                            webView.scrollToActiveElement(layout: layout, completion: { [weak self] contentOffset in
+                                let _ = self
+                            //    self?.targetContentOffset = contentOffset
+                            }, transition: transition)
+                            
                             transition.updateFrame(view: webView, frame: webViewFrame)
-                            Queue.mainQueue().after(0.1) {
-                                self.targetContentOffset = nil
-                            }
+//                            Queue.mainQueue().after(0.1) {
+//                                self.targetContentOffset = nil
+//                            }
                         }
                     })
                 } else {
