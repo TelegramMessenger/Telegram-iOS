@@ -144,7 +144,7 @@ private final class SheetContent: CombinedComponent {
                 
                 minAmount = StarsAmount(value: 1, nanos: 0)
                 maxAmount = withdrawConfiguration.maxPaidMediaAmount.flatMap { StarsAmount(value: $0, nanos: 0) }
-            case let .starGiftResell(update):
+            case let .starGiftResell(_, update):
                 titleString = update ? environment.strings.Stars_SellGift_EditTitle : environment.strings.Stars_SellGift_Title
                 amountTitle = environment.strings.Stars_SellGift_AmountTitle
                 amountPlaceholder = environment.strings.Stars_SellGift_AmountPlaceholder
@@ -487,6 +487,36 @@ private final class SheetContent: CombinedComponent {
                     }
                 })
             }
+            
+            if case let .starGiftResell(giftToMatch, update) = self.mode {
+                if update {
+                    if let resellStars = giftToMatch.resellStars {
+                        self.amount = StarsAmount(value: resellStars, nanos: 0)
+                    }
+                } else {
+                    let _ = (context.engine.payments.cachedStarGifts()
+                     |> filter { $0 != nil }
+                     |> take(1)
+                     |> deliverOnMainQueue).start(next: { [weak self] gifts in
+                        guard let self, let gifts else {
+                            return
+                        }
+                        guard let matchingGift = gifts.first(where: { gift in
+                            if case let .generic(gift) = gift, gift.title == giftToMatch.title {
+                                return true
+                            } else {
+                                return false
+                            }
+                        }) else {
+                            return
+                        }
+                        if case let .generic(genericGift) = matchingGift, let minResaleStars = genericGift.availability?.minResaleStars {
+                            self.amount = StarsAmount(value: minResaleStars, nanos: 0)
+                            self.updated()
+                        }
+                    })
+                }
+            }
         }
         
         deinit {
@@ -592,7 +622,7 @@ public final class StarsWithdrawScreen: ViewControllerComponentContainer {
         case accountWithdraw
         case paidMedia(Int64?)
         case reaction(Int64?)
-        case starGiftResell(Bool)
+        case starGiftResell(StarGift.UniqueGift, Bool)
         case paidMessages(current: Int64, minValue: Int64, fractionAfterCommission: Int, kind: StarsWithdrawalScreenSubject.PaidMessageKind)
     }
     

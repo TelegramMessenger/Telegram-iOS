@@ -3688,8 +3688,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return StarsWithdrawScreen(context: context, mode: mode, completion: completion)
     }
     
-    public func makeStarGiftResellScreen(context: AccountContext, update: Bool, completion: @escaping (Int64) -> Void) -> ViewController {
-        return StarsWithdrawScreen(context: context, mode: .starGiftResell(update), completion: completion)
+    public func makeStarGiftResellScreen(context: AccountContext, gift: StarGift.UniqueGift, update: Bool, completion: @escaping (Int64) -> Void) -> ViewController {
+        return StarsWithdrawScreen(context: context, mode: .starGiftResell(gift, update), completion: completion)
     }
     
     public func makeStarsGiftScreen(context: AccountContext, message: EngineMessage) -> ViewController {
