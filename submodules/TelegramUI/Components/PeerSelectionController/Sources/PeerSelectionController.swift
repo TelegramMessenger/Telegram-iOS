@@ -279,7 +279,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
                 if case let .channel(peer) = peer, peer.isForumOrMonoForum, threadId == nil, strongSelf.selectForumThreads {
                     let mainPeer: Signal<EnginePeer?, NoError>
                     if peer.isMonoForum, let linkedMonoforumId = peer.linkedMonoforumId {
-                        mainPeer = self.context.engine.data.get(
+                        mainPeer = strongSelf.context.engine.data.get(
                             TelegramEngine.EngineData.Item.Peer.Peer(id: linkedMonoforumId)
                         )
                     } else {
