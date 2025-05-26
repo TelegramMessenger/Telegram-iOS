@@ -1118,6 +1118,7 @@ public protocol SharedAccountContext: AnyObject {
     func makeCollectibleItemInfoScreen(context: AccountContext, initialData: CollectibleItemInfoScreenInitialData) -> ViewController
     func makeCollectibleItemInfoScreenInitialData(context: AccountContext, peerId: EnginePeer.Id, subject: CollectibleItemInfoScreenSubject) -> Signal<CollectibleItemInfoScreenInitialData?, NoError>
     func makeBotSettingsScreen(context: AccountContext, peerId: EnginePeer.Id?) -> ViewController
+    func makeEditForumTopicScreen(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64, threadInfo: EngineMessageHistoryThread.Info, isHidden: Bool) -> ViewController
     
     func navigateToChatController(_ params: NavigateToChatControllerParams)
     func navigateToForumChannel(context: AccountContext, peerId: EnginePeer.Id, navigationController: NavigationController)

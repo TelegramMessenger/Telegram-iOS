@@ -479,6 +479,8 @@ swift_library(
         "//submodules/TelegramUI/Components/PeerInfo/PostSuggestionsSettingsScreen",
         "//submodules/TelegramUI/Components/ForumSettingsScreen",
         "//submodules/TelegramUI/Components/Chat/ChatSideTopicsPanel",
+        "//submodules/TelegramUI/Components/GifVideoLayer",
+        "//submodules/TelegramUI/Components/BatchVideoRendering",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,
         "//build-system:ios_sim_arm64": [],

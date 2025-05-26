@@ -263,6 +263,7 @@ open class ListView: ASDisplayNode, ASScrollViewDelegate, ASGestureRecognizerDel
     public final var didScrollWithOffset: ((CGFloat, ContainedViewLayoutTransition, ListViewItemNode?, Bool) -> Void)?
     public final var addContentOffset: ((CGFloat, ListViewItemNode?) -> Void)?
     public final var shouldStopScrolling: ((CGFloat) -> Bool)?
+    public final var onContentsUpdated: ((ContainedViewLayoutTransition) -> Void)?
 
     public final var updateScrollingIndicator: ((ScrollingIndicatorState?, ContainedViewLayoutTransition) -> Void)?
     
@@ -389,6 +390,7 @@ open class ListView: ASDisplayNode, ASScrollViewDelegate, ASGestureRecognizerDel
     private var reorderScrollUpdateTimestamp: Double?
     private var reorderLastTimestamp: Double?
     public var reorderedItemHasShadow = true
+    public var reorderingRequiresLongPress = false
     
     private let waitingForNodesDisposable = MetaDisposable()
     
@@ -518,7 +520,7 @@ open class ListView: ASDisplayNode, ASScrollViewDelegate, ASGestureRecognizerDel
                             let itemNodeFrame = itemNode.frame
                             let itemNodeBounds = itemNode.bounds
                             if itemNode.isReorderable(at: point.offsetBy(dx: -itemNodeFrame.minX + itemNodeBounds.minX, dy: -itemNodeFrame.minY + itemNodeBounds.minY)) {
-                                let requiresLongPress = !strongSelf.reorderedItemHasShadow
+                                let requiresLongPress = strongSelf.reorderingRequiresLongPress
                                 return (true, requiresLongPress, itemNode)
                             }
                             break
@@ -1101,6 +1103,7 @@ open class ListView: ASDisplayNode, ASScrollViewDelegate, ASGestureRecognizerDel
         self.updateVisibleContentOffset()
         self.updateVisibleItemRange()
         self.updateItemNodesVisibilities(onlyPositive: false)
+        self.onContentsUpdated?(.immediate)
         
         //CATransaction.commit()
     }
@@ -3509,6 +3512,7 @@ open class ListView: ASDisplayNode, ASScrollViewDelegate, ASGestureRecognizerDel
                 }
                 
                 self.updateItemHeaders(leftInset: listInsets.left, rightInset: listInsets.right, synchronousLoad: synchronousLoads, transition: headerNodesTransition, animateInsertion: animated || !requestItemInsertionAnimationsIndices.isEmpty, animateFullTransition: animateFullTransition)
+                self.onContentsUpdated?(headerNodesTransition.0)
                 
                 if let offset = offset, !offset.isZero {
                     //self.didScrollWithOffset?(-offset, headerNodesTransition.0, nil)
@@ -3733,6 +3737,7 @@ open class ListView: ASDisplayNode, ASScrollViewDelegate, ASGestureRecognizerDel
         } else {
             self.updateItemHeaders(leftInset: listInsets.left, rightInset: listInsets.right, synchronousLoad: synchronousLoads, transition: headerNodesTransition, animateInsertion: animated || !requestItemInsertionAnimationsIndices.isEmpty, animateFullTransition: animateFullTransition)
             self.updateItemNodesVisibilities(onlyPositive: deferredUpdateVisible)
+            self.onContentsUpdated?(headerNodesTransition.0)
             
             applyHeaderNodesFullTransition()
             

@@ -16,8 +16,8 @@ public extension UIView {
     }
 }
 
-private extension CALayer {
-    func animate(from: Any, to: Any, keyPath: String, duration: Double, delay: Double, curve: ComponentTransition.Animation.Curve, removeOnCompletion: Bool, additive: Bool, completion: ((Bool) -> Void)? = nil) {
+public extension CALayer {
+    func animate(from: Any, to: Any, keyPath: String, duration: Double, delay: Double, curve: ComponentTransition.Animation.Curve, removeOnCompletion: Bool, additive: Bool, completion: ((Bool) -> Void)? = nil, key: String? = nil) {
         let timingFunction: String
         let mediaTimingFunction: CAMediaTimingFunction?
         switch curve {
@@ -39,7 +39,8 @@ private extension CALayer {
             mediaTimingFunction: mediaTimingFunction,
             removeOnCompletion: removeOnCompletion,
             additive: additive,
-            completion: completion
+            completion: completion,
+            key: key
         )
     }
 }

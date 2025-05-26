@@ -271,9 +271,13 @@ func sidePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceState
                     context: context,
                     theme: chatPresentationInterfaceState.theme,
                     strings: chatPresentationInterfaceState.strings,
+                    location: .side,
                     peerId: peerId,
                     isMonoforum: true,
                     topicId: chatPresentationInterfaceState.chatLocation.threadId,
+                    controller: { [weak interfaceInteraction] in
+                        return interfaceInteraction?.chatController()
+                    },
                     togglePanel: { [weak interfaceInteraction] in
                         interfaceInteraction?.toggleChatSidebarMode()
                     },
@@ -292,9 +296,13 @@ func sidePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceState
                     context: context,
                     theme: chatPresentationInterfaceState.theme,
                     strings: chatPresentationInterfaceState.strings,
+                    location: .side,
                     peerId: peerId,
                     isMonoforum: false,
                     topicId: chatPresentationInterfaceState.chatLocation.threadId,
+                    controller: { [weak interfaceInteraction] in
+                        return interfaceInteraction?.chatController()
+                    },
                     togglePanel: { [weak interfaceInteraction] in
                         interfaceInteraction?.toggleChatSidebarMode()
                     },

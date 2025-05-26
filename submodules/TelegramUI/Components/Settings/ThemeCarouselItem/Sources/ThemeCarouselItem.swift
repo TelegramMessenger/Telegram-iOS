@@ -198,7 +198,7 @@ private func generateBorderImage(theme: PresentationTheme, bordered: Bool, selec
 }
 
 
-private final class ThemeCarouselThemeItemIconNode : ListViewItemNode {
+private final class ThemeCarouselThemeItemIconNode: ListViewItemNode {
     private let containerNode: ASDisplayNode
     private let emojiContainerNode: ASDisplayNode
     private let imageNode: TransformImageNode

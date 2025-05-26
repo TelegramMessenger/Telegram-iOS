@@ -14,173 +14,9 @@ import EmojiStatusComponent
 import SwiftSignalKit
 import BundleIconComponent
 import AvatarNode
-
-private final class CustomBadgeComponent: Component {
-    public let text: String
-    public let font: UIFont
-    public let background: UIColor
-    public let foreground: UIColor
-    public let insets: UIEdgeInsets
-    
-    public init(
-        text: String,
-        font: UIFont,
-        background: UIColor,
-        foreground: UIColor,
-        insets: UIEdgeInsets
-    ) {
-        self.text = text
-        self.font = font
-        self.background = background
-        self.foreground = foreground
-        self.insets = insets
-    }
-    
-    public static func ==(lhs: CustomBadgeComponent, rhs: CustomBadgeComponent) -> Bool {
-        if lhs.text != rhs.text {
-            return false
-        }
-        if lhs.font != rhs.font {
-            return false
-        }
-        if lhs.background != rhs.background {
-            return false
-        }
-        if lhs.foreground != rhs.foreground {
-            return false
-        }
-        if lhs.insets != rhs.insets {
-            return false
-        }
-        return true
-    }
-    
-    private struct TextLayout {
-        var size: CGSize
-        var opticalBounds: CGRect
-        
-        init(size: CGSize, opticalBounds: CGRect) {
-            self.size = size
-            self.opticalBounds = opticalBounds
-        }
-    }
-    
-    public final class View: UIView {
-        private let backgroundView: UIImageView
-        private let textContentsView: UIImageView
-        
-        private var textLayout: TextLayout?
-        
-        private var component: CustomBadgeComponent?
-        
-        override public init(frame: CGRect) {
-            self.backgroundView = UIImageView()
-            
-            self.textContentsView = UIImageView()
-            self.textContentsView.layer.anchorPoint = CGPoint()
-            
-            super.init(frame: frame)
-            
-            self.addSubview(self.backgroundView)
-            self.addSubview(self.textContentsView)
-        }
-        
-        required public init?(coder: NSCoder) {
-            fatalError("init(coder:) has not been implemented")
-        }
-                
-        func update(component: CustomBadgeComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
-            let previousComponent = self.component
-            self.component = component
-            
-            if component.text != previousComponent?.text || component.font != previousComponent?.font {
-                let attributedText = NSAttributedString(string: component.text, attributes: [
-                    NSAttributedString.Key.font: component.font,
-                    NSAttributedString.Key.foregroundColor: UIColor.white
-                ])
-                
-                var boundingRect = attributedText.boundingRect(with: availableSize, options: .usesLineFragmentOrigin, context: nil)
-                boundingRect.size.width = ceil(boundingRect.size.width)
-                boundingRect.size.height = ceil(boundingRect.size.height)
-                
-                if let context = DrawingContext(size: boundingRect.size, scale: 0.0, opaque: false, clear: true) {
-                    context.withContext { c in
-                        UIGraphicsPushContext(c)
-                        defer {
-                            UIGraphicsPopContext()
-                        }
-                        
-                        attributedText.draw(at: CGPoint())
-                    }
-                    var minFilledLineY = Int(context.scaledSize.height) - 1
-                    var maxFilledLineY = 0
-                    var minFilledLineX = Int(context.scaledSize.width) - 1
-                    var maxFilledLineX = 0
-                    for y in 0 ..< Int(context.scaledSize.height) {
-                        let linePtr = context.bytes.advanced(by: max(0, y) * context.bytesPerRow).assumingMemoryBound(to: UInt32.self)
-                        
-                        for x in 0 ..< Int(context.scaledSize.width) {
-                            let pixelPtr = linePtr.advanced(by: x)
-                            if pixelPtr.pointee != 0 {
-                                minFilledLineY = min(y, minFilledLineY)
-                                maxFilledLineY = max(y, maxFilledLineY)
-                                minFilledLineX = min(x, minFilledLineX)
-                                maxFilledLineX = max(x, maxFilledLineX)
-                            }
-                        }
-                    }
-                    
-                    var opticalBounds = CGRect()
-                    if minFilledLineX <= maxFilledLineX && minFilledLineY <= maxFilledLineY {
-                        opticalBounds.origin.x = CGFloat(minFilledLineX) / context.scale
-                        opticalBounds.origin.y = CGFloat(minFilledLineY) / context.scale
-                        opticalBounds.size.width = CGFloat(maxFilledLineX - minFilledLineX) / context.scale
-                        opticalBounds.size.height = CGFloat(maxFilledLineY - minFilledLineY) / context.scale
-                    }
-                    
-                    self.textContentsView.image = context.generateImage()?.withRenderingMode(.alwaysTemplate)
-                    self.textLayout = TextLayout(size: boundingRect.size, opticalBounds: opticalBounds)
-                } else {
-                    self.textLayout = TextLayout(size: boundingRect.size, opticalBounds: CGRect(origin: CGPoint(), size: boundingRect.size))
-                }
-            }
-            
-            let textSize = self.textLayout?.size ?? CGSize(width: 1.0, height: 1.0)
-            
-            var size = CGSize(width: textSize.width + component.insets.left + component.insets.right, height: textSize.height + component.insets.top + component.insets.bottom)
-            size.width = max(size.width, size.height)
-            
-            let backgroundFrame = CGRect(origin: CGPoint(), size: size)
-            transition.setFrame(view: self.backgroundView, frame: backgroundFrame)
-            
-            let textFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - textSize.width) * 0.5), y: component.insets.top + UIScreenPixel), size: textSize)
-            /*if let textLayout = self.textLayout {
-                textFrame.origin.x = textLayout.opticalBounds.minX + floorToScreenPixels((backgroundFrame.width - textLayout.opticalBounds.width) * 0.5)
-                textFrame.origin.y = textLayout.opticalBounds.minY + floorToScreenPixels((backgroundFrame.height - textLayout.opticalBounds.height) * 0.5)
-            }*/
-            
-            transition.setPosition(view: self.textContentsView, position: textFrame.origin)
-            self.textContentsView.bounds = CGRect(origin: CGPoint(), size: textFrame.size)
-            
-            if size.height != self.backgroundView.image?.size.height {
-                self.backgroundView.image = generateStretchableFilledCircleImage(diameter: size.height, color: .white)?.withRenderingMode(.alwaysTemplate)
-            }
-            
-            self.backgroundView.tintColor = component.background
-            self.textContentsView.tintColor = component.foreground
-            
-            return size
-        }
-    }
-
-    public func makeView() -> View {
-        return View(frame: CGRect())
-    }
-    
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
-        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
-    }
-}
+import TextBadgeComponent
+import ChatSideTopicsPanel
+import ComponentDisplayAdapters
 
 final class ChatTopicListTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, ChatControllerCustomNavigationPanelNode {
     private struct Params: Equatable {
@@ -213,31 +49,7 @@ final class ChatTopicListTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, C
         }
     }
     
-    private final class Item: Equatable {
-        typealias Id = EngineChatList.Item.Id
-        
-        let item: EngineChatList.Item
-        
-        var id: Id {
-            return self.item.id
-        }
-        
-        init(item: EngineChatList.Item) {
-            self.item = item
-        }
-        
-        public static func ==(lhs: Item, rhs: Item) -> Bool {
-            if lhs === rhs {
-                return true
-            }
-            if lhs.item != rhs.item {
-                return false
-            }
-            return true
-        }
-    }
-    
-    private final class ItemView: UIView {
+    /*private final class ItemView: UIView {
         private let context: AccountContext
         private let action: () -> Void
         
@@ -396,11 +208,11 @@ final class ChatTopicListTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, C
                 
                 badgeSize = badge.update(
                     transition: badgeTransition,
-                    component: AnyComponent(CustomBadgeComponent(
-                        text: "\(readCounters.count)",
+                    component: AnyComponent(TextBadgeComponent(
+                        text: countString(Int64(readCounters.count)),
                         font: Font.regular(12.0),
-                        background: theme.list.itemCheckColors.fillColor,
-                        foreground: theme.list.itemCheckColors.foregroundColor,
+                        background: item.item.isMuted ? theme.chatList.unreadBadgeInactiveBackgroundColor : theme.chatList.unreadBadgeActiveBackgroundColor,
+                        foreground: item.item.isMuted ? theme.chatList.unreadBadgeInactiveTextColor : theme.chatList.unreadBadgeActiveTextColor,
                         insets: UIEdgeInsets(top: 1.0, left: 5.0, bottom: 2.0, right: 5.0)
                     )),
                     environment: {},
@@ -715,99 +527,26 @@ final class ChatTopicListTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, C
             
             return size
         }
-    }
-    
-    private final class ScrollView: UIScrollView {
-        override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-            return super.hitTest(point, with: event)
-        }
-        
-        override func touchesShouldCancel(in view: UIView) -> Bool {
-            return true
-        }
-    }
-    
-    private enum ScrollId: Equatable {
-        case all
-        case topic(Int64)
-    }
-    
-    private let context: AccountContext
-    private let isMonoforum: Bool
-    
-    private let scrollView: ScrollView
-    private let scrollViewContainer: UIView
-    private let scrollViewMask: UIImageView
+    }*/
     
     private var params: Params?
     
-    private var items: [Item] = []
-    private var itemViews: [Item.Id: ItemView] = [:]
-    private var allItemView: AllItemView?
-    private var tabItemView: TabItemView?
-    private let selectedLineView: UIImageView
-    
-    private var itemsDisposable: Disposable?
-    
-    private var appliedScrollToId: ScrollId?
+    private let context: AccountContext
+    private let peerId: EnginePeer.Id
+    private let isMonoforum: Bool
+    private let panel = ComponentView<ChatSidePanelEnvironment>()
     
     init(context: AccountContext, peerId: EnginePeer.Id, isMonoforum: Bool) {
         self.context = context
+        self.peerId = peerId
         self.isMonoforum = isMonoforum
-        
-        self.selectedLineView = UIImageView()
-        
-        self.scrollView = ScrollView(frame: CGRect())
-        self.scrollViewMask = UIImageView(image: generateGradientImage(size: CGSize(width: 8.0, height: 8.0), colors: [
-            UIColor(white: 1.0, alpha: 0.0),
-            UIColor(white: 1.0, alpha: 1.0)
-        ], locations: [0.0, 1.0], direction: .horizontal)?.stretchableImage(withLeftCapWidth: 8, topCapHeight: 0))
-        
-        self.scrollViewContainer = UIView()
         
         super.init()
         
-        self.scrollView.delaysContentTouches = false
-        self.scrollView.canCancelContentTouches = true
-        self.scrollView.clipsToBounds = true
-        self.scrollView.contentInsetAdjustmentBehavior = .never
-        if #available(iOS 13.0, *) {
-            self.scrollView.automaticallyAdjustsScrollIndicatorInsets = false
-        }
-        self.scrollView.showsVerticalScrollIndicator = false
-        self.scrollView.showsHorizontalScrollIndicator = false
-        self.scrollView.alwaysBounceHorizontal = false
-        self.scrollView.alwaysBounceVertical = false
-        self.scrollView.scrollsToTop = false
         
-        self.scrollViewContainer.addSubview(self.scrollView)
-        self.scrollViewContainer.mask = self.scrollViewMask
-        
-        self.view.addSubview(self.scrollViewContainer)
-        
-        self.scrollView.addSubview(self.selectedLineView)
-        
-        self.scrollView.disablesInteractiveTransitionGestureRecognizer = true
-        
-        let threadListSignal: Signal<EngineChatList, NoError> = context.sharedContext.subscribeChatListData(context: context, location: isMonoforum ? .savedMessagesChats(peerId: peerId) : .forum(peerId: peerId))
-        
-        self.itemsDisposable = (threadListSignal
-        |> deliverOnMainQueue).startStrict(next: { [weak self] chatList in
-            guard let self else {
-                return
-            }
-            self.items.removeAll()
-            
-            for item in chatList.items.reversed() {
-                self.items.append(Item(item: item))
-            }
-            
-            self.update(transition: .immediate)
-        })
     }
     
     deinit {
-        self.itemsDisposable?.dispose()
     }
     
     private func update(transition: ContainedViewLayoutTransition) {
@@ -819,14 +558,6 @@ final class ChatTopicListTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, C
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> LayoutResult {
         let params = Params(width: width, leftInset: leftInset, rightInset: rightInset, interfaceState: interfaceState)
         if self.params != params {
-            if self.params?.interfaceState.theme !== params.interfaceState.theme {
-                self.selectedLineView.image = generateImage(CGSize(width: 7.0, height: 4.0), rotatedContext: { size, context in
-                    context.clear(CGRect(origin: CGPoint(), size: size))
-                    context.setFillColor(params.interfaceState.theme.rootController.navigationBar.accentTextColor.cgColor)
-                    context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.width)))
-                })?.stretchableImage(withLeftCapWidth: 4, topCapHeight: 1)
-            }
-            
             self.params = params
             self.update(params: params, transition: transition)
         }
@@ -841,14 +572,54 @@ final class ChatTopicListTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, C
     }
     
     private func update(params: Params, transition: ContainedViewLayoutTransition) {
-        let hadItemViews = !self.itemViews.isEmpty
+        let panelHeight: CGFloat = 44.0
         
-        var transition = transition
-        if !hadItemViews {
-            transition = .immediate
+        let panelFrame = CGRect(origin: CGPoint(), size: CGSize(width: params.width, height: panelHeight))
+        let _ = self.panel.update(
+            transition: ComponentTransition(transition),
+            component: AnyComponent(ChatSideTopicsPanel(
+                context: self.context,
+                theme: params.interfaceState.theme,
+                strings: params.interfaceState.strings,
+                location: .top,
+                peerId: self.peerId,
+                isMonoforum: self.isMonoforum,
+                topicId: params.interfaceState.chatLocation.threadId,
+                controller: { [weak self] in
+                    return self?.interfaceInteraction?.chatController()
+                },
+                togglePanel: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.interfaceInteraction?.toggleChatSidebarMode()
+                },
+                updateTopicId: { [weak self] topicId, direction in
+                    guard let self else {
+                        return
+                    }
+                    self.interfaceInteraction?.updateChatLocationThread(topicId, direction ? .right : .left)
+                }
+            )),
+            environment: {
+                ChatSidePanelEnvironment(insets: UIEdgeInsets(
+                    top: 0.0,
+                    left: params.leftInset,
+                    bottom: 0.0,
+                    right: params.rightInset
+                ))
+            },
+            containerSize: panelFrame.size
+        )
+        if let panelView = self.panel.view {
+            if panelView.superview == nil {
+                panelView.disablesInteractiveTransitionGestureRecognizer = true
+                self.view.addSubview(panelView)
+            }
+            transition.updateFrame(view: panelView, frame: panelFrame)
         }
         
-        let panelHeight: CGFloat = 44.0
+        /*
         
         let containerInsets = UIEdgeInsets(top: 0.0, left: params.leftInset + 16.0, bottom: 0.0, right: params.rightInset + 16.0)
         let itemSpacing: CGFloat = 24.0
@@ -1068,17 +839,24 @@ final class ChatTopicListTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, C
             } else {
                 self.appliedScrollToId = scrollToId
             }
-        }
+        }*/
     }
 
     public func updateGlobalOffset(globalOffset: CGFloat, transition: ComponentTransition) {
-        if let tabItemView = self.tabItemView {
-            transition.setTransform(view: tabItemView, transform: CATransform3DMakeTranslation(0.0, -globalOffset, 0.0))
+        if let panelView = self.panel.view as? ChatSideTopicsPanel.View {
+            panelView.updateGlobalOffset(globalOffset: globalOffset, transition: transition)
+            //transition.setTransform(view: tabItemView, transform: CATransform3DMakeTranslation(0.0, -globalOffset, 0.0))
         }
     }
     
     public func topicIndex(threadId: Int64?) -> Int? {
-        if let threadId {
+        if let panelView = self.panel.view as? ChatSideTopicsPanel.View {
+            return panelView.topicIndex(threadId: threadId)
+        } else {
+            return nil
+        }
+        
+        /*if let threadId {
             if let value = self.items.firstIndex(where: { item in
                 if item.id == .chatList(PeerId(threadId)) {
                     return true
@@ -1094,6 +872,6 @@ final class ChatTopicListTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, C
             }
         } else {
             return 0
-        }
+        }*/
     }
 }
