@@ -468,7 +468,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             interaction: nodeInteraction
                         ), directionHint: entry.directionHint)
                     case let .peers(filter, isSelecting, _, filters, displayAutoremoveTimeout, displayPresence):
-                        let itemPeer = peer.chatMainPeer
+                        let itemPeer = peer.chatOrMonoforumMainPeer
                         var chatPeer: EnginePeer?
                         if let peer = peer.peers[peer.peerId] {
                             chatPeer = peer
@@ -643,7 +643,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             animationRenderer: nodeInteraction.animationRenderer
                         ), directionHint: entry.directionHint)
                 case .peerType:
-                    let itemPeer = peer.chatMainPeer
+                    let itemPeer = peer.chatOrMonoforumMainPeer
                     var chatPeer: EnginePeer?
                     if let peer = peer.peers[peer.peerId] {
                         chatPeer = peer
@@ -867,7 +867,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             interaction: nodeInteraction
                     ), directionHint: entry.directionHint)
                     case let .peers(filter, isSelecting, _, filters, displayAutoremoveTimeout, displayPresence):
-                        let itemPeer = peer.chatMainPeer
+                        let itemPeer = peer.chatOrMonoforumMainPeer
                         var chatPeer: EnginePeer?
                         if let peer = peer.peers[peer.peerId] {
                             chatPeer = peer
@@ -993,7 +993,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             animationRenderer: nodeInteraction.animationRenderer
                         ), directionHint: entry.directionHint)
                     case .peerType:
-                        let itemPeer = peer.chatMainPeer
+                        let itemPeer = peer.chatOrMonoforumMainPeer
                         var chatPeer: EnginePeer?
                         if let peer = peer.peers[peer.peerId] {
                             chatPeer = peer

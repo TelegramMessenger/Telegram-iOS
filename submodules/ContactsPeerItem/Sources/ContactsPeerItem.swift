@@ -1211,7 +1211,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.contextSourceNode.contentRect = extractedRect
                             
                             switch item.peer {
-                                case let .peer(peer, _):
+                                case let .peer(peer, chatPeer):
                                     if let peer = peer {
                                         var overrideImage: AvatarNodeImageOverride?
                                         if peer.id == item.context.account.peerId, case let .generalSearch(isSavedMessages) = item.peerMode, case .treatSelfAsSaved = item.aliasHandling {
@@ -1233,8 +1233,16 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                         if case .app(true) = item.peerMode {
                                             clipStyle = .roundedRect
                                             displayDimensions = CGSize(width: displayDimensions.width, height: displayDimensions.width * 1.2)
-                                        } else if case let .channel(channel) = peer, channel.isForumOrMonoForum {
-                                            clipStyle = .roundedRect
+                                        } else if case let .channel(channel) = peer {
+                                            if case let .channel(chatPeer) = chatPeer, chatPeer.isMonoForum {
+                                                clipStyle = .bubble
+                                            } else {
+                                                if channel.isForum {
+                                                    clipStyle = .roundedRect
+                                                } else {
+                                                    clipStyle = .round
+                                                }
+                                            }
                                         } else {
                                             clipStyle = .round
                                         }

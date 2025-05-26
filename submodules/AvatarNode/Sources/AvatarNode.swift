@@ -284,9 +284,14 @@ public final class AvatarNode: ASDisplayNode {
     
     public static func addAvatarBubblePath(context: CGContext, rect: CGRect) {
         if let path = try? convertSvgPath("M60,30.274903 C60,46.843446 46.568544,60.274904 30,60.274904 C13.431458,60.274904 0,46.843446 0,30.274903 C0,23.634797 2.158635,17.499547 5.810547,12.529785 L6.036133,12.226074 C6.921364,10.896042 7.367402,8.104698 5.548828,5.316895 C3.606939,2.340088 1.186019,0.979668 2.399414,0.470215 C3.148032,0.156204 7.572027,0.000065 10.764648,1.790527 C12.148517,2.56662 13.2296,3.342422 14.09224,4.039734 C14.42622,4.309704 14.892063,4.349773 15.265962,4.138523 C19.618079,1.679604 24.644722,0.274902 30,0.274902 C46.568544,0.274902 60,13.70636 60,30.274903 Z ") {
-            var transform = CGAffineTransformMake(1.0, 0.0, 0.0, -1.0, 0.0, 60.274904)
-            transform = CGAffineTransformScale(transform, rect.width / 60.0, rect.height / 60.0)
-            transform = CGAffineTransformTranslate(transform, rect.minX, rect.minY)
+            let sx = rect.width / 60.0
+            let sy = rect.height / 60.0
+            var transform = CGAffineTransform(
+                a: sx, b: 0.0,
+                c: 0.0, d: -sy,
+                tx: rect.minX,
+                ty: rect.minY + rect.height
+            )
             let transformedPath = path.copy(using: &transform)!
             context.addPath(transformedPath)
         }
@@ -949,6 +954,10 @@ public final class AvatarNode: ASDisplayNode {
                 } else if case .roundedRect = parameters.clipStyle {
                     context.beginPath()
                     context.addPath(UIBezierPath(roundedRect: CGRect(x: 0.0, y: 0.0, width: bounds.size.width, height: bounds.size.height), cornerRadius: floor(bounds.size.width * 0.25)).cgPath)
+                    context.clip()
+                } else if case .bubble = parameters.clipStyle {
+                    context.beginPath()
+                    AvatarNode.addAvatarBubblePath(context: context, rect: CGRect(x: 0.0, y: 0.0, width: bounds.size.width, height: bounds.size.height))
                     context.clip()
                 }
             } else {

@@ -50,7 +50,7 @@ public final class PeerSelectionControllerParams {
     public let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     public let filter: ChatListNodePeersFilter
     public let requestPeerType: [ReplyMarkupButtonRequestPeerType]?
-    public let forumPeerId: EnginePeer.Id?
+    public let forumPeerId: (id: EnginePeer.Id, isMonoforum: Bool)?
     public let hasFilters: Bool
     public let hasChatListSelector: Bool
     public let hasContactSelector: Bool
@@ -72,7 +72,7 @@ public final class PeerSelectionControllerParams {
         updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
         filter: ChatListNodePeersFilter = [.onlyWriteable],
         requestPeerType: [ReplyMarkupButtonRequestPeerType]? = nil,
-        forumPeerId: EnginePeer.Id? = nil,
+        forumPeerId: (id: EnginePeer.Id, isMonoforum: Bool)? = nil,
         hasFilters: Bool = false,
         hasChatListSelector: Bool = true,
         hasContactSelector: Bool = true,

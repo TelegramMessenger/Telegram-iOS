@@ -1924,108 +1924,71 @@ public final class ChatSideTopicsPanel: Component {
                     }
                     component.updateTopicId(topicId, direction)
                 }
-                let itemContextGesture: ((ContextGesture, ContextExtractedContentContainingNode) -> Void)? = (self.isReordering || component.isMonoforum) ? nil : { [weak self] gesture, sourceNode in
-                    guard let self, let component = self.component else {
-                        return
-                    }
-                    guard let controller = component.controller() else {
-                        return
-                    }
-                    
-                    let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
-                    
-                    if let listView = self.list.view as? AsyncListComponent.View {
-                        listView.stopScrolling()
-                    }
-                    
-                    let topicId: Int64
-                    switch item.item.id {
-                    case let .chatList(peerId):
-                        topicId = peerId.toInt64()
-                    case let .forum(topicIdValue):
-                        topicId = topicIdValue
-                    }
-                    
-                    var isPinned = false
-                    if case let .forum(pinnedIndex, _, _, _, _) = item.item.index {
-                        if case .index = pinnedIndex {
-                            isPinned = true
-                        }
-                    }
-                    let isClosed = item.item.threadData?.isClosed
-                    let threadData = item.item.threadData
-                    
-                    let _ = (chatForumTopicMenuItems(
-                        context: component.context,
-                        peerId: component.peerId,
-                        threadId: topicId,
-                        isPinned: isPinned,
-                        isClosed: isClosed,
-                        chatListController: controller,
-                        joined: true,
-                        canSelect: false,
-                        customEdit: { [weak self] contextController in
-                            contextController.dismiss(completion: {
-                                guard let self, let component = self.component, let threadData else {
-                                    return
-                                }
-                                let editController = component.context.sharedContext.makeEditForumTopicScreen(
-                                    context: component.context,
-                                    peerId: component.peerId,
-                                    threadId: topicId,
-                                    threadInfo: threadData.info,
-                                    isHidden: threadData.isHidden
-                                )
-                                component.controller()?.push(editController)
-                            })
-                        },
-                        customPinUnpin: { [weak self] contextController in
-                            guard let self, let component = self.component else {
-                                contextController.dismiss(completion: {})
-                                return
-                            }
-                            
-                            self.isTogglingPinnedItem = true
-                            self.dismissContextControllerOnNextUpdate = contextController
-                            
-                            let _ = (component.context.engine.peers.toggleForumChannelTopicPinned(id: component.peerId, threadId: topicId)
-                            |> deliverOnMainQueue).startStandalone(error: { [weak self, weak contextController] error in
-                                guard let self, let component = self.component else {
-                                    contextController?.dismiss(completion: {})
-                                    return
-                                }
-                                
-                                switch error {
-                                case let .limitReached(count):
-                                    contextController?.dismiss(completion: {})
-                                    if let controller = component.controller() {
-                                        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                                        let text = presentationData.strings.ChatList_MaxThreadPinsFinalText(Int32(count))
-                                        controller.present(textAlertController(context: component.context, title: presentationData.strings.Premium_LimitReached, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})], parseMarkdown: true), in: .window(.root))
-                                    }
-                                default:
-                                    break
-                                }
-                            })
-                        },
-                        reorder: { [weak self] in
-                            guard let self else {
-                                return
-                            }
-                            self.updateIsReordering(isReordering: true)
-                        }
-                    )
-                    |> take(1)
-                    |> deliverOnMainQueue).startStandalone(next: { [weak self, weak sourceNode, weak gesture] items in
+                var itemContextGesture: ((ContextGesture, ContextExtractedContentContainingNode) -> Void)?
+                if !self.isReordering && component.isMonoforum {
+                    itemContextGesture = { [weak self] gesture, sourceNode in
                         guard let self, let component = self.component else {
                             return
                         }
                         guard let controller = component.controller() else {
                             return
                         }
-                        guard let sourceNode else {
-                            return
+                        
+                        let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
+                        
+                        if let listView = self.list.view as? AsyncListComponent.View {
+                            listView.stopScrolling()
                         }
+                        
+                        let topicId: Int64
+                        switch item.item.id {
+                        case let .chatList(peerId):
+                            topicId = peerId.toInt64()
+                        case let .forum(topicIdValue):
+                            topicId = topicIdValue
+                        }
+                        
+                        var items: [ContextMenuItem] = []
+                        
+                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.ChatList_Context_Delete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self] c, _ in
+                            guard let self else {
+                                return
+                            }
+                            
+                            c?.dismiss(completion: { [weak self] in
+                                guard let self, let component = self.component, let controller = component.controller() else {
+                                    return
+                                }
+                                
+                                let actionSheet = ActionSheetController(presentationData: presentationData)
+                                var items: [ActionSheetItem] = []
+                                
+                                items.append(ActionSheetTextItem(title: presentationData.strings.ChatList_DeleteTopicConfirmationText, parseMarkdown: true))
+                                items.append(ActionSheetButtonItem(title: presentationData.strings.ChatList_DeleteTopicConfirmationAction, color: .destructive, action: { [weak self, weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                    guard let self, let component = self.component else {
+                                        return
+                                    }
+                                    
+                                    if component.topicId == topicId {
+                                        component.updateTopicId(nil, false)
+                                    }
+                                    
+                                    let _ = component.context.engine.peers.removeForumChannelThread(id: component.peerId, threadId: topicId).startStandalone(completed: {
+                                    })
+                                }))
+                                
+                                actionSheet.setItemGroups([
+                                    ActionSheetItemGroup(items: items),
+                                    ActionSheetItemGroup(items: [
+                                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                            actionSheet?.dismissAnimated()
+                                        })
+                                    ])
+                                ])
+                                controller.present(actionSheet, in: .window(.root))
+                            })
+                        })))
                         
                         let contextController = ContextController(
                             presentationData: presentationData,
@@ -2039,7 +2002,125 @@ public final class ChatSideTopicsPanel: Component {
                             gesture: gesture
                         )
                         controller.presentInGlobalOverlay(contextController)
-                    })
+                    }
+                } else if !self.isReordering {
+                    itemContextGesture = { [weak self] gesture, sourceNode in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        guard let controller = component.controller() else {
+                            return
+                        }
+                        
+                        let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
+                        
+                        if let listView = self.list.view as? AsyncListComponent.View {
+                            listView.stopScrolling()
+                        }
+                        
+                        let topicId: Int64
+                        switch item.item.id {
+                        case let .chatList(peerId):
+                            topicId = peerId.toInt64()
+                        case let .forum(topicIdValue):
+                            topicId = topicIdValue
+                        }
+                        
+                        var isPinned = false
+                        if case let .forum(pinnedIndex, _, _, _, _) = item.item.index {
+                            if case .index = pinnedIndex {
+                                isPinned = true
+                            }
+                        }
+                        let isClosed = item.item.threadData?.isClosed
+                        let threadData = item.item.threadData
+                        
+                        let _ = (chatForumTopicMenuItems(
+                            context: component.context,
+                            peerId: component.peerId,
+                            threadId: topicId,
+                            isPinned: isPinned,
+                            isClosed: isClosed,
+                            chatListController: controller,
+                            joined: true,
+                            canSelect: false,
+                            customEdit: { [weak self] contextController in
+                                contextController.dismiss(completion: {
+                                    guard let self, let component = self.component, let threadData else {
+                                        return
+                                    }
+                                    let editController = component.context.sharedContext.makeEditForumTopicScreen(
+                                        context: component.context,
+                                        peerId: component.peerId,
+                                        threadId: topicId,
+                                        threadInfo: threadData.info,
+                                        isHidden: threadData.isHidden
+                                    )
+                                    component.controller()?.push(editController)
+                                })
+                            },
+                            customPinUnpin: { [weak self] contextController in
+                                guard let self, let component = self.component else {
+                                    contextController.dismiss(completion: {})
+                                    return
+                                }
+                                
+                                self.isTogglingPinnedItem = true
+                                self.dismissContextControllerOnNextUpdate = contextController
+                                
+                                let _ = (component.context.engine.peers.toggleForumChannelTopicPinned(id: component.peerId, threadId: topicId)
+                                         |> deliverOnMainQueue).startStandalone(error: { [weak self, weak contextController] error in
+                                    guard let self, let component = self.component else {
+                                        contextController?.dismiss(completion: {})
+                                        return
+                                    }
+                                    
+                                    switch error {
+                                    case let .limitReached(count):
+                                        contextController?.dismiss(completion: {})
+                                        if let controller = component.controller() {
+                                            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                                            let text = presentationData.strings.ChatList_MaxThreadPinsFinalText(Int32(count))
+                                            controller.present(textAlertController(context: component.context, title: presentationData.strings.Premium_LimitReached, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})], parseMarkdown: true), in: .window(.root))
+                                        }
+                                    default:
+                                        break
+                                    }
+                                })
+                            },
+                            reorder: { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                self.updateIsReordering(isReordering: true)
+                            }
+                        )
+                        |> take(1)
+                        |> deliverOnMainQueue).startStandalone(next: { [weak self, weak sourceNode, weak gesture] items in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            guard let controller = component.controller() else {
+                                return
+                            }
+                            guard let sourceNode else {
+                                return
+                            }
+                            
+                            let contextController = ContextController(
+                                presentationData: presentationData,
+                                source: .extracted(ItemExtractedContentSource(
+                                    sourceNode: sourceNode,
+                                    containerView: self,
+                                    keepInPlace: false
+                                )),
+                                items: .single(ContextController.Items(content: .list(items))),
+                                recognizer: nil,
+                                gesture: gesture
+                            )
+                            controller.presentInGlobalOverlay(contextController)
+                        })
+                    }
                 }
                 
                 switch component.location {
