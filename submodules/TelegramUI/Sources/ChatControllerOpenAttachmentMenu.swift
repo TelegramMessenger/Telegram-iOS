@@ -80,7 +80,7 @@ extension ChatControllerImpl {
                 if let value = channel.hasBannedPermission(.banSendText, ignoreDefault: canByPassRestrictions) {
                     banSendText = value
                 }
-                if channel.hasBannedPermission(.banSendPolls, ignoreDefault: canByPassRestrictions) != nil {
+                if channel.hasBannedPermission(.banSendPolls, ignoreDefault: canByPassRestrictions) != nil || channel.isMonoForum {
                     canSendPolls = false
                 }
             } else if let group = peer as? TelegramGroup {
@@ -764,7 +764,7 @@ extension ChatControllerImpl {
                     if let value = channel.hasBannedPermission(.banSendMedia) {
                         bannedSendMedia = value
                     }
-                    if channel.hasBannedPermission(.banSendPolls) != nil {
+                    if channel.hasBannedPermission(.banSendPolls) != nil || channel.isMonoForum {
                         canSendPolls = false
                     }
                 } else if let group = peer as? TelegramGroup {

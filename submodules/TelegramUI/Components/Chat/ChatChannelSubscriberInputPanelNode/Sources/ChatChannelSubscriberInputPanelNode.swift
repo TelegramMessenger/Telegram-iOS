@@ -382,7 +382,7 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     let _ = presentationData
                     //TODO:localize
-                    let text: String = "Tap here to suggest a message"
+                    let text: String = "Tap here to send a message"
                     
                     let tooltipController = TooltipScreen(
                         account: context.account,

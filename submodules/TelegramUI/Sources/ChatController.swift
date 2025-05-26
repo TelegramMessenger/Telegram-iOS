@@ -7835,8 +7835,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum {
                     attributes.removeAll(where: { $0 is SendAsMessageAttribute })
-                    if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = self.presentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething), let sendAsPeerId = self.presentationInterfaceState.currentSendAsPeerId {
-                        attributes.append(SendAsMessageAttribute(peerId: sendAsPeerId))
+                    if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = self.presentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
+                        if let sendAsPeerId = self.presentationInterfaceState.currentSendAsPeerId {
+                            attributes.append(SendAsMessageAttribute(peerId: sendAsPeerId))
+                        } else {
+                            attributes.append(SendAsMessageAttribute(peerId: linkedMonoforumId))
+                        }
                     }
                 }
                 if let sendAsPeerId = self.presentationInterfaceState.currentSendAsPeerId {

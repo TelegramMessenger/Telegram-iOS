@@ -1447,11 +1447,25 @@ extension ChatControllerImpl {
                             )
                         }
                         
+                        var currentSendAsPeerId: PeerId?
+                        if let peer = peerView.peers[peerView.peerId] as? TelegramChannel, let cachedData = peerView.cachedData as? CachedChannelData {
+                            if peer.isMonoForum {
+                                if let linkedMonoforumId = peer.linkedMonoforumId, let mainChannel = peerView.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
+                                    currentSendAsPeerId = peer.linkedMonoforumId
+                                } else {
+                                    currentSendAsPeerId = nil
+                                }
+                            } else {
+                                currentSendAsPeerId = cachedData.sendAsPeerId
+                            }
+                        }
+                        
                         strongSelf.state.renderedPeer = renderedPeer
                         strongSelf.state.savedMessagesTopicPeer = savedMessagesPeer?.peer
                         strongSelf.state.hasSearchTags = hasSearchTags
                         strongSelf.state.hasSavedChats = hasSavedChats
                         strongSelf.state.hasScheduledMessages = hasScheduledMessages
+                        strongSelf.state.currentSendAsPeerId = currentSendAsPeerId
                     } else {
                         let message = messageAndTopic.message
                         

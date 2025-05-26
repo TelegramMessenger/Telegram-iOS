@@ -1587,7 +1587,7 @@ public final class ChatSideTopicsPanel: Component {
                 case .side:
                     selectedLineFrame = CGRect(origin: CGPoint(x: 0.0, y: selectedItemFrame.minY), size: CGSize(width: 4.0, height: selectedItemFrame.height))
                 case .top:
-                    selectedLineFrame = CGRect(origin: CGPoint(x: selectedItemFrame.minX, y: listView.frame.maxY - 4.0), size: CGSize(width: selectedItemFrame.width, height: 4.0))
+                    selectedLineFrame = CGRect(origin: CGPoint(x: selectedItemFrame.minX, y: listView.frame.maxY - 3.0), size: CGSize(width: selectedItemFrame.width, height: 3.0))
                 }
                 
                 self.selectedLineContainer.updatePosition(position: selectedLineFrame.origin, transition: lineTransition)
@@ -1729,10 +1729,11 @@ public final class ChatSideTopicsPanel: Component {
                         context.fillEllipse(in: CGRect(origin: CGPoint(x: size.width - size.height, y: 0.0), size: CGSize(width: size.height, height: size.height)))
                     })?.stretchableImage(withLeftCapWidth: 1, topCapHeight: 4)
                 case .top:
-                    self.selectedLineView.image = generateImage(CGSize(width: 4.0, height: 2.0), rotatedContext: { size, context in
+                    self.selectedLineView.image = generateImage(CGSize(width: 4.0, height: 3.0), rotatedContext: { size, context in
                         context.clear(CGRect(origin: CGPoint(), size: size))
                         context.setFillColor(component.theme.rootController.navigationBar.accentTextColor.cgColor)
-                        context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.width)))
+                        context.addPath(UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height * 2.0)), cornerRadius: 2.0).cgPath)
+                        context.fillPath()
                     })?.stretchableImage(withLeftCapWidth: 2, topCapHeight: 1)
                 }
                 
@@ -1923,7 +1924,7 @@ public final class ChatSideTopicsPanel: Component {
                     }
                     component.updateTopicId(topicId, direction)
                 }
-                let itemContextGesture: ((ContextGesture, ContextExtractedContentContainingNode) -> Void)? = (self.isReordering && !component.isMonoforum) ? nil : { [weak self] gesture, sourceNode in
+                let itemContextGesture: ((ContextGesture, ContextExtractedContentContainingNode) -> Void)? = (self.isReordering || component.isMonoforum) ? nil : { [weak self] gesture, sourceNode in
                     guard let self, let component = self.component else {
                         return
                     }

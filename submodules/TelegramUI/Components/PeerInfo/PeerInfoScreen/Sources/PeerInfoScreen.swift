@@ -2220,7 +2220,7 @@ private func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostSt
                     }))
                     
                     //TODO:localize
-                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPostSuggestionsSettings, label: .text(channel.linkedMonoforumId == nil ? "Off" : "On"), additionalBadgeLabel: presentationData.strings.Settings_New, text: "Message Channel", icon: UIImage(bundleImageName: "Chat/Info/PostSuggestionsIcon"), action: {
+                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPostSuggestionsSettings, label: .text(channel.linkedMonoforumId == nil ? "Off" : "On"), additionalBadgeLabel: presentationData.strings.Settings_New, text: "Allow Channel Messages", icon: UIImage(bundleImageName: "Chat/Info/PostSuggestionsIcon"), action: {
                         interaction.editingOpenPostSuggestionsSetup()
                     }))
                 }
