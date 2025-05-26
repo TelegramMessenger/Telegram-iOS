@@ -149,8 +149,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                     interaction.authorize()
                 })
             case .permissionLimited:
-                //TODO:localize
-                return LimitedPermissionItem(presentationData: ItemListPresentationData(presentationData), text: "You have limited Telegram from accessing all of your contacts.", action: {
+                return LimitedPermissionItem(presentationData: ItemListPresentationData(presentationData), text: presentationData.strings.Contacts_LimitedAccess_Text, action: {
                     interaction.openContactAccessPicker()
                 })
             case let .option(_, option, header, _, _):

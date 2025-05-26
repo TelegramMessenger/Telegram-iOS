@@ -75,7 +75,7 @@ final class ForumModeComponent: Component {
                             ItemComponent(
                                 theme: component.theme,
                                 animation: "ForumTabs",
-                                title: "Tabs",
+                                title: component.strings.PeerInfo_Topics_Tabs,
                                 isSelected: component.mode == .tabs
                             )
                         ),
@@ -104,7 +104,7 @@ final class ForumModeComponent: Component {
                             ItemComponent(
                                 theme: component.theme,
                                 animation: "ForumList",
-                                title: "List",
+                                title: component.strings.PeerInfo_Topics_List,
                                 isSelected: component.mode == .list
                             )
                         ),

@@ -926,24 +926,50 @@ func openResolvedUrlImpl(
                     source = subject
                 }
             }
-    
-            let externalState = MediaEditorTransitionOutExternalState(
-                storyTarget: nil,
-                isForcedTarget: false,
-                isPeerArchived: false,
-                transitionOut: nil
-            )
-            let controller = context.sharedContext.makeStoryMediaEditorScreen(context: context, source: source, text: nil, link: nil, completion: { results, commit in
-                let target: Stories.PendingTarget = results.first!.target
-                externalState.storyTarget = target
-                
-                if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
-                    rootController.proceedWithStoryUpload(target: target, results: results, existingMedia: nil, forwardInfo: nil, externalState: externalState, commit: commit)
+        
+            let _ = (context.engine.messages.checkStoriesUploadAvailability(target: .myStories)
+            |> deliverOnMainQueue).start(next: { availability in
+                if case let .available(remainingCount) = availability {
+                    let controller = context.sharedContext.makeStoryMediaEditorScreen(context: context, source: source, text: nil, link: nil, remainingCount: remainingCount, completion: { results, externalState, commit in
+                        let target: Stories.PendingTarget = results.first!.target
+                        externalState.storyTarget = target
+                        
+                        if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
+                            rootController.popToRoot(animated: false)
+                            rootController.proceedWithStoryUpload(target: target, results: results, existingMedia: nil, forwardInfo: nil, externalState: externalState, commit: commit)
+                        }
+                    })
+                    if let navigationController {
+                        navigationController.pushViewController(controller)
+                    }
+                } else {
+                    let subject: PremiumLimitSubject
+                    switch availability {
+                    case .expiringLimit:
+                        subject = .expiringStories
+                    case .weeklyLimit:
+                        subject = .storiesWeekly
+                    case .monthlyLimit:
+                        subject = .storiesMonthly
+                    default:
+                        subject = .expiringStories
+                    }
+                    var replaceImpl: ((ViewController) -> Void)?
+                    let controller = context.sharedContext.makePremiumLimitController(context: context, subject: subject, count: 10, forceDark: false, cancel: {
+                    }, action: {
+                        let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories, forceDark: true, dismissed: {
+                        })
+                        replaceImpl?(controller)
+                        return true
+                    })
+                    replaceImpl = { [weak controller] c in
+                        controller?.replace(with: c)
+                    }
+                    if let navigationController {
+                        navigationController.pushViewController(controller)
+                    }
                 }
             })
-            if let navigationController {
-                navigationController.pushViewController(controller)
-            }
         case let .startAttach(peerId, payload, choose):
             let presentError: (String) -> Void = { errorText in
                 present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: errorText, timeout: nil, customUndoText: nil), elevatedLayout: true, animateInAsReplacement: false, action: { _ in

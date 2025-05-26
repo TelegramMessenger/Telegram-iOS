@@ -67,7 +67,7 @@ enum AccountStateMutationOperation {
     case DeleteMessages([MessageId])
     case EditMessage(MessageId, StoreMessage)
     case UpdateMessagePoll(MediaId, Api.Poll?, Api.PollResults)
-    case UpdateMessageReactions(MessageId, Api.MessageReactions, Int32?)
+    case UpdateMessageReactions(MessageId, Int64?, Api.MessageReactions, Int32?)
     case UpdateMedia(MediaId, Media?)
     case ReadInbox(MessageId)
     case ReadOutbox(MessageId, Int32?)
@@ -97,7 +97,7 @@ enum AccountStateMutationOperation {
     case UpdatePinnedSavedItemIds(AccountStateUpdatePinnedItemIdsOperation)
     case UpdatePinnedTopic(peerId: PeerId, threadId: Int64, isPinned: Bool)
     case UpdatePinnedTopicOrder(peerId: PeerId, threadIds: [Int64])
-    case ReadMessageContents(peerIdsAndMessageIds: (PeerId?, [Int32]), date: Int32?)
+    case ReadMessageContents(peerIdsAndMessageIds: (PeerId?, Int64?, [Int32]), date: Int32?)
     case UpdateMessageImpressionCount(MessageId, Int32)
     case UpdateMessageForwardsCount(MessageId, Int32)
     case UpdateInstalledStickerPacks(AccountStateUpdateStickerPacksOperation)
@@ -376,8 +376,8 @@ struct AccountMutableState {
         self.addOperation(.UpdateMessagePoll(id, poll, results))
     }
     
-    mutating func updateMessageReactions(_ messageId: MessageId, reactions: Api.MessageReactions, eventTimestamp: Int32?) {
-        self.addOperation(.UpdateMessageReactions(messageId, reactions, eventTimestamp))
+    mutating func updateMessageReactions(_ messageId: MessageId, threadId: Int64?, reactions: Api.MessageReactions, eventTimestamp: Int32?) {
+        self.addOperation(.UpdateMessageReactions(messageId, threadId, reactions, eventTimestamp))
     }
         
     mutating func updateMedia(_ id: MediaId, media: Media?) {
@@ -608,7 +608,7 @@ struct AccountMutableState {
         self.addOperation(.UpdatePinnedTopicOrder(peerId: peerId, threadIds: threadIds))
     }
     
-    mutating func addReadMessagesContents(_ peerIdsAndMessageIds: (PeerId?, [Int32]), date: Int32?) {
+    mutating func addReadMessagesContents(_ peerIdsAndMessageIds: (PeerId?, Int64?, [Int32]), date: Int32?) {
         self.addOperation(.ReadMessageContents(peerIdsAndMessageIds: peerIdsAndMessageIds, date: date))
     }
     

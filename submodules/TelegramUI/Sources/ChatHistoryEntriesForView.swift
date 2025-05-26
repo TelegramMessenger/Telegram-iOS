@@ -135,6 +135,20 @@ func chatHistoryEntriesForView(
                     continue loop
                 }
             }
+        } else if case .peer = location {
+            for media in message.media {
+                if let action = media as? TelegramMediaAction, case .groupCreated = action.action {
+                    var chatPeer: Peer?
+                    for entry in view.additionalData {
+                        if case let .peer(_, peer) = entry {
+                            chatPeer = peer
+                        }
+                    }
+                    if let channel = chatPeer as? TelegramChannel, channel.isMonoForum {
+                        continue loop
+                    }
+                }
+            }
         }
         
         count += 1

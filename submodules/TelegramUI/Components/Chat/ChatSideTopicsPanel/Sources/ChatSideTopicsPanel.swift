@@ -590,6 +590,8 @@ public final class ChatSideTopicsPanel: Component {
     
     public final class View: UIView {
         private let scrollView: ScrollView
+        private let scrollContainerView: UIView
+        private let scrollViewMask: UIImageView
         
         private let background = ComponentView<Empty>()
         private let separatorLayer: SimpleLayer
@@ -612,13 +614,20 @@ public final class ChatSideTopicsPanel: Component {
             self.selectedLineView = UIImageView()
             self.scrollView = ScrollView(frame: CGRect())
             
+            self.scrollContainerView = UIView()
+            self.scrollViewMask = UIImageView(image: generateGradientImage(size: CGSize(width: 8.0, height: 8.0), colors: [
+                UIColor(white: 1.0, alpha: 0.0),
+                UIColor(white: 1.0, alpha: 1.0)
+            ], locations: [0.0, 1.0], direction: .vertical)?.stretchableImage(withLeftCapWidth: 0, topCapHeight: 8))
+            self.scrollContainerView.mask = self.scrollViewMask
+            
             self.separatorLayer = SimpleLayer()
             
             super.init(frame: frame)
             
             self.scrollView.delaysContentTouches = false
             self.scrollView.canCancelContentTouches = true
-            self.scrollView.clipsToBounds = false
+            self.scrollView.clipsToBounds = true
             self.scrollView.contentInsetAdjustmentBehavior = .never
             if #available(iOS 13.0, *) {
                 self.scrollView.automaticallyAdjustsScrollIndicatorInsets = false
@@ -629,7 +638,8 @@ public final class ChatSideTopicsPanel: Component {
             self.scrollView.alwaysBounceVertical = false
             self.scrollView.scrollsToTop = false
             
-            self.addSubview(self.scrollView)
+            self.addSubview(self.scrollContainerView)
+            self.scrollContainerView.addSubview(self.scrollView)
             self.scrollView.addSubview(self.selectedLineView)
         }
         
@@ -709,7 +719,7 @@ public final class ChatSideTopicsPanel: Component {
             
             if let backgroundView = self.background.view {
                 if backgroundView.superview == nil {
-                    self.insertSubview(backgroundView, belowSubview: self.scrollView)
+                    self.insertSubview(backgroundView, at: 0)
                 }
                 transition.setFrame(view: backgroundView, frame: CGRect(origin: CGPoint(), size: availableSize))
             }
@@ -735,20 +745,9 @@ public final class ChatSideTopicsPanel: Component {
             
             let itemSpacing: CGFloat = 24.0
             
-            var contentSize = CGSize(width: panelWidth, height: 0.0)
-            contentSize.height += containerInsets.top
-            
-            var validIds: [Item.Id] = []
-            var isFirst = true
-            var selectedItemFrame: CGRect?
+            var topContainerInset: CGFloat = containerInsets.top
             
             do {
-                if isFirst {
-                    isFirst = false
-                } else {
-                    contentSize.height += itemSpacing
-                }
-                
                 var itemTransition = transition
                 var animateIn = false
                 let itemView: TabItemView
@@ -764,11 +763,11 @@ public final class ChatSideTopicsPanel: Component {
                         component.togglePanel()
                     })
                     self.tabItemView = itemView
-                    self.scrollView.addSubview(itemView)
+                    self.addSubview(itemView)
                 }
                     
                 let itemSize = itemView.update(context: component.context, theme: component.theme, width: panelWidth, transition: .immediate)
-                let itemFrame = CGRect(origin: CGPoint(x: containerInsets.left, y: contentSize.height), size: itemSize)
+                let itemFrame = CGRect(origin: CGPoint(x: 0.0, y: topContainerInset), size: itemSize)
                 
                 itemTransition.setPosition(layer: itemView.layer, position: itemFrame.center)
                 itemTransition.setBounds(layer: itemView.layer, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
@@ -778,9 +777,16 @@ public final class ChatSideTopicsPanel: Component {
                     transition.containedViewLayoutTransition.animateTransformScale(view: itemView, from: 0.001)
                 }
                 
-                contentSize.height += itemSize.height
-                contentSize.height -= 20.0
+                topContainerInset += itemSize.height
+                topContainerInset -= 24.0
             }
+            
+            var contentSize = CGSize(width: panelWidth, height: 0.0)
+            contentSize.height += 36.0
+            
+            var validIds: [Item.Id] = []
+            var isFirst = true
+            var selectedItemFrame: CGRect?
             
             do {
                 if isFirst {
@@ -931,7 +937,11 @@ public final class ChatSideTopicsPanel: Component {
             
             contentSize.height += containerInsets.bottom
             
-            let scrollSize = CGSize(width: availableSize.width, height: availableSize.height)
+            let scrollSize = CGSize(width: availableSize.width, height: availableSize.height - topContainerInset)
+            
+            self.scrollContainerView.frame = CGRect(origin: CGPoint(x: 0.0, y: topContainerInset), size: scrollSize)
+            self.scrollViewMask.frame = CGRect(origin: CGPoint(x: 0.0, y: topContainerInset), size: scrollSize)
+            
             if self.scrollView.bounds.size != scrollSize {
                 self.scrollView.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: scrollSize)
             }

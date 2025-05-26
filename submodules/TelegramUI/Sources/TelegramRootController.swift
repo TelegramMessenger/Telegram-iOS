@@ -64,7 +64,7 @@ private class DetailsChatPlaceholderNode: ASDisplayNode, NavigationDetailsPlaceh
         self.wallpaperBackgroundNode.updateLayout(size: size, displayMode: needsTiling ? .aspectFit : .aspectFill, transition: transition)
         transition.updateFrame(node: self.wallpaperBackgroundNode, frame: contentBounds)
         
-        self.emptyNode.updateLayout(interfaceState: self.presentationInterfaceState, subject: .detailsPlaceholder, loadingNode: nil, backgroundNode: self.wallpaperBackgroundNode, size: contentBounds.size, insets: .zero, transition: transition)
+        self.emptyNode.updateLayout(interfaceState: self.presentationInterfaceState, subject: .detailsPlaceholder, loadingNode: nil, backgroundNode: self.wallpaperBackgroundNode, size: contentBounds.size, insets: .zero, leftInset: 0.0, rightInset: 0.0, transition: transition)
         transition.updateFrame(node: self.emptyNode, frame: CGRect(origin: .zero, size: size))
         self.emptyNode.update(rect: contentBounds, within: contentBounds.size, transition: transition)
     }

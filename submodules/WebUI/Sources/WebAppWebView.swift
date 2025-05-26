@@ -249,7 +249,7 @@ final class WebAppWebView: WKWebView {
             if let result = result as? CGFloat {
                 Queue.mainQueue().async {
                     let convertedY = result - self.scrollView.contentOffset.y
-                    let viewportHeight = self.frame.height - (layout.inputHeight ?? 0.0) + 26.0
+                    let viewportHeight = self.frame.height
                     if convertedY < 0.0 || (convertedY + 44.0) > viewportHeight {
                         let targetOffset: CGFloat
                         if convertedY < 0.0 {

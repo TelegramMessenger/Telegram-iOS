@@ -1538,10 +1538,15 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 let isPinned = (flags & (1 << 0)) != 0
                 updatedState.addUpdatePinnedTopic(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId)), threadId: Int64(topicId), isPinned: isPinned)
             case let .updateReadMessagesContents(_, messages, _, _, date):
-                updatedState.addReadMessagesContents((nil, messages), date: date)
-            case let .updateChannelReadMessagesContents(_, channelId, topMsgId, messages):
-                let _ = topMsgId
-                updatedState.addReadMessagesContents((PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId)), messages), date: nil)
+                updatedState.addReadMessagesContents((nil, nil, messages), date: date)
+            case let .updateChannelReadMessagesContents(_, channelId, topMsgId, savedPeerId, messages):
+                var threadId: Int64?
+                if let savedPeerId {
+                    threadId = savedPeerId.peerId.toInt64()
+                } else if let topMsgId {
+                    threadId = Int64(topMsgId)
+                }
+                updatedState.addReadMessagesContents((PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId)), threadId, messages), date: nil)
             case let .updateChannelMessageViews(channelId, id, views):
                 updatedState.addUpdateMessageImpressionCount(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId)), namespace: Namespaces.Message.Cloud, id: id), count: views)
             /*case let .updateChannelMessageForwards(channelId, id, forwards):
@@ -1794,8 +1799,15 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                         return current
                     }
                 })
-            case let .updateMessageReactions(_, peer, msgId, _, reactions):
-                updatedState.updateMessageReactions(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: msgId), reactions: reactions, eventTimestamp: updatesDate)
+            case let .updateMessageReactions(_, peer, msgId, topMsgId, savedPeerId, reactions):
+                var threadId: Int64?
+                if let savedPeerId {
+                    threadId = savedPeerId.peerId.toInt64()
+                } else if let topMsgId {
+                    threadId = Int64(topMsgId)
+                }
+            
+                updatedState.updateMessageReactions(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: msgId), threadId: threadId, reactions: reactions, eventTimestamp: updatesDate)
             case .updateAttachMenuBots:
                 updatedState.addUpdateAttachMenuBots()
             case let .updateWebViewResultSent(queryId):
@@ -2019,7 +2031,16 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                     }
                     
                     if peer.flags.contains(.isMonoforum) {
-                        let signal = source.request(Api.functions.messages.getSavedDialogsByID(flags: 1 << 1, parentPeer: inputPeer, ids: threadIds.compactMap { transaction.getPeer(PeerId($0)).flatMap(apiInputPeer(_:)) }))
+                        let signal = source.request(Api.functions.messages.getSavedDialogsByID(flags: 1 << 1, parentPeer: inputPeer, ids: threadIds.compactMap { threadId in
+                            let threadPeerId = PeerId(threadId)
+                            if let threadPeer = state.peers[threadPeerId] {
+                                return apiInputPeer(threadPeer)
+                            } else if let threadPeer = transaction.getPeer(threadPeerId) {
+                                return apiInputPeer(threadPeer)
+                            } else {
+                                return nil
+                            }
+                        }))
                         |> map { result -> (Peer, FetchedForumThreads)? in
                             let result = FetchedForumThreads(savedDialogs: result)
                             return (peer, result)
@@ -2099,8 +2120,7 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                                     }
                                 case let .savedDialog(savedDialog):
                                     switch savedDialog {
-                                    case let .monoForumDialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _):
-                                        
+                                    case let .monoForumDialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadReactionsCount, _):
                                         state.operations.append(.ResetForumTopic(
                                             topicId: PeerAndBoundThreadId(peerId: peerId, threadId: peer.peerId.toInt64()),
                                             data: StoreMessageHistoryThreadData(
@@ -2124,7 +2144,7 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                                                 ),
                                                 topMessageId: topMessage,
                                                 unreadMentionCount: 0,
-                                                unreadReactionCount: 0
+                                                unreadReactionCount: unreadReactionsCount
                                             ),
                                             pts: result.pts
                                         ))
@@ -2146,7 +2166,7 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
     }
 }
 
-func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchMessageHistoryHoleSource, ids: [PeerAndBoundThreadId]) -> Signal<Void, NoError> {
+func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchMessageHistoryHoleSource, additionalPeers: AccumulatedPeers, ids: [PeerAndBoundThreadId]) -> Signal<Void, NoError> {
     let forumThreadIds = Set(ids)
     
     if forumThreadIds.isEmpty {
@@ -2172,7 +2192,16 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                     }
                     
                     if peer.flags.contains(.isMonoforum) {
-                        let signal = source.request(Api.functions.messages.getSavedDialogsByID(flags: 1 << 1, parentPeer: inputPeer, ids: threadIds.compactMap { transaction.getPeer(PeerId($0)).flatMap(apiInputPeer(_:)) }))
+                        let signal = source.request(Api.functions.messages.getSavedDialogsByID(flags: 1 << 1, parentPeer: inputPeer, ids: threadIds.compactMap { threadId in
+                            let threadPeerId = PeerId(threadId)
+                            if let threadPeer = additionalPeers.get(threadPeerId) {
+                                return apiInputPeer(threadPeer)
+                            } else if let threadPeer = transaction.getPeer(threadPeerId) {
+                                return apiInputPeer(threadPeer)
+                            } else {
+                                return nil
+                            }
+                        }))
                         |> map { result -> (Peer, FetchedForumThreads)? in
                             let result = FetchedForumThreads(savedDialogs: result)
                             return (peer, result)
@@ -2250,7 +2279,7 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                                         }
                                     case let .savedDialog(savedDialog):
                                         switch savedDialog {
-                                        case let .monoForumDialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _):
+                                        case let .monoForumDialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadReactionsCount, _):
                                             let data = MessageHistoryThreadData(
                                                 creationDate: 0,
                                                 isOwnedByMe: true,
@@ -2274,7 +2303,7 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                                             }
                                             
                                             transaction.replaceMessageTagSummary(peerId: peerId, threadId: peer.peerId.toInt64(), tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, customTag: nil, count: 0, maxId: topMessage)
-                                            transaction.replaceMessageTagSummary(peerId: peerId, threadId: peer.peerId.toInt64(), tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud, customTag: nil, count: 0, maxId: topMessage)
+                                            transaction.replaceMessageTagSummary(peerId: peerId, threadId: peer.peerId.toInt64(), tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud, customTag: nil, count: unreadReactionsCount, maxId: topMessage)
                                         case .savedDialog:
                                             break
                                         }
@@ -2329,7 +2358,16 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                     }
                     
                     if peer.flags.contains(.isMonoforum) {
-                        let signal = source.request(Api.functions.messages.getSavedDialogsByID(flags: 1 << 1, parentPeer: inputPeer, ids: threadIds.compactMap { transaction.getPeer(PeerId($0)).flatMap(apiInputPeer(_:)) }))
+                        let signal = source.request(Api.functions.messages.getSavedDialogsByID(flags: 1 << 1, parentPeer: inputPeer, ids: threadIds.compactMap { threadId in
+                            let threadPeerId = PeerId(threadId)
+                            if let threadPeer = fetchedChatList.peers.get(threadPeerId) {
+                                return apiInputPeer(threadPeer)
+                            } else if let threadPeer = transaction.getPeer(threadPeerId) {
+                                return apiInputPeer(threadPeer)
+                            } else {
+                                return nil
+                            }
+                        }))
                         |> map { result -> (Peer, FetchedForumThreads)? in
                             let result = FetchedForumThreads(savedDialogs: result)
                             return (peer, result)
@@ -2402,7 +2440,7 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                                     }
                                 case let .savedDialog(savedDialog):
                                     switch savedDialog {
-                                    case let .monoForumDialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _):
+                                    case let .monoForumDialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadReactionsCount, _):
                                         
                                         fetchedChatList.threadInfos[PeerAndBoundThreadId(peerId: peerId, threadId: peer.peerId.toInt64())] = StoreMessageHistoryThreadData(
                                             data: MessageHistoryThreadData(
@@ -2425,7 +2463,7 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                                             ),
                                             topMessageId: topMessage,
                                             unreadMentionCount: 0,
-                                            unreadReactionCount: 0
+                                            unreadReactionCount: unreadReactionsCount
                                         )
                                     case .savedDialog:
                                         break
@@ -2591,7 +2629,7 @@ private func messagesFromOperations(state: AccountMutableState) -> [StoreMessage
 private func reactionsFromState(_ state: AccountMutableState) -> [MessageReaction.Reaction] {
     var result: [MessageReaction.Reaction] = []
     for operation in state.operations {
-        if case let .UpdateMessageReactions(_, reactions, _) = operation {
+        if case let .UpdateMessageReactions(_, _, reactions, _) = operation {
             for reaction in ReactionsMessageAttribute(apiReactions: reactions).reactions {
                 result.append(reaction.value)
             }
@@ -3276,9 +3314,14 @@ private func pollChannel(accountPeerId: PeerId, postbox: Postbox, network: Netwo
                         updatedState.updateMessagesPinned(ids: messages.map { id in
                             MessageId(peerId: channelPeerId, namespace: Namespaces.Message.Cloud, id: id)
                         }, pinned: (flags & (1 << 0)) != 0)
-                    case let .updateChannelReadMessagesContents(_, _, topMsgId, messages):
-                        let _ = topMsgId
-                        updatedState.addReadMessagesContents((peer.id, messages), date: nil)
+                    case let .updateChannelReadMessagesContents(_, _, topMsgId, savedPeerId, messages):
+                        var threadId: Int64?
+                        if let savedPeerId {
+                            threadId = savedPeerId.peerId.toInt64()
+                        } else if let topMsgId {
+                            threadId = Int64(topMsgId)
+                        }
+                        updatedState.addReadMessagesContents((peer.id, threadId, messages), date: nil)
                     case let .updateChannelMessageViews(_, id, views):
                         updatedState.addUpdateMessageImpressionCount(id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id), count: views)
                     case let .updateChannelWebPage(_, apiWebpage, _, _):
@@ -4650,7 +4693,7 @@ func replayFinalState(
             case let .UpdatePinnedTopicOrder(peerId, threadIds):
                 transaction.setPeerPinnedThreads(peerId: peerId, threadIds: threadIds)
             case let .ReadMessageContents(peerIdAndMessageIds, date):
-                let (peerId, messageIds) = peerIdAndMessageIds
+                let (peerId, _, messageIds) = peerIdAndMessageIds
 
                 if let peerId = peerId {
                     for id in messageIds {
@@ -4840,7 +4883,7 @@ func replayFinalState(
                         return state
                     })
                 }
-            case let .UpdateMessageReactions(messageId, reactions, _):
+            case let .UpdateMessageReactions(messageId, _, reactions, _):
                 transaction.updateMessage(messageId, update: { currentMessage in
                     var updatedReactions = ReactionsMessageAttribute(apiReactions: reactions)
                     

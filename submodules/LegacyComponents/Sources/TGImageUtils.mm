@@ -231,6 +231,10 @@ UIImage *TGScaleAndBlurImage(NSData *data, __unused CGSize size, __autoreleasing
 
 UIImage *TGScaleImageToPixelSize(UIImage *image, CGSize size)
 {
+    if (image.size.width <= size.width && image.size.height <= size.height) {
+        return image;
+    }
+    
     UIGraphicsBeginImageContextWithOptions(size, true, 1.0f);
     [image drawInRect:CGRectMake(0, 0, size.width, size.height) blendMode:kCGBlendModeCopy alpha:1.0f];
     UIImage *result = UIGraphicsGetImageFromCurrentImageContext();

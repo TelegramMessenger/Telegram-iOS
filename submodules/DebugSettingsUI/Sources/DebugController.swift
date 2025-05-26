@@ -96,7 +96,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case enableDebugDataDisplay(Bool)
     case rippleEffect(Bool)
     case browserExperiment(Bool)
-    case localTranscription(Bool)
+    case allForumsHaveTabs(Bool)
     case enableReactionOverrides(Bool)
     case compressedEmojiCache(Bool)
     case storiesJpegExperiment(Bool)
@@ -133,7 +133,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.web.rawValue
         case .keepChatNavigationStack, .skipReadHistory, .dustEffect, .crashOnSlowQueries, .crashOnMemoryPressure:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .resetNotifications, .crash, .fillLocalSavedMessageCache, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .checkSerializedData, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .rippleEffect, .browserExperiment, .localTranscription, .enableReactionOverrides, .restorePurchases, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .playerV2, .devRequests, .fakeAds, .enableLocalTranslation:
+        case .clearTips, .resetNotifications, .crash, .fillLocalSavedMessageCache, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .checkSerializedData, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .rippleEffect, .browserExperiment, .allForumsHaveTabs, .enableReactionOverrides, .restorePurchases, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .playerV2, .devRequests, .fakeAds, .enableLocalTranslation:
             return DebugControllerSection.experiments.rawValue
         case .logTranslationRecognition, .resetTranslationStates:
             return DebugControllerSection.translation.rawValue
@@ -226,7 +226,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 39
         case .browserExperiment:
             return 40
-        case .localTranscription:
+        case .allForumsHaveTabs:
             return 41
         case .enableReactionOverrides:
             return 42
@@ -1264,12 +1264,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
-        case let .localTranscription(value):
-            return ItemListSwitchItem(presentationData: presentationData, title: "Local Transcription", value: value, sectionId: self.section, style: .blocks, updated: { value in
+        case let .allForumsHaveTabs(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Forum Tabs Debug", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
                         var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
-                        settings.localTranscription = value
+                        settings.allForumsHaveTabs = value
                         return PreferencesEntry(settings)
                     })
                 }).start()
@@ -1526,7 +1526,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
             entries.append(.browserExperiment(experimentalSettings.browserExperiment))
         }
         #endif
-        entries.append(.localTranscription(experimentalSettings.localTranscription))
+        entries.append(.allForumsHaveTabs(experimentalSettings.allForumsHaveTabs))
         if case .internal = sharedContext.applicationBindings.appBuildType {
             entries.append(.enableReactionOverrides(experimentalSettings.enableReactionOverrides))
         }

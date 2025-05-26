@@ -42,16 +42,20 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
             viewForumAsMessages = .single(false)
         }
     } else if case let .peer(peer) = params.chatLocation, case let .channel(channel) = peer, channel.flags.contains(.isForum) {
-        viewForumAsMessages = params.context.account.postbox.combinedView(keys: [.cachedPeerData(peerId: peer.id)])
-        |> take(1)
-        |> map { combinedView in
-            guard let cachedDataView = combinedView.views[.cachedPeerData(peerId: peer.id)] as? CachedPeerDataView else {
-                return false
-            }
-            if let cachedData = cachedDataView.cachedPeerData as? CachedChannelData, case let .known(viewForumAsMessages) = cachedData.viewForumAsMessages, viewForumAsMessages {
-                return true
-            } else {
-                return false
+        if channel.flags.contains(.displayForumAsTabs) {
+            viewForumAsMessages = .single(true)
+        } else {
+            viewForumAsMessages = params.context.account.postbox.combinedView(keys: [.cachedPeerData(peerId: peer.id)])
+            |> take(1)
+            |> map { combinedView in
+                guard let cachedDataView = combinedView.views[.cachedPeerData(peerId: peer.id)] as? CachedPeerDataView else {
+                    return false
+                }
+                if let cachedData = cachedDataView.cachedPeerData as? CachedChannelData, case let .known(viewForumAsMessages) = cachedData.viewForumAsMessages, viewForumAsMessages {
+                    return true
+                } else {
+                    return false
+                }
             }
         }
     } else if case let .peer(peer) = params.chatLocation, peer.id == params.context.account.peerId {

@@ -1108,7 +1108,7 @@
     TGPhotoEditorButton *qualityButton = [_portraitToolbarView buttonForTab:TGPhotoEditorQualityTab];
     if (qualityButton != nil)
     {
-        bool isPhoto = [_currentItemView isKindOfClass:[TGMediaPickerGalleryPhotoItemView class]];
+        bool isPhoto = [_currentItemView isKindOfClass:[TGMediaPickerGalleryPhotoItemView class]] || [_currentItem isKindOfClass:[TGCameraCapturedPhoto class]];
         if (isPhoto) {
             bool isHd = _editingContext.isHighQualityPhoto;
             UIImage *icon = [TGPhotoEditorInterfaceAssets qualityIconForHighQuality:isHd filled: false];
@@ -1239,8 +1239,7 @@
         [self tooltipTimerTick];
     }
     
-    //TODO:localize
-    NSString *text = hd ? @"The photo will be sent in high quality." : @"The photo will be sent in standard quality.";
+    NSString *text = hd ? TGLocalized(@"Media.PhotoHdOn") : TGLocalized(@"Media.PhotoHdOff");
     [_context presentTooltip:text icon:[TGPhotoEditorInterfaceAssets qualityIconForHighQuality:hd filled: true] sourceRect:rect];
 }
 

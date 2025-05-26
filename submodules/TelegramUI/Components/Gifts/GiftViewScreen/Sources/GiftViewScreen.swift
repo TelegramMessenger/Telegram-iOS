@@ -862,7 +862,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                 )
                 controller.present(alertController, in: .window(.root))
             } else {
-                let resellController = self.context.sharedContext.makeStarGiftResellScreen(context: self.context, update: update, completion: { [weak self, weak controller] price in
+                let resellController = self.context.sharedContext.makeStarGiftResellScreen(context: self.context, gift: gift, update: update, completion: { [weak self, weak controller] price in
                     guard let self, let controller else {
                         return
                     }

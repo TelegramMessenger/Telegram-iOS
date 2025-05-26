@@ -125,8 +125,12 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
             let compactAuthorName = message.author?.compactDisplayTitle ?? ""
             
             var isChannel = false
-            if message.id.peerId.namespace == Namespaces.Peer.CloudChannel, let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
-                isChannel = true
+            var isMonoforum = false
+            if message.id.peerId.namespace == Namespaces.Peer.CloudChannel, let peer = message.peers[message.id.peerId] as? TelegramChannel {
+                if case .broadcast = peer.info {
+                    isChannel = true
+                }
+                isMonoforum = peer.isMonoForum
             }
             
             switch action.action {
@@ -135,7 +139,12 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     attributedString = NSAttributedString(string: strings.Notification_CreatedChannel, font: titleFont, textColor: primaryTextColor)
                 } else {
                     if forChatList {
-                        attributedString = NSAttributedString(string: strings.Notification_CreatedGroup, font: titleFont, textColor: primaryTextColor)
+                        if isMonoforum {
+                            //TODO:Localize
+                            attributedString = NSAttributedString(string: "No messages here yet...", font: titleFont, textColor: primaryTextColor)
+                        } else {
+                            attributedString = NSAttributedString(string: strings.Notification_CreatedGroup, font: titleFont, textColor: primaryTextColor)
+                        }
                     } else {
                         attributedString = addAttributesToStringWithRanges(strings.Notification_CreatedChatWithTitle(authorName, title)._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                     }

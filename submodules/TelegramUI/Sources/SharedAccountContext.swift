@@ -3552,31 +3552,49 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return editorController
     }
         
-    public func makeStoryMediaEditorScreen(context: AccountContext, source: Any?, text: String?, link: (url: String, name: String?)?, completion: @escaping ([MediaEditorScreenResult], @escaping (@escaping () -> Void) -> Void) -> Void) -> ViewController {
-        let subject: Signal<MediaEditorScreenImpl.Subject?, NoError>
+    public func makeStoryMediaEditorScreen(context: AccountContext, source: Any?, text: String?, link: (url: String, name: String?)?, remainingCount: Int32, completion: @escaping ([MediaEditorScreenResult], MediaEditorTransitionOutExternalState, @escaping (@escaping () -> Void) -> Void) -> Void) -> ViewController {
+        let editorSubject: Signal<MediaEditorScreenImpl.Subject?, NoError>
         if let image = source as? UIImage {
-            subject = .single(.image(image: image, dimensions: PixelDimensions(image.size), additionalImage: nil, additionalImagePosition: .bottomRight, fromCamera: false))
+            editorSubject = .single(.image(image: image, dimensions: PixelDimensions(image.size), additionalImage: nil, additionalImagePosition: .bottomRight, fromCamera: false))
         } else if let path = source as? String {
-            subject = .single(.video(videoPath: path, thumbnail: nil, mirror: false, additionalVideoPath: nil, additionalThumbnail: nil, dimensions: PixelDimensions(width: 1080, height: 1920), duration: 0.0, videoPositionChanges: [], additionalVideoPosition: .bottomRight, fromCamera: false))
+            editorSubject = .single(.video(videoPath: path, thumbnail: nil, mirror: false, additionalVideoPath: nil, additionalThumbnail: nil, dimensions: PixelDimensions(width: 1080, height: 1920), duration: 0.0, videoPositionChanges: [], additionalVideoPosition: .bottomRight, fromCamera: false))
         } else if let subjects = source as? [MediaEditorScreenImpl.Subject] {
-            subject = .single(.multiple(subjects))
+            editorSubject = .single(.multiple(subjects))
         } else if let subjectValue = source as? MediaEditorScreenImpl.Subject {
-            subject = .single(subjectValue)
+            editorSubject = .single(subjectValue)
         } else {
-            subject = .single(.empty(PixelDimensions(width: 1080, height: 1920)))
+            editorSubject = .single(.empty(PixelDimensions(width: 1080, height: 1920)))
         }
+        
+        let externalState = MediaEditorTransitionOutExternalState(
+            storyTarget: nil,
+            isForcedTarget: false,
+            isPeerArchived: false,
+            transitionOut: nil
+        )
+        
         let editorController = MediaEditorScreenImpl(
             context: context,
-            mode: .storyEditor(remainingCount: 1),
-            subject: subject,
+            mode: .storyEditor(remainingCount: remainingCount),
+            subject: editorSubject,
             customTarget: nil,
             initialCaption: text.flatMap { NSAttributedString(string: $0) },
             initialLink: link,
             transitionIn: nil,
             transitionOut: { finished, isNew in
+                if let externalTransitionOut = externalState.transitionOut {
+                    if finished, let transitionOut = externalTransitionOut(externalState.storyTarget, false), let destinationView = transitionOut.destinationView {
+                        return MediaEditorScreenImpl.TransitionOut(
+                            destinationView: destinationView,
+                            destinationRect: transitionOut.destinationRect,
+                            destinationCornerRadius: transitionOut.destinationCornerRadius,
+                            completion: transitionOut.completion
+                        )
+                    }
+                }
                 return nil
             }, completion: { results, commit in
-                completion(results, commit)
+                completion(results, externalState, commit)
             } as ([MediaEditorScreenImpl.Result], @escaping (@escaping () -> Void) -> Void) -> Void
         )
         return editorController
@@ -3688,8 +3706,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return StarsWithdrawScreen(context: context, mode: mode, completion: completion)
     }
     
-    public func makeStarGiftResellScreen(context: AccountContext, update: Bool, completion: @escaping (Int64) -> Void) -> ViewController {
-        return StarsWithdrawScreen(context: context, mode: .starGiftResell(update), completion: completion)
+    public func makeStarGiftResellScreen(context: AccountContext, gift: StarGift.UniqueGift, update: Bool, completion: @escaping (Int64) -> Void) -> ViewController {
+        return StarsWithdrawScreen(context: context, mode: .starGiftResell(gift, update), completion: completion)
     }
     
     public func makeStarsGiftScreen(context: AccountContext, message: EngineMessage) -> ViewController {

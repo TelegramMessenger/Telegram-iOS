@@ -525,7 +525,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
                     self.trimView.trimUpdated = { [weak self] start, end, updatedEnd, apply in
                         if let self {
                             self.mediaPlayer?.pause()
-                            self.interfaceInteraction?.updateVideoTrimRange(start, end, updatedEnd, apply)
+                            self.interfaceInteraction?.updateRecordingTrimRange(start, end, updatedEnd, apply)
                             if apply {
                                 if !updatedEnd {
                                     self.mediaPlayer?.seek(timestamp: start, play: true)
@@ -548,7 +548,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
                     }
                     self.trimView.frame = waveformBackgroundFrame
                     
-                    let playButtonSize = CGSize(width: rightHandleFrame.minX - leftHandleFrame.maxX, height: waveformBackgroundFrame.height)
+                    let playButtonSize = CGSize(width: max(0.0, rightHandleFrame.minX - leftHandleFrame.maxX), height: waveformBackgroundFrame.height)
                     self.playButtonNode.update(size: playButtonSize, transition: transition)
                     transition.updateFrame(node: self.playButtonNode, frame: CGRect(origin: CGPoint(x: waveformBackgroundFrame.minX + leftHandleFrame.maxX, y: waveformBackgroundFrame.minY), size: playButtonSize))
                 case let .video(video):
@@ -584,7 +584,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
                                 positionUpdated: { _, _ in },
                                 trackTrimUpdated: { [weak self] _, start, end, updatedEnd, apply in
                                     if let self {
-                                        self.interfaceInteraction?.updateVideoTrimRange(start, end, updatedEnd, apply)
+                                        self.interfaceInteraction?.updateRecordingTrimRange(start, end, updatedEnd, apply)
                                     }
                                 },
                                 trackOffsetUpdated: { _, _, _ in },
@@ -825,14 +825,16 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
             let _ = (mediaPlayer.status
             |> take(1)
             |> deliverOnMainQueue).start(next: { [weak self] status in
-                guard let self else {
+                guard let self, let mediaPlayer = self.mediaPlayer else {
                     return
                 }
 
                 if case .playing = status.status {
-                    self.mediaPlayer?.pause()
+                    mediaPlayer.pause()
                 } else if status.timestamp <= trimRange.lowerBound {
-                    self.mediaPlayer?.seek(timestamp: trimRange.lowerBound, play: true)
+                    mediaPlayer.seek(timestamp: trimRange.lowerBound, play: true)
+                } else {
+                    mediaPlayer.play()
                 }
             })
         } else {

@@ -175,6 +175,7 @@ public func legacyAssetPickerItemGenerator() -> ((Any?, NSAttributedString?, Str
             let image = dict["image"] as! UIImage
             let thumbnail = dict["previewImage"] as? UIImage
             let cover = dict["coverImage"] as? UIImage
+            let forceHd = (dict["hd"] as? NSNumber)?.boolValue ?? false
             
             var result: [AnyHashable : Any] = [:]
             if let isAnimation = dict["isAnimation"] as? NSNumber, isAnimation.boolValue {
@@ -184,7 +185,7 @@ public func legacyAssetPickerItemGenerator() -> ((Any?, NSAttributedString?, Str
                     result["item" as NSString] = LegacyAssetItemWrapper(item: .video(data: .tempFile(path: url, dimensions: dimensions, duration: 4.0), thumbnail: thumbnail, cover: cover, adjustments: dict["adjustments"] as? TGVideoEditAdjustments, caption: caption, asFile: false, asAnimation: true, stickers: stickers), timer: (dict["timer"] as? NSNumber)?.intValue, spoiler: (dict["spoiler"] as? NSNumber)?.boolValue, price: price, groupedId: (dict["groupedId"] as? NSNumber)?.int64Value, uniqueId: uniqueId)
                 }
             } else {
-                result["item" as NSString] = LegacyAssetItemWrapper(item: .image(data: .image(image), thumbnail: thumbnail, caption: caption, stickers: stickers), timer: (dict["timer"] as? NSNumber)?.intValue,  spoiler: (dict["spoiler"] as? NSNumber)?.boolValue, price: price, groupedId: (dict["groupedId"] as? NSNumber)?.int64Value, uniqueId: uniqueId)
+                result["item" as NSString] = LegacyAssetItemWrapper(item: .image(data: .image(image), thumbnail: thumbnail, caption: caption, stickers: stickers), timer: (dict["timer"] as? NSNumber)?.intValue,  spoiler: (dict["spoiler"] as? NSNumber)?.boolValue, price: price, forceHd: forceHd, groupedId: (dict["groupedId"] as? NSNumber)?.int64Value, uniqueId: uniqueId)
             }
             return result
         } else if (dict["type"] as! NSString) == "cloudPhoto" {
@@ -400,7 +401,9 @@ public func legacyAssetPickerEnqueueMessages(context: AccountContext, account: A
                                     var randomId: Int64 = 0
                                     arc4random_buf(&randomId, 8)
                                     let tempFilePath = NSTemporaryDirectory() + "\(randomId).jpeg"
-                                    let scaledSize = image.size.aspectFittedOrSmaller(CGSize(width: 1280.0, height: 1280.0))
+                                    let maxSize = item.forceHd ? CGSize(width: 2560.0, height: 2560.0) : CGSize(width: 1280.0, height: 1280.0)
+                                    let scaledSize = image.size.aspectFittedOrSmaller(maxSize)
+                                
                                     if let scaledImage = TGScaleImageToPixelSize(image, scaledSize) {
                                         let tempFile = TempBox.shared.tempFile(fileName: "file")
                                         defer {

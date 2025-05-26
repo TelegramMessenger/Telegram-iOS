@@ -68,6 +68,7 @@ final class ForumSettingsScreenComponent: Component {
         
         private var peer: EnginePeer?
         private var peerDisposable: Disposable?
+        private var peerIdPromise = ValuePromise<EnginePeer.Id>()
         
         private var isOn = false
         private var mode: ForumModeComponent.Mode = .tabs
@@ -140,6 +141,65 @@ final class ForumSettingsScreenComponent: Component {
                 transition.setAlpha(view: navigationTitleView, alpha: 1.0)
             }
         }
+        
+        func toggleTopicsEnabled(_ enabled: Bool) {
+            guard let component = self.component, let peer = self.peer else {
+                return
+            }
+            self.isOn = enabled
+            let displayForumAsTabs = self.mode == .tabs
+            
+            if self.isOn {
+                if case .legacyGroup = peer {
+                    let context = component.context
+                    let signal: Signal<EnginePeer.Id?, NoError> = context.engine.peers.convertGroupToSupergroup(peerId: peer.id, additionalProcessing: { upgradedPeerId -> Signal<Never, NoError> in
+                        return context.engine.peers.setChannelForumMode(id: upgradedPeerId, isForum: true, displayForumAsTabs: displayForumAsTabs)
+                    })
+                    |> map(Optional.init)
+                    |> `catch` { [weak self] error -> Signal<PeerId?, NoError> in
+                        guard let self, let controller = self.environment?.controller() else {
+                            return .single(nil)
+                        }
+                        switch error {
+                        case .tooManyChannels:
+                            Queue.mainQueue().async {
+                                let oldChannelsController = context.sharedContext.makeOldChannelsController(context: context, updatedPresentationData: nil, intent: .upgrade, completed: { result in
+                                    
+                                })
+                                controller.push(oldChannelsController)
+                            }
+                        default:
+                            break
+                        }
+                        return .single(nil)
+                    }
+                    |> mapToSignal { upgradedPeerId -> Signal<PeerId?, NoError> in
+                        guard let upgradedPeerId = upgradedPeerId else {
+                            return .single(nil)
+                        }
+                        return .single(upgradedPeerId)
+                    }
+                    |> deliverOnMainQueue
+                    
+                    let _ = signal.startStandalone(next: { [weak self] resultPeerId in
+                        guard let self else {
+                            return
+                        }
+                        if let resultPeerId {
+                            self.peerIdPromise.set(resultPeerId)
+                        } else {
+                            self.isOn = false
+                            self.state?.updated(transition: .easeInOut(duration: 0.2))
+                        }
+                    })
+                } else {
+                    let _ = component.context.engine.peers.setChannelForumMode(id: peer.id, isForum: true, displayForumAsTabs: displayForumAsTabs).startStandalone()
+                }
+            } else {
+                let _ = component.context.engine.peers.setChannelForumMode(id: peer.id, isForum: false, displayForumAsTabs: displayForumAsTabs).startStandalone()
+            }
+            self.state?.updated(transition: .spring(duration: 0.4))
+        }
                 
         func update(component: ForumSettingsScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
@@ -148,7 +208,12 @@ final class ForumSettingsScreenComponent: Component {
             }
             
             if self.component == nil {
-                self.peerDisposable = (component.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: component.peerId))
+                self.peerIdPromise.set(component.peerId)
+                
+                self.peerDisposable = (self.peerIdPromise.get()
+                |> mapToSignal { peerId in
+                    component.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                }
                 |> deliverOnMainQueue).start(next: { [weak self] peer in
                     guard let self else {
                         return
@@ -156,7 +221,9 @@ final class ForumSettingsScreenComponent: Component {
                     self.peer = peer
                     if case let .channel(channel) = peer {
                         self.isOn = channel.flags.contains(.isForum)
-                        self.mode = channel.flags.contains(.displayForumAsTabs) ? .tabs : .list
+                        if self.isOn {
+                            self.mode = channel.flags.contains(.displayForumAsTabs) ? .tabs : .list
+                        }
                     }
                     self.state?.updated()
                 })
@@ -177,11 +244,10 @@ final class ForumSettingsScreenComponent: Component {
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             
-            //TODO:localize
             let navigationTitleSize = self.navigationTitle.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "Topics", font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
+                    text: .plain(NSAttributedString(string: environment.strings.PeerInfo_Topics_Title, font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
                     horizontalAlignment: .center
                 )),
                 environment: {},
@@ -226,7 +292,7 @@ final class ForumSettingsScreenComponent: Component {
             
             contentHeight += 124.0
             
-            let subtitleString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString("The group chat will be divided into topics created by admins or users.", attributes: MarkdownAttributes(
+            let subtitleString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(environment.strings.PeerInfo_Topics_EnableTopicsInfo, attributes: MarkdownAttributes(
                 body: MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.freeTextColor),
                 bold: MarkdownAttributeSet(font: Font.semibold(15.0), textColor: environment.theme.list.freeTextColor),
                 link: MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.itemAccentColor),
@@ -277,7 +343,7 @@ final class ForumSettingsScreenComponent: Component {
                 title: AnyComponent(VStack([
                     AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Enable Topics",
+                            string: environment.strings.PeerInfo_Topics_EnableTopics,
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                             textColor: environment.theme.list.itemPrimaryTextColor
                         )),
@@ -285,13 +351,10 @@ final class ForumSettingsScreenComponent: Component {
                     ))),
                 ], alignment: .left, spacing: 2.0)),
                 accessory: .toggle(ListActionItemComponent.Toggle(style: .regular, isOn: self.isOn, action: { [weak self] value in
-                    guard let self, let component = self.component else {
+                    guard let self else {
                         return
                     }
-                    self.isOn = !self.isOn
-                    let displayForumAsTabs = self.mode == .tabs
-                    let _ = component.context.engine.peers.setChannelForumMode(id: component.peerId, isForum: self.isOn, displayForumAsTabs: displayForumAsTabs).startStandalone()
-                    self.state?.updated(transition: .spring(duration: 0.4))
+                    self.toggleTopicsEnabled(value)
                 })),
                 action: nil
             ))))
@@ -325,7 +388,7 @@ final class ForumSettingsScreenComponent: Component {
                     theme: environment.theme,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "DISPLAY AS",
+                            string: environment.strings.PeerInfo_Topics_DisplayAs,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -333,7 +396,7 @@ final class ForumSettingsScreenComponent: Component {
                     )),
                     footer: AnyComponent(MultilineTextComponent(
                         text: .markdown(
-                            text: "Choose how topics appear for all members.",
+                            text: environment.strings.PeerInfo_Topics_DisplayAsInfo,
                             attributes: MarkdownAttributes(
                                 body: MarkdownAttributeSet(font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: environment.theme.list.freeTextColor),
                                 bold: MarkdownAttributeSet(font: Font.semibold(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: environment.theme.list.freeTextColor),
