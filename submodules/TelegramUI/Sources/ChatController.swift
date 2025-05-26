@@ -9111,6 +9111,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let controller = controller as? QuickShareToastScreen {
                 controller.dismissWithCommitAction()
             }
+            if let controller = controller as? TooltipScreen, !controller.alwaysVisible {
+                controller.dismiss()
+            }
         })
         self.forEachController({ controller in
             if let controller = controller as? UndoOverlayController {

@@ -434,6 +434,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, openMessagePayment: {
         }, openBoostToUnrestrict: {
         }, updateRecordingTrimRange: { _, _, _, _ in
+        }, dismissAllTooltips: {
         }, updateHistoryFilter: { _ in
         }, updateChatLocationThread: { _, _ in
         }, toggleChatSidebarMode: {
@@ -2580,8 +2581,7 @@ private func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostSt
                         }
                         
                         if canSetupTopics {
-                            //TODO:localize
-                            let label = channel.flags.contains(.isForum) ? "Enabled" : "Disabled"
+                            let label = channel.flags.contains(.isForum) ? presentationData.strings.PeerInfo_OptionTopics_Enabled : presentationData.strings.PeerInfo_OptionTopics_Disabled
                             items[.peerDataSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemTopics, label: .text(label), text: presentationData.strings.PeerInfo_OptionTopics, icon: UIImage(bundleImageName: "Settings/Menu/Topics"), action: {
                                 if let topicsLimitedReason = topicsLimitedReason {
                                     interaction.displayTopicsLimited(topicsLimitedReason)
@@ -2709,8 +2709,7 @@ private func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostSt
                 }
                 
                 if canSetupTopics {
-                    //TODO:localize
-                    items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemTopics, label: .text("Disabled"), text: presentationData.strings.PeerInfo_OptionTopics, icon: UIImage(bundleImageName: "Settings/Menu/Topics"), action: {
+                    items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemTopics, label: .text(presentationData.strings.PeerInfo_OptionTopics_Disabled), text: presentationData.strings.PeerInfo_OptionTopics, icon: UIImage(bundleImageName: "Settings/Menu/Topics"), action: {
                         if let topicsLimitedReason = topicsLimitedReason {
                             interaction.displayTopicsLimited(topicsLimitedReason)
                         } else {

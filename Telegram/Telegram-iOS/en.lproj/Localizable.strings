@@ -14338,3 +14338,33 @@ Sorry for the inconvenience.";
 
 "Gift.Buy.ErrorTooEarly.Title" = "Try Later";
 "Gift.Buy.ErrorTooEarly.Text" = "You will be able to buy this gift on %@.";
+
+"Chat.PauseVoiceMessageTooltip" = "Pause to trim or replay.";
+"Chat.PauseVideoMessageTooltip" = "Pause to trim or replay.";
+
+"Chat.TrimVoiceMessageToResume.Title" = "Trim to selected range?";
+"Chat.TrimVoiceMessageToResume.Text" = "Audio outside that range will be discarded, and recording will start immediately.";
+"Chat.TrimVoiceMessageToResume.Proceed" = "Proceed";
+
+"Contacts.LimitedAccess.Text" = "You have limited Telegram from accessing all of your contacts.";
+"Contacts.LimitedAccess.Manage" = "MANAGE";
+
+"Media.PhotoHdOn" = "The photo will be sent in high quality.";
+"Media.PhotoHdOff" = "The photo will be sent in standard quality.";
+
+"Attachment.SendInHd" = "Send in High Quality";
+
+"Share.PostToStory" = "Post\nto Story";
+
+"PeerInfo.QRCode.Scan" = "Scan QR Code";
+
+"PeerInfo.Topics.Title" = "Topics";
+"PeerInfo.Topics.EnableTopics" = "Enable Topics";
+"PeerInfo.Topics.EnableTopicsInfo" = "The group chat will be divided into topics created by admins or users.";
+"PeerInfo.Topics.DisplayAs" = "DISPLAY AS";
+"PeerInfo.Topics.DisplayAsInfo" = "Choose how topics appear for all members.";
+"PeerInfo.Topics.Tabs" = "Tabs";
+"PeerInfo.Topics.List" = "List";
+
+"PeerInfo.OptionTopics.Enabled" = "Enabled";
+"PeerInfo.OptionTopics.Disabled" = "Disabled";

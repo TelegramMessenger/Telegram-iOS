@@ -898,9 +898,8 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, ASScrollViewDeleg
             self.doneButton.title = self.presentationData.strings.Share_ShareMessage
         }
         
-        //TODO:localize
         self.scanButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: .clear, foregroundColor: self.presentationData.theme.actionSheet.controlAccentColor), font: .regular, height: 42.0, cornerRadius: 0.0, gloss: false)
-        self.scanButton.title = "Scan QR Code"
+        self.scanButton.title = presentationData.strings.PeerInfo_QRCode_Scan
         self.scanButton.icon = UIImage(bundleImageName: "Settings/ScanQr")
         
         self.listNode = ListView()

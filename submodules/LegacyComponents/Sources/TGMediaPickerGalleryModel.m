@@ -197,7 +197,8 @@
              
              __strong TGModernGalleryController *controller = strongSelf.controller;
              if ([controller.currentItem conformsToProtocol:@protocol(TGModernGalleryEditableItem)]) {
-                 if (tab == TGPhotoEditorQualityTab && [controller.currentItem isKindOfClass:[TGMediaPickerGalleryFetchResultItem class]] && [((TGMediaPickerGalleryFetchResultItem *)controller.currentItem).backingItem isKindOfClass:[TGMediaPickerGalleryPhotoItem class]]) {
+                 bool isPhoto = [controller.currentItem isKindOfClass:[TGMediaPickerGalleryPhotoItem class]] || ([controller.currentItem isKindOfClass:[TGMediaPickerGalleryFetchResultItem class]] && [((TGMediaPickerGalleryFetchResultItem *)controller.currentItem).backingItem isKindOfClass:[TGMediaPickerGalleryPhotoItem class]]);
+                 if (tab == TGPhotoEditorQualityTab && isPhoto) {
                      [strongSelf->_editingContext setHighQualityPhoto:!strongSelf->_editingContext.isHighQualityPhoto];
                      [strongSelf->_interfaceView showPhotoQualityTooltip:strongSelf->_editingContext.isHighQualityPhoto];
                  } else {

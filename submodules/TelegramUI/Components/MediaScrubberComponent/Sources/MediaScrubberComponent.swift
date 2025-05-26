@@ -1672,20 +1672,43 @@ public class TrimView: UIView {
         self.rightHandleView.addSubview(self.rightCapsuleView)
         self.addSubview(self.borderView)
         
-        self.zoneView.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.handleZoneHandlePan(_:))))
-        self.leftHandleView.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.handleLeftHandlePan(_:))))
-        self.rightHandleView.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.handleRightHandlePan(_:))))
+        let zoneHandlePanGesture = UILongPressGestureRecognizer(target: self, action: #selector(self.handleZoneHandlePan(_:)))
+        zoneHandlePanGesture.minimumPressDuration = 0.0
+        zoneHandlePanGesture.allowableMovement = .infinity
+        
+        let leftHandlePanGesture = UILongPressGestureRecognizer(target: self, action: #selector(self.handleLeftHandlePan(_:)))
+        leftHandlePanGesture.minimumPressDuration = 0.0
+        leftHandlePanGesture.allowableMovement = .infinity
+        
+        let rightHandlePanGesture = UILongPressGestureRecognizer(target: self, action: #selector(self.handleRightHandlePan(_:)))
+        rightHandlePanGesture.minimumPressDuration = 0.0
+        rightHandlePanGesture.allowableMovement = .infinity
+        
+        self.zoneView.addGestureRecognizer(zoneHandlePanGesture)
+        self.leftHandleView.addGestureRecognizer(leftHandlePanGesture)
+        self.rightHandleView.addGestureRecognizer(rightHandlePanGesture)
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    @objc private func handleZoneHandlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
+    private var panStartLocation: CGPoint?
+    
+    @objc private func handleZoneHandlePan(_ gestureRecognizer: UILongPressGestureRecognizer) {
         guard let params = self.params else {
             return
         }
-        let translation = gestureRecognizer.translation(in: self)
+        
+        let location = gestureRecognizer.location(in: self)
+        if case .began = gestureRecognizer.state {
+            self.panStartLocation = location
+        }
+        
+        let translation = CGPoint(
+            x: location.x - (self.panStartLocation?.x ?? 0.0),
+            y: location.y - (self.panStartLocation?.y ?? 0.0)
+        )
         
         let start = handleWidth / 2.0
         let end = self.frame.width - handleWidth / 2.0
@@ -1706,6 +1729,7 @@ public class TrimView: UIView {
                 transition = .easeInOut(duration: 0.25)
             }
         case .ended, .cancelled:
+            self.panStartLocation = nil
             self.isPanningTrimHandle = false
             self.trimUpdated(startValue, endValue, false, true)
             transition = .easeInOut(duration: 0.25)
@@ -1713,15 +1737,15 @@ public class TrimView: UIView {
             break
         }
         
-        gestureRecognizer.setTranslation(.zero, in: self)
         self.updated(transition)
     }
     
-    @objc private func handleLeftHandlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
+    @objc private func handleLeftHandlePan(_ gestureRecognizer: UILongPressGestureRecognizer) {
         guard let params = self.params else {
             return
         }
         let location = gestureRecognizer.location(in: self)
+        
         let start = handleWidth / 2.0
         let end = params.scrubberSize.width - handleWidth / 2.0
         let length = end - start
@@ -1746,6 +1770,7 @@ public class TrimView: UIView {
                 transition = .easeInOut(duration: 0.25)
             }
         case .ended, .cancelled:
+            self.panStartLocation = nil
             self.isPanningTrimHandle = false
             self.trimUpdated(startValue, endValue, false, true)
             transition = .easeInOut(duration: 0.25)
@@ -1755,7 +1780,7 @@ public class TrimView: UIView {
         self.updated(transition)
     }
     
-    @objc private func handleRightHandlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
+    @objc private func handleRightHandlePan(_ gestureRecognizer: UILongPressGestureRecognizer) {
         guard let params = self.params else {
             return
         }
@@ -1784,6 +1809,7 @@ public class TrimView: UIView {
                 transition = .easeInOut(duration: 0.25)
             }
         case .ended, .cancelled:
+            self.panStartLocation = nil
             self.isPanningTrimHandle = false
             self.trimUpdated(startValue, endValue, true, true)
             transition = .easeInOut(duration: 0.25)

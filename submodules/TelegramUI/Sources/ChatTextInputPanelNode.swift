@@ -2225,7 +2225,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                         hideInfo = true
                     }
                 case .waitingForPreview:
-                    Queue.mainQueue().after(0.3, {
+                    Queue.mainQueue().after(0.5, {
                         self.actionButtons.micButton.audioRecorder = nil
                     })
                 }
@@ -2924,6 +2924,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         
         self.tooltipController?.dismiss()
         if self.viewOnce {
+            self.interfaceInteraction?.dismissAllTooltips()
             self.displayViewOnceTooltip(text: interfaceState.strings.Chat_PlayVoiceMessageOnceTooltip)
             
             let _ = ApplicationSpecificNotice.incrementVoiceMessagesPlayOnceSuggestion(accountManager: context.sharedContext.accountManager, count: 3).startStandalone()
