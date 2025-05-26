@@ -212,7 +212,7 @@ public final class SelectablePeerNode: ASDisplayNode {
     public func setup(accountPeerId: EnginePeer.Id, postbox: Postbox, network: Network, energyUsageSettings: EnergyUsageSettings, contentSettings: ContentSettings, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, resolveInlineStickers: @escaping ([Int64]) -> Signal<[Int64: TelegramMediaFile], NoError>, theme: PresentationTheme, strings: PresentationStrings, peer: EngineRenderedPeer, requiresPremiumForMessaging: Bool, requiresStars: Int64? = nil, customTitle: String? = nil, iconId: Int64? = nil, iconColor: Int32? = nil, online: Bool = false, numberOfLines: Int = 2, synchronousLoad: Bool) {
         let isFirstTime = self.peer == nil
         self.peer = peer
-        guard let mainPeer = peer.chatMainPeer else {
+        guard let mainPeer = peer.chatOrMonoforumMainPeer else {
             return
         }
         
@@ -226,8 +226,10 @@ public final class SelectablePeerNode: ASDisplayNode {
         }
         
         var isForum = false
-        if let peer = peer.chatMainPeer, case let .channel(channel) = peer, channel.isForumOrMonoForum {
-            isForum = true
+        var isMonoforum = false
+        if let peer = peer.chatMainPeer, case let .channel(channel) = peer {
+            isForum = channel.isForum
+            isMonoforum = channel.isMonoForum
         }
         
         let text: String
@@ -246,7 +248,15 @@ public final class SelectablePeerNode: ASDisplayNode {
         }
         self.textNode.maximumNumberOfLines = numberOfLines
         self.textNode.attributedText = NSAttributedString(string: customTitle ?? text, font: textFont, textColor: self.currentSelected ? self.theme.selectedTextColor : defaultColor, paragraphAlignment: .center)
-        self.avatarNode.setPeer(accountPeerId: accountPeerId, postbox: postbox, network: network, contentSettings: contentSettings, theme: theme, peer: mainPeer, overrideImage: overrideImage, emptyColor: self.theme.avatarPlaceholderColor, clipStyle: isForum ? .roundedRect : .round, synchronousLoad: synchronousLoad)
+        let clipStyle: AvatarNodeClipStyle
+        if isMonoforum {
+            clipStyle = .bubble
+        } else if isForum {
+            clipStyle = .roundedRect
+        } else {
+            clipStyle = .round
+        }
+        self.avatarNode.setPeer(accountPeerId: accountPeerId, postbox: postbox, network: network, contentSettings: contentSettings, theme: theme, peer: mainPeer, overrideImage: overrideImage, emptyColor: self.theme.avatarPlaceholderColor, clipStyle: clipStyle, synchronousLoad: synchronousLoad)
         
         if let requiresStars {
             let avatarBadgeOutline: UIImageView

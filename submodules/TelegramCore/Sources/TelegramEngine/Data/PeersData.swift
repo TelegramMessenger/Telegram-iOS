@@ -204,6 +204,11 @@ public extension TelegramEngine.EngineData.Item {
                         return nil
                     }
                     peers[mainPeer.id] = EnginePeer(mainPeer)
+                } else if let channel = peer as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId {
+                    guard let mainChannel = view.peers[linkedMonoforumId] else {
+                        return nil
+                    }
+                    peers[mainChannel.id] = EnginePeer(mainChannel)
                 }
 
                 return EngineRenderedPeer(peerId: self.id, peers: peers, associatedMedia: view.media)
