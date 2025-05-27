@@ -1191,7 +1191,8 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
                             canMakePaidContent: canMakePaidContent,
                             currentPrice: currentPrice,
                             hasTimers: hasTimers,
-                            sendPaidMessageStars: strongSelf.presentationInterfaceState.sendPaidMessageStars
+                            sendPaidMessageStars: strongSelf.presentationInterfaceState.sendPaidMessageStars,
+                            isMonoforum: strongSelf.presentationInterfaceState.renderedPeer?.peer?.isMonoForum ?? false
                         )),
                         hasEntityKeyboard: hasEntityKeyboard,
                         gesture: gesture,

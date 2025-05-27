@@ -5290,7 +5290,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     func deletePeerChat(peerId: PeerId, joined: Bool) {
         let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.RenderedPeer(id: peerId))
         |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
-            guard let strongSelf = self, let peer = peer, let chatPeer = peer.peers[peer.peerId], let mainPeer = peer.chatMainPeer else {
+            guard let strongSelf = self, let peer = peer, let chatPeer = peer.peers[peer.peerId], let mainPeer = peer.chatOrMonoforumMainPeer else {
                 return
             }
             strongSelf.view.window?.endEditing(true)

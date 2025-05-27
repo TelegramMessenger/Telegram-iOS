@@ -4187,14 +4187,9 @@ extension ChatControllerImpl {
                 return
             }
             self.updateChatPresentationInterfaceState(animated: true, interactive: true, { presentationInterfaceState in
-                let topicListDisplayMode: ChatPresentationInterfaceState.TopicListDisplayMode
-                switch presentationInterfaceState.topicListDisplayMode ?? .top {
-                case .top:
-                    topicListDisplayMode = .side
-                case .side:
-                    topicListDisplayMode = .top
+                return presentationInterfaceState.updatedInterfaceState { interfaceState in
+                    return interfaceState.withUpdatedTopicListPanelLocation(!interfaceState.topicListPanelLocation)
                 }
-                return presentationInterfaceState.updatedTopicListDisplayMode(topicListDisplayMode)
             })
         }, updateDisplayHistoryFilterAsList: { [weak self] displayAsList in
             guard let self else {

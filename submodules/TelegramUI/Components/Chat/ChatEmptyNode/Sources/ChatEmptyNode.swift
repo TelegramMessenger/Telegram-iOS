@@ -372,7 +372,7 @@ public final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNodeS
             let distance = interfaceState.peerNearbyData?.distance ?? 0
             
             if let renderedPeer = interfaceState.renderedPeer {
-                if let chatPeer = renderedPeer.peers[renderedPeer.peerId] {
+                if let chatPeer = renderedPeer.chatOrMonoforumMainPeer {
                     displayName = EnginePeer(chatPeer).compactDisplayTitle
                 }
             }
@@ -1279,7 +1279,7 @@ public final class ChatEmptyNodePremiumRequiredChatContent: ASDisplayNode, ChatE
         let textButtonSpacing: CGFloat = 12.0
         
         let peerTitle: String
-        if let peer = interfaceState.renderedPeer?.chatMainPeer {
+        if let peer = interfaceState.renderedPeer?.chatOrMonoforumMainPeer {
             peerTitle = EnginePeer(peer).compactDisplayTitle
         } else {
             peerTitle = " "
@@ -1927,7 +1927,7 @@ public final class ChatEmptyNode: ASDisplayNode {
         transition.updateFrame(node: self.backgroundNode, frame: contentFrame)
         self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: min(20.0, self.backgroundNode.bounds.height / 2.0), transition: transition)
         
-        if displayAttachedDescription, let peer = interfaceState.renderedPeer?.chatMainPeer {
+        if displayAttachedDescription, let peer = interfaceState.renderedPeer?.chatOrMonoforumMainPeer {
             let isPremium = interfaceState.isPremium
             let attachedDescriptionNode: EmptyAttachedDescriptionNode
             if let current = self.attachedDescriptionNode {

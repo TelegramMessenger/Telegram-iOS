@@ -1966,6 +1966,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             self.isLoadingEarlier = false
             
             let previousLoadingNode = self.loadingNode
+            self.backgroundNode.updateIsLooping(false)
             self.loadingNode = ChatLoadingNode(context: self.context, theme: self.chatPresentationInterfaceState.theme, chatWallpaper: self.chatPresentationInterfaceState.chatWallpaper, bubbleCorners: self.chatPresentationInterfaceState.bubbleCorners)
             self.loadingNode.frame = previousLoadingNode.frame
             self.loadingNode.isHidden = previousLoadingNode.isHidden
