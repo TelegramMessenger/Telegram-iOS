@@ -417,8 +417,7 @@ public final class ChatSideTopicsPanel: Component {
                     if let threadData = component.item.item.threadData {
                         titleText = threadData.info.title
                     } else {
-                        //TODO:localize
-                        titleText = "General"
+                        titleText = " "
                     }
                 } else {
                     titleText = component.item.item.renderedPeer.chatMainPeer?.compactDisplayTitle ?? " "
@@ -847,8 +846,7 @@ public final class ChatSideTopicsPanel: Component {
                     if let threadData = component.item.item.threadData {
                         titleText = threadData.info.title
                     } else {
-                        //TODO:localize
-                        titleText = "General"
+                        titleText = " "
                     }
                 } else {
                     titleText = component.item.item.renderedPeer.chatMainPeer?.compactDisplayTitle ?? " "
@@ -1220,8 +1218,7 @@ public final class ChatSideTopicsPanel: Component {
                     containerSize: CGSize(width: 100.0, height: 100.0)
                 )
                 
-                //TODO:localize
-                let titleText: String = "All"
+                let titleText: String = component.strings.Chat_InlineTopicMenu_AllTab
                 let titleSize = self.title.update(
                     transition: .immediate,
                     component: AnyComponent(MultilineTextComponent(
@@ -1348,8 +1345,7 @@ public final class ChatSideTopicsPanel: Component {
                 let leftInset: CGFloat = 6.0
                 let rightInset: CGFloat = 12.0
                 
-                //TODO:localize
-                let titleText: String = "All"
+                let titleText: String = component.strings.Chat_InlineTopicMenu_AllTab
                 let titleSize = self.title.update(
                     transition: .immediate,
                     component: AnyComponent(MultilineTextComponent(

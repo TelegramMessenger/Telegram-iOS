@@ -14382,3 +14382,17 @@ Sorry for the inconvenience.";
 "ChannelMessages.SwitchTitle" = "Allow Channel Messages";
 "ChannelMessages.PriceSectionTitle" = "PRICE FOR EACH MESSAGE";
 "ChannelMessages.PriceSectionFooter" = "Charge users for the ability to suggest one post for your channel. You're not required to publish any suggestions by charging this. You'll receive 85% of the selected fee for each incoming suggestion.";
+
+"ChatList.MonoforumLabel" = "MESSAGES";
+"ChatList.MonoforumEmptyText" = "No messages here yet...";
+
+"Chat.InlineTopicMenu.Reorder" = "Reorder";
+"Chat.InlineTopicMenu.Edit" = "Edit";
+"Chat.InlineTopicMenu.AllTab" = "All";
+"Chat.ChannelMessagesHint" = "Tap here to send a message";
+"Chat.ChannelMessagesHintBadge" = "NEW";
+
+"PeerInfo.AllowChannelMessages" = "Allow Channel Messages";
+"PeerInfo.AllowChannelMessages.On" = "On";
+"PeerInfo.AllowChannelMessages.Off" = "Off";
+"PeerInfo.ChannelMessages" = "Channel Messages";

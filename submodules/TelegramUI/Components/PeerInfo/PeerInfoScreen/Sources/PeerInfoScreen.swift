@@ -2219,8 +2219,7 @@ private func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostSt
                         interaction.editingOpenDiscussionGroupSetup()
                     }))
                     
-                    //TODO:localize
-                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPostSuggestionsSettings, label: .text(channel.linkedMonoforumId == nil ? "Off" : "On"), additionalBadgeLabel: presentationData.strings.Settings_New, text: "Allow Channel Messages", icon: UIImage(bundleImageName: "Chat/Info/PostSuggestionsIcon"), action: {
+                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPostSuggestionsSettings, label: .text(channel.linkedMonoforumId == nil ? presentationData.strings.PeerInfo_AllowChannelMessages_Off : presentationData.strings.PeerInfo_AllowChannelMessages_On), additionalBadgeLabel: presentationData.strings.Settings_New, text: presentationData.strings.PeerInfo_AllowChannelMessages, icon: UIImage(bundleImageName: "Chat/Info/PostSuggestionsIcon"), action: {
                         interaction.editingOpenPostSuggestionsSetup()
                     }))
                 }
@@ -2357,8 +2356,7 @@ private func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostSt
                     }))
                     
                     if channel.linkedMonoforumId != nil {
-                        //TODO:localize
-                        items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemChannelMessages, label: .none, text: "Channel Messages", icon: UIImage(bundleImageName: "Chat/Info/RecentActionsIcon"), action: {
+                        items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemChannelMessages, label: .none, text: presentationData.strings.PeerInfo_ChannelMessages, icon: UIImage(bundleImageName: "Chat/Info/RecentActionsIcon"), action: {
                             interaction.openChannelMessages()
                         }))
                     }

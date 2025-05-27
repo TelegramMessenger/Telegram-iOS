@@ -3014,8 +3014,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                             textColor = theme.titleColor
                         }
                         if case let .channel(channel) = itemPeer.peer, channel.flags.contains(.isMonoforum) {
-                            //TODO:localize
-                            titleBadgeText = "MESSAGES"
+                            titleBadgeText = item.presentationData.strings.ChatList_MonoforumLabel
                         }
                         titleAttributedString = NSAttributedString(string: displayTitle, font: titleFont, textColor: textColor)
                     }

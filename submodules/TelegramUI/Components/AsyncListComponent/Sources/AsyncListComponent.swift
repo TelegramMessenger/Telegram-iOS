@@ -526,14 +526,29 @@ public final class AsyncListComponent: Component {
             
             var scrollToItem: ListViewScrollToItem?
             if let resetScrollingRequest = component.externalStateValue.resetScrollingRequest, previousComponent?.externalStateValue.resetScrollingRequest != component.externalStateValue.resetScrollingRequest {
-                //TODO:release calculate direction hint
                 if let index = entries.firstIndex(where: { $0.id == resetScrollingRequest.id }) {
+                    var directionHint: ListViewScrollToItemDirectionHint = .Down
+                    var didSelectDirection = false
+                    self.listNode.forEachItemNode { itemNode in
+                        if didSelectDirection {
+                            return
+                        }
+                        if let itemNode = itemNode as? ListItemNodeImpl, let itemIndex = itemNode.index {
+                            if itemIndex <= index {
+                                directionHint = .Up
+                            } else {
+                                directionHint = .Down
+                            }
+                            didSelectDirection = true
+                        }
+                    }
+                    
                     scrollToItem = ListViewScrollToItem(
                         index: index,
                         position: .visible,
                         animated: animateTransition,
                         curve: updateSizeAndInsets.curve,
-                        directionHint: .Down
+                        directionHint: directionHint
                     )
                 }
             }
@@ -549,12 +564,24 @@ public final class AsyncListComponent: Component {
             transactionOptions.insert(.Synchronous)
             
             self.listNode.transaction(
+                deleteIndices: [],
+                insertIndicesAndItems: [],
+                updateIndicesAndItems: [],
+                options: transactionOptions,
+                scrollToItem: nil,
+                updateSizeAndInsets: updateSizeAndInsets,
+                stationaryItemRange: nil,
+                updateOpaqueState: nil,
+                completion: { _ in }
+            )
+            
+            self.listNode.transaction(
                 deleteIndices: deletions,
                 insertIndicesAndItems: insertions,
                 updateIndicesAndItems: updates,
                 options: transactionOptions,
                 scrollToItem: scrollToItem,
-                updateSizeAndInsets: updateSizeAndInsets,
+                updateSizeAndInsets: nil,
                 stationaryItemRange: nil,
                 updateOpaqueState: nil,
                 completion: { _ in }

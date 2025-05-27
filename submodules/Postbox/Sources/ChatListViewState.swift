@@ -65,7 +65,7 @@ private func mappedChatListFilterPredicate(postbox: PostboxImpl, currentTransact
                 if let cachedPeerData = postbox.cachedPeerDataTable.get(peer.id), postbox.seedConfiguration.decodeDisplayPeerAsRegularChat(cachedPeerData) {
                     displayAsRegularChat = true
                 }
-                let isThreadBased = postbox.seedConfiguration.peerSummaryIsThreadBased(peer).value
+                let isThreadBased = postbox.seedConfiguration.peerSummaryIsThreadBased(peer, peer.associatedPeerId.flatMap(postbox.peerTable.get)).value
                 if !isThreadBased {
                     displayAsRegularChat = true
                 }
@@ -439,7 +439,7 @@ private final class ChatListViewSpaceState {
                                 if let cachedPeerData = postbox.cachedPeerDataTable.get(peer.id), postbox.seedConfiguration.decodeDisplayPeerAsRegularChat(cachedPeerData) {
                                     displayAsRegularChat = true
                                 }
-                                let isThreadBased = postbox.seedConfiguration.peerSummaryIsThreadBased(peer).value
+                                let isThreadBased = postbox.seedConfiguration.peerSummaryIsThreadBased(peer, peer.associatedPeerId.flatMap(postbox.peerTable.get)).value
                                 if !isThreadBased {
                                     displayAsRegularChat = true
                                 }
@@ -577,7 +577,7 @@ private final class ChatListViewSpaceState {
                     if let cachedPeerData = postbox.cachedPeerDataTable.get(entryPeer.id), postbox.seedConfiguration.decodeDisplayPeerAsRegularChat(cachedPeerData) {
                         displayAsRegularChat = true
                     }
-                    let isThreadBased = postbox.seedConfiguration.peerSummaryIsThreadBased(entryPeer).value
+                    let isThreadBased = postbox.seedConfiguration.peerSummaryIsThreadBased(entryPeer, entryPeer.associatedPeerId.flatMap(postbox.peerTable.get)).value
                     if !isThreadBased {
                         displayAsRegularChat = true
                     }
@@ -630,7 +630,7 @@ private final class ChatListViewSpaceState {
                     if let cachedPeerData = postbox.cachedPeerDataTable.get(mainPeer.id), postbox.seedConfiguration.decodeDisplayPeerAsRegularChat(cachedPeerData) {
                         displayAsRegularChat = true
                     }
-                    let isThreadBased = postbox.seedConfiguration.peerSummaryIsThreadBased(mainPeer).value
+                    let isThreadBased = postbox.seedConfiguration.peerSummaryIsThreadBased(mainPeer, mainPeer.associatedPeerId.flatMap(postbox.peerTable.get)).value
                     if !isThreadBased {
                         displayAsRegularChat = true
                     }
@@ -816,7 +816,7 @@ private final class ChatListViewSpaceState {
                     if let cachedPeerData = postbox.cachedPeerDataTable.get(entryPeer.id), postbox.seedConfiguration.decodeDisplayPeerAsRegularChat(cachedPeerData) {
                         displayAsRegularChat = true
                     }
-                    let isThreadBased = postbox.seedConfiguration.peerSummaryIsThreadBased(entryPeer).value
+                    let isThreadBased = postbox.seedConfiguration.peerSummaryIsThreadBased(entryPeer, entryPeer.associatedPeerId.flatMap(postbox.peerTable.get)).value
                     if !isThreadBased {
                         displayAsRegularChat = true
                     }
@@ -878,7 +878,7 @@ private final class ChatListViewSpaceState {
                     if let cachedPeerData = postbox.cachedPeerDataTable.get(mainPeer.id), postbox.seedConfiguration.decodeDisplayPeerAsRegularChat(cachedPeerData) {
                         displayAsRegularChat = true
                     }
-                    let isThreadBased = postbox.seedConfiguration.peerSummaryIsThreadBased(mainPeer).value
+                    let isThreadBased = postbox.seedConfiguration.peerSummaryIsThreadBased(mainPeer, mainPeer.associatedPeerId.flatMap(postbox.peerTable.get)).value
                     if !isThreadBased {
                         displayAsRegularChat = true
                     }
@@ -978,7 +978,7 @@ private final class ChatListViewSpaceState {
                     }
                     let isThreadBased: Bool
                     if let peer = postbox.peerTable.get(entryData.index.messageIndex.id.peerId) {
-                        isThreadBased = postbox.seedConfiguration.peerSummaryIsThreadBased(peer).value
+                        isThreadBased = postbox.seedConfiguration.peerSummaryIsThreadBased(peer, peer.associatedPeerId.flatMap(postbox.peerTable.get)).value
                     } else {
                         isThreadBased = false
                     }
@@ -1620,7 +1620,7 @@ struct ChatListViewState {
                     var isThreadBased = false
                     var threadsArePeers = false
                     if let peer = postbox.peerTable.get(index.messageIndex.id.peerId) {
-                        let value = postbox.seedConfiguration.peerSummaryIsThreadBased(peer)
+                        let value = postbox.seedConfiguration.peerSummaryIsThreadBased(peer, peer.associatedPeerId.flatMap(postbox.peerTable.get))
                         isThreadBased = value.value
                         threadsArePeers = value.threadsArePeers
                     }

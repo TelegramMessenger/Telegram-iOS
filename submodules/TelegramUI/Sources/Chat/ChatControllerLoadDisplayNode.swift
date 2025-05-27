@@ -566,8 +566,6 @@ extension ChatControllerImpl {
         let initTimestamp = self.initTimestamp
         #endif
         
-        //TODO:release ready must include chat node
-        
         self.ready.set(combineLatest(queue: .mainQueue(), [
             self.contentDataReady.get(),
             self.wallpaperReady.get(),
