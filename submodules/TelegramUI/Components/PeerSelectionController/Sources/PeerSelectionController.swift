@@ -22,7 +22,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
     public var peerSelected: ((EnginePeer, Int64?) -> Void)?
     public var multiplePeersSelected: (([EnginePeer], [EnginePeer.Id: EnginePeer], NSAttributedString, AttachmentTextInputPanelSendMode, ChatInterfaceForwardOptionsState?, ChatSendMessageActionSheetController.SendParameters?) -> Void)?
     private let filter: ChatListNodePeersFilter
-    private let forumPeerId: EnginePeer.Id?
+    private let forumPeerId: (id: EnginePeer.Id, isMonoforum: Bool)?
     private let selectForumThreads: Bool
     
     private let attemptSelection: ((EnginePeer, Int64?, ChatListDisabledPeerReason) -> Void)?
@@ -277,28 +277,45 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
         self.peerSelectionNode.requestOpenPeer = { [weak self] peer, threadId in
             if let strongSelf = self, let peerSelected = strongSelf.peerSelected {
                 if case let .channel(peer) = peer, peer.isForumOrMonoForum, threadId == nil, strongSelf.selectForumThreads {
-                    let controller = PeerSelectionControllerImpl(
-                        PeerSelectionControllerParams(
-                            context: strongSelf.context,
-                            updatedPresentationData: nil,
-                            filter: strongSelf.filter,
-                            forumPeerId: peer.id,
-                            hasFilters: false,
-                            hasChatListSelector: false,
-                            hasContactSelector: false,
-                            hasGlobalSearch: false,
-                            title: EnginePeer(peer).compactDisplayTitle,
-                            attemptSelection: strongSelf.attemptSelection,
-                            createNewGroup: nil,
-                            pretendPresentedInModal: false,
-                            multipleSelection: false,
-                            forwardedMessageIds: [],
-                            hasTypeHeaders: false,
-                            selectForumThreads: false
+                    let mainPeer: Signal<EnginePeer?, NoError>
+                    if peer.isMonoForum, let linkedMonoforumId = peer.linkedMonoforumId {
+                        mainPeer = strongSelf.context.engine.data.get(
+                            TelegramEngine.EngineData.Item.Peer.Peer(id: linkedMonoforumId)
                         )
-                    )
-                    controller.peerSelected = strongSelf.peerSelected
-                    strongSelf.push(controller)
+                    } else {
+                        mainPeer = .single(nil)
+                    }
+                    
+                    let _ = (mainPeer |> deliverOnMainQueue).startStandalone(next: { [weak strongSelf] mainPeer in
+                        guard let strongSelf else {
+                            return
+                        }
+                        
+                        let displayPeer = mainPeer ?? EnginePeer(peer)
+                        
+                        let controller = PeerSelectionControllerImpl(
+                            PeerSelectionControllerParams(
+                                context: strongSelf.context,
+                                updatedPresentationData: nil,
+                                filter: strongSelf.filter,
+                                forumPeerId: (peer.id, peer.isMonoForum),
+                                hasFilters: false,
+                                hasChatListSelector: false,
+                                hasContactSelector: false,
+                                hasGlobalSearch: false,
+                                title: displayPeer.compactDisplayTitle,
+                                attemptSelection: strongSelf.attemptSelection,
+                                createNewGroup: nil,
+                                pretendPresentedInModal: false,
+                                multipleSelection: false,
+                                forwardedMessageIds: [],
+                                hasTypeHeaders: false,
+                                selectForumThreads: false
+                            )
+                        )
+                        controller.peerSelected = strongSelf.peerSelected
+                        strongSelf.push(controller)
+                    })
                 } else {
                     peerSelected(peer, threadId)
                 }
@@ -322,7 +339,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
                                     context: strongSelf.context,
                                     updatedPresentationData: nil,
                                     filter: strongSelf.filter,
-                                    forumPeerId: peer.id,
+                                    forumPeerId: (peer.id, peer.isMonoForum),
                                     hasFilters: false,
                                     hasChatListSelector: false,
                                     hasContactSelector: false,

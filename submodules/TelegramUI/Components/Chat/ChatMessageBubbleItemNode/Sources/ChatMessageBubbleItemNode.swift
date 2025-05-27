@@ -1597,7 +1597,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     }
                 }
                 if isMonoForum {
-                    if case .replyThread = item.chatLocation {
+                    if case let .replyThread(replyThreadMessage) = item.chatLocation, firstMessage.effectivelyIncoming(item.context.account.peerId), item.effectiveAuthorId == PeerId(replyThreadMessage.threadId) {
                         displayAuthorInfo = false
                     }
                 }

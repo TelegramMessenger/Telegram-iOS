@@ -2345,7 +2345,8 @@ public func messagesForNotification(transaction: Transaction, id: MessageId, alw
     
     var notificationSettingsStack: [TelegramPeerNotificationSettings] = []
     
-    if let threadId = message.threadId, let threadData = transaction.getMessageHistoryThreadInfo(peerId: message.id.peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
+    if let peer = peer as? TelegramChannel, peer.isMonoForum {
+    } else if let threadId = message.threadId, let threadData = transaction.getMessageHistoryThreadInfo(peerId: message.id.peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
         notificationSettingsStack.append(threadData.notificationSettings)
     }
     

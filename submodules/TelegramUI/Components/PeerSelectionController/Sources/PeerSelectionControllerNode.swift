@@ -33,7 +33,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     private let presentInGlobalOverlay: (ViewController, Any?) -> Void
     private let dismiss: () -> Void
     private let filter: ChatListNodePeersFilter
-    private let forumPeerId: EnginePeer.Id?
+    private let forumPeerId: (id: EnginePeer.Id, isMonoforum: Bool)?
     private let hasGlobalSearch: Bool
     private let forwardedMessageIds: [EngineMessage.Id]
     private let hasTypeHeaders: Bool
@@ -109,7 +109,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         return (self.presentationData, self.presentationDataPromise.get())
     }
     
-    init(context: AccountContext, controller: PeerSelectionControllerImpl, presentationData: PresentationData, filter: ChatListNodePeersFilter, forumPeerId: EnginePeer.Id?, hasFilters: Bool, hasChatListSelector: Bool, hasContactSelector: Bool, hasGlobalSearch: Bool, forwardedMessageIds: [EngineMessage.Id], hasTypeHeaders: Bool, requestPeerType: [ReplyMarkupButtonRequestPeerType]?, hasCreation: Bool, createNewGroup: (() -> Void)?, present: @escaping (ViewController, Any?) -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void) {
+    init(context: AccountContext, controller: PeerSelectionControllerImpl, presentationData: PresentationData, filter: ChatListNodePeersFilter, forumPeerId: (id: EnginePeer.Id, isMonoforum: Bool)?, hasFilters: Bool, hasChatListSelector: Bool, hasContactSelector: Bool, hasGlobalSearch: Bool, forwardedMessageIds: [EngineMessage.Id], hasTypeHeaders: Bool, requestPeerType: [ReplyMarkupButtonRequestPeerType]?, hasCreation: Bool, createNewGroup: (() -> Void)?, present: @escaping (ViewController, Any?) -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void) {
         self.context = context
         self.controller = controller
         self.present = present
@@ -193,8 +193,12 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }
         
         let chatListLocation: ChatListControllerLocation
-        if let forumPeerId = self.forumPeerId {
-            chatListLocation = .forum(peerId: forumPeerId)
+        if let (forumPeerId, isMonoforum) = self.forumPeerId {
+            if isMonoforum {
+                chatListLocation = .savedMessagesChats(peerId: forumPeerId)
+            } else {
+                chatListLocation = .forum(peerId: forumPeerId)
+            }
         } else {
             chatListLocation = .chatList(groupId: .root)
         }
@@ -248,12 +252,46 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }
         
         self.chatListNode?.peerSelected = { [weak self] peer, threadId, _, _, _ in
-            self?.chatListNode?.clearHighlightAnimated(true)
-            self?.requestOpenPeer?(peer, threadId)
+            guard let self else {
+                return
+            }
+            
+            if let (peerId, isMonoforum) = self.forumPeerId, isMonoforum {
+                let _ = (self.context.engine.data.get(
+                    TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+                )
+                |> deliverOnMainQueue).startStandalone(next: { [weak self] mainPeer in
+                    guard let self, let mainPeer else {
+                        return
+                    }
+                    self.chatListNode?.clearHighlightAnimated(true)
+                    self.requestOpenPeer?(mainPeer, peer.id.toInt64())
+                })
+            } else {
+                self.chatListNode?.clearHighlightAnimated(true)
+                self.requestOpenPeer?(peer, threadId)
+            }
         }
         self.mainContainerNode?.peerSelected = { [weak self] peer, threadId, _, _, _ in
-            self?.chatListNode?.clearHighlightAnimated(true)
-            self?.requestOpenPeer?(peer, threadId)
+            guard let self else {
+                return
+            }
+            
+            if let (peerId, isMonoforum) = self.forumPeerId, isMonoforum {
+                let _ = (self.context.engine.data.get(
+                    TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+                )
+                |> deliverOnMainQueue).startStandalone(next: { [weak self] mainPeer in
+                    guard let self, let mainPeer else {
+                        return
+                    }
+                    self.chatListNode?.clearHighlightAnimated(true)
+                    self.requestOpenPeer?(mainPeer, peer.id.toInt64())
+                })
+            } else {
+                self.chatListNode?.clearHighlightAnimated(true)
+                self.requestOpenPeer?(peer, threadId)
+            }
         }
         
         self.chatListNode?.disabledPeerSelected = { [weak self] peer, threadId, reason in
@@ -1212,8 +1250,12 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             self.mainContainerNode?.accessibilityElementsHidden = true
             
             let chatListLocation: ChatListControllerLocation
-            if let forumPeerId = self.forumPeerId {
-                chatListLocation = .forum(peerId: forumPeerId)
+            if let (forumPeerId, isMonoforum) = self.forumPeerId {
+                if isMonoforum {
+                    chatListLocation = .savedMessagesChats(peerId: forumPeerId)
+                } else {
+                    chatListLocation = .forum(peerId: forumPeerId)
+                }
             } else {
                 chatListLocation = .chatList(groupId: EngineChatList.Group(.root))
             }

@@ -161,7 +161,8 @@ extension StoredMessageHistoryThreadInfo {
         self.init(data: entry, summary: Summary(
             totalUnreadCount: data.incomingUnreadCount,
             isMarkedUnread: data.isMarkedUnread,
-            mutedUntil: mutedUntil
+            mutedUntil: mutedUntil,
+            maxOutgoingReadId: data.maxOutgoingReadId
         ))
     }
 }

@@ -526,7 +526,7 @@ public func threadNotificationExceptionsScreen(context: AccountContext, peerId: 
     }, addException: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let filter: ChatListNodePeersFilter = [.excludeRecent, .doNotSearchMessages, .removeSearchHeader]
-        let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: filter, forumPeerId: peerId, hasContactSelector: false, title: presentationData.strings.Notifications_AddExceptionTitle))
+        let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: filter, forumPeerId: (peerId, false), hasContactSelector: false, title: presentationData.strings.Notifications_AddExceptionTitle))
         controller.peerSelected = { [weak controller] _, threadId in
             guard let threadId = threadId else {
                 return
