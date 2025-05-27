@@ -335,6 +335,8 @@ public final class AsyncListComponent: Component {
             super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
             
             self.view.addSubview(self.contentContainer)
+            
+            self.scrollPositioningInsets = UIEdgeInsets(top: -24.0, left: 0.0, bottom: -24.0, right: 0.0)
         }
         
         deinit {

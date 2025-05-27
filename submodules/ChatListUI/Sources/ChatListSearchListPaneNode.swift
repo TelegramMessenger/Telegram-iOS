@@ -2990,6 +2990,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                             var associatedPeer: EnginePeer?
                             if case let .secretChat(secretChat) = peer, let associatedPeerId = secretChat.associatedPeerId {
                                 associatedPeer = renderedPeer.peers[associatedPeerId]
+                            } else if case let .channel(channel) = peer, channel.isMonoForum {
+                                associatedPeer = renderedPeer.chatOrMonoforumMainPeer
                             }
                             
                             entries.append(.recentlySearchedPeer(peer, associatedPeer, foundLocalPeers.unread[peer.id], index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder, nil, false))
@@ -3001,8 +3003,13 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 
                 if lowercasedQuery.count > 1 {
                     for peer in recentPeers {
+                        let renderedPeer = peer
                         if let peer = peer.peer.chatMainPeer, !existingPeerIds.contains(peer.id) {
                             let peer = EnginePeer(peer)
+                            var associatedPeer: EnginePeer?
+                            if case let .channel(channel) = peer, channel.isMonoForum {
+                                associatedPeer = renderedPeer.peer.chatOrMonoforumMainPeer.flatMap(EnginePeer.init)
+                            }
                             
                             var matches = false
                             if case let .user(user) = peer {
@@ -3017,7 +3024,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                             
                             if matches {
                                 existingPeerIds.insert(peer.id)
-                                entries.append(.localPeer(peer, nil, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder, localExpandType, nil, false, false))
+                                entries.append(.localPeer(peer, associatedPeer, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder, localExpandType, nil, false, false))
                             }
                         }
                     }
@@ -3038,6 +3045,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                             var associatedPeer: EnginePeer?
                             if case let .secretChat(secretChat) = peer, let associatedPeerId = secretChat.associatedPeerId {
                                 associatedPeer = renderedPeer.peers[associatedPeerId]
+                            } else if case let .channel(channel) = peer, channel.isMonoForum {
+                                associatedPeer = renderedPeer.chatOrMonoforumMainPeer
                             }
                             
                             entries.append(.localPeer(peer, associatedPeer, foundLocalPeers.unread[peer.id], index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder, localExpandType, nil, false, false))
@@ -3081,6 +3090,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         
                         if !existingPeerIds.contains(peer.peer.id), filteredPeer(EnginePeer(peer.peer), EnginePeer(accountPeer)) {
                             existingPeerIds.insert(peer.peer.id)
+                            
                             entries.append(.globalPeer(peer, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder, globalExpandType, nil, false, finalQuery))
                             index += 1
                             numberOfGlobalPeers += 1

@@ -1712,7 +1712,11 @@ private final class NotificationServiceHandler {
                                         var content = initialContent
                                         
                                         if let interactionAuthorId = interactionAuthorId {
-                                            if inAppNotificationSettings.displayNameOnLockscreen, let peer = transaction.getPeer(interactionAuthorId) {
+                                            if inAppNotificationSettings.displayNameOnLockscreen, var peer = transaction.getPeer(interactionAuthorId) {
+                                                if let channel = peer as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = transaction.getPeer(linkedMonoforumId) {
+                                                    peer = mainChannel
+                                                }
+                                                
                                                 var foundLocalId: String?
                                                 transaction.enumerateDeviceContactImportInfoItems({ _, value in
                                                     if let value = value as? TelegramDeviceContactImportedData {
@@ -2026,7 +2030,11 @@ private final class NotificationServiceHandler {
                                         var content = initialContent
                                         
                                         if let interactionAuthorId = interactionAuthorId {
-                                            if inAppNotificationSettings.displayNameOnLockscreen, let peer = transaction.getPeer(interactionAuthorId) {
+                                            if inAppNotificationSettings.displayNameOnLockscreen, var peer = transaction.getPeer(interactionAuthorId) {
+                                                if let channel = peer as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = transaction.getPeer(linkedMonoforumId) {
+                                                    peer = mainChannel
+                                                }
+                                                
                                                 var foundLocalId: String?
                                                 transaction.enumerateDeviceContactImportInfoItems({ _, value in
                                                     if let value = value as? TelegramDeviceContactImportedData {
