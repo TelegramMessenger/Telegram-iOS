@@ -325,11 +325,16 @@ public final class AsyncListComponent: Component {
     }
     
     private final class ListItemNodeImpl: ListViewItemNode {
+        private let contentContainer: UIView
         private let contentsView = ComponentView<Empty>()
         private(set) var item: ListItemImpl?
         
         init() {
+            self.contentContainer = UIView()
+            
             super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
+            
+            self.view.addSubview(self.contentContainer)
         }
         
         deinit {
@@ -377,16 +382,17 @@ public final class AsyncListComponent: Component {
                     
                     switch item.direction {
                     case .vertical:
-                        self.layer.sublayerTransform = CATransform3DIdentity
+                        self.contentContainer.layer.sublayerTransform = CATransform3DIdentity
                     case .horizontal:
-                        self.layer.sublayerTransform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
+                        self.contentContainer.layer.sublayerTransform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
                     }
+                    self.contentContainer.frame = CGRect(origin: CGPoint(), size: mappedContentsSize)
                     
                     let contentsFrame = CGRect(origin: CGPoint(), size: contentsSize)
                     
                     if let contentsComponentView = self.contentsView.view {
                         if contentsComponentView.superview == nil {
-                            self.view.addSubview(contentsComponentView)
+                            self.contentContainer.addSubview(contentsComponentView)
                         }
                         contentsComponentView.center = CGPoint(x: mappedContentsSize.width * 0.5, y: mappedContentsSize.height * 0.5)
                         contentsComponentView.bounds = CGRect(origin: CGPoint(), size: contentsFrame.size)

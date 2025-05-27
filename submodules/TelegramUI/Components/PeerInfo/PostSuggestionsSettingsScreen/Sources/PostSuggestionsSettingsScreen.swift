@@ -230,7 +230,7 @@ final class PostSuggestionsSettingsScreenComponent: Component {
             let iconSize = self.icon.update(
                 transition: .immediate,
                 component: AnyComponent(LottieComponent(
-                    content: LottieComponent.AppBundleContent(name: "LampEmoji"),
+                    content: LottieComponent.AppBundleContent(name: "ChannelMessages"),
                     loop: false
                 )),
                 environment: {},

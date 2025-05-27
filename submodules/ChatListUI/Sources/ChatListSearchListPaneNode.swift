@@ -145,6 +145,9 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                 if case .secretChat = maybeChatPeer, let associatedPeerId = maybeChatPeer._asPeer().associatedPeerId, let associatedPeer = peer.peer.peers[associatedPeerId] {
                     primaryPeer = EnginePeer(associatedPeer)
                     chatPeer = maybeChatPeer
+                } else if case .channel = maybeChatPeer, let mainChannel = peer.peer.chatOrMonoforumMainPeer {
+                    primaryPeer = EnginePeer(mainChannel)
+                    chatPeer = maybeChatPeer
                 } else {
                     primaryPeer = maybeChatPeer
                     chatPeer = maybeChatPeer
