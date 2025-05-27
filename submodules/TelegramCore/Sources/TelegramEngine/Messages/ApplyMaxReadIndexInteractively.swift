@@ -12,6 +12,30 @@ func _internal_applyMaxReadIndexInteractively(postbox: Postbox, stateManager: Ac
     
 func _internal_applyMaxReadIndexInteractively(transaction: Transaction, stateManager: AccountStateManager, index: MessageIndex)  {
     let messageIds = transaction.applyInteractiveReadMaxIndex(index)
+    
+    if let channel = transaction.getPeer(index.id.peerId) as? TelegramChannel, channel.isForumOrMonoForum {
+        if let combinedPeerReadState = transaction.getCombinedPeerReadState(channel.id), combinedPeerReadState.count == 0 {
+            for item in transaction.getMessageHistoryThreadIndex(peerId: channel.id, limit: 100) {
+                guard var data = transaction.getMessageHistoryThreadInfo(peerId: index.id.peerId, threadId: item.threadId)?.data.get(MessageHistoryThreadData.self) else {
+                    continue
+                }
+                guard let messageIndex = transaction.getMessageHistoryThreadTopMessage(peerId: index.id.peerId, threadId: item.threadId, namespaces: Set([Namespaces.Message.Cloud])) else {
+                    continue
+                }
+                if data.incomingUnreadCount != 0 {
+                    data.incomingUnreadCount = 0
+                    data.isMarkedUnread = false
+                    data.maxIncomingReadId = max(messageIndex.id.id, data.maxIncomingReadId)
+                    data.maxKnownMessageId = max(data.maxKnownMessageId, messageIndex.id.id)
+                    
+                    if let entry = StoredMessageHistoryThreadInfo(data) {
+                        transaction.setMessageHistoryThreadInfo(peerId: index.id.peerId, threadId: item.threadId, info: entry)
+                    }
+                }
+            }
+        }
+    }
+    
     if index.id.peerId.namespace == Namespaces.Peer.SecretChat {
         let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
         for id in messageIds {
