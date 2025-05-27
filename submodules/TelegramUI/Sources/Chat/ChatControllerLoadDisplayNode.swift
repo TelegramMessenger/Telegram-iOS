@@ -1536,7 +1536,14 @@ extension ChatControllerImpl {
                                 completion(t, {})
                             })
                             strongSelf.updateItemNodesSearchTextHighlightStates()
-                            strongSelf.chatDisplayNode.ensureInputViewFocused()
+                            if !strongSelf.chatDisplayNode.ensureInputViewFocused() {
+                                DispatchQueue.main.async { [weak self] in
+                                    guard let self else {
+                                        return
+                                    }
+                                    self.chatDisplayNode.ensureInputViewFocused()
+                                }
+                            }
                         } else {
                             completion(.immediate, {})
                         }

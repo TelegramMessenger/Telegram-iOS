@@ -3792,9 +3792,12 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
     }
     
-    func ensureInputViewFocused() {
+    @discardableResult func ensureInputViewFocused() -> Bool {
         if let inputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode {
             inputPanelNode.ensureFocused()
+            return true
+        } else {
+            return false
         }
     }
     
