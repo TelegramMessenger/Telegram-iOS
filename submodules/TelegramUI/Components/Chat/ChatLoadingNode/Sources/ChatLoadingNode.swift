@@ -215,7 +215,10 @@ public final class ChatLoadingPlaceholderNode: ASDisplayNode {
         self.borderNode.view.mask = self.borderMaskNode.view
         
         if self.context.sharedContext.energyUsageSettings.fullTranslucency {
-            Queue.mainQueue().after(0.3) {
+            Queue.mainQueue().after(0.3) { [weak self] in
+                guard let self else {
+                    return
+                }
                 if !self.didAnimateOut {
                     self.backgroundNode?.updateIsLooping(true)
                 }

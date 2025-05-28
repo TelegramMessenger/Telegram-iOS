@@ -399,7 +399,10 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
             var hasAvatar = false
             if !hasActionMedia {
                 if !isBroadcastChannel {
-                    hasAvatar = true
+                    if let channel = message.peers[message.id.peerId] as? TelegramChannel, channel.isMonoForum, chatLocation.threadId != nil {
+                    } else {
+                        hasAvatar = true
+                    }
                 } else if let channel = message.peers[message.id.peerId] as? TelegramChannel, case let .broadcast(info) = channel.info {
                     if info.flags.contains(.messagesShouldHaveProfiles) {
                         hasAvatar = true

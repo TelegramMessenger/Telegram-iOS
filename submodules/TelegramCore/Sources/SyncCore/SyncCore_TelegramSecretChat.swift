@@ -22,6 +22,7 @@ public final class TelegramSecretChat: Peer, Equatable {
     }
     
     public let notificationSettingsPeerId: PeerId?
+    public let associatedPeerOverridesIdentity: Bool = true
     
     public var timeoutAttribute: UInt32? { return nil }
     

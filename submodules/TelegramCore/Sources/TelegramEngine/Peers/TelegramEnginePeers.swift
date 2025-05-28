@@ -1143,6 +1143,18 @@ public extension TelegramEngine {
             |> ignoreValues
         }
         
+        public func getPerstistentChatInterfaceState(peerId: EnginePeer.Id) -> Signal<CodableEntry?, NoError> {
+            return self.account.postbox.transaction({ transaction -> CodableEntry? in
+                return (transaction.getPreferencesEntry(key: PreferencesKeys.persistentChatInterfaceData(peerId: peerId))?.data).flatMap(CodableEntry.init(data:))
+            })
+        }
+        
+        public func setPerstistentChatInterfaceState(peerId: EnginePeer.Id, state: CodableEntry?) {
+            let _ = self.account.postbox.transaction({ transaction -> Void in
+                transaction.setPreferencesEntry(key: PreferencesKeys.persistentChatInterfaceData(peerId: peerId), value: (state?.data).flatMap(PreferencesEntry.init(data:)))
+            }).startStandalone()
+        }
+        
         public func sendAsAvailablePeers(peerId: PeerId) -> Signal<[SendAsPeer], NoError> {
             return _internal_cachedPeerSendAsAvailablePeers(account: self.account, peerId: peerId)
         }

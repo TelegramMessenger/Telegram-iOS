@@ -254,6 +254,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     let contentDataReady = ValuePromise<Bool>(false, ignoreRepeated: true)
     var contentDataDisposable: Disposable?
     var didHandlePerformDismissAction: Bool = false
+    var didInitializePersistentPeerInterfaceData: Bool = false
     
     var accountPeerDisposable: Disposable?
     
@@ -6943,6 +6944,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         let _ = ChatInterfaceState.update(engine: self.context.engine, peerId: peerId, threadId: threadId, { _ in
             return interfaceState
         }).startStandalone()
+        
+        self.context.engine.peers.setPerstistentChatInterfaceState(peerId: peerId, state: CodableEntry(self.presentationInterfaceState.persistentData))
     }
         
     override public func viewWillLeaveNavigation() {
@@ -7835,8 +7838,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum {
                     attributes.removeAll(where: { $0 is SendAsMessageAttribute })
-                    if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = self.presentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething), let sendAsPeerId = self.presentationInterfaceState.currentSendAsPeerId {
-                        attributes.append(SendAsMessageAttribute(peerId: sendAsPeerId))
+                    if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = self.presentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
+                        if let sendAsPeerId = self.presentationInterfaceState.currentSendAsPeerId {
+                            attributes.append(SendAsMessageAttribute(peerId: sendAsPeerId))
+                        } else {
+                            attributes.append(SendAsMessageAttribute(peerId: linkedMonoforumId))
+                        }
                     }
                 }
                 if let sendAsPeerId = self.presentationInterfaceState.currentSendAsPeerId {

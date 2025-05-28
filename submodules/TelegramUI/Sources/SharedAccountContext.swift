@@ -85,6 +85,7 @@ import GiftStoreScreen
 import SendInviteLinkScreen
 import PostSuggestionsSettingsScreen
 import ForumSettingsScreen
+import ForumCreateTopicScreen
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -2607,6 +2608,25 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         } else {
             return botListSettingsScreen(context: context)
         }
+    }
+    
+    public func makeEditForumTopicScreen(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64, threadInfo: EngineMessageHistoryThread.Info, isHidden: Bool) -> ViewController {
+        let controller = ForumCreateTopicScreen(context: context, peerId: peerId, mode: .edit(threadId: threadId, threadInfo: threadInfo, isHidden: isHidden))
+        controller.navigationPresentation = .modal
+        controller.completion = { [weak controller] title, fileId, _, isHidden in
+            let _ = (context.engine.peers.editForumChannelTopic(id: peerId, threadId: threadId, title: title, iconFileId: fileId)
+            |> deliverOnMainQueue).startStandalone(completed: {
+                controller?.dismiss()
+            })
+            
+            if let isHidden {
+                let _ = (context.engine.peers.setForumChannelTopicHidden(id: peerId, threadId: threadId, isHidden: isHidden)
+                |> deliverOnMainQueue).startStandalone(completed: {
+                    controller?.dismiss()
+                })
+            }
+        }
+        return controller
     }
     
     private func mapIntroSource(source: PremiumIntroSource) -> PremiumSource {

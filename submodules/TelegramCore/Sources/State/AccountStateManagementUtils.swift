@@ -4262,7 +4262,7 @@ func replayFinalState(
                     } else {
                         updatedIncomingThreadReadStates[peerAndThreadId] = readMaxId
                     }
-                    if let channel = transaction.getPeer(peerAndThreadId.peerId) as? TelegramChannel, case .group = channel.info, channel.flags.contains(.isForum) {
+                    if let channel = transaction.getPeer(peerAndThreadId.peerId) as? TelegramChannel, case .group = channel.info, (channel.flags.contains(.isForum) || channel.flags.contains(.isMonoforum)) {
                         let threadId = peerAndThreadId.threadId
                         if var data = transaction.getMessageHistoryThreadInfo(peerId: peerAndThreadId.peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
                             if readMaxId > data.maxIncomingReadId {
@@ -4315,7 +4315,7 @@ func replayFinalState(
                     } else {
                         updatedOutgoingThreadReadStates[peerAndThreadId] = readMaxId
                     }
-                    if let channel = transaction.getPeer(peerAndThreadId.peerId) as? TelegramChannel, case .group = channel.info, channel.flags.contains(.isForum) {
+                    if let channel = transaction.getPeer(peerAndThreadId.peerId) as? TelegramChannel, case .group = channel.info, (channel.flags.contains(.isForum) || channel.flags.contains(.isMonoforum)) {
                         if var data = transaction.getMessageHistoryThreadInfo(peerId: peerAndThreadId.peerId, threadId: peerAndThreadId.threadId)?.data.get(MessageHistoryThreadData.self) {
                             if readMaxId >= data.maxOutgoingReadId {
                                 data.maxOutgoingReadId = readMaxId

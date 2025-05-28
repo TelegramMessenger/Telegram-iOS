@@ -760,9 +760,14 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
             return
         }
         
+        var isMonoforum = false
+        if case let .channel(channel) = mainPeer {
+            isMonoforum = channel.isMonoForum
+        }
+        
         var didPresent = false
         var presentImpl: (() -> Void)?
-        let threads = threadList(accountPeerId: context.accountPeerId, postbox: context.stateManager.postbox, peerId: mainPeer.id)
+        let threads = threadList(accountPeerId: context.accountPeerId, postbox: context.stateManager.postbox, peerId: mainPeer.id, isMonoforum: isMonoforum)
         |> deliverOnMainQueue
         |> beforeNext { _ in
             if !didPresent {
@@ -1933,78 +1938,162 @@ private final class ShareContextReferenceContentSource: ContextReferenceContentS
     }
 }
 
-private func threadList(accountPeerId: EnginePeer.Id, postbox: Postbox, peerId: EnginePeer.Id) -> Signal<EngineChatList, NoError> {
-    let viewKey: PostboxViewKey = .messageHistoryThreadIndex(
-        id: peerId,
-        summaryComponents: ChatListEntrySummaryComponents(
-            components: [:]
-        )
-    )
-
-    return postbox.combinedView(keys: [viewKey])
-    |> mapToSignal { view -> Signal<CombinedView, NoError> in
-        return postbox.transaction { transaction -> CombinedView in
-            if let peer = transaction.getPeer(accountPeerId) {
-                transaction.updatePeersInternal([peer]) { current, _ in
-                    return current ?? peer
+private func threadList(accountPeerId: EnginePeer.Id, postbox: Postbox, peerId: EnginePeer.Id, isMonoforum: Bool) -> Signal<EngineChatList, NoError> {
+    if isMonoforum {
+        let viewKey: PostboxViewKey = .savedMessagesIndex(peerId: peerId)
+        let interfaceStateKey: PostboxViewKey = .chatInterfaceState(peerId: peerId)
+        
+        return postbox.combinedView(keys: [viewKey, interfaceStateKey])
+        |> map { views -> EngineChatList in
+            guard let view = views.views[viewKey] as? MessageHistorySavedMessagesIndexView else {
+                preconditionFailure()
+            }
+            
+            var draft: EngineChatList.Draft?
+            if let interfaceStateView = views.views[interfaceStateKey] as? ChatInterfaceStateView {
+                if let embeddedState = interfaceStateView.value, let _ = embeddedState.overrideChatTimestamp {
+                    if let opaqueState = _internal_decodeStoredChatInterfaceState(state: embeddedState) {
+                        if let text = opaqueState.synchronizeableInputState?.text {
+                            draft = EngineChatList.Draft(text: text, entities: opaqueState.synchronizeableInputState?.entities ?? [])
+                        }
+                    }
                 }
             }
-            return view
-        }
-    }
-    |> map { views -> EngineChatList in
-        guard let view = views.views[viewKey] as? MessageHistoryThreadIndexView else {
-            preconditionFailure()
-        }
-        
-        var items: [EngineChatList.Item] = []
-        for item in view.items {
-            guard let peer = view.peer else {
-                continue
-            }
-            guard let data = item.info.get(MessageHistoryThreadData.self) else {
-                continue
+             
+            var items: [EngineChatList.Item] = []
+            for item in view.items {
+                guard let sourcePeer = item.peer else {
+                    continue
+                }
+                
+                let sourceId = PeerId(item.id)
+                
+                var messages: [EngineMessage] = []
+                if let topMessage = item.topMessage {
+                    messages.append(EngineMessage(topMessage))
+                }
+                
+                let mappedMessageIndex = MessageIndex(id: MessageId(peerId: sourceId, namespace: item.index.id.namespace, id: item.index.id.id), timestamp: item.index.timestamp)
+                
+                let readCounters = EnginePeerReadCounters(state: CombinedPeerReadState(states: [(Namespaces.Message.Cloud, .idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: Int32(item.unreadCount), markedUnread: item.markedUnread))]), isMuted: false)
+                
+                var itemDraft: EngineChatList.Draft?
+                if let embeddedState = item.embeddedInterfaceState, let _ = embeddedState.overrideChatTimestamp {
+                    if let opaqueState = _internal_decodeStoredChatInterfaceState(state: embeddedState) {
+                        if let text = opaqueState.synchronizeableInputState?.text {
+                            itemDraft = EngineChatList.Draft(text: text, entities: opaqueState.synchronizeableInputState?.entities ?? [])
+                        }
+                    }
+                }
+                
+                items.append(EngineChatList.Item(
+                    id: .chatList(sourceId),
+                    index: .chatList(ChatListIndex(pinningIndex: item.pinnedIndex.flatMap(UInt16.init), messageIndex: mappedMessageIndex)),
+                    messages: messages,
+                    readCounters: readCounters,
+                    isMuted: false,
+                    draft: sourceId == accountPeerId ? draft : itemDraft,
+                    threadData: nil,
+                    renderedPeer: EngineRenderedPeer(peer: EnginePeer(sourcePeer)),
+                    presence: nil,
+                    hasUnseenMentions: false,
+                    hasUnseenReactions: false,
+                    forumTopicData: nil,
+                    topForumTopicItems: [],
+                    hasFailed: false,
+                    isContact: false,
+                    autoremoveTimeout: nil,
+                    storyStats: nil,
+                    displayAsTopicList: false,
+                    isPremiumRequiredToMessage: false,
+                    mediaDraftContentType: nil
+                ))
             }
             
-            let pinnedIndex: EngineChatList.Item.PinnedIndex
-            if let index = item.pinnedIndex {
-                pinnedIndex = .index(index)
-            } else {
-                pinnedIndex = .none
-            }
+            let list = EngineChatList(
+                items: items.reversed(),
+                groupItems: [],
+                additionalItems: [],
+                hasEarlier: false,
+                hasLater: false,
+                isLoading: view.isLoading
+            )
             
-            items.append(EngineChatList.Item(
-                id: .forum(item.id),
-                index: .forum(pinnedIndex: pinnedIndex, timestamp: item.index.timestamp, threadId: item.id, namespace: item.index.id.namespace, id: item.index.id.id),
-                messages: item.topMessage.flatMap { [EngineMessage($0)] } ?? [],
-                readCounters: nil,
-                isMuted: false,
-                draft: nil,
-                threadData: data,
-                renderedPeer: EngineRenderedPeer(peer: EnginePeer(peer)),
-                presence: nil,
-                hasUnseenMentions: false,
-                hasUnseenReactions: false,
-                forumTopicData: nil,
-                topForumTopicItems: [],
-                hasFailed: false,
-                isContact: false,
-                autoremoveTimeout: nil,
-                storyStats: nil,
-                displayAsTopicList: false,
-                isPremiumRequiredToMessage: false,
-                mediaDraftContentType: nil
-            ))
+            return list
         }
-        
-        let list = EngineChatList(
-            items: items,
-            groupItems: [],
-            additionalItems: [],
-            hasEarlier: false,
-            hasLater: false,
-            isLoading: view.isLoading
+    } else {
+        let viewKey: PostboxViewKey = .messageHistoryThreadIndex(
+            id: peerId,
+            summaryComponents: ChatListEntrySummaryComponents(
+                components: [:]
+            )
         )
-        return list
+
+        return postbox.combinedView(keys: [viewKey])
+        |> mapToSignal { view -> Signal<CombinedView, NoError> in
+            return postbox.transaction { transaction -> CombinedView in
+                if let peer = transaction.getPeer(accountPeerId) {
+                    transaction.updatePeersInternal([peer]) { current, _ in
+                        return current ?? peer
+                    }
+                }
+                return view
+            }
+        }
+        |> map { views -> EngineChatList in
+            guard let view = views.views[viewKey] as? MessageHistoryThreadIndexView else {
+                preconditionFailure()
+            }
+            
+            var items: [EngineChatList.Item] = []
+            for item in view.items {
+                guard let peer = view.peer else {
+                    continue
+                }
+                guard let data = item.info.get(MessageHistoryThreadData.self) else {
+                    continue
+                }
+                
+                let pinnedIndex: EngineChatList.Item.PinnedIndex
+                if let index = item.pinnedIndex {
+                    pinnedIndex = .index(index)
+                } else {
+                    pinnedIndex = .none
+                }
+                
+                items.append(EngineChatList.Item(
+                    id: .forum(item.id),
+                    index: .forum(pinnedIndex: pinnedIndex, timestamp: item.index.timestamp, threadId: item.id, namespace: item.index.id.namespace, id: item.index.id.id),
+                    messages: item.topMessage.flatMap { [EngineMessage($0)] } ?? [],
+                    readCounters: nil,
+                    isMuted: false,
+                    draft: nil,
+                    threadData: data,
+                    renderedPeer: EngineRenderedPeer(peer: EnginePeer(peer)),
+                    presence: nil,
+                    hasUnseenMentions: false,
+                    hasUnseenReactions: false,
+                    forumTopicData: nil,
+                    topForumTopicItems: [],
+                    hasFailed: false,
+                    isContact: false,
+                    autoremoveTimeout: nil,
+                    storyStats: nil,
+                    displayAsTopicList: false,
+                    isPremiumRequiredToMessage: false,
+                    mediaDraftContentType: nil
+                ))
+            }
+            
+            let list = EngineChatList(
+                items: items,
+                groupItems: [],
+                additionalItems: [],
+                hasEarlier: false,
+                hasLater: false,
+                isLoading: view.isLoading
+            )
+            return list
+        }
     }
 }

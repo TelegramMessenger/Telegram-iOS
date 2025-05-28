@@ -679,13 +679,16 @@ final class MutableMessageHistoryView: MutablePostboxView {
                             hasChanges = true
                         }
                     case let .UpdateReadState(peerId, combinedReadState):
-                        hasChanges = true
-                        if let transientReadStates = self.transientReadStates {
-                            switch transientReadStates {
-                            case let .peer(states):
-                                var updatedStates = states
-                                updatedStates[peerId] = combinedReadState
-                                self.transientReadStates = .peer(updatedStates)
+                        if case let .single(_, threadId) = self.peerIds, threadId != nil {
+                        } else {
+                            hasChanges = true
+                            if let transientReadStates = self.transientReadStates {
+                                switch transientReadStates {
+                                case let .peer(states):
+                                    var updatedStates = states
+                                    updatedStates[peerId] = combinedReadState
+                                    self.transientReadStates = .peer(updatedStates)
+                                }
                             }
                         }
                     case let .UpdateTimestamp(index, timestamp):
@@ -698,8 +701,15 @@ final class MutableMessageHistoryView: MutablePostboxView {
             
             var currentThreadId: Int64?
             switch self.peerIds {
-            case let .single(_, threadIdValue):
+            case let .single(peerId, threadIdValue):
                 currentThreadId = threadIdValue
+                
+                if let threadIdValue, transaction.updatedPeerThreadInfos.contains(MessageHistoryThreadsTable.ItemId(peerId: peerId, threadId: threadIdValue)) {
+                    if let threadData = postbox.messageHistoryThreadIndexTable.get(peerId: peerId, threadId: threadIdValue) {
+                        hasChanges = true
+                        self.transientReadStates = .peer([peerId: CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 0, maxOutgoingReadId: threadData.summary.maxOutgoingReadId, maxKnownId: 0, count: 0, markedUnread: false))])])
+                    }
+                }
             case .associated:
                 break
             case .external:

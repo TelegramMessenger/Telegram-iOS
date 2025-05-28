@@ -268,6 +268,10 @@ public final class EmojiStatusComponent: Component {
             }
         }
         
+        public func playOnce() {
+            self.animationLayer?.playOnce()
+        }
+        
         func update(component: EmojiStatusComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             let availableSize = component.size ?? availableSize
             

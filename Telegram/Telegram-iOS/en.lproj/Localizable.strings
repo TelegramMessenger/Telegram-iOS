@@ -14013,9 +14013,17 @@ Sorry for the inconvenience.";
 "Notification.PaidMessagePriceChanged.Stars_1" = "%@ Star";
 "Notification.PaidMessagePriceChanged.Stars_any" = "%@ Stars";
 "Notification.PaidMessagePriceChanged" = "%1$@ changed price to %2$@ per message";
-"Notification.PaidMessagePriceChangedAndEnabledChannelMessage" = "%1$@ changed price to %2$@ per message, and enabled messaging this channel";
 "Notification.PaidMessagePriceChangedYou" = "You changed price to %1$@ per message";
-"Notification.PaidMessagePriceChangedAndEnabledChannelMessageYou" = "You changed price to %1$@ per message, and enabled messaging this channel";
+
+"Notification.ChannelMessagePriceChanged_1" = "{name} set the private message price to %d star";
+"Notification.ChannelMessagePriceChanged_any" = "{name} set the private message price to %d stars";
+"Notification.ChannelMessagePriceZeroChanged" = "%@ now accepts private messages";
+
+"Notification.ChannelMessagePriceChangedAndEnabledChannelMessage_1" = "{name} now accepts private messages for %d star";
+"Notification.ChannelMessagePriceChangedAndEnabledChannelMessage_any" = "{name} now accepts private messages for %d stars";
+"Notification.ChannelMessagePriceZeroChangedAndEnabledChannelMessage" = "%@ now accepts private messages";
+
+"Notification.ChannelMessageDisabled" = "%@ no longer accepts private messages";
 
 "Premium.MaxExpiringStoriesTextNumberFormat_1" = "**%d** story";
 "Premium.MaxExpiringStoriesTextNumberFormat_any" = "**%d** stories";
@@ -14368,3 +14376,25 @@ Sorry for the inconvenience.";
 
 "PeerInfo.OptionTopics.Enabled" = "Enabled";
 "PeerInfo.OptionTopics.Disabled" = "Disabled";
+
+"ChannelMessages.Title" = "Allow Channel Messages";
+"ChannelMessages.Info" = "Allow users to send messages to your channel, with the option to charge a fee for each message.";
+"ChannelMessages.SwitchTitle" = "Allow Channel Messages";
+"ChannelMessages.PriceSectionTitle" = "PRICE FOR EACH MESSAGE";
+"ChannelMessages.PriceSectionFooter" = "You will receive 85% of the selected fee for each incoming message.";
+
+"ChatList.MonoforumLabel" = "MESSAGES";
+"ChatList.MonoforumEmptyText" = "No messages here yet...";
+
+"Chat.InlineTopicMenu.Reorder" = "Reorder";
+"Chat.InlineTopicMenu.Edit" = "Edit";
+"Chat.InlineTopicMenu.AllTab" = "All";
+"Chat.ChannelMessagesHint" = "Send a message to the channel's admin";
+"Chat.ChannelMessagesHintBadge" = "NEW";
+
+"PeerInfo.AllowChannelMessages" = "Allow Channel Messages";
+"PeerInfo.AllowChannelMessages.On" = "On";
+"PeerInfo.AllowChannelMessages.Off" = "Off";
+"PeerInfo.ChannelMessages" = "Channel Messages";
+
+"Chat.EmptyStateMonoforum.Text" = "Send a direct message to the administrator of **%@**.";

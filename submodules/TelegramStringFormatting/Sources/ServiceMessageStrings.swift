@@ -140,8 +140,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 } else {
                     if forChatList {
                         if isMonoforum {
-                            //TODO:Localize
-                            attributedString = NSAttributedString(string: "No messages here yet...", font: titleFont, textColor: primaryTextColor)
+                            attributedString = NSAttributedString(string: strings.ChatList_MonoforumEmptyText, font: titleFont, textColor: primaryTextColor)
                         } else {
                             attributedString = NSAttributedString(string: strings.Notification_CreatedGroup, font: titleFont, textColor: primaryTextColor)
                         }
@@ -1262,21 +1261,28 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 let starsString = strings.Notification_PaidMessagePriceChanged_Stars(Int32(stars))
                 if message.author?.id == accountPeerId {
                     let resultString: PresentationStrings.FormattedString
-                    if broadcastMessagesAllowed {
-                        resultString = strings.Notification_PaidMessagePriceChangedAndEnabledChannelMessageYou(starsString)
-                    } else {
-                        resultString = strings.Notification_PaidMessagePriceChangedYou(starsString)
-                    }
+                    resultString = strings.Notification_PaidMessagePriceChangedYou(starsString)
                     attributedString = addAttributesToStringWithRanges(resultString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
                 } else {
                     let peerName = message.author?.compactDisplayTitle ?? ""
                     var attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)])
                     attributes[1] = boldAttributes
                     let resultString: PresentationStrings.FormattedString
+                    
                     if broadcastMessagesAllowed {
-                        resultString = strings.Notification_PaidMessagePriceChangedAndEnabledChannelMessage(peerName, starsString)
+                        if stars == 0 {
+                            resultString = strings.Notification_ChannelMessagePriceZeroChanged(peerName)
+                        } else {
+                            var rawString = strings.Notification_ChannelMessagePriceChanged(Int32(stars))
+                            rawString = rawString.replacingOccurrences(of: "{name}", with: peerName)
+                            resultString = PresentationStrings.FormattedString(string: rawString, ranges: [])
+                        }
                     } else {
-                        resultString = strings.Notification_PaidMessagePriceChanged(peerName, starsString)
+                        if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
+                            resultString = strings.Notification_ChannelMessageDisabled(peerName)
+                        } else {
+                            resultString = strings.Notification_PaidMessagePriceChanged(peerName, starsString)
+                        }
                     }
                     attributedString = addAttributesToStringWithRanges(resultString._tuple, body: bodyAttributes, argumentAttributes: attributes)
                 }

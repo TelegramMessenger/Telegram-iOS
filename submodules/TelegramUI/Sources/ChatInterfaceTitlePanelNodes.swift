@@ -231,8 +231,8 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
 
 func titleTopicsPanelForChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: ChatTitleAccessoryPanelNode?, controllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?, force: Bool) -> ChatTopicListTitleAccessoryPanelNode? {
     if let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isForumOrMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = chatPresentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething), chatPresentationInterfaceState.search == nil {
-        let topicListDisplayMode = chatPresentationInterfaceState.topicListDisplayMode ?? .top
-        if case .top = topicListDisplayMode, let peerId = chatPresentationInterfaceState.chatLocation.peerId {
+        let topicListDisplayModeOnTheSide = chatPresentationInterfaceState.persistentData.topicListPanelLocation
+        if !topicListDisplayModeOnTheSide, let peerId = chatPresentationInterfaceState.chatLocation.peerId {
             if let currentPanel = currentPanel as? ChatTopicListTitleAccessoryPanelNode {
                 return currentPanel
             } else {
@@ -242,8 +242,8 @@ func titleTopicsPanelForChatPresentationInterfaceState(_ chatPresentationInterfa
             }
         }
     } else if let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isForum, (channel.flags.contains(.displayForumAsTabs) || context.sharedContext.immediateExperimentalUISettings.allForumsHaveTabs), chatPresentationInterfaceState.search == nil {
-        let topicListDisplayMode = chatPresentationInterfaceState.topicListDisplayMode ?? .top
-        if case .top = topicListDisplayMode, let peerId = chatPresentationInterfaceState.chatLocation.peerId {
+        let topicListDisplayModeOnTheSide = chatPresentationInterfaceState.persistentData.topicListPanelLocation
+        if !topicListDisplayModeOnTheSide, let peerId = chatPresentationInterfaceState.chatLocation.peerId {
             if let currentPanel = currentPanel as? ChatTopicListTitleAccessoryPanelNode {
                 return currentPanel
             } else {
@@ -263,17 +263,21 @@ func sidePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceState
     }
     
     if let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = chatPresentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething), chatPresentationInterfaceState.search == nil {
-        let topicListDisplayMode = chatPresentationInterfaceState.topicListDisplayMode ?? .top
-        if case .side = topicListDisplayMode {
+        let topicListDisplayModeOnTheSide = chatPresentationInterfaceState.persistentData.topicListPanelLocation
+        if topicListDisplayModeOnTheSide {
             return AnyComponentWithIdentity(
                 id: "topics",
                 component: AnyComponent(ChatSideTopicsPanel(
                     context: context,
                     theme: chatPresentationInterfaceState.theme,
                     strings: chatPresentationInterfaceState.strings,
+                    location: .side,
                     peerId: peerId,
                     isMonoforum: true,
                     topicId: chatPresentationInterfaceState.chatLocation.threadId,
+                    controller: { [weak interfaceInteraction] in
+                        return interfaceInteraction?.chatController()
+                    },
                     togglePanel: { [weak interfaceInteraction] in
                         interfaceInteraction?.toggleChatSidebarMode()
                     },
@@ -284,17 +288,21 @@ func sidePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceState
             )
         }
     } else if let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isForum, chatPresentationInterfaceState.search == nil {
-        let topicListDisplayMode = chatPresentationInterfaceState.topicListDisplayMode ?? .top
-        if case .side = topicListDisplayMode {
+        let topicListDisplayModeOnTheSide = chatPresentationInterfaceState.persistentData.topicListPanelLocation
+        if topicListDisplayModeOnTheSide {
             return AnyComponentWithIdentity(
                 id: "topics",
                 component: AnyComponent(ChatSideTopicsPanel(
                     context: context,
                     theme: chatPresentationInterfaceState.theme,
                     strings: chatPresentationInterfaceState.strings,
+                    location: .side,
                     peerId: peerId,
                     isMonoforum: false,
                     topicId: chatPresentationInterfaceState.chatLocation.threadId,
+                    controller: { [weak interfaceInteraction] in
+                        return interfaceInteraction?.chatController()
+                    },
                     togglePanel: { [weak interfaceInteraction] in
                         interfaceInteraction?.toggleChatSidebarMode()
                     },

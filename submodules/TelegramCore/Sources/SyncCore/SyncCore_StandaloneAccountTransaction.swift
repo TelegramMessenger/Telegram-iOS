@@ -73,7 +73,7 @@ public let telegramPostboxSeedConfiguration: SeedConfiguration = {
                 return .nonContact
             }
         },
-        peerSummaryIsThreadBased: { peer in
+        peerSummaryIsThreadBased: { peer, associatedPeer in
             if let channel = peer as? TelegramChannel {
                 if channel.flags.contains(.isForum) {
                     if channel.flags.contains(.displayForumAsTabs) {
@@ -82,7 +82,11 @@ public let telegramPostboxSeedConfiguration: SeedConfiguration = {
                         return (true, false)
                     }
                 } else if channel.flags.contains(.isMonoforum) {
-                    return (true, true)
+                    if let associatedPeer = associatedPeer as? TelegramChannel, associatedPeer.hasPermission(.sendSomething) {
+                        return (true, true)
+                    } else {
+                        return (false, false)
+                    }
                 } else {
                     return (false, false)
                 }
@@ -194,7 +198,7 @@ public let telegramPostboxSeedConfiguration: SeedConfiguration = {
         },
         automaticThreadIndexInfo: { peerId, _ in
             if peerId.namespace == Namespaces.Peer.CloudUser {
-                return StoredMessageHistoryThreadInfo(data: CodableEntry(data: Data()), summary: StoredMessageHistoryThreadInfo.Summary(totalUnreadCount: 0, isMarkedUnread: false, mutedUntil: nil))
+                return StoredMessageHistoryThreadInfo(data: CodableEntry(data: Data()), summary: StoredMessageHistoryThreadInfo.Summary(totalUnreadCount: 0, isMarkedUnread: false, mutedUntil: nil, maxOutgoingReadId: 0))
             } else {
                 return nil
             }

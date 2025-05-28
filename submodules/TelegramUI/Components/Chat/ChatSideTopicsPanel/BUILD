@@ -24,6 +24,13 @@ swift_library(
         "//submodules/TelegramUI/Components/EmojiStatusComponent",
         "//submodules/Components/BundleIconComponent",
         "//submodules/AvatarNode",
+        "//submodules/ChatListUI",
+        "//submodules/ContextUI",
+        "//submodules/TelegramUI/Components/AsyncListComponent",
+        "//submodules/TelegramUI/Components/TextBadgeComponent",
+        "//submodules/TelegramUI/Components/MaskedContainerComponent",
+        "//submodules/AppBundle",
+        "//submodules/PresentationDataUtils",
     ],
     visibility = [
         "//visibility:public",
