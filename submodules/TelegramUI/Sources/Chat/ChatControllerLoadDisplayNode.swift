@@ -487,6 +487,11 @@ extension ChatControllerImpl {
             let initialInterfaceState = contentData.initialInterfaceState
             contentData.initialInterfaceState = nil
             
+            if !self.didInitializePersistentPeerInterfaceData, let initialPersistentPeerData = contentData.initialPersistentPeerData {
+                self.didInitializePersistentPeerInterfaceData = true
+                presentationInterfaceState = presentationInterfaceState.updatedPersistentData(initialPersistentPeerData)
+            }
+            
             presentationInterfaceState = presentationInterfaceState.updatedInterfaceState { interfaceState in
                 var interfaceState = interfaceState
                 if let initialInterfaceState {
@@ -4187,9 +4192,9 @@ extension ChatControllerImpl {
                 return
             }
             self.updateChatPresentationInterfaceState(animated: true, interactive: true, { presentationInterfaceState in
-                return presentationInterfaceState.updatedInterfaceState { interfaceState in
-                    return interfaceState.withUpdatedTopicListPanelLocation(!interfaceState.topicListPanelLocation)
-                }
+                var persistentData = presentationInterfaceState.persistentData
+                persistentData.topicListPanelLocation = !persistentData.topicListPanelLocation
+                return presentationInterfaceState.updatedPersistentData(persistentData)
             })
         }, updateDisplayHistoryFilterAsList: { [weak self] displayAsList in
             guard let self else {

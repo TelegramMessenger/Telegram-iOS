@@ -1205,7 +1205,7 @@ public final class ChatEmptyNodePremiumRequiredChatContent: ASDisplayNode, ChatE
     private let interaction: ChatPanelInterfaceInteraction?
     
     private let iconBackground: SimpleLayer
-    private let icon =  ComponentView<Empty>()
+    private var icon = ComponentView<Empty>()
     private let text = ComponentView<Empty>()
     private let buttonTitle = ComponentView<Empty>()
     private let button: HighlightTrackingButton
@@ -1286,7 +1286,7 @@ public final class ChatEmptyNodePremiumRequiredChatContent: ASDisplayNode, ChatE
         }
         
         let text: NSAttributedString
-        let actionText: String
+        var actionText: String?
         let attributes = MarkdownAttributes(
             body: MarkdownAttributeSet(font: Font.regular(15.0), textColor: serviceColor.primaryText),
             bold: MarkdownAttributeSet(font: Font.semibold(15.0), textColor: serviceColor.primaryText),
@@ -1313,14 +1313,19 @@ public final class ChatEmptyNodePremiumRequiredChatContent: ASDisplayNode, ChatE
             text = attributedString
             actionText = interfaceState.strings.Chat_EmptyStatePaidMessaging_Action
         } else {
-            let rawText: String
-            if self.isPremiumDisabled {
-                rawText = interfaceState.strings.Chat_EmptyStateMessagingRestrictedToPremiumDisabled_Text(peerTitle).string
+            if let channel = interfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum {
+                let rawText = interfaceState.strings.Chat_EmptyStateMonoforum_Text(peerTitle).string
+                text = parseMarkdownIntoAttributedString(rawText, attributes: attributes)
             } else {
-                rawText = interfaceState.strings.Chat_EmptyStateMessagingRestrictedToPremium_Text(peerTitle).string
+                let rawText: String
+                if self.isPremiumDisabled {
+                    rawText = interfaceState.strings.Chat_EmptyStateMessagingRestrictedToPremiumDisabled_Text(peerTitle).string
+                } else {
+                    rawText = interfaceState.strings.Chat_EmptyStateMessagingRestrictedToPremium_Text(peerTitle).string
+                }
+                text = parseMarkdownIntoAttributedString(rawText, attributes: attributes)
+                actionText = interfaceState.strings.Chat_EmptyStateMessagingRestrictedToPremium_Action
             }
-            text = parseMarkdownIntoAttributedString(rawText, attributes: attributes)
-            actionText = interfaceState.strings.Chat_EmptyStateMessagingRestrictedToPremium_Action
         }
         let textSize = self.text.update(
             transition: .immediate,
@@ -1333,21 +1338,30 @@ public final class ChatEmptyNodePremiumRequiredChatContent: ASDisplayNode, ChatE
             containerSize: CGSize(width: maxWidth - sideInset * 2.0, height: 500.0)
         )
         
-        let buttonTitleSize = self.buttonTitle.update(
-            transition: .immediate,
-            component: AnyComponent(MultilineTextComponent(
-                text: .plain(NSAttributedString(string: actionText, font: Font.semibold(15.0), textColor: serviceColor.primaryText))
-            )),
-            environment: {},
-            containerSize: CGSize(width: 200.0, height: 100.0)
-        )
-        let buttonSize = CGSize(width: buttonTitleSize.width + 20.0 * 2.0, height: buttonTitleSize.height + 9.0 * 2.0)
+        var buttonTitleSize: CGSize?
+        if let actionText {
+            buttonTitleSize = self.buttonTitle.update(
+                transition: .immediate,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: actionText, font: Font.semibold(15.0), textColor: serviceColor.primaryText))
+                )),
+                environment: {},
+                containerSize: CGSize(width: 200.0, height: 100.0)
+            )
+        } else {
+            self.buttonTitle.view?.removeFromSuperview()
+        }
+        
+        var buttonSize: CGSize?
+        if let buttonTitleSize {
+            buttonSize = CGSize(width: buttonTitleSize.width + 20.0 * 2.0, height: buttonTitleSize.height + 9.0 * 2.0)
+        }
         
         var contentsWidth: CGFloat = 0.0
         contentsWidth = max(contentsWidth, iconBackgroundSize + sideInset * 2.0)
         contentsWidth = max(contentsWidth, textSize.width + sideInset * 2.0)
         
-        if !self.isPremiumDisabled {
+        if !self.isPremiumDisabled, let buttonSize {
             contentsWidth = max(contentsWidth, buttonSize.width + sideInset * 2.0)
         }
         
@@ -1363,14 +1377,31 @@ public final class ChatEmptyNodePremiumRequiredChatContent: ASDisplayNode, ChatE
         
         let iconComponent: AnyComponent<Empty>
         do {
-            iconComponent = AnyComponent(
-                LottieComponent(
-                    content: LottieComponent.AppBundleContent(name: "PremiumRequired"),
-                    color: serviceColor.primaryText,
-                    size: CGSize(width: 120.0, height: 120.0),
-                    loop: true
+            if let channel = interfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum {
+                if let view = self.icon.view, !(view is BundleIconComponent.View) {
+                    view.removeFromSuperview()
+                    self.icon = ComponentView()
+                }
+                
+                iconComponent = AnyComponent(BundleIconComponent(
+                    name: "Chat/Empty Chat/ChannelMessages",
+                    tintColor: serviceColor.primaryText
+                ))
+            } else {
+                if let view = self.icon.view, !(view is LottieComponent.View) {
+                    view.removeFromSuperview()
+                    self.icon = ComponentView()
+                }
+                
+                iconComponent = AnyComponent(
+                    LottieComponent(
+                        content: LottieComponent.AppBundleContent(name: "PremiumRequired"),
+                        color: serviceColor.primaryText,
+                        size: CGSize(width: 120.0, height: 120.0),
+                        loop: true
+                    )
                 )
-            )
+            }
         }
         let iconSize = self.icon.update(
             transition: .immediate,
@@ -1397,9 +1428,7 @@ public final class ChatEmptyNodePremiumRequiredChatContent: ASDisplayNode, ChatE
         }
         contentsHeight += textSize.height
         
-        if self.isPremiumDisabled {
-            contentsHeight += bottomInset
-        } else {
+        if !self.isPremiumDisabled, let buttonTitleSize, let buttonSize {
             contentsHeight += textButtonSpacing
             
             let buttonFrame = CGRect(origin: CGPoint(x: floor((contentsWidth - buttonSize.width) * 0.5), y: contentsHeight), size: buttonSize)
@@ -1415,6 +1444,8 @@ public final class ChatEmptyNodePremiumRequiredChatContent: ASDisplayNode, ChatE
             self.button.backgroundColor = interfaceState.theme.overallDarkAppearance ? UIColor(rgb: 0xffffff, alpha: 0.12) : UIColor(rgb: 0x000000, alpha: 0.12)
             self.buttonStarsNode.frame = CGRect(origin: CGPoint(), size: buttonSize)
             contentsHeight += buttonSize.height
+            contentsHeight += bottomInset
+        } else {
             contentsHeight += bottomInset
         }
             
@@ -1432,7 +1463,7 @@ private enum ChatEmptyNodeContentType: Equatable {
     case greeting
     case topic
     case premiumRequired
-    case starsRequired(Int64)
+    case starsRequired(Int64?)
 }
 
 private final class EmptyAttachedDescriptionNode: HighlightTrackingButtonNode {
@@ -1835,8 +1866,8 @@ public final class ChatEmptyNode: ASDisplayNode {
                             }
                         }
                     }
-                } else if let channel = peer as? TelegramChannel, channel.isMonoForum, let sendPaidMessageStars = interfaceState.sendPaidMessageStars {
-                    contentType = .starsRequired(sendPaidMessageStars.value)
+                } else if let channel = peer as? TelegramChannel, channel.isMonoForum {
+                    contentType = .starsRequired(interfaceState.sendPaidMessageStars?.value)
                 } else {
                     contentType = .regular
                 }

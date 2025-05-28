@@ -14389,10 +14389,12 @@ Sorry for the inconvenience.";
 "Chat.InlineTopicMenu.Reorder" = "Reorder";
 "Chat.InlineTopicMenu.Edit" = "Edit";
 "Chat.InlineTopicMenu.AllTab" = "All";
-"Chat.ChannelMessagesHint" = "Tap here to send a message";
+"Chat.ChannelMessagesHint" = "Send a message to the channel's admin";
 "Chat.ChannelMessagesHintBadge" = "NEW";
 
 "PeerInfo.AllowChannelMessages" = "Allow Channel Messages";
 "PeerInfo.AllowChannelMessages.On" = "On";
 "PeerInfo.AllowChannelMessages.Off" = "Off";
 "PeerInfo.ChannelMessages" = "Channel Messages";
+
+"Chat.EmptyStateMonoforum.Text" = "Send a direct message to the administrator of **%@**.";

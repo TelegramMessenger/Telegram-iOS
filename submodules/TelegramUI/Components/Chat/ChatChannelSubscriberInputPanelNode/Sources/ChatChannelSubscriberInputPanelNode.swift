@@ -387,7 +387,7 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                         account: context.account,
                         sharedContext: context.sharedContext,
                         text: .plain(text: text),
-                        textBadge: presentationData.strings.Chat_ChannelMessagesHintBadge,
+                        textBadge: presentationData.strings.Chat_ChannelMessagesHintBadge.isEmpty ? nil : presentationData.strings.Chat_ChannelMessagesHintBadge,
                         balancedTextLayout: false,
                         style: .wide,
                         arrowStyle: .small,

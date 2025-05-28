@@ -268,6 +268,9 @@ public final class ChatSideTopicsPanel: Component {
             
             @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
                 if case .ended = recognizer.state {
+                    if let iconView = self.icon?.view as? EmojiStatusComponent.View {
+                        iconView.playOnce()
+                    }
                     self.component?.action?()
                 }
             }
@@ -390,7 +393,7 @@ public final class ChatSideTopicsPanel: Component {
                         animationCache: component.context.animationCache,
                         animationRenderer: component.context.animationRenderer,
                         content: avatarIconContent,
-                        isVisibleForAnimations: false,
+                        isVisibleForAnimations: true,
                         action: nil
                     )
                     let icon: ComponentView<Empty>
@@ -429,7 +432,7 @@ public final class ChatSideTopicsPanel: Component {
                         animationCache: component.context.animationCache,
                         animationRenderer: component.context.animationRenderer,
                         content: avatarIconContent,
-                        isVisibleForAnimations: false,
+                        isVisibleForAnimations: true,
                         action: nil
                     )
                     let _ = icon.update(
@@ -696,6 +699,9 @@ public final class ChatSideTopicsPanel: Component {
             
             @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
                 if case .ended = recognizer.state {
+                    if let iconView = self.icon?.view as? EmojiStatusComponent.View {
+                        iconView.playOnce()
+                    }
                     self.component?.action?()
                 }
             }

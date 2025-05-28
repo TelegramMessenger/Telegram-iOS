@@ -19,6 +19,7 @@ import ChatMessageItem
 import AvatarNode
 import ComponentFlow
 import EmojiStatusComponent
+import AppBundle
 
 private let timezoneOffset: Int32 = {
     let nowTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
@@ -276,7 +277,7 @@ private final class ChatMessageDateContentNode: ASDisplayNode {
         
         let graphics = PresentationResourcesChat.principalGraphics(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
 
-        let fullTranslucency: Bool = controllerInteraction?.enableFullTranslucency ?? true
+        let fullTranslucency: Bool = true
         
         self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), enableBlur: fullTranslucency && dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), transition: .immediate)
         self.stickBackgroundNode.image = graphics.dateFloatingBackground
@@ -305,7 +306,7 @@ private final class ChatMessageDateContentNode: ASDisplayNode {
         
         let graphics = PresentationResourcesChat.principalGraphics(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
         
-        let fullTranslucency: Bool = self.controllerInteraction?.enableFullTranslucency ?? true
+        let fullTranslucency: Bool = true
 
         self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), enableBlur: fullTranslucency && dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), transition: .immediate)
         self.stickBackgroundNode.image = graphics.dateFloatingBackground
@@ -328,7 +329,7 @@ private final class ChatMessageDateContentNode: ASDisplayNode {
     }
     
     func update(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
-        let chatDateSize: CGFloat = 20.0
+        let chatDateSize: CGFloat = 22.0
         let chatDateInset: CGFloat = 6.0
         
         let labelSize = self.labelNode.bounds.size
@@ -366,6 +367,8 @@ private final class ChatMessageDateContentNode: ASDisplayNode {
 }
 
 private final class ChatMessagePeerContentNode: ASDisplayNode {
+    private static let arrowImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/HeaderArrow"), color: .white)!.withRenderingMode(.alwaysTemplate)
+    
     private let context: AccountContext
     private var presentationData: ChatPresentationData
     private let controllerInteraction: ChatControllerInteraction?
@@ -373,6 +376,7 @@ private final class ChatMessagePeerContentNode: ASDisplayNode {
     
     private var avatarNode: AvatarNode?
     private var icon: ComponentView<Empty>?
+    private var arrowIcon: UIImageView?
     
     public let labelNode: TextNode
     public let backgroundNode: NavigationBackgroundNode
@@ -417,7 +421,7 @@ private final class ChatMessagePeerContentNode: ASDisplayNode {
         
         let graphics = PresentationResourcesChat.principalGraphics(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
 
-        let fullTranslucency: Bool = controllerInteraction?.enableFullTranslucency ?? true
+        let fullTranslucency: Bool = true
         
         self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), enableBlur: fullTranslucency && dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), transition: .immediate)
         self.stickBackgroundNode.image = graphics.dateFloatingBackground
@@ -482,6 +486,10 @@ private final class ChatMessagePeerContentNode: ASDisplayNode {
         let (size, apply) = labelLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 320.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
         let _ = apply()
         self.labelNode.frame = CGRect(origin: CGPoint(), size: size.size)
+        
+        let arrowIcon = UIImageView(image: ChatMessagePeerContentNode.arrowImage)
+        self.arrowIcon = arrowIcon
+        self.view.addSubview(arrowIcon)
     }
     
     func updatePresentationData(_ presentationData: ChatPresentationData, context: AccountContext) {
@@ -490,7 +498,7 @@ private final class ChatMessagePeerContentNode: ASDisplayNode {
         
         let graphics = PresentationResourcesChat.principalGraphics(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
         
-        let fullTranslucency: Bool = self.controllerInteraction?.enableFullTranslucency ?? true
+        let fullTranslucency: Bool = true
 
         self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), enableBlur: fullTranslucency && dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), transition: .immediate)
         self.stickBackgroundNode.image = graphics.dateFloatingBackground
@@ -513,8 +521,10 @@ private final class ChatMessagePeerContentNode: ASDisplayNode {
     }
     
     func update(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
-        let chatDateSize: CGFloat = 20.0
+        let chatDateSize: CGFloat = 22.0
         let chatDateInset: CGFloat = 6.0
+        let arrowInset: CGFloat = 5.0
+        let arrowSpacing: CGFloat = arrowInset + 6.0
         
         let avatarDiameter: CGFloat = 16.0
         let avatarInset: CGFloat
@@ -527,7 +537,7 @@ private final class ChatMessagePeerContentNode: ASDisplayNode {
         let avatarSpacing: CGFloat = 4.0
         
         let labelSize = self.labelNode.bounds.size
-        let backgroundSize = CGSize(width: avatarInset + avatarDiameter + avatarSpacing + labelSize.width + chatDateInset, height: chatDateSize)
+        let backgroundSize = CGSize(width: avatarInset + avatarDiameter + avatarSpacing + labelSize.width + chatDateInset + arrowSpacing, height: chatDateSize)
         
         let backgroundFrame = CGRect(origin: CGPoint(x: leftInset + floorToScreenPixels((size.width - leftInset - rightInset - backgroundSize.width) / 2.0), y: (size.height - chatDateSize) / 2.0), size: backgroundSize)
         
@@ -548,6 +558,13 @@ private final class ChatMessagePeerContentNode: ASDisplayNode {
         
         transition.updatePosition(node: self.labelNode, position: labelFrame.center)
         self.labelNode.bounds = CGRect(origin: CGPoint(), size: labelFrame.size)
+        
+        if let arrowIcon = self.arrowIcon, let image = arrowIcon.image {
+            arrowIcon.tintColor = bubbleVariableColor(variableColor: presentationData.theme.theme.chat.serviceMessage.dateTextColor, wallpaper: presentationData.theme.wallpaper).withMultipliedAlpha(0.7)
+            let arrowSize = image.size
+            let arrowFrame = CGRect(origin: CGPoint(x: backgroundFrame.maxX - arrowInset - arrowSize.width, y: backgroundFrame.minY + floorToScreenPixels((backgroundFrame.height - arrowSize.height) * 0.5)), size: arrowSize)
+            transition.updateFrame(view: arrowIcon, frame: arrowFrame)
+        }
                 
         if let backgroundContent = self.backgroundContent {
             backgroundContent.allowsGroupOpacity = true
