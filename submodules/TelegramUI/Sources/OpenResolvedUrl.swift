@@ -927,6 +927,15 @@ func openResolvedUrlImpl(
                 }
             }
         
+            if let navigationController = context.sharedContext.mainWindow?.viewController as? NavigationController {
+                for controller in navigationController.overlayControllers {
+                    controller.dismiss()
+                }
+                for controller in navigationController.globalOverlayControllers {
+                    controller.dismiss()
+                }
+            }
+        
             let _ = (context.engine.messages.checkStoriesUploadAvailability(target: .myStories)
             |> deliverOnMainQueue).start(next: { availability in
                 if case let .available(remainingCount) = availability {

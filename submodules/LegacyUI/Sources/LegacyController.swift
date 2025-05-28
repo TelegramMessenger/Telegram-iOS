@@ -271,13 +271,25 @@ public final class LegacyControllerContext: NSObject, LegacyComponentsContext {
             return
         }
         
+        var position: TooltipScreen.ArrowPosition = .bottom
+        if let layout = self.controller?.currentlyAppliedLayout, let orientation = layout.metrics.orientation {
+            switch orientation {
+            case .landscapeLeft:
+                position = .left
+            case .landscapeRight:
+                position = .right
+            default:
+                break
+            }
+        }
+                
         let controller = TooltipScreen(
             account: context.account,
             sharedContext: context.sharedContext,
             text: .plain(text: text),
             style: .customBlur(UIColor(rgb: 0x18181a), 0.0),
             icon: .image(icon),
-            location: .point(sourceRect, .bottom),
+            location: .point(sourceRect, position),
             displayDuration: .custom(2.0),
             shouldDismissOnTouch: { _, _ in
             return .dismiss(consume: false)

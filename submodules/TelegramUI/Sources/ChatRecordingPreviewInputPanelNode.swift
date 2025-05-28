@@ -509,16 +509,17 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
                         }))
                     }
                     
+                    let minDuration = max(2.0, 56.0 * audio.duration / waveformBackgroundFrame.size.width)
                     let (leftHandleFrame, rightHandleFrame) = self.trimView.update(
                         style: .voiceMessage,
                         theme: interfaceState.theme,
                         visualInsets: .zero,
                         scrubberSize: waveformBackgroundFrame.size,
-                        duration: Double(audio.duration),
+                        duration: audio.duration,
                         startPosition: audio.trimRange?.lowerBound ?? 0.0,
                         endPosition: audio.trimRange?.upperBound ?? Double(audio.duration),
                         position: 0.0,
-                        minDuration: 2.0,
+                        minDuration: minDuration,
                         maxDuration: Double(audio.duration),
                         transition: .immediate
                     )
@@ -530,7 +531,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
                                 if !updatedEnd {
                                     self.mediaPlayer?.seek(timestamp: start, play: true)
                                 } else {
-                                    self.mediaPlayer?.seek(timestamp: end - 1.0, play: true)
+                                    self.mediaPlayer?.seek(timestamp: max(0.0, end - 1.0), play: true)
                                 }
                                 self.playButtonNode.durationLabel.isScrubbing = false
                                 Queue.mainQueue().after(0.1) {
@@ -547,6 +548,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
                         }
                     }
                     self.trimView.frame = waveformBackgroundFrame
+                    self.trimView.isHidden = audio.duration < 2.0
                     
                     let playButtonSize = CGSize(width: max(0.0, rightHandleFrame.minX - leftHandleFrame.maxX), height: waveformBackgroundFrame.height)
                     self.playButtonNode.update(size: playButtonSize, transition: transition)
@@ -823,18 +825,23 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         }
         if let recordedMediaPreview = self.presentationInterfaceState?.interfaceState.mediaDraftState, case let .audio(audio) = recordedMediaPreview, let trimRange = audio.trimRange {
             let _ = (mediaPlayer.status
+            |> map(Optional.init)
+            |> timeout(0.3, queue: Queue.mainQueue(), alternate: .single(nil))
             |> take(1)
             |> deliverOnMainQueue).start(next: { [weak self] status in
                 guard let self, let mediaPlayer = self.mediaPlayer else {
                     return
                 }
-
-                if case .playing = status.status {
-                    mediaPlayer.pause()
-                } else if status.timestamp <= trimRange.lowerBound {
-                    mediaPlayer.seek(timestamp: trimRange.lowerBound, play: true)
+                if let status {
+                    if case .playing = status.status {
+                        mediaPlayer.pause()
+                    } else if status.timestamp <= trimRange.lowerBound {
+                        mediaPlayer.seek(timestamp: trimRange.lowerBound, play: true)
+                    } else {
+                        mediaPlayer.play()
+                    }
                 } else {
-                    mediaPlayer.play()
+                    mediaPlayer.seek(timestamp: trimRange.lowerBound, play: true)
                 }
             })
         } else {
