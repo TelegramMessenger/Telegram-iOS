@@ -325,7 +325,7 @@ extension ChatControllerImpl {
                                                 ChatInterfaceMediaDraftState.Audio(
                                                     resource: resource!,
                                                     fileSize: Int32(data.compressedData.count),
-                                                    duration: Int32(data.duration),
+                                                    duration: data.duration,
                                                     waveform: audioWaveform,
                                                     trimRange: data.trimRange,
                                                     resumeData: data.resumeData
@@ -439,7 +439,7 @@ extension ChatControllerImpl {
                                         $0.updatedInterfaceState {
                                             $0.withUpdatedMediaDraftState(.video(
                                                 ChatInterfaceMediaDraftState.Video(
-                                                    duration: Int32(data.duration),
+                                                    duration: data.duration,
                                                     frames: data.frames,
                                                     framesUpdateTimestamp: data.framesUpdateTimestamp,
                                                     trimRange: data.trimRange
@@ -494,7 +494,7 @@ extension ChatControllerImpl {
             })
         } else {
             let proceed = {
-                self.withAudioRecorder({ audioRecorder in
+                self.withAudioRecorder(resuming: true, { audioRecorder in
                     audioRecorder.resume()
                     
                     self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
@@ -505,24 +505,34 @@ extension ChatControllerImpl {
                 })
             }
             
-            //TODO:localize
-            if let recordedMediaPreview = self.presentationInterfaceState.interfaceState.mediaDraftState, case let .audio(audio) = recordedMediaPreview, let _ = audio.trimRange {
-                self.present(
-                    textAlertController(
-                        context: self.context,
-                        title: self.presentationData.strings.Chat_TrimVoiceMessageToResume_Title,
-                        text: self.presentationData.strings.Chat_TrimVoiceMessageToResume_Text,
-                        actions: [
-                            TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {}),
-                            TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Chat_TrimVoiceMessageToResume_Proceed, action: {
-                                proceed()
-                            })
-                        ]
-                    ), in: .window(.root)
-                )
-            } else {
-                proceed()
-            }
+            let _ = (ApplicationSpecificNotice.getVoiceMessagesResumeTrimWarning(accountManager: self.context.sharedContext.accountManager)
+            |> deliverOnMainQueue).start(next: { [weak self] count in
+                guard let self else {
+                    return
+                }
+                if count > 0 {
+                    proceed()
+                    return
+                }
+                if let recordedMediaPreview = self.presentationInterfaceState.interfaceState.mediaDraftState, case let .audio(audio) = recordedMediaPreview, let trimRange = audio.trimRange, trimRange.lowerBound > 0.1 || trimRange.upperBound < audio.duration {
+                    self.present(
+                        textAlertController(
+                            context: self.context,
+                            title: self.presentationData.strings.Chat_TrimVoiceMessageToResume_Title,
+                            text: self.presentationData.strings.Chat_TrimVoiceMessageToResume_Text,
+                            actions: [
+                                TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {}),
+                                TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Chat_TrimVoiceMessageToResume_Proceed, action: {
+                                    proceed()
+                                    let _ = ApplicationSpecificNotice.incrementVoiceMessagesResumeTrimWarning(accountManager: self.context.sharedContext.accountManager).start()
+                                })
+                            ]
+                        ), in: .window(.root)
+                    )
+                } else {
+                    proceed()
+                }
+            })
         }
     }
     
@@ -607,13 +617,43 @@ extension ChatControllerImpl {
         self.present(tooltipController, in: .window(.root))
     }
     
-    private func withAudioRecorder(_ f: (ManagedAudioRecorder) -> Void) {
+    private func withAudioRecorder(resuming: Bool, _ f: (ManagedAudioRecorder) -> Void) {
         if let audioRecorder = self.audioRecorderValue {
             f(audioRecorder)
         } else if let recordedMediaPreview = self.presentationInterfaceState.interfaceState.mediaDraftState, case let .audio(audio) = recordedMediaPreview {
             self.requestAudioRecorder(beginWithTone: false, existingDraft: audio)
             if let audioRecorder = self.audioRecorderValue {
                 f(audioRecorder)
+                
+                if !resuming {
+                    self.recorderDataDisposable.set(
+                        (audioRecorder.takenRecordedData()
+                         |> deliverOnMainQueue).startStrict(
+                            next: { [weak self] data in
+                                if let strongSelf = self, let data = data {
+                                    let audioWaveform = audio.waveform
+                                   
+                                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                                        $0.updatedInterfaceState {
+                                            $0.withUpdatedMediaDraftState(.audio(
+                                                ChatInterfaceMediaDraftState.Audio(
+                                                    resource: audio.resource,
+                                                    fileSize: Int32(data.compressedData.count),
+                                                    duration: data.duration,
+                                                    waveform: audioWaveform,
+                                                    trimRange: data.trimRange,
+                                                    resumeData: data.resumeData
+                                                )
+                                            ))
+                                        }.updatedInputTextPanelState { panelState in
+                                            return panelState.withUpdatedMediaRecordingState(nil)
+                                        }
+                                    })
+                                    strongSelf.updateDownButtonVisibility()
+                                }
+                            })
+                    )
+                }
             }
         }
     }
@@ -622,7 +662,7 @@ extension ChatControllerImpl {
         if let videoRecorder = self.videoRecorderValue {
             videoRecorder.updateTrimRange(start: start, end: end, updatedEnd: updatedEnd, apply: apply)
         } else {
-            self.withAudioRecorder({ audioRecorder in
+            self.withAudioRecorder(resuming: false, { audioRecorder in
                 audioRecorder.updateTrimRange(start: start, end: end, updatedEnd: updatedEnd, apply: apply)
             })
         }

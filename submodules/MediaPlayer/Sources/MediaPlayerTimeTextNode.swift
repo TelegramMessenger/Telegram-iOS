@@ -157,7 +157,7 @@ public final class MediaPlayerTimeTextNode: ASDisplayNode {
     
     private func ensureHasTimer() {
         if self.updateTimer == nil {
-            let timer = SwiftSignalKit.Timer(timeout: 0.5, repeat: true, completion: { [weak self] in
+            let timer = SwiftSignalKit.Timer(timeout: 0.2, repeat: true, completion: { [weak self] in
                 self?.updateTimestamp()
             }, queue: Queue.mainQueue())
             self.updateTimer = timer
@@ -182,7 +182,12 @@ public final class MediaPlayerTimeTextNode: ASDisplayNode {
                 duration = trimRange.upperBound - trimRange.lowerBound
             }
             
-            if self.showDurationIfNotStarted && (timestamp < .ulpOfOne || self.isScrubbing) {
+            var isPlaying = false
+            if case .playing = statusValue.status {
+                isPlaying = true
+            }
+            
+            if self.showDurationIfNotStarted && (timestamp < .ulpOfOne || self.isScrubbing) && !isPlaying {
                 let timestamp = Int32(duration)
                 self.state = MediaPlayerTimeTextNodeState(hours: timestamp / (60 * 60), minutes: timestamp % (60 * 60) / 60, seconds: timestamp % 60)
             } else {

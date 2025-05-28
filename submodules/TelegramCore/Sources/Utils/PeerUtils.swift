@@ -279,6 +279,14 @@ public extension Peer {
         }
     }
     
+    var displayForumAsTabs: Bool {
+        if let channel = self as? TelegramChannel, isForum {
+            return channel.flags.contains(.displayForumAsTabs)
+        } else {
+            return false
+        }
+    }
+    
     var isForumOrMonoForum: Bool {
         if let channel = self as? TelegramChannel {
             return channel.flags.contains(.isForum) || channel.flags.contains(.isMonoforum)
@@ -460,7 +468,7 @@ public func peerViewMonoforumMainPeer(_ view: PeerView) -> Peer? {
         if let channel = peer as? TelegramChannel, channel.flags.contains(.isMonoforum), let linkedMonoforumId = channel.linkedMonoforumId {
             return view.peers[linkedMonoforumId]
         } else {
-            return peer
+            return nil
         }
     } else {
         return nil

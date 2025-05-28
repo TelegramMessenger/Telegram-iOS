@@ -738,6 +738,9 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
                     backgroundFrame = CGRect(origin: CGPoint(x: rect.midX - backgroundWidth / 2.0, y: rect.minY - bottomInset - backgroundHeight), size: CGSize(width: backgroundWidth, height: backgroundHeight))
                 case .right:
                     backgroundFrame = CGRect(origin: CGPoint(x: rect.minX - backgroundWidth - bottomInset, y: rect.midY - backgroundHeight / 2.0), size: CGSize(width: backgroundWidth, height: backgroundHeight))
+                case .left:
+                    backgroundFrame = CGRect(origin: CGPoint(x: rect.maxX + bottomInset, y: rect.midY - backgroundHeight / 2.0), size: CGSize(width: backgroundWidth, height: backgroundHeight))
+
             }
             
             if backgroundFrame.minX < sideInset {
@@ -807,6 +810,17 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
                 ContainedViewLayoutTransition.immediate.updateTransformRotation(node: self.arrowContainer, angle: -CGFloat.pi / 2.0)
                 
                 transition.updateFrame(node: self.arrowContainer, frame: arrowFrame.offsetBy(dx: 8.0 - UIScreenPixel, dy: 0.0))
+                
+                let arrowBounds = CGRect(origin: .zero, size: arrowSize)
+                self.arrowNode.frame = arrowBounds
+                self.arrowGradientNode?.frame = arrowBounds
+            case .left:
+                let arrowCenterY = floorToScreenPixels(rect.midY - arrowSize.height / 2.0)
+                arrowFrame = CGRect(origin: CGPoint(x: -arrowSize.height, y: self.view.convert(CGPoint(x: 0.0, y: arrowCenterY), to: self.arrowContainer.supernode?.view).y), size: CGSize(width: arrowSize.height, height: arrowSize.width))
+                
+                ContainedViewLayoutTransition.immediate.updateTransformRotation(node: self.arrowContainer, angle: CGFloat.pi / 2.0)
+                
+                transition.updateFrame(node: self.arrowContainer, frame: arrowFrame.offsetBy(dx: 3.0 - UIScreenPixel, dy: -19.0))
                 
                 let arrowBounds = CGRect(origin: .zero, size: arrowSize)
                 self.arrowNode.frame = arrowBounds
@@ -1073,6 +1087,8 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
                     startPoint = CGPoint(x: self.arrowContainer.frame.midX - self.containerNode.bounds.width / 2.0, y: arrowY - self.containerNode.bounds.height / 2.0)
                 case .right:
                     startPoint = CGPoint(x: self.arrowContainer.frame.maxX - self.containerNode.bounds.width / 2.0, y: self.arrowContainer.frame.minY - self.containerNode.bounds.height / 2.0)
+                case .left:
+                    startPoint = CGPoint(x: self.arrowContainer.frame.minX - self.containerNode.bounds.width / 2.0, y: self.arrowContainer.frame.minY - self.containerNode.bounds.height / 2.0)
             }
             
             self.containerNode.layer.animateSpring(from: NSValue(cgPoint: startPoint), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: 0.4, damping: 105.0, additive: true)
@@ -1123,6 +1139,8 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
                     targetPoint = CGPoint(x: self.arrowContainer.frame.midX - self.containerNode.bounds.width / 2.0, y: arrowY - self.containerNode.bounds.height / 2.0)
                 case .right:
                     targetPoint = CGPoint(x: self.arrowContainer.frame.maxX - self.containerNode.bounds.width / 2.0, y: self.arrowContainer.frame.minY - self.containerNode.bounds.height / 2.0)
+                case .left:
+                    targetPoint = CGPoint(x: self.arrowContainer.frame.minX - self.containerNode.bounds.width / 2.0, y: self.arrowContainer.frame.minY - self.containerNode.bounds.height / 2.0)
             }
             
             self.containerNode.layer.animatePosition(from: CGPoint(), to: targetPoint, duration: 0.2, removeOnCompletion: false, additive: true)
@@ -1179,6 +1197,7 @@ public final class TooltipScreen: ViewController {
         case top
         case right
         case bottom
+        case left
     }
     
     public enum ArrowStyle {
