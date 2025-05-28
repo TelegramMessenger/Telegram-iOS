@@ -130,8 +130,8 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
                     text = PresentationStrings.FormattedString(string: strings.ChatList_DeleteSavedMessagesConfirmation, ranges: [])
                 } else if case let .legacyGroup(chatPeer) = chatPeer {
                     text = strings.ChatList_DeleteAndLeaveGroupConfirmation(chatPeer.title)
-                } else if case let .channel(chatPeer) = chatPeer {
-                    text = strings.ChatList_DeleteAndLeaveGroupConfirmation(chatPeer.title)
+                } else if case .channel = chatPeer {
+                    text = strings.ChatList_DeleteAndLeaveGroupConfirmation(peer.compactDisplayTitle)
                 } else if case .secretChat = chatPeer {
                     text = strings.ChatList_DeleteSecretChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
                 } else {

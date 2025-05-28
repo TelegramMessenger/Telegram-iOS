@@ -504,7 +504,7 @@ final class StoryItemSetContainerSendMessage {
             context: component.context,
             presentationData: presentationData,
             updatedPresentationData: nil,
-            peers: [component.slice.effectivePeer],
+            peers: [EngineRenderedPeer(peer: component.slice.effectivePeer)],
             count: 1,
             amount: sendPaidMessageStars,
             totalAmount: nil,

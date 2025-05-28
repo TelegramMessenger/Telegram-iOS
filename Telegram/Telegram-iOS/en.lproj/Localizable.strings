@@ -14377,7 +14377,7 @@ Sorry for the inconvenience.";
 "PeerInfo.OptionTopics.Enabled" = "Enabled";
 "PeerInfo.OptionTopics.Disabled" = "Disabled";
 
-"ChannelMessages.Title" = "Allow Channel Messages";
+"ChannelMessages.Title" = "Direct Messages";
 "ChannelMessages.Info" = "Allow users to send messages to your channel, with the option to charge a fee for each message.";
 "ChannelMessages.SwitchTitle" = "Allow Channel Messages";
 "ChannelMessages.PriceSectionTitle" = "PRICE FOR EACH MESSAGE";
@@ -14391,10 +14391,21 @@ Sorry for the inconvenience.";
 "Chat.InlineTopicMenu.AllTab" = "All";
 "Chat.ChannelMessagesHint" = "Send a message to the channel's admin";
 "Chat.ChannelMessagesHintBadge" = "NEW";
+"Chat.ContextMenu.AuthorInfo" = "Sent by %@";
 
-"PeerInfo.AllowChannelMessages" = "Allow Channel Messages";
-"PeerInfo.AllowChannelMessages.On" = "On";
+"PeerInfo.AllowChannelMessages" = "Direct Messages";
+"PeerInfo.AllowChannelMessages.Free" = "Free";
 "PeerInfo.AllowChannelMessages.Off" = "Off";
-"PeerInfo.ChannelMessages" = "Channel Messages";
+"PeerInfo.ChannelMessages" = "Direct Messages";
 
 "Chat.EmptyStateMonoforum.Text" = "Send a direct message to the administrator of **%@**.";
+"Chat.EmptyStateMonoforumPaid.Text" = "**%1$@** charges **%2$@**\nper message to its admin.";
+
+"Monoforum.NameFormat" = "%@ Messages";
+
+"Stars.SendMessage.AdjustmentTitle" = "Price for each Message";
+"Stars.SendMessage.AdjustmentPlaceholder" = "Price for each Message";
+"Stars.SendMessage.AdjustmentSectionHeader" = "PRICE IN STARS";
+"Stars.SendMessage.AdjustmentSectionFooterValue" = "You will receive **%@ Stars**.";
+"Stars.SendMessage.AdjustmentSectionFooterEmpty" = "You will receive **80%**.";
+"Stars.SendMessage.AdjustmentAction" = "OK";

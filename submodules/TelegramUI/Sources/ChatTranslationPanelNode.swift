@@ -82,7 +82,7 @@ final class ChatTranslationPanelNode: ASDisplayNode {
         self.layer.animateBounds(from: self.bounds, to: self.bounds.offsetBy(dx: 0.0, dy: self.bounds.size.height), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
     }
     
-    func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+    func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, leftDisplayInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
         let previousIsEnabled = self.chatInterfaceState?.translationState?.isEnabled
         self.chatInterfaceState = interfaceState
         
@@ -176,7 +176,7 @@ final class ChatTranslationPanelNode: ASDisplayNode {
             self.buttonTextNode.bounds = CGRect(origin: CGPoint(), size: buttonTextFrame.size)
         }
 
-        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: UIScreenPixel)))
+        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: leftDisplayInset, y: 0.0), size: CGSize(width: width - leftDisplayInset, height: UIScreenPixel)))
         
         return panelHeight
     }

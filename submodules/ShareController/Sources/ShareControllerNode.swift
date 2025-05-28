@@ -1285,12 +1285,16 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                 }
             )
             |> take(1)
-            |> map { views -> ([EnginePeer.Id: EnginePeer?], [EnginePeer.Id: Int64]) in
-                var result: [EnginePeer.Id: EnginePeer?] = [:]
+            |> map { views -> ([EnginePeer.Id: EngineRenderedPeer?], [EnginePeer.Id: Int64]) in
+                var result: [EnginePeer.Id: EngineRenderedPeer?] = [:]
                 var requiresStars: [EnginePeer.Id: Int64] = [:]
                 for peerId in peerIds {
                     if let view = views.views[PostboxViewKey.basicPeer(peerId)] as? PeerView, let peer = peerViewMainPeer(view) {
-                        result[peerId] = EnginePeer(peer)
+                        var peers: [EnginePeer.Id: EnginePeer] = [peer.id: EnginePeer(peer)]
+                        if let channel = peer as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = view.peers[linkedMonoforumId] {
+                            peers[mainChannel.id] = EnginePeer(mainChannel)
+                        }
+                        result[peerId] = EngineRenderedPeer(peerId: peer.id, peers: peers, associatedMedia: [:])
                         if peer is TelegramUser, let cachedPeerDataView = views.views[PostboxViewKey.cachedPeerData(peerId: peerId)] as? CachedPeerDataView {
                             if let cachedData = cachedPeerDataView.cachedPeerData as? CachedUserData {
                                 requiresStars[peerId] = cachedData.sendPaidMessageStars?.value
@@ -1307,14 +1311,14 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                     return
                 }
                 
-                var mappedPeers: [EnginePeer] = []
+                var mappedPeers: [EngineRenderedPeer] = []
                 for peerId in peerIds {
                     if let maybePeer = peers[peerId], let peer = maybePeer {
                         mappedPeers.append(peer)
                     }
                 }
                 
-                if !tryShare(self.inputFieldNode.text, mappedPeers) {
+                if !tryShare(self.inputFieldNode.text, mappedPeers.compactMap(\.peer)) {
                     return
                 }
 
@@ -1328,15 +1332,15 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
         }
     }
     
-    private func presentPaidMessageAlertIfNeeded(peers: [EnginePeer], requiresStars: [EnginePeer.Id: Int64], completion: @escaping () -> Void) {
+    private func presentPaidMessageAlertIfNeeded(peers: [EngineRenderedPeer], requiresStars: [EnginePeer.Id: Int64], completion: @escaping () -> Void) {
         var count: Int32 = Int32(self.messageCount)
         if !self.inputFieldNode.text.isEmpty {
             count += 1
         }
-        var chargingPeers: [EnginePeer] = []
+        var chargingPeers: [EngineRenderedPeer] = []
         var totalAmount: StarsAmount = .zero
         for peer in peers {
-            if let stars = requiresStars[peer.id] {
+            if let stars = requiresStars[peer.peerId] {
                 chargingPeers.append(peer)
                 totalAmount = totalAmount + StarsAmount(value: stars, nanos: 0)
             }

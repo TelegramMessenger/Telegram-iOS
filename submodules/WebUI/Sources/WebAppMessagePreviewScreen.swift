@@ -431,16 +431,20 @@ public final class WebAppMessagePreviewScreen: ViewControllerComponentContainer 
         let _ = (self.context.engine.data.get(
             EngineDataMap(
                 peers.map { TelegramEngine.EngineData.Item.Peer.SendPaidMessageStars.init(id: $0.id) }
+            ),
+            EngineDataList(
+                peers.map { TelegramEngine.EngineData.Item.Peer.RenderedPeer.init(id: $0.id) }
             )
         )
-        |> deliverOnMainQueue).start(next: { [weak self] sendPaidMessageStars in
+        |> deliverOnMainQueue).start(next: { [weak self] sendPaidMessageStars, renderedPeers in
             guard let self else {
                 return
             }
+            let renderedPeers = renderedPeers.compactMap({ $0 })
             var totalAmount: StarsAmount = .zero
-            var chargingPeers: [EnginePeer] = []
-            for peer in peers {
-                if let maybeAmount = sendPaidMessageStars[peer.id], let amount = maybeAmount {
+            var chargingPeers: [EngineRenderedPeer] = []
+            for peer in renderedPeers {
+                if let maybeAmount = sendPaidMessageStars[peer.peerId], let amount = maybeAmount {
                     totalAmount = totalAmount + amount
                     chargingPeers.append(peer)
                 }

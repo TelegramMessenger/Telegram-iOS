@@ -298,6 +298,7 @@ public protocol Peer: AnyObject, PostboxCoding {
     var id: PeerId { get }
     var indexName: PeerIndexNameRepresentation { get }
     var associatedPeerId: PeerId? { get }
+    var additionalAssociatedPeerId: PeerId? { get }
     var associatedPeerOverridesIdentity: Bool { get }
     var notificationSettingsPeerId: PeerId? { get }
     var associatedMediaIds: [MediaId]? { get }
@@ -307,6 +308,7 @@ public protocol Peer: AnyObject, PostboxCoding {
 }
 
 public extension Peer {
+    var additionalAssociatedPeerId: PeerId? { return nil }
     var associatedPeerOverridesIdentity: Bool { return false }
 }
 

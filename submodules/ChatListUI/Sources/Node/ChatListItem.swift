@@ -2980,7 +2980,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         if customMessageListData.commandPrefix != nil {
                             titleAttributedString = nil
                         } else {
-                            if let displayTitle = itemPeer.chatMainPeer?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder) {
+                            if let displayTitle = itemPeer.chatOrMonoforumMainPeer?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder) {
                                 let textColor: UIColor
                                 if case let .chatList(index) = item.index, index.messageIndex.id.peerId.namespace == Namespaces.Peer.SecretChat {
                                     textColor = theme.secretTitleColor
@@ -2988,6 +2988,10 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                                     textColor = theme.titleColor
                                 }
                                 titleAttributedString = NSAttributedString(string: displayTitle, font: titleFont, textColor: textColor)
+                                
+                                if case let .channel(channel) = itemPeer.peer, channel.flags.contains(.isMonoforum) {
+                                    titleBadgeText = item.presentationData.strings.ChatList_MonoforumLabel
+                                }
                             }
                         }
                     } else if let threadInfo = threadInfo {

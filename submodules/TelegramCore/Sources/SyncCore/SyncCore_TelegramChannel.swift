@@ -223,6 +223,10 @@ public final class TelegramChannel: Peer, Equatable {
         }
     }
     
+    public var additionalAssociatedPeerId: PeerId? {
+        self.linkedMonoforumId
+    }
+    
     public var indexName: PeerIndexNameRepresentation {
         var addressNames = self.usernames.map { $0.username }
         if addressNames.isEmpty, let username = self.username, !username.isEmpty {

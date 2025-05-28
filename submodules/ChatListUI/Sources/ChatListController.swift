@@ -5316,20 +5316,25 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 
                 var deleteTitle = strongSelf.presentationData.strings.Common_Delete
                 if case let .channel(channel) = chatPeer {
-                    if case .broadcast = channel.info {
+                    if channel.isMonoForum {
                         canClear = false
-                        deleteTitle = strongSelf.presentationData.strings.Channel_LeaveChannel
-                        if channel.flags.contains(.isCreator) {
-                            canRemoveGlobally = true
-                        }
+                        canRemoveGlobally = false
                     } else {
-                        deleteTitle = strongSelf.presentationData.strings.Group_DeleteGroup
-                        if channel.flags.contains(.isCreator) {
-                            canRemoveGlobally = true
+                        if case .broadcast = channel.info {
+                            canClear = false
+                            deleteTitle = strongSelf.presentationData.strings.Channel_LeaveChannel
+                            if channel.flags.contains(.isCreator) {
+                                canRemoveGlobally = true
+                            }
+                        } else {
+                            deleteTitle = strongSelf.presentationData.strings.Group_DeleteGroup
+                            if channel.flags.contains(.isCreator) {
+                                canRemoveGlobally = true
+                            }
                         }
-                    }
-                    if let addressName = channel.addressName, !addressName.isEmpty {
-                        canClear = false
+                        if let addressName = channel.addressName, !addressName.isEmpty {
+                            canClear = false
+                        }
                     }
                 } else if case let .legacyGroup(group) = chatPeer {
                     if case .creator = group.role {

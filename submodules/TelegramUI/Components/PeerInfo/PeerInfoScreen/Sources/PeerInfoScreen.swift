@@ -1197,8 +1197,8 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
         }
         if displayPersonalChannel {
             var personalChannelTitle: String?
-            if let personalChannel = data.personalChannel {
-                personalChannelTitle = personalChannel.peer.compactDisplayTitle
+            if let personalChannel = data.personalChannel, let peer = personalChannel.peer.chatOrMonoforumMainPeer {
+                personalChannelTitle = peer.compactDisplayTitle
             }
             
             items[.info]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerPersonalChannel, label: .text(personalChannelTitle ?? presentationData.strings.Settings_PersonalChannelEmptyValue), text: presentationData.strings.Settings_PersonalChannelItem, icon: nil, action: {
@@ -1288,7 +1288,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
         }
         
         if let personalChannel = data.personalChannel {
-            let peerId = personalChannel.peer.id
+            let peerId = personalChannel.peer.peerId
             var label: String?
             if let subscriberCount = personalChannel.subscriberCount {
                 label = presentationData.strings.Conversation_StatusSubscribers(Int32(subscriberCount))
@@ -2024,6 +2024,7 @@ private func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostSt
         case peerDataSettings
         case peerVerifySettings
         case peerSettings
+        case linkedMonoforum
         case peerAdditionalSettings
         case peerActions
     }
@@ -2218,10 +2219,6 @@ private func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostSt
                     items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemDiscussionGroup, label: .text(discussionGroupTitle), text: presentationData.strings.Channel_DiscussionGroup, icon: UIImage(bundleImageName: "Chat/Info/GroupDiscussionIcon"), action: {
                         interaction.editingOpenDiscussionGroupSetup()
                     }))
-                    
-                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPostSuggestionsSettings, label: .text(channel.linkedMonoforumId == nil ? presentationData.strings.PeerInfo_AllowChannelMessages_Off : presentationData.strings.PeerInfo_AllowChannelMessages_On), additionalBadgeLabel: presentationData.strings.Settings_New, text: presentationData.strings.PeerInfo_AllowChannelMessages, icon: PresentationResourcesSettings.channelMessages, action: {
-                        interaction.editingOpenPostSuggestionsSetup()
-                    }))
                 }
                 
                 if isCreator || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
@@ -2266,7 +2263,7 @@ private func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostSt
                     if let approximateBoostLevel = channel.approximateBoostLevel, approximateBoostLevel < 1 {
                         boostIcon = generateDisclosureActionBoostLevelBadgeImage(text: presentationData.strings.Channel_Info_BoostLevelPlusBadge("1").string)
                     } else {
-                        let labelText = NSAttributedString(string: presentationData.strings.Settings_New, font: Font.medium(11.0), textColor: presentationData.theme.list.itemCheckColors.foregroundColor)
+                        /*let labelText = NSAttributedString(string: presentationData.strings.Settings_New, font: Font.medium(11.0), textColor: presentationData.theme.list.itemCheckColors.foregroundColor)
                         let labelBounds = labelText.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: [.usesLineFragmentOrigin], context: nil)
                         let labelSize = CGSize(width: ceil(labelBounds.width), height: ceil(labelBounds.height))
                         let badgeSize = CGSize(width: labelSize.width + 8.0, height: labelSize.height + 2.0 + 1.0)
@@ -2282,7 +2279,7 @@ private func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostSt
                             UIGraphicsPushContext(context)
                             labelText.draw(at: CGPoint(x: 4.0, y: 1.0 + UIScreenPixel))
                             UIGraphicsPopContext()
-                        })
+                        })*/
                     }
                     items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerColor, label: .image(colorImage, colorImage.size), additionalBadgeIcon: boostIcon, text: presentationData.strings.Channel_Info_AppearanceItem, icon: UIImage(bundleImageName: "Chat/Info/NameColorIcon"), action: {
                         interaction.editingOpenNameColorSetup()
@@ -2300,6 +2297,62 @@ private func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostSt
                             interaction.editingToggleAutoTranslate(value)
                         }
                     }))
+                }
+                
+                if isCreator || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
+                    let labelString: NSAttributedString
+                    if channel.linkedMonoforumId != nil {
+                        if let monoforumPeer = data.linkedMonoforumPeer as? TelegramChannel {
+                            if let sendPaidMessageStars = monoforumPeer.sendPaidMessageStars {
+                                let formattedLabel = formatStarsAmountText(sendPaidMessageStars, dateTimeFormat: presentationData.dateTimeFormat)
+                                let smallLabelFont = Font.regular(floor(presentationData.listsFontSize.itemListBaseFontSize / 17.0 * 13.0))
+                                let labelFont = Font.regular(presentationData.listsFontSize.itemListBaseFontSize)
+                                let labelColor = presentationData.theme.list.itemSecondaryTextColor
+                                let attributedString = tonAmountAttributedString(formattedLabel, integralFont: labelFont, fractionalFont: smallLabelFont, color: labelColor, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator).mutableCopy() as! NSMutableAttributedString
+                                attributedString.insert(NSAttributedString(string: "*", font: labelFont, textColor: labelColor), at: 0)
+                                
+                                if let range = attributedString.string.range(of: "*") {
+                                    attributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: NSRange(range, in: attributedString.string))
+                                    attributedString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: attributedString.string))
+                                }
+                                labelString = attributedString
+                            } else {
+                                let labelFont = Font.regular(presentationData.listsFontSize.itemListBaseFontSize)
+                                let labelColor = presentationData.theme.list.itemSecondaryTextColor
+                                
+                                labelString = NSAttributedString(string: presentationData.strings.PeerInfo_AllowChannelMessages_Free, font: labelFont, textColor: labelColor)
+                            }
+                        } else {
+                            let labelFont = Font.regular(presentationData.listsFontSize.itemListBaseFontSize)
+                            let labelColor = presentationData.theme.list.itemSecondaryTextColor
+                            
+                            labelString = NSAttributedString(string: " ", font: labelFont, textColor: labelColor)
+                        }
+                    } else {
+                        let labelFont = Font.regular(presentationData.listsFontSize.itemListBaseFontSize)
+                        let labelColor = presentationData.theme.list.itemSecondaryTextColor
+                        
+                        labelString = NSAttributedString(string: presentationData.strings.PeerInfo_AllowChannelMessages_Off, font: labelFont, textColor: labelColor)
+                    }
+                    
+                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPostSuggestionsSettings, label: .attributedText(labelString), additionalBadgeLabel: presentationData.strings.Settings_New, text: presentationData.strings.PeerInfo_AllowChannelMessages, icon: PresentationResourcesSettings.channelMessages, action: {
+                        interaction.editingOpenPostSuggestionsSetup()
+                    }))
+                    
+                    if let personalChannel = data.personalChannel {
+                        let peerId = personalChannel.peer.peerId
+                        items[.linkedMonoforum]?.append(PeerInfoScreenPersonalChannelItem(id: 1, context: context, data: personalChannel, controller: { [weak interaction] in
+                            guard let interaction else {
+                                return nil
+                            }
+                            return interaction.getController()
+                        }, action: { [weak interaction] in
+                            guard let interaction else {
+                                return
+                            }
+                            interaction.openChat(peerId)
+                        }))
+                    }
                 }
                 
                 var canEditMembers = false

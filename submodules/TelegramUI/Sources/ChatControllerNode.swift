@@ -398,6 +398,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                         } else {
                             self.loadingPlaceholderNode = nil
                             loadingPlaceholderNode.removeFromSupernode()
+                            self.backgroundNode.updateIsLooping(false)
                         }
                     }
                 } else {
@@ -1433,7 +1434,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 translationPanelNode.clipsToBounds = true
             }
             
-            let height = translationPanelNode.updateLayout(width: layout.size.width, leftInset: leftPanelSize?.width ?? layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: immediatelyLayoutTitleAccessoryPanelNodeAndAnimateAppearance ? .immediate : transition, interfaceState: self.chatPresentationInterfaceState)
+            let height = translationPanelNode.updateLayout(width: layout.size.width, leftInset: leftPanelSize?.width ?? layout.safeInsets.left, rightInset: layout.safeInsets.right, leftDisplayInset: leftPanelSize?.width ?? 0.0, transition: immediatelyLayoutTitleAccessoryPanelNodeAndAnimateAppearance ? .immediate : transition, interfaceState: self.chatPresentationInterfaceState)
             translationPanelHeight = height
             if immediatelyLayoutTranslationPanelNodeAndAnimateAppearance {
                 translationPanelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
