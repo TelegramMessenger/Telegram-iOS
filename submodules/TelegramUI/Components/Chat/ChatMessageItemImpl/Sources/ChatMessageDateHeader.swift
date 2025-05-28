@@ -162,7 +162,9 @@ private final class ChatMessageDateSectionSeparatorNode: ASDisplayNode {
     private let controllerInteraction: ChatControllerInteraction?
     private let presentationData: ChatPresentationData
     
-    private let backgroundNode: NavigationBackgroundNode
+    public let backgroundNode: NavigationBackgroundNode
+    private var backgroundContent: WallpaperBubbleBackgroundNode?
+    
     private let patternLayer: SimpleShapeLayer
     
     init(
@@ -172,6 +174,11 @@ private final class ChatMessageDateSectionSeparatorNode: ASDisplayNode {
         self.controllerInteraction = controllerInteraction
         self.presentationData = presentationData
         
+        if controllerInteraction?.presentationContext.backgroundNode?.hasExtraBubbleBackground() == true, let backgroundContent = controllerInteraction?.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {
+            backgroundContent.clipsToBounds = true
+            self.backgroundContent = backgroundContent
+        }
+                
         self.backgroundNode = NavigationBackgroundNode(color: .clear)
         self.backgroundNode.isUserInteractionEnabled = false
         
@@ -182,7 +189,13 @@ private final class ChatMessageDateSectionSeparatorNode: ASDisplayNode {
         self.backgroundColor = nil
         self.isOpaque = false
         
-        self.addSubnode(self.backgroundNode)
+        if let backgroundContent = self.backgroundContent {
+            self.addSubnode(backgroundContent)
+            backgroundContent.layer.mask = self.patternLayer
+        } else {
+            self.addSubnode(self.backgroundNode)
+            self.backgroundNode.layer.mask = self.patternLayer
+        }
         
         let fullTranslucency: Bool = self.controllerInteraction?.enableFullTranslucency ?? true
         
@@ -196,8 +209,6 @@ private final class ChatMessageDateSectionSeparatorNode: ASDisplayNode {
         linePath.addLine(to: CGPoint(x: 10000.0, y: self.patternLayer.lineWidth * 0.5))
         self.patternLayer.path = linePath
         self.patternLayer.lineDashPattern = [6.0 as NSNumber, 2.0 as NSNumber] as [NSNumber]
-        
-        self.backgroundNode.layer.mask = self.patternLayer
     }
     
     func update(size: CGSize, transition: ContainedViewLayoutTransition) {
@@ -206,6 +217,21 @@ private final class ChatMessageDateSectionSeparatorNode: ASDisplayNode {
         self.backgroundNode.update(size: backgroundFrame.size, transition: transition)
         
         transition.updateFrame(layer: self.patternLayer, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: 1.66)))
+        
+        if let backgroundContent = self.backgroundContent {
+            backgroundContent.allowsGroupOpacity = true
+            self.backgroundNode.isHidden = true
+            
+            transition.updateFrame(node: backgroundContent, frame: self.backgroundNode.frame)
+            backgroundContent.cornerRadius = backgroundFrame.size.height / 2.0
+            
+            /*if let (rect, containerSize) = self.absolutePosition {
+                var backgroundFrame = backgroundContent.frame
+                backgroundFrame.origin.x += rect.minX
+                backgroundFrame.origin.y += containerSize.height - rect.minY
+                backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: transition)
+            }*/
+        }
     }
 }
 

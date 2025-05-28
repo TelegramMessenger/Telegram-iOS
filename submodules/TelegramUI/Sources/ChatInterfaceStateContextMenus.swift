@@ -1891,11 +1891,14 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
-        let canViewStats: Bool
-        if let messageReadStatsAreHidden = infoSummaryData.messageReadStatsAreHidden, !messageReadStatsAreHidden {
+        var canViewStats = false
+        var canViewAuthor = false
+        if let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum {
+            if message.effectivelyIncoming(context.account.peerId) {
+                canViewAuthor = true
+            }
+        } else if let messageReadStatsAreHidden = infoSummaryData.messageReadStatsAreHidden, !messageReadStatsAreHidden {
             canViewStats = canViewReadStats(message: message, participantCount: infoSummaryData.participantCount, isMessageRead: isMessageRead, isPremium: isPremium, appConfig: appConfig)
-        } else {
-            canViewStats = false
         }
         
         var reactionCount = 0
@@ -1922,6 +1925,13 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             actions.insert(.custom(ChatReadReportContextItem(context: context, message: message, hasReadReports: false, isEdit: true, stats: MessageReadStats(reactionCount: 0, peers: [], readTimestamps: [:]), action: nil), false), at: 0)
         }
 
+        if canViewAuthor {
+            actions.insert(.custom(ChatMessageAuthorContextItem(context: context, message: message, action: { c, f, peer in
+                c.dismiss(completion: {
+                    controllerInteraction.openPeer(peer, .default, nil, .default)
+                })
+            }), false), at: 0)
+        }
         if let peer = message.peers[message.id.peerId], (canViewStats || reactionCount != 0) {
             var hasReadReports = false
             if let channel = peer as? TelegramChannel {
@@ -2681,6 +2691,313 @@ private final class ChatDeleteMessageContextItemNode: ASDisplayNode, ContextMenu
     
     func updateIsHighlighted(isHighlighted: Bool) {
         self.setIsHighlighted(isHighlighted)
+    }
+    
+    func actionNode(at point: CGPoint) -> ContextActionNodeProtocol {
+        return self
+    }
+}
+
+final class ChatMessageAuthorContextItem: ContextMenuCustomItem {
+    fileprivate let context: AccountContext
+    fileprivate let message: Message
+    fileprivate let action: ((ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void, EnginePeer) -> Void)?
+
+    init(context: AccountContext, message: Message, action: ((ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void, EnginePeer) -> Void)?) {
+        self.context = context
+        self.message = message
+        self.action = action
+    }
+
+    func node(presentationData: PresentationData, getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void) -> ContextMenuCustomNode {
+        return ChatMessageAuthorContextItemNode(presentationData: presentationData, item: self, getController: getController, actionSelected: actionSelected)
+    }
+}
+
+private final class ChatMessageAuthorContextItemNode: ASDisplayNode, ContextMenuCustomNode, ContextActionNodeProtocol {
+    private let item: ChatMessageAuthorContextItem
+    private var presentationData: PresentationData
+    private let getController: () -> ContextControllerProtocol?
+    private let actionSelected: (ContextMenuActionResult) -> Void
+
+    private let backgroundNode: ASDisplayNode
+    private let highlightedBackgroundNode: ASDisplayNode
+    private let placeholderCalculationTextNode: ImmediateTextNode
+    private let textNode: ImmediateTextNode
+    private let shimmerNode: ShimmerEffectNode
+
+    /*private let avatarsNode: AnimatedAvatarSetNode
+    private let avatarsContext: AnimatedAvatarSetContext
+
+    private let placeholderAvatarsNode: AnimatedAvatarSetNode
+    private let placeholderAvatarsContext: AnimatedAvatarSetContext*/
+
+    private let buttonNode: HighlightTrackingButtonNode
+
+    private var pointerInteraction: PointerInteraction?
+
+    private var disposable: Disposable?
+    private var peer: EnginePeer?
+
+    init(presentationData: PresentationData, item: ChatMessageAuthorContextItem, getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void) {
+        self.item = item
+        self.presentationData = presentationData
+        self.getController = getController
+        self.actionSelected = actionSelected
+
+        let textFont = Font.regular(presentationData.listsFontSize.baseDisplaySize)
+
+        self.backgroundNode = ASDisplayNode()
+        self.backgroundNode.isAccessibilityElement = false
+        self.backgroundNode.backgroundColor = presentationData.theme.contextMenu.itemBackgroundColor
+        self.highlightedBackgroundNode = ASDisplayNode()
+        self.highlightedBackgroundNode.isAccessibilityElement = false
+        self.highlightedBackgroundNode.backgroundColor = presentationData.theme.contextMenu.itemHighlightedBackgroundColor
+        self.highlightedBackgroundNode.alpha = 0.0
+
+        self.placeholderCalculationTextNode = ImmediateTextNode()
+        self.placeholderCalculationTextNode.attributedText = NSAttributedString(string: presentationData.strings.Conversation_ContextMenuSeen(11), font: textFont, textColor: presentationData.theme.contextMenu.primaryColor)
+        self.placeholderCalculationTextNode.maximumNumberOfLines = 1
+
+        self.textNode = ImmediateTextNode()
+        self.textNode.isAccessibilityElement = false
+        self.textNode.isUserInteractionEnabled = false
+        self.textNode.displaysAsynchronously = false
+        self.textNode.attributedText = NSAttributedString(string: " ", font: textFont, textColor: presentationData.theme.contextMenu.primaryColor)
+        self.textNode.maximumNumberOfLines = 1
+        self.textNode.alpha = 0.0
+
+        self.shimmerNode = ShimmerEffectNode()
+        self.shimmerNode.clipsToBounds = true
+
+        self.buttonNode = HighlightTrackingButtonNode()
+        self.buttonNode.isAccessibilityElement = true
+        self.buttonNode.accessibilityLabel = presentationData.strings.VoiceChat_StopRecording
+
+        /*self.avatarsNode = AnimatedAvatarSetNode()
+        self.avatarsContext = AnimatedAvatarSetContext()
+
+        self.placeholderAvatarsNode = AnimatedAvatarSetNode()
+        self.placeholderAvatarsContext = AnimatedAvatarSetContext()*/
+
+        super.init()
+
+        self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.highlightedBackgroundNode)
+        self.addSubnode(self.shimmerNode)
+        self.addSubnode(self.textNode)
+        /*self.addSubnode(self.avatarsNode)
+        self.addSubnode(self.placeholderAvatarsNode)*/
+        self.addSubnode(self.buttonNode)
+
+        self.buttonNode.highligthedChanged = { [weak self] highligted in
+            guard let strongSelf = self else {
+                return
+            }
+            if highligted {
+                strongSelf.highlightedBackgroundNode.alpha = 1.0
+            } else {
+                strongSelf.highlightedBackgroundNode.alpha = 0.0
+                strongSelf.highlightedBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
+            }
+        }
+        self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
+        
+        self.buttonNode.isUserInteractionEnabled = false
+
+        self.disposable = (item.context.engine.messages.requestMessageAuthor(id: item.message.id)
+        |> deliverOnMainQueue).startStrict(next: { [weak self] value in
+            guard let self else {
+                return
+            }
+            if let value {
+                self.updatePeer(peer: value, transition: .animated(duration: 0.2, curve: .easeInOut))
+            }
+        })
+    }
+
+    deinit {
+        self.disposable?.dispose()
+    }
+
+    override func didLoad() {
+        super.didLoad()
+
+        self.pointerInteraction = PointerInteraction(node: self.buttonNode, style: .hover, willEnter: { [weak self] in
+            if let strongSelf = self {
+                strongSelf.highlightedBackgroundNode.alpha = 0.75
+            }
+        }, willExit: { [weak self] in
+            if let strongSelf = self {
+                strongSelf.highlightedBackgroundNode.alpha = 0.0
+            }
+        })
+    }
+
+    private var validLayout: (calculatedWidth: CGFloat, size: CGSize)?
+
+    func updatePeer(peer: EnginePeer, transition: ContainedViewLayoutTransition) {
+        self.buttonNode.isUserInteractionEnabled = true
+
+        guard let (calculatedWidth, size) = self.validLayout else {
+            return
+        }
+
+        self.peer = peer
+
+        let (_, apply) = self.updateLayout(constrainedWidth: calculatedWidth, constrainedHeight: size.height)
+        apply(size, transition)
+    }
+
+    func updateLayout(constrainedWidth: CGFloat, constrainedHeight: CGFloat) -> (CGSize, (CGSize, ContainedViewLayoutTransition) -> Void) {
+        let sideInset: CGFloat = 14.0
+        let verticalInset: CGFloat
+        let rightTextInset: CGFloat
+        //let avatarsWidth: CGFloat = 32.0
+        let avatarsWidth: CGFloat = 0
+        
+        verticalInset = 12.0
+        rightTextInset = sideInset + 36.0
+
+        let calculatedWidth = min(constrainedWidth, 250.0)
+
+        let textFont = Font.regular(floor(13.0 * (self.presentationData.listsFontSize.baseDisplaySize / 17.0)))
+        let boldTextFont = Font.semibold(floor(13.0 * (self.presentationData.listsFontSize.baseDisplaySize / 17.0)))
+        
+        let animatePositions = true
+
+        if let peer = self.peer {
+            let peerTitle = peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)
+            let rawString = self.presentationData.strings.Chat_ContextMenu_AuthorInfo(peerTitle)
+            let string = NSMutableAttributedString(attributedString: NSAttributedString(string: rawString.string, font: textFont, textColor: self.presentationData.theme.contextMenu.primaryColor))
+            for range in rawString.ranges {
+                string.addAttribute(.foregroundColor, value: self.presentationData.theme.list.itemAccentColor, range: range.range)
+                string.addAttribute(.font, value: boldTextFont, range: range.range)
+            }
+            self.textNode.attributedText = string
+        } else {
+            self.textNode.attributedText = NSAttributedString(string: " ", font: textFont, textColor: self.presentationData.theme.contextMenu.primaryColor)
+        }
+
+        let textSize = self.textNode.updateLayout(CGSize(width: calculatedWidth - sideInset - rightTextInset - avatarsWidth - 4.0, height: .greatestFiniteMagnitude))
+
+        let placeholderTextSize = self.placeholderCalculationTextNode.updateLayout(CGSize(width: calculatedWidth - sideInset - rightTextInset - avatarsWidth - 4.0, height: .greatestFiniteMagnitude))
+
+        let combinedTextHeight = textSize.height
+        return (CGSize(width: calculatedWidth, height: verticalInset * 2.0 + combinedTextHeight), { size, transition in
+            self.validLayout = (calculatedWidth: calculatedWidth, size: size)
+            
+            let positionTransition: ContainedViewLayoutTransition = animatePositions ? transition : .immediate
+            
+            let verticalOrigin = floor((size.height - combinedTextHeight) / 2.0)
+            let textFrame = CGRect(origin: CGPoint(x: sideInset + avatarsWidth + 2.0, y: verticalOrigin), size: textSize)
+            
+            positionTransition.updateFrameAdditive(node: self.textNode, frame: textFrame)
+            transition.updateAlpha(node: self.textNode, alpha: self.peer == nil ? 0.0 : 1.0)
+
+            let shimmerHeight: CGFloat = 8.0
+
+            self.shimmerNode.frame = CGRect(origin: CGPoint(x: textFrame.minX, y: floor((size.height - shimmerHeight) / 2.0)), size: CGSize(width: placeholderTextSize.width, height: shimmerHeight))
+            self.shimmerNode.cornerRadius = shimmerHeight / 2.0
+            let shimmeringForegroundColor: UIColor
+            let shimmeringColor: UIColor
+            if self.presentationData.theme.overallDarkAppearance {
+                let backgroundColor = self.presentationData.theme.contextMenu.backgroundColor.blitOver(self.presentationData.theme.list.plainBackgroundColor, alpha: 1.0)
+
+                shimmeringForegroundColor = self.presentationData.theme.contextMenu.primaryColor.blitOver(backgroundColor, alpha: 0.1)
+                shimmeringColor = self.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.3)
+            } else {
+                let backgroundColor = self.presentationData.theme.contextMenu.backgroundColor.blitOver(self.presentationData.theme.list.plainBackgroundColor, alpha: 1.0)
+
+                shimmeringForegroundColor = self.presentationData.theme.contextMenu.primaryColor.blitOver(backgroundColor, alpha: 0.15)
+                shimmeringColor = self.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.3)
+            }
+            self.shimmerNode.update(backgroundColor: self.presentationData.theme.list.plainBackgroundColor, foregroundColor: shimmeringForegroundColor, shimmeringColor: shimmeringColor, shapes: [.rect(rect: self.shimmerNode.bounds)], horizontal: true, size: self.shimmerNode.bounds.size)
+            self.shimmerNode.updateAbsoluteRect(self.shimmerNode.frame, within: size)
+            transition.updateAlpha(node: self.shimmerNode, alpha: self.peer == nil ? 1.0 : 0.0)
+
+            /*let avatarsContent: AnimatedAvatarSetContext.Content
+            let placeholderAvatarsContent: AnimatedAvatarSetContext.Content
+
+            var avatarsPeers: [EnginePeer] = []
+            if let peer = self.peer {
+                avatarsPeers = [peer]
+            }
+            avatarsContent = self.avatarsContext.update(peers: avatarsPeers, animated: false)
+            
+            placeholderAvatarsContent = self.avatarsContext.updatePlaceholder(color: shimmeringForegroundColor, count: 1, animated: false)
+
+            let avatarsSize = self.avatarsNode.update(context: self.item.context, content: avatarsContent, itemSize: CGSize(width: 24.0, height: 24.0), customSpacing: 10.0, animated: false, synchronousLoad: true)
+            self.avatarsNode.frame = CGRect(origin: CGPoint(x: sideInset, y: floor((size.height - avatarsSize.height) / 2.0)), size: avatarsSize)
+            transition.updateAlpha(node: self.avatarsNode, alpha: self.peer == nil ? 0.0 : 1.0)
+
+            let placeholderAvatarsSize = self.placeholderAvatarsNode.update(context: self.item.context, content: placeholderAvatarsContent, itemSize: CGSize(width: 24.0, height: 24.0), customSpacing: 10.0, animated: false, synchronousLoad: true)
+            self.placeholderAvatarsNode.frame = CGRect(origin: CGPoint(x: self.avatarsNode.frame.minX, y: floor((size.height - placeholderAvatarsSize.height) / 2.0)), size: placeholderAvatarsSize)
+            transition.updateAlpha(node: self.placeholderAvatarsNode, alpha: self.peer == nil ? 1.0 : 0.0)*/
+
+            transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height)))
+            transition.updateFrame(node: self.highlightedBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height)))
+            transition.updateFrame(node: self.buttonNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height)))
+        })
+    }
+
+    func updateTheme(presentationData: PresentationData) {
+        self.presentationData = presentationData
+
+        self.backgroundNode.backgroundColor = presentationData.theme.contextMenu.itemBackgroundColor
+        self.highlightedBackgroundNode.backgroundColor = presentationData.theme.contextMenu.itemHighlightedBackgroundColor
+
+        let textFont = Font.regular(presentationData.listsFontSize.baseDisplaySize)
+
+        self.textNode.attributedText = NSAttributedString(string: self.textNode.attributedText?.string ?? "", font: textFont, textColor: presentationData.theme.contextMenu.primaryColor)
+    }
+
+    @objc private func buttonPressed() {
+        self.performAction()
+    }
+
+    private var actionTemporarilyDisabled: Bool = false
+    
+    func canBeHighlighted() -> Bool {
+        return self.isActionEnabled
+    }
+    
+    func updateIsHighlighted(isHighlighted: Bool) {
+        self.setIsHighlighted(isHighlighted)
+    }
+
+    func performAction() {
+        if self.actionTemporarilyDisabled {
+            return
+        }
+        self.actionTemporarilyDisabled = true
+        Queue.mainQueue().async { [weak self] in
+            self?.actionTemporarilyDisabled = false
+        }
+
+        guard let controller = self.getController() else {
+            return
+        }
+        if let peer = self.peer {
+            self.item.action?(controller, { [weak self] result in
+                self?.actionSelected(result)
+            }, peer)
+        }
+    }
+
+    var isActionEnabled: Bool {
+        if self.item.action == nil {
+            return false
+        }
+        return self.peer != nil
+    }
+
+    func setIsHighlighted(_ value: Bool) {
+        if value {
+            self.highlightedBackgroundNode.alpha = 1.0
+        } else {
+            self.highlightedBackgroundNode.alpha = 0.0
+        }
     }
     
     func actionNode(at point: CGPoint) -> ContextActionNodeProtocol {

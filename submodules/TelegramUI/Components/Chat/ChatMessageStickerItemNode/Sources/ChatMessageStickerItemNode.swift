@@ -485,15 +485,19 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                 if replyThreadMessage.peerId != item.context.account.peerId {
                     if replyThreadMessage.peerId.isGroupOrChannel && item.message.author != nil {
                         var isBroadcastChannel = false
-                        if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
-                            isBroadcastChannel = true
+                        var isMonoforum = false
+                        if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel {
+                            if case .broadcast = peer.info {
+                                isBroadcastChannel = true
+                            }
+                            isMonoforum = peer.isMonoForum
                         }
                         
                         if replyThreadMessage.isChannelPost, replyThreadMessage.effectiveTopId == item.message.id {
                             isBroadcastChannel = true
                         }
                         
-                        if !isBroadcastChannel {
+                        if !isBroadcastChannel && !isMonoforum {
                             hasAvatar = true
                         }
                     }

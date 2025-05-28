@@ -933,7 +933,11 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                     } else if case let .legacyGroup(group) = peer {
                         titleAttributedString = NSAttributedString(string: group.title, font: titleBoldFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
                     } else if case let .channel(channel) = peer {
-                        titleAttributedString = NSAttributedString(string: channel.title, font: titleBoldFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
+                        if case let .channel(mainChannel) = chatPeer, mainChannel.isMonoForum {
+                            titleAttributedString = NSAttributedString(string: item.presentationData.strings.Monoforum_NameFormat(channel.title).string, font: titleBoldFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
+                        } else {
+                            titleAttributedString = NSAttributedString(string: channel.title, font: titleBoldFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
+                        }
                     }
                     
                     switch item.status {

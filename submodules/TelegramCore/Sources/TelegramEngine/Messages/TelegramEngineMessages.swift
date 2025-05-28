@@ -1575,5 +1575,9 @@ public extension TelegramEngine {
                 return filteredResult
             }
         }
+        
+        public func requestMessageAuthor(id: EngineMessage.Id) -> Signal<EnginePeer?, NoError> {
+            return _internal_requestMessageAuthor(account: self.account, id: id)
+        }
     }
 }

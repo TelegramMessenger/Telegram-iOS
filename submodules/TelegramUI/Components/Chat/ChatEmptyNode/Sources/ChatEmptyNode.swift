@@ -1299,7 +1299,9 @@ public final class ChatEmptyNodePremiumRequiredChatContent: ASDisplayNode, ChatE
             let starsString = presentationStringsFormattedNumber(Int32(amount), interfaceState.dateTimeFormat.groupingSeparator)
             let rawText: String
             
-            if self.isPremiumDisabled {
+            if let channel = interfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum {
+                rawText = interfaceState.strings.Chat_EmptyStateMonoforumPaid_Text(peerTitle, " $ \(starsString)").string
+            } else if self.isPremiumDisabled {
                 rawText = interfaceState.strings.Chat_EmptyStatePaidMessagingDisabled_Text(peerTitle, " $ \(starsString)").string
             } else {
                 rawText = interfaceState.strings.Chat_EmptyStatePaidMessaging_Text(peerTitle, " $ \(starsString)").string
@@ -1867,7 +1869,11 @@ public final class ChatEmptyNode: ASDisplayNode {
                         }
                     }
                 } else if let channel = peer as? TelegramChannel, channel.isMonoForum {
-                    contentType = .starsRequired(interfaceState.sendPaidMessageStars?.value)
+                    if let mainChannel = interfaceState.renderedPeer?.chatOrMonoforumMainPeer as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
+                        contentType = .regular
+                    } else {
+                        contentType = .starsRequired(interfaceState.sendPaidMessageStars?.value)
+                    }
                 } else {
                     contentType = .regular
                 }

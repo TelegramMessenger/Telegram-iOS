@@ -3241,6 +3241,22 @@ public extension Api.functions.channels {
                 }
 }
 public extension Api.functions.channels {
+                static func getMessageAuthor(channel: Api.InputChannel, id: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.User>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-320691994)
+                    channel.serialize(buffer, true)
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "channels.getMessageAuthor", parameters: [("channel", String(describing: channel)), ("id", String(describing: id))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.User? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.User?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.User
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.channels {
                 static func getMessages(channel: Api.InputChannel, id: [Api.InputMessage]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-1383294429)
