@@ -119,7 +119,7 @@ final class PlayButtonNode: ASDisplayNode {
         
         transition.updateFrame(node: self.backgroundNode, frame: buttonSize.centered(in: CGRect(origin: .zero, size: size)))
                 
-        self.playPauseIconNode.frame = CGRect(origin: CGPoint(x: 4.0, y: 1.0 - UIScreenPixel), size: CGSize(width: 21.0, height: 21.0))
+        self.playPauseIconNode.frame = CGRect(origin: CGPoint(x: 3.0, y: 1.0 - UIScreenPixel), size: CGSize(width: 21.0, height: 21.0))
                                
         transition.updateFrame(node: self.durationLabel, frame: CGRect(origin: CGPoint(x: 18.0, y: 3.0), size: CGSize(width: 35.0, height: 20.0)))
         transition.updateAlpha(node: self.durationLabel, alpha: buttonSize.width > 27.0 ? 1.0 : 0.0)
@@ -509,7 +509,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
                         }))
                     }
                     
-                    let minDuration = max(2.0, 56.0 * audio.duration / waveformBackgroundFrame.size.width)
+                    let minDuration = max(1.0, 56.0 * audio.duration / waveformBackgroundFrame.size.width)
                     let (leftHandleFrame, rightHandleFrame) = self.trimView.update(
                         style: .voiceMessage,
                         theme: interfaceState.theme,

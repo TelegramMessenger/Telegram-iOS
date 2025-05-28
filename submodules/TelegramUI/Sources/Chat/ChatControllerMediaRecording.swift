@@ -494,7 +494,7 @@ extension ChatControllerImpl {
             })
         } else {
             let proceed = {
-                self.withAudioRecorder({ audioRecorder in
+                self.withAudioRecorder(resuming: true, { audioRecorder in
                     audioRecorder.resume()
                     
                     self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
@@ -617,13 +617,43 @@ extension ChatControllerImpl {
         self.present(tooltipController, in: .window(.root))
     }
     
-    private func withAudioRecorder(_ f: (ManagedAudioRecorder) -> Void) {
+    private func withAudioRecorder(resuming: Bool, _ f: (ManagedAudioRecorder) -> Void) {
         if let audioRecorder = self.audioRecorderValue {
             f(audioRecorder)
         } else if let recordedMediaPreview = self.presentationInterfaceState.interfaceState.mediaDraftState, case let .audio(audio) = recordedMediaPreview {
             self.requestAudioRecorder(beginWithTone: false, existingDraft: audio)
             if let audioRecorder = self.audioRecorderValue {
                 f(audioRecorder)
+                
+                if !resuming {
+                    self.recorderDataDisposable.set(
+                        (audioRecorder.takenRecordedData()
+                         |> deliverOnMainQueue).startStrict(
+                            next: { [weak self] data in
+                                if let strongSelf = self, let data = data {
+                                    let audioWaveform = audio.waveform
+                                   
+                                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                                        $0.updatedInterfaceState {
+                                            $0.withUpdatedMediaDraftState(.audio(
+                                                ChatInterfaceMediaDraftState.Audio(
+                                                    resource: audio.resource,
+                                                    fileSize: Int32(data.compressedData.count),
+                                                    duration: data.duration,
+                                                    waveform: audioWaveform,
+                                                    trimRange: data.trimRange,
+                                                    resumeData: data.resumeData
+                                                )
+                                            ))
+                                        }.updatedInputTextPanelState { panelState in
+                                            return panelState.withUpdatedMediaRecordingState(nil)
+                                        }
+                                    })
+                                    strongSelf.updateDownButtonVisibility()
+                                }
+                            })
+                    )
+                }
             }
         }
     }
@@ -632,7 +662,7 @@ extension ChatControllerImpl {
         if let videoRecorder = self.videoRecorderValue {
             videoRecorder.updateTrimRange(start: start, end: end, updatedEnd: updatedEnd, apply: apply)
         } else {
-            self.withAudioRecorder({ audioRecorder in
+            self.withAudioRecorder(resuming: false, { audioRecorder in
                 audioRecorder.updateTrimRange(start: start, end: end, updatedEnd: updatedEnd, apply: apply)
             })
         }
