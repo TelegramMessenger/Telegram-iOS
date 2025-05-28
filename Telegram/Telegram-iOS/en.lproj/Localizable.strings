@@ -14381,4 +14381,20 @@ Sorry for the inconvenience.";
 "ChannelMessages.Info" = "Allow users to send messages to your channel, with the option to charge a fee for each message.";
 "ChannelMessages.SwitchTitle" = "Allow Channel Messages";
 "ChannelMessages.PriceSectionTitle" = "PRICE FOR EACH MESSAGE";
-"ChannelMessages.PriceSectionFooter" = "Charge users for the ability to suggest one post for your channel. You're not required to publish any suggestions by charging this. You'll receive 85% of the selected fee for each incoming suggestion.";
+"ChannelMessages.PriceSectionFooter" = "You will receive 85% of the selected fee for each incoming message.";
+
+"ChatList.MonoforumLabel" = "MESSAGES";
+"ChatList.MonoforumEmptyText" = "No messages here yet...";
+
+"Chat.InlineTopicMenu.Reorder" = "Reorder";
+"Chat.InlineTopicMenu.Edit" = "Edit";
+"Chat.InlineTopicMenu.AllTab" = "All";
+"Chat.ChannelMessagesHint" = "Send a message to the channel's admin";
+"Chat.ChannelMessagesHintBadge" = "NEW";
+
+"PeerInfo.AllowChannelMessages" = "Allow Channel Messages";
+"PeerInfo.AllowChannelMessages.On" = "On";
+"PeerInfo.AllowChannelMessages.Off" = "Off";
+"PeerInfo.ChannelMessages" = "Channel Messages";
+
+"Chat.EmptyStateMonoforum.Text" = "Send a direct message to the administrator of **%@**.";

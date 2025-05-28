@@ -174,6 +174,7 @@ extension ChatControllerImpl {
         private(set) var state: State = State()
         var initialInterfaceState: (interfaceState: ChatInterfaceState, editMessage: Message?)?
         var initialNavigationBadge: String?
+        var initialPersistentPeerData: ChatPresentationInterfaceState.PersistentPeerData?
         
         var overlayTitle: String? {
             var title: String?
@@ -547,8 +548,7 @@ extension ChatControllerImpl {
                             strongSelf.state.chatTitleContent = .custom(strings.Chat_TitlePinnedMessages(Int32(displayedCount ?? 1)), nil, false)
                         } else if let channel = peer as? TelegramChannel, channel.isMonoForum {
                             if let linkedMonoforumId = channel.linkedMonoforumId, let mainPeer = peerView.peers[linkedMonoforumId] {
-                                //TODO:localize
-                                strongSelf.state.chatTitleContent = .custom(mainPeer.debugDisplayTitle, nil, false)
+                                strongSelf.state.chatTitleContent = .custom(mainPeer.debugDisplayTitle, "Direct messages", false)
                             } else {
                                 strongSelf.state.chatTitleContent = .custom(channel.debugDisplayTitle, nil, false)
                             }
@@ -1885,12 +1885,32 @@ extension ChatControllerImpl {
                 strongSelf.onUpdated?(previousState)
             }
             
+            let initialPersistentPeerData: Signal<ChatPresentationInterfaceState.PersistentPeerData?, NoError>
+            if let peerId = chatLocation.peerId {
+                initialPersistentPeerData = context.engine.peers.getPerstistentChatInterfaceState(peerId: peerId)
+                |> map { value in
+                    return value?.get(ChatPresentationInterfaceState.PersistentPeerData.self)
+                }
+            } else {
+                initialPersistentPeerData = .single(nil)
+            }
+            let initialPersistentPeerDataReady = initialPersistentPeerData
+            |> deliverOnMainQueue
+            |> beforeNext { [weak self] value in
+                guard let self else {
+                    return
+                }
+                self.initialPersistentPeerData = value
+            }
+            |> map { _ -> Bool in true }
+            
             self.isReady.set(combineLatest(queue: .mainQueue(), [
                 self.isPeerInfoReady.get(),
                 self.isChatLocationInfoReady.get(),
                 self.isCachedDataReady.get(),
                 historyNode.isReady,
-                initialData |> map { _ -> Bool in true }
+                initialData |> map { _ -> Bool in true },
+                initialPersistentPeerDataReady
             ])
             |> map { values in
                 return !values.contains(where: { !$0 })

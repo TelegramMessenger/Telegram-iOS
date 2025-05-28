@@ -268,6 +268,9 @@ public final class ChatSideTopicsPanel: Component {
             
             @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
                 if case .ended = recognizer.state {
+                    if let iconView = self.icon?.view as? EmojiStatusComponent.View {
+                        iconView.playOnce()
+                    }
                     self.component?.action?()
                 }
             }
@@ -390,7 +393,7 @@ public final class ChatSideTopicsPanel: Component {
                         animationCache: component.context.animationCache,
                         animationRenderer: component.context.animationRenderer,
                         content: avatarIconContent,
-                        isVisibleForAnimations: false,
+                        isVisibleForAnimations: true,
                         action: nil
                     )
                     let icon: ComponentView<Empty>
@@ -417,8 +420,7 @@ public final class ChatSideTopicsPanel: Component {
                     if let threadData = component.item.item.threadData {
                         titleText = threadData.info.title
                     } else {
-                        //TODO:localize
-                        titleText = "General"
+                        titleText = " "
                     }
                 } else {
                     titleText = component.item.item.renderedPeer.chatMainPeer?.compactDisplayTitle ?? " "
@@ -430,7 +432,7 @@ public final class ChatSideTopicsPanel: Component {
                         animationCache: component.context.animationCache,
                         animationRenderer: component.context.animationRenderer,
                         content: avatarIconContent,
-                        isVisibleForAnimations: false,
+                        isVisibleForAnimations: true,
                         action: nil
                     )
                     let _ = icon.update(
@@ -697,6 +699,9 @@ public final class ChatSideTopicsPanel: Component {
             
             @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
                 if case .ended = recognizer.state {
+                    if let iconView = self.icon?.view as? EmojiStatusComponent.View {
+                        iconView.playOnce()
+                    }
                     self.component?.action?()
                 }
             }
@@ -847,8 +852,7 @@ public final class ChatSideTopicsPanel: Component {
                     if let threadData = component.item.item.threadData {
                         titleText = threadData.info.title
                     } else {
-                        //TODO:localize
-                        titleText = "General"
+                        titleText = " "
                     }
                 } else {
                     titleText = component.item.item.renderedPeer.chatMainPeer?.compactDisplayTitle ?? " "
@@ -1220,8 +1224,7 @@ public final class ChatSideTopicsPanel: Component {
                     containerSize: CGSize(width: 100.0, height: 100.0)
                 )
                 
-                //TODO:localize
-                let titleText: String = "All"
+                let titleText: String = component.strings.Chat_InlineTopicMenu_AllTab
                 let titleSize = self.title.update(
                     transition: .immediate,
                     component: AnyComponent(MultilineTextComponent(
@@ -1348,8 +1351,7 @@ public final class ChatSideTopicsPanel: Component {
                 let leftInset: CGFloat = 6.0
                 let rightInset: CGFloat = 12.0
                 
-                //TODO:localize
-                let titleText: String = "All"
+                let titleText: String = component.strings.Chat_InlineTopicMenu_AllTab
                 let titleSize = self.title.update(
                     transition: .immediate,
                     component: AnyComponent(MultilineTextComponent(

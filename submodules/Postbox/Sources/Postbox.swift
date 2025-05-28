@@ -3187,7 +3187,6 @@ final class PostboxImpl {
             let signal: Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> = self.transactionSignal(userInteractive: true, { subscriber, transaction in
                 let peerIds = self.peerIdsForLocation(chatLocation, ignoreRelatedChats: false)
                 
-                //TODO:release jump to unread
                 var anchor: HistoryViewInputAnchor = .upperBound
                 switch peerIds {
                 case let .single(peerId, threadId):

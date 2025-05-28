@@ -487,6 +487,11 @@ extension ChatControllerImpl {
             let initialInterfaceState = contentData.initialInterfaceState
             contentData.initialInterfaceState = nil
             
+            if !self.didInitializePersistentPeerInterfaceData, let initialPersistentPeerData = contentData.initialPersistentPeerData {
+                self.didInitializePersistentPeerInterfaceData = true
+                presentationInterfaceState = presentationInterfaceState.updatedPersistentData(initialPersistentPeerData)
+            }
+            
             presentationInterfaceState = presentationInterfaceState.updatedInterfaceState { interfaceState in
                 var interfaceState = interfaceState
                 if let initialInterfaceState {
@@ -565,8 +570,6 @@ extension ChatControllerImpl {
         #if DEBUG
         let initTimestamp = self.initTimestamp
         #endif
-        
-        //TODO:release ready must include chat node
         
         self.ready.set(combineLatest(queue: .mainQueue(), [
             self.contentDataReady.get(),
@@ -1538,7 +1541,14 @@ extension ChatControllerImpl {
                                 completion(t, {})
                             })
                             strongSelf.updateItemNodesSearchTextHighlightStates()
-                            strongSelf.chatDisplayNode.ensureInputViewFocused()
+                            if !strongSelf.chatDisplayNode.ensureInputViewFocused() {
+                                DispatchQueue.main.async { [weak self] in
+                                    guard let self else {
+                                        return
+                                    }
+                                    self.chatDisplayNode.ensureInputViewFocused()
+                                }
+                            }
                         } else {
                             completion(.immediate, {})
                         }
@@ -4182,14 +4192,9 @@ extension ChatControllerImpl {
                 return
             }
             self.updateChatPresentationInterfaceState(animated: true, interactive: true, { presentationInterfaceState in
-                let topicListDisplayMode: ChatPresentationInterfaceState.TopicListDisplayMode
-                switch presentationInterfaceState.topicListDisplayMode ?? .top {
-                case .top:
-                    topicListDisplayMode = .side
-                case .side:
-                    topicListDisplayMode = .top
-                }
-                return presentationInterfaceState.updatedTopicListDisplayMode(topicListDisplayMode)
+                var persistentData = presentationInterfaceState.persistentData
+                persistentData.topicListPanelLocation = !persistentData.topicListPanelLocation
+                return presentationInterfaceState.updatedPersistentData(persistentData)
             })
         }, updateDisplayHistoryFilterAsList: { [weak self] displayAsList in
             guard let self else {

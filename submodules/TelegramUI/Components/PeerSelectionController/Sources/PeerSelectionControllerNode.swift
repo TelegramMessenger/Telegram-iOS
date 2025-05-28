@@ -756,7 +756,8 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                         canMakePaidContent: false,
                         currentPrice: nil,
                         hasTimers: false,
-                        sendPaidMessageStars: nil
+                        sendPaidMessageStars: nil,
+                        isMonoforum: false
                     )),
                     hasEntityKeyboard: hasEntityKeyboard,
                     gesture: gesture,

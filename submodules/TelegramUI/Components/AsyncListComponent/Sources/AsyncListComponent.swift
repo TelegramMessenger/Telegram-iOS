@@ -325,11 +325,18 @@ public final class AsyncListComponent: Component {
     }
     
     private final class ListItemNodeImpl: ListViewItemNode {
+        private let contentContainer: UIView
         private let contentsView = ComponentView<Empty>()
         private(set) var item: ListItemImpl?
         
         init() {
+            self.contentContainer = UIView()
+            
             super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
+            
+            self.view.addSubview(self.contentContainer)
+            
+            self.scrollPositioningInsets = UIEdgeInsets(top: -24.0, left: 0.0, bottom: -24.0, right: 0.0)
         }
         
         deinit {
@@ -377,16 +384,17 @@ public final class AsyncListComponent: Component {
                     
                     switch item.direction {
                     case .vertical:
-                        self.layer.sublayerTransform = CATransform3DIdentity
+                        self.contentContainer.layer.sublayerTransform = CATransform3DIdentity
                     case .horizontal:
-                        self.layer.sublayerTransform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
+                        self.contentContainer.layer.sublayerTransform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
                     }
+                    self.contentContainer.frame = CGRect(origin: CGPoint(), size: mappedContentsSize)
                     
                     let contentsFrame = CGRect(origin: CGPoint(), size: contentsSize)
                     
                     if let contentsComponentView = self.contentsView.view {
                         if contentsComponentView.superview == nil {
-                            self.view.addSubview(contentsComponentView)
+                            self.contentContainer.addSubview(contentsComponentView)
                         }
                         contentsComponentView.center = CGPoint(x: mappedContentsSize.width * 0.5, y: mappedContentsSize.height * 0.5)
                         contentsComponentView.bounds = CGRect(origin: CGPoint(), size: contentsFrame.size)
@@ -526,14 +534,29 @@ public final class AsyncListComponent: Component {
             
             var scrollToItem: ListViewScrollToItem?
             if let resetScrollingRequest = component.externalStateValue.resetScrollingRequest, previousComponent?.externalStateValue.resetScrollingRequest != component.externalStateValue.resetScrollingRequest {
-                //TODO:release calculate direction hint
                 if let index = entries.firstIndex(where: { $0.id == resetScrollingRequest.id }) {
+                    var directionHint: ListViewScrollToItemDirectionHint = .Down
+                    var didSelectDirection = false
+                    self.listNode.forEachItemNode { itemNode in
+                        if didSelectDirection {
+                            return
+                        }
+                        if let itemNode = itemNode as? ListItemNodeImpl, let itemIndex = itemNode.index {
+                            if itemIndex <= index {
+                                directionHint = .Up
+                            } else {
+                                directionHint = .Down
+                            }
+                            didSelectDirection = true
+                        }
+                    }
+                    
                     scrollToItem = ListViewScrollToItem(
                         index: index,
                         position: .visible,
                         animated: animateTransition,
                         curve: updateSizeAndInsets.curve,
-                        directionHint: .Down
+                        directionHint: directionHint
                     )
                 }
             }
@@ -549,12 +572,24 @@ public final class AsyncListComponent: Component {
             transactionOptions.insert(.Synchronous)
             
             self.listNode.transaction(
+                deleteIndices: [],
+                insertIndicesAndItems: [],
+                updateIndicesAndItems: [],
+                options: transactionOptions,
+                scrollToItem: nil,
+                updateSizeAndInsets: updateSizeAndInsets,
+                stationaryItemRange: nil,
+                updateOpaqueState: nil,
+                completion: { _ in }
+            )
+            
+            self.listNode.transaction(
                 deleteIndices: deletions,
                 insertIndicesAndItems: insertions,
                 updateIndicesAndItems: updates,
                 options: transactionOptions,
                 scrollToItem: scrollToItem,
-                updateSizeAndInsets: updateSizeAndInsets,
+                updateSizeAndInsets: nil,
                 stationaryItemRange: nil,
                 updateOpaqueState: nil,
                 completion: { _ in }

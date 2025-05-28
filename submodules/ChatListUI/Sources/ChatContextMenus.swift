@@ -632,8 +632,7 @@ public func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, thr
                 })))
                 
                 if isPinned, let reorder {
-                    //TODO:localize
-                    items.append(.action(ContextMenuActionItem(text: "Reorder", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReorderItems"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_InlineTopicMenu_Reorder, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReorderItems"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
                         c?.dismiss(completion: {
                         })
                         reorder()
@@ -664,8 +663,7 @@ public func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, thr
         }
         
         if threadId != 1, canOpenClose, let customEdit {
-            //TODO:localize
-            items.append(.action(ContextMenuActionItem(text: "Edit", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor) }, action: { c, f in
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_InlineTopicMenu_Edit, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor) }, action: { c, f in
                 if let c = c as? ContextController {
                     customEdit(c)
                 } else {

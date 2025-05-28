@@ -230,7 +230,7 @@ final class PostSuggestionsSettingsScreenComponent: Component {
             let iconSize = self.icon.update(
                 transition: .immediate,
                 component: AnyComponent(LottieComponent(
-                    content: LottieComponent.AppBundleContent(name: "LampEmoji"),
+                    content: LottieComponent.AppBundleContent(name: "ChannelMessages"),
                     loop: false
                 )),
                 environment: {},
@@ -487,7 +487,7 @@ public final class PostSuggestionsSettingsScreen: ViewControllerComponentContain
         if case let .channel(channel) = peer, case let .broadcast(info) = channel.info, info.flags.contains(.hasMonoforum), let linkedMonoforumId = channel.linkedMonoforumId {
             initialPrice = await context.engine.data.get(
                 TelegramEngine.EngineData.Item.Peer.SendMessageToChannelPrice(id: linkedMonoforumId)
-            ).get() ?? StarsAmount(value: 20, nanos: 0)
+            ).get() ?? StarsAmount(value: 0, nanos: 0)
         } else {
             initialPrice = await context.engine.data.get(
                 TelegramEngine.EngineData.Item.Peer.SendMessageToChannelPrice(id: peerId)

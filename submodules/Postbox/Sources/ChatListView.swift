@@ -714,7 +714,7 @@ final class MutableChatListView {
                             let renderedPeer = RenderedPeer(peerId: peer.id, peers: peers, associatedMedia: renderAssociatedMediaForPeers(postbox: postbox, peers: peers))
                             
                             let isUnread: Bool
-                            if postbox.seedConfiguration.peerSummaryIsThreadBased(peer).value {
+                            if postbox.seedConfiguration.peerSummaryIsThreadBased(peer, peer.associatedPeerId.flatMap(postbox.peerTable.get)).value {
                                 let hasUnmutedUnread = postbox.peerThreadsSummaryTable.get(peerId: peer.id)?.hasUnmutedUnread ?? false
                                 isUnread = hasUnmutedUnread
                             } else {
@@ -846,7 +846,7 @@ final class MutableChatListView {
                                     displayAsRegularChat = postbox.seedConfiguration.decodeDisplayPeerAsRegularChat(cachedData)
                                 }
                                 
-                                if let peer = groupEntries[i].renderedPeers[j].peer.peer, postbox.seedConfiguration.peerSummaryIsThreadBased(peer).value, !displayAsRegularChat {
+                                if let peer = groupEntries[i].renderedPeers[j].peer.peer, postbox.seedConfiguration.peerSummaryIsThreadBased(peer, peer.associatedPeerId.flatMap(postbox.peerTable.get)).value, !displayAsRegularChat {
                                     isUnread = postbox.peerThreadsSummaryTable.get(peerId: peer.id)?.hasUnmutedUnread ?? false
                                 } else {
                                     isUnread = postbox.readStateTable.getCombinedState(groupEntries[i].renderedPeers[j].peer.peerId)?.isUnread ?? false
@@ -942,7 +942,7 @@ final class MutableChatListView {
             var isThreadBased = false
             var threadsArePeers = false
             if let peer = renderedPeer.peer {
-                let value = postbox.seedConfiguration.peerSummaryIsThreadBased(peer)
+                let value = postbox.seedConfiguration.peerSummaryIsThreadBased(peer, peer.associatedPeerId.flatMap(postbox.peerTable.get))
                 isThreadBased = value.value
                 threadsArePeers = value.threadsArePeers
             }

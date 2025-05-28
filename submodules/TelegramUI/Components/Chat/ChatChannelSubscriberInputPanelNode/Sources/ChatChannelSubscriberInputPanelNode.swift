@@ -381,14 +381,13 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                     
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     let _ = presentationData
-                    //TODO:localize
-                    let text: String = "Tap here to send a message"
+                    let text: String = presentationData.strings.Chat_ChannelMessagesHint
                     
                     let tooltipController = TooltipScreen(
                         account: context.account,
                         sharedContext: context.sharedContext,
                         text: .plain(text: text),
-                        textBadge: "NEW",
+                        textBadge: presentationData.strings.Chat_ChannelMessagesHintBadge.isEmpty ? nil : presentationData.strings.Chat_ChannelMessagesHintBadge,
                         balancedTextLayout: false,
                         style: .wide,
                         arrowStyle: .small,

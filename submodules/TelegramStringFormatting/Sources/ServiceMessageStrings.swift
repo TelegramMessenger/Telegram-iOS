@@ -140,8 +140,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 } else {
                     if forChatList {
                         if isMonoforum {
-                            //TODO:Localize
-                            attributedString = NSAttributedString(string: "No messages here yet...", font: titleFont, textColor: primaryTextColor)
+                            attributedString = NSAttributedString(string: strings.ChatList_MonoforumEmptyText, font: titleFont, textColor: primaryTextColor)
                         } else {
                             attributedString = NSAttributedString(string: strings.Notification_CreatedGroup, font: titleFont, textColor: primaryTextColor)
                         }

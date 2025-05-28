@@ -254,6 +254,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     let contentDataReady = ValuePromise<Bool>(false, ignoreRepeated: true)
     var contentDataDisposable: Disposable?
     var didHandlePerformDismissAction: Bool = false
+    var didInitializePersistentPeerInterfaceData: Bool = false
     
     var accountPeerDisposable: Disposable?
     
@@ -6943,6 +6944,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         let _ = ChatInterfaceState.update(engine: self.context.engine, peerId: peerId, threadId: threadId, { _ in
             return interfaceState
         }).startStandalone()
+        
+        self.context.engine.peers.setPerstistentChatInterfaceState(peerId: peerId, state: CodableEntry(self.presentationInterfaceState.persistentData))
     }
         
     override public func viewWillLeaveNavigation() {
