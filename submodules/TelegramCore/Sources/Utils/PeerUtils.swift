@@ -279,6 +279,14 @@ public extension Peer {
         }
     }
     
+    var displayForumAsTabs: Bool {
+        if let channel = self as? TelegramChannel, isForum {
+            return channel.flags.contains(.displayForumAsTabs)
+        } else {
+            return false
+        }
+    }
+    
     var isForumOrMonoForum: Bool {
         if let channel = self as? TelegramChannel {
             return channel.flags.contains(.isForum) || channel.flags.contains(.isMonoforum)
