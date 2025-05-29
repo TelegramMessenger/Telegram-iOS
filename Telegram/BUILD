@@ -1779,13 +1779,12 @@ ios_application(
         ":UrlTypesInfoPlist",
     ],
     deps = [
-        "//submodules/Display",
-        "//submodules/TelegramCore",
-        "//submodules/FFMpegBinding",
+        #"//submodules/Display",
+        #"//submodules/TelegramCore",
+        #"//submodules/FFMpegBinding",
         "//third-party/webrtc",
-        "//submodules/AsyncDisplayKit",
-        "//submodules/ObjCRuntimeUtils",
-
+        #"//submodules/AsyncDisplayKit",
+        #"//submodules/ObjCRuntimeUtils",
     ],
 )
 

@@ -212,7 +212,7 @@ for name, module in sorted(modules.items()):
                 if cxxopts:
                     combined_lines.append("                .unsafeFlags([")
                     for flag in cxxopts:
-                        if flag.startswith("-std="):
+                        if flag.startswith("-std=") and False:
                             if flag != "-std=c++17":
                                 print("{}: Unsupported C++ standard: {}".format(name, flag))
                                 sys.exit(1)
@@ -267,8 +267,8 @@ for name, module in sorted(modules.items()):
         print("Unknown module type: {}".format(module["type"]))
         sys.exit(1)
 
-combined_lines.append("    ],")
-combined_lines.append("    cxxLanguageStandard: .cxx17")
+combined_lines.append("    ]")
+#combined_lines.append("    cxxLanguageStandard: .cxx17")
 combined_lines.append(")")
 combined_lines.append("")
 
