@@ -598,6 +598,14 @@
         return [_landscapeToolbarView buttonForTab:TGPhotoEditorTimerTab];
 }
 
+- (UIView *)qualityButton
+{
+    if (UIInterfaceOrientationIsPortrait(self.interfaceOrientation))
+        return [_portraitToolbarView buttonForTab:TGPhotoEditorQualityTab];
+    else
+        return [_landscapeToolbarView buttonForTab:TGPhotoEditorQualityTab];
+}
+
 - (void)setSelectedItemsModel:(TGMediaPickerGallerySelectedItemsModel *)selectedItemsModel
 {
     _selectedPhotosView.selectedItemsModel = selectedItemsModel;
@@ -1100,33 +1108,43 @@
     TGPhotoEditorButton *qualityButton = [_portraitToolbarView buttonForTab:TGPhotoEditorQualityTab];
     if (qualityButton != nil)
     {
-        TGMediaVideoConversionPreset preset = 0;
-        TGMediaVideoConversionPreset adjustmentsPreset = TGMediaVideoConversionPresetCompressedDefault;
-        if ([adjustments isKindOfClass:[TGMediaVideoEditAdjustments class]])
-            adjustmentsPreset = ((TGMediaVideoEditAdjustments *)adjustments).preset;
-        
-        if (adjustmentsPreset != TGMediaVideoConversionPresetCompressedDefault)
-        {
-            preset = adjustmentsPreset;
-        }
-        else
-        {
-            NSNumber *presetValue = [[NSUserDefaults standardUserDefaults] objectForKey:@"TG_preferredVideoPreset_v0"];
-            if (presetValue != nil)
-                preset = (TGMediaVideoConversionPreset)[presetValue integerValue];
+        bool isPhoto = [_currentItemView isKindOfClass:[TGMediaPickerGalleryPhotoItemView class]] || [_currentItem isKindOfClass:[TGCameraCapturedPhoto class]];
+        if (isPhoto) {
+            bool isHd = _editingContext.isHighQualityPhoto;
+            UIImage *icon = [TGPhotoEditorInterfaceAssets qualityIconForHighQuality:isHd filled: false];
+            qualityButton.iconImage = icon;
+            
+            qualityButton = [_landscapeToolbarView buttonForTab:TGPhotoEditorQualityTab];
+            qualityButton.iconImage = icon;
+        } else {
+            TGMediaVideoConversionPreset preset = 0;
+            TGMediaVideoConversionPreset adjustmentsPreset = TGMediaVideoConversionPresetCompressedDefault;
+            if ([adjustments isKindOfClass:[TGMediaVideoEditAdjustments class]])
+                adjustmentsPreset = ((TGMediaVideoEditAdjustments *)adjustments).preset;
+            
+            if (adjustmentsPreset != TGMediaVideoConversionPresetCompressedDefault)
+            {
+                preset = adjustmentsPreset;
+            }
             else
-                preset = TGMediaVideoConversionPresetCompressedMedium;
+            {
+                NSNumber *presetValue = [[NSUserDefaults standardUserDefaults] objectForKey:@"TG_preferredVideoPreset_v0"];
+                if (presetValue != nil)
+                    preset = (TGMediaVideoConversionPreset)[presetValue integerValue];
+                else
+                    preset = TGMediaVideoConversionPresetCompressedMedium;
+            }
+            
+            TGMediaVideoConversionPreset bestPreset = [TGMediaVideoConverter bestAvailablePresetForDimensions:dimensions];
+            if (preset > bestPreset)
+                preset = bestPreset;
+            
+            UIImage *icon = [TGPhotoEditorInterfaceAssets qualityIconForPreset:preset];
+            qualityButton.iconImage = icon;
+            
+            qualityButton = [_landscapeToolbarView buttonForTab:TGPhotoEditorQualityTab];
+            qualityButton.iconImage = icon;
         }
-        
-        TGMediaVideoConversionPreset bestPreset = [TGMediaVideoConverter bestAvailablePresetForDimensions:dimensions];
-        if (preset > bestPreset)
-            preset = bestPreset;
-        
-        UIImage *icon = [TGPhotoEditorInterfaceAssets qualityIconForPreset:preset];
-        qualityButton.iconImage = icon;
-        
-        qualityButton = [_landscapeToolbarView buttonForTab:TGPhotoEditorQualityTab];
-        qualityButton.iconImage = icon;
     }
     
     TGPhotoEditorButton *timerButton = [_portraitToolbarView buttonForTab:TGPhotoEditorTimerTab];
@@ -1205,6 +1223,24 @@
     _tooltipTimer = nil;
     
     [_tooltipContainerView hideMenu];
+}
+
+- (void)showPhotoQualityTooltip:(bool)hd {
+    [self updateEditorButtonsForItem:_currentItem animated:false];
+    
+    UIView *button = [self qualityButton];
+    CGRect rect = [button convertRect:button.bounds toView:nil];
+    [self showPhotoQualityTooltip:rect hd:hd];
+}
+
+- (void)showPhotoQualityTooltip:(CGRect)rect hd:(bool)hd
+{
+    if (_tooltipContainerView != nil) {
+        [self tooltipTimerTick];
+    }
+    
+    NSString *text = hd ? TGLocalized(@"Media.PhotoHdOn") : TGLocalized(@"Media.PhotoHdOff");
+    [_context presentTooltip:text icon:[TGPhotoEditorInterfaceAssets qualityIconForHighQuality:hd filled: true] sourceRect:rect];
 }
 
 #pragma mark - Grouping Tooltip

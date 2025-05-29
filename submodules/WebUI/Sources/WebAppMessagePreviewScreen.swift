@@ -431,16 +431,20 @@ public final class WebAppMessagePreviewScreen: ViewControllerComponentContainer 
         let _ = (self.context.engine.data.get(
             EngineDataMap(
                 peers.map { TelegramEngine.EngineData.Item.Peer.SendPaidMessageStars.init(id: $0.id) }
+            ),
+            EngineDataList(
+                peers.map { TelegramEngine.EngineData.Item.Peer.RenderedPeer.init(id: $0.id) }
             )
         )
-        |> deliverOnMainQueue).start(next: { [weak self] sendPaidMessageStars in
+        |> deliverOnMainQueue).start(next: { [weak self] sendPaidMessageStars, renderedPeers in
             guard let self else {
                 return
             }
+            let renderedPeers = renderedPeers.compactMap({ $0 })
             var totalAmount: StarsAmount = .zero
-            var chargingPeers: [EnginePeer] = []
-            for peer in peers {
-                if let maybeAmount = sendPaidMessageStars[peer.id], let amount = maybeAmount {
+            var chargingPeers: [EngineRenderedPeer] = []
+            for peer in renderedPeers {
+                if let maybeAmount = sendPaidMessageStars[peer.peerId], let amount = maybeAmount {
                     totalAmount = totalAmount + amount
                     chargingPeers.append(peer)
                 }
@@ -528,9 +532,22 @@ public final class WebAppMessagePreviewScreen: ViewControllerComponentContainer 
     }
     
     fileprivate func proceed() {
-        let requestPeerType = self.preparedMessage.peerTypes.requestPeerTypes
+        let peerTypes = self.preparedMessage.peerTypes
+        var types: [ReplyMarkupButtonRequestPeerType] = []
+        if peerTypes.contains(.users) {
+            types.append(.user(.init(isBot: false, isPremium: nil)))
+        }
+        if peerTypes.contains(.bots) {
+            types.append(.user(.init(isBot: true, isPremium: nil)))
+        }
+        if peerTypes.contains(.channels) {
+            types.append(.channel(.init(isCreator: false, hasUsername: nil, userAdminRights: TelegramChatAdminRights(rights: [.canPostMessages]), botAdminRights: nil)))
+        }
+        if peerTypes.contains(.groups) {
+            types.append(.group(.init(isCreator: false, hasUsername: nil, isForum: nil, botParticipant: false, userAdminRights: nil, botAdminRights: nil)))
+        }
         
-        let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.excludeRecent, .doNotSearchMessages], requestPeerType: requestPeerType, hasContactSelector: false, multipleSelection: true, selectForumThreads: true, immediatelyActivateMultipleSelection: true))
+        let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.excludeRecent, .doNotSearchMessages], requestPeerType: types, hasContactSelector: false, multipleSelection: true, selectForumThreads: true, immediatelyActivateMultipleSelection: true))
         
         controller.multiplePeersSelected = { [weak self, weak controller] peers, _, _, _, _, _ in
             guard let self else {

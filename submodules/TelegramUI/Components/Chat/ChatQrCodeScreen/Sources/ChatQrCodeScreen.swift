@@ -35,6 +35,7 @@ import SaveToCameraRoll
 import SegmentedControlNode
 import AnimatedCountLabelNode
 import HexColor
+import QrCodeUI
 
 private func closeButtonImage(theme: PresentationTheme) -> UIImage? {
     return generateImage(CGSize(width: 30.0, height: 30.0), contextGenerator: { size, context in
@@ -536,7 +537,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
             snapshotView.frame = self.containerNode.view.frame
             self.view.insertSubview(snapshotView, aboveSubview: self.containerNode.view)
             
-            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: ChatQrCodeScreen.themeCrossfadeDuration, delay: ChatQrCodeScreen.themeCrossfadeDelay, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: ChatQrCodeScreenImpl.themeCrossfadeDuration, delay: ChatQrCodeScreenImpl.themeCrossfadeDelay, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                 snapshotView?.removeFromSuperview()
             })
         }
@@ -561,7 +562,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
     }
 }
 
-public final class ChatQrCodeScreen: ViewController {
+public final class ChatQrCodeScreenImpl: ViewController, ChatQrCodeScreen {
     public static let themeCrossfadeDuration: Double = 0.3
     public static let themeCrossfadeDelay: Double = 0.05
     
@@ -603,7 +604,7 @@ public final class ChatQrCodeScreen: ViewController {
     private var animatedIn = false
     
     private let context: AccountContext
-    fileprivate let subject: ChatQrCodeScreen.Subject
+    fileprivate let subject: ChatQrCodeScreenImpl.Subject
     
     private var presentationData: PresentationData
     private var presentationThemePromise = Promise<PresentationTheme?>()
@@ -611,12 +612,14 @@ public final class ChatQrCodeScreen: ViewController {
     
     public var dismissed: (() -> Void)?
     
-    public init(context: AccountContext, subject: ChatQrCodeScreen.Subject) {
+    public init(context: AccountContext, subject: ChatQrCodeScreenImpl.Subject) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.subject = subject
                 
         super.init(navigationBarPresentationData: nil)
+        
+        self.navigationPresentation = .flatModal
         
         self.statusBar.statusBarStyle = .Ignore
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
@@ -664,14 +667,11 @@ public final class ChatQrCodeScreen: ViewController {
             }
             strongSelf.dismiss()
         }
-        self.controllerNode.dismiss = { [weak self] in
-            self?.presentingViewController?.dismiss(animated: false, completion: nil)
-        }
         self.controllerNode.cancel = { [weak self] in
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.dismiss()
+            strongSelf.dismiss(animated: true)
         }
     }
     
@@ -690,19 +690,25 @@ public final class ChatQrCodeScreen: ViewController {
         }
     }
     
-    override public func dismiss(completion: (() -> Void)? = nil) {
+    public override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
         self.forEachController({ controller in
             if let controller = controller as? TooltipScreen {
                 controller.dismiss()
             }
             return true
         })
-    
-        self.controllerNode.animateOut(completion: completion)
+        
+        if flag {
+            self.controllerNode.animateOut(completion: {
+                super.dismiss(animated: false, completion: completion)
+            })
+        } else {
+            super.dismiss(animated: flag, completion: completion)
+        }
         
         self.dismissed?()
     }
-    
+
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
@@ -754,11 +760,12 @@ private func generateShadowImage() -> UIImage? {
 private class ChatQrCodeScreenNode: ViewControllerTracingNode, ASScrollViewDelegate {
     private let context: AccountContext
     private var presentationData: PresentationData
-    private weak var controller: ChatQrCodeScreen?
+    private weak var controller: ChatQrCodeScreenImpl?
     
     private let contentNode: ContentNode
     
     private let wrappingScrollNode: ASScrollNode
+    private let scrollNodeContentNode: ASDisplayNode
     private let contentContainerNode: ASDisplayNode
     private let topContentContainerNode: SparseNode
     private let shadowNode: ASImageNode
@@ -772,6 +779,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, ASScrollViewDeleg
     private let animationContainerNode: ASDisplayNode
     private var animationNode: AnimationNode
     private let doneButton: SolidRoundedButtonNode
+    private let scanButton: SolidRoundedButtonNode
     
     private let listNode: ListView
     private var entries: [ThemeSettingsThemeEntry]?
@@ -805,10 +813,9 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, ASScrollViewDeleg
     var present: ((ViewController) -> Void)?
     var previewTheme: ((String?, Bool?, PresentationTheme) -> Void)?
     var completion: ((String?) -> Void)?
-    var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
     
-    init(context: AccountContext, presentationData: PresentationData, controller: ChatQrCodeScreen) {
+    init(context: AccountContext, presentationData: PresentationData, controller: ChatQrCodeScreenImpl) {
         self.context = context
         self.controller = controller
         self.presentationData = presentationData
@@ -817,7 +824,10 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, ASScrollViewDeleg
         self.wrappingScrollNode.view.alwaysBounceVertical = true
         self.wrappingScrollNode.view.delaysContentTouches = false
         self.wrappingScrollNode.view.canCancelContentTouches = true
-                
+        
+        self.scrollNodeContentNode = ASDisplayNode()
+        self.scrollNodeContentNode.clipsToBounds = true
+        
         switch controller.subject {
             case let .peer(peer, threadId, temporary):
                 self.contentNode = QrContentNode(context: context, peer: peer, threadId: threadId, isStatic: false, temporary: temporary)
@@ -888,6 +898,10 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, ASScrollViewDeleg
             self.doneButton.title = self.presentationData.strings.Share_ShareMessage
         }
         
+        self.scanButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: .clear, foregroundColor: self.presentationData.theme.actionSheet.controlAccentColor), font: .regular, height: 42.0, cornerRadius: 0.0, gloss: false)
+        self.scanButton.title = presentationData.strings.PeerInfo_QRCode_Scan
+        self.scanButton.icon = UIImage(bundleImageName: "Settings/ScanQr")
+        
         self.listNode = ListView()
         self.listNode.transform = CATransform3DMakeRotation(-CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
         
@@ -898,18 +912,21 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, ASScrollViewDeleg
 
         self.addSubnode(self.wrappingScrollNode)
         
-        self.wrappingScrollNode.addSubnode(self.contentNode)
+        self.wrappingScrollNode.addSubnode(self.scrollNodeContentNode)
         
-        self.wrappingScrollNode.addSubnode(self.shadowNode)
-        self.wrappingScrollNode.addSubnode(self.backgroundNode)
-        self.wrappingScrollNode.addSubnode(self.contentContainerNode)
-        self.wrappingScrollNode.addSubnode(self.topContentContainerNode)
+        self.scrollNodeContentNode.addSubnode(self.contentNode)
+        
+        self.scrollNodeContentNode.addSubnode(self.shadowNode)
+        self.scrollNodeContentNode.addSubnode(self.backgroundNode)
+        self.scrollNodeContentNode.addSubnode(self.contentContainerNode)
+        self.scrollNodeContentNode.addSubnode(self.topContentContainerNode)
         
         self.backgroundNode.addSubnode(self.effectNode)
         self.backgroundNode.addSubnode(self.contentBackgroundNode)
         self.contentContainerNode.addSubnode(self.titleNode)
         self.contentContainerNode.addSubnode(self.segmentedNode)
         self.contentContainerNode.addSubnode(self.doneButton)
+        self.contentContainerNode.addSubnode(self.scanButton)
         
         self.topContentContainerNode.addSubnode(self.animationContainerNode)
         self.animationContainerNode.addSubnode(self.animationNode)
@@ -990,6 +1007,14 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, ASScrollViewDeleg
                     }
                 }
             }
+        }
+        
+        self.scanButton.pressed = { [weak self] in
+            guard let self else {
+                return
+            }
+            let controller = QrCodeScanScreen(context: self.context, subject: .peer)
+            self.controller?.push(controller)
         }
         
         let animatedEmojiStickers = context.engine.stickers.loadedStickerPack(reference: .animatedEmoji, forceActualized: false)
@@ -1246,9 +1271,6 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, ASScrollViewDeleg
     
     private var switchThemeIconAnimator: DisplayLinkAnimator?
     func updatePresentationData(_ presentationData: PresentationData) {
-        guard !self.animatedOut else {
-            return
-        }
         let previousTheme = self.presentationData.theme
         self.presentationData = presentationData
                         
@@ -1261,6 +1283,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, ASScrollViewDeleg
         
         self.cancelButton.setImage(closeButtonImage(theme: self.presentationData.theme), for: .normal)
         self.doneButton.updateTheme(SolidRoundedButtonTheme(theme: self.presentationData.theme))
+        self.scanButton.updateTheme(SolidRoundedButtonTheme(backgroundColor: .clear, foregroundColor: self.presentationData.theme.actionSheet.controlAccentColor))
         
         let previousIconColors = iconColors(theme: previousTheme)
         let newIconColors = iconColors(theme: self.presentationData.theme)
@@ -1336,7 +1359,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, ASScrollViewDeleg
         if let snapshotView = self.contentNode.containerNode.view.snapshotView(afterScreenUpdates: false) {
             self.contentNode.view.insertSubview(snapshotView, aboveSubview: self.contentNode.containerNode.view)
             
-            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: ChatQrCodeScreen.themeCrossfadeDuration, delay: ChatQrCodeScreen.themeCrossfadeDelay, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: ChatQrCodeScreenImpl.themeCrossfadeDuration, delay: ChatQrCodeScreenImpl.themeCrossfadeDelay, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                 snapshotView?.removeFromSuperview()
             })
         }
@@ -1345,14 +1368,14 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, ASScrollViewDeleg
             snapshotView.frame = self.animationNode.frame
             self.animationNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.animationNode.view)
             
-            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: ChatQrCodeScreen.themeCrossfadeDuration, delay: ChatQrCodeScreen.themeCrossfadeDelay, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: ChatQrCodeScreenImpl.themeCrossfadeDuration, delay: ChatQrCodeScreenImpl.themeCrossfadeDelay, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                 snapshotView?.removeFromSuperview()
             })
         }
         
-        Queue.mainQueue().after(ChatQrCodeScreen.themeCrossfadeDelay) {
+        Queue.mainQueue().after(ChatQrCodeScreenImpl.themeCrossfadeDelay) {
             if let effectView = self.effectNode.view as? UIVisualEffectView {
-                UIView.animate(withDuration: ChatQrCodeScreen.themeCrossfadeDuration, delay: 0.0, options: .curveLinear) {
+                UIView.animate(withDuration: ChatQrCodeScreenImpl.themeCrossfadeDuration, delay: 0.0, options: .curveLinear) {
                     effectView.effect = UIBlurEffect(style: self.presentationData.theme.actionSheet.backgroundType == .light ? .light : .dark)
                 } completion: { _ in
                 }
@@ -1360,14 +1383,14 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, ASScrollViewDeleg
 
             let previousColor = self.contentBackgroundNode.backgroundColor ?? .clear
             self.contentBackgroundNode.backgroundColor = self.presentationData.theme.actionSheet.itemBackgroundColor
-            self.contentBackgroundNode.layer.animate(from: previousColor.cgColor, to: (self.contentBackgroundNode.backgroundColor ?? .clear).cgColor, keyPath: "backgroundColor", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: ChatQrCodeScreen.themeCrossfadeDuration)
+            self.contentBackgroundNode.layer.animate(from: previousColor.cgColor, to: (self.contentBackgroundNode.backgroundColor ?? .clear).cgColor, keyPath: "backgroundColor", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: ChatQrCodeScreenImpl.themeCrossfadeDuration)
         }
                 
         if let snapshotView = self.contentContainerNode.view.snapshotView(afterScreenUpdates: false) {
             snapshotView.frame = self.contentContainerNode.frame
             self.contentContainerNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.contentContainerNode.view)
             
-            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: ChatQrCodeScreen.themeCrossfadeDuration, delay: ChatQrCodeScreen.themeCrossfadeDelay, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: ChatQrCodeScreenImpl.themeCrossfadeDuration, delay: ChatQrCodeScreenImpl.themeCrossfadeDelay, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                 snapshotView?.removeFromSuperview()
             })
         }
@@ -1383,33 +1406,58 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, ASScrollViewDeleg
     public func animateIn() {
         let offset = self.bounds.size.height - self.contentBackgroundNode.frame.minY
         
+        if let (layout, _) = self.containerLayout {
+            self.scrollNodeContentNode.cornerRadius = layout.deviceMetrics.screenCornerRadius
+        }
+        
         let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
         let targetBounds = self.bounds
         self.bounds = self.bounds.offsetBy(dx: 0.0, dy: -offset)
         transition.animateView({
             self.bounds = targetBounds
+        }, completion: { _ in
+            self.scrollNodeContentNode.cornerRadius = 0.0
         })
     }
     
-    public func animateOut(completion: (() -> Void)? = nil) {
+    public func animateOut(velocity: Double? = nil, completion: (() -> Void)? = nil) {
         self.animatedOut = true
         
-        let offset = self.bounds.size.height - self.contentBackgroundNode.frame.minY
-        self.wrappingScrollNode.layer.animateBoundsOriginYAdditive(from: 0.0, to: -offset, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { [weak self] _ in
-            if let strongSelf = self {
-                strongSelf.dismiss?()
+        self.wrappingScrollNode.view.isScrollEnabled = false
+        
+        let distance = self.bounds.size.height - self.contentBackgroundNode.frame.minY
+        if let velocity {
+            let initialVelocity: CGFloat = distance.isZero ? 0.0 : abs(velocity / distance)
+            self.wrappingScrollNode.layer.animateSpring(from: 0.0 as NSNumber, to: -distance as NSNumber, keyPath: "bounds.origin.y", duration: 0.45, delay: 0.0, initialVelocity: initialVelocity, damping: 124.0, removeOnCompletion: false, additive: true, completion: { _ in
                 completion?()
-            }
-        })
+            })
+        } else {
+            self.wrappingScrollNode.layer.animateBoundsOriginYAdditive(from: 0.0, to: -distance, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { _ in
+                completion?()
+            })
+        }
     }
-    
-    public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+
+    func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
         let contentOffset = scrollView.contentOffset
         let additionalTopHeight = max(0.0, -contentOffset.y)
         
         if additionalTopHeight >= 30.0 {
-            self.cancelButtonPressed()
+            self.animateOut(velocity: velocity.y, completion: {
+                self.controller?.dismiss(animated: false)
+            })
         }
+    }
+    
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        guard let (layout, _) = self.containerLayout else {
+            return
+        }
+        self.scrollNodeContentNode.cornerRadius = layout.deviceMetrics.screenCornerRadius
+    }
+    
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        self.scrollNodeContentNode.cornerRadius = 0.0
     }
     
     public func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -1421,7 +1469,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, ASScrollViewDeleg
         
         let bottomInset: CGFloat = 10.0 + cleanInsets.bottom
         let titleHeight: CGFloat = 54.0
-        let contentHeight = titleHeight + bottomInset + 188.0
+        let contentHeight = titleHeight + bottomInset + 188.0 + 52.0
         
         let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
         
@@ -1440,6 +1488,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, ASScrollViewDeleg
         transition.updateFrame(node: self.effectNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
         transition.updateFrame(node: self.contentBackgroundNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
         transition.updateFrame(node: self.wrappingScrollNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+        transition.updateFrame(node: self.scrollNodeContentNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: layout.size.height + 2000.0)))
         
         let titleSize = self.titleNode.measure(CGSize(width: width - 90.0, height: titleHeight))
         let titleFrame = CGRect(origin: CGPoint(x: floor((contentFrame.width - titleSize.width) / 2.0), y: 19.0 + UIScreenPixel), size: titleSize)
@@ -1459,9 +1508,12 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, ASScrollViewDeleg
         transition.updateFrame(node: self.cancelButton, frame: cancelFrame)
         
         let buttonInset: CGFloat = 16.0
-        let doneButtonHeight = self.doneButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
-        transition.updateFrame(node: self.doneButton, frame: CGRect(x: buttonInset, y: contentHeight - doneButtonHeight - insets.bottom - 6.0, width: contentFrame.width, height: doneButtonHeight))
+        let scanButtonHeight = self.scanButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
+        transition.updateFrame(node: self.scanButton, frame: CGRect(x: buttonInset, y: contentHeight - scanButtonHeight - insets.bottom - 6.0, width: contentFrame.width, height: scanButtonHeight))
         
+        let doneButtonHeight = self.doneButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
+        transition.updateFrame(node: self.doneButton, frame: CGRect(x: buttonInset, y: contentHeight - doneButtonHeight - scanButtonHeight - 10.0 - insets.bottom - 6.0, width: contentFrame.width, height: doneButtonHeight))
+                
         transition.updateFrame(node: self.contentContainerNode, frame: contentContainerFrame)
         transition.updateFrame(node: self.topContentContainerNode, frame: contentContainerFrame)
         

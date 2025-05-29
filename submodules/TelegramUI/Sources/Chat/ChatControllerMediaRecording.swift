@@ -53,6 +53,7 @@ import TelegramIntents
 import TooltipUI
 import StatisticsUI
 import MediaResources
+import LocalMediaResources
 import GalleryData
 import ChatInterfaceState
 import InviteLinksUI
@@ -125,15 +126,27 @@ import ChatMediaInputStickerGridItem
 import AdsInfoScreen
 
 extension ChatControllerImpl {
-    func requestAudioRecorder(beginWithTone: Bool) {
+    func requestAudioRecorder(beginWithTone: Bool, existingDraft: ChatInterfaceMediaDraftState.Audio? = nil) {
         if self.audioRecorderValue == nil {
-            if self.recorderFeedback == nil {
+            if self.recorderFeedback == nil && existingDraft == nil {
                 self.recorderFeedback = HapticFeedback()
                 self.recorderFeedback?.prepareImpact(.light)
             }
             
-            self.audioRecorder.set(self.context.sharedContext.mediaManager.audioRecorder(beginWithTone: beginWithTone, applicationBindings: self.context.sharedContext.applicationBindings, beganWithTone: { _ in
-            }))
+            var resumeData: AudioRecorderResumeData?
+            if let existingDraft, let path = self.context.account.postbox.mediaBox.completedResourcePath(existingDraft.resource), let compressedData = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedIfSafe]), let recorderResumeData = existingDraft.resumeData {
+                resumeData = AudioRecorderResumeData(compressedData: compressedData, resumeData: recorderResumeData)
+            }
+            
+            self.audioRecorder.set(
+                self.context.sharedContext.mediaManager.audioRecorder(
+                    resumeData: resumeData,
+                    beginWithTone: beginWithTone,
+                    applicationBindings: self.context.sharedContext.applicationBindings,
+                    beganWithTone: { _ in
+                    }
+                )
+            )
         }
     }
     
@@ -263,52 +276,75 @@ extension ChatControllerImpl {
                 audioRecorderValue.stop()
             }
             
+            self.dismissAllTooltips()
+            
             switch updatedAction {
             case .dismiss:
                 self.recorderDataDisposable.set(nil)
                 self.chatDisplayNode.updateRecordedMediaDeleted(true)
                 self.audioRecorder.set(.single(nil))
             case .preview, .pause:
-                if case .preview = updatedAction {
-                    self.audioRecorder.set(.single(nil))
-                }
                 self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
                     $0.updatedInputTextPanelState { panelState in
                         return panelState.withUpdatedMediaRecordingState(.waitingForPreview)
                     }
                 })
-                self.recorderDataDisposable.set((audioRecorderValue.takenRecordedData()
-                |> deliverOnMainQueue).startStrict(next: { [weak self] data in
-                    if let strongSelf = self, let data = data {
-                        if data.duration < 0.5 {
-                            strongSelf.recorderFeedback?.error()
-                            strongSelf.recorderFeedback = nil
-                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                                $0.updatedInputTextPanelState { panelState in
-                                    return panelState.withUpdatedMediaRecordingState(nil)
+                
+                var resource: LocalFileMediaResource?
+                self.recorderDataDisposable.set(
+                    (audioRecorderValue.takenRecordedData()
+                     |> deliverOnMainQueue).startStrict(
+                        next: { [weak self] data in
+                            if let strongSelf = self, let data = data {
+                                if data.duration < 0.5 {
+                                    strongSelf.recorderFeedback?.error()
+                                    strongSelf.recorderFeedback = nil
+                                    strongSelf.audioRecorder.set(.single(nil))
+                                    strongSelf.recorderDataDisposable.set(nil)
+                                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                                        $0.updatedInputTextPanelState { panelState in
+                                            return panelState.withUpdatedMediaRecordingState(nil)
+                                        }
+                                    })
+                                } else if let waveform = data.waveform {
+                                    if resource == nil {
+                                        resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max), size: Int64(data.compressedData.count))
+                                        strongSelf.context.account.postbox.mediaBox.storeResourceData(resource!.id, data: data.compressedData)
+                                    }
+                                    
+                                    let audioWaveform: AudioWaveform
+                                    if let recordedMediaPreview = strongSelf.presentationInterfaceState.interfaceState.mediaDraftState, case let .audio(audio) = recordedMediaPreview {
+                                        audioWaveform = audio.waveform
+                                    } else {
+                                        audioWaveform = AudioWaveform(bitstream: waveform, bitsPerSample: 5)
+                                    }
+                                    
+                                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                                        $0.updatedInterfaceState {
+                                            $0.withUpdatedMediaDraftState(.audio(
+                                                ChatInterfaceMediaDraftState.Audio(
+                                                    resource: resource!,
+                                                    fileSize: Int32(data.compressedData.count),
+                                                    duration: data.duration,
+                                                    waveform: audioWaveform,
+                                                    trimRange: data.trimRange,
+                                                    resumeData: data.resumeData
+                                                )
+                                            ))
+                                        }.updatedInputTextPanelState { panelState in
+                                            return panelState.withUpdatedMediaRecordingState(nil)
+                                        }
+                                    })
+                                    strongSelf.recorderFeedback = nil
+                                    strongSelf.updateDownButtonVisibility()
+                                    
+                                    if sendImmediately {
+                                        strongSelf.interfaceInteraction?.sendRecordedMedia(false, false)
+                                    }
                                 }
-                            })
-                            strongSelf.recorderDataDisposable.set(nil)
-                        } else if let waveform = data.waveform {
-                            let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max), size: Int64(data.compressedData.count))
-                            
-                            strongSelf.context.account.postbox.mediaBox.storeResourceData(resource.id, data: data.compressedData)
-                            
-                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                                $0.updatedInterfaceState { $0.withUpdatedMediaDraftState(.audio(ChatInterfaceMediaDraftState.Audio(resource: resource, fileSize: Int32(data.compressedData.count), duration: Int32(data.duration), waveform: AudioWaveform(bitstream: waveform, bitsPerSample: 5)))) }.updatedInputTextPanelState { panelState in
-                                    return panelState.withUpdatedMediaRecordingState(nil)
-                                }
-                            })
-                            strongSelf.recorderFeedback = nil
-                            strongSelf.updateDownButtonVisibility()
-                            strongSelf.recorderDataDisposable.set(nil)
-                            
-                            if sendImmediately {
-                                strongSelf.interfaceInteraction?.sendRecordedMedia(false, false)
                             }
-                        }
-                    }
-                }))
+                        })
+                )
             case let .send(viewOnce):
                 self.chatDisplayNode.updateRecordedMediaDeleted(false)
                 self.recorderDataDisposable.set((audioRecorderValue.takenRecordedData()
@@ -318,6 +354,7 @@ extension ChatControllerImpl {
                             strongSelf.recorderFeedback?.error()
                             strongSelf.recorderFeedback = nil
                             strongSelf.audioRecorder.set(.single(nil))
+                            strongSelf.recorderDataDisposable.set(nil)
                         } else {
                             let randomId = Int64.random(in: Int64.min ... Int64.max)
                             
@@ -329,7 +366,12 @@ extension ChatControllerImpl {
                             let correlationId = Int64.random(in: 0 ..< Int64.max)
                             var usedCorrelationId = false
                             
-                            if strongSelf.chatDisplayNode.shouldAnimateMessageTransition, let textInputPanelNode = strongSelf.chatDisplayNode.textInputPanelNode, let micButton = textInputPanelNode.micButton {
+                            var shouldAnimateMessageTransition = strongSelf.chatDisplayNode.shouldAnimateMessageTransition
+                            if strongSelf.chatLocation.threadId == nil, let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = strongSelf.presentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
+                                shouldAnimateMessageTransition = false
+                            }
+                            
+                            if shouldAnimateMessageTransition, let textInputPanelNode = strongSelf.chatDisplayNode.textInputPanelNode, let micButton = textInputPanelNode.micButton {
                                 usedCorrelationId = true
                                 strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .audioMicInput(ChatMessageTransitionNodeImpl.Source.AudioMicInput(micButton: micButton)), initiated: {
                                     guard let strongSelf = self else {
@@ -397,7 +439,7 @@ extension ChatControllerImpl {
                                         $0.updatedInterfaceState {
                                             $0.withUpdatedMediaDraftState(.video(
                                                 ChatInterfaceMediaDraftState.Video(
-                                                    duration: Int32(data.duration),
+                                                    duration: data.duration,
                                                     frames: data.frames,
                                                     framesUpdateTimestamp: data.framesUpdateTimestamp,
                                                     trimRange: data.trimRange
@@ -439,22 +481,57 @@ extension ChatControllerImpl {
     }
     
     func resumeMediaRecorder() {
+        self.recorderDataDisposable.set(nil)
+        
         self.context.sharedContext.mediaManager.playlistControl(.playback(.pause), type: nil)
         
-        if let audioRecorderValue = self.audioRecorderValue {
-            audioRecorderValue.resume()
-            
-            self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                $0.updatedInputTextPanelState { panelState in
-                    return panelState.withUpdatedMediaRecordingState(.audio(recorder: audioRecorderValue, isLocked: true))
-                }.updatedInterfaceState { $0.withUpdatedMediaDraftState(nil) }
-            })
-        } else if let videoRecorderValue = self.videoRecorderValue {
+        if let videoRecorderValue = self.videoRecorderValue {
             self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
                 $0.updatedInputTextPanelState { panelState in
                     let recordingStatus = videoRecorderValue.recordingStatus
                     return panelState.withUpdatedMediaRecordingState(.video(status: .recording(InstantVideoControllerRecordingStatus(micLevel: recordingStatus.micLevel, duration: recordingStatus.duration)), isLocked: true))
                 }.updatedInterfaceState { $0.withUpdatedMediaDraftState(nil) }
+            })
+        } else {
+            let proceed = {
+                self.withAudioRecorder(resuming: true, { audioRecorder in
+                    audioRecorder.resume()
+                    
+                    self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                        $0.updatedInputTextPanelState { panelState in
+                            return panelState.withUpdatedMediaRecordingState(.audio(recorder: audioRecorder, isLocked: true))
+                        }.updatedInterfaceState { $0.withUpdatedMediaDraftState(nil) }
+                    })
+                })
+            }
+            
+            let _ = (ApplicationSpecificNotice.getVoiceMessagesResumeTrimWarning(accountManager: self.context.sharedContext.accountManager)
+            |> deliverOnMainQueue).start(next: { [weak self] count in
+                guard let self else {
+                    return
+                }
+                if count > 0 {
+                    proceed()
+                    return
+                }
+                if let recordedMediaPreview = self.presentationInterfaceState.interfaceState.mediaDraftState, case let .audio(audio) = recordedMediaPreview, let trimRange = audio.trimRange, trimRange.lowerBound > 0.1 || trimRange.upperBound < audio.duration {
+                    self.present(
+                        textAlertController(
+                            context: self.context,
+                            title: self.presentationData.strings.Chat_TrimVoiceMessageToResume_Title,
+                            text: self.presentationData.strings.Chat_TrimVoiceMessageToResume_Text,
+                            actions: [
+                                TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {}),
+                                TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Chat_TrimVoiceMessageToResume_Proceed, action: {
+                                    proceed()
+                                    let _ = ApplicationSpecificNotice.incrementVoiceMessagesResumeTrimWarning(accountManager: self.context.sharedContext.accountManager).start()
+                                })
+                            ]
+                        ), in: .window(.root)
+                    )
+                } else {
+                    proceed()
+                }
             })
         }
     }
@@ -468,7 +545,11 @@ extension ChatControllerImpl {
             })
         }
         
-        self.videoRecorderValue?.lockVideoRecording()
+        if let _ = self.audioRecorderValue {
+            self.maybePresentAudioPauseTooltip()
+        } else if let videoRecorderValue = self.videoRecorderValue {
+            videoRecorderValue.lockVideoRecording()
+        }
     }
     
     func deleteMediaRecording() {
@@ -484,9 +565,116 @@ extension ChatControllerImpl {
             $0.updatedInterfaceState { $0.withUpdatedMediaDraftState(nil) }
         })
         self.updateDownButtonVisibility()
+        
+        self.dismissAllTooltips()
     }
     
-    func sendMediaRecording(silentPosting: Bool? = nil, scheduleTime: Int32? = nil, viewOnce: Bool = false, messageEffect: ChatSendMessageEffect? = nil, postpone: Bool = false) {
+    private func maybePresentAudioPauseTooltip() {
+        let _ = (ApplicationSpecificNotice.getVoiceMessagesPauseSuggestion(accountManager: self.context.sharedContext.accountManager)
+        |> deliverOnMainQueue).startStandalone(next: { [weak self] pauseCounter in
+            guard let self else {
+                return
+            }
+            
+            if pauseCounter >= 3 {
+                return
+            } else {
+                Queue.mainQueue().after(0.3) {
+                    self.displayPauseTooltip(text: self.presentationData.strings.Chat_PauseVoiceMessageTooltip)
+                }
+                let _ = ApplicationSpecificNotice.incrementVoiceMessagesPauseSuggestion(accountManager: self.context.sharedContext.accountManager).startStandalone()
+            }
+        })
+    }
+    
+    private func displayPauseTooltip(text: String) {
+        guard let layout = self.validLayout else {
+            return
+        }
+        
+        self.dismissAllTooltips()
+        
+        let insets = layout.insets(options: [.input])
+        let location = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.right - 42.0 - UIScreenPixel, y: layout.size.height - insets.bottom - 122.0), size: CGSize())
+        
+        let tooltipController = TooltipScreen(
+            account: self.context.account,
+            sharedContext: self.context.sharedContext,
+            text: .markdown(text: text),
+            balancedTextLayout: true,
+            constrainWidth: 240.0,
+            style: .customBlur(UIColor(rgb: 0x18181a), 0.0),
+            arrowStyle: .small,
+            icon: nil,
+            location: .point(location, .right),
+            displayDuration: .default,
+            inset: 8.0,
+            cornerRadius: 8.0,
+            shouldDismissOnTouch: { _, _ in
+                return .ignore
+            }
+        )
+        self.present(tooltipController, in: .window(.root))
+    }
+    
+    private func withAudioRecorder(resuming: Bool, _ f: (ManagedAudioRecorder) -> Void) {
+        if let audioRecorder = self.audioRecorderValue {
+            f(audioRecorder)
+        } else if let recordedMediaPreview = self.presentationInterfaceState.interfaceState.mediaDraftState, case let .audio(audio) = recordedMediaPreview {
+            self.requestAudioRecorder(beginWithTone: false, existingDraft: audio)
+            if let audioRecorder = self.audioRecorderValue {
+                f(audioRecorder)
+                
+                if !resuming {
+                    self.recorderDataDisposable.set(
+                        (audioRecorder.takenRecordedData()
+                         |> deliverOnMainQueue).startStrict(
+                            next: { [weak self] data in
+                                if let strongSelf = self, let data = data {
+                                    let audioWaveform = audio.waveform
+                                   
+                                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                                        $0.updatedInterfaceState {
+                                            $0.withUpdatedMediaDraftState(.audio(
+                                                ChatInterfaceMediaDraftState.Audio(
+                                                    resource: audio.resource,
+                                                    fileSize: Int32(data.compressedData.count),
+                                                    duration: data.duration,
+                                                    waveform: audioWaveform,
+                                                    trimRange: data.trimRange,
+                                                    resumeData: data.resumeData
+                                                )
+                                            ))
+                                        }.updatedInputTextPanelState { panelState in
+                                            return panelState.withUpdatedMediaRecordingState(nil)
+                                        }
+                                    })
+                                    strongSelf.updateDownButtonVisibility()
+                                }
+                            })
+                    )
+                }
+            }
+        }
+    }
+    
+    func updateTrimRange(start: Double, end: Double, updatedEnd: Bool, apply: Bool) {
+        if let videoRecorder = self.videoRecorderValue {
+            videoRecorder.updateTrimRange(start: start, end: end, updatedEnd: updatedEnd, apply: apply)
+        } else {
+            self.withAudioRecorder(resuming: false, { audioRecorder in
+                audioRecorder.updateTrimRange(start: start, end: end, updatedEnd: updatedEnd, apply: apply)
+            })
+        }
+    }
+    
+    func sendMediaRecording(
+        silentPosting: Bool? = nil,
+        scheduleTime: Int32? = nil,
+        viewOnce: Bool = false,
+        messageEffect: ChatSendMessageEffect? = nil,
+        postpone: Bool = false
+    ) {
         self.chatDisplayNode.updateRecordedMediaDeleted(false)
         
         guard let recordedMediaPreview = self.presentationInterfaceState.interfaceState.mediaDraftState else {
@@ -509,7 +697,7 @@ extension ChatControllerImpl {
                 return
             }
             
-            let waveformBuffer = audio.waveform.makeBitstream()
+            
             
             self.chatDisplayNode.setupSendActionOnViewUpdate({ [weak self] in
                 if let strongSelf = self {
@@ -531,7 +719,23 @@ extension ChatControllerImpl {
                 attributes.append(EffectMessageAttribute(id: messageEffect.id))
             }
             
-            let messages: [EnqueueMessage] = [.message(text: "", attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: audio.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: Int64(audio.fileSize), attributes: [.Audio(isVoice: true, duration: Int(audio.duration), title: nil, performer: nil, waveform: waveformBuffer)], alternativeRepresentations: [])), threadId: self.chatLocation.threadId, replyToMessageId: self.presentationInterfaceState.interfaceState.replyMessageSubject?.subjectModel, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]
+            let resource: TelegramMediaResource
+            var waveform = audio.waveform
+            var finalDuration: Int = Int(audio.duration)
+            if let trimRange = audio.trimRange, trimRange.lowerBound > 0.0 || trimRange.upperBound < Double(audio.duration)  {
+                let randomId = Int64.random(in: Int64.min ... Int64.max)
+                let tempPath = NSTemporaryDirectory() + "\(Int64.random(in: 0 ..< .max)).ogg"
+                resource = LocalFileAudioMediaResource(randomId: randomId, path: tempPath, trimRange: trimRange)
+                self.context.account.postbox.mediaBox.moveResourceData(audio.resource.id, toTempPath: tempPath)
+                waveform = waveform.subwaveform(from: trimRange.lowerBound / Double(audio.duration), to: trimRange.upperBound / Double(audio.duration))
+                finalDuration = Int(trimRange.upperBound - trimRange.lowerBound)
+            } else {
+                resource = audio.resource
+            }
+            
+            let waveformBuffer = waveform.makeBitstream()
+            
+            let messages: [EnqueueMessage] = [.message(text: "", attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: Int64(audio.fileSize), attributes: [.Audio(isVoice: true, duration: finalDuration, title: nil, performer: nil, waveform: waveformBuffer)], alternativeRepresentations: [])), threadId: self.chatLocation.threadId, replyToMessageId: self.presentationInterfaceState.interfaceState.replyMessageSubject?.subjectModel, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]
             
             let transformedMessages: [EnqueueMessage]
             if let silentPosting = silentPosting {

@@ -517,6 +517,36 @@ private final class AdminUserActionsSheetComponent: Component {
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
             
             if self.component == nil {
+                let _ = (component.context.account.postbox.peerView(id: component.chatPeer.id)
+                |> take(1)).start(next: { [weak self] peerView in
+                    guard let self else{
+                        return
+                    }
+                    
+                    var selectAll = false
+                    if let cachedData = peerView.cachedData as? CachedChannelData {
+                        if let memberCount = cachedData.participantsSummary.memberCount, memberCount >= 1000 {
+                            selectAll = true
+                        } else if case let .known(peerId) = cachedData.linkedDiscussionPeerId, let _ = peerId {
+                            selectAll = true
+                        }
+                    }
+                    
+                    if selectAll && !"".isEmpty {
+                        var selectedPeers = Set<EnginePeer.Id>()
+                        for peer in component.peers {
+                            selectedPeers.insert(peer.peer.id)
+                        }
+                        self.optionReportSelectedPeers = selectedPeers
+                        self.optionDeleteAllSelectedPeers = selectedPeers
+                        self.optionBanSelectedPeers = selectedPeers
+                    }
+                    
+                    if !self.isUpdating {
+                        self.state?.updated()
+                    }
+                })
+                
                 var (allowedParticipantRights, allowedMediaRights) = rightsFromBannedRights([])
                 if case let .channel(channel) = component.chatPeer {
                     (allowedParticipantRights, allowedMediaRights) = rightsFromBannedRights(channel.defaultBannedRights?.flags ?? [])
@@ -1011,212 +1041,230 @@ private final class AdminUserActionsSheetComponent: Component {
                 case changeInfo
             }
             
-            var allConfigItems: [(ConfigItem, Bool)] = []
-            if !self.allowedMediaRights.isEmpty || !self.allowedParticipantRights.isEmpty {
-                for configItem in ConfigItem.allCases {
-                    let isEnabled: Bool
+            if case let .channel(channel) = component.chatPeer, channel.isMonoForum {
+            } else {
+                var allConfigItems: [(ConfigItem, Bool)] = []
+                if !self.allowedMediaRights.isEmpty || !self.allowedParticipantRights.isEmpty {
+                    for configItem in ConfigItem.allCases {
+                        let isEnabled: Bool
+                        switch configItem {
+                        case .sendMessages:
+                            isEnabled = self.allowedParticipantRights.contains(.sendMessages)
+                        case .sendMedia:
+                            isEnabled = !self.allowedMediaRights.isEmpty
+                        case .addUsers:
+                            isEnabled = self.allowedParticipantRights.contains(.addMembers)
+                        case .pinMessages:
+                            isEnabled = self.allowedParticipantRights.contains(.pinMessages)
+                        case .changeInfo:
+                            isEnabled = self.allowedParticipantRights.contains(.changeInfo)
+                        }
+                        allConfigItems.append((configItem, isEnabled))
+                    }
+                }
+                
+                loop: for (configItem, isEnabled) in allConfigItems {
+                    let itemTitle: AnyComponent<Empty>
+                    let itemValue: Bool
                     switch configItem {
                     case .sendMessages:
-                        isEnabled = self.allowedParticipantRights.contains(.sendMessages)
+                        itemTitle = AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: environment.strings.Channel_BanUser_PermissionSendMessages,
+                                font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                                textColor: environment.theme.list.itemPrimaryTextColor
+                            )),
+                            maximumNumberOfLines: 1
+                        ))
+                        itemValue = self.participantRights.contains(.sendMessages)
                     case .sendMedia:
-                        isEnabled = !self.allowedMediaRights.isEmpty
-                    case .addUsers:
-                        isEnabled = self.allowedParticipantRights.contains(.addMembers)
-                    case .pinMessages:
-                        isEnabled = self.allowedParticipantRights.contains(.pinMessages)
-                    case .changeInfo:
-                        isEnabled = self.allowedParticipantRights.contains(.changeInfo)
-                    }
-                    allConfigItems.append((configItem, isEnabled))
-                }
-            }
-            
-            loop: for (configItem, isEnabled) in allConfigItems {
-                let itemTitle: AnyComponent<Empty>
-                let itemValue: Bool
-                switch configItem {
-                case .sendMessages:
-                    itemTitle = AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(
-                            string: environment.strings.Channel_BanUser_PermissionSendMessages,
-                            font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
-                            textColor: environment.theme.list.itemPrimaryTextColor
-                        )),
-                        maximumNumberOfLines: 1
-                    ))
-                    itemValue = self.participantRights.contains(.sendMessages)
-                case .sendMedia:
-                    if isEnabled {
-                        itemTitle = AnyComponent(HStack([
-                            AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
+                        if isEnabled {
+                            itemTitle = AnyComponent(HStack([
+                                AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
+                                    text: .plain(NSAttributedString(
+                                        string: environment.strings.Channel_BanUser_PermissionSendMedia,
+                                        font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                                        textColor: environment.theme.list.itemPrimaryTextColor
+                                    )),
+                                    maximumNumberOfLines: 1
+                                ))),
+                                AnyComponentWithIdentity(id: 1, component: AnyComponent(MediaSectionExpandIndicatorComponent(
+                                    theme: environment.theme,
+                                    title: "\(self.mediaRights.count)/\(self.allowedMediaRights.count)",
+                                    isExpanded: self.isMediaSectionExpanded
+                                )))
+                            ], spacing: 7.0))
+                        } else {
+                            itemTitle = AnyComponent(MultilineTextComponent(
                                 text: .plain(NSAttributedString(
                                     string: environment.strings.Channel_BanUser_PermissionSendMedia,
                                     font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                     textColor: environment.theme.list.itemPrimaryTextColor
                                 )),
                                 maximumNumberOfLines: 1
-                            ))),
-                            AnyComponentWithIdentity(id: 1, component: AnyComponent(MediaSectionExpandIndicatorComponent(
-                                theme: environment.theme,
-                                title: "\(self.mediaRights.count)/\(self.allowedMediaRights.count)",
-                                isExpanded: self.isMediaSectionExpanded
-                            )))
-                        ], spacing: 7.0))
-                    } else {
+                            ))
+                        }
+                        
+                        itemValue = !self.mediaRights.isEmpty
+                    case .addUsers:
                         itemTitle = AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
-                                string: environment.strings.Channel_BanUser_PermissionSendMedia,
+                                string: environment.strings.Channel_BanUser_PermissionAddMembers,
                                 font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                 textColor: environment.theme.list.itemPrimaryTextColor
                             )),
                             maximumNumberOfLines: 1
                         ))
+                        itemValue = self.participantRights.contains(.addMembers)
+                    case .pinMessages:
+                        itemTitle = AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: environment.strings.Channel_EditAdmin_PermissionPinMessages,
+                                font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                                textColor: environment.theme.list.itemPrimaryTextColor
+                            )),
+                            maximumNumberOfLines: 1
+                        ))
+                        itemValue = self.participantRights.contains(.pinMessages)
+                    case .changeInfo:
+                        itemTitle = AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: environment.strings.Channel_BanUser_PermissionChangeGroupInfo,
+                                font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                                textColor: environment.theme.list.itemPrimaryTextColor
+                            )),
+                            maximumNumberOfLines: 1
+                        ))
+                        itemValue = self.participantRights.contains(.changeInfo)
                     }
                     
-                    itemValue = !self.mediaRights.isEmpty
-                case .addUsers:
-                    itemTitle = AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(
-                            string: environment.strings.Channel_BanUser_PermissionAddMembers,
-                            font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
-                            textColor: environment.theme.list.itemPrimaryTextColor
+                    configSectionItems.append(AnyComponentWithIdentity(id: configItem, component: AnyComponent(ListActionItemComponent(
+                        theme: environment.theme,
+                        title: itemTitle,
+                        accessory: .toggle(ListActionItemComponent.Toggle(
+                            style: isEnabled ? .icons : .lock,
+                            isOn: itemValue,
+                            isInteractive: isEnabled,
+                            action: isEnabled ? { [weak self] _ in
+                                guard let self else {
+                                    return
+                                }
+                                
+                                switch configItem {
+                                case .sendMessages:
+                                    if self.participantRights.contains(.sendMessages) {
+                                        self.participantRights.remove(.sendMessages)
+                                    } else {
+                                        self.participantRights.insert(.sendMessages)
+                                    }
+                                case .sendMedia:
+                                    if self.mediaRights.isEmpty {
+                                        self.mediaRights = self.allowedMediaRights
+                                    } else {
+                                        self.mediaRights = []
+                                    }
+                                case .addUsers:
+                                    if self.participantRights.contains(.addMembers) {
+                                        self.participantRights.remove(.addMembers)
+                                    } else {
+                                        self.participantRights.insert(.addMembers)
+                                    }
+                                case .pinMessages:
+                                    if self.participantRights.contains(.pinMessages) {
+                                        self.participantRights.remove(.pinMessages)
+                                    } else {
+                                        self.participantRights.insert(.pinMessages)
+                                    }
+                                case .changeInfo:
+                                    if self.participantRights.contains(.changeInfo) {
+                                        self.participantRights.remove(.changeInfo)
+                                    } else {
+                                        self.participantRights.insert(.changeInfo)
+                                    }
+                                }
+                                self.state?.updated(transition: .spring(duration: 0.35))
+                            } : nil
                         )),
-                        maximumNumberOfLines: 1
-                    ))
-                    itemValue = self.participantRights.contains(.addMembers)
-                case .pinMessages:
-                    itemTitle = AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(
-                            string: environment.strings.Channel_EditAdmin_PermissionPinMessages,
-                            font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
-                            textColor: environment.theme.list.itemPrimaryTextColor
-                        )),
-                        maximumNumberOfLines: 1
-                    ))
-                    itemValue = self.participantRights.contains(.pinMessages)
-                case .changeInfo:
-                    itemTitle = AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(
-                            string: environment.strings.Channel_BanUser_PermissionChangeGroupInfo,
-                            font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
-                            textColor: environment.theme.list.itemPrimaryTextColor
-                        )),
-                        maximumNumberOfLines: 1
-                    ))
-                    itemValue = self.participantRights.contains(.changeInfo)
-                }
-                
-                configSectionItems.append(AnyComponentWithIdentity(id: configItem, component: AnyComponent(ListActionItemComponent(
-                    theme: environment.theme,
-                    title: itemTitle,
-                    accessory: .toggle(ListActionItemComponent.Toggle(
-                        style: isEnabled ? .icons : .lock,
-                        isOn: itemValue,
-                        isInteractive: isEnabled,
-                        action: isEnabled ? { [weak self] _ in
-                            guard let self else {
+                        action: ((isEnabled && configItem == .sendMedia) || !isEnabled) ? { [weak self] _ in
+                            guard let self, let component = self.component else {
                                 return
                             }
-                            
-                            switch configItem {
-                            case .sendMessages:
-                                if self.participantRights.contains(.sendMessages) {
-                                    self.participantRights.remove(.sendMessages)
-                                } else {
-                                    self.participantRights.insert(.sendMessages)
-                                }
-                            case .sendMedia:
-                                if self.mediaRights.isEmpty {
-                                    self.mediaRights = self.allowedMediaRights
-                                } else {
-                                    self.mediaRights = []
-                                }
-                            case .addUsers:
-                                if self.participantRights.contains(.addMembers) {
-                                    self.participantRights.remove(.addMembers)
-                                } else {
-                                    self.participantRights.insert(.addMembers)
-                                }
-                            case .pinMessages:
-                                if self.participantRights.contains(.pinMessages) {
-                                    self.participantRights.remove(.pinMessages)
-                                } else {
-                                    self.participantRights.insert(.pinMessages)
-                                }
-                            case .changeInfo:
-                                if self.participantRights.contains(.changeInfo) {
-                                    self.participantRights.remove(.changeInfo)
-                                } else {
-                                    self.participantRights.insert(.changeInfo)
-                                }
+                            if !isEnabled {
+                                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                                self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: environment.strings.GroupPermission_PermissionDisabledByDefault, actions: [
+                                    TextAlertAction(type: .defaultAction, title: environment.strings.Common_OK, action: {
+                                    })
+                                ]), in: .window(.root))
+                            } else {
+                                self.isMediaSectionExpanded = !self.isMediaSectionExpanded
+                                self.state?.updated(transition: .spring(duration: 0.35))
                             }
-                            self.state?.updated(transition: .spring(duration: 0.35))
-                        } : nil
-                    )),
-                    action: ((isEnabled && configItem == .sendMedia) || !isEnabled) ? { [weak self] _ in
-                        guard let self, let component = self.component else {
-                            return
-                        }
-                        if !isEnabled {
-                            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                            self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: environment.strings.GroupPermission_PermissionDisabledByDefault, actions: [
-                                TextAlertAction(type: .defaultAction, title: environment.strings.Common_OK, action: {
-                                })
-                            ]), in: .window(.root))
-                        } else {
-                            self.isMediaSectionExpanded = !self.isMediaSectionExpanded
-                            self.state?.updated(transition: .spring(duration: 0.35))
-                        }
-                    } : nil,
-                    highlighting: .disabled
-                ))))
-                
-                if isEnabled, case .sendMedia = configItem, self.isMediaSectionExpanded {
-                    var mediaItems: [AnyComponentWithIdentity<Empty>] = []
-                    mediaRightsLoop: for possibleMediaItem in allMediaRightItems {
-                        if !self.allowedMediaRights.contains(possibleMediaItem) {
-                            continue
-                        }
-                        
-                        let mediaItemTitle: String
-                        switch possibleMediaItem {
-                        case .photos:
-                            mediaItemTitle = environment.strings.Channel_BanUser_PermissionSendPhoto
-                        case .videos:
-                            mediaItemTitle = environment.strings.Channel_BanUser_PermissionSendVideo
-                        case .stickersAndGifs:
-                            mediaItemTitle = environment.strings.Channel_BanUser_PermissionSendStickersAndGifs
-                        case .music:
-                            mediaItemTitle = environment.strings.Channel_BanUser_PermissionSendMusic
-                        case .files:
-                            mediaItemTitle = environment.strings.Channel_BanUser_PermissionSendFile
-                        case .voiceMessages:
-                            mediaItemTitle = environment.strings.Channel_BanUser_PermissionSendVoiceMessage
-                        case .videoMessages:
-                            mediaItemTitle = environment.strings.Channel_BanUser_PermissionSendVideoMessage
-                        case .links:
-                            mediaItemTitle = environment.strings.Channel_BanUser_PermissionEmbedLinks
-                        case .polls:
-                            mediaItemTitle = environment.strings.Channel_BanUser_PermissionSendPolls
-                        default:
-                            continue mediaRightsLoop
-                        }
-                        
-                        mediaItems.append(AnyComponentWithIdentity(id: possibleMediaItem, component: AnyComponent(ListActionItemComponent(
-                            theme: environment.theme,
-                            title: AnyComponent(VStack([
-                                AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
-                                    text: .plain(NSAttributedString(
-                                        string: mediaItemTitle,
-                                        font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
-                                        textColor: environment.theme.list.itemPrimaryTextColor
-                                    )),
-                                    maximumNumberOfLines: 1
-                                ))),
-                            ], alignment: .left, spacing: 2.0)),
-                            leftIcon: .check(ListActionItemComponent.LeftIcon.Check(
-                                isSelected: self.mediaRights.contains(possibleMediaItem),
-                                toggle: { [weak self] in
+                        } : nil,
+                        highlighting: .disabled
+                    ))))
+                    
+                    if isEnabled, case .sendMedia = configItem, self.isMediaSectionExpanded {
+                        var mediaItems: [AnyComponentWithIdentity<Empty>] = []
+                        mediaRightsLoop: for possibleMediaItem in allMediaRightItems {
+                            if !self.allowedMediaRights.contains(possibleMediaItem) {
+                                continue
+                            }
+                            
+                            let mediaItemTitle: String
+                            switch possibleMediaItem {
+                            case .photos:
+                                mediaItemTitle = environment.strings.Channel_BanUser_PermissionSendPhoto
+                            case .videos:
+                                mediaItemTitle = environment.strings.Channel_BanUser_PermissionSendVideo
+                            case .stickersAndGifs:
+                                mediaItemTitle = environment.strings.Channel_BanUser_PermissionSendStickersAndGifs
+                            case .music:
+                                mediaItemTitle = environment.strings.Channel_BanUser_PermissionSendMusic
+                            case .files:
+                                mediaItemTitle = environment.strings.Channel_BanUser_PermissionSendFile
+                            case .voiceMessages:
+                                mediaItemTitle = environment.strings.Channel_BanUser_PermissionSendVoiceMessage
+                            case .videoMessages:
+                                mediaItemTitle = environment.strings.Channel_BanUser_PermissionSendVideoMessage
+                            case .links:
+                                mediaItemTitle = environment.strings.Channel_BanUser_PermissionEmbedLinks
+                            case .polls:
+                                mediaItemTitle = environment.strings.Channel_BanUser_PermissionSendPolls
+                            default:
+                                continue mediaRightsLoop
+                            }
+                            
+                            mediaItems.append(AnyComponentWithIdentity(id: possibleMediaItem, component: AnyComponent(ListActionItemComponent(
+                                theme: environment.theme,
+                                title: AnyComponent(VStack([
+                                    AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
+                                        text: .plain(NSAttributedString(
+                                            string: mediaItemTitle,
+                                            font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                                            textColor: environment.theme.list.itemPrimaryTextColor
+                                        )),
+                                        maximumNumberOfLines: 1
+                                    ))),
+                                ], alignment: .left, spacing: 2.0)),
+                                leftIcon: .check(ListActionItemComponent.LeftIcon.Check(
+                                    isSelected: self.mediaRights.contains(possibleMediaItem),
+                                    toggle: { [weak self] in
+                                        guard let self else {
+                                            return
+                                        }
+                                        
+                                        if self.mediaRights.contains(possibleMediaItem) {
+                                            self.mediaRights.remove(possibleMediaItem)
+                                        } else {
+                                            self.mediaRights.insert(possibleMediaItem)
+                                        }
+                                        
+                                        self.state?.updated(transition: .spring(duration: 0.35))
+                                    }
+                                )),
+                                icon: .none,
+                                accessory: .none,
+                                action: { [weak self] _ in
                                     guard let self else {
                                         return
                                     }
@@ -1228,31 +1276,16 @@ private final class AdminUserActionsSheetComponent: Component {
                                     }
                                     
                                     self.state?.updated(transition: .spring(duration: 0.35))
-                                }
-                            )),
-                            icon: .none,
-                            accessory: .none,
-                            action: { [weak self] _ in
-                                guard let self else {
-                                    return
-                                }
-                                
-                                if self.mediaRights.contains(possibleMediaItem) {
-                                    self.mediaRights.remove(possibleMediaItem)
-                                } else {
-                                    self.mediaRights.insert(possibleMediaItem)
-                                }
-                                
-                                self.state?.updated(transition: .spring(duration: 0.35))
-                            },
-                            highlighting: .disabled
+                                },
+                                highlighting: .disabled
+                            ))))
+                        }
+                        configSectionItems.append(AnyComponentWithIdentity(id: "media-sub", component: AnyComponent(ListSubSectionComponent(
+                            theme: environment.theme,
+                            leftInset: 0.0,
+                            items: mediaItems
                         ))))
                     }
-                    configSectionItems.append(AnyComponentWithIdentity(id: "media-sub", component: AnyComponent(ListSubSectionComponent(
-                        theme: environment.theme,
-                        leftInset: 0.0,
-                        items: mediaItems
-                    ))))
                 }
             }
             

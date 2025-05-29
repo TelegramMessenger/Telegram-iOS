@@ -23,7 +23,6 @@ private enum ChatReportPeerTitleButton: Equatable {
     case shareMyPhoneNumber
     case reportSpam
     case reportUserSpam
-    case reportIrrelevantGeoLocation
     case unarchive
     case addMembers
     case restartTopic
@@ -48,8 +47,6 @@ private enum ChatReportPeerTitleButton: Equatable {
             return strings.Conversation_ReportSpamAndLeave
         case .reportUserSpam:
             return strings.Conversation_ReportSpam
-        case .reportIrrelevantGeoLocation:
-            return strings.Conversation_ReportGroupLocation
         case .unarchive:
             return strings.Conversation_Unarchive
         case .addMembers:
@@ -103,7 +100,7 @@ private func peerButtons(_ state: ChatPresentationInterfaceState) -> [ChatReport
             }
         }
     } else if let peer = state.renderedPeer?.chatMainPeer {
-        if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {
+        if let channel = peer as? TelegramChannel, channel.isForumOrMonoForum {
             if let threadData = state.threadData {
                 if threadData.isClosed {
                     var canManage = false
@@ -125,8 +122,6 @@ private func peerButtons(_ state: ChatPresentationInterfaceState) -> [ChatReport
         if case .peer = state.chatLocation {
             if let contactStatus = state.contactStatus, let peerStatusSettings = contactStatus.peerStatusSettings, peerStatusSettings.contains(.suggestAddMembers) {
                 buttons.append(.addMembers)
-            } else if let contactStatus = state.contactStatus, contactStatus.canReportIrrelevantLocation, let peerStatusSettings = contactStatus.peerStatusSettings, peerStatusSettings.contains(.canReportIrrelevantGeoLocation) {
-                buttons.append(.reportIrrelevantGeoLocation)
             } else if let contactStatus = state.contactStatus, let peerStatusSettings = contactStatus.peerStatusSettings, peerStatusSettings.contains(.autoArchived) {
                 buttons.append(.reportUserSpam)
                 buttons.append(.unarchive)
@@ -590,7 +585,7 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
         
         var emojiStatus: PeerEmojiStatus?
         if let user = interfaceState.renderedPeer?.peer as? TelegramUser, let emojiStatusValue = user.emojiStatus {
-            if user.isFake || user.isScam {
+            if user.isFake || user.isScam { 
             } else {
                 emojiStatus = emojiStatusValue
             }
@@ -601,7 +596,8 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
             }
         }
         
-        if let emojiStatus = emojiStatus, case let .emoji(fileId) = emojiStatus.content {
+        if let emojiStatus {
+            let fileId = emojiStatus.fileId
             if self.emojiStatusFileId != fileId {
                 self.emojiStatusFileId = fileId
                 
@@ -791,8 +787,6 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
                     self.interfaceInteraction?.presentInviteMembers()
                 case .addContact:
                     self.interfaceInteraction?.presentPeerContact()
-                case .reportIrrelevantGeoLocation:
-                    self.interfaceInteraction?.reportPeerIrrelevantGeoLocation()
                 case .restartTopic:
                     self.interfaceInteraction?.restartTopic()
                 }

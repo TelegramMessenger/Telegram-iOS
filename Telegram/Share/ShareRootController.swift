@@ -69,6 +69,13 @@ class ShareRootController: UIViewController {
             }), getExtensionContext: { [weak self] in
                 return self?.extensionContext
             })
+            
+            self.impl?.openUrl = { [weak self] url in
+                guard let self, let url = URL(string: url) else {
+                    return
+                }
+                let _ = self.openURL(url)
+            }
         }
         
         self.impl?.loadView()
@@ -92,5 +99,21 @@ class ShareRootController: UIViewController {
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         self.impl?.viewDidLayoutSubviews(view: self.view, traitCollection: self.traitCollection)
+    }
+    
+    @objc func openURL(_ url: URL) -> Bool {
+        var responder: UIResponder? = self
+        while responder != nil {
+            if let application = responder as? UIApplication {
+                if #available(iOS 18.0, *) {
+                    application.open(url, options: [:], completionHandler: nil)
+                    return true
+                } else {
+                    return application.perform(#selector(openURL(_:)), with: url) != nil
+                }
+            }
+            responder = responder?.next
+        }
+        return false
     }
 }

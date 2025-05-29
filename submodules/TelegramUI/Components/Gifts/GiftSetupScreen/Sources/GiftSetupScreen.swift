@@ -1359,7 +1359,8 @@ final class GiftSetupScreenComponent: Component {
                         color: environment.theme.list.itemCheckColors.fillColor,
                         foreground: environment.theme.list.itemCheckColors.foregroundColor,
                         pressedColor: environment.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9),
-                        cornerRadius: 10.0
+                        cornerRadius: 10.0,
+                        isShimmering: true
                     ),
                     content: AnyComponentWithIdentity(
                         id: AnyHashable(buttonString),

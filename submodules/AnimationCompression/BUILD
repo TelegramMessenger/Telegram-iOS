@@ -69,7 +69,7 @@ objc_library(
         "DctHuffman/Sources/**/*.m",
         "DctHuffman/Sources/**/*.mm",
         "DctHuffman/Sources/**/*.h",
-    ]),
+    ], allow_empty=True),
     copts = [],
     hdrs = glob([
         "DctHuffman/PublicHeaders/**/*.h",

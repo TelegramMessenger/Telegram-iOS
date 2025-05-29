@@ -267,14 +267,14 @@ private final class SendInviteLinkScreenComponent: Component {
             }
         }
         
-        private func presentPaidMessageAlertIfNeeded(peers: [EnginePeer], requiresStars: [EnginePeer.Id: StarsAmount], completion: @escaping () -> Void) {
+        private func presentPaidMessageAlertIfNeeded(peers: [EngineRenderedPeer], requiresStars: [EnginePeer.Id: StarsAmount], completion: @escaping () -> Void) {
             guard let component = self.component else {
                 completion()
                 return
             }
             var totalAmount: StarsAmount = .zero
             for peer in peers {
-                if let amount = requiresStars[peer.id] {
+                if let amount = requiresStars[peer.peerId] {
                     totalAmount = totalAmount + amount
                 }
             }
@@ -968,7 +968,7 @@ private final class SendInviteLinkScreenComponent: Component {
                                 let selectedPeers = component.peers.filter { self.selectedItems.contains($0.peer.id) }
                                 
                                 self.presentPaidMessageAlertIfNeeded(
-                                    peers: selectedPeers.map { $0.peer },
+                                    peers: selectedPeers.map { EngineRenderedPeer(peer: $0.peer) },
                                     requiresStars: component.sendPaidMessageStars,
                                     completion: { [weak self] in
                                         guard let self, let component = self.component, let controller = self.environment?.controller() else {

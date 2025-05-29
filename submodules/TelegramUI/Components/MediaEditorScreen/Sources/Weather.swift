@@ -57,7 +57,7 @@ func getWeather(context: AccountContext, load: Bool) -> Signal<StickerPickerScre
         switch status {
         case .notDetermined:
             return .single(.notDetermined)
-        case .denied, .restricted, .unreachable:
+        case .denied, .restricted, .unreachable, .limited:
             return .single(.notAllowed)
         case .allowed:
             if load {

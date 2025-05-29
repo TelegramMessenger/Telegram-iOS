@@ -110,6 +110,8 @@ static inline int writeOggPage(ogg_page *page, TGDataItem *fileItem)
     opus_int32 lookahead;
 }
 
+@property (nonatomic) ogg_sync_state syncState;
+
 @end
 
 @implementation TGOggOpusWriter
@@ -343,6 +345,174 @@ static inline int writeOggPage(ogg_page *page, TGDataItem *fileItem)
     return true;
 }
 
+- (bool)parseExistingOpusFile:(NSData *)data
+{
+    ogg_sync_init(&_syncState);
+    
+    char *buffer = ogg_sync_buffer(&_syncState, (long)data.length);
+    memcpy(buffer, data.bytes, data.length);
+    ogg_sync_wrote(&_syncState, (long)data.length);
+    
+    ogg_stream_state tempStream;
+    ogg_page page;
+    ogg_packet packet;
+    bool headerParsed = false;
+    bool foundStream = false;
+    ogg_int64_t finalGranulePos = 0;
+    
+    while (ogg_sync_pageout(&_syncState, &page) == 1) {
+        if (!foundStream) {
+            serialno = ogg_page_serialno(&page);
+            if (ogg_stream_init(&tempStream, serialno) != 0) {
+                ogg_sync_clear(&_syncState);
+                return false;
+            }
+            foundStream = true;
+        }
+        
+        if (ogg_page_serialno(&page) == serialno) {
+            ogg_stream_pagein(&tempStream, &page);
+            
+            if (ogg_page_granulepos(&page) != -1) {
+                finalGranulePos = ogg_page_granulepos(&page);
+            }
+            
+            while (ogg_stream_packetout(&tempStream, &packet) == 1) {
+                if (!headerParsed && packet.packetno == 0) {
+                    if (![self parseOpusHeader:packet.packet length:packet.bytes]) {
+                        ogg_stream_clear(&tempStream);
+                        ogg_sync_clear(&_syncState);
+                        return false;
+                    }
+                    headerParsed = true;
+                }
+                
+                _packetId = (ogg_int32_t)packet.packetno;
+                if (packet.granulepos != -1) {
+                    enc_granulepos = packet.granulepos;
+                    last_granulepos = packet.granulepos;
+                    finalGranulePos = packet.granulepos;
+                }
+            }
+        }
+    }
+    
+    if (finalGranulePos > header.preskip) {
+         opus_int64 samples = finalGranulePos - header.preskip;
+         total_samples = (samples * rate) / 48000;
+     } else {
+         total_samples = 0;
+     }
+    
+    ogg_stream_clear(&tempStream);
+    ogg_sync_clear(&_syncState);
+    
+    if (!headerParsed) {
+        return false;
+    }
+    
+    return true;
+}
+
+- (bool)parseOpusHeader:(unsigned char *)data length:(long)length
+{
+    if (length < 19) {
+        NSLog(@"Opus header too short");
+        return false;
+    }
+    
+    if (memcmp(data, "OpusHead", 8) != 0) {
+        NSLog(@"Invalid Opus header signature");
+        return false;
+    }
+    
+    header.channels = data[9];
+    header.preskip = data[10] | (data[11] << 8);
+    header.input_sample_rate = data[12] | (data[13] << 8) | (data[14] << 16) | (data[15] << 24);
+    header.gain = (signed short)(data[16] | (data[17] << 8));
+    header.channel_mapping = data[18];
+    
+    if (header.channels == 0) {
+        return false;
+    }
+    
+    rate = header.input_sample_rate;
+    coding_rate = rate;
+    
+    if (rate > 24000)
+        coding_rate = 48000;
+    else if (rate > 16000)
+        coding_rate = 24000;
+    else if (rate > 12000)
+        coding_rate = 16000;
+    else if (rate > 8000)
+        coding_rate = 12000;
+    else
+        coding_rate = 8000;
+    
+    header.nb_streams = 1;
+    
+    return true;
+}
+
+- (bool)initializeEncoderForAppend
+{
+    bytes_written = _dataItem.data.length;
+    
+    inopt.channels = header.channels;
+    inopt.rate = rate;
+    inopt.gain = header.gain;
+    inopt.samplesize = 16;
+    inopt.endianness = 0;
+    inopt.rawmode = 0;
+    inopt.ignorelength = 0;
+    inopt.copy_comments = 0;
+    
+    int result = OPUS_OK;
+    _encoder = opus_encoder_create(coding_rate, header.channels, OPUS_APPLICATION_AUDIO, &result);
+    if (result != OPUS_OK) {
+        NSLog(@"Error cannot create encoder: %s", opus_strerror(result));
+        return false;
+    }
+    
+    bitrate = 30 * 1024;
+    frame_size = 960;
+    
+    opus_encoder_ctl(_encoder, OPUS_SET_BITRATE(bitrate));
+    
+#ifdef OPUS_SET_LSB_DEPTH
+    opus_encoder_ctl(_encoder, OPUS_SET_LSB_DEPTH(16));
+#endif
+    
+    opus_encoder_ctl(_encoder, OPUS_GET_LOOKAHEAD(&lookahead));
+    
+    if (ogg_stream_init(&os, serialno) == -1) {
+        NSLog(@"Error: stream init failed");
+        return false;
+    }
+    
+    max_frame_bytes = (1275 * 3 + 7) * header.nb_streams;
+    _packet = malloc(max_frame_bytes);
+        
+    return true;
+}
+
+
+- (bool)beginAppendWithDataItem:(TGDataItem *)dataItem
+{
+    if (dataItem.data.length == 0) {
+        return [self beginWithDataItem:dataItem];
+    }
+    
+    _dataItem = dataItem;
+    
+    if (![self parseExistingOpusFile:_dataItem.data]) {
+        return false;
+    }
+    
+    return [self initializeEncoderForAppend];
+}
+
 - (bool)writeFrame:(uint8_t *)framePcmBytes frameByteCount:(NSUInteger)frameByteCount
 {
     // Main encoding loop (one frame per iteration)
@@ -466,6 +636,138 @@ static inline int writeOggPage(ogg_page *page, TGDataItem *fileItem)
 - (NSTimeInterval)encodedDuration
 {
     return total_samples / (NSTimeInterval)coding_rate;
+}
+
+- (NSDictionary *)pause
+{
+    [self flushPages];
+    return [self saveState];
+}
+
+- (bool)resumeWithDataItem:(TGDataItem *)dataItem encoderState:(NSDictionary *)state
+{
+    if (![self restoreState:state withDataItem:dataItem])
+        return false;
+    
+    _packetId++;
+    
+    return true;
+}
+
+- (bool)flushPages
+{
+    while (ogg_stream_flush_fill(&os, &og, 255 * 255))
+    {
+        if (ogg_page_packets(&og) != 0)
+            last_granulepos = ogg_page_granulepos(&og);
+        
+        last_segments -= og.header[26];
+        int writtenPageBytes = writeOggPage(&og, _dataItem);
+        if (writtenPageBytes != og.header_len + og.body_len)
+        {
+            NSLog(@"Error: failed writing data to output stream");
+            return false;
+        }
+        bytes_written += writtenPageBytes;
+        pages_out++;
+    }
+    return true;
+}
+
+- (NSDictionary *)saveState
+{
+    NSMutableDictionary *state = [NSMutableDictionary dictionary];
+    
+    [state setObject:@(_packetId) forKey:@"packetId"];
+    [state setObject:@(enc_granulepos) forKey:@"enc_granulepos"];
+    [state setObject:@(last_granulepos) forKey:@"last_granulepos"];
+    [state setObject:@(last_segments) forKey:@"last_segments"];
+    [state setObject:@(nb_encoded) forKey:@"nb_encoded"];
+    [state setObject:@(bytes_written) forKey:@"bytes_written"];
+    [state setObject:@(pages_out) forKey:@"pages_out"];
+    [state setObject:@(total_bytes) forKey:@"total_bytes"];
+    [state setObject:@(total_samples) forKey:@"total_samples"];
+    [state setObject:@(serialno) forKey:@"serialno"];
+    
+    [state setObject:@(rate) forKey:@"rate"];
+    [state setObject:@(coding_rate) forKey:@"coding_rate"];
+    [state setObject:@(frame_size) forKey:@"frame_size"];
+    [state setObject:@(bitrate) forKey:@"bitrate"];
+    [state setObject:@(with_cvbr) forKey:@"with_cvbr"];
+    [state setObject:@(lookahead) forKey:@"lookahead"];
+    
+    NSDictionary *headerDict = @{
+        @"channels": @(header.channels),
+        @"channel_mapping": @(header.channel_mapping),
+        @"input_sample_rate": @(header.input_sample_rate),
+        @"gain": @(header.gain),
+        @"nb_streams": @(header.nb_streams),
+        @"preskip": @(header.preskip)
+    };
+    [state setObject:headerDict forKey:@"header"];
+    
+    return state;
+}
+
+- (bool)restoreState:(NSDictionary *)state withDataItem:(TGDataItem *)dataItem
+{
+    if (state == nil || dataItem == nil)
+        return false;
+    
+    [self cleanup];
+    
+    _dataItem = dataItem;
+    
+    _packetId = [state[@"packetId"] intValue];
+    enc_granulepos = [state[@"enc_granulepos"] longLongValue];
+    last_granulepos = [state[@"last_granulepos"] longLongValue];
+    last_segments = [state[@"last_segments"] intValue];
+    nb_encoded = [state[@"nb_encoded"] longLongValue];
+    bytes_written = [state[@"bytes_written"] longLongValue];
+    pages_out = [state[@"pages_out"] longLongValue];
+    total_bytes = [state[@"total_bytes"] longLongValue];
+    total_samples = [state[@"total_samples"] longLongValue];
+    serialno = [state[@"serialno"] intValue];
+    
+    rate = [state[@"rate"] intValue];
+    coding_rate = [state[@"coding_rate"] intValue];
+    frame_size = [state[@"frame_size"] intValue];
+    bitrate = [state[@"bitrate"] intValue];
+    with_cvbr = [state[@"with_cvbr"] intValue];
+    lookahead = [state[@"lookahead"] intValue];
+    
+    NSDictionary *headerDict = state[@"header"];
+    header.channels = [headerDict[@"channels"] intValue];
+    header.channel_mapping = [headerDict[@"channel_mapping"] intValue];
+    header.input_sample_rate = [headerDict[@"input_sample_rate"] intValue];
+    header.gain = [headerDict[@"gain"] intValue];
+    header.nb_streams = [headerDict[@"nb_streams"] intValue];
+    header.preskip = [headerDict[@"preskip"] intValue];
+    
+    int result = OPUS_OK;
+    _encoder = opus_encoder_create(coding_rate, header.channels, OPUS_APPLICATION_AUDIO, &result);
+    if (result != OPUS_OK)
+    {
+        NSLog(@"Error cannot create encoder: %s", opus_strerror(result));
+        return false;
+    }
+    
+    opus_encoder_ctl(_encoder, OPUS_SET_BITRATE(bitrate));
+    
+#ifdef OPUS_SET_LSB_DEPTH
+    opus_encoder_ctl(_encoder, OPUS_SET_LSB_DEPTH(16));
+#endif
+    
+    if (ogg_stream_init(&os, serialno) == -1)
+    {
+        NSLog(@"Error: stream init failed");
+        return false;
+    }
+    
+    min_bytes = max_frame_bytes = (1275 * 3 + 7) * header.nb_streams;
+    _packet = malloc(max_frame_bytes);
+    
+    return true;
 }
 
 @end

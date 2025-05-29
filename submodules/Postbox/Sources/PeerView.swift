@@ -48,10 +48,23 @@ final class MutablePeerView: MutablePostboxView {
         var messageIds = Set<MessageId>()
         peerIds.insert(peerId)
         
-        if let peer = getPeer(peerId), let associatedPeerId = peer.associatedPeerId {
-            peerIds.insert(associatedPeerId)
-            self.contactPeerId = associatedPeerId
-            self.peerIsContact = postbox.contactsTable.isContact(peerId: associatedPeerId)
+        if let peer = getPeer(peerId) {
+            if let associatedPeerId = peer.associatedPeerId {
+                peerIds.insert(associatedPeerId)
+                
+                if peer.associatedPeerOverridesIdentity {
+                    self.contactPeerId = associatedPeerId
+                    self.peerIsContact = postbox.contactsTable.isContact(peerId: associatedPeerId)
+                } else {
+                    self.contactPeerId = peerId
+                }
+            } else {
+                self.contactPeerId = peerId
+            }
+            
+            if let additionalAssociatedPeerId = peer.additionalAssociatedPeerId {
+                peerIds.insert(additionalAssociatedPeerId)
+            }
         } else {
             self.contactPeerId = peerId
         }
@@ -83,9 +96,18 @@ final class MutablePeerView: MutablePostboxView {
             if let presence = getPeerPresence(associatedPeerId) {
                 self.peerPresences[associatedPeerId] = presence
             }
-            self.notificationSettings = postbox.peerNotificationSettingsTable.getEffective(associatedPeerId)
+            if peer.associatedPeerOverridesIdentity {
+                self.notificationSettings = postbox.peerNotificationSettingsTable.getEffective(associatedPeerId)
+            } else {
+                self.notificationSettings = postbox.peerNotificationSettingsTable.getEffective(peerId)
+            }
         } else {
             self.notificationSettings = postbox.peerNotificationSettingsTable.getEffective(peerId)
+        }
+        if let peer = self.peers[peerId], let additionalAssociatedPeerId = peer.additionalAssociatedPeerId {
+            if let peer = getPeer(additionalAssociatedPeerId) {
+                self.peers[additionalAssociatedPeerId] = peer
+            }
         }
         for id in messageIds {
             if let message = postbox.getMessage(id) {
@@ -132,8 +154,13 @@ final class MutablePeerView: MutablePostboxView {
             
             var peerIds = Set<PeerId>()
             peerIds.insert(self.peerId)
-            if let peer = getPeer(self.peerId), let associatedPeerId = peer.associatedPeerId {
-                peerIds.insert(associatedPeerId)
+            if let peer = getPeer(self.peerId) {
+                if let associatedPeerId = peer.associatedPeerId {
+                    peerIds.insert(associatedPeerId)
+                }
+                if let additionalAssociatedPeerId = peer.additionalAssociatedPeerId {
+                    peerIds.insert(additionalAssociatedPeerId)
+                }
             }
             peerIds.formUnion(cachedData.peerIds)
             
@@ -177,8 +204,13 @@ final class MutablePeerView: MutablePostboxView {
         } else {
             var peerIds = Set<PeerId>()
             peerIds.insert(self.peerId)
-            if let peer = getPeer(self.peerId), let associatedPeerId = peer.associatedPeerId {
-                peerIds.insert(associatedPeerId)
+            if let peer = getPeer(self.peerId) {
+                if let associatedPeerId = peer.associatedPeerId {
+                    peerIds.insert(associatedPeerId)
+                }
+                if let additionalAssociatedPeerId = peer.additionalAssociatedPeerId {
+                    peerIds.insert(additionalAssociatedPeerId)
+                }
             }
             if let cachedData = self.cachedData {
                 peerIds.formUnion(cachedData.peerIds)
@@ -236,7 +268,7 @@ final class MutablePeerView: MutablePostboxView {
         }
         
         if let peer = self.peers[self.peerId] {
-            if let associatedPeerId = peer.associatedPeerId {
+            if let associatedPeerId = peer.associatedPeerId, peer.associatedPeerOverridesIdentity {
                 if let (_, notificationSettings) = updatedNotificationSettings[associatedPeerId] {
                     self.notificationSettings = notificationSettings
                     updated = true

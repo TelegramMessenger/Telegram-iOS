@@ -21,6 +21,7 @@ private final class PhoneAndCountryNode: ASDisplayNode {
     let theme: PresentationTheme
     
     let countryButton: ASButtonNode
+    let countryButtonArrow: ASImageNode
     let phoneBackground: ASImageNode
     let phoneInputNode: PhoneInputNode
     
@@ -90,6 +91,9 @@ private final class PhoneAndCountryNode: ASDisplayNode {
         self.countryButton.titleNode.truncationMode = .byTruncatingTail
         self.countryButton.setBackgroundImage(countryButtonHighlightedBackground, for: .highlighted)
         
+        self.countryButtonArrow = ASImageNode()
+        self.countryButtonArrow.image = generateTintedImage(image: UIImage(bundleImageName: "Item List/DisclosureArrow"), color: theme.list.disclosureArrowColor)
+        
         self.phoneBackground = ASImageNode()
         self.phoneBackground.image = phoneInputBackground
         self.phoneBackground.displaysAsynchronously = false
@@ -102,6 +106,7 @@ private final class PhoneAndCountryNode: ASDisplayNode {
         
         self.addSubnode(self.phoneBackground)
         self.addSubnode(self.countryButton)
+        self.countryButton.addSubnode(self.countryButtonArrow)
         self.addSubnode(self.phoneInputNode)
         
         self.phoneInputNode.countryCodeField.textField.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
@@ -240,6 +245,10 @@ private final class PhoneAndCountryNode: ASDisplayNode {
         
         self.countryButton.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: 67.0))
         self.phoneBackground.frame = CGRect(origin: CGPoint(x: 0.0, y: size.height - 57.0), size: CGSize(width: size.width - inset, height: 57.0))
+        
+        if let image = self.countryButtonArrow.image {
+            self.countryButtonArrow.frame = CGRect(origin: CGPoint(x: size.width - image.size.width - 24.0 - 3.0, y: 16.0 + UIScreenPixel), size: image.size)
+        }
         
         let countryCodeFrame = CGRect(origin: CGPoint(x: 18.0, y: size.height - 58.0), size: CGSize(width: 71.0, height: 57.0))
         let numberFrame = CGRect(origin: CGPoint(x: 107.0, y: size.height - 58.0), size: CGSize(width: size.width - 96.0 - 8.0 - 24.0, height: 57.0))

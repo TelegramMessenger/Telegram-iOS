@@ -80,18 +80,23 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
         self.addSubnode(self.avatarNode)
         self.addSubnode(self.accessibilityArea)
         
+        var clipStyle: AvatarNodeClipStyle = .round
+        if case let .channel(channel) = chatPeer, channel.isMonoForum {
+            clipStyle = .bubble
+        }
+        
         if chatPeer.id == context.account.peerId {
-            self.avatarNode.setPeer(context: context, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: peer, overrideImage: .savedMessagesIcon)
+            self.avatarNode.setPeer(context: context, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: peer, overrideImage: .savedMessagesIcon, clipStyle: clipStyle)
         } else if chatPeer.id.isReplies {
-            self.avatarNode.setPeer(context: context, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: peer, overrideImage: .repliesIcon)
+            self.avatarNode.setPeer(context: context, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: peer, overrideImage: .repliesIcon, clipStyle: clipStyle)
         } else if chatPeer.id.isAnonymousSavedMessages {
-            self.avatarNode.setPeer(context: context, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: peer, overrideImage: .anonymousSavedMessagesIcon(isColored: true))
+            self.avatarNode.setPeer(context: context, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: peer, overrideImage: .anonymousSavedMessagesIcon(isColored: true), clipStyle: clipStyle)
         } else {
             var overrideImage: AvatarNodeImageOverride?
             if chatPeer.isDeleted {
                 overrideImage = .deletedIcon
             }
-            self.avatarNode.setPeer(context: context, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: peer, overrideImage: overrideImage)
+            self.avatarNode.setPeer(context: context, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: peer, overrideImage: overrideImage, clipStyle: clipStyle)
         }
         
         var attributedText: NSAttributedString?
@@ -109,11 +114,11 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
             var text: PresentationStrings.FormattedString?
             switch action {
             case .delete:
-                if chatPeer.id == context.account.peerId {
+                if peer.id == context.account.peerId {
                     text = PresentationStrings.FormattedString(string: strings.ChatList_DeleteSavedMessagesConfirmation, ranges: [])
-                } else if case let .legacyGroup(chatPeer) = chatPeer {
+                } else if case let .legacyGroup(chatPeer) = peer {
                     text = strings.ChatList_LeaveGroupConfirmation(chatPeer.title)
-                } else if case let .channel(chatPeer) = chatPeer {
+                } else if case let .channel(chatPeer) = peer {
                     text = strings.ChatList_LeaveGroupConfirmation(chatPeer.title)
                 } else if case .secretChat = chatPeer {
                     text = strings.ChatList_DeleteSecretChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
@@ -125,8 +130,8 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
                     text = PresentationStrings.FormattedString(string: strings.ChatList_DeleteSavedMessagesConfirmation, ranges: [])
                 } else if case let .legacyGroup(chatPeer) = chatPeer {
                     text = strings.ChatList_DeleteAndLeaveGroupConfirmation(chatPeer.title)
-                } else if case let .channel(chatPeer) = chatPeer {
-                    text = strings.ChatList_DeleteAndLeaveGroupConfirmation(chatPeer.title)
+                } else if case .channel = chatPeer {
+                    text = strings.ChatList_DeleteAndLeaveGroupConfirmation(peer.compactDisplayTitle)
                 } else if case .secretChat = chatPeer {
                     text = strings.ChatList_DeleteSecretChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
                 } else {

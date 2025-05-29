@@ -3,25 +3,33 @@ import Foundation
 public struct StoredMessageHistoryThreadInfo: Equatable, PostboxCoding {
     public struct Summary: Equatable, PostboxCoding {
         public var totalUnreadCount: Int32
+        public var isMarkedUnread: Bool
         public var mutedUntil: Int32?
+        public var maxOutgoingReadId: Int32
         
-        public init(totalUnreadCount: Int32, mutedUntil: Int32?) {
+        public init(totalUnreadCount: Int32, isMarkedUnread: Bool, mutedUntil: Int32?, maxOutgoingReadId: Int32) {
             self.totalUnreadCount = totalUnreadCount
+            self.isMarkedUnread = isMarkedUnread
             self.mutedUntil = mutedUntil
+            self.maxOutgoingReadId = maxOutgoingReadId
         }
         
         public init(decoder: PostboxDecoder) {
             self.totalUnreadCount = decoder.decodeInt32ForKey("u", orElse: 0)
             self.mutedUntil = decoder.decodeOptionalInt32ForKey("m")
+            self.isMarkedUnread = decoder.decodeBoolForKey("mu", orElse: false)
+            self.maxOutgoingReadId = decoder.decodeInt32ForKey("or", orElse: 0)
         }
         
         public func encode(_ encoder: PostboxEncoder) {
             encoder.encodeInt32(self.totalUnreadCount, forKey: "u")
+            encoder.encodeBool(self.isMarkedUnread, forKey: "mu")
             if let mutedUntil = self.mutedUntil {
                 encoder.encodeInt32(mutedUntil, forKey: "m")
             } else {
                 encoder.encodeNil(forKey: "m")
             }
+            encoder.encodeInt32(self.maxOutgoingReadId, forKey: "or")
         }
     }
     
@@ -108,7 +116,7 @@ class MessageHistoryThreadIndexTable: Table {
         return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
     }
     
-    private struct UpdatedEntry {
+    struct UpdatedEntry {
         var value: StoredMessageHistoryThreadInfo?
     }
     
@@ -123,7 +131,7 @@ class MessageHistoryThreadIndexTable: Table {
     
     private let sharedKey = ValueBoxKey(length: 8 + 4 + 8 + 4 + 4)
     
-    private var updatedInfoItems: [MessageHistoryThreadsTable.ItemId: UpdatedEntry] = [:]
+    private(set) var updatedInfoItems: [MessageHistoryThreadsTable.ItemId: UpdatedEntry] = [:]
     
     init(valueBox: ValueBox, table: ValueBoxTable, reverseIndexTable: MessageHistoryThreadReverseIndexTable, seedConfiguration: SeedConfiguration, useCaches: Bool) {
         self.reverseIndexTable = reverseIndexTable

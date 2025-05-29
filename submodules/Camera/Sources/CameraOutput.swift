@@ -109,7 +109,7 @@ final class CameraOutput: NSObject {
     private var videoConnection: AVCaptureConnection?
     private var previewConnection: AVCaptureConnection?
 
-    private var roundVideoFilter: CameraRoundVideoFilter?
+    private var roundVideoFilter: CameraRoundLegacyVideoFilter?
     private let semaphore = DispatchSemaphore(value: 1)
     
     private let videoQueue = DispatchQueue(label: "", qos: .userInitiated)
@@ -577,11 +577,11 @@ final class CameraOutput: NSObject {
             return nil
         }
         
-        let filter: CameraRoundVideoFilter
+        let filter: CameraRoundLegacyVideoFilter
         if let current = self.roundVideoFilter {
             filter = current
         } else {
-            filter = CameraRoundVideoFilter(ciContext: self.ciContext, colorSpace: self.colorSpace, simple: self.exclusive)
+            filter = CameraRoundLegacyVideoFilter(ciContext: self.ciContext, colorSpace: self.colorSpace, simple: self.exclusive)
             self.roundVideoFilter = filter
         }
         if !filter.isPrepared {

@@ -381,14 +381,13 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                     
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     let _ = presentationData
-                    //TODO:localize
-                    let text: String = "Tap here to suggest a message"
+                    let text: String = presentationData.strings.Chat_ChannelMessagesHint
                     
                     let tooltipController = TooltipScreen(
                         account: context.account,
                         sharedContext: context.sharedContext,
                         text: .plain(text: text),
-                        textBadge: "NEW",
+                        textBadge: presentationData.strings.Chat_ChannelMessagesHintBadge.isEmpty ? nil : presentationData.strings.Chat_ChannelMessagesHintBadge,
                         balancedTextLayout: false,
                         style: .wide,
                         arrowStyle: .small,
@@ -461,7 +460,7 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         
         if self.discussButton.isHidden {
             if let peer = interfaceState.renderedPeer?.peer as? TelegramChannel {
-                if case .broadcast = peer.info, interfaceState.starGiftsAvailable {
+                if case let .broadcast(broadcastInfo) = peer.info, interfaceState.starGiftsAvailable {
                     if self.giftButton.isHidden && !isFirstTime {
                         self.giftButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                         self.giftButton.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
@@ -469,7 +468,12 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                     
                     self.giftButton.isHidden = false
                     self.helpButton.isHidden = true
-                    self.suggestedPostButton.isHidden = true
+                    self.suggestedPostButton.isHidden = !broadcastInfo.flags.contains(.hasMonoforum)
+                    self.presentGiftOrSuggestTooltip()
+                } else if case let .broadcast(broadcastInfo) = peer.info, broadcastInfo.flags.contains(.hasMonoforum) {
+                    self.giftButton.isHidden = true
+                    self.helpButton.isHidden = true
+                    self.suggestedPostButton.isHidden = false
                     self.presentGiftOrSuggestTooltip()
                 } else if peer.flags.contains(.isGigagroup), self.action == .muteNotifications || self.action == .unmuteNotifications {
                     self.giftButton.isHidden = true

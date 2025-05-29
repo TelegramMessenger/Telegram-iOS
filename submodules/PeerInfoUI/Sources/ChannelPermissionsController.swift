@@ -1265,7 +1265,7 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
                 if value?.value == 0 {
                     effectiveValue = nil
                 }
-                updateSendPaidMessageStarsDisposable.set((context.engine.peers.updateChannelPaidMessagesStars(peerId: view.peerId, stars: effectiveValue)
+                updateSendPaidMessageStarsDisposable.set((context.engine.peers.updateChannelPaidMessagesStars(peerId: view.peerId, stars: effectiveValue, broadcastMessagesAllowed: false)
                 |> deliverOnMainQueue).start())
             })
         }

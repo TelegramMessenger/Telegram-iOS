@@ -215,6 +215,48 @@
     return backgroundImage;
 }
 
++ (UIImage *)qualityIconForHighQuality:(bool)highQuality filled:(bool)filled
+{
+    CGFloat lineWidth = 2.0f - TGScreenPixel;
+    
+    CGSize size = CGSizeMake(26.0f, 22.0f);
+    CGRect rect = CGRectInset(CGRectMake(0.0f, 0.0f, size.width, size.height), lineWidth / 2.0, lineWidth / 2.0);
+    UIGraphicsBeginImageContextWithOptions(size, false, 0.0f);
+    
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    
+    UIBezierPath *path = [UIBezierPath bezierPathWithRoundedRect:rect cornerRadius:5.0f];
+    
+    NSString *label = highQuality ? @"HD" : @"SD";
+  
+    CGContextAddPath(context, path.CGPath);
+    if (filled) {
+        CGContextSetFillColorWithColor(context, [UIColor whiteColor].CGColor);
+        CGContextFillPath(context);
+    } else {
+        CGContextSetStrokeColorWithColor(context, [UIColor whiteColor].CGColor);
+        CGContextSetLineWidth(context, lineWidth);
+        CGContextStrokePath(context);
+    }
+    
+    if (filled) {
+        CGContextSetBlendMode(context, kCGBlendModeClear);
+    }
+    
+    UIFont *font = [TGFont roundedFontOfSize:11];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    CGSize textSize = [label sizeWithFont:font];
+    [[UIColor whiteColor] setFill];
+    [label drawInRect:CGRectMake((size.width - textSize.width) / 2.0f + TGScreenPixel, 4.0f, textSize.width, textSize.height) withFont:font];
+#pragma clang diagnostic pop
+    
+    UIImage *result = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    
+    return result;
+}
+
 + (UIImage *)qualityIconForPreset:(TGMediaVideoConversionPreset)preset
 {
     CGFloat lineWidth = 2.0f - TGScreenPixel;

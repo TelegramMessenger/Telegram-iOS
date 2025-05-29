@@ -110,7 +110,7 @@ public func peerAvatarCompleteImage(postbox: Postbox, network: Network, peer: En
     
     let clipStyle: AvatarNodeClipStyle
     if round {
-        if case let .channel(channel) = peer, channel.isForum {
+        if case let .channel(channel) = peer, channel.isForumOrMonoForum {
             clipStyle = .roundedRect
         } else {
             clipStyle = .round
@@ -214,6 +214,16 @@ public func peerAvatarImage(postbox: Postbox, network: Network, peerReference: P
                             case .roundedRect:
                                 context.addPath(UIBezierPath(roundedRect: CGRect(x: 0.0, y: 0.0, width: displayDimensions.width, height: displayDimensions.height).insetBy(dx: inset, dy: inset), cornerRadius: floor(displayDimensions.width * 0.25)).cgPath)
                                 context.clip()
+                            case .bubble:
+                                let rect = CGRect(origin: CGPoint(), size: displayDimensions).insetBy(dx: inset, dy: inset)
+                                context.translateBy(x: rect.midX, y: rect.midY)
+                                context.scaleBy(x: 1.0, y: -1.0)
+                                context.translateBy(x: -rect.midX, y: -rect.midY)
+                                AvatarNode.addAvatarBubblePath(context: context, rect: rect)
+                                context.translateBy(x: rect.midX, y: rect.midY)
+                                context.scaleBy(x: 1.0, y: -1.0)
+                                context.translateBy(x: -rect.midX, y: -rect.midY)
+                                context.clip()
                             }
 
                             var shouldBlur = false
@@ -265,6 +275,8 @@ public func peerAvatarImage(postbox: Postbox, network: Network, peerReference: P
                                 }
                             case .roundedRect:
                                 break
+                            case .bubble:
+                                break
                             }
                         } else {
                             if let emptyColor = emptyColor {
@@ -279,6 +291,16 @@ public func peerAvatarImage(postbox: Postbox, network: Network, peerReference: P
                                     context.beginPath()
                                     context.addPath(UIBezierPath(roundedRect: CGRect(x: 0.0, y: 0.0, width: displayDimensions.width, height: displayDimensions.height).insetBy(dx: inset, dy: inset), cornerRadius: floor(displayDimensions.width * 0.25)).cgPath)
                                     context.fillPath()
+                                case .bubble:
+                                    let rect = CGRect(origin: CGPoint(), size: displayDimensions).insetBy(dx: inset, dy: inset)
+                                    context.translateBy(x: rect.midX, y: rect.midY)
+                                    context.scaleBy(x: 1.0, y: -1.0)
+                                    context.translateBy(x: -rect.midX, y: -rect.midY)
+                                    AvatarNode.addAvatarBubblePath(context: context, rect: rect)
+                                    context.translateBy(x: rect.midX, y: rect.midY)
+                                    context.scaleBy(x: 1.0, y: -1.0)
+                                    context.translateBy(x: -rect.midX, y: -rect.midY)
+                                    context.clip()
                                 }
                             }
                         }
@@ -295,6 +317,16 @@ public func peerAvatarImage(postbox: Postbox, network: Network, peerReference: P
                             context.beginPath()
                             context.addPath(UIBezierPath(roundedRect: CGRect(x: 0.0, y: 0.0, width: displayDimensions.width, height: displayDimensions.height).insetBy(dx: inset, dy: inset), cornerRadius: floor(displayDimensions.width * 0.25)).cgPath)
                             context.fillPath()
+                        case .bubble:
+                            let rect = CGRect(origin: CGPoint(), size: displayDimensions).insetBy(dx: inset, dy: inset)
+                            context.translateBy(x: rect.midX, y: rect.midY)
+                            context.scaleBy(x: 1.0, y: -1.0)
+                            context.translateBy(x: -rect.midX, y: -rect.midY)
+                            AvatarNode.addAvatarBubblePath(context: context, rect: rect)
+                            context.translateBy(x: rect.midX, y: rect.midY)
+                            context.scaleBy(x: 1.0, y: -1.0)
+                            context.translateBy(x: -rect.midX, y: -rect.midY)
+                            context.clip()
                         }
                     }
                     
@@ -332,6 +364,16 @@ public func peerAvatarImage(postbox: Postbox, network: Network, peerReference: P
                                 context.beginPath()
                                 context.addPath(UIBezierPath(roundedRect: CGRect(x: 0.0, y: 0.0, width: displayDimensions.width, height: displayDimensions.height).insetBy(dx: inset, dy: inset), cornerRadius: floor(displayDimensions.width * 0.25)).cgPath)
                                 context.fillPath()
+                            case .bubble:
+                                let rect = CGRect(origin: CGPoint(), size: displayDimensions).insetBy(dx: inset, dy: inset)
+                                context.translateBy(x: rect.midX, y: rect.midY)
+                                context.scaleBy(x: 1.0, y: -1.0)
+                                context.translateBy(x: -rect.midX, y: -rect.midY)
+                                AvatarNode.addAvatarBubblePath(context: context, rect: rect)
+                                context.translateBy(x: rect.midX, y: rect.midY)
+                                context.scaleBy(x: 1.0, y: -1.0)
+                                context.translateBy(x: -rect.midX, y: -rect.midY)
+                                context.clip()
                             }
                         }
                     })

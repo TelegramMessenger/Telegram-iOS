@@ -804,6 +804,12 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                 rightInset -= 6.0 + rightLabelTextLayoutAndApplyValue.0.size.width
             }
             
+            var searchAdIcon: UIImage?
+            if item.isAd, let icon = PresentationResourcesChatList.searchAdIcon(item.presentationData.theme, strings: item.presentationData.strings) {
+                searchAdIcon = icon
+                rightInset += icon.size.width + 12.0
+            }
+            
             let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.context.currentAppConfiguration.with { $0 })
             
             var credibilityIcon: EmojiStatusComponent.Content?
@@ -927,7 +933,11 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                     } else if case let .legacyGroup(group) = peer {
                         titleAttributedString = NSAttributedString(string: group.title, font: titleBoldFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
                     } else if case let .channel(channel) = peer {
-                        titleAttributedString = NSAttributedString(string: channel.title, font: titleBoldFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
+                        if case let .channel(mainChannel) = chatPeer, mainChannel.isMonoForum {
+                            titleAttributedString = NSAttributedString(string: item.presentationData.strings.Monoforum_NameFormat(channel.title).string, font: titleBoldFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
+                        } else {
+                            titleAttributedString = NSAttributedString(string: channel.title, font: titleBoldFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
+                        }
                     }
                     
                     switch item.status {
@@ -1205,7 +1215,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.contextSourceNode.contentRect = extractedRect
                             
                             switch item.peer {
-                                case let .peer(peer, _):
+                                case let .peer(peer, chatPeer):
                                     if let peer = peer {
                                         var overrideImage: AvatarNodeImageOverride?
                                         if peer.id == item.context.account.peerId, case let .generalSearch(isSavedMessages) = item.peerMode, case .treatSelfAsSaved = item.aliasHandling {
@@ -1227,8 +1237,16 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                         if case .app(true) = item.peerMode {
                                             clipStyle = .roundedRect
                                             displayDimensions = CGSize(width: displayDimensions.width, height: displayDimensions.width * 1.2)
-                                        } else if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
-                                            clipStyle = .roundedRect
+                                        } else if case let .channel(channel) = peer {
+                                            if case let .channel(chatPeer) = chatPeer, chatPeer.isMonoForum {
+                                                clipStyle = .bubble
+                                            } else {
+                                                if channel.isForum {
+                                                    clipStyle = .roundedRect
+                                                } else {
+                                                    clipStyle = .round
+                                                }
+                                            }
                                         } else {
                                             clipStyle = .round
                                         }
@@ -1824,7 +1842,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                     adButton.addTarget(strongSelf, action: #selector(strongSelf.adButtonPressed), forControlEvents: .touchUpInside)
                                 }
                                 if updatedTheme != nil || adButton.image(for: .normal) == nil {
-                                    adButton.setImage(PresentationResourcesChatList.searchAdIcon(item.presentationData.theme, strings: item.presentationData.strings), for: .normal)
+                                    adButton.setImage(searchAdIcon, for: .normal)
                                 }
                                 if let icon = adButton.image(for: .normal) {
                                     adButton.frame = CGRect(origin: CGPoint(x: params.width - 20.0 - icon.size.width - 13.0, y: 11.0), size: icon.size).insetBy(dx: -11.0, dy: -11.0)

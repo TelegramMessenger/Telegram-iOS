@@ -42,6 +42,7 @@ final class ListMessageDateHeader: ListViewItemHeader {
     private let year: Int32
     
     let id: ListViewItemNode.HeaderId
+    let stackingId: ListViewItemNode.HeaderId? = nil
     let theme: PresentationTheme
     let strings: PresentationStrings
     let fontSize: PresentationFontSize
@@ -117,7 +118,7 @@ public final class ListMessageDateHeaderNode: ListViewItemHeaderNode {
         self.setNeedsLayout()
     }
     
-    override public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
+    override public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
         let headerFrame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: size.width, height: size.height + UIScreenPixel))
         self.headerNode.frame = headerFrame
             self.headerNode.updateLayout(size: headerFrame.size, leftInset: leftInset, rightInset: rightInset)

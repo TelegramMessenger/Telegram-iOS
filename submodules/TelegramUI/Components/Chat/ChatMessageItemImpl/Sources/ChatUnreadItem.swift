@@ -22,7 +22,7 @@ public class ChatUnreadItem: ListViewItem {
         self.index = index
         self.presentationData = presentationData
         self.controllerInteraction = controllerInteraction
-        self.header = ChatMessageDateHeader(timestamp: index.timestamp, scheduled: false, presentationData: presentationData, controllerInteraction: controllerInteraction, context: context)
+        self.header = ChatMessageDateHeader(timestamp: index.timestamp, separableThreadId: nil, scheduled: false, displayHeader: nil, presentationData: presentationData, controllerInteraction: controllerInteraction, context: context)
     }
     
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -38,7 +38,7 @@ public class ChatUnreadItem: ListViewItem {
             Queue.mainQueue().async {
                 completion(node, {
                     return (nil, { _ in
-                        apply()
+                        apply(.None)
                     })
                 })
             }
@@ -56,7 +56,7 @@ public class ChatUnreadItem: ListViewItem {
                     let (layout, apply) = nodeLayout(self, params, dateAtBottom)
                     Queue.mainQueue().async {
                         completion(layout, { _ in
-                            apply()
+                            apply(animation)
                         })
                     }
                 }
@@ -122,18 +122,18 @@ public class ChatUnreadItemNode: ListViewItemNode {
         if let item = item as? ChatUnreadItem {
             let dateAtBottom = !chatItemsHaveCommonDateHeader(item, nextItem)
             let (layout, apply) = self.asyncLayout()(item, params, dateAtBottom)
-            apply()
+            apply(.None)
             self.contentSize = layout.contentSize
             self.insets = layout.insets
         }
     }
     
-    public func asyncLayout() -> (_ item: ChatUnreadItem, _ params: ListViewItemLayoutParams, _ dateAtBottom: Bool) -> (ListViewItemNodeLayout, () -> Void) {
+    public func asyncLayout() -> (_ item: ChatUnreadItem, _ params: ListViewItemLayoutParams, _ dateAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
         let labelLayout = TextNode.asyncLayout(self.labelNode)
         let layoutConstants = self.layoutConstants
         let currentTheme = self.theme
         
-        return { item, params, dateAtBottom in
+        return { [weak self] item, params, dateAtBottom in
             var updatedBackgroundImage: UIImage?
             if currentTheme != item.presentationData.theme {
                 updatedBackgroundImage = PresentationResourcesChat.chatUnreadBarBackgroundImage(item.presentationData.theme.theme)
@@ -144,7 +144,7 @@ public class ChatUnreadItemNode: ListViewItemNode {
             
             let backgroundSize = CGSize(width: params.width, height: 25.0)
             
-            return (ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 25.0), insets: UIEdgeInsets(top: 6.0 + (dateAtBottom ? layoutConstants.timestampHeaderHeight : 0.0), left: 0.0, bottom: 5.0, right: 0.0)), { [weak self] in
+            return (ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 25.0), insets: UIEdgeInsets(top: 6.0 + (dateAtBottom ? layoutConstants.timestampHeaderHeight : 0.0), left: 0.0, bottom: 5.0, right: 0.0)), { animation in
                 if let strongSelf = self {
                     strongSelf.item = item
                     strongSelf.theme = item.presentationData.theme
@@ -159,7 +159,10 @@ public class ChatUnreadItemNode: ListViewItemNode {
                     strongSelf.activateArea.accessibilityLabel = string
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: backgroundSize)
-                    strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - size.size.width) / 2.0), y: floorToScreenPixels((backgroundSize.height - size.size.height) / 2.0)), size: size.size)
+                    
+                    let labelFrame = CGRect(origin: CGPoint(x: params.leftInset + floorToScreenPixels((backgroundSize.width - params.leftInset - params.rightInset - size.size.width) / 2.0), y: floorToScreenPixels((backgroundSize.height - size.size.height) / 2.0)), size: size.size)
+                    animation.animator.updatePosition(layer: strongSelf.labelNode.layer, position: labelFrame.center, completion: nil)
+                    strongSelf.labelNode.bounds = CGRect(origin: CGPoint(), size: labelFrame.size)
                     
                     if item.controllerInteraction.presentationContext.backgroundNode?.hasExtraBubbleBackground() == true {
                         if strongSelf.backgroundContent == nil, let backgroundContent = item.controllerInteraction.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {

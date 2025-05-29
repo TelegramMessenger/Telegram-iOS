@@ -417,7 +417,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
         }
     }
     
-    override public func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
+    override public func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: ChatMessageHeaderSpec) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
         let displaySize = CGSize(width: 184.0, height: 184.0)
         let telegramFile = self.telegramFile
         let layoutConstants = self.layoutConstants
@@ -430,12 +430,12 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
         let makeForwardInfoLayout = ChatMessageForwardInfoNode.asyncLayout(self.forwardInfoNode)
         
         let viaBotLayout = TextNode.asyncLayout(self.viaBotNode)
-        let makeThreadInfoLayout = ChatMessageThreadInfoNode.asyncLayout(self.threadInfoNode)
+        //let makeThreadInfoLayout = ChatMessageThreadInfoNode.asyncLayout(self.threadInfoNode)
         let makeReplyInfoLayout = ChatMessageReplyInfoNode.asyncLayout(self.replyInfoNode)
         let currentShareButtonNode = self.shareButtonNode
         let currentForwardInfo = self.appliedForwardInfo
         
-        func continueAsyncLayout(_ weakSelf: Weak<ChatMessageStickerItemNode>, _ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
+        func continueAsyncLayout(_ weakSelf: Weak<ChatMessageStickerItemNode>, _ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: ChatMessageHeaderSpec) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
             let accessibilityData = ChatMessageAccessibilityData(item: item, isSelected: nil)
             
             let layoutConstants = chatMessageItemLayoutConstants(layoutConstants, params: params, presentationData: item.presentationData)
@@ -485,15 +485,19 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                 if replyThreadMessage.peerId != item.context.account.peerId {
                     if replyThreadMessage.peerId.isGroupOrChannel && item.message.author != nil {
                         var isBroadcastChannel = false
-                        if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
-                            isBroadcastChannel = true
+                        var isMonoforum = false
+                        if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel {
+                            if case .broadcast = peer.info {
+                                isBroadcastChannel = true
+                            }
+                            isMonoforum = peer.isMonoForum
                         }
                         
                         if replyThreadMessage.isChannelPost, replyThreadMessage.effectiveTopId == item.message.id {
                             isBroadcastChannel = true
                         }
                         
-                        if !isBroadcastChannel {
+                        if !isBroadcastChannel && !isMonoforum {
                             hasAvatar = true
                         }
                     }
@@ -567,8 +571,15 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
             }
             
             var layoutInsets = UIEdgeInsets(top: mergedTop.merged ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, left: 0.0, bottom: mergedBottom.merged ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, right: 0.0)
-            if dateHeaderAtBottom {
-                layoutInsets.top += layoutConstants.timestampHeaderHeight
+            if dateHeaderAtBottom.hasDate && dateHeaderAtBottom.hasTopic {
+                layoutInsets.top += layoutConstants.timestampDateAndTopicHeaderHeight
+            } else {
+                if dateHeaderAtBottom.hasDate {
+                    layoutInsets.top += layoutConstants.timestampHeaderHeight
+                }
+                if dateHeaderAtBottom.hasTopic {
+                    layoutInsets.top += layoutConstants.timestampHeaderHeight
+                }
             }
             
             var deliveryFailedInset: CGFloat = 0.0
@@ -662,7 +673,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
             let (dateAndStatusSize, dateAndStatusApply) = statusSuggestedWidthAndContinue.1(statusSuggestedWidthAndContinue.0)
             
             var viaBotApply: (TextNodeLayout, () -> TextNode)?
-            var threadInfoApply: (CGSize, (Bool) -> ChatMessageThreadInfoNode)?
+            let threadInfoApply: (CGSize, (Bool) -> ChatMessageThreadInfoNode)? = nil
             var replyInfoApply: (CGSize, (CGSize, Bool, ListViewItemUpdateAnimation) -> ChatMessageReplyInfoNode)?
             var replyMarkup: ReplyMarkupMessageAttribute?
             
@@ -727,12 +738,12 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
             }
             
             var hasReply = replyMessage != nil || replyForward != nil || replyStory != nil
-            if case let .peer(peerId) = item.chatLocation, (peerId == replyMessage?.id.peerId || item.message.threadId == 1), let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum), item.message.associatedThreadInfo != nil {
+            if case let .peer(peerId) = item.chatLocation, (peerId == replyMessage?.id.peerId || item.message.threadId == 1), let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.isForumOrMonoForum, item.message.associatedThreadInfo != nil {
                 if let threadId = item.message.threadId, let replyMessage = replyMessage, Int64(replyMessage.id.id) == threadId {
                     hasReply = false
                 }
                     
-                threadInfoApply = makeThreadInfoLayout(ChatMessageThreadInfoNode.Arguments(
+                /*threadInfoApply = makeThreadInfoLayout(ChatMessageThreadInfoNode.Arguments(
                     presentationData: item.presentationData,
                     strings: item.presentationData.strings,
                     context: item.context,
@@ -744,7 +755,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                     constrainedSize: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude),
                     animationCache: item.controllerInteraction.presentationContext.animationCache,
                     animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
-                ))
+                ))*/
             }
             
             if hasReply, (replyMessage != nil || replyForward != nil || replyStory != nil) {
@@ -964,6 +975,8 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                     strongSelf.appliedForwardInfo = (forwardSource, forwardAuthorSignature)
                     strongSelf.updateAccessibilityData(accessibilityData)
                     
+                    strongSelf.updateAttachedDateHeader(hasDate: dateHeaderAtBottom.hasDate, hasPeer: dateHeaderAtBottom.hasTopic)
+                    
                     transition.updateFrame(node: strongSelf.imageNode, frame: updatedImageFrame)
                     strongSelf.enableSynchronousImageApply = true
                     imageApply()
@@ -986,7 +999,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                         
                         let placeholderFrame = updatedImageFrame.insetBy(dx: innerImageInset, dy: innerImageInset)
                         strongSelf.placeholderNode.update(backgroundColor: nil, foregroundColor: foregroundColor, shimmeringColor: shimmeringColor, data: immediateThumbnailData, size: placeholderFrame.size, enableEffect: item.context.sharedContext.energyUsageSettings.fullTranslucency)
-                        strongSelf.placeholderNode.frame = placeholderFrame
+                        animation.animator.updateFrame(layer: strongSelf.placeholderNode.layer, frame: placeholderFrame, completion: nil)
                     }
                     
                     strongSelf.messageAccessibilityArea.frame = CGRect(origin: CGPoint(), size: layoutSize)
@@ -1058,7 +1071,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                             strongSelf.contextSourceNode.contentNode.addSubnode(threadInfoNode)
                         }
                         let threadInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + 6.0) : (params.width - params.rightInset - threadInfoSize.width - layoutConstants.bubble.edgeInset - 8.0)), y: 8.0), size: threadInfoSize)
-                        threadInfoNode.frame = threadInfoFrame
+                        animation.animator.updateFrame(layer: threadInfoNode.layer, frame: threadInfoFrame, completion: nil)
                         
                         headersOffset += threadInfoSize.height + 10.0
                     } else if let replyInfoNode = strongSelf.replyInfoNode {
@@ -1111,7 +1124,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                             }
                         }
                         let forwardInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + 12.0 + 5.0) : (params.width - params.rightInset - messageInfoSize.width - layoutConstants.bubble.edgeInset - 8.0 - 5.0)), y: headersOffset + 8.0 + messageInfoSize.height), size: forwardInfoSize)
-                        forwardInfoNode.frame = forwardInfoFrame
+                        animation.animator.updateFrame(layer: forwardInfoNode.layer, frame: forwardInfoFrame, completion: nil)
                         
                         messageInfoSize = CGSize(width: messageInfoSize.width, height: messageInfoSize.height + forwardInfoSize.height + 8.0)
                         

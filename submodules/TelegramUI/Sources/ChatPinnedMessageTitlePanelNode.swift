@@ -517,12 +517,13 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         if self.currentLayout?.0 != width || self.currentLayout?.1 != leftInset || self.currentLayout?.2 != rightInset || messageUpdated || themeUpdated || currentTranslateToLanguageUpdated {
             self.currentLayout = (width, leftInset, rightInset)
             
+            let messageUpdated = self.currentMessage?.message.id != interfaceState.pinnedMessage?.message.id
             let previousMessageWasNil = self.currentMessage == nil
             self.currentMessage = interfaceState.pinnedMessage
             
             if let currentMessage = self.currentMessage, let currentLayout = self.currentLayout {
                 self.dustNode?.update(revealed: false, animated: false)
-                self.enqueueTransition(width: currentLayout.0, panelHeight: panelHeight, leftInset: currentLayout.1, rightInset: currentLayout.2, transition: .immediate, animation: messageUpdatedAnimation, pinnedMessage: currentMessage, theme: interfaceState.theme, strings: interfaceState.strings, nameDisplayOrder: interfaceState.nameDisplayOrder, dateTimeFormat: interfaceState.dateTimeFormat, accountPeerId: self.context.account.peerId, firstTime: previousMessageWasNil, isReplyThread: isReplyThread, translateToLanguage: translateToLanguage?.toLang)
+                self.enqueueTransition(width: currentLayout.0, panelHeight: panelHeight, leftInset: currentLayout.1, rightInset: currentLayout.2, transition: messageUpdated ? .immediate : transition, animation: messageUpdatedAnimation, pinnedMessage: currentMessage, theme: interfaceState.theme, strings: interfaceState.strings, nameDisplayOrder: interfaceState.nameDisplayOrder, dateTimeFormat: interfaceState.dateTimeFormat, accountPeerId: self.context.account.peerId, firstTime: previousMessageWasNil, isReplyThread: isReplyThread, translateToLanguage: translateToLanguage?.toLang)
             }
         }
         
@@ -565,6 +566,8 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                 self.textNode.textNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -offset), to: CGPoint(), duration: 0.2, additive: true)
                 self.textNode.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             }
+        } else {
+            animationTransition = transition
         }
         
         let makeTitleLayout = self.titleNode.asyncLayout()
@@ -574,13 +577,6 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         
         let previousMediaReference = self.previousMediaReference
         let context = self.context
-        
-        let targetQueue: Queue
-        if firstTime {
-            targetQueue = Queue.mainQueue()
-        } else {
-            targetQueue = self.queue
-        }
         
         let contentLeftInset: CGFloat = leftInset + 10.0
         var textLineInset: CGFloat = 10.0
@@ -592,293 +588,288 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             rightInset += self.actionButton.bounds.width - 14.0
         }
         
-        targetQueue.async { [weak self] in
-            var updatedMediaReference: AnyMediaReference?
-            var imageDimensions: CGSize?
-            
-            let giveaway = pinnedMessage.message.media.first(where: { $0 is TelegramMediaGiveaway }) as? TelegramMediaGiveaway
-            
-            var titleStrings: [AnimatedCountLabelNode.Segment] = []
-            if let _ = giveaway {
-                titleStrings.append(.text(0, NSAttributedString(string: "\(strings.Conversation_PinnedGiveaway) ", font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor)))
-            } else {
-                if pinnedMessage.totalCount == 2 {
-                    if pinnedMessage.index == 0 {
-                        titleStrings.append(.text(0, NSAttributedString(string: "\(strings.Conversation_PinnedPreviousMessage) ", font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor)))
-                    } else {
-                        titleStrings.append(.text(0, NSAttributedString(string: "\(strings.Conversation_PinnedMessage) ", font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor)))
-                    }
-                } else if pinnedMessage.totalCount > 1 && pinnedMessage.index != pinnedMessage.totalCount - 1 {
-                    titleStrings.append(.text(0, NSAttributedString(string: "\(strings.Conversation_PinnedMessage)", font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor)))
-                    titleStrings.append(.text(1, NSAttributedString(string: " #", font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor)))
-                    titleStrings.append(.number(pinnedMessage.index + 1, NSAttributedString(string: "\(pinnedMessage.index + 1)", font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor)))
+        var updatedMediaReference: AnyMediaReference?
+        var imageDimensions: CGSize?
+        
+        let giveaway = pinnedMessage.message.media.first(where: { $0 is TelegramMediaGiveaway }) as? TelegramMediaGiveaway
+        
+        var titleStrings: [AnimatedCountLabelNode.Segment] = []
+        if let _ = giveaway {
+            titleStrings.append(.text(0, NSAttributedString(string: "\(strings.Conversation_PinnedGiveaway) ", font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor)))
+        } else {
+            if pinnedMessage.totalCount == 2 {
+                if pinnedMessage.index == 0 {
+                    titleStrings.append(.text(0, NSAttributedString(string: "\(strings.Conversation_PinnedPreviousMessage) ", font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor)))
                 } else {
                     titleStrings.append(.text(0, NSAttributedString(string: "\(strings.Conversation_PinnedMessage) ", font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor)))
                 }
+            } else if pinnedMessage.totalCount > 1 && pinnedMessage.index != pinnedMessage.totalCount - 1 {
+                titleStrings.append(.text(0, NSAttributedString(string: "\(strings.Conversation_PinnedMessage)", font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor)))
+                titleStrings.append(.text(1, NSAttributedString(string: " #", font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor)))
+                titleStrings.append(.number(pinnedMessage.index + 1, NSAttributedString(string: "\(pinnedMessage.index + 1)", font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor)))
+            } else {
+                titleStrings.append(.text(0, NSAttributedString(string: "\(strings.Conversation_PinnedMessage) ", font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor)))
             }
-            
-            if !message.containsSecretMedia {
-                for media in message.media {
-                    if let image = media as? TelegramMediaImage {
-                        updatedMediaReference = .message(message: MessageReference(message), media: image)
-                        if let representation = largestRepresentationForPhoto(image) {
-                            imageDimensions = representation.dimensions.cgSize
-                        }
-                        break
-                    } else if let file = media as? TelegramMediaFile {
-                        updatedMediaReference = .message(message: MessageReference(message), media: file)
-                        if !file.isInstantVideo && !file.isSticker, let representation = largestImageRepresentation(file.previewRepresentations) {
-                            imageDimensions = representation.dimensions.cgSize
-                        } else if file.isAnimated, let dimensions = file.dimensions {
+        }
+        
+        if !message.containsSecretMedia {
+            for media in message.media {
+                if let image = media as? TelegramMediaImage {
+                    updatedMediaReference = .message(message: MessageReference(message), media: image)
+                    if let representation = largestRepresentationForPhoto(image) {
+                        imageDimensions = representation.dimensions.cgSize
+                    }
+                    break
+                } else if let file = media as? TelegramMediaFile {
+                    updatedMediaReference = .message(message: MessageReference(message), media: file)
+                    if !file.isInstantVideo && !file.isSticker, let representation = largestImageRepresentation(file.previewRepresentations) {
+                        imageDimensions = representation.dimensions.cgSize
+                    } else if file.isAnimated, let dimensions = file.dimensions {
+                        imageDimensions = dimensions.cgSize
+                    }
+                    break
+                } else if let paidContent = media as? TelegramMediaPaidContent, let firstMedia = paidContent.extendedMedia.first {
+                    switch firstMedia {
+                    case let .preview(dimensions, immediateThumbnailData, _):
+                        let thumbnailMedia = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [], immediateThumbnailData: immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
+                        if let dimensions {
                             imageDimensions = dimensions.cgSize
                         }
-                        break
-                    } else if let paidContent = media as? TelegramMediaPaidContent, let firstMedia = paidContent.extendedMedia.first {
-                        switch firstMedia {
-                        case let .preview(dimensions, immediateThumbnailData, _):
-                            let thumbnailMedia = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [], immediateThumbnailData: immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
-                            if let dimensions {
+                        updatedMediaReference = .standalone(media: thumbnailMedia)
+                    case let .full(fullMedia):
+                        updatedMediaReference = .message(message: MessageReference(message), media: fullMedia)
+                        if let image = fullMedia as? TelegramMediaImage {
+                            if let representation = largestRepresentationForPhoto(image) {
+                                imageDimensions = representation.dimensions.cgSize
+                            }
+                            break
+                        } else if let file = fullMedia as? TelegramMediaFile {
+                            if let dimensions = file.dimensions {
                                 imageDimensions = dimensions.cgSize
                             }
-                            updatedMediaReference = .standalone(media: thumbnailMedia)
-                        case let .full(fullMedia):
-                            updatedMediaReference = .message(message: MessageReference(message), media: fullMedia)
-                            if let image = fullMedia as? TelegramMediaImage {
-                                if let representation = largestRepresentationForPhoto(image) {
-                                    imageDimensions = representation.dimensions.cgSize
-                                }
-                                break
-                            } else if let file = fullMedia as? TelegramMediaFile {
-                                if let dimensions = file.dimensions {
-                                    imageDimensions = dimensions.cgSize
-                                }
-                                break
-                            }
-                        }
-                    }
-                }
-            }
-            
-            if isReplyThread {
-                let titleString: String
-                if let author = message.effectiveAuthor {
-                    titleString = EnginePeer(author).displayTitle(strings: strings, displayOrder: nameDisplayOrder)
-                } else {
-                    titleString = ""
-                }
-                titleStrings = [.text(0, NSAttributedString(string: titleString, font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor))]
-            } else {
-                for media in message.media {
-                    if let media = media as? TelegramMediaInvoice {
-                        titleStrings = [.text(0, NSAttributedString(string: media.title, font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor))]
-                        break
-                    }
-                }
-            }
-            
-            var applyImage: (() -> Void)?
-            if let imageDimensions = imageDimensions {
-                let boundingSize = CGSize(width: 35.0, height: 35.0)
-                applyImage = imageNodeLayout(TransformImageArguments(corners: ImageCorners(radius: 2.0), imageSize: imageDimensions.aspectFilled(boundingSize), boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets()))
-                
-                textLineInset += 9.0 + 35.0
-            }
-            
-            var mediaUpdated = false
-            if let updatedMediaReference = updatedMediaReference, let previousMediaReference = previousMediaReference {
-                mediaUpdated = !updatedMediaReference.media.isEqual(to: previousMediaReference.media)
-            } else if (updatedMediaReference != nil) != (previousMediaReference != nil) {
-                mediaUpdated = true
-            }
-            
-            let hasSpoiler = message.attributes.contains(where: { $0 is MediaSpoilerMessageAttribute })
-            
-            var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
-            var updatedFetchMediaSignal: Signal<FetchResourceSourceType, FetchResourceError>?
-            if mediaUpdated {
-                if let updatedMediaReference = updatedMediaReference, imageDimensions != nil {
-                    if let imageReference = updatedMediaReference.concrete(TelegramMediaImage.self) {
-                        if imageReference.media.representations.isEmpty {
-                            updateImageSignal = chatSecretPhoto(account: context.account, userLocation: .peer(message.id.peerId), photoReference: imageReference, ignoreFullSize: true, synchronousLoad: true)
-                        } else {
-                            updateImageSignal = chatMessagePhotoThumbnail(account: context.account, userLocation: .peer(message.id.peerId), photoReference: imageReference, blurred: hasSpoiler)
-                        }
-                    } else if let fileReference = updatedMediaReference.concrete(TelegramMediaFile.self) {
-                        if fileReference.media.isAnimatedSticker {
-                            let dimensions = fileReference.media.dimensions ?? PixelDimensions(width: 512, height: 512)
-                            updateImageSignal = chatMessageAnimatedSticker(postbox: context.account.postbox, userLocation: .peer(message.id.peerId), file: fileReference.media, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0)))
-                            updatedFetchMediaSignal = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .peer(message.id.peerId), userContentType: MediaResourceUserContentType(file: fileReference.media), reference: fileReference.resourceReference(fileReference.media.resource))
-                        } else if fileReference.media.isVideo || fileReference.media.isAnimated {
-                            updateImageSignal = chatMessageVideoThumbnail(account: context.account, userLocation: .peer(message.id.peerId), fileReference: fileReference, blurred: hasSpoiler)
-                        } else if let iconImageRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
-                            updateImageSignal = chatWebpageSnippetFile(account: context.account, userLocation: .peer(message.id.peerId), mediaReference: fileReference.abstract, representation: iconImageRepresentation)
-                        }
-                    }
-                } else {
-                    updateImageSignal = .single({ _ in return nil })
-                }
-            }
-            let (titleLayout, titleApply) = makeTitleLayout(CGSize(width: width - textLineInset - contentLeftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), .zero, titleStrings)
-            
-            let (textString, _, isText) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: EngineMessage(message), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: accountPeerId)
-            
-            let messageText: NSAttributedString
-            let textFont = Font.regular(15.0)
-            if let giveaway {
-                let dateString = stringForDateWithoutYear(date: Date(timeIntervalSince1970: TimeInterval(giveaway.untilDate)), timeZone: .current, strings: strings)
-                let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
-                let isFinished = currentTime >= giveaway.untilDate
-                let text: String
-                if isFinished {
-                    let winnersString = strings.Conversation_PinnedGiveaway_Finished_Winners(giveaway.quantity)
-                    text = strings.Conversation_PinnedGiveaway_Finished(winnersString, dateString).string
-                } else {
-                    let winnersString = strings.Conversation_PinnedGiveaway_Ongoing_Winners(giveaway.quantity)
-                    text = strings.Conversation_PinnedGiveaway_Ongoing(winnersString, dateString).string
-                }
-                messageText = NSAttributedString(string: text, font: textFont, textColor: theme.chat.inputPanel.primaryTextColor)
-            } else if isText {
-                var text = message.text
-                var messageEntities = message.textEntitiesAttribute?.entities ?? []
-                
-                if let translateToLanguage = translateToLanguage, !text.isEmpty {
-                    for attribute in message.attributes {
-                        if let attribute = attribute as? TranslationMessageAttribute, !attribute.text.isEmpty, attribute.toLang == translateToLanguage {
-                            text = attribute.text
-                            messageEntities = attribute.entities
                             break
                         }
                     }
                 }
-                
-                let entities = messageEntities.filter { entity in
-                    switch entity.type {
-                    case .Spoiler, .CustomEmoji:
-                        return true
-                    default:
-                        return false
-                    }
-                }
-                let textColor = theme.chat.inputPanel.primaryTextColor
-                if entities.count > 0 {
-                    messageText = stringWithAppliedEntities(trimToLineCount(text, lineCount: 1), entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: message)
-                } else {
-                    messageText = NSAttributedString(string: foldLineBreaks(text), font: textFont, textColor: textColor)
-                }
-            } else {
-                messageText = NSAttributedString(string: foldLineBreaks(textString.string), font: textFont, textColor: message.media.isEmpty || message.media.first is TelegramMediaWebpage ? theme.chat.inputPanel.primaryTextColor : theme.chat.inputPanel.secondaryTextColor)
             }
-            
-            let textConstrainedSize = CGSize(width: width - textLineInset - contentLeftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude)
-            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: messageText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 0.0, bottom: 2.0, right: 0.0)))
-            
-            let spoilerTextLayoutAndApply: (TextNodeLayout, (TextNodeWithEntities.Arguments?) -> TextNodeWithEntities)?
-            if !textLayout.spoilers.isEmpty {
-                spoilerTextLayoutAndApply = makeSpoilerTextLayout(TextNodeLayoutArguments(attributedString: messageText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 0.0, bottom: 2.0, right: 0.0), displaySpoilers: true, displayEmbeddedItemsUnderSpoilers: true))
+        }
+        
+        if isReplyThread {
+            let titleString: String
+            if let author = message.effectiveAuthor {
+                titleString = EnginePeer(author).displayTitle(strings: strings, displayOrder: nameDisplayOrder)
             } else {
-                spoilerTextLayoutAndApply = nil
+                titleString = ""
             }
+            titleStrings = [.text(0, NSAttributedString(string: titleString, font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor))]
+        } else {
+            for media in message.media {
+                if let media = media as? TelegramMediaInvoice {
+                    titleStrings = [.text(0, NSAttributedString(string: media.title, font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor))]
+                    break
+                }
+            }
+        }
+        
+        var applyImage: (() -> Void)?
+        if let imageDimensions = imageDimensions {
+            let boundingSize = CGSize(width: 35.0, height: 35.0)
+            applyImage = imageNodeLayout(TransformImageArguments(corners: ImageCorners(radius: 2.0), imageSize: imageDimensions.aspectFilled(boundingSize), boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets()))
             
-            Queue.mainQueue().async {
-                if let strongSelf = self {
-                    let _ = titleApply(animation != nil)
-                    
-                    var textArguments: TextNodeWithEntities.Arguments?
-                    if let cache = strongSelf.animationCache, let renderer = strongSelf.animationRenderer {
-                        textArguments = TextNodeWithEntities.Arguments(
-                            context: strongSelf.context,
-                            cache: cache,
-                            renderer: renderer,
-                            placeholderColor: theme.list.mediaPlaceholderColor,
-                            attemptSynchronous: false
-                        )
-                    }
-                    let _ = textApply(textArguments)
-                    
-                    strongSelf.previousMediaReference = updatedMediaReference
-                    
-                    animationTransition.updateFrameAdditive(node: strongSelf.contentTextContainer, frame: CGRect(origin: CGPoint(x: contentLeftInset + textLineInset, y: 0.0), size: CGSize(width: width, height: panelHeight)))
-                    
-                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 5.0), size: titleLayout.size)
-                    
-                    let textFrame = CGRect(origin: CGPoint(x: 0.0, y: 23.0), size: textLayout.size)
-                    strongSelf.textNode.textNode.frame = textFrame
-                    
-                    if let (_, spoilerTextApply) = spoilerTextLayoutAndApply {
-                        let spoilerTextNode = spoilerTextApply(textArguments)
-                        if strongSelf.spoilerTextNode == nil {
-                            spoilerTextNode.textNode.alpha = 0.0
-                            spoilerTextNode.textNode.isUserInteractionEnabled = false
-                            spoilerTextNode.textNode.contentMode = .topLeft
-                            spoilerTextNode.textNode.contentsScale = UIScreenScale
-                            spoilerTextNode.textNode.displaysAsynchronously = false
-                            strongSelf.contentTextContainer.insertSubnode(spoilerTextNode.textNode, aboveSubnode: strongSelf.textNode.textNode)
-                            
-                            strongSelf.spoilerTextNode = spoilerTextNode
-                        }
-                        
-                        strongSelf.spoilerTextNode?.textNode.frame = textFrame
-                        
-                        let dustNode: InvisibleInkDustNode
-                        if let current = strongSelf.dustNode {
-                            dustNode = current
-                        } else {
-                            dustNode = InvisibleInkDustNode(textNode: spoilerTextNode.textNode, enableAnimations: strongSelf.context.sharedContext.energyUsageSettings.fullTranslucency)
-                            strongSelf.dustNode = dustNode
-                            strongSelf.contentTextContainer.insertSubnode(dustNode, aboveSubnode: spoilerTextNode.textNode)
-                        }
-                        dustNode.frame = textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0)
-                        dustNode.update(size: dustNode.frame.size, color: theme.chat.inputPanel.secondaryTextColor, textColor: theme.chat.inputPanel.primaryTextColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
-                    } else if let spoilerTextNode = strongSelf.spoilerTextNode {
-                        strongSelf.spoilerTextNode = nil
-                        spoilerTextNode.textNode.removeFromSupernode()
-                        
-                        if let dustNode = strongSelf.dustNode {
-                            strongSelf.dustNode = nil
-                            dustNode.removeFromSupernode()
-                        }
-                    }
-                    
-                    strongSelf.textNode.visibilityRect = CGRect.infinite
-                    strongSelf.spoilerTextNode?.visibilityRect = CGRect.infinite
-                    
-                    let lineFrame = CGRect(origin: CGPoint(x: contentLeftInset, y: 0.0), size: CGSize(width: 2.0, height: panelHeight))
-                    animationTransition.updateFrame(node: strongSelf.lineNode, frame: lineFrame)
-                    strongSelf.lineNode.update(
-                        colors: AnimatedNavigationStripeNode.Colors(
-                            foreground: theme.chat.inputPanel.panelControlAccentColor,
-                            background: theme.chat.inputPanel.panelControlAccentColor.withAlphaComponent(0.5),
-                            clearBackground: theme.chat.inputPanel.panelBackgroundColor
-                        ),
-                        configuration: AnimatedNavigationStripeNode.Configuration(
-                            height: panelHeight,
-                            index: pinnedMessage.index,
-                            count: pinnedMessage.totalCount
-                        ),
-                        transition: animationTransition
-                    )
-                    
-                    strongSelf.imageNodeContainer.frame = CGRect(origin: CGPoint(x: contentLeftInset + 9.0, y: 7.0), size: CGSize(width: 35.0, height: 35.0))
-                    strongSelf.imageNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 35.0, height: 35.0))
-                    
-                    if let applyImage = applyImage {
-                        applyImage()
-                        
-                        animationTransition.updateSublayerTransformScale(node: strongSelf.imageNodeContainer, scale: 1.0)
-                        animationTransition.updateAlpha(node: strongSelf.imageNodeContainer, alpha: 1.0, beginWithCurrentState: true)
+            textLineInset += 9.0 + 35.0
+        }
+        
+        var mediaUpdated = false
+        if let updatedMediaReference = updatedMediaReference, let previousMediaReference = previousMediaReference {
+            mediaUpdated = !updatedMediaReference.media.isEqual(to: previousMediaReference.media)
+        } else if (updatedMediaReference != nil) != (previousMediaReference != nil) {
+            mediaUpdated = true
+        }
+        
+        let hasSpoiler = message.attributes.contains(where: { $0 is MediaSpoilerMessageAttribute })
+        
+        var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
+        var updatedFetchMediaSignal: Signal<FetchResourceSourceType, FetchResourceError>?
+        if mediaUpdated {
+            if let updatedMediaReference = updatedMediaReference, imageDimensions != nil {
+                if let imageReference = updatedMediaReference.concrete(TelegramMediaImage.self) {
+                    if imageReference.media.representations.isEmpty {
+                        updateImageSignal = chatSecretPhoto(account: context.account, userLocation: .peer(message.id.peerId), photoReference: imageReference, ignoreFullSize: true, synchronousLoad: true)
                     } else {
-                        animationTransition.updateSublayerTransformScale(node: strongSelf.imageNodeContainer, scale: 0.1)
-                        animationTransition.updateAlpha(node: strongSelf.imageNodeContainer, alpha: 0.0, beginWithCurrentState: true)
+                        updateImageSignal = chatMessagePhotoThumbnail(account: context.account, userLocation: .peer(message.id.peerId), photoReference: imageReference, blurred: hasSpoiler)
                     }
-                    
-                    if let updateImageSignal = updateImageSignal {
-                        strongSelf.imageNode.setSignal(updateImageSignal)
+                } else if let fileReference = updatedMediaReference.concrete(TelegramMediaFile.self) {
+                    if fileReference.media.isAnimatedSticker {
+                        let dimensions = fileReference.media.dimensions ?? PixelDimensions(width: 512, height: 512)
+                        updateImageSignal = chatMessageAnimatedSticker(postbox: context.account.postbox, userLocation: .peer(message.id.peerId), file: fileReference.media, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0)))
+                        updatedFetchMediaSignal = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .peer(message.id.peerId), userContentType: MediaResourceUserContentType(file: fileReference.media), reference: fileReference.resourceReference(fileReference.media.resource))
+                    } else if fileReference.media.isVideo || fileReference.media.isAnimated {
+                        updateImageSignal = chatMessageVideoThumbnail(account: context.account, userLocation: .peer(message.id.peerId), fileReference: fileReference, blurred: hasSpoiler)
+                    } else if let iconImageRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
+                        updateImageSignal = chatWebpageSnippetFile(account: context.account, userLocation: .peer(message.id.peerId), mediaReference: fileReference.abstract, representation: iconImageRepresentation)
                     }
-                    if let updatedFetchMediaSignal = updatedFetchMediaSignal {
-                        strongSelf.fetchDisposable.set(updatedFetchMediaSignal.startStrict())
+                }
+            } else {
+                updateImageSignal = .single({ _ in return nil })
+            }
+        }
+        let (titleLayout, titleApply) = makeTitleLayout(CGSize(width: width - textLineInset - contentLeftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), .zero, titleStrings)
+        
+        let (textString, _, isText) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: EngineMessage(message), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: accountPeerId)
+        
+        let messageText: NSAttributedString
+        let textFont = Font.regular(15.0)
+        if let giveaway {
+            let dateString = stringForDateWithoutYear(date: Date(timeIntervalSince1970: TimeInterval(giveaway.untilDate)), timeZone: .current, strings: strings)
+            let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+            let isFinished = currentTime >= giveaway.untilDate
+            let text: String
+            if isFinished {
+                let winnersString = strings.Conversation_PinnedGiveaway_Finished_Winners(giveaway.quantity)
+                text = strings.Conversation_PinnedGiveaway_Finished(winnersString, dateString).string
+            } else {
+                let winnersString = strings.Conversation_PinnedGiveaway_Ongoing_Winners(giveaway.quantity)
+                text = strings.Conversation_PinnedGiveaway_Ongoing(winnersString, dateString).string
+            }
+            messageText = NSAttributedString(string: text, font: textFont, textColor: theme.chat.inputPanel.primaryTextColor)
+        } else if isText {
+            var text = message.text
+            var messageEntities = message.textEntitiesAttribute?.entities ?? []
+            
+            if let translateToLanguage = translateToLanguage, !text.isEmpty {
+                for attribute in message.attributes {
+                    if let attribute = attribute as? TranslationMessageAttribute, !attribute.text.isEmpty, attribute.toLang == translateToLanguage {
+                        text = attribute.text
+                        messageEntities = attribute.entities
+                        break
                     }
                 }
             }
+            
+            let entities = messageEntities.filter { entity in
+                switch entity.type {
+                case .Spoiler, .CustomEmoji:
+                    return true
+                default:
+                    return false
+                }
+            }
+            let textColor = theme.chat.inputPanel.primaryTextColor
+            if entities.count > 0 {
+                messageText = stringWithAppliedEntities(trimToLineCount(text, lineCount: 1), entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: message)
+            } else {
+                messageText = NSAttributedString(string: foldLineBreaks(text), font: textFont, textColor: textColor)
+            }
+        } else {
+            messageText = NSAttributedString(string: foldLineBreaks(textString.string), font: textFont, textColor: message.media.isEmpty || message.media.first is TelegramMediaWebpage ? theme.chat.inputPanel.primaryTextColor : theme.chat.inputPanel.secondaryTextColor)
+        }
+        
+        let textConstrainedSize = CGSize(width: width - textLineInset - contentLeftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude)
+        let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: messageText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 0.0, bottom: 2.0, right: 0.0)))
+        
+        let spoilerTextLayoutAndApply: (TextNodeLayout, (TextNodeWithEntities.Arguments?) -> TextNodeWithEntities)?
+        if !textLayout.spoilers.isEmpty {
+            spoilerTextLayoutAndApply = makeSpoilerTextLayout(TextNodeLayoutArguments(attributedString: messageText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 0.0, bottom: 2.0, right: 0.0), displaySpoilers: true, displayEmbeddedItemsUnderSpoilers: true))
+        } else {
+            spoilerTextLayoutAndApply = nil
+        }
+        
+        let strongSelf = self
+        let _ = titleApply(animation != nil)
+        
+        var textArguments: TextNodeWithEntities.Arguments?
+        if let cache = strongSelf.animationCache, let renderer = strongSelf.animationRenderer {
+            textArguments = TextNodeWithEntities.Arguments(
+                context: strongSelf.context,
+                cache: cache,
+                renderer: renderer,
+                placeholderColor: theme.list.mediaPlaceholderColor,
+                attemptSynchronous: false
+            )
+        }
+        let _ = textApply(textArguments)
+        
+        strongSelf.previousMediaReference = updatedMediaReference
+        
+        animationTransition.updateFrameAdditive(node: strongSelf.contentTextContainer, frame: CGRect(origin: CGPoint(x: contentLeftInset + textLineInset, y: 0.0), size: CGSize(width: width, height: panelHeight)))
+        
+        strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 5.0), size: titleLayout.size)
+        
+        let textFrame = CGRect(origin: CGPoint(x: 0.0, y: 23.0), size: textLayout.size)
+        strongSelf.textNode.textNode.frame = textFrame
+        
+        if let (_, spoilerTextApply) = spoilerTextLayoutAndApply {
+            let spoilerTextNode = spoilerTextApply(textArguments)
+            if strongSelf.spoilerTextNode == nil {
+                spoilerTextNode.textNode.alpha = 0.0
+                spoilerTextNode.textNode.isUserInteractionEnabled = false
+                spoilerTextNode.textNode.contentMode = .topLeft
+                spoilerTextNode.textNode.contentsScale = UIScreenScale
+                spoilerTextNode.textNode.displaysAsynchronously = false
+                strongSelf.contentTextContainer.insertSubnode(spoilerTextNode.textNode, aboveSubnode: strongSelf.textNode.textNode)
+                
+                strongSelf.spoilerTextNode = spoilerTextNode
+            }
+            
+            strongSelf.spoilerTextNode?.textNode.frame = textFrame
+            
+            let dustNode: InvisibleInkDustNode
+            if let current = strongSelf.dustNode {
+                dustNode = current
+            } else {
+                dustNode = InvisibleInkDustNode(textNode: spoilerTextNode.textNode, enableAnimations: strongSelf.context.sharedContext.energyUsageSettings.fullTranslucency)
+                strongSelf.dustNode = dustNode
+                strongSelf.contentTextContainer.insertSubnode(dustNode, aboveSubnode: spoilerTextNode.textNode)
+            }
+            dustNode.frame = textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0)
+            dustNode.update(size: dustNode.frame.size, color: theme.chat.inputPanel.secondaryTextColor, textColor: theme.chat.inputPanel.primaryTextColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
+        } else if let spoilerTextNode = strongSelf.spoilerTextNode {
+            strongSelf.spoilerTextNode = nil
+            spoilerTextNode.textNode.removeFromSupernode()
+            
+            if let dustNode = strongSelf.dustNode {
+                strongSelf.dustNode = nil
+                dustNode.removeFromSupernode()
+            }
+        }
+        
+        strongSelf.textNode.visibilityRect = CGRect.infinite
+        strongSelf.spoilerTextNode?.visibilityRect = CGRect.infinite
+        
+        let lineFrame = CGRect(origin: CGPoint(x: contentLeftInset, y: 0.0), size: CGSize(width: 2.0, height: panelHeight))
+        animationTransition.updateFrame(node: strongSelf.lineNode, frame: lineFrame)
+        strongSelf.lineNode.update(
+            colors: AnimatedNavigationStripeNode.Colors(
+                foreground: theme.chat.inputPanel.panelControlAccentColor,
+                background: theme.chat.inputPanel.panelControlAccentColor.withAlphaComponent(0.5),
+                clearBackground: theme.chat.inputPanel.panelBackgroundColor
+            ),
+            configuration: AnimatedNavigationStripeNode.Configuration(
+                height: panelHeight,
+                index: pinnedMessage.index,
+                count: pinnedMessage.totalCount
+            ),
+            transition: animationTransition
+        )
+        
+        strongSelf.imageNodeContainer.frame = CGRect(origin: CGPoint(x: contentLeftInset + 9.0, y: 7.0), size: CGSize(width: 35.0, height: 35.0))
+        strongSelf.imageNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 35.0, height: 35.0))
+        
+        if let applyImage = applyImage {
+            applyImage()
+            
+            animationTransition.updateSublayerTransformScale(node: strongSelf.imageNodeContainer, scale: 1.0)
+            animationTransition.updateAlpha(node: strongSelf.imageNodeContainer, alpha: 1.0, beginWithCurrentState: true)
+        } else {
+            animationTransition.updateSublayerTransformScale(node: strongSelf.imageNodeContainer, scale: 0.1)
+            animationTransition.updateAlpha(node: strongSelf.imageNodeContainer, alpha: 0.0, beginWithCurrentState: true)
+        }
+        
+        if let updateImageSignal = updateImageSignal {
+            strongSelf.imageNode.setSignal(updateImageSignal)
+        }
+        if let updatedFetchMediaSignal = updatedFetchMediaSignal {
+            strongSelf.fetchDisposable.set(updatedFetchMediaSignal.startStrict())
         }
     }
     

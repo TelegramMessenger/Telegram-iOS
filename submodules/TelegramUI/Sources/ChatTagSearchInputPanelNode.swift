@@ -191,7 +191,7 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
             if case .everything = search.domain {
                 if let _ = params.interfaceState.renderedPeer?.peer as? TelegramGroup {
                     canSearchMembers = true
-                } else if let peer = params.interfaceState.renderedPeer?.peer as? TelegramChannel, case .group = peer.info {
+                } else if let peer = params.interfaceState.renderedPeer?.peer as? TelegramChannel, case .group = peer.info, !peer.isMonoForum {
                     canSearchMembers = true
                 }
             } else {
@@ -260,6 +260,10 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
             ])
         } else if let context = self.context, case .peer(context.account.peerId) = params.interfaceState.chatLocation {
             canChangeListMode = true
+        }
+        
+        if let channel = params.interfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum, params.interfaceState.chatLocation.threadId == nil, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = params.interfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
+            canChangeListMode = false
         }
         
         let height: CGFloat

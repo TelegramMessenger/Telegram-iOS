@@ -175,6 +175,7 @@ public final class BrowserBookmarksScreen: ViewController {
             }, forceUpdateWarpContents: {
             }, playShakeAnimation: {
             }, displayQuickShare: { _, _ ,_ in
+            }, updateChatLocationThread: { _, _ in
             }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(), presentationContext: ChatPresentationContext(context: context, backgroundNode: nil))
             
             

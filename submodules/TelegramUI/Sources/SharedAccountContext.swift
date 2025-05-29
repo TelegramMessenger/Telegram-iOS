@@ -84,6 +84,8 @@ import InviteLinksUI
 import GiftStoreScreen
 import SendInviteLinkScreen
 import PostSuggestionsSettingsScreen
+import ForumSettingsScreen
+import ForumCreateTopicScreen
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -2126,8 +2128,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         navigateToForumChannelImpl(context: context, peerId: peerId, navigationController: navigationController)
     }
     
-    public func navigateToForumThread(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64, messageId: EngineMessage.Id?, navigationController: NavigationController, activateInput: ChatControllerActivateInput?, scrollToEndIfExists: Bool, keepStack: NavigateToChatKeepStack) -> Signal<Never, NoError> {
-        return navigateToForumThreadImpl(context: context, peerId: peerId, threadId: threadId, messageId: messageId, navigationController: navigationController, activateInput: activateInput, scrollToEndIfExists: scrollToEndIfExists, keepStack: keepStack)
+    public func navigateToForumThread(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64, messageId: EngineMessage.Id?, navigationController: NavigationController, activateInput: ChatControllerActivateInput?, scrollToEndIfExists: Bool, keepStack: NavigateToChatKeepStack, animated: Bool) -> Signal<Never, NoError> {
+        return navigateToForumThreadImpl(context: context, peerId: peerId, threadId: threadId, messageId: messageId, navigationController: navigationController, activateInput: activateInput, scrollToEndIfExists: scrollToEndIfExists, keepStack: keepStack, animated: animated)
     }
     
     public func chatControllerForForumThread(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64) -> Signal<ChatController, NoError> {
@@ -2227,6 +2229,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             updatedPresentationData: updatedPresentationData,
             chatLocation: chatLocation,
             chatLocationContextHolder: chatLocationContextHolder,
+            adMessagesContext: nil,
             tag: tag,
             source: source,
             subject: subject,
@@ -2236,6 +2239,13 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             isChatPreview: false,
             messageTransitionNode: { return nil }
         )
+    }
+    
+    public func subscribeChatListData(context: AccountContext, location: ChatListControllerLocation) -> Signal<EngineChatList, NoError> {
+        return chatListViewForLocation(chatListLocation: location, location: .initial(count: 100, filter: nil), account: context.account, shouldLoadCanMessagePeer: false)
+        |> map { update -> EngineChatList in
+            return update.list
+        }
     }
     
     public func makePeerSharedMediaController(context: AccountContext, peerId: PeerId) -> ViewController? {
@@ -2388,6 +2398,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }, forceUpdateWarpContents: {
         }, playShakeAnimation: {
         }, displayQuickShare: { _, _ ,_ in
+        }, updateChatLocationThread: { _, _ in
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
         pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(), presentationContext: ChatPresentationContext(context: context, backgroundNode: backgroundNode as? WallpaperBackgroundNode))
         
@@ -2408,7 +2419,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func makeChatMessageDateHeaderItem(context: AccountContext, timestamp: Int32, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder) -> ListViewItemHeader {
-        return ChatMessageDateHeader(timestamp: timestamp, scheduled: false, presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: theme, wallpaper: wallpaper), fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameOrder, disableAnimations: false, largeEmoji: false, chatBubbleCorners: chatBubbleCorners, animatedEmojiScale: 1.0, isPreview: true), controllerInteraction: nil, context: context)
+        return ChatMessageDateHeader(timestamp: timestamp, separableThreadId: nil, scheduled: false, displayHeader: nil, presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: theme, wallpaper: wallpaper), fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameOrder, disableAnimations: false, largeEmoji: false, chatBubbleCorners: chatBubbleCorners, animatedEmojiScale: 1.0, isPreview: true), controllerInteraction: nil, context: context)
     }
     
     public func makeChatMessageAvatarHeaderItem(context: AccountContext, timestamp: Int32, peer: Peer, message: Message, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder) -> ListViewItemHeader {
@@ -2464,7 +2475,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func makeChatQrCodeScreen(context: AccountContext, peer: Peer, threadId: Int64?, temporary: Bool) -> ViewController {
-        return ChatQrCodeScreen(context: context, subject: .peer(peer: peer, threadId: threadId, temporary: temporary))
+        return ChatQrCodeScreenImpl(context: context, subject: .peer(peer: peer, threadId: threadId, temporary: temporary))
     }
     
     public func makePrivacyAndSecurityController(context: AccountContext) -> ViewController {
@@ -2597,6 +2608,25 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         } else {
             return botListSettingsScreen(context: context)
         }
+    }
+    
+    public func makeEditForumTopicScreen(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64, threadInfo: EngineMessageHistoryThread.Info, isHidden: Bool) -> ViewController {
+        let controller = ForumCreateTopicScreen(context: context, peerId: peerId, mode: .edit(threadId: threadId, threadInfo: threadInfo, isHidden: isHidden))
+        controller.navigationPresentation = .modal
+        controller.completion = { [weak controller] title, fileId, _, isHidden in
+            let _ = (context.engine.peers.editForumChannelTopic(id: peerId, threadId: threadId, title: title, iconFileId: fileId)
+            |> deliverOnMainQueue).startStandalone(completed: {
+                controller?.dismiss()
+            })
+            
+            if let isHidden {
+                let _ = (context.engine.peers.setForumChannelTopicHidden(id: peerId, threadId: threadId, isHidden: isHidden)
+                |> deliverOnMainQueue).startStandalone(completed: {
+                    controller?.dismiss()
+                })
+            }
+        }
+        return controller
     }
     
     private func mapIntroSource(source: PremiumIntroSource) -> PremiumSource {
@@ -3432,7 +3462,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         if let asset = source as? PHAsset {
             subject = .single(.asset(asset))
         } else if let image = source as? UIImage {
-            subject = .single(.image(image: image, dimensions: PixelDimensions(image.size), additionalImage: nil, additionalImagePosition: .bottomRight))
+            subject = .single(.image(image: image, dimensions: PixelDimensions(image.size), additionalImage: nil, additionalImagePosition: .bottomRight, fromCamera: false))
         } else {
             subject = .single(.empty(PixelDimensions(width: 1080, height: 1920)))
         }
@@ -3485,7 +3515,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             subject = .single(.asset(asset))
             mode = .addingToPack
         } else if let image = source as? UIImage {
-            subject = .single(.image(image: image, dimensions: PixelDimensions(image.size), additionalImage: nil, additionalImagePosition: .bottomRight))
+            subject = .single(.image(image: image, dimensions: PixelDimensions(image.size), additionalImage: nil, additionalImagePosition: .bottomRight, fromCamera: false))
             mode = .addingToPack
         } else if let source = source as? Signal<CameraScreenImpl.Result, NoError> {
             subject = source
@@ -3494,7 +3524,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 case .pendingImage:
                     return nil
                 case let .image(image):
-                    return .image(image: image.image, dimensions: PixelDimensions(image.image.size), additionalImage: nil, additionalImagePosition: .topLeft)
+                    return .image(image: image.image, dimensions: PixelDimensions(image.image.size), additionalImage: nil, additionalImagePosition: .topLeft, fromCamera: false)
                 default:
                     return nil
                 }
@@ -3542,27 +3572,49 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return editorController
     }
         
-    public func makeStoryMediaEditorScreen(context: AccountContext, source: Any?, text: String?, link: (url: String, name: String?)?, completion: @escaping (MediaEditorScreenResult, @escaping (@escaping () -> Void) -> Void) -> Void) -> ViewController {
-        let subject: Signal<MediaEditorScreenImpl.Subject?, NoError>
+    public func makeStoryMediaEditorScreen(context: AccountContext, source: Any?, text: String?, link: (url: String, name: String?)?, remainingCount: Int32, completion: @escaping ([MediaEditorScreenResult], MediaEditorTransitionOutExternalState, @escaping (@escaping () -> Void) -> Void) -> Void) -> ViewController {
+        let editorSubject: Signal<MediaEditorScreenImpl.Subject?, NoError>
         if let image = source as? UIImage {
-            subject = .single(.image(image: image, dimensions: PixelDimensions(image.size), additionalImage: nil, additionalImagePosition: .bottomRight))
+            editorSubject = .single(.image(image: image, dimensions: PixelDimensions(image.size), additionalImage: nil, additionalImagePosition: .bottomRight, fromCamera: false))
         } else if let path = source as? String {
-            subject = .single(.video(videoPath: path, thumbnail: nil, mirror: false, additionalVideoPath: nil, additionalThumbnail: nil, dimensions: PixelDimensions(width: 1080, height: 1920), duration: 0.0, videoPositionChanges: [], additionalVideoPosition: .bottomRight))
+            editorSubject = .single(.video(videoPath: path, thumbnail: nil, mirror: false, additionalVideoPath: nil, additionalThumbnail: nil, dimensions: PixelDimensions(width: 1080, height: 1920), duration: 0.0, videoPositionChanges: [], additionalVideoPosition: .bottomRight, fromCamera: false))
+        } else if let subjects = source as? [MediaEditorScreenImpl.Subject] {
+            editorSubject = .single(.multiple(subjects))
+        } else if let subjectValue = source as? MediaEditorScreenImpl.Subject {
+            editorSubject = .single(subjectValue)
         } else {
-            subject = .single(.empty(PixelDimensions(width: 1080, height: 1920)))
+            editorSubject = .single(.empty(PixelDimensions(width: 1080, height: 1920)))
         }
+        
+        let externalState = MediaEditorTransitionOutExternalState(
+            storyTarget: nil,
+            isForcedTarget: false,
+            isPeerArchived: false,
+            transitionOut: nil
+        )
+        
         let editorController = MediaEditorScreenImpl(
             context: context,
-            mode: .storyEditor(remainingCount: 1),
-            subject: subject,
+            mode: .storyEditor(remainingCount: remainingCount),
+            subject: editorSubject,
             customTarget: nil,
             initialCaption: text.flatMap { NSAttributedString(string: $0) },
             initialLink: link,
             transitionIn: nil,
             transitionOut: { finished, isNew in
+                if let externalTransitionOut = externalState.transitionOut {
+                    if finished, let transitionOut = externalTransitionOut(externalState.storyTarget, false), let destinationView = transitionOut.destinationView {
+                        return MediaEditorScreenImpl.TransitionOut(
+                            destinationView: destinationView,
+                            destinationRect: transitionOut.destinationRect,
+                            destinationCornerRadius: transitionOut.destinationCornerRadius,
+                            completion: transitionOut.completion
+                        )
+                    }
+                }
                 return nil
             }, completion: { results, commit in
-                completion(results.first!, commit)
+                completion(results, externalState, commit)
             } as ([MediaEditorScreenImpl.Result], @escaping (@escaping () -> Void) -> Void) -> Void
         )
         return editorController
@@ -3674,8 +3726,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return StarsWithdrawScreen(context: context, mode: mode, completion: completion)
     }
     
-    public func makeStarGiftResellScreen(context: AccountContext, update: Bool, completion: @escaping (Int64) -> Void) -> ViewController {
-        return StarsWithdrawScreen(context: context, mode: .starGiftResell(update), completion: completion)
+    public func makeStarGiftResellScreen(context: AccountContext, gift: StarGift.UniqueGift, update: Bool, completion: @escaping (Int64) -> Void) -> ViewController {
+        return StarsWithdrawScreen(context: context, mode: .starGiftResell(gift, update), completion: completion)
     }
     
     public func makeStarsGiftScreen(context: AccountContext, message: EngineMessage) -> ViewController {
@@ -3849,8 +3901,13 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return SendInviteLinkScreen(context: context, subject: subject, peers: peers, theme: theme)
     }
     
-    public func makePostSuggestionsSettingsScreen(context: AccountContext) -> ViewController {
-        return PostSuggestionsSettingsScreen(context: context, completion: {})
+    @available(iOS 13.0, *)
+    public func makePostSuggestionsSettingsScreen(context: AccountContext, peerId: EnginePeer.Id) async -> ViewController {
+        return await PostSuggestionsSettingsScreen(context: context, peerId: peerId, completion: {})
+    }
+    
+    public func makeForumSettingsScreen(context: AccountContext, peerId: EnginePeer.Id) -> ViewController {
+        return ForumSettingsScreen(context: context, peerId: peerId)
     }
 }
 

@@ -31,7 +31,15 @@
   // Will be unused if assertions are disabled.
   __unused int scanResult = sscanf(ivarsObj.objCType, "[%u^{objc_ivar}]", &count);
   ASDisplayNodeAssert(scanResult == 1, @"Unexpected type in NSValue: %s", ivarsObj.objCType);
+    
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 180400
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wvla-cxx-extension"
+#endif
   Ivar ivars[count];
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 180400
+#pragma clang diagnostic pop
+#endif
   [ivarsObj getValue:ivars];
   
   for (Ivar ivar : ivars) {

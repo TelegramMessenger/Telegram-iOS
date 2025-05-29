@@ -125,8 +125,12 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
             let compactAuthorName = message.author?.compactDisplayTitle ?? ""
             
             var isChannel = false
-            if message.id.peerId.namespace == Namespaces.Peer.CloudChannel, let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
-                isChannel = true
+            var isMonoforum = false
+            if message.id.peerId.namespace == Namespaces.Peer.CloudChannel, let peer = message.peers[message.id.peerId] as? TelegramChannel {
+                if case .broadcast = peer.info {
+                    isChannel = true
+                }
+                isMonoforum = peer.isMonoForum
             }
             
             switch action.action {
@@ -135,7 +139,11 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     attributedString = NSAttributedString(string: strings.Notification_CreatedChannel, font: titleFont, textColor: primaryTextColor)
                 } else {
                     if forChatList {
-                        attributedString = NSAttributedString(string: strings.Notification_CreatedGroup, font: titleFont, textColor: primaryTextColor)
+                        if isMonoforum {
+                            attributedString = NSAttributedString(string: strings.ChatList_MonoforumEmptyText, font: titleFont, textColor: primaryTextColor)
+                        } else {
+                            attributedString = NSAttributedString(string: strings.Notification_CreatedGroup, font: titleFont, textColor: primaryTextColor)
+                        }
                     } else {
                         attributedString = addAttributesToStringWithRanges(strings.Notification_CreatedChatWithTitle(authorName, title)._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                     }
@@ -1249,16 +1257,33 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     let resultString = strings.Notification_PaidMessageRefund(peerName, starsString)
                     attributedString = addAttributesToStringWithRanges(resultString._tuple, body: bodyAttributes, argumentAttributes: attributes)
                 }
-            case let .paidMessagesPriceEdited(stars):
+            case let .paidMessagesPriceEdited(stars, broadcastMessagesAllowed):
                 let starsString = strings.Notification_PaidMessagePriceChanged_Stars(Int32(stars))
                 if message.author?.id == accountPeerId {
-                    let resultString = strings.Notification_PaidMessagePriceChangedYou(starsString)
+                    let resultString: PresentationStrings.FormattedString
+                    resultString = strings.Notification_PaidMessagePriceChangedYou(starsString)
                     attributedString = addAttributesToStringWithRanges(resultString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
                 } else {
                     let peerName = message.author?.compactDisplayTitle ?? ""
                     var attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)])
                     attributes[1] = boldAttributes
-                    let resultString = strings.Notification_PaidMessagePriceChanged(peerName, starsString)
+                    let resultString: PresentationStrings.FormattedString
+                    
+                    if broadcastMessagesAllowed {
+                        if stars == 0 {
+                            resultString = strings.Notification_ChannelMessagePriceZeroChanged(peerName)
+                        } else {
+                            var rawString = strings.Notification_ChannelMessagePriceChanged(Int32(stars))
+                            rawString = rawString.replacingOccurrences(of: "{name}", with: peerName)
+                            resultString = PresentationStrings.FormattedString(string: rawString, ranges: [])
+                        }
+                    } else {
+                        if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
+                            resultString = strings.Notification_ChannelMessageDisabled(peerName)
+                        } else {
+                            resultString = strings.Notification_PaidMessagePriceChanged(peerName, starsString)
+                        }
+                    }
                     attributedString = addAttributesToStringWithRanges(resultString._tuple, body: bodyAttributes, argumentAttributes: attributes)
                 }
             case .unknown:

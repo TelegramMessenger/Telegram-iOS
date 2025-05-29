@@ -272,14 +272,15 @@ public extension Api {
 }
 public extension Api {
     indirect enum InputReplyTo: TypeConstructorDescription {
-        case inputReplyToMessage(flags: Int32, replyToMsgId: Int32, topMsgId: Int32?, replyToPeerId: Api.InputPeer?, quoteText: String?, quoteEntities: [Api.MessageEntity]?, quoteOffset: Int32?)
+        case inputReplyToMessage(flags: Int32, replyToMsgId: Int32, topMsgId: Int32?, replyToPeerId: Api.InputPeer?, quoteText: String?, quoteEntities: [Api.MessageEntity]?, quoteOffset: Int32?, monoforumPeerId: Api.InputPeer?)
+        case inputReplyToMonoForum(monoforumPeerId: Api.InputPeer)
         case inputReplyToStory(peer: Api.InputPeer, storyId: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .inputReplyToMessage(let flags, let replyToMsgId, let topMsgId, let replyToPeerId, let quoteText, let quoteEntities, let quoteOffset):
+                case .inputReplyToMessage(let flags, let replyToMsgId, let topMsgId, let replyToPeerId, let quoteText, let quoteEntities, let quoteOffset, let monoforumPeerId):
                     if boxed {
-                        buffer.appendInt32(583071445)
+                        buffer.appendInt32(-1334822736)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(replyToMsgId, buffer: buffer, boxed: false)
@@ -292,6 +293,13 @@ public extension Api {
                         item.serialize(buffer, true)
                     }}
                     if Int(flags) & Int(1 << 4) != 0 {serializeInt32(quoteOffset!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 5) != 0 {monoforumPeerId!.serialize(buffer, true)}
+                    break
+                case .inputReplyToMonoForum(let monoforumPeerId):
+                    if boxed {
+                        buffer.appendInt32(1775660101)
+                    }
+                    monoforumPeerId.serialize(buffer, true)
                     break
                 case .inputReplyToStory(let peer, let storyId):
                     if boxed {
@@ -305,8 +313,10 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .inputReplyToMessage(let flags, let replyToMsgId, let topMsgId, let replyToPeerId, let quoteText, let quoteEntities, let quoteOffset):
-                return ("inputReplyToMessage", [("flags", flags as Any), ("replyToMsgId", replyToMsgId as Any), ("topMsgId", topMsgId as Any), ("replyToPeerId", replyToPeerId as Any), ("quoteText", quoteText as Any), ("quoteEntities", quoteEntities as Any), ("quoteOffset", quoteOffset as Any)])
+                case .inputReplyToMessage(let flags, let replyToMsgId, let topMsgId, let replyToPeerId, let quoteText, let quoteEntities, let quoteOffset, let monoforumPeerId):
+                return ("inputReplyToMessage", [("flags", flags as Any), ("replyToMsgId", replyToMsgId as Any), ("topMsgId", topMsgId as Any), ("replyToPeerId", replyToPeerId as Any), ("quoteText", quoteText as Any), ("quoteEntities", quoteEntities as Any), ("quoteOffset", quoteOffset as Any), ("monoforumPeerId", monoforumPeerId as Any)])
+                case .inputReplyToMonoForum(let monoforumPeerId):
+                return ("inputReplyToMonoForum", [("monoforumPeerId", monoforumPeerId as Any)])
                 case .inputReplyToStory(let peer, let storyId):
                 return ("inputReplyToStory", [("peer", peer as Any), ("storyId", storyId as Any)])
     }
@@ -331,6 +341,10 @@ public extension Api {
             } }
             var _7: Int32?
             if Int(_1!) & Int(1 << 4) != 0 {_7 = reader.readInt32() }
+            var _8: Api.InputPeer?
+            if Int(_1!) & Int(1 << 5) != 0 {if let signature = reader.readInt32() {
+                _8 = Api.parse(reader, signature: signature) as? Api.InputPeer
+            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
@@ -338,8 +352,22 @@ public extension Api {
             let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 3) == 0) || _6 != nil
             let _c7 = (Int(_1!) & Int(1 << 4) == 0) || _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.InputReplyTo.inputReplyToMessage(flags: _1!, replyToMsgId: _2!, topMsgId: _3, replyToPeerId: _4, quoteText: _5, quoteEntities: _6, quoteOffset: _7)
+            let _c8 = (Int(_1!) & Int(1 << 5) == 0) || _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.InputReplyTo.inputReplyToMessage(flags: _1!, replyToMsgId: _2!, topMsgId: _3, replyToPeerId: _4, quoteText: _5, quoteEntities: _6, quoteOffset: _7, monoforumPeerId: _8)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputReplyToMonoForum(_ reader: BufferReader) -> InputReplyTo? {
+            var _1: Api.InputPeer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputPeer
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputReplyTo.inputReplyToMonoForum(monoforumPeerId: _1!)
             }
             else {
                 return nil

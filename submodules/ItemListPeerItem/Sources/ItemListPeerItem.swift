@@ -1721,7 +1721,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                             strongSelf.avatarNode.imageNode.animateFirstTransition = item.animateFirstAvatarTransition
                             
                             var clipStyle: AvatarNodeClipStyle = .round
-                            if case let .channel(channel) = item.peer, channel.isForum {
+                            if case let .channel(channel) = item.peer, channel.isForumOrMonoForum {
                                 clipStyle = .roundedRect
                             }
                             
@@ -2045,6 +2045,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
 
 public final class ItemListPeerItemHeader: ListViewItemHeader {
     public let id: ListViewItemNode.HeaderId
+    public let stackingId: ListViewItemNode.HeaderId? = nil
     public let context: AccountContext
     public let text: NSAttributedString
     public let additionalText: String
@@ -2201,11 +2202,11 @@ public final class ItemListPeerItemHeaderNode: ListViewItemHeaderNode, ItemListH
         self.actionTextNode.attributedText = NSAttributedString(string: actionTitle ?? "", font: titleFont, textColor: action == nil ? theme.list.sectionHeaderTextColor : theme.list.itemAccentColor)
         self.actionButton.isUserInteractionEnabled = self.action != nil
         if let (size, leftInset, rightInset) = self.validLayout {
-            self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset)
+            self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: .immediate)
         }
     }
     
-    override public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
+    override public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = (size, leftInset, rightInset)
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
         self.snappedBackgroundNode.frame = CGRect(origin: CGPoint(), size: size)
@@ -2229,7 +2230,7 @@ public final class ItemListPeerItemHeaderNode: ListViewItemHeaderNode, ItemListH
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: true)
     }
     
-    override public func updateStickDistanceFactor(_ factor: CGFloat, transition: ContainedViewLayoutTransition) {
+    override public func updateStickDistanceFactor(_ factor: CGFloat, distance: CGFloat, transition: ContainedViewLayoutTransition) {
         if self.stickDistanceFactor == factor {
             return
         }

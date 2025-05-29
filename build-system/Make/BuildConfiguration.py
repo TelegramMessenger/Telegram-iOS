@@ -6,6 +6,7 @@ import tempfile
 import plistlib
 
 from BuildEnvironment import run_executable_with_output, check_run_system
+from DecryptMatch import decrypt_match_data
 
 class BuildConfiguration:
     def __init__(self,
@@ -103,12 +104,15 @@ def decrypt_codesigning_directory_recursively(source_base_path, destination_base
     for file_name in os.listdir(source_base_path):
         source_path = source_base_path + '/' + file_name
         destination_path = destination_base_path + '/' + file_name
-        if os.path.isfile(source_path):
+        allowed_file_extensions = ['.mobileprovision', '.cer', '.p12']
+        if os.path.isfile(source_path) and any(source_path.endswith(ext) for ext in allowed_file_extensions):
+            #print('Decrypting {} to {} with {}'.format(source_path, destination_path, password))
             os.system('ruby build-system/decrypt.rb "{password}" "{source_path}" "{destination_path}"'.format(
                 password=password,
                 source_path=source_path,
                 destination_path=destination_path
             ))
+            #decrypt_match_data(source_path, destination_path, password)
         elif os.path.isdir(source_path):
             os.makedirs(destination_path, exist_ok=True)
             decrypt_codesigning_directory_recursively(source_path, destination_path, password)

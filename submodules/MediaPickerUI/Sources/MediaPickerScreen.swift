@@ -2717,6 +2717,19 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                             self?.controllerNode.send(asFile: true, silently: false, scheduleTime: nil, animated: true, parameters: nil, completion: {})
                         })))
                     }
+                    if price == nil {
+                        //TODO:localize
+                        items.append(.action(ContextMenuActionItem(text: strings.Attachment_SendInHd, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/QualityHd"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] _, f in
+                            f(.default)
+                            
+                            if let editingContext = self?.interaction?.editingState {
+                                editingContext.setHighQualityPhoto(true)
+                            }
+                            self?.controllerNode.send(asFile: false, silently: false, scheduleTime: nil, animated: true, parameters: nil, completion: {})
+                        })))
+                    }
                     if selectionCount > 1, price == nil {
                         items.append(.action(ContextMenuActionItem(text: strings.Attachment_SendWithoutGrouping, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Media Grid/GroupingOff"), color: theme.contextMenu.primaryColor)

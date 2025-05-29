@@ -54,7 +54,7 @@ CONFIGURE_FLAGS="--enable-cross-compile --disable-programs \
                  --enable-demuxer=aac,mov,m4v,mp3,ogg,libopus,flac,wav,aiff,matroska,mpegts, \
                  --enable-parser=aac,h264,mp3,libopus \
                  --enable-protocol=file \
-                 --enable-muxer=mp4,matroska,mpegts \
+                 --enable-muxer=mp4,matroska,ogg,mpegts \
                  --enable-hwaccel=h264_videotoolbox,hevc_videotoolbox,av1_videotoolbox \
                  "
 

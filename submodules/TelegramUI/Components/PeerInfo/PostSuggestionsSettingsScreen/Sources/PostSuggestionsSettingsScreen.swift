@@ -29,15 +29,21 @@ final class PostSuggestionsSettingsScreenComponent: Component {
     
     let context: AccountContext
     let usdWithdrawRate: Int64
+    let peer: EnginePeer?
+    let initialPrice: StarsAmount?
     let completion: () -> Void
 
     init(
         context: AccountContext,
         usdWithdrawRate: Int64,
+        peer: EnginePeer?,
+        initialPrice: StarsAmount?,
         completion: @escaping () -> Void
     ) {
         self.context = context
         self.usdWithdrawRate = usdWithdrawRate
+        self.peer = peer
+        self.initialPrice = initialPrice
         self.completion = completion
     }
 
@@ -103,12 +109,23 @@ final class PostSuggestionsSettingsScreenComponent: Component {
         }
         
         func attemptNavigation(complete: @escaping () -> Void) -> Bool {
-            guard let component = self.component, let environment = self.environment else {
+            guard let component = self.component else {
                 return true
             }
+            guard let peer = component.peer else {
+                return true
+            }
+
+            let currentAmount: StarsAmount?
+            if self.areSuggestionsEnabled {
+                currentAmount = StarsAmount(value: Int64(self.starCount), nanos: 0)
+            } else {
+                currentAmount = nil
+            }
             
-            let _ = component
-            let _ = environment
+            if component.initialPrice != currentAmount {
+                let _ = component.context.engine.peers.updateChannelPaidMessagesStars(peerId: peer.id, stars: currentAmount, broadcastMessagesAllowed: currentAmount != nil).startStandalone()
+            }
             
             return true
         }
@@ -154,7 +171,13 @@ final class PostSuggestionsSettingsScreenComponent: Component {
             }
             
             if self.component == nil {
-                self.starCount = 20
+                if let initialPrice = component.initialPrice {
+                    self.starCount = Int(initialPrice.value)
+                    self.areSuggestionsEnabled = true
+                } else {
+                    self.starCount = 20
+                    self.areSuggestionsEnabled = false
+                }
             }
             
             let environment = environment[EnvironmentType.self].value
@@ -177,11 +200,10 @@ final class PostSuggestionsSettingsScreenComponent: Component {
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             
-            //TODO:localize
             let navigationTitleSize = self.navigationTitle.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "Post Suggestion", font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
+                    text: .plain(NSAttributedString(string: environment.strings.ChannelMessages_Title, font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
                     horizontalAlignment: .center
                 )),
                 environment: {},
@@ -208,7 +230,7 @@ final class PostSuggestionsSettingsScreenComponent: Component {
             let iconSize = self.icon.update(
                 transition: .immediate,
                 component: AnyComponent(LottieComponent(
-                    content: LottieComponent.AppBundleContent(name: "LampEmoji"),
+                    content: LottieComponent.AppBundleContent(name: "ChannelMessages"),
                     loop: false
                 )),
                 environment: {},
@@ -226,8 +248,7 @@ final class PostSuggestionsSettingsScreenComponent: Component {
             
             contentHeight += 129.0
             
-            //TODO:localize
-            let subtitleString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString("Allow users to suggest posts for your channel.", attributes: MarkdownAttributes(
+            let subtitleString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(environment.strings.ChannelMessages_Info, attributes: MarkdownAttributes(
                 body: MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.freeTextColor),
                 bold: MarkdownAttributeSet(font: Font.semibold(15.0), textColor: environment.theme.list.freeTextColor),
                 link: MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.itemAccentColor),
@@ -278,7 +299,7 @@ final class PostSuggestionsSettingsScreenComponent: Component {
                 title: AnyComponent(VStack([
                     AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Allow Post Suggestions",
+                            string: environment.strings.ChannelMessages_SwitchTitle,
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                             textColor: environment.theme.list.itemPrimaryTextColor
                         )),
@@ -362,26 +383,6 @@ final class PostSuggestionsSettingsScreenComponent: Component {
                 ),
                 params: ListViewItemLayoutParams(width: availableSize.width - sideInset * 2.0, leftInset: 0.0, rightInset: 0.0, availableHeight: 10000.0, isStandalone: true)
             ))))
-            /*contentSectionItems.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(ListItemSliderSelectorComponent(
-                theme: environment.theme,
-                content: .discrete(ListItemSliderSelectorComponent.Discrete(
-                    values: sliderValueList.map { item in
-                        return item
-                    },
-                    markPositions: false,
-                    selectedIndex: max(0, min(sliderValueList.count - 1, self.starCount - 1)),
-                    title: sliderTitle,
-                    secondaryTitle: sliderSecondaryTitle,
-                    selectedIndexUpdated: { [weak self] index in
-                        guard let self else {
-                            return
-                        }
-                        let index = max(0, min(sliderValueList.count, index))
-                        self.starCount = index
-                        self.state?.updated(transition: .immediate)
-                    }
-                ))
-            ))))*/
             
             let contentSectionSize = self.contentSection.update(
                 transition: transition,
@@ -389,7 +390,7 @@ final class PostSuggestionsSettingsScreenComponent: Component {
                     theme: environment.theme,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "PRICE FOR EACH SUGGESTION",
+                            string: environment.strings.ChannelMessages_PriceSectionTitle,
                             font: Font.regular(13.0),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -397,7 +398,7 @@ final class PostSuggestionsSettingsScreenComponent: Component {
                     )),
                     footer: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Charge users for the ability to suggest one post for your channel. You're not required to publish any suggestions by charging this. You'll receive 85% of the selected fee for each incoming suggestion.",
+                            string: environment.strings.ChannelMessages_PriceSectionFooter,
                             font: Font.regular(13.0),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -464,20 +465,40 @@ final class PostSuggestionsSettingsScreenComponent: Component {
     }
 }
 
+@available(iOS 13.0, *)
 public final class PostSuggestionsSettingsScreen: ViewControllerComponentContainer {
     private let context: AccountContext
     
+    @MainActor
     public init(
         context: AccountContext,
+        peerId: EnginePeer.Id,
         completion: @escaping () -> Void
-    ) {
+    ) async {
         self.context = context
         
         let configuration = StarsSubscriptionConfiguration.with(appConfiguration: context.currentAppConfiguration.with({ $0 }))
         
+        let peer = await context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+        ).get()
+        
+        let initialPrice: StarsAmount?
+        if case let .channel(channel) = peer, case let .broadcast(info) = channel.info, info.flags.contains(.hasMonoforum), let linkedMonoforumId = channel.linkedMonoforumId {
+            initialPrice = await context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.SendMessageToChannelPrice(id: linkedMonoforumId)
+            ).get() ?? StarsAmount(value: 0, nanos: 0)
+        } else {
+            initialPrice = await context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.SendMessageToChannelPrice(id: peerId)
+            ).get()
+        }
+        
         super.init(context: context, component: PostSuggestionsSettingsScreenComponent(
             context: context,
             usdWithdrawRate: configuration.usdWithdrawRate,
+            peer: peer,
+            initialPrice: initialPrice,
             completion: completion
         ), navigationBarAppearance: .default, theme: .default, updatedPresentationData: nil)
         

@@ -140,7 +140,14 @@ Class _Nullable ASGetClassFromType(const char  * _Nullable type)
 
   // Copy type[2..(end-1)]. So @"UIImage" -> UIImage
   size_t resultLength = typeLength - 3;
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 180400
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wvla-cxx-extension"
+#endif
   char className[resultLength + 1];
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 180400
+#pragma clang diagnostic pop
+#endif
   strncpy(className, type + 2, resultLength);
   className[resultLength] = '\0';
   return objc_getClass(className);

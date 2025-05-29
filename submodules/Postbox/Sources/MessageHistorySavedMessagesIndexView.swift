@@ -7,19 +7,28 @@ final class MutableMessageHistorySavedMessagesIndexView: MutablePostboxView {
         let pinnedIndex: Int?
         let index: MessageIndex
         let topMessage: Message?
+        let unreadCount: Int
+        let markedUnread: Bool
+        let embeddedInterfaceState: StoredPeerChatInterfaceState?
         
         init(
             id: Int64,
             peer: Peer?,
             pinnedIndex: Int?,
             index: MessageIndex,
-            topMessage: Message?
+            topMessage: Message?,
+            unreadCount: Int,
+            markedUnread: Bool,
+            embeddedInterfaceState: StoredPeerChatInterfaceState?
         ) {
             self.id = id
             self.peer = peer
             self.pinnedIndex = pinnedIndex
             self.index = index
             self.topMessage = topMessage
+            self.unreadCount = unreadCount
+            self.markedUnread = markedUnread
+            self.embeddedInterfaceState = embeddedInterfaceState
         }
     }
     
@@ -62,12 +71,17 @@ final class MutableMessageHistorySavedMessagesIndexView: MutablePostboxView {
                     pinnedIndex = index
                 }
                 
+                let embeddedInterfaceState = postbox.peerChatThreadInterfaceStateTable.get(PeerChatThreadId(peerId: self.peerId, threadId: item.threadId))
+                
                 self.items.append(Item(
                     id: item.threadId,
                     peer: postbox.peerTable.get(PeerId(item.threadId)),
                     pinnedIndex: pinnedIndex,
                     index: item.index,
-                    topMessage: postbox.getMessage(item.index.id)
+                    topMessage: postbox.getMessage(item.index.id),
+                    unreadCount: Int(item.info.summary.totalUnreadCount),
+                    markedUnread: item.info.summary.isMarkedUnread,
+                    embeddedInterfaceState: embeddedInterfaceState
                 ))
             }
             
@@ -120,19 +134,28 @@ public final class EngineMessageHistorySavedMessagesThread {
         public let pinnedIndex: Int?
         public let index: MessageIndex
         public let topMessage: Message?
+        public let unreadCount: Int
+        public let markedUnread: Bool
+        public let embeddedInterfaceState: StoredPeerChatInterfaceState?
         
         public init(
             id: Int64,
             peer: Peer?,
             pinnedIndex: Int?,
             index: MessageIndex,
-            topMessage: Message?
+            topMessage: Message?,
+            unreadCount: Int,
+            markedUnread: Bool,
+            embeddedInterfaceState: StoredPeerChatInterfaceState?
         ) {
             self.id = id
             self.peer = peer
             self.pinnedIndex = pinnedIndex
             self.index = index
             self.topMessage = topMessage
+            self.unreadCount = unreadCount
+            self.markedUnread = markedUnread
+            self.embeddedInterfaceState = embeddedInterfaceState
         }
         
         public static func ==(lhs: Item, rhs: Item) -> Bool {
@@ -158,6 +181,15 @@ public final class EngineMessageHistorySavedMessagesThread {
             } else if (lhs.topMessage == nil) != (rhs.topMessage == nil) {
                 return false
             }
+            if lhs.unreadCount != rhs.unreadCount {
+                return false
+            }
+            if lhs.markedUnread != rhs.markedUnread {
+                return false
+            }
+            if lhs.embeddedInterfaceState != rhs.embeddedInterfaceState {
+                return false
+            }
             
             return true
         }
@@ -179,7 +211,10 @@ public final class MessageHistorySavedMessagesIndexView: PostboxView {
                 peer: item.peer,
                 pinnedIndex: item.pinnedIndex,
                 index: item.index,
-                topMessage: item.topMessage
+                topMessage: item.topMessage,
+                unreadCount: item.unreadCount,
+                markedUnread: item.markedUnread,
+                embeddedInterfaceState: item.embeddedInterfaceState
             ))
         }
         self.items = items

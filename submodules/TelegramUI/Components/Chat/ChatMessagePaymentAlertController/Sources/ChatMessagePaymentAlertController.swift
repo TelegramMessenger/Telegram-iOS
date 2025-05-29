@@ -422,7 +422,7 @@ public func chatMessagePaymentAlertController(
     context: AccountContext?,
     presentationData: PresentationData,
     updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?,
-    peers: [EnginePeer],
+    peers: [EngineRenderedPeer],
     count: Int32,
     amount: StarsAmount,
     totalAmount: StarsAmount?,
@@ -452,10 +452,10 @@ public func chatMessagePaymentAlertController(
     if peers.count == 1, let peer = peers.first {
         let amountString = presentationData.strings.Chat_PaidMessage_Confirm_Text_Stars(Int32(amount.value))
         let totalString = presentationData.strings.Chat_PaidMessage_Confirm_Text_Stars(Int32(amount.value * Int64(count)))
-        if case let .channel(channel) = peer, case .broadcast = channel.info {
-            text = presentationData.strings.Chat_PaidMessage_Confirm_SingleComment_Text(peer.compactDisplayTitle, amountString, totalString, messagesString).string
+        if case let .channel(channel) = peer.chatOrMonoforumMainPeer, case .broadcast = channel.info {
+            text = presentationData.strings.Chat_PaidMessage_Confirm_SingleComment_Text(EnginePeer(channel).compactDisplayTitle, amountString, totalString, messagesString).string
         } else {
-            text = presentationData.strings.Chat_PaidMessage_Confirm_Single_Text(peer.compactDisplayTitle, amountString, totalString, messagesString).string
+            text = presentationData.strings.Chat_PaidMessage_Confirm_Single_Text(peer.chatOrMonoforumMainPeer?.compactDisplayTitle ?? " ", amountString, totalString, messagesString).string
         }
     } else {
         let amount = totalAmount ?? amount

@@ -17,9 +17,14 @@ objc_library(
         "lottiecpp/PlatformSpecific/Darwin/Sources/**/*.c",
         "lottiecpp/PlatformSpecific/Darwin/Sources/**/*.cpp",
         "lottiecpp/PlatformSpecific/Darwin/Sources/**/*.hpp",
-    ]),
+    ], allow_empty=True),
     copts = [
         "-Werror",
+        "-I{}/lottiecpp/Sources".format(package_name()),
+    ],
+    cxxopts = [
+        "-Werror",
+        "-std=c++17",
         "-I{}/lottiecpp/Sources".format(package_name()),
     ],
     hdrs = glob([
@@ -44,11 +49,14 @@ cc_library(
     hdrs = glob([
         "lottiecpp/PublicHeaders/**/*.h",
         "lottiecpp/PlatformSpecific/Darwin/PublicHeaders/**/*.h",
-    ]),
+    ], allow_empty=True),
     includes = [
         "PublicHeaders",
     ],
     copts = [],
+    cxxopts = [
+        "-std=c++17",
+    ],
     visibility = ["//visibility:public"],
     linkstatic = 1,
 )

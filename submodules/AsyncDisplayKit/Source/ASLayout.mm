@@ -235,7 +235,14 @@ static std::atomic_bool static_retainsSublayoutLayoutElements = ATOMIC_VAR_INIT(
       }
     } else if (sublayoutsCount > 0) {
       // Fast-reverse-enumerate the sublayouts array by copying it into a C-array and push_front'ing each into the queue.
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 180400
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wvla-cxx-extension"
+#endif
       unowned ASLayout *rawSublayouts[sublayoutsCount];
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 180400
+#pragma clang diagnostic pop
+#endif
       [layout->_sublayouts getObjects:rawSublayouts range:NSMakeRange(0, sublayoutsCount)];
       for (NSInteger i = sublayoutsCount - 1; i >= 0; i--) {
         queue.push_front({rawSublayouts[i], absolutePosition + rawSublayouts[i].position});

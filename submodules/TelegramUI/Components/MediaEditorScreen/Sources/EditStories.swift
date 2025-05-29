@@ -42,7 +42,7 @@ public extension MediaEditorScreenImpl {
                     if let image = UIImage(contentsOfFile: data.path) {
                         return .single(nil)
                         |> then(
-                            .single(.image(image: image, dimensions: PixelDimensions(image.size), additionalImage: nil, additionalImagePosition: .bottomRight))
+                            .single(.image(image: image, dimensions: PixelDimensions(image.size), additionalImage: nil, additionalImagePosition: .bottomRight, fromCamera: false))
                             |> delay(0.1, queue: Queue.mainQueue())
                         )
                     } else {
@@ -56,7 +56,7 @@ public extension MediaEditorScreenImpl {
                         }
                         return .single(nil)
                         |> then(
-                            .single(.video(videoPath: symlinkPath, thumbnail: nil, mirror: false, additionalVideoPath: nil, additionalThumbnail: nil, dimensions: PixelDimensions(width: 720, height: 1280), duration: duration ?? 0.0, videoPositionChanges: [], additionalVideoPosition: .bottomRight))
+                            .single(.video(videoPath: symlinkPath, thumbnail: nil, mirror: false, additionalVideoPath: nil, additionalThumbnail: nil, dimensions: PixelDimensions(width: 720, height: 1280), duration: duration ?? 0.0, videoPositionChanges: [], additionalVideoPosition: .bottomRight, fromCamera: false))
                         )
                     }
                 }

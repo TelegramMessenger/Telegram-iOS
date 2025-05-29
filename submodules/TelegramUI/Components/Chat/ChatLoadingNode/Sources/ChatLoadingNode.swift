@@ -126,7 +126,7 @@ public final class ChatLoadingPlaceholderMessageContainer {
         }
         
         if let avatarNode = self.avatarNode, let avatarBorderNode = self.avatarBorderNode {
-            let avatarFrame = CGRect(origin: CGPoint(x: 3.0, y: rect.maxY + 1.0 - avatarSize.height), size: avatarSize)
+            let avatarFrame = CGRect(origin: CGPoint(x: rect.minX + 3.0, y: rect.maxY + 1.0 - avatarSize.height), size: avatarSize)
 
             transition.updateFrame(node: avatarNode, frame: avatarFrame)
             transition.updateFrame(node: avatarBorderNode, frame: avatarFrame)
@@ -134,7 +134,7 @@ public final class ChatLoadingPlaceholderMessageContainer {
             avatarOffset += avatarSize.width - 1.0
         }
         
-        let bubbleFrame = CGRect(origin: CGPoint(x: 3.0 + avatarOffset, y: rect.origin.y), size: CGSize(width: rect.width, height: rect.height))
+        let bubbleFrame = CGRect(origin: CGPoint(x: rect.minX + 3.0 + avatarOffset, y: rect.origin.y), size: CGSize(width: rect.width, height: rect.height))
         transition.updateFrame(node: self.bubbleNode, frame: bubbleFrame)
         transition.updateFrame(node: self.bubbleBorderNode, frame: bubbleFrame)
     }
@@ -215,7 +215,10 @@ public final class ChatLoadingPlaceholderNode: ASDisplayNode {
         self.borderNode.view.mask = self.borderMaskNode.view
         
         if self.context.sharedContext.energyUsageSettings.fullTranslucency {
-            Queue.mainQueue().after(0.3) {
+            Queue.mainQueue().after(0.3) { [weak self] in
+                guard let self else {
+                    return
+                }
                 if !self.didAnimateOut {
                     self.backgroundNode?.updateIsLooping(true)
                 }
@@ -484,7 +487,7 @@ public final class ChatLoadingPlaceholderNode: ASDisplayNode {
         
         for messageContainer in self.messageContainers {
             let messageSize = dimensions[index % 14]
-            messageContainer.update(size: bounds.size, hasAvatar: self.chatType != .channel && self.chatType != .user, rect: CGRect(origin: CGPoint(x: 0.0, y: bounds.size.height - insets.bottom - offset - messageSize.height), size: messageSize), transition: transition)
+            messageContainer.update(size: bounds.size, hasAvatar: self.chatType != .channel && self.chatType != .user, rect: CGRect(origin: CGPoint(x: insets.left, y: bounds.size.height - insets.bottom - offset - messageSize.height), size: messageSize), transition: transition)
             offset += messageSize.height
             index += 1
         }

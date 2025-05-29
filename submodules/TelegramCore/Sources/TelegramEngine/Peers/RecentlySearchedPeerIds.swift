@@ -80,7 +80,7 @@ public func _internal_recentlySearchedPeers(postbox: Postbox) -> Signal<[Recentl
                     var presence: TelegramUserPresence?
                     var unreadCount = unreadCounts[peerId] ?? 0
                     if let peer = peerView.peers[peerId] {
-                        if let associatedPeerId = peer.associatedPeerId {
+                        if peer is TelegramSecretChat, let associatedPeerId = peer.associatedPeerId {
                             presence = peerView.peerPresences[associatedPeerId] as? TelegramUserPresence
                         } else {
                             presence = peerView.peerPresences[peerId] as? TelegramUserPresence

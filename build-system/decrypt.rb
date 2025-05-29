@@ -5,17 +5,6 @@ require 'securerandom'
 class EncryptionV1
   ALGORITHM = 'aes-256-cbc'
 
-  def encrypt(data:, password:, salt:, hash_algorithm: "MD5")
-    cipher = ::OpenSSL::Cipher.new(ALGORITHM)
-    cipher.encrypt
-
-    keyivgen(cipher, password, salt, hash_algorithm)
-
-    encrypted_data = cipher.update(data)
-    encrypted_data << cipher.final
-    { encrypted_data: encrypted_data }
-  end
-
   def decrypt(encrypted_data:, password:, salt:, hash_algorithm: "MD5")
     cipher = ::OpenSSL::Cipher.new(ALGORITHM)
     cipher.decrypt
@@ -43,20 +32,6 @@ end
 class EncryptionV2
   ALGORITHM = 'aes-256-gcm'
 
-  def encrypt(data:, password:, salt:)
-    cipher = ::OpenSSL::Cipher.new(ALGORITHM)
-    cipher.encrypt
-
-    keyivgen(cipher, password, salt)
-
-    encrypted_data = cipher.update(data)
-    encrypted_data << cipher.final
-
-    auth_tag = cipher.auth_tag
-
-    { encrypted_data: encrypted_data, auth_tag: auth_tag }
-  end
-
   def decrypt(encrypted_data:, password:, salt:, auth_tag:)
     cipher = ::OpenSSL::Cipher.new(ALGORITHM)
     cipher.decrypt
@@ -76,6 +51,11 @@ class EncryptionV2
     key = keyIv[0..31]
     iv = keyIv[32..43]
     auth_data = keyIv[44..-1]
+
+    puts "key: #{key.inspect}"
+    puts "iv: #{iv.inspect}"
+    puts "auth_data: #{auth_data.inspect}"
+
     cipher.key = key
     cipher.iv = iv
     cipher.auth_data = auth_data
@@ -85,20 +65,6 @@ end
 class MatchDataEncryption
   V1_PREFIX = "Salted__"
   V2_PREFIX = "match_encrypted_v2__"
-
-  def encrypt(data:, password:, version: 2)
-    salt = SecureRandom.random_bytes(8)
-    if version == 2
-      e = EncryptionV2.new
-      encryption = e.encrypt(data: data, password: password, salt: salt)
-      encrypted_data = V2_PREFIX + salt + encryption[:auth_tag] + encryption[:encrypted_data]
-    else
-      e = EncryptionV1.new
-      encryption = e.encrypt(data: data, password: password, salt: salt)
-      encrypted_data = V1_PREFIX + salt + encryption[:encrypted_data]
-    end
-    Base64.encode64(encrypted_data)
-  end
 
   def decrypt(base64encoded_encrypted:, password:)
     stored_data = Base64.decode64(base64encoded_encrypted)
@@ -130,14 +96,6 @@ end
 
 
 class MatchFileEncryption
-  def encrypt(file_path:, password:, output_path: nil)
-    output_path = file_path unless output_path
-    data_to_encrypt = File.binread(file_path)
-    e = MatchDataEncryption.new
-    data = e.encrypt(data: data_to_encrypt, password: password)
-    File.write(output_path, data)
-  end
-
   def decrypt(file_path:, password:, output_path: nil)
     output_path = file_path unless output_path
     content = File.read(file_path)

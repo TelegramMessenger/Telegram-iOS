@@ -128,7 +128,7 @@ func managedSynchronizeChatInputStateOperations(postbox: Postbox, network: Netwo
 private func synchronizeChatInputState(transaction: Transaction, postbox: Postbox, network: Network, peerId: PeerId, threadId: Int64?, operation: SynchronizeChatInputStateOperation) -> Signal<Void, NoError> {
     var inputState: SynchronizeableChatInputState?
     let peerChatInterfaceState: StoredPeerChatInterfaceState?
-    if let threadId = threadId {
+    if let threadId {
         peerChatInterfaceState = transaction.getPeerChatThreadInterfaceState(peerId, threadId: threadId)
     } else {
         peerChatInterfaceState = transaction.getPeerChatInterfaceState(peerId)
@@ -146,8 +146,13 @@ private func synchronizeChatInputState(transaction: Transaction, postbox: Postbo
             }
         }
         var topMsgId: Int32?
-        if let threadId = threadId {
-            topMsgId = Int32(clamping: threadId)
+        var monoforumPeerId: Api.InputPeer?
+        if let threadId {
+            if let channel = peer as? TelegramChannel, channel.flags.contains(.isMonoforum) {
+                monoforumPeerId = transaction.getPeer(PeerId(threadId)).flatMap(apiInputPeer)
+            } else {
+                topMsgId = Int32(clamping: threadId)
+            }
         }
         
         var replyTo: Api.InputReplyTo?
@@ -155,7 +160,12 @@ private func synchronizeChatInputState(transaction: Transaction, postbox: Postbo
             flags |= 1 << 0
             
             var innerFlags: Int32 = 0
-            //inputReplyToMessage#73ec805 flags:# reply_to_msg_id:int top_msg_id:flags.0?int reply_to_peer_id:flags.1?InputPeer quote_text:flags.2?string quote_entities:flags.3?Vector<MessageEntity> = InputReplyTo;
+            if topMsgId != nil {
+                innerFlags |= 1 << 0
+            } else if monoforumPeerId != nil {
+                innerFlags |= 1 << 5
+            }
+            
             var replyToPeer: Api.InputPeer?
             var discard = false
             if replySubject.messageId.peerId != peerId {
@@ -201,14 +211,17 @@ private func synchronizeChatInputState(transaction: Transaction, postbox: Postbo
             }
             
             if !discard {
-                replyTo = .inputReplyToMessage(flags: innerFlags, replyToMsgId: replySubject.messageId.id, topMsgId: topMsgId, replyToPeerId: replyToPeer, quoteText: quoteText, quoteEntities: quoteEntities, quoteOffset: quoteOffset)
+                replyTo = .inputReplyToMessage(flags: innerFlags, replyToMsgId: replySubject.messageId.id, topMsgId: topMsgId, replyToPeerId: replyToPeer, quoteText: quoteText, quoteEntities: quoteEntities, quoteOffset: quoteOffset, monoforumPeerId: monoforumPeerId)
             }
-        } else if let topMsgId = topMsgId {
+        } else if let topMsgId {
             flags |= 1 << 0
             
             var innerFlags: Int32 = 0
             innerFlags |= 1 << 0
-            replyTo = .inputReplyToMessage(flags: innerFlags, replyToMsgId: topMsgId, topMsgId: topMsgId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil)
+            replyTo = .inputReplyToMessage(flags: innerFlags, replyToMsgId: topMsgId, topMsgId: topMsgId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: nil)
+        } else if let monoforumPeerId {
+            flags |= 1 << 0
+            replyTo = .inputReplyToMonoForum(monoforumPeerId: monoforumPeerId)
         }
         
         return network.request(Api.functions.messages.saveDraft(flags: flags, replyTo: replyTo, peer: inputPeer, message: inputState?.text ?? "", entities: apiEntitiesFromMessageTextEntities(inputState?.entities ?? [], associatedPeers: SimpleDictionary()), media: nil, effect: nil))

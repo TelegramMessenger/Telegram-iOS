@@ -61,8 +61,10 @@ extension ChatControllerImpl {
         
         var canSendPolls = true
         if let peer = self.presentationInterfaceState.renderedPeer?.peer {
-            if let peer = peer as? TelegramUser, peer.botInfo == nil {
-                canSendPolls = false
+            if let peer = peer as? TelegramUser {
+                if peer.botInfo == nil && peer.id != self.context.account.peerId {
+                    canSendPolls = false
+                }
             } else if peer is TelegramSecretChat {
                 canSendPolls = false
             } else if let channel = peer as? TelegramChannel {
@@ -78,7 +80,7 @@ extension ChatControllerImpl {
                 if let value = channel.hasBannedPermission(.banSendText, ignoreDefault: canByPassRestrictions) {
                     banSendText = value
                 }
-                if channel.hasBannedPermission(.banSendPolls, ignoreDefault: canByPassRestrictions) != nil {
+                if channel.hasBannedPermission(.banSendPolls, ignoreDefault: canByPassRestrictions) != nil || channel.isMonoForum {
                     canSendPolls = false
                 }
             } else if let group = peer as? TelegramGroup {
@@ -762,7 +764,7 @@ extension ChatControllerImpl {
                     if let value = channel.hasBannedPermission(.banSendMedia) {
                         bannedSendMedia = value
                     }
-                    if channel.hasBannedPermission(.banSendPolls) != nil {
+                    if channel.hasBannedPermission(.banSendPolls) != nil || channel.isMonoForum {
                         canSendPolls = false
                     }
                 } else if let group = peer as? TelegramGroup {
@@ -850,7 +852,7 @@ extension ChatControllerImpl {
             let controller = legacyAttachmentMenu(
                 context: strongSelf.context,
                 peer: strongSelf.presentationInterfaceState.renderedPeer?.peer,
-                threadTitle: strongSelf.threadInfo?.title, chatLocation: strongSelf.chatLocation,
+                threadTitle: strongSelf.contentData?.state.threadInfo?.title, chatLocation: strongSelf.chatLocation,
                 editMediaOptions: menuEditMediaOptions,
                 addingMedia: editMediaOptions == nil,
                 saveEditedPhotos: settings.storeEditedPhotos,
@@ -1203,14 +1205,14 @@ extension ChatControllerImpl {
             isScheduledMessages = true
         }
         var paidMediaAllowed = false
-        if let cachedData = self.peerView?.cachedData as? CachedChannelData, cachedData.flags.contains(.paidMediaAllowed) {
+        if let cachedData = self.contentData?.state.peerView?.cachedData as? CachedChannelData, cachedData.flags.contains(.paidMediaAllowed) {
             paidMediaAllowed = true
         }
         let controller = MediaPickerScreenImpl(
             context: self.context,
             updatedPresentationData: self.updatedPresentationData,
             peer: (self.presentationInterfaceState.renderedPeer?.peer).flatMap(EnginePeer.init),
-            threadTitle: self.threadInfo?.title,
+            threadTitle: self.contentData?.state.threadInfo?.title,
             chatLocation: self.chatLocation,
             isScheduledMessages: isScheduledMessages, 
             bannedSendPhotos: bannedSendPhotos,
@@ -1369,7 +1371,7 @@ extension ChatControllerImpl {
                 slowModeEnabled = true
             }
             
-            let _ = legacyAssetPicker(context: strongSelf.context, presentationData: strongSelf.presentationData, editingMedia: editingMedia, fileMode: fileMode, peer: peer, threadTitle: strongSelf.threadInfo?.title, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, selectionLimit: selectionLimit).startStandalone(next: { generator in
+            let _ = legacyAssetPicker(context: strongSelf.context, presentationData: strongSelf.presentationData, editingMedia: editingMedia, fileMode: fileMode, peer: peer, threadTitle: strongSelf.contentData?.state.threadInfo?.title, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, selectionLimit: selectionLimit).startStandalone(next: { generator in
                 if let strongSelf = self {
                     let legacyController = LegacyController(presentation: fileMode ? .navigation : .custom, theme: strongSelf.presentationData.theme, initialLayout: strongSelf.validLayout)
                     legacyController.navigationPresentation = .modal
@@ -1893,7 +1895,7 @@ extension ChatControllerImpl {
                 if let asset = result as? PHAsset {
                     subject = .single(.asset(asset))
                 } else if let image = result as? UIImage {
-                    subject = .single(.image(image: image, dimensions: PixelDimensions(image.size), additionalImage: nil, additionalImagePosition: .bottomRight))
+                    subject = .single(.image(image: image, dimensions: PixelDimensions(image.size), additionalImage: nil, additionalImagePosition: .bottomRight, fromCamera: false))
                 } else if let result = result as? Signal<CameraScreenImpl.Result, NoError> {
                     subject = result
                     |> map { value -> MediaEditorScreenImpl.Subject? in
@@ -1901,7 +1903,7 @@ extension ChatControllerImpl {
                         case .pendingImage:
                             return nil
                         case let .image(image):
-                            return .image(image: image.image, dimensions: PixelDimensions(image.image.size), additionalImage: nil, additionalImagePosition: .topLeft)
+                            return .image(image: image.image, dimensions: PixelDimensions(image.image.size), additionalImage: nil, additionalImagePosition: .topLeft, fromCamera: false)
                         default:
                             return nil
                         }

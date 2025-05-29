@@ -22,9 +22,13 @@ fileprivate struct InitialBannedRights {
 
 extension ChatControllerImpl {
     fileprivate func applyAdminUserActionsResult(messageIds: Set<MessageId>, result: AdminUserActionsSheet.Result, initialUserBannedRights: [EnginePeer.Id: InitialBannedRights]) {
-        guard let peerId = self.chatLocation.peerId else {
+        guard let messagesPeerId = self.chatLocation.peerId else {
             return
         }
+        guard let banLocationPeerId = self.presentationInterfaceState.renderedPeer?.chatOrMonoforumMainPeer?.id else {
+            return
+        }
+        
         
         var title: String? = messageIds.count == 1 ? self.presentationData.strings.Chat_AdminAction_ToastMessagesDeletedTitleSingle : self.presentationData.strings.Chat_AdminAction_ToastMessagesDeletedTitleMultiple
         if !result.deleteAllFromPeers.isEmpty {
@@ -66,8 +70,8 @@ extension ChatControllerImpl {
             let _ = self.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forEveryone).startStandalone()
             
             for authorId in result.deleteAllFromPeers {
-                let _ = self.context.engine.messages.deleteAllMessagesWithAuthor(peerId: peerId, authorId: authorId, namespace: Namespaces.Message.Cloud).startStandalone()
-                let _ = self.context.engine.messages.clearAuthorHistory(peerId: peerId, memberId: authorId).startStandalone()
+                let _ = self.context.engine.messages.deleteAllMessagesWithAuthor(peerId: messagesPeerId, authorId: authorId, namespace: Namespaces.Message.Cloud).startStandalone()
+                let _ = self.context.engine.messages.clearAuthorHistory(peerId: messagesPeerId, memberId: authorId).startStandalone()
             }
             
             for authorId in result.reportSpamPeers {
@@ -75,11 +79,11 @@ extension ChatControllerImpl {
             }
             
             for authorId in result.banPeers {
-                let _ = self.context.engine.peers.removePeerMember(peerId: peerId, memberId: authorId).startStandalone()
+                let _ = self.context.engine.peers.removePeerMember(peerId: banLocationPeerId, memberId: authorId).startStandalone()
             }
             
             for (authorId, rights) in result.updateBannedRights {
-                let _ = self.context.engine.peers.updateChannelMemberBannedRights(peerId: peerId, memberId: authorId, rights: rights).startStandalone()
+                let _ = self.context.engine.peers.updateChannelMemberBannedRights(peerId: banLocationPeerId, memberId: authorId, rights: rights).startStandalone()
             }
         }
         
@@ -106,7 +110,7 @@ extension ChatControllerImpl {
                         break
                     case .undo:
                         for (authorId, rights) in initialUserBannedRights {
-                            let _ = self.context.engine.peers.updateChannelMemberBannedRights(peerId: peerId, memberId: authorId, rights: rights.value).startStandalone()
+                            let _ = self.context.engine.peers.updateChannelMemberBannedRights(peerId: banLocationPeerId, memberId: authorId, rights: rights.value).startStandalone()
                         }
                     default:
                         break

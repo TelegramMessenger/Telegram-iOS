@@ -76,6 +76,8 @@ final class AuthorizationSequencePaymentScreenComponent: Component {
         private var productsDisposable: Disposable?
         private var inProgress = false
         
+        private var paymentDisposable = MetaDisposable()
+        
         override init(frame: CGRect) {
             super.init(frame: frame)
                 
@@ -87,11 +89,12 @@ final class AuthorizationSequencePaymentScreenComponent: Component {
         }
         
         deinit {
+            self.paymentDisposable.dispose()
             self.productsDisposable?.dispose()
         }
         
         private func proceed() {
-            guard let component = self.component, let storeProduct = self.products.first(where: { $0.id == component.storeProduct }) else {
+            guard let component = self.component, let storeProduct = self.products.first(where: { $0.id == component.storeProduct }), !self.inProgress else {
                 return
             }
             
@@ -107,10 +110,12 @@ final class AuthorizationSequencePaymentScreenComponent: Component {
                 }
                 let presentationData = component.presentationData
                 if available {
-                    let _ = (component.inAppPurchaseManager.buyProduct(storeProduct, quantity: 1, purpose: purpose)
+                    self.paymentDisposable.set((component.inAppPurchaseManager.buyProduct(storeProduct, quantity: 1, purpose: purpose)
                     |> deliverOnMainQueue).start(next: { [weak self] status in
-                        let _ = status
-                        let _ = self
+                        guard let self else {
+                            return
+                        }
+                        self.inProgress = false
                     }, error: { [weak self] error in
                         guard let self, let controller = self.environment?.controller() else {
                             return
@@ -144,7 +149,7 @@ final class AuthorizationSequencePaymentScreenComponent: Component {
                             //let alertController = textAlertController(context: component.context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
                             //controller.present(alertController, in: .window(.root))
                         }
-                    })
+                    }))
                 } else {
                     self.inProgress = false
                     self.state?.updated(transition: .immediate)

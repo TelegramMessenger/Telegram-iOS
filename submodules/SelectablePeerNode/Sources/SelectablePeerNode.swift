@@ -71,6 +71,12 @@ public final class SelectablePeerNodeTheme {
 }
 
 public final class SelectablePeerNode: ASDisplayNode {
+    public enum StoryMode {
+        case createStory
+        case repostStory
+        case repostMessage
+    }
+    
     private let contextContainer: ContextControllerSourceNode
     private let avatarSelectionNode: ASImageNode
     private let avatarNodeContainer: ASDisplayNode
@@ -176,20 +182,37 @@ public final class SelectablePeerNode: ASDisplayNode {
         )
     }
     
-    public func setupStoryRepost(accountPeerId: EnginePeer.Id, postbox: Postbox, network: Network, theme: PresentationTheme, strings: PresentationStrings, synchronousLoad: Bool, isMessage: Bool) {
+    public func setupStoryRepost(accountPeerId: EnginePeer.Id, postbox: Postbox, network: Network, theme: PresentationTheme, strings: PresentationStrings, synchronousLoad: Bool, storyMode: StoryMode) {
         self.peer = nil
         
-        self.textNode.maximumNumberOfLines = 2
-        self.textNode.attributedText = NSAttributedString(string: isMessage ? strings.Share_RepostToStory : strings.Share_RepostStory, font: textFont, textColor: self.theme.textColor, paragraphAlignment: .center)
-        self.avatarNode.setPeer(accountPeerId: accountPeerId, postbox: postbox, network: network, contentSettings: ContentSettings.default, theme: theme, peer: nil, overrideImage: .repostIcon, emptyColor: self.theme.avatarPlaceholderColor, clipStyle: .round, synchronousLoad: synchronousLoad)
+        let title: String
+        let overrideImage: AvatarNodeImageOverride
+
+        switch storyMode {
+        case .createStory:
+            title = strings.Share_PostToStory
+            overrideImage = .storyIcon
+        case .repostStory:
+            title = strings.Share_RepostStory
+            overrideImage = .repostIcon
+        case .repostMessage:
+            title = strings.Share_RepostToStory
+            overrideImage = .repostIcon
+        }
         
-        self.avatarNode.playRepostAnimation()
+        self.textNode.maximumNumberOfLines = 2
+        self.textNode.attributedText = NSAttributedString(string: title, font: textFont, textColor: self.theme.textColor, paragraphAlignment: .center)
+        self.avatarNode.setPeer(accountPeerId: accountPeerId, postbox: postbox, network: network, contentSettings: ContentSettings.default, theme: theme, peer: nil, overrideImage: overrideImage, emptyColor: self.theme.avatarPlaceholderColor, clipStyle: .round, synchronousLoad: synchronousLoad)
+        
+        if case .repostIcon = overrideImage {
+            self.avatarNode.playRepostAnimation()
+        }
     }
     
     public func setup(accountPeerId: EnginePeer.Id, postbox: Postbox, network: Network, energyUsageSettings: EnergyUsageSettings, contentSettings: ContentSettings, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, resolveInlineStickers: @escaping ([Int64]) -> Signal<[Int64: TelegramMediaFile], NoError>, theme: PresentationTheme, strings: PresentationStrings, peer: EngineRenderedPeer, requiresPremiumForMessaging: Bool, requiresStars: Int64? = nil, customTitle: String? = nil, iconId: Int64? = nil, iconColor: Int32? = nil, online: Bool = false, numberOfLines: Int = 2, synchronousLoad: Bool) {
         let isFirstTime = self.peer == nil
         self.peer = peer
-        guard let mainPeer = peer.chatMainPeer else {
+        guard let mainPeer = peer.chatOrMonoforumMainPeer else {
             return
         }
         
@@ -203,8 +226,10 @@ public final class SelectablePeerNode: ASDisplayNode {
         }
         
         var isForum = false
-        if let peer = peer.chatMainPeer, case let .channel(channel) = peer, channel.flags.contains(.isForum) {
-            isForum = true
+        var isMonoforum = false
+        if let peer = peer.chatMainPeer, case let .channel(channel) = peer {
+            isForum = channel.isForum
+            isMonoforum = channel.isMonoForum
         }
         
         let text: String
@@ -223,7 +248,15 @@ public final class SelectablePeerNode: ASDisplayNode {
         }
         self.textNode.maximumNumberOfLines = numberOfLines
         self.textNode.attributedText = NSAttributedString(string: customTitle ?? text, font: textFont, textColor: self.currentSelected ? self.theme.selectedTextColor : defaultColor, paragraphAlignment: .center)
-        self.avatarNode.setPeer(accountPeerId: accountPeerId, postbox: postbox, network: network, contentSettings: contentSettings, theme: theme, peer: mainPeer, overrideImage: overrideImage, emptyColor: self.theme.avatarPlaceholderColor, clipStyle: isForum ? .roundedRect : .round, synchronousLoad: synchronousLoad)
+        let clipStyle: AvatarNodeClipStyle
+        if isMonoforum {
+            clipStyle = .bubble
+        } else if isForum {
+            clipStyle = .roundedRect
+        } else {
+            clipStyle = .round
+        }
+        self.avatarNode.setPeer(accountPeerId: accountPeerId, postbox: postbox, network: network, contentSettings: contentSettings, theme: theme, peer: mainPeer, overrideImage: overrideImage, emptyColor: self.theme.avatarPlaceholderColor, clipStyle: clipStyle, synchronousLoad: synchronousLoad)
         
         if let requiresStars {
             let avatarBadgeOutline: UIImageView
@@ -375,7 +408,7 @@ public final class SelectablePeerNode: ASDisplayNode {
             }
             
             var isForum = false
-            if let peer = self.peer?.chatMainPeer, case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+            if let peer = self.peer?.chatMainPeer, case let .channel(channel) = peer, channel.isForumOrMonoForum {
                 isForum = true
             }
             

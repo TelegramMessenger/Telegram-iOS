@@ -72,8 +72,6 @@ private func fetchWebpage(account: Account, messageId: MessageId, threadId: Int6
                 targetMessageNamespace = Namespaces.Message.ScheduledCloud
             } else if Namespaces.Message.allQuickReply.contains(messageId.namespace) {
                 targetMessageNamespace = Namespaces.Message.QuickReplyCloud
-            } else if Namespaces.Message.allSuggestedPost.contains(messageId.namespace) {
-                targetMessageNamespace = Namespaces.Message.SuggestedPostCloud
             } else {
                 targetMessageNamespace = Namespaces.Message.Cloud
             }
@@ -125,7 +123,7 @@ private func fetchWebpage(account: Account, messageId: MessageId, threadId: Int6
                     let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                     
                     for message in messages {
-                        if let storeMessage = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForum, namespace: targetMessageNamespace) {
+                        if let storeMessage = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForumOrMonoForum, namespace: targetMessageNamespace) {
                             var webpage: TelegramMediaWebpage?
                             for media in storeMessage.media {
                                 if let media = media as? TelegramMediaWebpage {
@@ -872,7 +870,7 @@ public final class AccountViewTracker {
                                         }
                                         for update in updateList {
                                             switch update {
-                                            case let .updateMessageReactions(_, peer, msgId, _, reactions):
+                                            case let .updateMessageReactions(_, peer, msgId, _, _, reactions):
                                                 transaction.updateMessage(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: msgId), update: { currentMessage in
                                                     var updatedReactions = ReactionsMessageAttribute(apiReactions: reactions)
                                                     
@@ -1073,10 +1071,6 @@ public final class AccountViewTracker {
                                 } else {
                                     fetchSignal = .never()
                                 }
-                            } else if let messageId = messageIds.first, messageId.namespace == Namespaces.Message.SuggestedPostCloud {
-                                //TODO:release
-                                assertionFailure()
-                                fetchSignal = .never()
                             } else if peerIdAndThreadId.peerId.namespace == Namespaces.Peer.CloudUser || peerIdAndThreadId.peerId.namespace == Namespaces.Peer.CloudGroup {
                                 fetchSignal = account.network.request(Api.functions.messages.getMessages(id: messageIds.map { Api.InputMessage.inputMessageID(id: $0.id) }))
                             } else if peerIdAndThreadId.peerId.namespace == Namespaces.Peer.CloudChannel {
@@ -1110,7 +1104,7 @@ public final class AccountViewTracker {
                                     updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                                     
                                     for message in messages {
-                                        guard let storeMessage = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: topPeer.isForum) else {
+                                        guard let storeMessage = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: topPeer.isForumOrMonoForum) else {
                                             continue
                                         }
                                         guard case let .Id(id) = storeMessage.id else {
@@ -1695,7 +1689,7 @@ public final class AccountViewTracker {
                     }
                     
                     transaction.replaceMessageTagSummary(peerId: peerId, threadId: threadId, tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud, customTag: nil, count: 0, maxId: maxId)
-                    addSynchronizeMarkAllUnseenReactionsOperation(transaction: transaction, peerId: peerId, maxId: summary.range.maxId)
+                    addSynchronizeMarkAllUnseenReactionsOperation(transaction: transaction, peerId: peerId, maxId: summary.range.maxId, threadId: threadId)
                 }
                 
                 return ids
@@ -2126,51 +2120,27 @@ public final class AccountViewTracker {
         }
         return signal
     }
-
-    public func postSuggestionsViewForLocation(peerId: EnginePeer.Id, additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
-        guard let account = self.account else {
-            return .never()
-        }
-        let chatLocation: ChatLocationInput = .peer(peerId: peerId, threadId: nil)
-        let signal = account.postbox.aroundMessageHistoryViewForLocation(chatLocation, anchor: .upperBound, ignoreMessagesInTimestampRange: nil, ignoreMessageIds: Set(), count: 200, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tag: nil, appendMessagesFromTheSameGroup: false, namespaces: .just(Namespaces.Message.allSuggestedPost), orderStatistics: [], additionalData: additionalData)
-        return withState(signal, { [weak self] () -> Int32 in
-            if let strongSelf = self {
-                return OSAtomicIncrement32(&strongSelf.nextViewId)
-            } else {
-                return -1
-            }
-        }, next: { [weak self] next, viewId in
-            if let strongSelf = self {
-                strongSelf.queue.async {
-                    let (messageIds, localWebpages) = pendingWebpages(entries: next.0.entries)
-                    strongSelf.updatePendingWebpages(viewId: viewId, threadId: nil, messageIds: messageIds, localWebpages: localWebpages)
-                    strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: next.0, location: chatLocation)
-                }
-            }
-        }, disposed: { [weak self] viewId in
-            if let strongSelf = self {
-                strongSelf.queue.async {
-                    strongSelf.updatePendingWebpages(viewId: viewId, threadId: nil, messageIds: [], localWebpages: [:])
-                    strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: nil, location: nil)
-                }
-            }
-        })
-    }
     
     public func aroundMessageOfInterestHistoryViewForLocation(_ chatLocation: ChatLocationInput, ignoreMessagesInTimestampRange: ClosedRange<Int32>? = nil, ignoreMessageIds: Set<MessageId> = Set(), count: Int, tag: HistoryViewInputTag? = nil, appendMessagesFromTheSameGroup: Bool = false, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = [], useRootInterfaceStateForThread: Bool = false) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         if let account = self.account {
             let signal: Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError>
             if let peerId = chatLocation.peerId, let threadId = chatLocation.threadId, tag == nil {
-                signal = account.postbox.transaction { transaction -> (MessageHistoryThreadData?, MessageIndex?) in
+                signal = account.postbox.transaction { transaction -> (Peer?, MessageHistoryThreadData?, MessageIndex?) in
                     let interfaceState = transaction.getPeerChatThreadInterfaceState(peerId, threadId: threadId)
                     
                     return (
+                        transaction.getPeer(peerId),
                         transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self),
                         interfaceState?.historyScrollMessageIndex
                     )
                 }
-                |> mapToSignal { threadInfo, scrollRestorationIndex -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> in
+                |> mapToSignal { peer, threadInfo, scrollRestorationIndex -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> in
+                    var isSimpleThread = false
                     if peerId == account.peerId {
+                        isSimpleThread = true
+                    }
+                    
+                    if isSimpleThread {
                         let anchor: HistoryViewInputAnchor
                         if let scrollRestorationIndex {
                             anchor = .index(scrollRestorationIndex)

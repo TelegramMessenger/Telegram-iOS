@@ -72,6 +72,7 @@ public final class MediaScrubberComponent: Component {
     public enum Style {
         case editor
         case videoMessage
+        case voiceMessage
         case cover
     }
     
@@ -519,7 +520,7 @@ public final class MediaScrubberComponent: Component {
             switch component.style {
             case .editor:
                 self.cursorView.isHidden = false
-            case .videoMessage:
+            case .videoMessage, .voiceMessage:
                 self.cursorView.isHidden = true
             case .cover:
                 self.cursorView.isHidden = false
@@ -748,7 +749,7 @@ public final class MediaScrubberComponent: Component {
             switch component.style {
             case .editor, .cover:
                 fullTrackHeight = trackHeight
-            case .videoMessage:
+            case .videoMessage, .voiceMessage:
                 fullTrackHeight = 33.0
             }
             let scrubberSize = CGSize(width: availableSize.width, height: fullTrackHeight)
@@ -1207,7 +1208,7 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
             fullTrackHeight = trackHeight
             framesCornerRadius = 9.0
             self.videoTransparentFramesContainer.alpha = 0.35
-        case .videoMessage:
+        case .videoMessage, .voiceMessage:
             fullTrackHeight = 33.0
             framesCornerRadius = fullTrackHeight / 2.0
             self.videoTransparentFramesContainer.alpha = 0.5
@@ -1620,7 +1621,7 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
 }
 
 
-private class TrimView: UIView {
+public class TrimView: UIView {
     fileprivate let leftHandleView = HandleView()
     fileprivate let rightHandleView = HandleView()
     private let borderView = UIImageView()
@@ -1631,12 +1632,12 @@ private class TrimView: UIView {
     
     fileprivate var isPanningTrimHandle = false
     
-    var isHollow = false
+    public var isHollow = false
     
-    var trimUpdated: (Double, Double, Bool, Bool) -> Void = { _, _, _, _ in }
+    public var trimUpdated: (Double, Double, Bool, Bool) -> Void = { _, _, _, _ in }
     var updated: (ComponentTransition) -> Void = { _ in }
     
-    override init(frame: CGRect) {
+    public override init(frame: CGRect) {
         super.init(frame: .zero)
         
         self.zoneView.image = UIImage()
@@ -1671,20 +1672,43 @@ private class TrimView: UIView {
         self.rightHandleView.addSubview(self.rightCapsuleView)
         self.addSubview(self.borderView)
         
-        self.zoneView.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.handleZoneHandlePan(_:))))
-        self.leftHandleView.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.handleLeftHandlePan(_:))))
-        self.rightHandleView.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.handleRightHandlePan(_:))))
+        let zoneHandlePanGesture = UILongPressGestureRecognizer(target: self, action: #selector(self.handleZoneHandlePan(_:)))
+        zoneHandlePanGesture.minimumPressDuration = 0.0
+        zoneHandlePanGesture.allowableMovement = .infinity
+        
+        let leftHandlePanGesture = UILongPressGestureRecognizer(target: self, action: #selector(self.handleLeftHandlePan(_:)))
+        leftHandlePanGesture.minimumPressDuration = 0.0
+        leftHandlePanGesture.allowableMovement = .infinity
+        
+        let rightHandlePanGesture = UILongPressGestureRecognizer(target: self, action: #selector(self.handleRightHandlePan(_:)))
+        rightHandlePanGesture.minimumPressDuration = 0.0
+        rightHandlePanGesture.allowableMovement = .infinity
+        
+        self.zoneView.addGestureRecognizer(zoneHandlePanGesture)
+        self.leftHandleView.addGestureRecognizer(leftHandlePanGesture)
+        self.rightHandleView.addGestureRecognizer(rightHandlePanGesture)
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    @objc private func handleZoneHandlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
+    private var panStartLocation: CGPoint?
+    
+    @objc private func handleZoneHandlePan(_ gestureRecognizer: UILongPressGestureRecognizer) {
         guard let params = self.params else {
             return
         }
-        let translation = gestureRecognizer.translation(in: self)
+        
+        let location = gestureRecognizer.location(in: self)
+        if case .began = gestureRecognizer.state {
+            self.panStartLocation = location
+        }
+        
+        let translation = CGPoint(
+            x: location.x - (self.panStartLocation?.x ?? 0.0),
+            y: location.y - (self.panStartLocation?.y ?? 0.0)
+        )
         
         let start = handleWidth / 2.0
         let end = self.frame.width - handleWidth / 2.0
@@ -1705,6 +1729,7 @@ private class TrimView: UIView {
                 transition = .easeInOut(duration: 0.25)
             }
         case .ended, .cancelled:
+            self.panStartLocation = nil
             self.isPanningTrimHandle = false
             self.trimUpdated(startValue, endValue, false, true)
             transition = .easeInOut(duration: 0.25)
@@ -1712,15 +1737,15 @@ private class TrimView: UIView {
             break
         }
         
-        gestureRecognizer.setTranslation(.zero, in: self)
         self.updated(transition)
     }
     
-    @objc private func handleLeftHandlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
+    @objc private func handleLeftHandlePan(_ gestureRecognizer: UILongPressGestureRecognizer) {
         guard let params = self.params else {
             return
         }
         let location = gestureRecognizer.location(in: self)
+        
         let start = handleWidth / 2.0
         let end = params.scrubberSize.width - handleWidth / 2.0
         let length = end - start
@@ -1745,6 +1770,7 @@ private class TrimView: UIView {
                 transition = .easeInOut(duration: 0.25)
             }
         case .ended, .cancelled:
+            self.panStartLocation = nil
             self.isPanningTrimHandle = false
             self.trimUpdated(startValue, endValue, false, true)
             transition = .easeInOut(duration: 0.25)
@@ -1754,7 +1780,7 @@ private class TrimView: UIView {
         self.updated(transition)
     }
     
-    @objc private func handleRightHandlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
+    @objc private func handleRightHandlePan(_ gestureRecognizer: UILongPressGestureRecognizer) {
         guard let params = self.params else {
             return
         }
@@ -1783,6 +1809,7 @@ private class TrimView: UIView {
                 transition = .easeInOut(duration: 0.25)
             }
         case .ended, .cancelled:
+            self.panStartLocation = nil
             self.isPanningTrimHandle = false
             self.trimUpdated(startValue, endValue, true, true)
             transition = .easeInOut(duration: 0.25)
@@ -1792,7 +1819,7 @@ private class TrimView: UIView {
         self.updated(transition)
     }
     
-    var params: (
+    private var params: (
         scrubberSize: CGSize,
         duration: Double,
         startPosition: Double,
@@ -1802,7 +1829,7 @@ private class TrimView: UIView {
         maxDuration: Double
     )?
     
-    func update(
+    public func update(
         style: MediaScrubberComponent.Style,
         theme: PresentationTheme,
         visualInsets: UIEdgeInsets,
@@ -1823,6 +1850,7 @@ private class TrimView: UIView {
         let capsuleOffset: CGFloat
         let color: UIColor
         let highlightColor: UIColor
+        var borderColor: UIColor
         
         switch style {
         case .editor, .cover:
@@ -1883,12 +1911,50 @@ private class TrimView: UIView {
                 self.leftCapsuleView.backgroundColor = .white
                 self.rightCapsuleView.backgroundColor = .white
             }
+            
+        case .voiceMessage:
+            effectiveHandleWidth = 16.0
+            fullTrackHeight = 33.0
+            capsuleOffset = 8.0
+            color = theme.chat.inputPanel.panelControlAccentColor
+            highlightColor = theme.chat.inputPanel.panelControlAccentColor
+        
+            self.zoneView.backgroundColor = UIColor(white: 1.0, alpha: 0.4)
+            
+            if isFirstTime {
+                self.borderView.image = generateImage(CGSize(width: 3.0, height: fullTrackHeight), rotatedContext: { size, context in
+                    context.clear(CGRect(origin: .zero, size: size))
+                    context.setFillColor(UIColor.white.cgColor)
+                    context.fill(CGRect(origin: .zero, size: CGSize(width: 1.0, height: size.height)))
+                    context.fill(CGRect(origin: CGPoint(x: size.width - 1.0, y: 0.0), size: CGSize(width: 1.0, height: size.height)))
+                })?.withRenderingMode(.alwaysTemplate).resizableImage(withCapInsets: UIEdgeInsets(top: 0.0, left: 1.0, bottom: 0.0, right: 1.0))
+                              
+                let handleImage = generateImage(CGSize(width: effectiveHandleWidth, height: fullTrackHeight), rotatedContext: { size, context in
+                    context.clear(CGRect(origin: .zero, size: size))
+                    context.setFillColor(UIColor.white.cgColor)
+                    
+                    let path = UIBezierPath(roundedRect: CGRect(origin: .zero, size: CGSize(width: size.width * 2.0, height: size.height)), cornerRadius: 16.5)
+                    context.addPath(path.cgPath)
+                    context.fillPath()
+                })?.withRenderingMode(.alwaysTemplate)
+                
+                self.leftHandleView.image = handleImage
+                self.rightHandleView.image = handleImage
+                
+                self.leftCapsuleView.backgroundColor = .white
+                self.rightCapsuleView.backgroundColor = .white
+            }
         }
         
         let trimColor = self.isPanningTrimHandle ? highlightColor : color
+        borderColor = trimColor
+        if case .voiceMessage = style {
+            borderColor = theme.chat.inputPanel.panelBackgroundColor
+        }
+        
         transition.setTintColor(view: self.leftHandleView, color: trimColor)
         transition.setTintColor(view: self.rightHandleView, color: trimColor)
-        transition.setTintColor(view: self.borderView, color: trimColor)
+        transition.setTintColor(view: self.borderView, color: borderColor)
         
         let totalWidth = scrubberSize.width
         let totalRange = totalWidth - effectiveHandleWidth
@@ -1919,7 +1985,7 @@ private class TrimView: UIView {
         return (leftHandleFrame, rightHandleFrame)
     }
     
-    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+    public override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
         let leftHandleFrame = self.leftHandleView.frame.insetBy(dx: -8.0, dy: -9.0)
         let rightHandleFrame = self.rightHandleView.frame.insetBy(dx: -8.0, dy: -9.0)
         let areaFrame = CGRect(x: leftHandleFrame.minX, y: leftHandleFrame.minY, width: rightHandleFrame.maxX - leftHandleFrame.minX, height: rightHandleFrame.maxY - rightHandleFrame.minY)

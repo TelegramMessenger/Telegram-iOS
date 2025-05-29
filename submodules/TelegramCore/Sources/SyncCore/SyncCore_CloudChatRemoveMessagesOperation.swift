@@ -97,7 +97,6 @@ public enum CloudChatClearHistoryType: Int32 {
     case forEveryone
     case scheduledMessages
     case quickReplyMessages
-    case suggestedPostMessages
 }
 
 public enum InteractiveHistoryClearingType: Int32 {

@@ -244,8 +244,8 @@ all_sources = arch_specific_sources + [
 cc_library(
     name = "openh264",
     srcs = all_sources,
-    hdrs = glob([
-    ]),
+    hdrs = [
+    ],
     textual_hdrs = arch_specific_textual_hdrs,
     includes = [
     ],

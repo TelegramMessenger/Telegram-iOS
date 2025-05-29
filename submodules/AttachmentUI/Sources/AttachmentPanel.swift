@@ -1085,7 +1085,6 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
                 })
                 strongSelf.present(controller)
             }
-        }, reportPeerIrrelevantGeoLocation: {
         }, displaySlowmodeTooltip: { _, _ in
         }, displaySendMessageOptions: { [weak self] node, gesture in
             guard let strongSelf = self, let textInputPanelNode = strongSelf.textInputPanelNode else {
@@ -1192,7 +1191,8 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
                             canMakePaidContent: canMakePaidContent,
                             currentPrice: currentPrice,
                             hasTimers: hasTimers,
-                            sendPaidMessageStars: strongSelf.presentationInterfaceState.sendPaidMessageStars
+                            sendPaidMessageStars: strongSelf.presentationInterfaceState.sendPaidMessageStars,
+                            isMonoforum: strongSelf.presentationInterfaceState.renderedPeer?.peer?.isMonoForum ?? false
                         )),
                         hasEntityKeyboard: hasEntityKeyboard,
                         gesture: gesture,
@@ -1265,8 +1265,11 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
         }, openStarsPurchase: { _ in
         }, openMessagePayment: {
         }, openBoostToUnrestrict: {
-        }, updateVideoTrimRange: { _, _, _, _ in
+        }, updateRecordingTrimRange: { _, _, _, _ in
+        }, dismissAllTooltips: {  
         }, updateHistoryFilter: { _ in
+        }, updateChatLocationThread: { _, _ in
+        }, toggleChatSidebarMode: {
         }, updateDisplayHistoryFilterAsList: { _ in
         }, requestLayout: { _ in
         }, chatController: {
@@ -1295,7 +1298,11 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
                 if let data = view.cachedData as? CachedUserData {
                     return data.sendPaidMessageStars
                 } else if let channel = peerViewMainPeer(view) as? TelegramChannel {
-                    return channel.sendPaidMessageStars
+                    if channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = view.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
+                        return nil
+                    } else {
+                        return channel.sendPaidMessageStars
+                    }
                 } else {
                     return nil
                 }

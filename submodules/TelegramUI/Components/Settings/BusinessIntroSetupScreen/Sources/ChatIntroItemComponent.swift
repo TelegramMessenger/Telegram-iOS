@@ -145,6 +145,8 @@ final class ChatIntroItemComponent: Component {
                 backgroundNode: backgroundNode,
                 size: size,
                 insets: UIEdgeInsets(),
+                leftInset: 0.0,
+                rightInset: 0.0,
                 transition: .immediate
             )
             

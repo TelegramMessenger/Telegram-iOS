@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import AVFoundation
 import AsyncDisplayKit
 import TelegramCore
 import Postbox
@@ -35,6 +36,7 @@ import WallpaperGalleryScreen
 import TelegramStringFormatting
 import TextFormat
 import BrowserUI
+import MediaEditorScreen
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {
@@ -218,7 +220,7 @@ func openResolvedUrlImpl(
             }
         case let .replyThread(messageId):
             if let navigationController = navigationController {
-                let _ = context.sharedContext.navigateToForumThread(context: context, peerId: messageId.peerId, threadId: Int64(messageId.id), messageId: nil, navigationController: navigationController, activateInput: nil, scrollToEndIfExists: false, keepStack: .always).startStandalone()
+                let _ = context.sharedContext.navigateToForumThread(context: context, peerId: messageId.peerId, threadId: Int64(messageId.id), messageId: nil, navigationController: navigationController, activateInput: nil, scrollToEndIfExists: false, keepStack: .always, animated: true).startStandalone()
             }
         case let .stickerPack(name, _):
             dismissInput()
@@ -300,7 +302,7 @@ func openResolvedUrlImpl(
                             if let photoRepresentation = invite.photoRepresentation {
                                 photo.append(photoRepresentation)
                             }
-                            let channel = TelegramChannel(id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(0)), accessHash: .genericPublic(0), title: invite.title, username: nil, photo: photo, creationDate: 0, version: 0, participationStatus: .left, info: .broadcast(TelegramChannelBroadcastInfo(flags: [])), flags: [], restrictionInfo: nil, adminRights: nil, bannedRights: nil, defaultBannedRights: nil, usernames: [], storiesHidden: nil, nameColor: invite.nameColor, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, emojiStatus: nil, approximateBoostLevel: nil, subscriptionUntilDate: nil, verificationIconFileId: nil, sendPaidMessageStars: nil)
+                            let channel = TelegramChannel(id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(0)), accessHash: .genericPublic(0), title: invite.title, username: nil, photo: photo, creationDate: 0, version: 0, participationStatus: .left, info: .broadcast(TelegramChannelBroadcastInfo(flags: [])), flags: [], restrictionInfo: nil, adminRights: nil, bannedRights: nil, defaultBannedRights: nil, usernames: [], storiesHidden: nil, nameColor: invite.nameColor, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, emojiStatus: nil, approximateBoostLevel: nil, subscriptionUntilDate: nil, verificationIconFileId: nil, sendPaidMessageStars: nil, linkedMonoforumId: nil)
                             let invoice = TelegramMediaInvoice(title: "", description: "", photo: nil, receiptMessageId: nil, currency: "XTR", totalAmount: subscriptionPricing.amount.value, startParam: "", extendedMedia: nil, subscriptionPeriod: nil, flags: [], version: 0)
                             
                             inputData.set(.single(BotCheckoutController.InputData(
@@ -865,6 +867,118 @@ func openResolvedUrlImpl(
                     present(controller, nil)
                 }
             }
+        case let .shareStory(sessionId):
+            dismissInput()
+        
+            let rootPath = context.sharedContext.applicationBindings.containerPath + "/telegram-data"
+            let storiesPath = rootPath + "/share/stories/\(sessionId)"
+        
+            var filePaths: [String] = []
+            do {
+                let directoryContents = try FileManager.default.contentsOfDirectory(atPath: storiesPath)
+                
+                for item in directoryContents {
+                    let fullPath = storiesPath + "/" + item
+                    
+                    var isDirectory: ObjCBool = false
+                    if FileManager.default.fileExists(atPath: fullPath, isDirectory: &isDirectory) && !isDirectory.boolValue {
+                        filePaths.append(fullPath)
+                    }
+                }
+                filePaths.sort { lhs, rhs in
+                    let lhsName = ((lhs as NSString).lastPathComponent as NSString).deletingPathExtension
+                    let rhsName = ((rhs as NSString).lastPathComponent as NSString).deletingPathExtension
+                    if let lhsValue = Int(lhsName), let rhsValue = Int(rhsName) {
+                        return lhsValue < rhsValue
+                    }
+                    return lhsName < rhsName
+                }
+            } catch {
+            }
+        
+            func subject(for path: String) -> MediaEditorScreenImpl.Subject? {
+                if path.hasSuffix(".jpg") {
+                    if let image = UIImage(contentsOfFile: path)?.fixedOrientation() {
+                        return .image(image: image, dimensions: PixelDimensions(image.size), additionalImage: nil, additionalImagePosition: .topLeft, fromCamera: false)
+                    }
+                } else {
+                    let asset = AVURLAsset(url: URL(fileURLWithPath: path))
+                    var dimensions = PixelDimensions(width: 1080, height: 1920)
+                    if let videoTrack = asset.tracks(withMediaType: .video).first {
+                        dimensions = PixelDimensions(videoTrack.naturalSize)
+                    }
+                    return .video(videoPath: path, thumbnail: nil, mirror: false, additionalVideoPath: nil, additionalThumbnail: nil, dimensions: dimensions, duration: asset.duration.seconds, videoPositionChanges: [], additionalVideoPosition: .bottomLeft, fromCamera: false)
+                }
+                return nil
+            }
+    
+            var source: Any?
+            if filePaths.count > 1 {
+                var subjects: [MediaEditorScreenImpl.Subject] = []
+                for path in filePaths {
+                    if let subject = subject(for: path) {
+                        subjects.append(subject)
+                    }
+                }
+                source = subjects
+            } else if let path = filePaths.first {
+                if let subject = subject(for: path) {
+                    source = subject
+                }
+            }
+        
+            if let navigationController = context.sharedContext.mainWindow?.viewController as? NavigationController {
+                for controller in navigationController.overlayControllers {
+                    controller.dismiss()
+                }
+                for controller in navigationController.globalOverlayControllers {
+                    controller.dismiss()
+                }
+            }
+        
+            let _ = (context.engine.messages.checkStoriesUploadAvailability(target: .myStories)
+            |> deliverOnMainQueue).start(next: { availability in
+                if case let .available(remainingCount) = availability {
+                    let controller = context.sharedContext.makeStoryMediaEditorScreen(context: context, source: source, text: nil, link: nil, remainingCount: remainingCount, completion: { results, externalState, commit in
+                        let target: Stories.PendingTarget = results.first!.target
+                        externalState.storyTarget = target
+                        
+                        if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
+                            rootController.popToRoot(animated: false)
+                            rootController.proceedWithStoryUpload(target: target, results: results, existingMedia: nil, forwardInfo: nil, externalState: externalState, commit: commit)
+                        }
+                    })
+                    if let navigationController {
+                        navigationController.pushViewController(controller)
+                    }
+                } else {
+                    let subject: PremiumLimitSubject
+                    switch availability {
+                    case .expiringLimit:
+                        subject = .expiringStories
+                    case .weeklyLimit:
+                        subject = .storiesWeekly
+                    case .monthlyLimit:
+                        subject = .storiesMonthly
+                    default:
+                        subject = .expiringStories
+                    }
+                    var replaceImpl: ((ViewController) -> Void)?
+                    let controller = context.sharedContext.makePremiumLimitController(context: context, subject: subject, count: 10, forceDark: false, cancel: {
+                    }, action: {
+                        let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories, forceDark: true, dismissed: {
+                        })
+                        replaceImpl?(controller)
+                        return true
+                    })
+                    replaceImpl = { [weak controller] c in
+                        controller?.replace(with: c)
+                    }
+                    if let navigationController {
+                        navigationController.pushViewController(controller)
+                    }
+                }
+            })
         case let .startAttach(peerId, payload, choose):
             let presentError: (String) -> Void = { errorText in
                 present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: errorText, timeout: nil, customUndoText: nil), elevatedLayout: true, animateInAsReplacement: false, action: { _ in

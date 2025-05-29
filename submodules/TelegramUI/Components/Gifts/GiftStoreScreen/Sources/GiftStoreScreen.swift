@@ -98,6 +98,8 @@ final class GiftStoreScreenComponent: Component {
         private var initialCount: Int32?
         private var showLoading = true
         
+        private var selectedFilterId: AnyHashable?
+        
         private var component: GiftStoreScreenComponent?
         private(set) weak var state: State?
         private var environment: EnvironmentType?
@@ -502,6 +504,13 @@ final class GiftStoreScreenComponent: Component {
             })))
             
             let contextController = ContextController(presentationData: presentationData, source: .reference(GiftStoreReferenceContentSource(controller: controller, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
+            contextController.dismissed = { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.selectedFilterId = nil
+                self.state?.updated()
+            }
             controller.presentInGlobalOverlay(contextController)
         }
         
@@ -603,6 +612,13 @@ final class GiftStoreScreenComponent: Component {
                 items: .single(ContextController.Items(content: .list(items))),
                 gesture: nil
             )
+            contextController.dismissed = { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.selectedFilterId = nil
+                self.state?.updated()
+            }
             controller.presentInGlobalOverlay(contextController)
         }
         
@@ -704,6 +720,13 @@ final class GiftStoreScreenComponent: Component {
                 items: .single(ContextController.Items(content: .list(items))),
                 gesture: nil
             )
+            contextController.dismissed = { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.selectedFilterId = nil
+                self.state?.updated()
+            }
             controller.presentInGlobalOverlay(contextController)
         }
         
@@ -805,6 +828,13 @@ final class GiftStoreScreenComponent: Component {
                 items: .single(ContextController.Items(content: .list(items))),
                 gesture: nil
             )
+            contextController.dismissed = { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.selectedFilterId = nil
+                self.state?.updated()
+            }
             controller.presentInGlobalOverlay(contextController)
         }
         
@@ -996,29 +1026,43 @@ final class GiftStoreScreenComponent: Component {
             let optionWidth = (availableSize.width - sideInset * 2.0 - optionSpacing * 2.0) / 3.0
                          
             var sortingTitle = environment.strings.Gift_Store_Sort_Date
-            var sortingIcon: String = "Peer Info/SortDate"
+            var sortingIcon: String = "GiftFilterDate"
+            var sortingIndex: Int = 0
             if let sorting = self.state?.starGiftsState?.sorting {
                 switch sorting {
-                case .date:
-                    sortingTitle = environment.strings.Gift_Store_Sort_Date
-                    sortingIcon = "Peer Info/SortDate"
                 case .value:
                     sortingTitle = environment.strings.Gift_Store_Sort_Price
-                    sortingIcon = "Peer Info/SortValue"
+                    sortingIcon = "GiftFilterPrice"
+                    sortingIndex = 0
+                case .date:
+                    sortingTitle = environment.strings.Gift_Store_Sort_Date
+                    sortingIcon = "GiftFilterDate"
+                    sortingIndex = 1
                 case .number:
                     sortingTitle = environment.strings.Gift_Store_Sort_Number
-                    sortingIcon = "Peer Info/SortNumber"
+                    sortingIcon = "GiftFilterNumber"
+                    sortingIndex = 2
                 }
+            }
+            
+            enum FilterItemId: Int32 {
+                case sort
+                case model
+                case backdrop
+                case symbol
             }
             
             var filterItems: [FilterSelectorComponent.Item] = []
             filterItems.append(FilterSelectorComponent.Item(
-                id: AnyHashable(0),
+                id: AnyHashable(FilterItemId.sort),
+                index: sortingIndex,
                 iconName: sortingIcon,
                 title: sortingTitle,
                 action: { [weak self] view in
                     if let self {
+                        self.selectedFilterId = AnyHashable(FilterItemId.sort)
                         self.openSortContextMenu(sourceView: view)
+                        self.state?.updated()
                     }
                 }
             ))
@@ -1026,19 +1070,18 @@ final class GiftStoreScreenComponent: Component {
             var modelTitle = environment.strings.Gift_Store_Filter_Model
             var backdropTitle = environment.strings.Gift_Store_Filter_Backdrop
             var symbolTitle = environment.strings.Gift_Store_Filter_Symbol
+            var modelCount: Int32 = 0
+            var backdropCount: Int32 = 0
+            var symbolCount: Int32 = 0
             if let filterAttributes = self.state?.starGiftsState?.filterAttributes {
-                var modelCount: Int32 = 0
-                var backdropCount: Int32 = 0
-                var symbolCount: Int32 = 0
-                
                 for attribute in filterAttributes {
                     switch attribute {
                     case .model:
                         modelCount += 1
-                    case .pattern:
-                        symbolCount += 1
                     case .backdrop:
                         backdropCount += 1
+                    case .pattern:
+                        symbolCount += 1
                     }
                 }
                 
@@ -1054,29 +1097,38 @@ final class GiftStoreScreenComponent: Component {
             }
             
             filterItems.append(FilterSelectorComponent.Item(
-                id: AnyHashable(1),
+                id: AnyHashable(FilterItemId.model),
+                index: Int(modelCount),
                 title: modelTitle,
                 action: { [weak self] view in
                     if let self {
+                        self.selectedFilterId = AnyHashable(FilterItemId.model)
                         self.openModelContextMenu(sourceView: view)
+                        self.state?.updated()
                     }
                 }
             ))
             filterItems.append(FilterSelectorComponent.Item(
-                id: AnyHashable(2),
+                id: AnyHashable(FilterItemId.backdrop),
+                index: Int(backdropCount),
                 title: backdropTitle,
                 action: { [weak self] view in
                     if let self {
+                        self.selectedFilterId = AnyHashable(FilterItemId.backdrop)
                         self.openBackdropContextMenu(sourceView: view)
+                        self.state?.updated()
                     }
                 }
             ))
             filterItems.append(FilterSelectorComponent.Item(
-                id: AnyHashable(3),
+                id: AnyHashable(FilterItemId.symbol),
+                index: Int(symbolCount),
                 title: symbolTitle,
                 action: { [weak self] view in
                     if let self {
+                        self.selectedFilterId = AnyHashable(FilterItemId.symbol)
                         self.openSymbolContextMenu(sourceView: view)
+                        self.state?.updated()
                     }
                 }
             ))
@@ -1092,7 +1144,8 @@ final class GiftStoreScreenComponent: Component {
                         foreground: theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.65),
                         background: theme.list.itemSecondaryTextColor.mixedWith(theme.list.blocksBackgroundColor, alpha: 0.85)
                     ),
-                    items: filterItems
+                    items: filterItems,
+                    selectedItemId: self.selectedFilterId
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - 10.0 * 2.0, height: 50.0)
@@ -1193,8 +1246,17 @@ final class GiftStoreScreenComponent: Component {
                 guard let self else {
                     return
                 }
+                let previousFilterAttributes = self.starGiftsState?.filterAttributes
+                let previousSorting = self.starGiftsState?.sorting
                 self.starGiftsState = state
-                self.updated()
+                
+                var transition: ComponentTransition = .immediate
+                if let previousFilterAttributes, previousFilterAttributes != state.filterAttributes {
+                    transition = .easeInOut(duration: 0.25)
+                } else if let previousSorting, previousSorting != state.sorting {
+                    transition = .easeInOut(duration: 0.25)
+                }
+                self.updated(transition: transition)
             })
         }
         

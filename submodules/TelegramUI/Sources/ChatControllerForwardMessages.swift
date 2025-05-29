@@ -100,20 +100,25 @@ extension ChatControllerImpl {
                 let _ = (context.engine.data.get(
                     EngineDataMap(
                         peerIds.map(TelegramEngine.EngineData.Item.Peer.SendPaidMessageStars.init(id:))
+                    ),
+                    EngineDataList(
+                        peerIds.map(TelegramEngine.EngineData.Item.Peer.RenderedPeer.init(id:))
                     )
                 )
-                |> deliverOnMainQueue).start(next: { [weak self, weak controller] sendPaidMessageStars in
+                |> deliverOnMainQueue).start(next: { [weak self, weak controller] sendPaidMessageStars, renderedPeers in
                     guard let strongSelf = self else {
                         return
                     }
+                    let renderedPeers = renderedPeers.compactMap({ $0 })
+                    
                     var count: Int32 = Int32(messages.count)
                     if messageText.string.count > 0 {
                         count += 1
                     }
                     var totalAmount: StarsAmount = .zero
-                    var chargingPeers: [EnginePeer] = []
-                    for peer in peers {
-                        if let maybeAmount = sendPaidMessageStars[peer.id], let amount = maybeAmount {
+                    var chargingPeers: [EngineRenderedPeer] = []
+                    for peer in renderedPeers {
+                        if let maybeAmount = sendPaidMessageStars[peer.peerId], let amount = maybeAmount {
                             totalAmount = totalAmount + amount
                             chargingPeers.append(peer)
                         }

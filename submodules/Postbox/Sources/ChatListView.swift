@@ -100,13 +100,28 @@ public struct ChatListGroupReferenceEntry: Equatable {
     }
 }
 
-public struct ChatListForumTopicData: Equatable {
-    public var id: Int64
-    public var info: StoredMessageHistoryThreadInfo
+public final class ChatListForumTopicData: Equatable {
+    public let id: Int64
+    public let info: StoredMessageHistoryThreadInfo
+    public let threadPeer: Peer?
     
-    public init(id: Int64, info: StoredMessageHistoryThreadInfo) {
+    public init(id: Int64, info: StoredMessageHistoryThreadInfo, threadPeer: Peer?) {
         self.id = id
         self.info = info
+        self.threadPeer = threadPeer
+    }
+    
+    public static func ==(lhs: ChatListForumTopicData, rhs: ChatListForumTopicData) -> Bool {
+        if lhs.id != rhs.id {
+            return false
+        }
+        if lhs.info != rhs.info {
+            return false
+        }
+        if !arePeersEqual(lhs.threadPeer, rhs.threadPeer) {
+            return false
+        }
+        return true
     }
 }
 
@@ -447,7 +462,12 @@ public struct ChatListFilterPredicate {
         if self.pinnedPeerIds.contains(peer.id) {
             return false
         }
-        let includePeerId = peer.associatedPeerId ?? peer.id
+        let includePeerId: PeerId
+        if let associatedPeerId = peer.associatedPeerId, peer.associatedPeerOverridesIdentity {
+            includePeerId = associatedPeerId
+        } else {
+            includePeerId = peer.id
+        }
         if self.excludePeerIds.contains(includePeerId) {
             return false
         }
@@ -694,7 +714,7 @@ final class MutableChatListView {
                             let renderedPeer = RenderedPeer(peerId: peer.id, peers: peers, associatedMedia: renderAssociatedMediaForPeers(postbox: postbox, peers: peers))
                             
                             let isUnread: Bool
-                            if postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
+                            if postbox.seedConfiguration.peerSummaryIsThreadBased(peer, peer.associatedPeerId.flatMap(postbox.peerTable.get)).value {
                                 let hasUnmutedUnread = postbox.peerThreadsSummaryTable.get(peerId: peer.id)?.hasUnmutedUnread ?? false
                                 isUnread = hasUnmutedUnread
                             } else {
@@ -826,7 +846,7 @@ final class MutableChatListView {
                                     displayAsRegularChat = postbox.seedConfiguration.decodeDisplayPeerAsRegularChat(cachedData)
                                 }
                                 
-                                if let peer = groupEntries[i].renderedPeers[j].peer.peer, postbox.seedConfiguration.peerSummaryIsThreadBased(peer), !displayAsRegularChat {
+                                if let peer = groupEntries[i].renderedPeers[j].peer.peer, postbox.seedConfiguration.peerSummaryIsThreadBased(peer, peer.associatedPeerId.flatMap(postbox.peerTable.get)).value, !displayAsRegularChat {
                                     isUnread = postbox.peerThreadsSummaryTable.get(peerId: peer.id)?.hasUnmutedUnread ?? false
                                 } else {
                                     isUnread = postbox.readStateTable.getCombinedState(groupEntries[i].renderedPeers[j].peer.peerId)?.isUnread ?? false
@@ -904,6 +924,9 @@ final class MutableChatListView {
                     if let associatedPeer = postbox.peerTable.get(associatedPeerId) {
                         peers[associatedPeer.id] = associatedPeer
                     }
+                }
+                    
+                if let associatedPeerId = peer.associatedPeerId, peer.associatedPeerOverridesIdentity {
                     notificationSettings = postbox.peerNotificationSettingsTable.getEffective(associatedPeerId)
                     presence = postbox.peerPresenceTable.get(associatedPeerId)
                     isContact = postbox.contactsTable.isContact(peerId: associatedPeerId)
@@ -916,17 +939,25 @@ final class MutableChatListView {
             
             let renderedPeer = RenderedPeer(peerId: index.messageIndex.id.peerId, peers: peers, associatedMedia: renderAssociatedMediaForPeers(postbox: postbox, peers: peers))
             
+            var isThreadBased = false
+            var threadsArePeers = false
+            if let peer = renderedPeer.peer {
+                let value = postbox.seedConfiguration.peerSummaryIsThreadBased(peer, peer.associatedPeerId.flatMap(postbox.peerTable.get))
+                isThreadBased = value.value
+                threadsArePeers = value.threadsArePeers
+            }
+            
             var forumTopicData: ChatListForumTopicData?
             if let message = renderedMessages.first, let threadId = message.threadId {
                 if let info = postbox.messageHistoryThreadIndexTable.get(peerId: message.id.peerId, threadId: threadId) {
-                    forumTopicData = ChatListForumTopicData(id: threadId, info: info)
+                    forumTopicData = ChatListForumTopicData(id: threadId, info: info, threadPeer: threadsArePeers ? postbox.peerTable.get(PeerId(threadId)) : nil)
                 }
             }
             
             var topForumTopics: [ChatListForumTopicData] = []
-            if let peer = renderedPeer.peer, postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
+            if let peer = renderedPeer.peer, isThreadBased {
                 for item in postbox.messageHistoryThreadIndexTable.fetch(peerId: peer.id, namespace: 0, start: .upperBound, end: .lowerBound, limit: 5) {
-                    topForumTopics.append(ChatListForumTopicData(id: item.threadId, info: item.info))
+                    topForumTopics.append(ChatListForumTopicData(id: item.threadId, info: item.info, threadPeer: threadsArePeers ? postbox.peerTable.get(PeerId(item.threadId)) : nil))
                 }
             }
             
@@ -938,7 +969,7 @@ final class MutableChatListView {
                 displayAsRegularChat = postbox.seedConfiguration.decodeDisplayPeerAsRegularChat(cachedData)
             }
             
-            if let peer = postbox.peerTable.get(index.messageIndex.id.peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer), !displayAsRegularChat {
+            if isThreadBased, !displayAsRegularChat {
                 let summary = postbox.peerThreadsSummaryTable.get(peerId: index.messageIndex.id.peerId)
                 var count: Int32 = 0
                 var isMuted: Bool = false

@@ -20,6 +20,9 @@ extension ChatControllerImpl {
             completion(false)
             return
         }
+        guard let renderedPeer = self.presentationInterfaceState.renderedPeer.flatMap(EngineRenderedPeer.init) else {
+            return
+        }
         if let sendPaidMessageStars = self.presentationInterfaceState.sendPaidMessageStars, self.presentationInterfaceState.interfaceState.editMessage == nil {
             let totalAmount = sendPaidMessageStars.value * Int64(count)
             
@@ -42,14 +45,16 @@ extension ChatControllerImpl {
                         presentationData = presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
                     }
                     var peer = peer
-                    if let peerDiscussionId = self.presentationInterfaceState.peerDiscussionId, let channel = self.peerView?.peers[peerDiscussionId] {
+                    var renderedPeer = renderedPeer
+                    if let peerDiscussionId = self.presentationInterfaceState.peerDiscussionId, let channel = self.contentData?.state.peerView?.peers[peerDiscussionId] {
                         peer = EnginePeer(channel)
+                        renderedPeer = EngineRenderedPeer(peer: peer)
                     }
                     let controller = chatMessagePaymentAlertController(
                         context: self.context,
                         presentationData: presentationData,
                         updatedPresentationData: nil,
-                        peers: [peer],
+                        peers: [renderedPeer],
                         count: count,
                         amount: sendPaidMessageStars,
                         totalAmount: nil,

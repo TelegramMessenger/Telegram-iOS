@@ -8,7 +8,7 @@ objc_library(
         "Sources/**/*.mm",
         "Sources/**/*.h",
         "Sources/**/*.cpp",
-    ]),
+    ], allow_empty=True),
     hdrs = glob([
         "PublicHeaders/**/*.h",
     ]),

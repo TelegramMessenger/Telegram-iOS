@@ -801,7 +801,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     }
         
-    override public func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
+    override public func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: ChatMessageHeaderSpec) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
         var displaySize = CGSize(width: 180.0, height: 180.0)
         let telegramFile = self.telegramFile
         let emojiFile = self.emojiFile
@@ -816,14 +816,14 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         let makeForwardInfoLayout = ChatMessageForwardInfoNode.asyncLayout(self.forwardInfoNode)
         
         let viaBotLayout = TextNode.asyncLayout(self.viaBotNode)
-        let makeThreadInfoLayout = ChatMessageThreadInfoNode.asyncLayout(self.threadInfoNode)
+        //let makeThreadInfoLayout = ChatMessageThreadInfoNode.asyncLayout(self.threadInfoNode)
         let makeReplyInfoLayout = ChatMessageReplyInfoNode.asyncLayout(self.replyInfoNode)
         let currentShareButtonNode = self.shareButtonNode
         let currentForwardInfo = self.appliedForwardInfo
         
         let textLayout = TextNodeWithEntities.asyncLayout(self.textNode)
         
-        func continueAsyncLayout(_ weakSelf: Weak<ChatMessageAnimatedStickerItemNode>, _ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
+        func continueAsyncLayout(_ weakSelf: Weak<ChatMessageAnimatedStickerItemNode>, _ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: ChatMessageHeaderSpec) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
             let accessibilityData = ChatMessageAccessibilityData(item: item, isSelected: nil)
             let layoutConstants = chatMessageItemLayoutConstants(layoutConstants, params: params, presentationData: item.presentationData)
             let incoming = item.content.effectivelyIncoming(item.context.account.peerId, associatedData: item.associatedData)
@@ -864,15 +864,19 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 if replyThreadMessage.peerId != item.context.account.peerId {
                     if replyThreadMessage.peerId.isGroupOrChannel && item.message.author != nil {
                         var isBroadcastChannel = false
-                        if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
-                            isBroadcastChannel = true
+                        var isMonoforum = false
+                        if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel {
+                            if case .broadcast = peer.info {
+                                isBroadcastChannel = true
+                            }
+                            isMonoforum = peer.isMonoForum
                         }
                         
                         if replyThreadMessage.isChannelPost, replyThreadMessage.effectiveTopId == item.message.id {
                             isBroadcastChannel = true
                         }
                         
-                        if !isBroadcastChannel {
+                        if !isBroadcastChannel && !isMonoforum {
                             hasAvatar = true
                         }
                     }
@@ -1005,8 +1009,15 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
                         
             var layoutInsets = UIEdgeInsets(top: mergedTop.merged ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, left: 0.0, bottom: mergedBottom.merged ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, right: 0.0)
-            if dateHeaderAtBottom {
-                layoutInsets.top += layoutConstants.timestampHeaderHeight
+            if dateHeaderAtBottom.hasDate && dateHeaderAtBottom.hasTopic {
+                layoutInsets.top += layoutConstants.timestampDateAndTopicHeaderHeight
+            } else {
+                if dateHeaderAtBottom.hasDate {
+                    layoutInsets.top += layoutConstants.timestampHeaderHeight
+                }
+                if dateHeaderAtBottom.hasTopic {
+                    layoutInsets.top += layoutConstants.timestampHeaderHeight
+                }
             }
             
             var deliveryFailedInset: CGFloat = 0.0
@@ -1100,7 +1111,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             let (dateAndStatusSize, dateAndStatusApply) = statusSuggestedWidthAndContinue.1(statusSuggestedWidthAndContinue.0)
             
             var viaBotApply: (TextNodeLayout, () -> TextNode)?
-            var threadInfoApply: (CGSize, (Bool) -> ChatMessageThreadInfoNode)?
+            let threadInfoApply: (CGSize, (Bool) -> ChatMessageThreadInfoNode)? = nil
             var replyInfoApply: (CGSize, (CGSize, Bool, ListViewItemUpdateAnimation) -> ChatMessageReplyInfoNode)?
             var replyMarkup: ReplyMarkupMessageAttribute?
             
@@ -1161,12 +1172,12 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
             
             var hasReply = replyMessage != nil || replyForward != nil || replyStory != nil
-            if case let .peer(peerId) = item.chatLocation, (peerId == replyMessage?.id.peerId || item.message.threadId == 1), let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum), item.message.associatedThreadInfo != nil {
+            if case let .peer(peerId) = item.chatLocation, (peerId == replyMessage?.id.peerId || item.message.threadId == 1), let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.isForumOrMonoForum, item.message.associatedThreadInfo != nil {
                 if let threadId = item.message.threadId, let replyMessage = replyMessage, Int64(replyMessage.id.id) == threadId {
                     hasReply = false
                 }
                     
-                threadInfoApply = makeThreadInfoLayout(ChatMessageThreadInfoNode.Arguments(
+                /*threadInfoApply = makeThreadInfoLayout(ChatMessageThreadInfoNode.Arguments(
                     presentationData: item.presentationData,
                     strings: item.presentationData.strings,
                     context: item.context,
@@ -1178,7 +1189,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     constrainedSize: CGSize(width: availableContentWidth, height: CGFloat.greatestFiniteMagnitude),
                     animationCache: item.controllerInteraction.presentationContext.animationCache,
                     animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
-                ))
+                ))*/
             }
             
             if hasReply, (replyMessage != nil || replyForward != nil || replyStory != nil) {
@@ -1377,6 +1388,8 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     strongSelf.appliedForwardInfo = (forwardSource, forwardAuthorSignature)
                     strongSelf.updateAccessibilityData(accessibilityData)
                     
+                    strongSelf.updateAttachedDateHeader(hasDate: dateHeaderAtBottom.hasDate, hasPeer: dateHeaderAtBottom.hasTopic)
+                    
                     strongSelf.messageAccessibilityArea.frame = CGRect(origin: CGPoint(), size: layoutSize)
                     strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
                     strongSelf.contextSourceNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
@@ -1414,10 +1427,10 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             strongSelf.contextSourceNode.contentNode.insertSubnode(strongSelf.textNode.textNode, aboveSubnode: strongSelf.imageNode)
                         }
 
-                        strongSelf.textNode.textNode.frame = imageFrame
+                        animation.animator.updateFrame(layer: strongSelf.textNode.textNode.layer, frame: imageFrame, completion: nil)
                     }
                     
-                    strongSelf.imageNode.frame = updatedContentFrame
+                    animation.animator.updateFrame(layer: strongSelf.imageNode.layer, frame: updatedContentFrame, completion: nil)
                     
                     strongSelf.contextSourceNode.contentRect = contextContentFrame
                     strongSelf.containerNode.targetNodeForActivationProgressContentRect = strongSelf.contextSourceNode.contentRect
@@ -1449,11 +1462,13 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         let foregroundColor: UIColor = .clear// = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderColor, wallpaper: item.presentationData.theme.wallpaper)
                         let shimmeringColor = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderShimmerColor, wallpaper: item.presentationData.theme.wallpaper)
                         strongSelf.placeholderNode.update(backgroundColor: nil, foregroundColor: foregroundColor, shimmeringColor: shimmeringColor, data: immediateThumbnailData, size: animationNodeFrame.size, enableEffect: item.context.sharedContext.energyUsageSettings.fullTranslucency, imageSize: file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0))
-                        strongSelf.placeholderNode.frame = animationNodeFrame
+                        animation.animator.updateFrame(layer: strongSelf.placeholderNode.layer, frame: animationNodeFrame, completion: nil)
                     }
                     
                     if strongSelf.animationNode?.supernode === strongSelf.contextSourceNode.contentNode {
-                        strongSelf.animationNode?.frame = animationNodeFrame
+                        if let animationNode = strongSelf.animationNode {
+                            animation.animator.updateFrame(layer: animationNode.layer, frame: animationNodeFrame, completion: nil)
+                        }
                         if let animationNode = strongSelf.animationNode as? AnimatedStickerNode {
                             animationNode.updateLayout(size: updatedContentFrame.insetBy(dx: imageInset, dy: imageInset).size)
                             
@@ -1485,7 +1500,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             }
                         }
                         let buttonSize = updatedShareButtonNode.update(presentationData: item.presentationData, controllerInteraction: item.controllerInteraction, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account)
-                        updatedShareButtonNode.frame = CGRect(origin: CGPoint(x: !incoming ? updatedImageFrame.minX - buttonSize.width - 6.0 : updatedImageFrame.maxX + 8.0, y: updatedImageFrame.maxY - buttonSize.height - 4.0 + imageBottomPadding), size: buttonSize)
+                        animation.animator.updateFrame(layer: updatedShareButtonNode.layer, frame: CGRect(origin: CGPoint(x: !incoming ? updatedImageFrame.minX - buttonSize.width - 6.0 : updatedImageFrame.maxX + 8.0, y: updatedImageFrame.maxY - buttonSize.height - 4.0 + imageBottomPadding), size: buttonSize), completion: nil)
                     } else if let shareButtonNode = strongSelf.shareButtonNode {
                         shareButtonNode.removeFromSupernode()
                         strongSelf.shareButtonNode = nil
@@ -1829,7 +1844,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
         
         let weakSelf = Weak(self)
-        return { (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) in
+        return { (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: ChatMessageHeaderSpec) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) in
             return continueAsyncLayout(weakSelf, item, params, mergedTop, mergedBottom, dateHeaderAtBottom)
         }
     }

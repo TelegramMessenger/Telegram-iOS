@@ -10,13 +10,10 @@ public struct Namespaces {
         public static let ScheduledLocal: Int32 = 4
         public static let QuickReplyCloud: Int32 = 5
         public static let QuickReplyLocal: Int32 = 6
-        public static let SuggestedPostLocal: Int32 = 7
-        public static let SuggestedPostCloud: Int32 = 8
         
         public static let allScheduled: Set<Int32> = Set([Namespaces.Message.ScheduledCloud, Namespaces.Message.ScheduledLocal])
         public static let allQuickReply: Set<Int32> = Set([Namespaces.Message.QuickReplyCloud, Namespaces.Message.QuickReplyLocal])
-        public static let allSuggestedPost: Set<Int32> = Set([Namespaces.Message.SuggestedPostCloud, Namespaces.Message.SuggestedPostLocal])
-        public static let allNonRegular: Set<Int32> = Set([Namespaces.Message.ScheduledCloud, Namespaces.Message.ScheduledLocal, Namespaces.Message.QuickReplyCloud, Namespaces.Message.QuickReplyLocal, Namespaces.Message.SuggestedPostCloud, Namespaces.Message.SuggestedPostLocal])
+        public static let allNonRegular: Set<Int32> = Set([Namespaces.Message.ScheduledCloud, Namespaces.Message.ScheduledLocal, Namespaces.Message.QuickReplyCloud, Namespaces.Message.QuickReplyLocal])
         public static let allLocal: [Int32] = [
             Namespaces.Message.Local,
             Namespaces.Message.SecretIncoming,
@@ -316,6 +313,7 @@ private enum PreferencesKeyValues: Int32 {
     case botStorageState = 42
     case secureBotStorageState = 43
     case serverSuggestionInfo = 44
+    case persistentChatInterfaceData = 45
 }
 
 public func applicationSpecificPreferencesKey(_ value: Int32) -> ValueBoxKey {
@@ -563,6 +561,13 @@ public struct PreferencesKeys {
     public static func serverSuggestionInfo() -> ValueBoxKey {
         let key = ValueBoxKey(length: 4 + 8)
         key.setInt32(0, value: PreferencesKeyValues.serverSuggestionInfo.rawValue)
+        return key
+    }
+    
+    public static func persistentChatInterfaceData(peerId: PeerId) -> ValueBoxKey {
+        let key = ValueBoxKey(length: 4 + 8)
+        key.setInt32(0, value: PreferencesKeyValues.persistentChatInterfaceData.rawValue)
+        key.setInt64(4, value: peerId.toInt64())
         return key
     }
 }

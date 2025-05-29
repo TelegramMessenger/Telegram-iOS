@@ -949,6 +949,8 @@
     NSInteger num = 0;
     bool grouping = selectionContext.grouping;
     
+    bool isHighQualityPhoto = editingContext.isHighQualityPhoto;
+    
     NSNumber *price;
     bool hasAnyTimers = false;
     if (editingContext != nil || grouping)
@@ -1071,9 +1073,11 @@
                         if (price != nil)
                             dict[@"price"] = price;
                         
-                        if (spoiler) {
+                        if (spoiler)
                             dict[@"spoiler"] = @true;
-                        }
+                        
+                        if (isHighQualityPhoto)
+                            dict[@"hd"] = @true;
                         
                         id generatedItem = descriptionGenerator(dict, caption, nil, asset.identifier);
                         return generatedItem;
@@ -1201,6 +1205,9 @@
                             dict[@"image"] = image;
                             if (adjustments.paintingData.stickers.count > 0)
                                 dict[@"stickers"] = adjustments.paintingData.stickers;
+                            
+                            if (isHighQualityPhoto)
+                                dict[@"hd"] = @true;
                             
                             bool animated = adjustments.paintingData.hasAnimation;
                             if (animated) {

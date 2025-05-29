@@ -186,6 +186,9 @@ private class TimerDatePickerView: UIDatePicker, TimerPickerView {
     }
 }
 
+private let digitsCharacterSet = CharacterSet(charactersIn: "0123456789")
+private let nondigitsCharacterSet = CharacterSet(charactersIn: "0123456789").inverted
+
 private class TimerPickerItemView: UIView {
     let valueLabel = UILabel()
     let unitLabel = UILabel()
@@ -207,6 +210,9 @@ private class TimerPickerItemView: UIView {
                 } else if components.count > 1 {
                     self.valueLabel.text = components[0]
                     self.unitLabel.text = components[1]
+                } else {
+                    self.valueLabel.text = string.trimmingCharacters(in: nondigitsCharacterSet)
+                    self.unitLabel.text = string.trimmingCharacters(in: digitsCharacterSet)
                 }
             }
             

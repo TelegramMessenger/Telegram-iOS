@@ -47,6 +47,7 @@ final class PostboxTransaction {
     let updatedMessageThreadPeerIds: Set<PeerId>
     let updatedPeerThreadCombinedStates: Set<PeerId>
     let updatedPeerThreadsSummaries: Set<PeerId>
+    let updatedPeerThreadInfos: Set<MessageHistoryThreadsTable.ItemId>
     let updatedPinnedThreads: Set<PeerId>
     let updatedHiddenPeerIds: Bool
     let storyGeneralStatesEvents: [StoryGeneralStatesTable.Event]
@@ -195,6 +196,9 @@ final class PostboxTransaction {
         if !self.updatedPeerThreadsSummaries.isEmpty {
             return false
         }
+        if !self.updatedPeerThreadInfos.isEmpty {
+            return false
+        }
         if !self.updatedPinnedThreads.isEmpty {
             return false
         }
@@ -269,6 +273,7 @@ final class PostboxTransaction {
         updatedMessageThreadPeerIds: Set<PeerId>,
         updatedPeerThreadCombinedStates: Set<PeerId>,
         updatedPeerThreadsSummaries: Set<PeerId>,
+        updatedPeerThreadInfos: Set<MessageHistoryThreadsTable.ItemId>,
         updatedPinnedThreads: Set<PeerId>,
         updatedHiddenPeerIds: Bool,
         storyGeneralStatesEvents: [StoryGeneralStatesTable.Event],
@@ -323,6 +328,7 @@ final class PostboxTransaction {
         self.updatedMessageThreadPeerIds = updatedMessageThreadPeerIds
         self.updatedPeerThreadCombinedStates = updatedPeerThreadCombinedStates
         self.updatedPeerThreadsSummaries = updatedPeerThreadsSummaries
+        self.updatedPeerThreadInfos = updatedPeerThreadInfos
         self.updatedPinnedThreads = updatedPinnedThreads
         self.updatedHiddenPeerIds = updatedHiddenPeerIds
         self.storyGeneralStatesEvents = storyGeneralStatesEvents

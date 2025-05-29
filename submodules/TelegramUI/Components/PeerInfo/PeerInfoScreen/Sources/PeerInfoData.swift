@@ -314,13 +314,13 @@ final class TelegramGlobalSettings {
 }
 
 final class PeerInfoPersonalChannelData: Equatable {
-    let peer: EnginePeer
+    let peer: EngineRenderedPeer
     let subscriberCount: Int?
     let topMessages: [EngineMessage]
     let storyStats: PeerStoryStats?
     let isLoading: Bool
     
-    init(peer: EnginePeer, subscriberCount: Int?, topMessages: [EngineMessage], storyStats: PeerStoryStats?, isLoading: Bool) {
+    init(peer: EngineRenderedPeer, subscriberCount: Int?, topMessages: [EngineMessage], storyStats: PeerStoryStats?, isLoading: Bool) {
         self.peer = peer
         self.subscriberCount = subscriberCount
         self.topMessages = topMessages
@@ -363,6 +363,7 @@ final class PeerInfoScreenData {
     let availablePanes: [PeerInfoPaneKey]
     let groupsInCommon: GroupsInCommonContext?
     let linkedDiscussionPeer: Peer?
+    let linkedMonoforumPeer: Peer?
     let members: PeerInfoMembersData?
     let storyListContext: StoryListContext?
     let storyArchiveListContext: StoryListContext?
@@ -413,6 +414,7 @@ final class PeerInfoScreenData {
         availablePanes: [PeerInfoPaneKey],
         groupsInCommon: GroupsInCommonContext?,
         linkedDiscussionPeer: Peer?,
+        linkedMonoforumPeer: Peer?,
         members: PeerInfoMembersData?,
         storyListContext: StoryListContext?,
         storyArchiveListContext: StoryListContext?,
@@ -451,6 +453,7 @@ final class PeerInfoScreenData {
         self.availablePanes = availablePanes
         self.groupsInCommon = groupsInCommon
         self.linkedDiscussionPeer = linkedDiscussionPeer
+        self.linkedMonoforumPeer = linkedMonoforumPeer
         self.members = members
         self.storyListContext = storyListContext
         self.storyArchiveListContext = storyArchiveListContext
@@ -663,10 +666,25 @@ public func keepPeerInfoScreenDataHot(context: AccountContext, peerId: PeerId, c
     }
 }
 
-private func peerInfoPersonalChannel(context: AccountContext, peerId: EnginePeer.Id, isSettings: Bool) -> Signal<PeerInfoPersonalChannelData?, NoError> {
-    return context.engine.data.subscribe(
-        TelegramEngine.EngineData.Item.Peer.PersonalChannel(id: peerId)
+private func peerInfoPersonalOrLinkedChannel(context: AccountContext, peerId: EnginePeer.Id, isSettings: Bool) -> Signal<PeerInfoPersonalChannelData?, NoError> {
+    let personalChannel: Signal<TelegramEngine.EngineData.Item.Peer.PersonalChannel.Result, NoError> = context.engine.data.subscribe(
+        TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
     )
+    |> mapToSignal { peer -> Signal<TelegramEngine.EngineData.Item.Peer.PersonalChannel.Result, NoError> in
+        guard let peer else {
+            return .single(.known(nil))
+        }
+        if case .user = peer {
+            return context.engine.data.subscribe(
+                TelegramEngine.EngineData.Item.Peer.PersonalChannel(id: peerId)
+            )
+        } else if case let .channel(channel) = peer, case let .broadcast(info) = channel.info, info.flags.contains(.hasMonoforum), let linkedMonoforumId = channel.linkedMonoforumId {
+            return .single(CachedTelegramPersonalChannel.known(TelegramPersonalChannel(peerId: linkedMonoforumId, subscriberCount: nil, topMessageId: nil)))
+        }
+        return .single(.known(nil))
+    }
+    
+    return personalChannel
     |> distinctUntilChanged
     |> mapToSignal { personalChannel -> Signal<PeerInfoPersonalChannelData?, NoError> in
         guard case let .known(personalChannelValue) = personalChannel, let personalChannelValue else {
@@ -674,14 +692,13 @@ private func peerInfoPersonalChannel(context: AccountContext, peerId: EnginePeer
         }
         
         return context.engine.data.subscribe(
-            TelegramEngine.EngineData.Item.Peer.Peer(id: personalChannelValue.peerId),
+            TelegramEngine.EngineData.Item.Peer.RenderedPeer(id: personalChannelValue.peerId),
             TelegramEngine.EngineData.Item.Peer.ParticipantCount(id: personalChannelValue.peerId)
         )
-        |> mapToSignal { channelPeer, participantCount -> Signal<PeerInfoPersonalChannelData?, NoError> in
-            guard let channelPeer else {
+        |> mapToSignal { channelRenderedPeer, participantCount -> Signal<PeerInfoPersonalChannelData?, NoError> in
+            guard let channelRenderedPeer, let channelPeer = channelRenderedPeer.peer else {
                 return .single(nil)
             }
-            
             
             let polledChannel: Signal<Void, NoError> = Signal<Void, NoError>.single(Void())
             |> then(
@@ -723,7 +740,7 @@ private func peerInfoPersonalChannel(context: AccountContext, peerId: EnginePeer
                 }
                 
                 return PeerInfoPersonalChannelData(
-                    peer: channelPeer,
+                    peer: channelRenderedPeer,
                     subscriberCount: mappedParticipantCount,
                     topMessages: messages,
                     storyStats: storyStats,
@@ -862,7 +879,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
         |> distinctUntilChanged,
         hasStories,
         bots,
-        peerInfoPersonalChannel(context: context, peerId: peerId, isSettings: true),
+        peerInfoPersonalOrLinkedChannel(context: context, peerId: peerId, isSettings: true),
         starsState
     )
     |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, hasWatchApp, accountPreferences, suggestions, limits, hasPassword, isPowerSavingEnabled, hasStories, bots, personalChannel, starsState -> PeerInfoScreenData in
@@ -925,6 +942,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
             availablePanes: [],
             groupsInCommon: nil,
             linkedDiscussionPeer: nil,
+            linkedMonoforumPeer: nil,
             members: nil,
             storyListContext: hasStories == true ? storyListContext : nil,
             storyArchiveListContext: nil,
@@ -974,6 +992,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 availablePanes: [],
                 groupsInCommon: nil,
                 linkedDiscussionPeer: nil,
+                linkedMonoforumPeer: nil,
                 members: nil,
                 storyListContext: nil,
                 storyArchiveListContext: nil,
@@ -1325,7 +1344,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 hasSavedMessages,
                 hasSavedMessageTags,
                 hasBotPreviewItems,
-                peerInfoPersonalChannel(context: context, peerId: peerId, isSettings: false),
+                peerInfoPersonalOrLinkedChannel(context: context, peerId: peerId, isSettings: false),
                 privacySettings,
                 starsRevenueContextAndState,
                 revenueContextAndState,
@@ -1432,6 +1451,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     availablePanes: availablePanes ?? [],
                     groupsInCommon: groupsInCommon,
                     linkedDiscussionPeer: nil,
+                    linkedMonoforumPeer: nil,
                     members: nil,
                     storyListContext: storyListContext,
                     storyArchiveListContext: storyArchiveListContext,
@@ -1564,6 +1584,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             
             let profileGiftsContext = ProfileGiftsContext(account: context.account, peerId: peerId)
             
+            let personalChannel = peerInfoPersonalOrLinkedChannel(context: context, peerId: peerId, isSettings: false)
+            
             return combineLatest(
                 context.account.viewTracker.peerView(peerId, updateData: true),
                 peerInfoAvailableMediaPanes(context: context, peerId: peerId, chatLocation: chatLocation, isMyProfile: false, chatLocationContextHolder: chatLocationContextHolder),
@@ -1582,9 +1604,10 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 isPremiumRequiredForStoryPosting,
                 starsRevenueContextAndState,
                 revenueContextAndState,
-                profileGiftsContext.state
+                profileGiftsContext.state,
+                personalChannel
             )
-            |> map { peerView, availablePanes, globalNotificationSettings, status, currentInvitationsContext, invitations, currentRequestsContext, requests, hasStories, accountIsPremium, recommendedChannels, hasSavedMessages, hasSavedMessagesChats, hasSavedMessageTags, isPremiumRequiredForStoryPosting, starsRevenueContextAndState, revenueContextAndState, profileGiftsState -> PeerInfoScreenData in
+            |> map { peerView, availablePanes, globalNotificationSettings, status, currentInvitationsContext, invitations, currentRequestsContext, requests, hasStories, accountIsPremium, recommendedChannels, hasSavedMessages, hasSavedMessagesChats, hasSavedMessageTags, isPremiumRequiredForStoryPosting, starsRevenueContextAndState, revenueContextAndState, profileGiftsState, personalChannel -> PeerInfoScreenData in
                 var availablePanes = availablePanes
                 if let hasStories {
                     if hasStories {
@@ -1621,6 +1644,11 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     discussionPeer = peer
                 }
                 
+                var monoforumPeer: Peer?
+                if let channel = peerViewMainPeer(peerView) as? TelegramChannel, case let .broadcast(info) = channel.info, info.flags.contains(.hasMonoforum), let linkedMonoforumId = channel.linkedMonoforumId {
+                    monoforumPeer = peerView.peers[linkedMonoforumId]
+                }
+                
                 var canManageInvitations = false
                 if let channel = peerViewMainPeer(peerView) as? TelegramChannel, let _ = peerView.cachedData as? CachedChannelData, channel.flags.contains(.isCreator) || (channel.adminRights?.rights.contains(.canInviteUsers) == true) {
                     canManageInvitations = true
@@ -1654,6 +1682,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     availablePanes: availablePanes ?? [],
                     groupsInCommon: nil,
                     linkedDiscussionPeer: discussionPeer,
+                    linkedMonoforumPeer: monoforumPeer,
                     members: nil,
                     storyListContext: storyListContext,
                     storyArchiveListContext: nil,
@@ -1670,7 +1699,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     hasSavedMessageTags: hasSavedMessageTags,
                     hasBotPreviewItems: false,
                     isPremiumRequiredForStoryPosting: isPremiumRequiredForStoryPosting,
-                    personalChannel: nil,
+                    personalChannel: personalChannel,
                     starsState: nil,
                     starsRevenueStatsState: starsRevenueContextAndState.1,
                     starsRevenueStatsContext: starsRevenueContextAndState.0,
@@ -1903,6 +1932,11 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 if case let .known(maybeLinkedDiscussionPeerId) = (peerView.cachedData as? CachedChannelData)?.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId, let peer = peerView.peers[linkedDiscussionPeerId] {
                     discussionPeer = peer
                 }
+                
+                var monoforumPeer: Peer?
+                if let channel = peerViewMainPeer(peerView) as? TelegramChannel, case let .broadcast(info) = channel.info, info.flags.contains(.hasMonoforum), let linkedMonoforumId = channel.linkedMonoforumId {
+                    monoforumPeer = peerView.peers[linkedMonoforumId]
+                }
                                 
                 var availablePanes = availablePanes
                 if let membersData = membersData, case .longList = membersData {
@@ -1980,6 +2014,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     availablePanes: availablePanes ?? [],
                     groupsInCommon: nil,
                     linkedDiscussionPeer: discussionPeer,
+                    linkedMonoforumPeer: monoforumPeer,
                     members: membersData,
                     storyListContext: storyListContext,
                     storyArchiveListContext: nil,
@@ -2317,7 +2352,7 @@ func peerInfoCanEdit(peer: Peer?, chatLocation: ChatLocation, threadData: Messag
         }
         return true
     } else if let peer = peer as? TelegramChannel {
-        if peer.flags.contains(.isForum), let threadData = threadData {
+        if peer.isForumOrMonoForum, let threadData = threadData {
             if peer.flags.contains(.isCreator) {
                 return true
             } else if threadData.isOwnedByMe {

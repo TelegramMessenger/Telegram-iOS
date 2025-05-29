@@ -247,7 +247,7 @@ final class VideoChatParticipantAvatarComponent: Component {
             let avatarSize = availableSize
             
             let clipStyle: AvatarNodeClipStyle
-            if case let .channel(channel) = component.peer, channel.flags.contains(.isForum) {
+            if case let .channel(channel) = component.peer, channel.isForumOrMonoForum {
                 clipStyle = .roundedRect
             } else {
                 clipStyle = .round

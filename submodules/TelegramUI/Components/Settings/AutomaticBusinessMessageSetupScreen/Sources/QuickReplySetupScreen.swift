@@ -294,7 +294,7 @@ final class QuickReplySetupScreenComponent: Component {
                     hasActiveRevealControls: false,
                     selected: isSelected,
                     header: nil,
-                    enableContextActions: true,
+                    enabledContextActions: .auto,
                     hiddenOffset: false,
                     interaction: chatListNodeInteraction
                 )

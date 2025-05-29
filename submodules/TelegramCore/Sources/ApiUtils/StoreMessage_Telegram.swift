@@ -802,7 +802,7 @@ extension StoreMessage {
                     }
                 }
             
-                if peerId == accountPeerId, let savedPeerId = savedPeerId {
+                if let savedPeerId {
                     threadId = savedPeerId.peerId.toInt64()
                 }
             

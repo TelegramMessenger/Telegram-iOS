@@ -323,7 +323,7 @@ public class ChatMessageThreadInfoNode: ASDisplayNode {
             var topicTitle = ""
             var topicIconId: Int64?
             var topicIconColor: Int32 = 0
-            if let _ = arguments.parentMessage.threadId, let channel = arguments.parentMessage.peers[arguments.parentMessage.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum), let threadInfo = arguments.parentMessage.associatedThreadInfo {
+            if let _ = arguments.parentMessage.threadId, let channel = arguments.parentMessage.peers[arguments.parentMessage.id.peerId] as? TelegramChannel, channel.isForumOrMonoForum, let threadInfo = arguments.parentMessage.associatedThreadInfo {
                 topicTitle = threadInfo.title
                 topicIconId = threadInfo.icon
                 topicIconColor = threadInfo.iconColor
@@ -514,7 +514,7 @@ public class ChatMessageThreadInfoNode: ASDisplayNode {
                     var containerSize: CGSize = CGSize(width: 22.0, height: 22.0)
                     var iconX: CGFloat = 0.0
                     if arguments.threadId == 1 {
-                        titleTopicIconContent = .image(image: generalThreadIcon)
+                        titleTopicIconContent = .image(image: generalThreadIcon, tintColor: nil)
                         containerSize = CGSize(width: 18.0, height: 18.0)
                         iconX = 3.0
                     } else if let fileId = topicIconId, fileId != 0 {

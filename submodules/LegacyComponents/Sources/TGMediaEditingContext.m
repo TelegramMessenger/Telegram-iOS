@@ -131,10 +131,13 @@
     SPipe *_fullSizePipe;
     SPipe *_cropPipe;
     SPipe *_captionAbovePipe;
+    SPipe *_highQualityPhotoPipe;
     
     NSAttributedString *_forcedCaption;
     
     bool _captionAbove;
+    
+    bool _highQualityPhoto;
 }
 @end
 
@@ -209,6 +212,7 @@
         _fullSizePipe = [[SPipe alloc] init];
         _cropPipe = [[SPipe alloc] init];
         _captionAbovePipe = [[SPipe alloc] init];
+        _highQualityPhotoPipe = [[SPipe alloc] init];
     }
     return self;
 }
@@ -887,6 +891,29 @@
     _captionAbove = captionAbove;
     _captionAbovePipe.sink(@(captionAbove));
 }
+
+- (bool)isHighQualityPhoto {
+    return _highQualityPhoto;
+}
+
+- (SSignal *)highQualityPhoto
+{
+    __weak TGMediaEditingContext *weakSelf = self;
+    SSignal *updateSignal = [_highQualityPhotoPipe.signalProducer() map:^NSNumber *(NSNumber *update)
+    {
+        __strong TGMediaEditingContext *strongSelf = weakSelf;
+        return @(strongSelf->_highQualityPhoto);
+    }];
+    
+    return [[SSignal single:@(_highQualityPhoto)] then:updateSignal];
+}
+
+- (void)setHighQualityPhoto:(bool)highQualityPhoto
+{
+    _highQualityPhoto = highQualityPhoto;
+    _highQualityPhotoPipe.sink(@(highQualityPhoto));
+}
+
 
 - (SSignal *)facesForItem:(NSObject<TGMediaEditableItem> *)item
 {

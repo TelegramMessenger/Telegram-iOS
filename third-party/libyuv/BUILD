@@ -118,7 +118,7 @@ objc_library(
         "LibYuvBinding/Sources/**/*.m",
         "LibYuvBinding/Sources/**/*.c",
         "LibYuvBinding/Sources/**/*.h",
-    ]),
+    ], allow_empty=True),
     hdrs = glob([
         "LibYuvBinding/PublicHeaders/**/*.h",
     ]),

@@ -30,7 +30,7 @@ extension PeerInfoScreenImpl {
         
         let peerId = self.peerId
         var isForum = false
-        if let peer = peer as? TelegramChannel, peer.flags.contains(.isForum) {
+        if let peer = peer as? TelegramChannel, peer.isForumOrMonoForum {
             isForum = true
         }
         
@@ -112,7 +112,7 @@ extension PeerInfoScreenImpl {
                 if let asset = result as? PHAsset {
                     subject = .single(.asset(asset))
                 } else if let image = result as? UIImage {
-                    subject = .single(.image(image: image, dimensions: PixelDimensions(image.size), additionalImage: nil, additionalImagePosition: .bottomRight))
+                    subject = .single(.image(image: image, dimensions: PixelDimensions(image.size), additionalImage: nil, additionalImagePosition: .bottomRight, fromCamera: false))
                 } else if let result = result as? Signal<CameraScreenImpl.Result, NoError> {
                     subject = result
                     |> map { value -> MediaEditorScreenImpl.Subject? in
@@ -120,9 +120,9 @@ extension PeerInfoScreenImpl {
                         case .pendingImage:
                             return nil
                         case let .image(image):
-                            return .image(image: image.image, dimensions: PixelDimensions(image.image.size), additionalImage: nil, additionalImagePosition: .topLeft)
+                            return .image(image: image.image, dimensions: PixelDimensions(image.image.size), additionalImage: nil, additionalImagePosition: .topLeft, fromCamera: false)
                         case let .video(video):
-                            return .video(videoPath: video.videoPath, thumbnail: video.coverImage, mirror: video.mirror, additionalVideoPath: nil, additionalThumbnail: nil, dimensions: video.dimensions, duration: video.duration, videoPositionChanges: [], additionalVideoPosition: .topLeft)
+                            return .video(videoPath: video.videoPath, thumbnail: video.coverImage, mirror: video.mirror, additionalVideoPath: nil, additionalThumbnail: nil, dimensions: video.dimensions, duration: video.duration, videoPositionChanges: [], additionalVideoPosition: .topLeft, fromCamera: false)
                         default:
                             return nil
                         }
@@ -135,7 +135,7 @@ extension PeerInfoScreenImpl {
                         peerType = .group
                     } else if case let .channel(channel) = peer {
                         if case .group = channel.info {
-                            peerType = channel.flags.contains(.isForum) ? .forum : .group
+                            peerType = channel.isForumOrMonoForum ? .forum : .group
                         } else {
                             peerType = .channel
                         }

@@ -2,17 +2,19 @@ import Foundation
 import UIKit
 import Display
 import ComponentFlow
+import SwiftSignalKit
 import PlainButtonComponent
-import MultilineTextWithEntitiesComponent
+import MultilineTextComponent
 import BundleIconComponent
 import TextFormat
 import AccountContext
+import LottieComponent
 
 public final class FilterSelectorComponent: Component {
     public struct Colors: Equatable {
         public var foreground: UIColor
         public var background: UIColor
-
+        
         public init(
             foreground: UIColor,
             background: UIColor
@@ -24,39 +26,45 @@ public final class FilterSelectorComponent: Component {
     
     public struct Item: Equatable {
         public var id: AnyHashable
+        public var index: Int
         public var iconName: String?
         public var title: String
         public var action: (UIView) -> Void
-
+        
         public init(
             id: AnyHashable,
+            index: Int = 0,
             iconName: String? = nil,
             title: String,
             action: @escaping (UIView) -> Void
         ) {
             self.id = id
+            self.index = index
             self.iconName = iconName
             self.title = title
             self.action = action
         }
         
         public static func ==(lhs: Item, rhs: Item) -> Bool {
-            return lhs.id == rhs.id && lhs.iconName == rhs.iconName && lhs.title == rhs.title
+            return lhs.id == rhs.id && lhs.index == rhs.index && lhs.iconName == rhs.iconName && lhs.title == rhs.title
         }
     }
-
+    
     public let context: AccountContext?
     public let colors: Colors
     public let items: [Item]
+    public let selectedItemId: AnyHashable?
     
     public init(
         context: AccountContext? = nil,
         colors: Colors,
-        items: [Item]
+        items: [Item],
+        selectedItemId: AnyHashable?
     ) {
         self.context = context
         self.colors = colors
         self.items = items
+        self.selectedItemId = selectedItemId
     }
     
     public static func ==(lhs: FilterSelectorComponent, rhs: FilterSelectorComponent) -> Bool {
@@ -67,6 +75,9 @@ public final class FilterSelectorComponent: Component {
             return false
         }
         if lhs.items != rhs.items {
+            return false
+        }
+        if lhs.selectedItemId != rhs.selectedItemId {
             return false
         }
         return true
@@ -123,14 +134,14 @@ public final class FilterSelectorComponent: Component {
             self.state = state
             
             let baseHeight: CGFloat = 28.0
-                        
+            
             var spacing: CGFloat = 6.0
             
             let itemFont = Font.semibold(14.0)
             let allowScroll = true
-                    
+            
             var innerContentWidth: CGFloat = 0.0
-                        
+            
             var validIds: [AnyHashable] = []
             var index = 0
             var itemViews: [AnyHashable: (VisibleItem, CGSize, ComponentTransition)] = [:]
@@ -150,15 +161,17 @@ public final class FilterSelectorComponent: Component {
                 validIds.append(itemId)
                 
                 let itemSize = itemView.title.update(
-                    transition: .immediate,
+                    transition: transition,
                     component: AnyComponent(PlainButtonComponent(
                         content: AnyComponent(ItemComponent(
                             context: component.context,
+                            index: item.index,
                             iconName: item.iconName,
                             text: item.title,
                             font: itemFont,
                             color: component.colors.foreground,
-                            backgroundColor: component.colors.background
+                            backgroundColor: component.colors.background,
+                            isSelected: itemId == component.selectedItemId
                         )),
                         effectAlignment: .center,
                         minSize: nil,
@@ -217,7 +230,7 @@ public final class FilterSelectorComponent: Component {
             
             self.contentSize = CGSize(width: contentWidth, height: baseHeight)
             self.disablesInteractiveTransitionGestureRecognizer = contentWidth > availableSize.width
-
+            
             return CGSize(width: min(contentWidth, availableSize.width), height: baseHeight)
         }
     }
@@ -233,41 +246,50 @@ public final class FilterSelectorComponent: Component {
 
 extension CGRect {
     func interpolate(with other: CGRect, fraction: CGFloat) -> CGRect {
-         return CGRect(
+        return CGRect(
             x: self.origin.x * (1.0 - fraction) + (other.origin.x) * fraction,
             y: self.origin.y * (1.0 - fraction) + (other.origin.y) * fraction,
             width: self.size.width * (1.0 - fraction) + (other.size.width) * fraction,
             height: self.size.height * (1.0 - fraction) + (other.size.height) * fraction
-         )
-     }
+        )
+    }
 }
 
-private final class ItemComponent: CombinedComponent {
+private final class ItemComponent: Component {
     let context: AccountContext?
+    let index: Int
     let iconName: String?
     let text: String
     let font: UIFont
     let color: UIColor
     let backgroundColor: UIColor
+    let isSelected: Bool
     
     init(
         context: AccountContext?,
+        index: Int,
         iconName: String?,
         text: String,
         font: UIFont,
         color: UIColor,
-        backgroundColor: UIColor
+        backgroundColor: UIColor,
+        isSelected: Bool
     ) {
         self.context = context
+        self.index = index
         self.iconName = iconName
         self.text = text
         self.font = font
         self.color = color
         self.backgroundColor = backgroundColor
+        self.isSelected = isSelected
     }
-
+    
     static func ==(lhs: ItemComponent, rhs: ItemComponent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.index != rhs.index {
             return false
         }
         if lhs.iconName != rhs.iconName {
@@ -285,44 +307,97 @@ private final class ItemComponent: CombinedComponent {
         if lhs.backgroundColor != rhs.backgroundColor {
             return false
         }
+        if lhs.isSelected != rhs.isSelected {
+            return false
+        }
         return true
     }
     
-    static var body: Body {
-        let background = Child(RoundedRectangle.self)
-        let title = Child(MultilineTextWithEntitiesComponent.self)
-        let icon = Child(BundleIconComponent.self)
+    public final class View: UIView {
+        private var component: ItemComponent?
+        private weak var state: EmptyComponentState?
         
-        return { context in
-            let component = context.component
+        private let background = ComponentView<Empty>()
+        private let title = ComponentView<Empty>()
+        private let icon = ComponentView<Empty>()
+        
+        private var isSelected = false
+        private var iconName: String?
+        
+        private let playOnce = ActionSlot<Void>()
+        
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        func update(component: ItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+            let previousComponent = self.component
+            self.component = component
+            self.state = state
             
-            let attributedTitle = NSMutableAttributedString(string: component.text, font: component.font, textColor: component.color)
-            let range = (attributedTitle.string as NSString).range(of: "⭐️")
-            if range.location != NSNotFound {
-                attributedTitle.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: range)
+            var animateTitleInDirection: CGFloat?
+            if let previousComponent, previousComponent.text != component.text, !transition.animation.isImmediate, let titleView = self.title.view, let snapshotView = titleView.snapshotView(afterScreenUpdates: false) {
+                snapshotView.frame = titleView.frame
+                self.addSubview(snapshotView)
+                
+                var direction: CGFloat = 1.0
+                if previousComponent.index < component.index {
+                    direction = -1.0
+                }
+                
+                snapshotView.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: 6.0 * direction), duration: 0.2, removeOnCompletion: false, additive: true)
+                snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                    snapshotView.removeFromSuperview()
+                })
+                
+                animateTitleInDirection = direction
             }
             
-            let title = title.update(
-                component: MultilineTextWithEntitiesComponent(
-                    context: component.context,
-                    animationCache: component.context?.animationCache,
-                    animationRenderer: component.context?.animationRenderer,
-                    placeholderColor: .white,
+            let attributedTitle = NSAttributedString(string: component.text, font: component.font, textColor: component.color)
+            let titleSize = self.title.update(
+                transition: .immediate,
+                component: AnyComponent(MultilineTextComponent(
                     text: .plain(attributedTitle)
-                ),
-                availableSize: context.availableSize,
-                transition: .immediate
+                )),
+                environment: {},
+                containerSize: availableSize
             )
             
-            let icon = icon.update(
-                component: BundleIconComponent(
-                    name: component.iconName ?? "Item List/ExpandableSelectorArrows",
-                    tintColor: component.color,
-                    maxSize: component.iconName != nil ? CGSize(width: 22.0, height: 22.0) : nil
-                ),
-                availableSize: CGSize(width: 100, height: 100),
-                transition: .immediate
+            let animationName = component.iconName ?? (component.isSelected ? "GiftFilterMenuOpen" : "GiftFilterMenuClose")
+            let animationSize = component.iconName != nil ? CGSize(width: 22.0, height: 22.0) : CGSize(width: 10.0, height: 22.0)
+            
+            let iconSize = self.icon.update(
+                transition: transition,
+                component: AnyComponent(LottieComponent(
+                    content: LottieComponent.AppBundleContent(name: animationName),
+                    color: component.color,
+                    playOnce: self.playOnce
+                )),
+                environment: {},
+                containerSize: CGSize(width: 22.0, height: 22.0)
             )
+        
+            var playAnimation = false
+            if self.isSelected != component.isSelected || self.iconName != component.iconName {
+                if let iconName = component.iconName {
+                    if component.isSelected {
+                        playAnimation = true
+                    } else if self.iconName != iconName {
+                        playAnimation = true
+                    }
+                    self.iconName = iconName
+                } else {
+                    playAnimation = true
+                }
+                self.isSelected = component.isSelected
+            }
+            if playAnimation {
+                self.playOnce.invoke(Void())
+            }
             
             let padding: CGFloat = 12.0
             var leftPadding = padding
@@ -330,35 +405,68 @@ private final class ItemComponent: CombinedComponent {
                 leftPadding -= 4.0
             }
             let spacing: CGFloat = 4.0
-            let totalWidth = title.size.width + icon.size.width + spacing
+            let totalWidth = titleSize.width + animationSize.width + spacing
             let size = CGSize(width: totalWidth + leftPadding + padding, height: 28.0)
-            let background = background.update(
-                component: RoundedRectangle(
+            
+            let backgroundSize = self.background.update(
+                transition: transition,
+                component: AnyComponent(RoundedRectangle(
                     color: component.backgroundColor,
                     cornerRadius: 14.0
-                ),
-                availableSize: size,
-                transition: .immediate
+                )),
+                environment: {},
+                containerSize: size
             )
-            context.add(background
-                .position(CGPoint(x: size.width / 2.0, y: size.height / 2.0))
-            )
-            if let _ = component.iconName {
-                context.add(title
-                    .position(CGPoint(x: size.width - padding - title.size.width / 2.0, y: size.height / 2.0))
-                )
-                context.add(icon
-                    .position(CGPoint(x: leftPadding + icon.size.width / 2.0, y: size.height / 2.0))
-                )
-            } else {
-                context.add(title
-                    .position(CGPoint(x: padding + title.size.width / 2.0, y: size.height / 2.0))
-                )
-                context.add(icon
-                    .position(CGPoint(x: size.width - padding - icon.size.width / 2.0, y: size.height / 2.0))
-                )
+            
+            if let backgroundView = self.background.view {
+                if backgroundView.superview == nil {
+                    self.addSubview(backgroundView)
+                }
+                transition.setPosition(view: backgroundView, position: CGPoint(x: size.width / 2.0, y: size.height / 2.0))
+                transition.setBounds(view: backgroundView, bounds: CGRect(origin: CGPoint(), size: backgroundSize))
             }
+            
+            if let titleView = self.title.view {
+                if titleView.superview == nil {
+                    self.addSubview(titleView)
+                }
+                let titlePosition: CGPoint
+                if let _ = component.iconName {
+                    titlePosition = CGPoint(x: size.width - padding - titleSize.width / 2.0, y: size.height / 2.0)
+                } else {
+                    titlePosition = CGPoint(x: padding + titleSize.width / 2.0, y: size.height / 2.0)
+                }
+                if let animateTitleInDirection {
+                    titleView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    titleView.center = CGPoint(x: titlePosition.x, y: titlePosition.y - 6.0 * animateTitleInDirection)
+                }
+                transition.setPosition(view: titleView, position: titlePosition)
+                titleView.bounds = CGRect(origin: CGPoint(), size: titleSize)
+            }
+            
+            if let iconView = self.icon.view {
+                if iconView.superview == nil {
+                    self.addSubview(iconView)
+                }
+                let iconPosition: CGPoint
+                if let _ = component.iconName {
+                    iconPosition = CGPoint(x: leftPadding + iconSize.width / 2.0, y: size.height / 2.0)
+                } else {
+                    iconPosition = CGPoint(x: size.width - padding - animationSize.width / 2.0, y: size.height / 2.0)
+                }
+                transition.setPosition(view: iconView, position: iconPosition)
+                transition.setBounds(view: iconView, bounds: CGRect(origin: CGPoint(), size: iconSize))
+            }
+            
             return size
         }
+    }
+    
+    public func makeView() -> View {
+        return View(frame: CGRect())
+    }
+    
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

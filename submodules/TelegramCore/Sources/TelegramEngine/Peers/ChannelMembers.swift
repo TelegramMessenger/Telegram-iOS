@@ -29,6 +29,9 @@ func _internal_channelMembers(postbox: Postbox, network: Network, accountPeerId:
                     return .single(nil)
                 }
             }
+            if peer.flags.contains(.isMonoforum) {
+                return .single(nil)
+            }
             
             let apiFilter: Api.ChannelParticipantsFilter
             switch category {

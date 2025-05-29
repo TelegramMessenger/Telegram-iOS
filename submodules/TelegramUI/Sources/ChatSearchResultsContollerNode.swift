@@ -118,7 +118,7 @@ private enum ChatListSearchEntry: Comparable, Identifiable {
                     hasActiveRevealControls: false,
                     selected: false,
                     header: nil,
-                    enableContextActions: false,
+                    enabledContextActions: nil,
                     hiddenOffset: false,
                     interaction: interaction
                 )
@@ -185,7 +185,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, ASScrollViewDe
         self.searchState = searchState
         
         if case let .peer(peerId, _, _, _, _, _, _) = location, peerId == context.account.peerId {
-            self.mappedLocation = .savedMessagesChats
+            self.mappedLocation = .savedMessagesChats(peerId: peerId)
         } else {
             self.mappedLocation = .chatList(groupId: .root)
         }

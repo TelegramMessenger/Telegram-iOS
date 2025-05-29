@@ -20,6 +20,9 @@ swift_library(
         "//submodules/DeviceAccess:DeviceAccess",
         "//submodules/LegacyComponents:LegacyComponents",
         "//submodules/StickerResources:StickerResources",
+        "//submodules/Camera",
+        "//submodules/Utils/DeviceModel",
+        "//submodules/TooltipUI",
     ],
     visibility = [
         "//visibility:public",

@@ -138,10 +138,14 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                         authorString = EnginePeer(author).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                     }
                     
-                    if let threadData = item.threadData {
-                        title = "\(authorString) → \(threadData.info.title)"
+                    if case let .channel(channel) = peer, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = firstMessage.peers[linkedMonoforumId] {
+                        title = authorString + "@" + EnginePeer(mainChannel).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                     } else {
-                        title = authorString + "@" + peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                        if let threadData = item.threadData {
+                            title = "\(authorString) → \(threadData.info.title)"
+                        } else {
+                            title = authorString + "@" + peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                        }
                     }
                 } else {
                     title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
@@ -172,6 +176,9 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             var avatarPeer = peer
             if firstMessage.id.peerId.isRepliesOrVerificationCodes, let author = firstMessage.forwardInfo?.author {
                 avatarPeer = EnginePeer(author)
+            }
+            if case let .channel(channel) = avatarPeer, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = firstMessage.peers[linkedMonoforumId] as? TelegramChannel {
+                avatarPeer = .channel(mainChannel)
             }
             self.avatarNode.setPeer(context: item.context, theme: presentationData.theme, peer: avatarPeer, overrideImage: peer.id == item.context.account.peerId ? .savedMessagesIcon : nil, emptyColor: presentationData.theme.list.mediaPlaceholderColor)
         }

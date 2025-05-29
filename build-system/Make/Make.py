@@ -90,7 +90,9 @@ class BazelCommandLine:
 
             # https://docs.bazel.build/versions/master/command-line-reference.html
             # Set the number of parallel jobs per module to saturate the available CPU resources.
-            '--swiftcopt=-j{}'.format(os.cpu_count() - 1),
+            #'--swiftcopt=-j{}'.format(os.cpu_count() - 1),
+            '--@build_bazel_rules_swift//swift:copt="-j{}"'.format(os.cpu_count() - 1),
+            '--@build_bazel_rules_swift//swift:copt="-whole-module-optimization"',
         ]
 
         self.common_release_args = [
@@ -106,7 +108,7 @@ class BazelCommandLine:
             # 1. resolves issues with the linker caused by the swift-objc mixing.
             # 2. makes the resulting binaries significantly smaller (up to 9% for this project).
             #'--swiftcopt=-num-threads', '--swiftcopt=1',
-            '--swiftcopt=-num-threads', '--swiftcopt=1',
+            #'--@build_bazel_rules_swift//swift:copt="-num-threads 0"',
 
             # Strip unsused code.
             '--features=dead_strip',
@@ -197,8 +199,7 @@ class BazelCommandLine:
                 # Require DSYM files as build output.
                 '--output_groups=+dsyms',
 
-                '--swiftcopt=-num-threads',
-                '--swiftcopt=0',
+                #'--@build_bazel_rules_swift//swift:copt="-num-threads 0"',
             ] + self.common_release_args
         else:
             raise Exception('Unknown configuration {}'.format(configuration))
@@ -516,6 +517,9 @@ def resolve_configuration(base_path, bazel_command_line: BazelCommandLine, argum
 
     with open(configuration_repository_path + '/WORKSPACE', 'w+') as file:
         pass
+
+    with open(configuration_repository_path + '/MODULE.bazel', 'w+') as file:
+        file.write('module(\n    name = "build_configuration",\n)\n')
 
     with open(configuration_repository_path + '/BUILD', 'w+') as file:
         pass

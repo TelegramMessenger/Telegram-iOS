@@ -463,12 +463,12 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             hasActiveRevealControls: hasActiveRevealControls,
                             selected: selected,
                             header: nil,
-                            enableContextActions: true,
+                            enabledContextActions: .auto,
                             hiddenOffset: threadInfo?.isHidden == true && !revealed,
                             interaction: nodeInteraction
                         ), directionHint: entry.directionHint)
                     case let .peers(filter, isSelecting, _, filters, displayAutoremoveTimeout, displayPresence):
-                        let itemPeer = peer.chatMainPeer
+                        let itemPeer = peer.chatOrMonoforumMainPeer
                         var chatPeer: EnginePeer?
                         if let peer = peer.peers[peer.peerId] {
                             chatPeer = peer
@@ -598,7 +598,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                         }
                     
                         var isForum = false
-                        if let peer = chatPeer, case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+                        if let peer = chatPeer, case let .channel(channel) = peer, channel.isForumOrMonoForum {
                             isForum = true
                             if editing, case .chatList = mode {
                                 enabled = false
@@ -643,7 +643,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             animationRenderer: nodeInteraction.animationRenderer
                         ), directionHint: entry.directionHint)
                 case .peerType:
-                    let itemPeer = peer.chatMainPeer
+                    let itemPeer = peer.chatOrMonoforumMainPeer
                     var chatPeer: EnginePeer?
                     if let peer = peer.peers[peer.peerId] {
                         chatPeer = peer
@@ -709,7 +709,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                     hasActiveRevealControls: false,
                     selected: false,
                     header: nil,
-                    enableContextActions: true,
+                    enabledContextActions: .auto,
                     hiddenOffset: groupReferenceEntry.hiddenByDefault && !groupReferenceEntry.revealed,
                     interaction: nodeInteraction
                 ), directionHint: entry.directionHint)
@@ -862,12 +862,12 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             hasActiveRevealControls: hasActiveRevealControls,
                             selected: selected,
                             header: nil,
-                            enableContextActions: true,
+                            enabledContextActions: .auto,
                             hiddenOffset: threadInfo?.isHidden == true && !revealed,
                             interaction: nodeInteraction
                     ), directionHint: entry.directionHint)
                     case let .peers(filter, isSelecting, _, filters, displayAutoremoveTimeout, displayPresence):
-                        let itemPeer = peer.chatMainPeer
+                        let itemPeer = peer.chatOrMonoforumMainPeer
                         var chatPeer: EnginePeer?
                         if let peer = peer.peers[peer.peerId] {
                             chatPeer = peer
@@ -948,7 +948,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                         }
                         
                         var isForum = false
-                        if let peer = chatPeer, case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+                        if let peer = chatPeer, case let .channel(channel) = peer, channel.isForumOrMonoForum {
                             isForum = true
                             if editing, case .chatList = mode {
                                 enabled = false
@@ -993,7 +993,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             animationRenderer: nodeInteraction.animationRenderer
                         ), directionHint: entry.directionHint)
                     case .peerType:
-                        let itemPeer = peer.chatMainPeer
+                        let itemPeer = peer.chatOrMonoforumMainPeer
                         var chatPeer: EnginePeer?
                         if let peer = peer.peers[peer.peerId] {
                             chatPeer = peer
@@ -1059,7 +1059,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                         hasActiveRevealControls: false,
                         selected: false,
                         header: nil,
-                        enableContextActions: true,
+                        enabledContextActions: .auto,
                         hiddenOffset: groupReferenceEntry.hiddenByDefault && !groupReferenceEntry.revealed,
                         interaction: nodeInteraction
                 ), directionHint: entry.directionHint)
@@ -1535,9 +1535,9 @@ public final class ChatListNode: ListView {
                 }
             }
         }, setItemPinned: { [weak self] itemId, _ in
-            if case .savedMessagesChats = location {
+            if case let .savedMessagesChats(peerId) = location {
                 if case let .peer(itemPeerId) = itemId {
-                    let _ = (context.engine.peers.toggleForumChannelTopicPinned(id: context.account.peerId, threadId: itemPeerId.toInt64())
+                    let _ = (context.engine.peers.toggleForumChannelTopicPinned(id: peerId, threadId: itemPeerId.toInt64())
                     |> deliverOnMainQueue).start(error: { error in
                         guard let self else {
                             return
@@ -2987,7 +2987,7 @@ public final class ChatListNode: ListView {
                             guard case .global = chatPeerId.category else {
                                 continue
                             }
-                            if case let .channel(channel) = peerMap[chatPeerId.peerId], channel.flags.contains(.isForum) {
+                            if case let .channel(channel) = peerMap[chatPeerId.peerId], channel.isForumOrMonoForum {
                                 continue
                             }
                             itemId = ChatListNodePeerInputActivities.ItemId(peerId: chatPeerId.peerId, threadId: nil)

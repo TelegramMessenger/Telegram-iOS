@@ -18,6 +18,7 @@ import PremiumUI
 import ChatControllerInteraction
 import ChatContextResultPeekContent
 import ChatInputContextPanelNode
+import BatchVideoRendering
 
 private struct ChatContextResultStableId: Hashable {
     let result: ChatContextResult
@@ -48,8 +49,8 @@ private struct HorizontalListContextResultsChatInputContextPanelEntry: Comparabl
         return lhs.index < rhs.index
     }
     
-    func item(context: AccountContext, resultSelected: @escaping (ChatContextResult, ASDisplayNode, CGRect) -> Bool) -> ListViewItem {
-        return HorizontalListContextResultsChatInputPanelItem(context: context, theme: self.theme, result: self.result, resultSelected: resultSelected)
+    func item(context: AccountContext, batchVideoContext: QueueLocalObject<BatchVideoRenderingContext>, resultSelected: @escaping (ChatContextResult, ASDisplayNode, CGRect) -> Bool) -> ListViewItem {
+        return HorizontalListContextResultsChatInputPanelItem(context: context, theme: self.theme, result: self.result, batchVideoContext: batchVideoContext, resultSelected: resultSelected)
     }
 }
 
@@ -71,12 +72,12 @@ private final class HorizontalListContextResultsOpaqueState {
     }
 }
 
-private func preparedTransition(from fromEntries: [HorizontalListContextResultsChatInputContextPanelEntry], to toEntries: [HorizontalListContextResultsChatInputContextPanelEntry], hasMore: Bool, context: AccountContext, resultSelected: @escaping (ChatContextResult, ASDisplayNode, CGRect) -> Bool) -> HorizontalListContextResultsChatInputContextPanelTransition {
+private func preparedTransition(from fromEntries: [HorizontalListContextResultsChatInputContextPanelEntry], to toEntries: [HorizontalListContextResultsChatInputContextPanelEntry], hasMore: Bool, context: AccountContext, batchVideoContext: QueueLocalObject<BatchVideoRenderingContext>, resultSelected: @escaping (ChatContextResult, ASDisplayNode, CGRect) -> Bool) -> HorizontalListContextResultsChatInputContextPanelTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, resultSelected: resultSelected), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, resultSelected: resultSelected), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, batchVideoContext: batchVideoContext, resultSelected: resultSelected), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, batchVideoContext: batchVideoContext, resultSelected: resultSelected), directionHint: nil) }
     
     return HorizontalListContextResultsChatInputContextPanelTransition(deletions: deletions, insertions: insertions, updates: updates, entryCount: toEntries.count, hasMore: hasMore)
 }
@@ -93,6 +94,8 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
     private var enqueuedTransitions: [(HorizontalListContextResultsChatInputContextPanelTransition, Bool)] = []
     private var hasValidLayout = false
     
+    private let batchVideoContext: QueueLocalObject<BatchVideoRenderingContext>
+    
     override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, chatPresentationContext: ChatPresentationContext) {
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
@@ -107,6 +110,10 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
         self.listView.accessibilityPageScrolledString = { row, count in
             return strings.VoiceOver_ScrollStatus(row, count).string
         }
+        
+        self.batchVideoContext = QueueLocalObject(queue: .mainQueue(), generate: {
+            return BatchVideoRenderingContext(context: context)
+        })
         
         super.init(context: context, theme: theme, strings: strings, fontSize: fontSize, chatPresentationContext: chatPresentationContext)
         
@@ -136,7 +143,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
         
         self.listView.view.disablesInteractiveTransitionGestureRecognizer = true
         self.listView.view.disablesInteractiveKeyboardGestureRecognizer = true
-        self.view.addGestureRecognizer(PeekControllerGestureRecognizer(contentAtPoint: { [weak self] point in
+        self.view.addGestureRecognizer(PeekControllerGestureRecognizer(contentAtPoint: { [weak self] point -> Signal<(UIView, CGRect, PeekControllerContent)?, NoError>? in
             if let strongSelf = self {
                 let convertedPoint = strongSelf.listView.view.convert(point, from: strongSelf.view)
                 
@@ -183,7 +190,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                                 let controller = PremiumIntroScreen(context: strongSelf.context, source: .stickers)
                                 strongSelf.interfaceInteraction?.getNavigationController()?.pushViewController(controller)
                             }))
-                        } else {
+                        } else if let batchVideoContext = strongSelf.batchVideoContext.unsafeGet() {
                             var menuItems: [ContextMenuItem] = []
                             if case let .internalReference(internalReference) = item.result, let file = internalReference.file, file.isAnimated {
                                 menuItems.append(.action(ContextMenuActionItem(text: strongSelf.strings.Preview_SaveGif, icon: { theme in
@@ -229,7 +236,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                                 f(.default)
                                 let _ = item.resultSelected(item.result, itemNode, itemNode.bounds)
                             })))
-                            selectedItemNodeAndContent = (itemNode.view, itemNode.bounds, ChatContextResultPeekContent(account: item.context.account, contextResult: item.result, menu: menuItems))
+                            selectedItemNodeAndContent = (itemNode.view, itemNode.bounds, ChatContextResultPeekContent(context: item.context, contextResult: item.result, menu: menuItems, batchVideoContext: batchVideoContext))
                         }
                     }
                 }
@@ -312,7 +319,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
         }
         
         let firstTime = self.currentEntries == nil
-        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, hasMore: results.nextOffset != nil, context: self.context, resultSelected: { [weak self] result, node, rect in
+        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, hasMore: results.nextOffset != nil, context: self.context, batchVideoContext: self.batchVideoContext, resultSelected: { [weak self] result, node, rect in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
                 return interfaceInteraction.sendContextResult(results, result, node, rect)
             } else {

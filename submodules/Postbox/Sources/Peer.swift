@@ -298,11 +298,18 @@ public protocol Peer: AnyObject, PostboxCoding {
     var id: PeerId { get }
     var indexName: PeerIndexNameRepresentation { get }
     var associatedPeerId: PeerId? { get }
+    var additionalAssociatedPeerId: PeerId? { get }
+    var associatedPeerOverridesIdentity: Bool { get }
     var notificationSettingsPeerId: PeerId? { get }
     var associatedMediaIds: [MediaId]? { get }
     var timeoutAttribute: UInt32? { get }
     
     func isEqual(_ other: Peer) -> Bool
+}
+
+public extension Peer {
+    var additionalAssociatedPeerId: PeerId? { return nil }
+    var associatedPeerOverridesIdentity: Bool { return false }
 }
 
 public func arePeersEqual(_ lhs: Peer?, _ rhs: Peer?) -> Bool {

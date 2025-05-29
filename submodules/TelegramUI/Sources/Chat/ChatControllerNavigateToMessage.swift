@@ -143,8 +143,8 @@ extension ChatControllerImpl {
                 self.dismiss()
                 
                 let navigateToLocation: NavigateToChatControllerParams.Location
-                if let message = messages.first, let threadId = message.threadId, let channel = message.peers[message.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum) {
-                    navigateToLocation = .replyThread(ChatReplyThreadMessage(peerId: peer.id, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false))
+                if let message = messages.first, let threadId = message.threadId, let channel = message.peers[message.id.peerId] as? TelegramChannel, channel.isForumOrMonoForum {
+                    navigateToLocation = .replyThread(ChatReplyThreadMessage(peerId: peer.id, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, isMonoforumPost: false,maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false))
                 } else {
                     navigateToLocation = .peer(peer)
                 }
@@ -177,9 +177,9 @@ extension ChatControllerImpl {
                 var chatLocation: NavigateToChatControllerParams.Location = .peer(peer)
                 var preloadChatLocation: ChatLocation = .peer(id: peer.id)
                 var displayMessageNotFoundToast = false
-                if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+                if case let .channel(channel) = peer, channel.isForumOrMonoForum {
                     if let message = message, let threadId = message.threadId {
-                        let replyThreadMessage = ChatReplyThreadMessage(peerId: peer.id, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false)
+                        let replyThreadMessage = ChatReplyThreadMessage(peerId: peer.id, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, isMonoforumPost: false, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false)
                         chatLocation = .replyThread(replyThreadMessage)
                         preloadChatLocation = .replyThread(message: replyThreadMessage)
                     } else {
@@ -317,7 +317,7 @@ extension ChatControllerImpl {
             })
         } else if forceInCurrentChat {
             if let _ = fromId, let fromIndex = fromIndex, rememberInStack {
-                self.historyNavigationStack.add(fromIndex)
+                self.contentData?.historyNavigationStack.add(fromIndex)
             }
             
             let scrollFromIndex: MessageIndex?
@@ -505,7 +505,7 @@ extension ChatControllerImpl {
                         return
                 }
                 if let _ = fromId, rememberInStack {
-                    self.historyNavigationStack.add(fromIndex)
+                    self.contentData?.historyNavigationStack.add(fromIndex)
                 }
                 self.loadingMessage.set(.single(statusSubject) |> delay(0.1, queue: .mainQueue()))
                 

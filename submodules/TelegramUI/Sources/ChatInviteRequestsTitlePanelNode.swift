@@ -108,12 +108,27 @@ private final class ChatInfoTitlePanelPeerNearbyInfoNode: ASDisplayNode {
 }
 
 final class ChatInviteRequestsTitlePanelNode: ChatTitleAccessoryPanelNode {
+    private final class Params {
+        let width: CGFloat
+        let leftInset: CGFloat
+        let rightInset: CGFloat
+        let interfaceState: ChatPresentationInterfaceState
+
+        init(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, interfaceState: ChatPresentationInterfaceState) {
+            self.width = width
+            self.leftInset = leftInset
+            self.rightInset = rightInset
+            self.interfaceState = interfaceState
+        }
+    }
+    
     private let context: AccountContext
     
     private let separatorNode: ASDisplayNode
     
     private let closeButton: HighlightableButtonNode
-    private var button: UIButton?
+    private let button: HighlightableButtonNode
+    private let buttonTitle: ImmediateTextNode
     
     private let avatarsContext: AnimatedAvatarSetContext
     private var avatarsContent: AnimatedAvatarSetContext.Content?
@@ -127,6 +142,8 @@ final class ChatInviteRequestsTitlePanelNode: ChatTitleAccessoryPanelNode {
     private var peers: [EnginePeer] = []
     private var count: Int32 = 0
     
+    private var params: Params?
+    
     init(context: AccountContext) {
         self.context = context
         
@@ -136,6 +153,10 @@ final class ChatInviteRequestsTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.closeButton = HighlightableButtonNode()
         self.closeButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
         self.closeButton.displaysAsynchronously = false
+        
+        self.button = HighlightableButtonNode()
+        self.buttonTitle = ImmediateTextNode()
+        self.buttonTitle.anchorPoint = CGPoint()
         
         self.avatarsContext = AnimatedAvatarSetContext()
         self.avatarsNode = AnimatedAvatarSetNode()
@@ -150,6 +171,12 @@ final class ChatInviteRequestsTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.closeButton.addTarget(self, action: #selector(self.closePressed), forControlEvents: [.touchUpInside])
         self.addSubnode(self.closeButton)
         
+        self.button.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
+        self.addSubnode(self.button)
+        
+        self.buttonTitle.isUserInteractionEnabled = false
+        self.button.addSubnode(self.buttonTitle)
+        
         self.addSubnode(self.avatarsNode)
         
         self.addSubnode(self.activateAreaNode)
@@ -161,12 +188,16 @@ final class ChatInviteRequestsTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.peers = peers
         self.count = count
         
-        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         self.avatarsContent = self.avatarsContext.update(peers: peers, animated: false)
-        self.button?.setTitle(presentationData.strings.Conversation_RequestsToJoin(count), for: [])
+        
+        if let params = self.params {
+            let _ = self.updateLayout(width: params.width, leftInset: params.leftInset, rightInset: params.rightInset, transition: .immediate, interfaceState: params.interfaceState)
+        }
     }
     
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> LayoutResult {
+        self.params = Params(width: width, leftInset: leftInset, rightInset: rightInset, interfaceState: interfaceState)
+        
         if interfaceState.theme !== self.theme {
             self.theme = interfaceState.theme
             
@@ -181,21 +212,15 @@ final class ChatInviteRequestsTitlePanelNode: ChatTitleAccessoryPanelNode {
         let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))
         transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: width - contentRightInset - closeButtonSize.width, y: floorToScreenPixels((panelHeight - closeButtonSize.height) / 2.0)), size: closeButtonSize))
         
-        if self.button == nil {
-            let view = UIButton()
-            view.titleLabel?.font = Font.regular(16.0)
-            view.setTitleColor(interfaceState.theme.rootController.navigationBar.accentTextColor, for: [])
-            view.setTitleColor(interfaceState.theme.rootController.navigationBar.accentTextColor.withAlphaComponent(0.7), for: [.highlighted])
-            view.addTarget(self, action: #selector(self.buttonPressed), for: [.touchUpInside])
-            self.view.addSubview(view)
-            self.button = view
-        }
+        self.buttonTitle.attributedText = NSAttributedString(string: interfaceState.strings.Conversation_RequestsToJoin(self.count), font: Font.regular(16.0), textColor: interfaceState.theme.rootController.navigationBar.accentTextColor)
         
-        self.button?.setTitle(interfaceState.strings.Conversation_RequestsToJoin(self.count), for: [])
+        transition.updateFrame(node: self.button, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: panelHeight)))
         
-        let maxInset = max(contentRightInset, leftInset)
-        let buttonWidth = floor(width - maxInset * 2.0)
-        self.button?.frame = CGRect(origin: CGPoint(x: maxInset, y: 0.0), size: CGSize(width: buttonWidth, height: panelHeight))
+        let titleSize = self.buttonTitle.updateLayout(CGSize(width: width - leftInset - 90.0 - contentRightInset, height: 100.0))
+        var buttonTitleFrame = CGRect(origin: CGPoint(x: leftInset + floor((width - leftInset - titleSize.width) * 0.5), y: floor((panelHeight - titleSize.height) * 0.5)), size: titleSize)
+        buttonTitleFrame.origin.x = max(buttonTitleFrame.minX, leftInset + 90.0)
+        transition.updatePosition(node: self.buttonTitle, position: buttonTitleFrame.origin)
+        self.buttonTitle.bounds = CGRect(origin: CGPoint(), size: buttonTitleFrame.size)
         
         let initialPanelHeight = panelHeight
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: UIScreenPixel)))

@@ -2713,6 +2713,12 @@ final class MessageHistoryTable: Table {
         
         var associatedStories: [StoryId: CodableEntry] = [:]
         
+        if let threadId = message.threadId {
+            if let peer = peerTable.get(PeerId(threadId)) {
+                peers[peer.id] = peer
+            }
+        }
+        
         for media in parsedMedia {
             for peerId in media.peerIds {
                 if let peer = peerTable.get(peerId) {
@@ -2776,6 +2782,10 @@ final class MessageHistoryTable: Table {
             associatedThreadInfo = self.seedConfiguration.decodeMessageThreadInfo(data.data)
         }
         
+        if let threadId = message.threadId, let possibleThreadPeer = peerTable.get(PeerId(threadId)) {
+            peers[possibleThreadPeer.id] = possibleThreadPeer
+        }
+        
         return Message(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, groupInfo: message.groupInfo, threadId: message.threadId, timestamp: message.timestamp, flags: message.flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, customTags: message.customTags, forwardInfo: forwardInfo, author: author, text: message.text, attributes: parsedAttributes, media: parsedMedia, peers: peers, associatedMessages: associatedMessages, associatedMessageIds: associatedMessageIds, associatedMedia: associatedMedia, associatedThreadInfo: associatedThreadInfo, associatedStories: associatedStories)
     }
     
@@ -2797,6 +2807,12 @@ final class MessageHistoryTable: Table {
                 if let peer = peerTable.get(associatedPeerId) {
                     peers[peer.id] = peer
                 }
+            }
+        }
+        
+        if let threadId = message.threadId {
+            if let peer = peerTable.get(PeerId(threadId)) {
+                peers[peer.id] = peer
             }
         }
         

@@ -332,7 +332,7 @@ private func notificationsPeerCategoryEntries(peerId: EnginePeer.Id, notificatio
             }
         }
         existingThreadIds.insert(value.threadId)
-        entries.append(.exception(Int32(index), presentationData.dateTimeFormat, presentationData.nameDisplayOrder, .channel(TelegramChannel(id: peerId, accessHash: nil, title: "", username: nil, photo: [], creationDate: 0, version: 0, participationStatus: .member, info: .group(TelegramChannelGroupInfo(flags: [])), flags: [.isForum], restrictionInfo: nil, adminRights: nil, bannedRights: nil, defaultBannedRights: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, emojiStatus: nil, approximateBoostLevel: nil, subscriptionUntilDate: nil, verificationIconFileId: nil, sendPaidMessageStars: nil)), value.threadId, value.info, title, value.notificationSettings._asNotificationSettings(), state.editing, state.revealedThreadId == value.threadId))
+        entries.append(.exception(Int32(index), presentationData.dateTimeFormat, presentationData.nameDisplayOrder, .channel(TelegramChannel(id: peerId, accessHash: nil, title: "", username: nil, photo: [], creationDate: 0, version: 0, participationStatus: .member, info: .group(TelegramChannelGroupInfo(flags: [])), flags: [.isForum], restrictionInfo: nil, adminRights: nil, bannedRights: nil, defaultBannedRights: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, emojiStatus: nil, approximateBoostLevel: nil, subscriptionUntilDate: nil, verificationIconFileId: nil, sendPaidMessageStars: nil, linkedMonoforumId: nil)), value.threadId, value.info, title, value.notificationSettings._asNotificationSettings(), state.editing, state.revealedThreadId == value.threadId))
         index += 1
     }
     
@@ -526,7 +526,7 @@ public func threadNotificationExceptionsScreen(context: AccountContext, peerId: 
     }, addException: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let filter: ChatListNodePeersFilter = [.excludeRecent, .doNotSearchMessages, .removeSearchHeader]
-        let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: filter, forumPeerId: peerId, hasContactSelector: false, title: presentationData.strings.Notifications_AddExceptionTitle))
+        let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: filter, forumPeerId: (peerId, false), hasContactSelector: false, title: presentationData.strings.Notifications_AddExceptionTitle))
         controller.peerSelected = { [weak controller] _, threadId in
             guard let threadId = threadId else {
                 return

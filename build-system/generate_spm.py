@@ -19,6 +19,24 @@ if os.path.exists(spm_files_dir):
 if not os.path.exists(spm_files_dir):
     os.makedirs(spm_files_dir)
 
+def escape_swift_string_literal_component(text: str) -> str:
+    return text.replace('\\', '\\\\').replace('"', '\\"')
+
+parsed_modules = {}
+for name, module in sorted(modules.items()):
+    is_empty = False
+    all_source_files = []
+    for source in module.get("hdrs", []) + module["sources"]:
+        if source.endswith(('.a')):
+            continue
+        all_source_files.append(source)
+    if module["type"] == "objc_library" or module["type"] == "swift_library" or module["type"] == "cc_library":
+        if all_source_files == []:
+            is_empty = True
+    parsed_modules[name] = {
+        "is_empty": is_empty,
+    }
+
 combined_lines = []
 combined_lines.append("// swift-tools-version: 6.0")
 combined_lines.append("// The swift-tools-version declares the minimum version of Swift required to build this package.")
@@ -28,11 +46,14 @@ combined_lines.append("")
 combined_lines.append("let package = Package(")
 combined_lines.append("    name: \"Telegram\",")
 combined_lines.append("    platforms: [")
-combined_lines.append("        .iOS(.v13)")
+combined_lines.append("        .iOS(.v12)")
 combined_lines.append("    ],")
 combined_lines.append("    products: [")
 
 for name, module in sorted(modules.items()):
+    if parsed_modules[name]["is_empty"]:
+        continue
+    
     if module["type"] == "objc_library" or module["type"] == "swift_library" or module["type"] == "cc_library":
         combined_lines.append("        .library(name: \"%s\", targets: [\"%s\"])," % (module["name"], module["name"]))
 
@@ -40,6 +61,9 @@ combined_lines.append("    ],")
 combined_lines.append("    targets: [")
 
 for name, module in sorted(modules.items()):
+    if parsed_modules[name]["is_empty"]:
+        continue
+
     module_type = module["type"]
     if module_type == "objc_library" or module_type == "cc_library" or module_type == "swift_library":
         combined_lines.append("        .target(")
@@ -47,7 +71,7 @@ for name, module in sorted(modules.items()):
 
         linked_directory = None
         has_non_linked_sources = False
-        for source in module["sources"]:
+        for source in module["sources"] + module.get("hdrs", []):
             if source.startswith("bazel-out/"):
                 linked_directory = "spm-files/" + name
             else:
@@ -60,7 +84,8 @@ for name, module in sorted(modules.items()):
         
         combined_lines.append("            dependencies: [")
         for dep in module["deps"]:
-            combined_lines.append("                .target(name: \"%s\")," % dep)
+            if not parsed_modules[dep]["is_empty"]:
+                combined_lines.append("                .target(name: \"%s\")," % dep)
         combined_lines.append("            ],")
 
         if linked_directory:
@@ -85,7 +110,7 @@ for name, module in sorted(modules.items()):
                         continue
                     # Check if any source file is under this directory
                     has_source = False
-                    for source in module["sources"]:
+                    for source in module["sources"] + module.get("hdrs", []):
                         rel_source = source[len(module["path"]) + 1:]
                         if rel_source.startswith(dir_path + "/"):
                             has_source = True
@@ -98,16 +123,14 @@ for name, module in sorted(modules.items()):
                     file_path = os.path.join(rel_path, f)
                     if any(component.startswith('.') for component in file_path.split('/')):
                         continue
-                    if file_path not in [source[len(module["path"]) + 1:] for source in module["sources"]]:
+                    if file_path not in [source[len(module["path"]) + 1:] for source in module["sources"] + module.get("hdrs", [])]:
                         exclude_files_and_dirs.append(file_path)
         for item in exclude_files_and_dirs:
             combined_lines.append("                \"%s\"," % item)
         combined_lines.append("            ],")
         
         combined_lines.append("            sources: [")
-        for source in module["sources"]:
-            if source.endswith(('.h', '.hpp')):
-                continue
+        for source in module["sources"] + module.get("hdrs", []):
             linked_source_file_names = []
             if not source.startswith(module["path"]):
                 if source.startswith("bazel-out/"):
@@ -138,7 +161,8 @@ for name, module in sorted(modules.items()):
                     
                     os.symlink(symlink_target, symlink_location)
                     relative_source = source_file_name
-                    combined_lines.append("                \"%s\"," % relative_source)
+                    if not source.endswith(('.h', '.hpp', '.a')):
+                        combined_lines.append("                \"%s\"," % relative_source)
                 else:
                     print("Source {} is not inside module path {}".format(source, module["path"]))
                     sys.exit(1)
@@ -152,16 +176,53 @@ for name, module in sorted(modules.items()):
             elif len(module["includes"]) == 1:
                 combined_lines.append("            publicHeadersPath: \"%s\"," % module["includes"][0])
             else:
-                print("Multiple includes are not supported yet: {}".format(module["includes"]))
+                print("{}: Multiple includes are not yet supported: {}".format(name, module["includes"]))
                 sys.exit(1)
-            combined_lines.append("            cSettings: [")
-            combined_lines.append("                .unsafeFlags([")
-            for flag in module["copts"]:
-                # Escape C-string entities in flag
-                escaped_flag = flag.replace('\\', '\\\\').replace('"', '\\"')
-                combined_lines.append("                    \"%s\"," % escaped_flag)
-            combined_lines.append("                ])")
-            combined_lines.append("            ],")
+
+            defines = module.get("defines", [])
+            copts = module.get("copts", [])
+            cxxopts = module.get("cxxopts", [])
+
+            if defines or copts:
+                combined_lines.append("            cSettings: [")
+                if defines:
+                    for define in defines:
+                        if "=" in define:
+                            print("{}: Defines with = are not yet supported: {}".format(name, define))
+                            sys.exit(1)
+                        else:
+                            combined_lines.append(f'                .define("{define}"),')
+                if copts:
+                    combined_lines.append("                .unsafeFlags([")
+                    for flag in copts:
+                        escaped_flag = escape_swift_string_literal_component(flag)
+                        combined_lines.append(f'                    "{escaped_flag}",')
+                    combined_lines.append("                ])")
+                combined_lines.append("            ],")
+
+            if defines or cxxopts: # Check for defines OR cxxopts
+                combined_lines.append("            cxxSettings: [")
+                if defines: # Add defines again if present, for C++ context
+                    for define in defines:
+                        if "=" in define:
+                            print("{}: Defines with = are not yet supported: {}".format(name, define))
+                            sys.exit(1)
+                        else:
+                            combined_lines.append(f'                .define("{define}"),')
+                if cxxopts:
+                    combined_lines.append("                .unsafeFlags([")
+                    for flag in cxxopts:
+                        if flag.startswith("-std=") and False:
+                            if flag != "-std=c++17":
+                                print("{}: Unsupported C++ standard: {}".format(name, flag))
+                                sys.exit(1)
+                            else:
+                                continue
+                        escaped_flag = escape_swift_string_literal_component(flag)
+                        combined_lines.append(f'                    "{escaped_flag}",')
+                    combined_lines.append("                ])")
+                combined_lines.append("            ],")
+
             combined_lines.append("            linkerSettings: [")
             if module_type == "objc_library":
                 for framework in module["sdk_frameworks"]:
@@ -171,12 +232,33 @@ for name, module in sorted(modules.items()):
             combined_lines.append("            ]")
             
         elif module_type == "swift_library":
+            defines = module.get("defines", [])
+            swift_copts = module.get("copts", []) # These are actual swiftc flags
+
+            # Handle cSettings for defines if they exist
+            if defines:
+                combined_lines.append("            cSettings: [")
+                for define in defines:
+                    combined_lines.append(f'                .define("{define}"),')
+                combined_lines.append("            ],")
+
+            # Handle swiftSettings
             combined_lines.append("            swiftSettings: [")
             combined_lines.append("                .swiftLanguageMode(.v5),")
-            combined_lines.append("                .unsafeFlags([")
-            for flag in module["copts"]:
-                combined_lines.append("                    \"%s\"," % flag)
-            combined_lines.append("                ])")
+            # Add defines to swiftSettings as simple .define("STRING") flags
+            if defines:
+                for define in defines:
+                    # For Swift settings, the define is passed as a single string, e.g., "KEY=VALUE" or "FLAG"
+                    escaped_define = escape_swift_string_literal_component(define) # Escape the whole define string
+                    combined_lines.append(f'                .define("{escaped_define}"),')
+
+            # Add copts (swiftc flags) to unsafeFlags in swiftSettings
+            if swift_copts:
+                combined_lines.append("                .unsafeFlags([")
+                for flag in swift_copts:
+                    escaped_flag = escape_swift_string_literal_component(flag)
+                    combined_lines.append(f'                    "{escaped_flag}",')
+                combined_lines.append("                ])")
             combined_lines.append("            ]")
         combined_lines.append("        ),")
     elif module["type"] == "root":
@@ -186,6 +268,7 @@ for name, module in sorted(modules.items()):
         sys.exit(1)
 
 combined_lines.append("    ]")
+#combined_lines.append("    cxxLanguageStandard: .cxx17")
 combined_lines.append(")")
 combined_lines.append("")
 

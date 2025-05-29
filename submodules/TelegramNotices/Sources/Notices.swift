@@ -204,6 +204,9 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case starGiftWearTips = 77
     case channelSuggestTooltip = 78
     case multipleStoriesTooltip = 79
+    case voiceMessagesPauseSuggestion = 80
+    case videoMessagesPauseSuggestion = 81
+    case voiceMessagesResumeTrimWarning = 82
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -568,6 +571,18 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func multipleStoriesTooltip() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.multipleStoriesTooltip.key)
+    }
+    
+    static func voiceMessagesPauseSuggestion() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.voiceMessagesPauseSuggestion.key)
+    }
+    
+    static func videoMessagesPauseSuggestion() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.videoMessagesPauseSuggestion.key)
+    }
+    
+    static func voiceMessagesResumeTrimWarning() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.voiceMessagesResumeTrimWarning.key)
     }
 }
 
@@ -2453,6 +2468,87 @@ public struct ApplicationSpecificNotice {
 
             if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
                 transaction.setNotice(ApplicationSpecificNoticeKeys.multipleStoriesTooltip(), entry)
+            }
+            
+            return Int(previousValue)
+        }
+    }
+        
+    public static func getVoiceMessagesPauseSuggestion(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.voiceMessagesPauseSuggestion())?.get(ApplicationSpecificCounterNotice.self) {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+    
+    public static func incrementVoiceMessagesPauseSuggestion(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int = 1) -> Signal<Int, NoError> {
+        return accountManager.transaction { transaction -> Int in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.voiceMessagesPauseSuggestion())?.get(ApplicationSpecificCounterNotice.self) {
+                currentValue = value.value
+            }
+            let previousValue = currentValue
+            currentValue += Int32(count)
+
+            if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.voiceMessagesPauseSuggestion(), entry)
+            }
+            
+            return Int(previousValue)
+        }
+    }
+    
+    public static func getVideoMessagesPauseSuggestion(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.videoMessagesPauseSuggestion())?.get(ApplicationSpecificCounterNotice.self) {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+    
+    public static func incrementVideoMessagesPauseSuggestion(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int = 1) -> Signal<Int, NoError> {
+        return accountManager.transaction { transaction -> Int in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.videoMessagesPauseSuggestion())?.get(ApplicationSpecificCounterNotice.self) {
+                currentValue = value.value
+            }
+            let previousValue = currentValue
+            currentValue += Int32(count)
+
+            if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.videoMessagesPauseSuggestion(), entry)
+            }
+            
+            return Int(previousValue)
+        }
+    }
+    
+    public static func getVoiceMessagesResumeTrimWarning(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.voiceMessagesResumeTrimWarning())?.get(ApplicationSpecificCounterNotice.self) {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+    
+    public static func incrementVoiceMessagesResumeTrimWarning(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int = 1) -> Signal<Int, NoError> {
+        return accountManager.transaction { transaction -> Int in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.voiceMessagesResumeTrimWarning())?.get(ApplicationSpecificCounterNotice.self) {
+                currentValue = value.value
+            }
+            let previousValue = currentValue
+            currentValue += Int32(count)
+
+            if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.voiceMessagesResumeTrimWarning(), entry)
             }
             
             return Int(previousValue)

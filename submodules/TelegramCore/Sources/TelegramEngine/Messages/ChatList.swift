@@ -28,21 +28,48 @@ public final class EngineChatList: Equatable {
         }
     }
     
-    public struct ForumTopicData: Equatable {
-        public var id: Int64
-        public var title: String
-        public var iconFileId: Int64?
-        public var iconColor: Int32
-        public var maxOutgoingReadMessageId: EngineMessage.Id
-        public var isUnread: Bool
+    public final class ForumTopicData: Equatable {
+        public let id: Int64
+        public let title: String
+        public let iconFileId: Int64?
+        public let iconColor: Int32
+        public let maxOutgoingReadMessageId: EngineMessage.Id
+        public let isUnread: Bool
+        public let threadPeer: EnginePeer?
         
-        public init(id: Int64, title: String, iconFileId: Int64?, iconColor: Int32, maxOutgoingReadMessageId: EngineMessage.Id, isUnread: Bool) {
+        public init(id: Int64, title: String, iconFileId: Int64?, iconColor: Int32, maxOutgoingReadMessageId: EngineMessage.Id, isUnread: Bool, threadPeer: EnginePeer?) {
             self.id = id
             self.title = title
             self.iconFileId = iconFileId
             self.iconColor = iconColor
             self.maxOutgoingReadMessageId = maxOutgoingReadMessageId
             self.isUnread = isUnread
+            self.threadPeer = threadPeer
+        }
+        
+        public static func ==(lhs: ForumTopicData, rhs: ForumTopicData) -> Bool {
+            if lhs.id != rhs.id {
+                return false
+            }
+            if lhs.title != rhs.title {
+                return false
+            }
+            if lhs.iconFileId != rhs.iconFileId {
+                return false
+            }
+            if lhs.iconColor != rhs.iconColor {
+                return false
+            }
+            if lhs.maxOutgoingReadMessageId != rhs.maxOutgoingReadMessageId {
+                return false
+            }
+            if lhs.isUnread != rhs.isUnread {
+                return false
+            }
+            if lhs.threadPeer != rhs.threadPeer {
+                return false
+            }
+            return true
         }
     }
     
@@ -507,22 +534,22 @@ extension EngineChatList.Item {
             var forumTopicDataValue: EngineChatList.ForumTopicData?
             if let forumTopicData = forumTopicData {
                 let id = forumTopicData.id
-                if let forumTopicData = forumTopicData.info.data.get(MessageHistoryThreadData.self) {
-                    forumTopicDataValue = EngineChatList.ForumTopicData(id: id, title: forumTopicData.info.title, iconFileId: forumTopicData.info.icon, iconColor: forumTopicData.info.iconColor, maxOutgoingReadMessageId: MessageId(peerId: index.messageIndex.id.peerId, namespace: Namespaces.Message.Cloud, id: forumTopicData.maxOutgoingReadId), isUnread: forumTopicData.incomingUnreadCount > 0)
+                if let forumTopicInfo = forumTopicData.info.data.get(MessageHistoryThreadData.self) {
+                    forumTopicDataValue = EngineChatList.ForumTopicData(id: id, title: forumTopicInfo.info.title, iconFileId: forumTopicInfo.info.icon, iconColor: forumTopicInfo.info.iconColor, maxOutgoingReadMessageId: MessageId(peerId: index.messageIndex.id.peerId, namespace: Namespaces.Message.Cloud, id: forumTopicInfo.maxOutgoingReadId), isUnread: forumTopicInfo.incomingUnreadCount > 0, threadPeer: forumTopicData.threadPeer.flatMap(EnginePeer.init))
                 }
             }
             
             var topForumTopicItems: [EngineChatList.ForumTopicData] = []
             for item in topForumTopics {
-                if let forumTopicData = item.info.data.get(MessageHistoryThreadData.self) {
-                    topForumTopicItems.append(EngineChatList.ForumTopicData(id: item.id, title: forumTopicData.info.title, iconFileId: forumTopicData.info.icon, iconColor: forumTopicData.info.iconColor, maxOutgoingReadMessageId: MessageId(peerId: index.messageIndex.id.peerId, namespace: Namespaces.Message.Cloud, id: forumTopicData.maxOutgoingReadId), isUnread: forumTopicData.incomingUnreadCount > 0))
+                if let forumTopicInfo = item.info.data.get(MessageHistoryThreadData.self) {
+                    topForumTopicItems.append(EngineChatList.ForumTopicData(id: item.id, title: forumTopicInfo.info.title, iconFileId: forumTopicInfo.info.icon, iconColor: forumTopicInfo.info.iconColor, maxOutgoingReadMessageId: MessageId(peerId: index.messageIndex.id.peerId, namespace: Namespaces.Message.Cloud, id: forumTopicInfo.maxOutgoingReadId), isUnread: forumTopicInfo.incomingUnreadCount > 0, threadPeer: item.threadPeer.flatMap(EnginePeer.init)))
                 }
             }
             
             let readCounters = readState.flatMap(EnginePeerReadCounters.init)
             
             if let channel = renderedPeer.peer as? TelegramChannel {
-                if channel.flags.contains(.isForum) {
+                if channel.isForumOrMonoForum {
                     draft = nil
                 } else {
                     forumTopicDataValue = nil

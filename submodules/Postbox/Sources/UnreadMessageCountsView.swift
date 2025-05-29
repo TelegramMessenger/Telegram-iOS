@@ -64,7 +64,7 @@ final class MutableUnreadMessageCountsView: MutablePostboxView {
             case let .totalInGroup(groupId):
                 return .totalInGroup(groupId, postbox.messageHistoryMetadataTable.getTotalUnreadState(groupId: groupId))
             case let .peer(peerId, handleThreads):
-                if handleThreads, let peer = postbox.peerTable.get(peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
+                if handleThreads, let peer = postbox.peerTable.get(peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer, peer.associatedPeerId.flatMap(postbox.peerTable.get)).value {
                     var count: Int32 = 0
                     if let summary = postbox.peerThreadsSummaryTable.get(peerId: peerId) {
                         count = summary.totalUnreadCount
@@ -113,7 +113,7 @@ final class MutableUnreadMessageCountsView: MutablePostboxView {
                         }
                     }
                 case let .peer(peerId, handleThreads, _):
-                    if handleThreads, let peer = postbox.peerTable.get(peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
+                    if handleThreads, let peer = postbox.peerTable.get(peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer, peer.associatedPeerId.flatMap(postbox.peerTable.get)).value {
                         if transaction.updatedPeerThreadsSummaries.contains(peerId) {
                             var count: Int32 = 0
                             if let summary = postbox.peerThreadsSummaryTable.get(peerId: peerId) {
@@ -143,7 +143,7 @@ final class MutableUnreadMessageCountsView: MutablePostboxView {
             case let .totalInGroup(groupId):
                 return .totalInGroup(groupId, postbox.messageHistoryMetadataTable.getTotalUnreadState(groupId: groupId))
             case let .peer(peerId, handleThreads):
-                if handleThreads, let peer = postbox.peerTable.get(peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
+                if handleThreads, let peer = postbox.peerTable.get(peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer, peer.associatedPeerId.flatMap(postbox.peerTable.get)).value {
                     var count: Int32 = 0
                     if let summary = postbox.peerThreadsSummaryTable.get(peerId: peerId) {
                         count = summary.totalUnreadCount
@@ -240,7 +240,7 @@ final class MutableCombinedReadStateView: MutablePostboxView {
         var updated = false
         
         if transaction.alteredInitialPeerCombinedReadStates[self.peerId] != nil || transaction.updatedPeerThreadCombinedStates.contains(self.peerId) {
-            if self.handleThreads, let peer = postbox.peerTable.get(self.peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
+            if self.handleThreads, let peer = postbox.peerTable.get(self.peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer, peer.associatedPeerId.flatMap(postbox.peerTable.get)).value {
                 var count: Int32 = 0
                 if let summary = postbox.peerThreadsSummaryTable.get(peerId: peerId) {
                     count = summary.totalUnreadCount
@@ -260,14 +260,14 @@ final class MutableCombinedReadStateView: MutablePostboxView {
 
     func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
         let state: CombinedPeerReadState?
-        if handleThreads, let peer = postbox.peerTable.get(peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
+        if self.handleThreads, let peer = postbox.peerTable.get(self.peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer, peer.associatedPeerId.flatMap(postbox.peerTable.get)).value {
             var count: Int32 = 0
-            if let summary = postbox.peerThreadsSummaryTable.get(peerId: peerId) {
+            if let summary = postbox.peerThreadsSummaryTable.get(peerId: self.peerId) {
                 count = summary.totalUnreadCount
             }
             state = CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 1, maxOutgoingReadId: 1, maxKnownId: 1, count: count, markedUnread: false))])
         } else {
-            state = postbox.readStateTable.getCombinedState(peerId)
+            state = postbox.readStateTable.getCombinedState(self.peerId)
         }
         
         if state != self.state {

@@ -201,7 +201,6 @@ private final class GiftTransferAlertContentNode: AlertContentNode {
         let maxActionWidth: CGFloat = floor(size.width / CGFloat(self.actionNodes.count))
         let actionTitleInsets: CGFloat = 8.0
         
-        let effectiveActionLayout = TextAlertContentActionLayout.vertical
         for actionNode in self.actionNodes {
             let actionTitleSize = actionNode.titleNode.updateLayout(CGSize(width: maxActionWidth, height: actionButtonHeight))
             minActionsWidth = max(minActionsWidth, actionTitleSize.width + actionTitleInsets)
@@ -217,39 +216,42 @@ private final class GiftTransferAlertContentNode: AlertContentNode {
         transition.updateFrame(node: self.actionNodesSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight - UIScreenPixel), size: CGSize(width: resultSize.width, height: UIScreenPixel)))
         
         var actionOffset: CGFloat = 0.0
-        let actionWidth: CGFloat = floor(resultSize.width / CGFloat(self.actionNodes.count))
+        //let actionWidth: CGFloat = floor(resultSize.width / CGFloat(self.actionNodes.count))
         var separatorIndex = -1
         var nodeIndex = 0
         for actionNode in self.actionNodes {
             if separatorIndex >= 0 {
                 let separatorNode = self.actionVerticalSeparators[separatorIndex]
-                switch effectiveActionLayout {
+                /*switch effectiveActionLayout {
                     case .horizontal:
                         transition.updateFrame(node: separatorNode, frame: CGRect(origin: CGPoint(x: actionOffset - UIScreenPixel, y: resultSize.height - actionsHeight), size: CGSize(width: UIScreenPixel, height: actionsHeight - UIScreenPixel)))
-                    case .vertical:
+                    case .vertical:*/
+                do {
                         transition.updateFrame(node: separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight + actionOffset - UIScreenPixel), size: CGSize(width: resultSize.width, height: UIScreenPixel)))
                 }
             }
             separatorIndex += 1
             
             let currentActionWidth: CGFloat
-            switch effectiveActionLayout {
+            /*switch effectiveActionLayout {
                 case .horizontal:
                     if nodeIndex == self.actionNodes.count - 1 {
                         currentActionWidth = resultSize.width - actionOffset
                     } else {
                         currentActionWidth = actionWidth
                     }
-                case .vertical:
+                case .vertical:*/
+            do {
                     currentActionWidth = resultSize.width
             }
             
             let actionNodeFrame: CGRect
-            switch effectiveActionLayout {
+            /*switch effectiveActionLayout {
                 case .horizontal:
                     actionNodeFrame = CGRect(origin: CGPoint(x: actionOffset, y: resultSize.height - actionsHeight), size: CGSize(width: currentActionWidth, height: actionButtonHeight))
                     actionOffset += currentActionWidth
-                case .vertical:
+                case .vertical:*/
+            do {
                     actionNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight + actionOffset), size: CGSize(width: currentActionWidth, height: actionButtonHeight))
                     actionOffset += actionButtonHeight
             }

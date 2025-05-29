@@ -14015,6 +14015,16 @@ Sorry for the inconvenience.";
 "Notification.PaidMessagePriceChanged" = "%1$@ changed price to %2$@ per message";
 "Notification.PaidMessagePriceChangedYou" = "You changed price to %1$@ per message";
 
+"Notification.ChannelMessagePriceChanged_1" = "{name} set the private message price to %d star";
+"Notification.ChannelMessagePriceChanged_any" = "{name} set the private message price to %d stars";
+"Notification.ChannelMessagePriceZeroChanged" = "%@ now accepts private messages";
+
+"Notification.ChannelMessagePriceChangedAndEnabledChannelMessage_1" = "{name} now accepts private messages for %d star";
+"Notification.ChannelMessagePriceChangedAndEnabledChannelMessage_any" = "{name} now accepts private messages for %d stars";
+"Notification.ChannelMessagePriceZeroChangedAndEnabledChannelMessage" = "%@ now accepts private messages";
+
+"Notification.ChannelMessageDisabled" = "%@ no longer accepts private messages";
+
 "Premium.MaxExpiringStoriesTextNumberFormat_1" = "**%d** story";
 "Premium.MaxExpiringStoriesTextNumberFormat_any" = "**%d** stories";
 "Premium.MaxExpiringStoriesTextPremiumNumberFormat_1" = "**%d** story";
@@ -14336,3 +14346,66 @@ Sorry for the inconvenience.";
 
 "Gift.Buy.ErrorTooEarly.Title" = "Try Later";
 "Gift.Buy.ErrorTooEarly.Text" = "You will be able to buy this gift on %@.";
+
+"Chat.PauseVoiceMessageTooltip" = "Pause to trim or replay.";
+"Chat.PauseVideoMessageTooltip" = "Pause to trim or replay.";
+
+"Chat.TrimVoiceMessageToResume.Title" = "Trim to selected range?";
+"Chat.TrimVoiceMessageToResume.Text" = "Audio outside that range will be discarded, and recording will start immediately.";
+"Chat.TrimVoiceMessageToResume.Proceed" = "Proceed";
+
+"Contacts.LimitedAccess.Text" = "You have limited Telegram from accessing all of your contacts.";
+"Contacts.LimitedAccess.Manage" = "MANAGE";
+
+"Media.PhotoHdOn" = "The photo will be sent in high quality.";
+"Media.PhotoHdOff" = "The photo will be sent in standard quality.";
+
+"Attachment.SendInHd" = "Send in High Quality";
+
+"Share.PostToStory" = "Post\nto Story";
+
+"PeerInfo.QRCode.Scan" = "Scan QR Code";
+
+"PeerInfo.Topics.Title" = "Topics";
+"PeerInfo.Topics.EnableTopics" = "Enable Topics";
+"PeerInfo.Topics.EnableTopicsInfo" = "The group chat will be divided into topics created by admins or users.";
+"PeerInfo.Topics.DisplayAs" = "DISPLAY AS";
+"PeerInfo.Topics.DisplayAsInfo" = "Choose how topics appear for all members.";
+"PeerInfo.Topics.Tabs" = "Tabs";
+"PeerInfo.Topics.List" = "List";
+
+"PeerInfo.OptionTopics.Enabled" = "Enabled";
+"PeerInfo.OptionTopics.Disabled" = "Disabled";
+
+"ChannelMessages.Title" = "Direct Messages";
+"ChannelMessages.Info" = "Allow users to send messages to your channel, with the option to charge a fee for each message.";
+"ChannelMessages.SwitchTitle" = "Allow Channel Messages";
+"ChannelMessages.PriceSectionTitle" = "PRICE FOR EACH MESSAGE";
+"ChannelMessages.PriceSectionFooter" = "You will receive 85% of the selected fee for each incoming message.";
+
+"ChatList.MonoforumLabel" = "MESSAGES";
+"ChatList.MonoforumEmptyText" = "No messages here yet...";
+
+"Chat.InlineTopicMenu.Reorder" = "Reorder";
+"Chat.InlineTopicMenu.Edit" = "Edit";
+"Chat.InlineTopicMenu.AllTab" = "All";
+"Chat.ChannelMessagesHint" = "Send a message to the channel's admin";
+"Chat.ChannelMessagesHintBadge" = "NEW";
+"Chat.ContextMenu.AuthorInfo" = "Sent by %@";
+
+"PeerInfo.AllowChannelMessages" = "Direct Messages";
+"PeerInfo.AllowChannelMessages.Free" = "Free";
+"PeerInfo.AllowChannelMessages.Off" = "Off";
+"PeerInfo.ChannelMessages" = "Direct Messages";
+
+"Chat.EmptyStateMonoforum.Text" = "Send a direct message to the administrator of **%@**.";
+"Chat.EmptyStateMonoforumPaid.Text" = "**%1$@** charges **%2$@**\nper message to its admin.";
+
+"Monoforum.NameFormat" = "%@ Messages";
+
+"Stars.SendMessage.AdjustmentTitle" = "Price for each Message";
+"Stars.SendMessage.AdjustmentPlaceholder" = "Price for each Message";
+"Stars.SendMessage.AdjustmentSectionHeader" = "PRICE IN STARS";
+"Stars.SendMessage.AdjustmentSectionFooterValue" = "You will receive **%@ Stars**.";
+"Stars.SendMessage.AdjustmentSectionFooterEmpty" = "You will receive **80%**.";
+"Stars.SendMessage.AdjustmentAction" = "OK";

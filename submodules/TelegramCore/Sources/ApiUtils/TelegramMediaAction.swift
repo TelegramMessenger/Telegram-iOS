@@ -199,8 +199,9 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         return TelegramMediaAction(action: .starGiftUnique(gift: gift, isUpgrade: (flags & (1 << 0)) != 0, isTransferred: (flags & (1 << 1)) != 0, savedToProfile: (flags & (1 << 2)) != 0, canExportDate: canExportAt, transferStars: transferStars, isRefunded: (flags & (1 << 5)) != 0, peerId: peer?.peerId, senderId: fromId?.peerId, savedId: savedId, resaleStars: resaleStars, canTransferDate: canTransferDate, canResaleDate: canResaleDate))
     case let .messageActionPaidMessagesRefunded(count, stars):
         return TelegramMediaAction(action: .paidMessagesRefunded(count: count, stars: stars))
-    case let .messageActionPaidMessagesPrice(stars):
-        return TelegramMediaAction(action: .paidMessagesPriceEdited(stars: stars))
+    case let .messageActionPaidMessagesPrice(flags, stars):
+        let broadcastMessagesAllowed = (flags & (1 << 0)) != 0
+        return TelegramMediaAction(action: .paidMessagesPriceEdited(stars: stars, broadcastMessagesAllowed: broadcastMessagesAllowed))
     case let .messageActionConferenceCall(flags, callId, duration, otherParticipants):
         let isMissed = (flags & (1 << 0)) != 0
         let isActive = (flags & (1 << 1)) != 0

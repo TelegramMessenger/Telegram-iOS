@@ -504,7 +504,7 @@ final class StoryItemSetContainerSendMessage {
             context: component.context,
             presentationData: presentationData,
             updatedPresentationData: nil,
-            peers: [component.slice.effectivePeer],
+            peers: [EngineRenderedPeer(peer: component.slice.effectivePeer)],
             count: 1,
             amount: sendPaidMessageStars,
             totalAmount: nil,
@@ -926,7 +926,7 @@ final class StoryItemSetContainerSendMessage {
                     }
                 } else {
                     if self.audioRecorderValue == nil {
-                        self.audioRecorder.set(component.context.sharedContext.mediaManager.audioRecorder(beginWithTone: false, applicationBindings: component.context.sharedContext.applicationBindings, beganWithTone: { _ in
+                        self.audioRecorder.set(component.context.sharedContext.mediaManager.audioRecorder(resumeData: nil, beginWithTone: false, applicationBindings: component.context.sharedContext.applicationBindings, beganWithTone: { _ in
                         }))
                     }
                 }
@@ -2808,7 +2808,7 @@ final class StoryItemSetContainerSendMessage {
                 let context = component.context
                 switch navigation {
                 case let .chat(_, subject, peekData):
-                    if case let .channel(channel) = peerId, channel.flags.contains(.isForum) {
+                    if case let .channel(channel) = peerId, channel.isForumOrMonoForum {
                         controller.dismissWithoutTransitionOut()
                         context.sharedContext.navigateToForumChannel(context: context, peerId: peerId.id, navigationController: navigationController)
                     } else {

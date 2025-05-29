@@ -129,7 +129,7 @@ public func listViewAnimationCurveFromAnimationOptions(animationOptions: UIView.
 
 public final class ListViewAnimation {
     let from: Interpolatable
-    let to: Interpolatable
+    public let to: Interpolatable
     let duration: Double
     let startTime: Double
     let invertOffsetDirection: Bool

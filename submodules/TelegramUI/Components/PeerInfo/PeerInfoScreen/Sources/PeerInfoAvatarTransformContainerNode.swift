@@ -158,7 +158,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
         }
         
         var isForum = false
-        if let peer, let channel = peer as? TelegramChannel, channel.isForum {
+        if let peer, let channel = peer as? TelegramChannel, channel.isForumOrMonoForum {
             isForum = true
         }
         
@@ -294,7 +294,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                 }
                 let content: EmojiStatusComponent.Content
                 if threadId == 1 {
-                    content = .image(image: PresentationResourcesChat.chatGeneralThreadIcon(theme))
+                    content = .image(image: PresentationResourcesChat.chatGeneralThreadIcon(theme), tintColor: nil)
                 } else if let iconFileId = threadInfo.icon {
                     content = .animation(content: .customEmoji(fileId: iconFileId), size: CGSize(width: avatarSize, height: avatarSize), placeholderColor: theme.list.mediaPlaceholderColor, themeColor: theme.list.itemAccentColor, loopMode: .forever)
                 } else {
@@ -325,7 +325,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
             
             var isForum = false
             let avatarCornerRadius: CGFloat
-            if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {
+            if let channel = peer as? TelegramChannel, channel.isForumOrMonoForum {
                 avatarCornerRadius = floor(avatarSize * 0.25)
                 isForum = true
             } else {

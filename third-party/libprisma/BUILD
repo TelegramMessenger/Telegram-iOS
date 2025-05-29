@@ -50,7 +50,7 @@ objc_library(
         "Sources/**/*.mm",
         "Sources/**/*.h",
         "Sources/**/*.hpp",
-    ]),
+    ], allow_empty=True),
     hdrs = glob([
         "include/libprisma/*.h",
     ]),

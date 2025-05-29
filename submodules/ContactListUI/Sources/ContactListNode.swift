@@ -48,7 +48,7 @@ private enum ContactListNodeEntrySection: Int {
 private enum ContactListNodeEntryId: Hashable {
     case search
     case sort
-    case permission(action: Bool)
+    case permission(index: Int)
     case option(index: Int)
     case peerId(peerId: Int64, section: ContactListNodeEntrySection)
     case deviceContact(DeviceContactStableId)
@@ -64,10 +64,11 @@ private final class ContactListNodeInteraction {
     fileprivate let openStories: (EnginePeer, ASDisplayNode) -> Void
     fileprivate let deselectAll: () -> Void
     fileprivate let toggleSelection: ([EnginePeer], Bool) -> Void
+    fileprivate let openContactAccessPicker: () -> Void
     
     let itemHighlighting = ContactItemHighlighting()
     
-    init(activateSearch: @escaping () -> Void, authorize: @escaping () -> Void, suppressWarning: @escaping () -> Void, openPeer: @escaping (ContactListPeer, ContactListAction, ASDisplayNode?, ContextGesture?) -> Void, openDisabledPeer: @escaping (EnginePeer, ChatListDisabledPeerReason) -> Void, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?, Bool) -> Void)?, openStories: @escaping (EnginePeer, ASDisplayNode) -> Void, deselectAll: @escaping () -> Void, toggleSelection: @escaping ([EnginePeer], Bool) -> Void) {
+    init(activateSearch: @escaping () -> Void, authorize: @escaping () -> Void, suppressWarning: @escaping () -> Void, openPeer: @escaping (ContactListPeer, ContactListAction, ASDisplayNode?, ContextGesture?) -> Void, openDisabledPeer: @escaping (EnginePeer, ChatListDisabledPeerReason) -> Void, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?, Bool) -> Void)?, openStories: @escaping (EnginePeer, ASDisplayNode) -> Void, deselectAll: @escaping () -> Void, toggleSelection: @escaping ([EnginePeer], Bool) -> Void, openContactAccessPicker: @escaping () -> Void) {
         self.activateSearch = activateSearch
         self.authorize = authorize
         self.suppressWarning = suppressWarning
@@ -77,6 +78,7 @@ private final class ContactListNodeInteraction {
         self.openStories = openStories
         self.deselectAll = deselectAll
         self.toggleSelection = toggleSelection
+        self.openContactAccessPicker = openContactAccessPicker
     }
 }
 
@@ -97,6 +99,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
     case sort(PresentationTheme, PresentationStrings, ContactsSortOrder)
     case permissionInfo(PresentationTheme, String, String, Bool)
     case permissionEnable(PresentationTheme, String)
+    case permissionLimited(PresentationTheme, PresentationStrings)
     case option(Int, ContactListAdditionalOption, ListViewItemHeader?, PresentationTheme, PresentationStrings)
     case peer(Int, ContactListPeer, EnginePeer.Presence?, ListViewItemHeader?, ContactsPeerItemSelection, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, PresentationPersonNameOrder, Bool, Bool, Bool, StoryData?, Bool, String?)
     
@@ -107,9 +110,11 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
             case .sort:
                 return .sort
             case .permissionInfo:
-                return .permission(action: false)
+                return .permission(index: 0)
             case .permissionEnable:
-                return .permission(action: true)
+                return .permission(index: 1)
+            case .permissionLimited:
+                return .permission(index: 2)
             case let .option(index, _, _, _, _):
                 return .option(index: index)
             case let .peer(_, peer, _, _, _, _, _, _, _, _, _, _, _, storyData, _, _):
@@ -142,6 +147,10 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
             case let .permissionEnable(_, text):
                 return ContactListActionItem(presentationData: ItemListPresentationData(presentationData), title: text, icon: .none, header: nil, action: {
                     interaction.authorize()
+                })
+            case .permissionLimited:
+                return LimitedPermissionItem(presentationData: ItemListPresentationData(presentationData), text: presentationData.strings.Contacts_LimitedAccess_Text, action: {
+                    interaction.openContactAccessPicker()
                 })
             case let .option(_, option, header, _, _):
                 let style: ContactListActionItem.Style
@@ -268,6 +277,12 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
+            case let .permissionLimited(lhsTheme, lhsStrings):
+                if case let .permissionLimited(rhsTheme, rhsStrings) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings {
+                    return true
+                } else {
+                    return false
+                }
             case let .option(lhsIndex, lhsOption, lhsHeader, lhsTheme, lhsStrings):
                 if case let .option(rhsIndex, rhsOption, rhsHeader, rhsTheme, rhsStrings) = rhs, lhsIndex == rhsIndex, lhsOption == rhsOption, lhsHeader?.id == rhsHeader?.id, lhsTheme === rhsTheme, lhsStrings === rhsStrings {
                     return true
@@ -361,9 +376,16 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                     default:
                         return true
                 }
-            case let .option(lhsIndex, _, _, _, _):
+            case .permissionLimited:
                 switch rhs {
                     case .search, .sort, .permissionInfo, .permissionEnable:
+                        return false
+                    default:
+                        return true
+                }
+            case let .option(lhsIndex, _, _, _, _):
+                switch rhs {
+                    case .search, .sort, .permissionInfo, .permissionEnable, .permissionLimited:
                             return false
                         case let .option(rhsIndex, _, _, _, _):
                             return lhsIndex < rhsIndex
@@ -372,7 +394,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 }
             case let .peer(lhsIndex, _, _, _, _, _, _, _, _, _, _, _, _, lhsStoryData, _, _):
                 switch rhs {
-                    case .search, .sort, .permissionInfo, .permissionEnable, .option:
+                    case .search, .sort, .permissionInfo, .permissionEnable, .permissionLimited, .option:
                         return false
                     case let .peer(rhsIndex, _, _, _, _, _, _, _, _, _, _, _, _, rhsStoryData, _, _):
                         if (lhsStoryData == nil) != (rhsStoryData == nil) {
@@ -402,6 +424,10 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
             let title = strings.Contacts_PermissionsTitle
             let text = strings.Contacts_PermissionsText
             switch authorizationStatus {
+                case .limited:
+                    if displaySortOptions {
+                        entries.append(.permissionLimited(theme, strings))
+                    }
                 case .denied:
                     entries.append(.permissionInfo(theme, title, text, suppressed))
                     entries.append(.permissionEnable(theme, strings.Permissions_ContactsAllowInSettings_v0))
@@ -1119,6 +1145,7 @@ public final class ContactListNode: ASDisplayNode {
     public var suppressPermissionWarning: (() -> Void)?
     private let contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?, Bool) -> Void)?
     public var openStories: ((EnginePeer, ASDisplayNode) -> Void)?
+    public var openContactAccessPicker: (() -> Void)?
     
     private let previousEntries = Atomic<[ContactListNodeEntry]?>(value: nil)
     private let disposable = MetaDisposable()
@@ -1272,6 +1299,8 @@ public final class ContactListNode: ASDisplayNode {
                 return state
             })
             self.updatedSelection?(peers, value)
+        }, openContactAccessPicker: { [weak self] in
+            self?.openContactAccessPicker?()
         })
         
         self.indexNode.indexSelected = { [weak self] section in

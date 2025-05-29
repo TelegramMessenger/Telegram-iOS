@@ -430,6 +430,9 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
             if message.minAutoremoveOrClearTimeout == viewOnceTimeout {
                 canReplyInAnotherChat = false
             }
+            if let channel = message.peers[message.id.peerId] as? TelegramChannel, channel.isMonoForum {
+                canReplyInAnotherChat = false
+            }
         }
         
         if canReplyInAnotherChat {

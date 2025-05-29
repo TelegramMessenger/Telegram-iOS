@@ -144,23 +144,17 @@ private final class SheetContent: CombinedComponent {
                 
                 minAmount = StarsAmount(value: 1, nanos: 0)
                 maxAmount = withdrawConfiguration.maxPaidMediaAmount.flatMap { StarsAmount(value: $0, nanos: 0) }
-            case let .starGiftResell(update):
+            case let .starGiftResell(_, update):
                 titleString = update ? environment.strings.Stars_SellGift_EditTitle : environment.strings.Stars_SellGift_Title
                 amountTitle = environment.strings.Stars_SellGift_AmountTitle
                 amountPlaceholder = environment.strings.Stars_SellGift_AmountPlaceholder
                 
                 minAmount = StarsAmount(value: resaleConfiguration.starGiftResaleMinAmount, nanos: 0)
                 maxAmount = StarsAmount(value: resaleConfiguration.starGiftResaleMaxAmount, nanos: 0)
-            case let .paidMessages(_, minAmountValue, _, kind):
-                //TODO:localize
-                switch kind {
-                case .privacy:
-                    titleString = "Price per Message"
-                case .postSuggestion:
-                    titleString = "Price for each Suggestion"
-                }
-                amountTitle = "PRICE IN STARS"
-                amountPlaceholder = "Enter Price"
+            case let .paidMessages(_, minAmountValue, _, _):
+                titleString = environment.strings.Stars_SendMessage_AdjustmentTitle
+                amountTitle = environment.strings.Stars_SendMessage_AdjustmentSectionHeader
+                amountPlaceholder = environment.strings.Stars_SendMessage_AdjustmentPlaceholder
                 
                 minAmount = StarsAmount(value: minAmountValue, nanos: 0)
                 maxAmount = StarsAmount(value: resaleConfiguration.paidMessageMaxAmount, nanos: 0)
@@ -299,9 +293,9 @@ private final class SheetContent: CombinedComponent {
                 if let value = state.amount?.value, value > 0 {
                     let fullValue: Int64 = Int64(value) * 1_000_000_000 * Int64(fractionAfterCommission) / 100
                     let amountValue = StarsAmount(value: fullValue / 1_000_000_000, nanos: Int32(fullValue % 1_000_000_000))
-                    amountInfoString = NSAttributedString(attributedString: parseMarkdownIntoAttributedString("You will receive **\(amountValue) Stars**.", attributes: amountMarkdownAttributes, textAlignment: .natural))
+                    amountInfoString = NSAttributedString(attributedString: parseMarkdownIntoAttributedString(environment.strings.Stars_SendMessage_AdjustmentSectionFooterValue("\(amountValue)").string, attributes: amountMarkdownAttributes, textAlignment: .natural))
                 } else {
-                    amountInfoString = NSAttributedString(attributedString: parseMarkdownIntoAttributedString("You will receive **80%**.", attributes: amountMarkdownAttributes, textAlignment: .natural))
+                    amountInfoString = NSAttributedString(attributedString: parseMarkdownIntoAttributedString(environment.strings.Stars_SendMessage_AdjustmentSectionFooterEmpty, attributes: amountMarkdownAttributes, textAlignment: .natural))
                 }
                 amountFooter = AnyComponent(MultilineTextComponent(
                     text: .plain(amountInfoString),
@@ -376,8 +370,7 @@ private final class SheetContent: CombinedComponent {
                     buttonString = environment.strings.Stars_SellGift_Sell
                 }
             } else if case .paidMessages = component.mode {
-                //TODO:localize
-                buttonString = "OK"
+                buttonString = environment.strings.Stars_SendMessage_AdjustmentAction
             } else if let amount = state.amount {
                 buttonString = "\(environment.strings.Stars_Withdraw_Withdraw)  # \(presentationStringsFormattedNumber(amount, environment.dateTimeFormat.groupingSeparator))"
             } else {
@@ -487,6 +480,36 @@ private final class SheetContent: CombinedComponent {
                     }
                 })
             }
+            
+            if case let .starGiftResell(giftToMatch, update) = self.mode {
+                if update {
+                    if let resellStars = giftToMatch.resellStars {
+                        self.amount = StarsAmount(value: resellStars, nanos: 0)
+                    }
+                } else {
+                    let _ = (context.engine.payments.cachedStarGifts()
+                     |> filter { $0 != nil }
+                     |> take(1)
+                     |> deliverOnMainQueue).start(next: { [weak self] gifts in
+                        guard let self, let gifts else {
+                            return
+                        }
+                        guard let matchingGift = gifts.first(where: { gift in
+                            if case let .generic(gift) = gift, gift.title == giftToMatch.title {
+                                return true
+                            } else {
+                                return false
+                            }
+                        }) else {
+                            return
+                        }
+                        if case let .generic(genericGift) = matchingGift, let minResaleStars = genericGift.availability?.minResaleStars {
+                            self.amount = StarsAmount(value: minResaleStars, nanos: 0)
+                            self.updated()
+                        }
+                    })
+                }
+            }
         }
         
         deinit {
@@ -592,7 +615,7 @@ public final class StarsWithdrawScreen: ViewControllerComponentContainer {
         case accountWithdraw
         case paidMedia(Int64?)
         case reaction(Int64?)
-        case starGiftResell(Bool)
+        case starGiftResell(StarGift.UniqueGift, Bool)
         case paidMessages(current: Int64, minValue: Int64, fractionAfterCommission: Int, kind: StarsWithdrawalScreenSubject.PaidMessageKind)
     }
     
@@ -642,6 +665,7 @@ public final class StarsWithdrawScreen: ViewControllerComponentContainer {
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         var text = presentationData.strings.Stars_Withdraw_Withdraw_ErrorMinimum(presentationData.strings.Stars_Withdraw_Withdraw_ErrorMinimum_Stars(Int32(minAmount))).string
         if case .starGiftResell = self.mode {
+            //TODO:localize
             text = "You cannot sell gift for less than \(presentationData.strings.Stars_Withdraw_Withdraw_ErrorMinimum_Stars(Int32(minAmount)))."
         }
         

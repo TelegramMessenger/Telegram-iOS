@@ -95,17 +95,6 @@ public func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Mess
         dateText = "         "
     }
     
-    for attribute in message.attributes {
-        if let attribute = attribute as? OutgoingSuggestedPostMessageAttribute {
-            if let timestamp = attribute.timestamp {
-                dateText = stringForMessageTimestamp(timestamp: timestamp, dateTimeFormat: dateTimeFormat)
-            } else {
-                //TODO:localize
-                dateText = "Anytime"
-            }
-        }
-    }
-    
     if message.id.namespace == Namespaces.Message.ScheduledCloud, let _ = message.pendingProcessingAttribute {
         return "appx. \(dateText)"
     }

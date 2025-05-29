@@ -282,19 +282,25 @@ public enum ChatInterfaceMediaDraftState: Codable, Equatable {
     public struct Audio: Codable, Equatable {
         public let resource: LocalFileMediaResource
         public let fileSize: Int32
-        public let duration: Int32
+        public let duration: Double
         public let waveform: AudioWaveform
+        public let trimRange: Range<Double>?
+        public let resumeData: Data?
         
         public init(
             resource: LocalFileMediaResource,
             fileSize: Int32,
-            duration: Int32,
-            waveform: AudioWaveform
+            duration: Double,
+            waveform: AudioWaveform,
+            trimRange: Range<Double>?,
+            resumeData: Data?
         ) {
             self.resource = resource
             self.fileSize = fileSize
             self.duration = duration
             self.waveform = waveform
+            self.trimRange = trimRange
+            self.resumeData = resumeData
         }
         
         public init(from decoder: Decoder) throws {
@@ -304,11 +310,24 @@ public enum ChatInterfaceMediaDraftState: Codable, Equatable {
             self.resource = LocalFileMediaResource(decoder: PostboxDecoder(buffer: MemoryBuffer(data: resourceData.data)))
             
             self.fileSize = try container.decode(Int32.self, forKey: "s")
-            self.duration = try container.decode(Int32.self, forKey: "d")
+            
+            if let doubleValue = try container.decodeIfPresent(Double.self, forKey: "dd") {
+                self.duration = doubleValue
+            } else {
+                self.duration = Double(try container.decode(Int32.self, forKey: "d"))
+            }
             
             let waveformData = try container.decode(Data.self, forKey: "wd")
             let waveformPeak = try container.decode(Int32.self, forKey: "wp")
             self.waveform = AudioWaveform(samples: waveformData, peak: waveformPeak)
+            
+            if let trimLowerBound = try container.decodeIfPresent(Double.self, forKey: "tl"), let trimUpperBound = try container.decodeIfPresent(Double.self, forKey: "tu") {
+                self.trimRange = trimLowerBound ..< trimUpperBound
+            } else {
+                self.trimRange = nil
+            }
+            
+            self.resumeData = try container.decode(Data.self, forKey: "rd")
         }
 
         public func encode(to encoder: Encoder) throws {
@@ -316,9 +335,18 @@ public enum ChatInterfaceMediaDraftState: Codable, Equatable {
 
             try container.encode(PostboxEncoder().encodeObjectToRawData(self.resource), forKey: "r")
             try container.encode(self.fileSize, forKey: "s")
-            try container.encode(self.duration, forKey: "d")
+            try container.encode(self.duration, forKey: "dd")
             try container.encode(self.waveform.samples, forKey: "wd")
             try container.encode(self.waveform.peak, forKey: "wp")
+            
+            if let trimRange = self.trimRange {
+                try container.encode(trimRange.lowerBound, forKey: "tl")
+                try container.encode(trimRange.upperBound, forKey: "tu")
+            }
+            
+            if let resumeData = self.resumeData {
+                try container.encode(resumeData, forKey: "rd")
+            }
         }
         
         public static func ==(lhs: Audio, rhs: Audio) -> Bool {
@@ -334,18 +362,24 @@ public enum ChatInterfaceMediaDraftState: Codable, Equatable {
             if lhs.waveform != rhs.waveform {
                 return false
             }
+            if lhs.trimRange != rhs.trimRange {
+                return false
+            }
+            if lhs.resumeData != rhs.resumeData {
+                return false
+            }
             return true
         }
     }
     
     public struct Video: Codable, Equatable {
-        public let duration: Int32
+        public let duration: Double
         public let frames: [UIImage]
         public let framesUpdateTimestamp: Double
         public let trimRange: Range<Double>?
         
         public init(
-            duration: Int32,
+            duration: Double,
             frames: [UIImage],
             framesUpdateTimestamp: Double,
             trimRange: Range<Double>?
@@ -359,7 +393,11 @@ public enum ChatInterfaceMediaDraftState: Codable, Equatable {
         public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: StringCodingKey.self)
             
-            self.duration = try container.decode(Int32.self, forKey: "d")
+            if let doubleValue = try container.decodeIfPresent(Double.self, forKey: "dd") {
+                self.duration = doubleValue
+            } else {
+                self.duration = Double(try container.decode(Int32.self, forKey: "d"))
+            }
             self.frames = []
             self.framesUpdateTimestamp = try container.decode(Double.self, forKey: "fu")
             if let trimLowerBound = try container.decodeIfPresent(Double.self, forKey: "tl"), let trimUpperBound = try container.decodeIfPresent(Double.self, forKey: "tu") {
@@ -372,7 +410,7 @@ public enum ChatInterfaceMediaDraftState: Codable, Equatable {
         public func encode(to encoder: Encoder) throws {
             var container = encoder.container(keyedBy: StringCodingKey.self)
 
-            try container.encode(self.duration, forKey: "d")
+            try container.encode(self.duration, forKey: "dd")
             try container.encode(self.framesUpdateTimestamp, forKey: "fu")
             if let trimRange = self.trimRange {
                 try container.encode(trimRange.lowerBound, forKey: "tl")

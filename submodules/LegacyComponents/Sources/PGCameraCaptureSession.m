@@ -504,9 +504,9 @@ const NSInteger PGCameraFrameRate = 30;
                 if (backingLevel < firstMark) {
                     realLevel = 0.5 + 0.5 * (backingLevel - 1.0) / (firstMark - 1.0);
                 } else if (backingLevel < secondMark) {
-                    realLevel = 1.0 + 1.0 * (backingLevel - firstMark) / (secondMark - firstMark);
+                    realLevel = 1.0 + ([self secondMarkZoomValue] - 1.0) * (backingLevel - firstMark) / (secondMark - firstMark);
                 } else {
-                    realLevel = 2.0 + 6.0 * (backingLevel - secondMark) / (self.maxZoomLevel - secondMark);
+                    realLevel = [self secondMarkZoomValue] + 6.0 * (backingLevel - secondMark) / (self.maxZoomLevel - secondMark);
                 }
             } else if (marks.count == 1) {
                 CGFloat mark = [marks.firstObject floatValue];
@@ -551,12 +551,12 @@ const NSInteger PGCameraFrameRate = 30;
     [self setZoomLevel:zoomLevel animated:false];
 }
 
-- (int32_t)maxMarkZoomValue {
-    return 25.0;
-}
-
-- (int32_t)secondMarkZoomValue {
-    return 5.0;
+- (CGFloat)secondMarkZoomValue {
+    if (self.zoomLevels.count > 2) {
+        return self.zoomLevels.lastObject.doubleValue;
+    } else {
+        return 2.0;
+    }
 }
 
 - (void)setZoomLevel:(CGFloat)zoomLevel animated:(bool)animated
@@ -582,10 +582,10 @@ const NSInteger PGCameraFrameRate = 30;
                     if (level < 1.0) {
                         level = MAX(0.5, level);
                         backingLevel = 1.0 + ((level - 0.5) / 0.5) * (firstMark - 1.0);
-                    } else if (zoomLevel < 2.0) {
-                        backingLevel = firstMark + ((level - 1.0) / 1.0) * (secondMark - firstMark);
+                    } else if (zoomLevel < [self secondMarkZoomValue]) {
+                        backingLevel = firstMark + ((level - 1.0) / ([self secondMarkZoomValue] - 1.0)) * (secondMark - firstMark);
                     } else {
-                        backingLevel = secondMark + ((level - 2.0) / 6.0) * (self.maxZoomLevel - secondMark);
+                        backingLevel = secondMark + ((level - [self secondMarkZoomValue]) / 6.0) * (self.maxZoomLevel - secondMark);
                     }
                 } else if (marks.count == 1) {
                     CGFloat mark = [marks.firstObject floatValue];

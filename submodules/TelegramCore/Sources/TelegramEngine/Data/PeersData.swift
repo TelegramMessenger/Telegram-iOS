@@ -204,6 +204,11 @@ public extension TelegramEngine.EngineData.Item {
                         return nil
                     }
                     peers[mainPeer.id] = EnginePeer(mainPeer)
+                } else if let channel = peer as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId {
+                    guard let mainChannel = view.peers[linkedMonoforumId] else {
+                        return nil
+                    }
+                    peers[mainChannel.id] = EnginePeer(mainChannel)
                 }
 
                 return EngineRenderedPeer(peerId: self.id, peers: peers, associatedMedia: view.media)
@@ -385,6 +390,34 @@ public extension TelegramEngine.EngineData.Item {
                 if let cachedPeerData = view.cachedData as? CachedUserData {
                     return cachedPeerData.sendPaidMessageStars
                 } else if let channel = peerViewMainPeer(view) as? TelegramChannel {
+                    return channel.sendPaidMessageStars
+                } else {
+                    return nil
+                }
+            }
+        }
+        
+        public struct SendMessageToChannelPrice: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
+            public typealias Result = Optional<StarsAmount>
+
+            fileprivate var id: EnginePeer.Id
+            public var mapKey: EnginePeer.Id {
+                return self.id
+            }
+
+            public init(id: EnginePeer.Id) {
+                self.id = id
+            }
+
+            var key: PostboxViewKey {
+                return .peer(peerId: self.id, components: [])
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? PeerView else {
+                    preconditionFailure()
+                }
+                if let channel = peerViewMainPeer(view) as? TelegramChannel {
                     return channel.sendPaidMessageStars
                 } else {
                     return nil

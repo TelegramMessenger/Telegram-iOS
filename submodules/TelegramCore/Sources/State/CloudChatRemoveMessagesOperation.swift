@@ -35,25 +35,6 @@ func cloudChatAddClearHistoryOperation(transaction: Transaction, peerId: PeerId,
         } else if case .forEveryone = type {
             transaction.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: CloudChatClearHistoryOperation(peerId: peerId, topMessageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: .max), threadId: threadId, minTimestamp: minTimestamp, maxTimestamp: maxTimestamp, type: type))
         }
-    } else if type == .suggestedPostMessages {
-        var messageIds: [MessageId] = []
-        transaction.withAllMessages(peerId: peerId, namespace: Namespaces.Message.SuggestedPostCloud) { message -> Bool in
-            messageIds.append(message.id)
-            return true
-        }
-        cloudChatAddRemoveMessagesOperation(transaction: transaction, peerId: peerId, threadId: threadId, messageIds: messageIds, type: .forLocalPeer)
-        
-        let topMessageId: MessageId?
-        if let explicitTopMessageId = explicitTopMessageId {
-            topMessageId = explicitTopMessageId
-        } else {
-            topMessageId = transaction.getTopPeerMessageId(peerId: peerId, namespace: Namespaces.Message.SuggestedPostCloud)
-        }
-        if let topMessageId = topMessageId {
-            transaction.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: CloudChatClearHistoryOperation(peerId: peerId, topMessageId: topMessageId, threadId: threadId, minTimestamp: minTimestamp, maxTimestamp: maxTimestamp, type: type))
-        } else if case .forEveryone = type {
-            transaction.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: CloudChatClearHistoryOperation(peerId: peerId, topMessageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: .max), threadId: threadId, minTimestamp: minTimestamp, maxTimestamp: maxTimestamp, type: type))
-        }
     } else {
         let topMessageId: MessageId?
         if let explicitTopMessageId = explicitTopMessageId {

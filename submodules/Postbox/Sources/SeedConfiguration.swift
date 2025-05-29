@@ -66,7 +66,7 @@ public final class SeedConfiguration {
     public let existingGlobalMessageTags: GlobalMessageTags
     public let peerNamespacesRequiringMessageTextIndex: [PeerId.Namespace]
     public let peerSummaryCounterTags: (Peer, Bool) -> PeerSummaryCounterTags
-    public let peerSummaryIsThreadBased: (Peer) -> Bool
+    public let peerSummaryIsThreadBased: (Peer, Peer?) -> (value: Bool, threadsArePeers: Bool)
     public let additionalChatListIndexNamespace: MessageId.Namespace?
     public let messageNamespacesRequiringGroupStatsValidation: Set<MessageId.Namespace>
     public let defaultMessageNamespaceReadStates: [MessageId.Namespace: PeerReadState]
@@ -97,7 +97,7 @@ public final class SeedConfiguration {
         existingGlobalMessageTags: GlobalMessageTags,
         peerNamespacesRequiringMessageTextIndex: [PeerId.Namespace],
         peerSummaryCounterTags: @escaping (Peer, Bool) -> PeerSummaryCounterTags,
-        peerSummaryIsThreadBased: @escaping (Peer) -> Bool,
+        peerSummaryIsThreadBased: @escaping (Peer, Peer?) -> (value: Bool, threadsArePeers: Bool),
         additionalChatListIndexNamespace: MessageId.Namespace?,
         messageNamespacesRequiringGroupStatsValidation: Set<MessageId.Namespace>,
         defaultMessageNamespaceReadStates: [MessageId.Namespace: PeerReadState],

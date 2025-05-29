@@ -155,6 +155,13 @@ private enum ChatTitleCredibilityIcon: Equatable {
 }
 
 public final class ChatTitleView: UIView, NavigationBarTitleView {
+    public enum AnimateFromSnapshotDirection {
+        case up
+        case down
+        case left
+        case right
+    }
+    
     private let context: AccountContext
     
     private var theme: PresentationTheme
@@ -432,10 +439,25 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                 }
                 self.isUserInteractionEnabled = isEnabled
                 self.button.isUserInteractionEnabled = isEnabled
-                if !self.updateStatus() {
+                
+                var enableAnimation = false
+                switch titleContent {
+                case let .peer(_, customTitle, _, _, _, _, _):
+                    if case let .peer(_, previousCustomTitle, _, _, _, _, _) = oldValue {
+                        if customTitle != previousCustomTitle {
+                            enableAnimation = false
+                        }
+                    } else {
+                        enableAnimation = false
+                    }
+                default:
+                    break
+                }
+                
+                if !self.updateStatus(enableAnimation: enableAnimation) {
                     if updated {
                         if !self.manualLayout, let (size, clearBounds) = self.validLayout {
-                            let _ = self.updateLayout(size: size, clearBounds: clearBounds, transition: self.disableAnimations ? .immediate : .animated(duration: 0.2, curve: .easeInOut))
+                            let _ = self.updateLayout(size: size, clearBounds: clearBounds, transition: (self.disableAnimations || !enableAnimation) ? .immediate : .animated(duration: 0.2, curve: .easeInOut))
                         }
                     }
                 }
@@ -443,7 +465,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
         }
     }
     
-    private func updateStatus() -> Bool {
+    private func updateStatus(enableAnimation: Bool = true) -> Bool {
         var inputActivitiesAllowed = true
         if let titleContent = self.titleContent {
             switch titleContent {
@@ -621,7 +643,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                                         state = .info(string, .generic)
                                     }
                                 } else if let channel = peer as? TelegramChannel {
-                                    if channel.flags.contains(.isForum), customTitle != nil {
+                                    if channel.isForumOrMonoForum, customTitle != nil {
                                         let string = NSAttributedString(string: EnginePeer(peer).displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder), font: subtitleFont, textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
                                         state = .info(string, .generic)
                                     } else if let cachedChannelData = peerView.cachedData as? CachedChannelData, let memberCount = onlineMemberCount.total ?? cachedChannelData.participantsSummary.memberCount {
@@ -688,9 +710,9 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
             }
         }
         
-        if self.activityNode.transitionToState(state, animation: .slide) {
+        if self.activityNode.transitionToState(state, animation: enableAnimation ? .slide : .none) {
             if !self.manualLayout, let (size, clearBounds) = self.validLayout {
-                let _ = self.updateLayout(size: size, clearBounds: clearBounds, transition: .animated(duration: 0.3, curve: .spring))
+                let _ = self.updateLayout(size: size, clearBounds: clearBounds, transition: enableAnimation ? .animated(duration: 0.3, curve: .spring) : .immediate)
             }
             return true
         } else {
@@ -999,16 +1021,16 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                 if activitySize.width < size.width {
                     activityFrame.origin.x = -clearBounds.minX + floor((size.width - activityFrame.width) / 2.0)
                 }
-                self.activityNode.frame = activityFrame
+                titleTransition.updateFrameAdditiveToCenter(node: self.activityNode, frame: activityFrame)
             }
             
             if let image = self.titleLeftIconNode.image {
-                self.titleLeftIconNode.frame = CGRect(origin: CGPoint(x: -image.size.width - 3.0 - UIScreenPixel, y: 4.0), size: image.size)
+                titleTransition.updateFrame(node: self.titleLeftIconNode, frame: CGRect(origin: CGPoint(x: -image.size.width - 3.0 - UIScreenPixel, y: 4.0), size: image.size))
             }
             
             var nextIconX: CGFloat = titleFrame.width
             
-            self.titleVerifiedIconView.frame = CGRect(origin: CGPoint(x: 0.0, y: floor((titleFrame.height - titleVerifiedSize.height) / 2.0)), size: titleVerifiedSize)
+            titleTransition.updateFrame(view: self.titleVerifiedIconView, frame: CGRect(origin: CGPoint(x: 0.0, y: floor((titleFrame.height - titleVerifiedSize.height) / 2.0)), size: titleVerifiedSize))
             
             self.titleCredibilityIconView.frame = CGRect(origin: CGPoint(x: nextIconX - titleCredibilitySize.width, y: floor((titleFrame.height - titleCredibilitySize.height) / 2.0)), size: titleCredibilitySize)
             nextIconX -= titleCredibilitySize.width
@@ -1034,7 +1056,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
             titleTransition.updateFrameAdditiveToCenter(view: self.titleContainerView, frame: titleFrame)
             titleTransition.updateFrameAdditiveToCenter(node: self.titleTextNode, frame: CGRect(origin: CGPoint(), size: titleFrame.size))
             
-            self.activityNode.frame = CGRect(origin: CGPoint(x: floor((clearBounds.width - combinedWidth) / 2.0 + titleSize.width + leftIconWidth + credibilityIconWidth + verifiedIconWidth + statusIconWidth + rightIconWidth + titleInfoSpacing), y: floor((size.height - activitySize.height) / 2.0)), size: activitySize)
+            titleTransition.updateFrameAdditiveToCenter(node: self.activityNode, frame: CGRect(origin: CGPoint(x: floor((clearBounds.width - combinedWidth) / 2.0 + titleSize.width + leftIconWidth + credibilityIconWidth + verifiedIconWidth + statusIconWidth + rightIconWidth + titleInfoSpacing), y: floor((size.height - activitySize.height) / 2.0)), size: activitySize))
             
             if let image = self.titleLeftIconNode.image {
                 self.titleLeftIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.minX, y: titleFrame.minY + 4.0), size: image.size)
@@ -1047,11 +1069,11 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
             self.titleCredibilityIconView.frame = CGRect(origin: CGPoint(x: nextIconX - titleCredibilitySize.width, y: floor((titleFrame.height - titleCredibilitySize.height) / 2.0)), size: titleCredibilitySize)
             nextIconX -= titleCredibilitySize.width
             
-            self.titleStatusIconView.frame = CGRect(origin: CGPoint(x: nextIconX - titleStatusSize.width, y: floor((titleFrame.height - titleStatusSize.height) / 2.0)), size: titleStatusSize)
+            titleTransition.updateFrame(view: self.titleStatusIconView, frame: CGRect(origin: CGPoint(x: nextIconX - titleStatusSize.width, y: floor((titleFrame.height - titleStatusSize.height) / 2.0)), size: titleStatusSize))
             nextIconX -= titleStatusSize.width
             
             if let image = self.titleRightIconNode.image {
-                self.titleRightIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.maxX - image.size.width, y: titleFrame.minY + 6.0), size: image.size)
+                titleTransition.updateFrame(node: self.titleRightIconNode, frame: CGRect(origin: CGPoint(x: titleFrame.maxX - image.size.width, y: titleFrame.minY + 6.0), size: image.size))
             }
         }
         
@@ -1096,25 +1118,40 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
         }
     }
 
-    public func prepareSnapshotState() -> SnapshotState {
-        let snapshotView = self.snapshotView(afterScreenUpdates: false)!
+    public func prepareSnapshotState() -> SnapshotState? {
+        guard let snapshotView = self.snapshotView(afterScreenUpdates: false) else {
+            return nil
+        }
         return SnapshotState(
             snapshotView: snapshotView
         )
     }
 
-    public func animateFromSnapshot(_ snapshotState: SnapshotState) {
-        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-        self.layer.animatePosition(from: CGPoint(x: 0.0, y: 20.0), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: true, additive: true)
+    public func animateFromSnapshot(_ snapshotState: SnapshotState, direction: AnimateFromSnapshotDirection = .up) {
+        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        
+        var offset = CGPoint()
+        switch direction {
+        case .up:
+            offset.y = -20.0
+        case .down:
+            offset.y = 20.0
+        case .left:
+            offset.x = -20.0
+        case .right:
+            offset.x = 20.0
+        }
+        
+        self.layer.animatePosition(from: offset, to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: true, additive: true)
 
         snapshotState.snapshotView.frame = self.frame
         self.superview?.insertSubview(snapshotState.snapshotView, belowSubview: self)
 
         let snapshotView = snapshotState.snapshotView
-        snapshotState.snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+        snapshotState.snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.14, removeOnCompletion: false, completion: { [weak snapshotView] _ in
             snapshotView?.removeFromSuperview()
         })
-        snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -20.0), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+        snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: -offset.x, y: -offset.y), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
     }
 }
 

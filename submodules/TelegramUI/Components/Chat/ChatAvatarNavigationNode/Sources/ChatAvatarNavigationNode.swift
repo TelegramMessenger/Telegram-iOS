@@ -265,31 +265,47 @@ public final class ChatAvatarNavigationNode: ASDisplayNode {
 
     public final class SnapshotState {
         fileprivate let snapshotView: UIView?
+        fileprivate let snapshotStatusView: UIView?
 
-        fileprivate init(snapshotView: UIView?) {
+        fileprivate init(snapshotView: UIView?, snapshotStatusView: UIView?) {
             self.snapshotView = snapshotView
+            self.snapshotStatusView = snapshotStatusView
         }
     }
 
     public func prepareSnapshotState() -> SnapshotState {
         let snapshotView = self.avatarNode.view.snapshotView(afterScreenUpdates: false)
+        let snapshotStatusView = self.statusView.view?.snapshotView(afterScreenUpdates: false)
         return SnapshotState(
-            snapshotView: snapshotView
+            snapshotView: snapshotView,
+            snapshotStatusView: snapshotStatusView
         )
     }
 
     public func animateFromSnapshot(_ snapshotState: SnapshotState) {
-        self.avatarNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-        self.avatarNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: true)
+        self.avatarNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.16)
+        self.avatarNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: true)
+        
+        self.statusView.view?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.16)
+        self.statusView.view?.layer.animateScale(from: 0.1, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: true)
 
         if let snapshotView = snapshotState.snapshotView {
             snapshotView.frame = self.frame
-            self.containerNode.view.addSubview(snapshotView)
+            self.containerNode.view.insertSubview(snapshotView, at: 0)
 
-            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                 snapshotView?.removeFromSuperview()
             })
-            snapshotView.layer.animateScale(from: 1.0, to: 0.1, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+            snapshotView.layer.animateScale(from: 1.0, to: 0.1, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+        }
+        if let snapshotStatusView = snapshotState.snapshotStatusView {
+            snapshotStatusView.frame = CGRect(origin: CGPoint(x: floor((self.containerNode.bounds.width - snapshotStatusView.bounds.width) / 2.0), y: floor((self.containerNode.bounds.height - snapshotStatusView.bounds.height) / 2.0)), size: snapshotStatusView.bounds.size)
+            self.containerNode.view.insertSubview(snapshotStatusView, at: 0)
+
+            snapshotStatusView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotStatusView] _ in
+                snapshotStatusView?.removeFromSuperview()
+            })
+            snapshotStatusView.layer.animateScale(from: 1.0, to: 0.1, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
         }
     }
     

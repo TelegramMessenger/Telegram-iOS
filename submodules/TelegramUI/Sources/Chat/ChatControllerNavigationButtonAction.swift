@@ -384,8 +384,15 @@ extension ChatControllerImpl {
                 })
             }
         case let .openChatInfo(expandAvatar, section):
-            let _ = self.presentVoiceMessageDiscardAlert(action: {
-                switch self.chatLocationInfoData {
+            let _ = self.presentVoiceMessageDiscardAlert(action: { [weak self] in
+                guard let self else {
+                    return
+                }
+                guard let contentData = self.contentData else {
+                    return
+                }
+                
+                switch contentData.chatLocationInfoData {
                 case let .peer(peerView):
                     self.navigationActionDisposable.set((peerView.get()
                     |> take(1)
@@ -413,7 +420,7 @@ extension ChatControllerImpl {
                                 default:
                                     mode = .generic
                                 }
-                                if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peer: peer, mode: mode, avatarInitiallyExpanded: expandAvatar, fromChat: true, requestsContext: strongSelf.inviteRequestsContext) {
+                                if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peer: peer, mode: mode, avatarInitiallyExpanded: expandAvatar, fromChat: true, requestsContext: strongSelf.contentData?.inviteRequestsContext) {
                                     strongSelf.effectiveNavigationController?.pushViewController(infoController)
                                 }
                             }
@@ -426,8 +433,25 @@ extension ChatControllerImpl {
                         if let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: peer, mode: .forumTopic(thread: replyThreadMessage), avatarInitiallyExpanded: false, fromChat: true, requestsContext: nil) {
                             self.effectiveNavigationController?.pushViewController(infoController)
                         }
-                    } else if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.flags.contains(.isForum), case let .replyThread(message) = self.chatLocation {
-                        if let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: channel, mode: .forumTopic(thread: message), avatarInitiallyExpanded: false, fromChat: true, requestsContext: self.inviteRequestsContext) {
+                    } else if let peer = self.presentationInterfaceState.renderedPeer?.peer, case let .replyThread(replyThreadMessage) = self.chatLocation, peer.isMonoForum {
+                        let context = self.context
+                        if #available(iOS 13.0, *) {
+                            Task { @MainActor [weak self] in
+                                guard let peer = await context.engine.data.get(
+                                    TelegramEngine.EngineData.Item.Peer.Peer(id: PeerId(replyThreadMessage.threadId))
+                                ).get() else {
+                                    return
+                                }
+                                guard let self else {
+                                    return
+                                }
+                                if let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: true, requestsContext: nil) {
+                                    self.effectiveNavigationController?.pushViewController(infoController)
+                                }
+                            }
+                        }
+                    } else if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isForumOrMonoForum, case let .replyThread(message) = self.chatLocation {
+                        if let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: channel, mode: .forumTopic(thread: message), avatarInitiallyExpanded: false, fromChat: true, requestsContext: self.contentData?.inviteRequestsContext) {
                             self.effectiveNavigationController?.pushViewController(infoController)
                         }
                     }
@@ -442,6 +466,10 @@ extension ChatControllerImpl {
                 self.dismiss()
             }
         case .clearCache:
+            guard let contentData = self.contentData else {
+                return
+            }
+            
             let controller = OverlayStatusController(theme: self.presentationData.theme, type: .loading(cancelled: nil))
             self.present(controller, in: .window(.root))
             
@@ -453,7 +481,7 @@ extension ChatControllerImpl {
                 self.clearCacheDisposable = disposable
             }
         
-            switch self.chatLocationInfoData {
+            switch contentData.chatLocationInfoData {
             case let .peer(peerView):
                 self.navigationActionDisposable.set((peerView.get()
                 |> take(1)

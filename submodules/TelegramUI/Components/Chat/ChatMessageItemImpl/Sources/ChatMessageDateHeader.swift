@@ -16,6 +16,10 @@ import WallpaperBackgroundNode
 import ChatControllerInteraction
 import AvatarVideoNode
 import ChatMessageItem
+import AvatarNode
+import ComponentFlow
+import EmojiStatusComponent
+import AppBundle
 
 private let timezoneOffset: Int32 = {
     let nowTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
@@ -28,25 +32,60 @@ private let timezoneOffset: Int32 = {
 private let granularity: Int32 = 60 * 60 * 24
 
 public final class ChatMessageDateHeader: ListViewItemHeader {
+    public struct Id: Hashable {
+        public let roundedTimestamp: Int64?
+        public let separableThreadId: Int64?
+        
+        public init(roundedTimestamp: Int64?, separableThreadId: Int64?) {
+            self.roundedTimestamp = roundedTimestamp
+            self.separableThreadId = separableThreadId
+        }
+    }
+    
+    public final class HeaderData {
+        public enum Contents {
+            case peer(EnginePeer)
+            case thread(id: Int64, info: Message.AssociatedThreadInfo)
+        }
+        
+        public let contents: Contents
+        
+        public init(contents: Contents) {
+            self.contents = contents
+        }
+    }
+    
     private let timestamp: Int32
     private let roundedTimestamp: Int32
     private let scheduled: Bool
+    public let displayHeader: HeaderData?
     
     public let id: ListViewItemNode.HeaderId
+    public let stackingId: ListViewItemNode.HeaderId?
+    public let idValue: Id
     public let presentationData: ChatPresentationData
     public let controllerInteraction: ChatControllerInteraction?
     public let context: AccountContext
     public let action: ((Int32, Bool) -> Void)?
     
-    public init(timestamp: Int32, scheduled: Bool, presentationData: ChatPresentationData, controllerInteraction: ChatControllerInteraction?, context: AccountContext, action: ((Int32, Bool) -> Void)? = nil) {
+    public init(timestamp: Int32, separableThreadId: Int64?, scheduled: Bool, displayHeader: HeaderData?, presentationData: ChatPresentationData, controllerInteraction: ChatControllerInteraction?, context: AccountContext, action: ((Int32, Bool) -> Void)? = nil) {
         self.timestamp = timestamp
         self.scheduled = scheduled
+        self.displayHeader = displayHeader
         self.presentationData = presentationData
         self.controllerInteraction = controllerInteraction
         self.context = context
         self.action = action
         self.roundedTimestamp = dateHeaderTimestampId(timestamp: timestamp)
-        self.id = ListViewItemNode.HeaderId(space: 0, id: Int64(self.roundedTimestamp))
+        if let _ = self.displayHeader {
+            self.idValue = ChatMessageDateHeader.Id(roundedTimestamp: 0, separableThreadId: separableThreadId)
+            self.id = ListViewItemNode.HeaderId(space: 3, id: self.idValue)
+            self.stackingId = ListViewItemNode.HeaderId(space: 2, id: ChatMessageDateHeader.Id(roundedTimestamp: Int64(self.roundedTimestamp), separableThreadId: nil))
+        } else {
+            self.idValue = ChatMessageDateHeader.Id(roundedTimestamp: Int64(self.roundedTimestamp), separableThreadId: nil)
+            self.id = ListViewItemNode.HeaderId(space: 2, id: self.idValue)
+            self.stackingId = nil
+        }
         
         let isRotated = controllerInteraction?.chatIsRotated ?? true
         
@@ -67,11 +106,11 @@ public final class ChatMessageDateHeader: ListViewItemHeader {
     }
     
     public func node(synchronousLoad: Bool) -> ListViewItemHeaderNode {
-        return ChatMessageDateHeaderNode(localTimestamp: self.roundedTimestamp, scheduled: self.scheduled, presentationData: self.presentationData, controllerInteraction: self.controllerInteraction, context: self.context, action: self.action)
+        return ChatMessageDateHeaderNodeImpl(localTimestamp: self.roundedTimestamp, scheduled: self.scheduled, displayHeader: self.displayHeader, presentationData: self.presentationData, controllerInteraction: self.controllerInteraction, context: self.context, action: self.action)
     }
     
     public func updateNode(_ node: ListViewItemHeaderNode, previous: ListViewItemHeader?, next: ListViewItemHeader?) {
-        guard let node = node as? ChatMessageDateHeaderNode, let next = next as? ChatMessageDateHeader else {
+        guard let node = node as? ChatMessageDateHeaderNodeImpl, let next = next as? ChatMessageDateHeader else {
             return
         }
         node.updatePresentationData(next.presentationData, context: next.context)
@@ -119,32 +158,97 @@ private func dateHeaderTimestampId(timestamp: Int32) -> Int32 {
     }
 }
 
-public final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
+private final class ChatMessageDateSectionSeparatorNode: ASDisplayNode {
+    private let controllerInteraction: ChatControllerInteraction?
+    private let presentationData: ChatPresentationData
+    
+    public let backgroundNode: NavigationBackgroundNode
+    private var backgroundContent: WallpaperBubbleBackgroundNode?
+    
+    private let patternLayer: SimpleShapeLayer
+    
+    init(
+        controllerInteraction: ChatControllerInteraction?,
+        presentationData: ChatPresentationData
+    ) {
+        self.controllerInteraction = controllerInteraction
+        self.presentationData = presentationData
+        
+        if controllerInteraction?.presentationContext.backgroundNode?.hasExtraBubbleBackground() == true, let backgroundContent = controllerInteraction?.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {
+            backgroundContent.clipsToBounds = true
+            self.backgroundContent = backgroundContent
+        }
+                
+        self.backgroundNode = NavigationBackgroundNode(color: .clear)
+        self.backgroundNode.isUserInteractionEnabled = false
+        
+        self.patternLayer = SimpleShapeLayer()
+        
+        super.init()
+        
+        self.backgroundColor = nil
+        self.isOpaque = false
+        
+        if let backgroundContent = self.backgroundContent {
+            self.addSubnode(backgroundContent)
+            backgroundContent.layer.mask = self.patternLayer
+        } else {
+            self.addSubnode(self.backgroundNode)
+            self.backgroundNode.layer.mask = self.patternLayer
+        }
+        
+        let fullTranslucency: Bool = self.controllerInteraction?.enableFullTranslucency ?? true
+        
+        self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: self.presentationData.theme.theme, wallpaper: self.presentationData.theme.wallpaper), enableBlur: fullTranslucency && dateFillNeedsBlur(theme: self.presentationData.theme.theme, wallpaper: self.presentationData.theme.wallpaper), transition: .immediate)
+        
+        self.patternLayer.lineWidth = 1.66
+        self.patternLayer.strokeColor = UIColor.white.cgColor
+        
+        let linePath = CGMutablePath()
+        linePath.move(to: CGPoint(x: 0.0, y: self.patternLayer.lineWidth * 0.5))
+        linePath.addLine(to: CGPoint(x: 10000.0, y: self.patternLayer.lineWidth * 0.5))
+        self.patternLayer.path = linePath
+        self.patternLayer.lineDashPattern = [6.0 as NSNumber, 2.0 as NSNumber] as [NSNumber]
+    }
+    
+    func update(size: CGSize, transition: ContainedViewLayoutTransition) {
+        let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: 10.0))
+        transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
+        self.backgroundNode.update(size: backgroundFrame.size, transition: transition)
+        
+        transition.updateFrame(layer: self.patternLayer, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: 1.66)))
+        
+        if let backgroundContent = self.backgroundContent {
+            backgroundContent.allowsGroupOpacity = true
+            self.backgroundNode.isHidden = true
+            
+            transition.updateFrame(node: backgroundContent, frame: self.backgroundNode.frame)
+            backgroundContent.cornerRadius = backgroundFrame.size.height / 2.0
+            
+            /*if let (rect, containerSize) = self.absolutePosition {
+                var backgroundFrame = backgroundContent.frame
+                backgroundFrame.origin.x += rect.minX
+                backgroundFrame.origin.y += containerSize.height - rect.minY
+                backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: transition)
+            }*/
+        }
+    }
+}
+
+private final class ChatMessageDateContentNode: ASDisplayNode {
+    private var presentationData: ChatPresentationData
+    private let controllerInteraction: ChatControllerInteraction?
+    
     public let labelNode: TextNode
     public let backgroundNode: NavigationBackgroundNode
     public let stickBackgroundNode: ASImageNode
     
     private var backgroundContent: WallpaperBubbleBackgroundNode?
+    private var text: String
     
-    private let localTimestamp: Int32
-    private var presentationData: ChatPresentationData
-    private let controllerInteraction: ChatControllerInteraction?
-    private let context: AccountContext
-    private let text: String
-    
-    private var flashingOnScrolling = false
-    private var stickDistanceFactor: CGFloat = 0.0
-    private var action: ((Int32, Bool) -> Void)? = nil
-    
-    private var absolutePosition: (CGRect, CGSize)?
-    
-    public init(localTimestamp: Int32, scheduled: Bool, presentationData: ChatPresentationData, controllerInteraction: ChatControllerInteraction?, context: AccountContext, action: ((Int32, Bool) -> Void)? = nil) {
+    init(presentationData: ChatPresentationData, controllerInteraction: ChatControllerInteraction?, localTimestamp: Int32, scheduled: Bool) {
         self.presentationData = presentationData
         self.controllerInteraction = controllerInteraction
-        self.context = context
-        
-        self.localTimestamp = localTimestamp
-        self.action = action
         
         self.labelNode = TextNode()
         self.labelNode.isUserInteractionEnabled = false
@@ -195,22 +299,16 @@ public final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         }
         self.text = text
         
-        let isRotated = controllerInteraction?.chatIsRotated ?? true
-        
-        super.init(layerBacked: false, dynamicBounce: true, isRotated: isRotated, seeThrough: false)
-        
-        if isRotated {
-            self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
-        }
+        super.init()
         
         let graphics = PresentationResourcesChat.principalGraphics(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
 
-        let fullTranslucency: Bool = controllerInteraction?.enableFullTranslucency ?? true
+        let fullTranslucency: Bool = true
         
         self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), enableBlur: fullTranslucency && dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), transition: .immediate)
         self.stickBackgroundNode.image = graphics.dateFloatingBackground
         self.stickBackgroundNode.alpha = 0.0
-
+        
         if let backgroundContent = self.backgroundContent {
             self.addSubnode(backgroundContent)
         } else {
@@ -227,20 +325,14 @@ public final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         let _ = apply()
         self.labelNode.frame = CGRect(origin: CGPoint(), size: size.size)
     }
-
-    override public func didLoad() {
-        super.didLoad()
-        
-        self.view.addGestureRecognizer(ListViewTapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
-    }
     
-    public func updatePresentationData(_ presentationData: ChatPresentationData, context: AccountContext) {
+    func updatePresentationData(_ presentationData: ChatPresentationData, context: AccountContext) {
         let previousPresentationData = self.presentationData
         self.presentationData = presentationData
         
         let graphics = PresentationResourcesChat.principalGraphics(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
         
-        let fullTranslucency: Bool = self.controllerInteraction?.enableFullTranslucency ?? true
+        let fullTranslucency: Bool = true
 
         self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), enableBlur: fullTranslucency && dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), transition: .immediate)
         self.stickBackgroundNode.image = graphics.dateFloatingBackground
@@ -256,55 +348,414 @@ public final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         if presentationData.fontSize != previousPresentationData.fontSize {
             self.labelNode.bounds = CGRect(origin: CGPoint(), size: size.size)
         }
-
-        self.setNeedsLayout()
     }
     
-    public func updateBackgroundColor(color: UIColor, enableBlur: Bool) {
+    func updateBackgroundColor(color: UIColor, enableBlur: Bool) {
         self.backgroundNode.updateColor(color: color, enableBlur: enableBlur, transition: .immediate)
     }
     
-    override public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
-        self.absolutePosition = (rect, containerSize)
-        if let backgroundContent = self.backgroundContent {
-            var backgroundFrame = backgroundContent.frame
-            backgroundFrame.origin.x += rect.minX
-            backgroundFrame.origin.y += containerSize.height - rect.minY
-            backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
-        }
-    }
-    
-    override public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
-        let chatDateSize: CGFloat = 20.0
+    func update(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
+        let chatDateSize: CGFloat = 22.0
         let chatDateInset: CGFloat = 6.0
         
         let labelSize = self.labelNode.bounds.size
         let backgroundSize = CGSize(width: labelSize.width + chatDateInset * 2.0, height: chatDateSize)
         
-        let backgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - backgroundSize.width) / 2.0), y: (34.0 - chatDateSize) / 2.0), size: backgroundSize)
-        self.stickBackgroundNode.frame = CGRect(origin: CGPoint(), size: backgroundFrame.size)
-        self.backgroundNode.frame = backgroundFrame
-        self.backgroundNode.update(size: backgroundFrame.size, cornerRadius: backgroundFrame.size.height / 2.0, transition: .immediate)
-        self.labelNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.origin.x + chatDateInset, y: backgroundFrame.origin.y + floorToScreenPixels((backgroundSize.height - labelSize.height) / 2.0)), size: labelSize)
+        let backgroundFrame = CGRect(origin: CGPoint(x: leftInset + floorToScreenPixels((size.width - leftInset - rightInset - backgroundSize.width) / 2.0), y: (size.height - chatDateSize) / 2.0), size: backgroundSize)
+        
+        transition.updateFrame(node: self.stickBackgroundNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
+        transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
+        self.backgroundNode.update(size: backgroundFrame.size, cornerRadius: backgroundFrame.size.height / 2.0, transition: transition)
+        let labelFrame = CGRect(origin: CGPoint(x: backgroundFrame.origin.x + chatDateInset, y: backgroundFrame.origin.y + floorToScreenPixels((backgroundSize.height - labelSize.height) / 2.0)), size: labelSize)
+        
+        transition.updatePosition(node: self.labelNode, position: labelFrame.center)
+        self.labelNode.bounds = CGRect(origin: CGPoint(), size: labelFrame.size)
                 
         if let backgroundContent = self.backgroundContent {
             backgroundContent.allowsGroupOpacity = true
             self.backgroundNode.isHidden = true
-            backgroundContent.frame = self.backgroundNode.frame
+            
+            transition.updateFrame(node: backgroundContent, frame: self.backgroundNode.frame)
             backgroundContent.cornerRadius = backgroundFrame.size.height / 2.0
             
-            if let (rect, containerSize) = self.absolutePosition {
+            /*if let (rect, containerSize) = self.absolutePosition {
                 var backgroundFrame = backgroundContent.frame
                 backgroundFrame.origin.x += rect.minX
                 backgroundFrame.origin.y += containerSize.height - rect.minY
-                backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
-            }
+                backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: transition)
+            }*/
         }
     }
     
-    override public func updateStickDistanceFactor(_ factor: CGFloat, transition: ContainedViewLayoutTransition) {
+    func updateStickDistanceFactor(_ factor: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.stickBackgroundNode.alpha = factor
+    }
+}
+
+private final class ChatMessagePeerContentNode: ASDisplayNode {
+    private static let arrowImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/HeaderArrow"), color: .white)!.withRenderingMode(.alwaysTemplate)
+    
+    private let context: AccountContext
+    private var presentationData: ChatPresentationData
+    private let controllerInteraction: ChatControllerInteraction?
+    private let displayHeader: ChatMessageDateHeader.HeaderData
+    
+    private var avatarNode: AvatarNode?
+    private var icon: ComponentView<Empty>?
+    private var arrowIcon: UIImageView?
+    
+    public let labelNode: TextNode
+    public let backgroundNode: NavigationBackgroundNode
+    public let stickBackgroundNode: ASImageNode
+    
+    private var backgroundContent: WallpaperBubbleBackgroundNode?
+    private var text: String
+    
+    init(context: AccountContext, presentationData: ChatPresentationData, controllerInteraction: ChatControllerInteraction?, displayHeader: ChatMessageDateHeader.HeaderData) {
+        self.context = context
+        self.presentationData = presentationData
+        self.controllerInteraction = controllerInteraction
+        self.displayHeader = displayHeader
+        
+        self.labelNode = TextNode()
+        self.labelNode.isUserInteractionEnabled = false
+        self.labelNode.displaysAsynchronously = !presentationData.isPreview
+        
+        if controllerInteraction?.presentationContext.backgroundNode?.hasExtraBubbleBackground() == true, let backgroundContent = controllerInteraction?.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {
+            backgroundContent.clipsToBounds = true
+            self.backgroundContent = backgroundContent
+        }
+                
+        self.backgroundNode = NavigationBackgroundNode(color: .clear)
+        self.backgroundNode.isUserInteractionEnabled = false
+        
+        self.stickBackgroundNode = ASImageNode()
+        self.stickBackgroundNode.isLayerBacked = true
+        self.stickBackgroundNode.displayWithoutProcessing = true
+        self.stickBackgroundNode.displaysAsynchronously = false
+        
+        let text: String
+        switch displayHeader.contents {
+        case let .peer(peer):
+            text = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+        case let .thread(_, info):
+            text = info.title
+        }
+        self.text = text
+        
+        super.init()
+        
+        let graphics = PresentationResourcesChat.principalGraphics(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
+
+        let fullTranslucency: Bool = true
+        
+        self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), enableBlur: fullTranslucency && dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), transition: .immediate)
+        self.stickBackgroundNode.image = graphics.dateFloatingBackground
+        self.stickBackgroundNode.alpha = 0.0
+        
+        if let backgroundContent = self.backgroundContent {
+            self.addSubnode(backgroundContent)
+        } else {
+            self.addSubnode(self.backgroundNode)
+        }
+        
+        switch displayHeader.contents {
+        case let .peer(peer):
+            let avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 8.0))
+            self.avatarNode = avatarNode
+            self.addSubnode(avatarNode)
+            
+            if peer.smallProfileImage != nil {
+                avatarNode.setPeerV2(context: context, theme: presentationData.theme.theme, peer: peer, displayDimensions: CGSize(width: 16.0, height: 16.0))
+            } else {
+                avatarNode.setPeer(context: context, theme: presentationData.theme.theme, peer: peer, displayDimensions: CGSize(width: 16.0, height: 16.0))
+            }
+        case let .thread(id, info):
+            let avatarIconContent: EmojiStatusComponent.Content
+            if id != 1 {
+                if let fileId = info.icon, fileId != 0 {
+                    avatarIconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 16.0, height: 16.0), placeholderColor: presentationData.theme.theme.list.mediaPlaceholderColor, themeColor: presentationData.theme.theme.list.itemAccentColor, loopMode: .count(0))
+                } else {
+                    avatarIconContent = .topic(title: String(info.title.prefix(1)), color: info.iconColor, size: CGSize(width: 16.0, height: 16.0))
+                }
+            } else {
+                avatarIconContent = .image(image: PresentationResourcesChatList.generalTopicIcon(presentationData.theme.theme)?.withRenderingMode(.alwaysTemplate), tintColor: bubbleVariableColor(variableColor: presentationData.theme.theme.chat.serviceMessage.dateTextColor, wallpaper: presentationData.theme.wallpaper))
+            }
+            
+            let avatarIconComponent = EmojiStatusComponent(
+                context: context,
+                animationCache: context.animationCache,
+                animationRenderer: context.animationRenderer,
+                content: avatarIconContent,
+                isVisibleForAnimations: false,
+                action: nil
+            )
+            let icon = ComponentView<Empty>()
+            self.icon = icon
+            let _ = icon.update(
+                transition: .immediate,
+                component: AnyComponent(avatarIconComponent),
+                environment: {},
+                containerSize: CGSize(width: 16.0, height: 16.0)
+            )
+            if let iconView = icon.view {
+                self.view.addSubview(iconView)
+            }
+        }
+        self.addSubnode(self.labelNode)
+                
+        let titleFont = Font.medium(min(18.0, floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0)))
+        
+        let attributedString = NSAttributedString(string: text, font: titleFont, textColor: bubbleVariableColor(variableColor: presentationData.theme.theme.chat.serviceMessage.dateTextColor, wallpaper: presentationData.theme.wallpaper))
+        let labelLayout = TextNode.asyncLayout(self.labelNode)
+                
+        let (size, apply) = labelLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 320.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+        let _ = apply()
+        self.labelNode.frame = CGRect(origin: CGPoint(), size: size.size)
+        
+        let arrowIcon = UIImageView(image: ChatMessagePeerContentNode.arrowImage)
+        self.arrowIcon = arrowIcon
+        self.view.addSubview(arrowIcon)
+    }
+    
+    func updatePresentationData(_ presentationData: ChatPresentationData, context: AccountContext) {
+        let previousPresentationData = self.presentationData
+        self.presentationData = presentationData
+        
+        let graphics = PresentationResourcesChat.principalGraphics(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
+        
+        let fullTranslucency: Bool = true
+
+        self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), enableBlur: fullTranslucency && dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), transition: .immediate)
+        self.stickBackgroundNode.image = graphics.dateFloatingBackground
+        
+        let titleFont = Font.medium(min(18.0, floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0)))
+        
+        let attributedString = NSAttributedString(string: self.text, font: titleFont, textColor: bubbleVariableColor(variableColor: presentationData.theme.theme.chat.serviceMessage.dateTextColor, wallpaper: presentationData.theme.wallpaper))
+        let labelLayout = TextNode.asyncLayout(self.labelNode)
+        
+        let (size, apply) = labelLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 320.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+        let _ = apply()
+        
+        if presentationData.fontSize != previousPresentationData.fontSize {
+            self.labelNode.bounds = CGRect(origin: CGPoint(), size: size.size)
+        }
+    }
+    
+    func updateBackgroundColor(color: UIColor, enableBlur: Bool) {
+        self.backgroundNode.updateColor(color: color, enableBlur: enableBlur, transition: .immediate)
+    }
+    
+    func update(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
+        let chatDateSize: CGFloat = 22.0
+        let chatDateInset: CGFloat = 6.0
+        let arrowInset: CGFloat = 5.0
+        let arrowSpacing: CGFloat = arrowInset + 6.0
+        
+        let avatarDiameter: CGFloat = 16.0
+        let avatarInset: CGFloat
+        switch self.displayHeader.contents {
+        case .peer:
+            avatarInset = 2.0
+        case .thread:
+            avatarInset = 4.0
+        }
+        let avatarSpacing: CGFloat = 4.0
+        
+        let labelSize = self.labelNode.bounds.size
+        let backgroundSize = CGSize(width: avatarInset + avatarDiameter + avatarSpacing + labelSize.width + chatDateInset + arrowSpacing, height: chatDateSize)
+        
+        let backgroundFrame = CGRect(origin: CGPoint(x: leftInset + floorToScreenPixels((size.width - leftInset - rightInset - backgroundSize.width) / 2.0), y: (size.height - chatDateSize) / 2.0), size: backgroundSize)
+        
+        let iconFrame = CGRect(origin: CGPoint(x: backgroundFrame.minX + avatarInset, y: backgroundFrame.origin.y + floorToScreenPixels((backgroundSize.height - avatarDiameter) / 2.0)), size: CGSize(width: avatarDiameter, height: avatarDiameter))
+        
+        if let avatarNode = self.avatarNode {
+            transition.updateFrame(node: avatarNode, frame: iconFrame)
+            avatarNode.updateSize(size: iconFrame.size)
+        }
+        if let iconView = self.icon?.view {
+            transition.updateFrame(view: iconView, frame: iconFrame)
+        }
+        
+        transition.updateFrame(node: self.stickBackgroundNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
+        transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
+        self.backgroundNode.update(size: backgroundFrame.size, cornerRadius: backgroundFrame.size.height / 2.0, transition: transition)
+        let labelFrame = CGRect(origin: CGPoint(x: backgroundFrame.origin.x + avatarInset + avatarDiameter + avatarSpacing, y: backgroundFrame.origin.y + floorToScreenPixels((backgroundSize.height - labelSize.height) / 2.0)), size: labelSize)
+        
+        transition.updatePosition(node: self.labelNode, position: labelFrame.center)
+        self.labelNode.bounds = CGRect(origin: CGPoint(), size: labelFrame.size)
+        
+        if let arrowIcon = self.arrowIcon, let image = arrowIcon.image {
+            arrowIcon.tintColor = bubbleVariableColor(variableColor: presentationData.theme.theme.chat.serviceMessage.dateTextColor, wallpaper: presentationData.theme.wallpaper).withMultipliedAlpha(0.7)
+            let arrowSize = image.size
+            let arrowFrame = CGRect(origin: CGPoint(x: backgroundFrame.maxX - arrowInset - arrowSize.width, y: backgroundFrame.minY + floorToScreenPixels((backgroundFrame.height - arrowSize.height) * 0.5)), size: arrowSize)
+            transition.updateFrame(view: arrowIcon, frame: arrowFrame)
+        }
+                
+        if let backgroundContent = self.backgroundContent {
+            backgroundContent.allowsGroupOpacity = true
+            self.backgroundNode.isHidden = true
+            
+            transition.updateFrame(node: backgroundContent, frame: self.backgroundNode.frame)
+            backgroundContent.cornerRadius = backgroundFrame.size.height / 2.0
+            
+            /*if let (rect, containerSize) = self.absolutePosition {
+                var backgroundFrame = backgroundContent.frame
+                backgroundFrame.origin.x += rect.minX
+                backgroundFrame.origin.y += containerSize.height - rect.minY
+                backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: transition)
+            }*/
+        }
+    }
+    
+    func updateStickDistanceFactor(_ factor: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.stickBackgroundNode.alpha = factor
+    }
+}
+
+public final class ChatMessageDateHeaderNodeImpl: ListViewItemHeaderNode, ChatMessageDateHeaderNode {
+    private var dateContentNode: ChatMessageDateContentNode?
+    private var peerContentNode: ChatMessagePeerContentNode?
+    
+    private var sectionSeparator: ChatMessageDateSectionSeparatorNode?
+    
+    private let context: AccountContext
+    private let localTimestamp: Int32
+    private let scheduled: Bool
+    private let displayHeader: ChatMessageDateHeader.HeaderData?
+    private var presentationData: ChatPresentationData
+    private let controllerInteraction: ChatControllerInteraction?
+    
+    private var flashingOnScrolling = false
+    private var stickDistanceFactor: CGFloat = 0.0
+    private var action: ((Int32, Bool) -> Void)? = nil
+    
+    private var params: (size: CGSize, leftInset: CGFloat, rightInset: CGFloat)?
+    private var absolutePosition: (CGRect, CGSize)?
+    
+    public init(localTimestamp: Int32, scheduled: Bool, displayHeader: ChatMessageDateHeader.HeaderData?, presentationData: ChatPresentationData, controllerInteraction: ChatControllerInteraction?, context: AccountContext, action: ((Int32, Bool) -> Void)? = nil) {
+        self.context = context
+        self.presentationData = presentationData
+        self.controllerInteraction = controllerInteraction
+        
+        self.localTimestamp = localTimestamp
+        self.scheduled = scheduled
+        self.displayHeader = displayHeader
+        self.action = action
+        
+        let isRotated = controllerInteraction?.chatIsRotated ?? true
+        
+        super.init(layerBacked: false, dynamicBounce: true, isRotated: isRotated, seeThrough: false)
+        
+        if isRotated {
+            self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
+        }
+        
+        if let displayHeader {
+            if self.peerContentNode == nil {
+                let sectionSeparator = ChatMessageDateSectionSeparatorNode(controllerInteraction: controllerInteraction, presentationData: presentationData)
+                self.sectionSeparator = sectionSeparator
+                self.addSubnode(sectionSeparator)
+                
+                let peerContentNode = ChatMessagePeerContentNode(context: self.context, presentationData: self.presentationData, controllerInteraction: self.controllerInteraction, displayHeader: displayHeader)
+                self.peerContentNode = peerContentNode
+                self.addSubnode(peerContentNode)
+            }
+        } else {
+            if self.dateContentNode == nil {
+                let dateContentNode = ChatMessageDateContentNode(presentationData: self.presentationData, controllerInteraction: self.controllerInteraction, localTimestamp: self.localTimestamp, scheduled: self.scheduled)
+                self.dateContentNode = dateContentNode
+                self.addSubnode(dateContentNode)
+            }
+        }
+    }
+
+    override public func didLoad() {
+        super.didLoad()
+        
+        self.view.addGestureRecognizer(ListViewTapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+    }
+    
+    public func updateItem(hasDate: Bool, hasPeer: Bool) {
+    }
+    
+    public func updatePresentationData(_ presentationData: ChatPresentationData, context: AccountContext) {
+        if let dateContentNode = self.dateContentNode {
+            dateContentNode.updatePresentationData(presentationData, context: context)
+        }
+        if let peerContentNode = self.peerContentNode {
+            peerContentNode.updatePresentationData(presentationData, context: context)
+        }
+
+        self.setNeedsLayout()
+    }
+    
+    public func updateBackgroundColor(color: UIColor, enableBlur: Bool) {
+        if let dateContentNode = self.dateContentNode {
+            dateContentNode.updateBackgroundColor(color: color, enableBlur: enableBlur)
+        }
+        if let peerContentNode = self.peerContentNode {
+            peerContentNode.updateBackgroundColor(color: color, enableBlur: enableBlur)
+        }
+    }
+    
+    override public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        /*self.absolutePosition = (rect, containerSize)
+        if let backgroundContent = self.backgroundContent {
+            var backgroundFrame = backgroundContent.frame
+            backgroundFrame.origin.x += rect.minX
+            backgroundFrame.origin.y += containerSize.height - rect.minY
+            backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
+        }*/
+    }
+    
+    override public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.params = (size, leftInset, rightInset)
+        
+        var contentOffsetY: CGFloat = 0.0
+        var isFirst = true
+        if let dateContentNode = self.dateContentNode {
+            if isFirst {
+                isFirst = false
+                contentOffsetY += 7.0
+            } else {
+                contentOffsetY += 7.0
+            }
+            let contentFrame = CGRect(origin: CGPoint(x: 0.0, y: contentOffsetY), size: CGSize(width: size.width, height: 20.0))
+            transition.updateFrame(node: dateContentNode, frame: contentFrame)
+            dateContentNode.update(size: contentFrame.size, leftInset: leftInset, rightInset: rightInset, transition: transition)
+            contentOffsetY += 20.0
+        }
+        if let peerContentNode = self.peerContentNode {
+            if isFirst {
+                isFirst = false
+                contentOffsetY += 7.0
+            } else {
+                contentOffsetY += 7.0
+            }
+            let contentFrame = CGRect(origin: CGPoint(x: 0.0, y: contentOffsetY), size: CGSize(width: size.width, height: 20.0))
+            transition.updateFrame(node: peerContentNode, frame: contentFrame)
+            peerContentNode.update(size: contentFrame.size, leftInset: leftInset, rightInset: rightInset, transition: transition)
+            contentOffsetY += 20.0
+            
+            if let sectionSeparator = self.sectionSeparator {
+                let sectionSeparatorFrame = CGRect(origin: CGPoint(x: 0.0, y: contentFrame.minY + floorToScreenPixels((contentFrame.height - 1.66) * 0.5)), size: CGSize(width: size.width, height: 1.66))
+                sectionSeparator.update(size: sectionSeparatorFrame.size, transition: transition)
+                transition.updatePosition(node: sectionSeparator, position: sectionSeparatorFrame.center)
+                transition.updateBounds(node: sectionSeparator, bounds: CGRect(origin: CGPoint(), size: sectionSeparatorFrame.size))
+            }
+        }
+        contentOffsetY += 7.0
+    }
+    
+    override public func updateStickDistanceFactor(_ factor: CGFloat, distance: CGFloat, transition: ContainedViewLayoutTransition) {
         if !self.stickDistanceFactor.isEqual(to: factor) {
-            self.stickBackgroundNode.alpha = factor
+            if let dateContentNode = self.dateContentNode {
+                dateContentNode.updateStickDistanceFactor(factor, transition: transition)
+            }
+            if let peerContentNode = self.peerContentNode {
+                peerContentNode.updateStickDistanceFactor(factor, transition: transition)
+            }
             
             let wasZero = self.stickDistanceFactor < 0.5
             let isZero = factor < 0.5
@@ -318,6 +769,10 @@ public final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
                 self.updateFlashing(animated: animated)
             }
         }
+        
+        if let sectionSeparator = self.sectionSeparator {
+            transition.updateTransform(node: sectionSeparator, transform: CGAffineTransformMakeTranslation(0.0, -distance))
+        }
     }
     
     override public func updateFlashingOnScrolling(_ isFlashingOnScrolling: Bool, animated: Bool) {
@@ -329,34 +784,82 @@ public final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         let flashing = self.flashingOnScrolling || self.stickDistanceFactor < 0.5
         
         let alpha: CGFloat = flashing ? 1.0 : 0.0
-        let previousAlpha = self.backgroundNode.alpha
         
-        if !previousAlpha.isEqual(to: alpha) {
-            self.backgroundContent?.alpha = alpha
-            self.backgroundNode.alpha = alpha
-            self.labelNode.alpha = alpha
-            if animated {
-                let duration: Double = flashing ? 0.3 : 0.4
-                self.backgroundContent?.layer.animateAlpha(from: previousAlpha, to: alpha, duration: duration)
-                self.backgroundNode.layer.animateAlpha(from: previousAlpha, to: alpha, duration: duration)
-                self.labelNode.layer.animateAlpha(from: previousAlpha, to: alpha, duration: duration)
+        if let dateContentNode = self.dateContentNode {
+            let previousAlpha = dateContentNode.alpha
+            
+            if !previousAlpha.isEqual(to: alpha) {
+                dateContentNode.alpha = alpha
+                if animated {
+                    let duration: Double = flashing ? 0.3 : 0.4
+                    dateContentNode.layer.animateAlpha(from: previousAlpha, to: alpha, duration: duration)
+                }
+            }
+        }
+        
+        if let peerContentNode = self.peerContentNode {
+            let previousAlpha = peerContentNode.alpha
+            
+            if !previousAlpha.isEqual(to: alpha) {
+                peerContentNode.alpha = alpha
+                if animated {
+                    let duration: Double = flashing ? 0.3 : 0.4
+                    peerContentNode.layer.animateAlpha(from: previousAlpha, to: alpha, duration: duration)
+                }
             }
         }
     }
     
+    override public func animateRemoved(duration: Double) {
+        self.alpha = 0.0
+        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: false)
+        if self.dateContentNode != nil {
+            self.layer.animateScale(from: 1.0, to: 0.2, duration: duration, removeOnCompletion: false)
+        }
+    }
+
+    override public func animateAdded(duration: Double) {
+        self.layer.animateAlpha(from: 0.0, to: self.alpha, duration: 0.2)
+        if self.dateContentNode != nil {
+            self.layer.animateScale(from: 0.2, to: 1.0, duration: 0.2)
+        }
+    }
+    
     override public func getEffectiveAlpha() -> CGFloat {
-        return self.backgroundNode.alpha
+        if let dateContentNode = self.dateContentNode {
+            return dateContentNode.alpha
+        }
+        if let peerContentNode = self.peerContentNode {
+            return peerContentNode.alpha
+        }
+        return 0.0
     }
 
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if !self.bounds.contains(point) {
             return nil
         }
-        if self.labelNode.alpha.isZero {
-            return nil
+        if let dateContentNode = self.dateContentNode {
+            if dateContentNode.frame.contains(point) {
+                if dateContentNode.alpha.isZero {
+                    return nil
+                }
+                
+                if dateContentNode.backgroundNode.frame.contains(point.offsetBy(dx: -dateContentNode.frame.minX, dy: -dateContentNode.frame.minY)) {
+                    return self.view
+                }
+            }
         }
-        if self.backgroundNode.frame.contains(point) {
-            return self.view
+        if let peerContentNode = self.peerContentNode {
+            if peerContentNode.frame.contains(point) {
+                if peerContentNode.alpha.isZero {
+                    return nil
+                }
+                
+                if peerContentNode.backgroundNode.frame.contains(point.offsetBy(dx: -peerContentNode.frame.minX, dy: -peerContentNode.frame.minY)) {
+                    return self.view
+                }
+            }
         }
         return nil
     }
@@ -379,6 +882,7 @@ public final class ChatMessageAvatarHeader: ListViewItemHeader {
     }
 
     public let id: ListViewItemNode.HeaderId
+    public let stackingId: ListViewItemNode.HeaderId? = nil
     public let peerId: PeerId
     public let peer: Peer?
     public let messageReference: MessageReference?
@@ -471,6 +975,8 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
     private var hierarchyTrackingLayer: HierarchyTrackingLayer?
     
     private var backgroundContent: WallpaperBubbleBackgroundNode?
+    
+    private var isAvatarHidden: Bool = false
     
     private var trackingIsInHierarchy: Bool = false {
         didSet {
@@ -713,15 +1219,20 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
         }
     }
 
-    override public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
-        self.containerNode.frame = CGRect(origin: CGPoint(x: leftInset + 3.0, y: 0.0), size: CGSize(width: 38.0, height: 38.0))
-        self.avatarNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 38.0, height: 38.0))
+    override public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
+        transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(x: leftInset + 3.0, y: 0.0), size: CGSize(width: 38.0, height: 38.0)))
+        let avatarFrame = CGRect(origin: CGPoint(), size: CGSize(width: 38.0, height: 38.0))
+        self.avatarNode.position = avatarFrame.center
+        self.avatarNode.bounds = CGRect(origin: CGPoint(), size: avatarFrame.size)
+        self.avatarNode.updateSize(size: avatarFrame.size)
     }
 
     override public func animateRemoved(duration: Double) {
         self.alpha = 0.0
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: false)
-        self.avatarNode.layer.animateScale(from: 1.0, to: 0.2, duration: duration, removeOnCompletion: false)
+        if !self.isAvatarHidden {
+            self.avatarNode.layer.animateScale(from: 1.0, to: 0.2, duration: duration, removeOnCompletion: false)
+        }
     }
 
     override public func animateAdded(duration: Double) {
@@ -729,7 +1240,7 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
         self.avatarNode.layer.animateScale(from: 0.2, to: 1.0, duration: 0.2)
     }
 
-    override public func updateStickDistanceFactor(_ factor: CGFloat, transition: ContainedViewLayoutTransition) {
+    override public func updateStickDistanceFactor(_ factor: CGFloat, distance: CGFloat, transition: ContainedViewLayoutTransition) {
     }
 
     override public func updateFlashingOnScrolling(_ isFlashingOnScrolling: Bool, animated: Bool) {
@@ -747,6 +1258,18 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
         if animated {
             self.layer.animate(from: NSValue(caTransform3D: previousSubnodeTransform), to: NSValue(caTransform3D: self.subnodeTransform), keyPath: "sublayerTransform", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.2)
         }
+    }
+    
+    public func updateAvatarIsHidden(isHidden: Bool, transition: ContainedViewLayoutTransition) {
+        self.isAvatarHidden = isHidden
+        var avatarTransform: CATransform3D = CATransform3DIdentity
+        if isHidden {
+            let scale: CGFloat = isHidden ? 0.001 : 1.0
+            avatarTransform = CATransform3DTranslate(avatarTransform, -38.0 * 0.5, 38.0 * 0.5, 0.0)
+            avatarTransform = CATransform3DScale(avatarTransform, scale, scale, 1.0)
+        }
+        transition.updateTransform(node: self.avatarNode, transform: avatarTransform)
+        transition.updateAlpha(node: self.avatarNode, alpha: isHidden ? 0.0 : 1.0)
     }
 
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -786,7 +1309,7 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
         self.avatarVideoNode?.updateVisibility(isVisible)
       
         if let videoNode = self.avatarVideoNode {
-            videoNode.updateLayout(size: self.avatarNode.frame.size, cornerRadius: self.avatarNode.frame.size.width / 2.0, transition: .immediate)
+            videoNode.updateLayout(size: self.avatarNode.bounds.size, cornerRadius: self.avatarNode.bounds.size.width / 2.0, transition: .immediate)
             videoNode.frame = self.avatarNode.bounds
         }
     }

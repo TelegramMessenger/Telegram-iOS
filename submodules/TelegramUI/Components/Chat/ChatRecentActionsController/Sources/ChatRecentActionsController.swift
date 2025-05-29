@@ -134,7 +134,6 @@ public final class ChatRecentActionsController: TelegramBaseController {
         }, updateInputLanguage: { _ in
         }, unarchiveChat: {
         }, openLinkEditing: {  
-        }, reportPeerIrrelevantGeoLocation: {
         }, displaySlowmodeTooltip: { _, _ in
         }, displaySendMessageOptions: { _, _ in
         }, openScheduledMessages: {
@@ -169,8 +168,11 @@ public final class ChatRecentActionsController: TelegramBaseController {
         }, openStarsPurchase: { _ in
         }, openMessagePayment: {
         }, openBoostToUnrestrict: {
-        }, updateVideoTrimRange: { _, _, _, _ in
+        }, updateRecordingTrimRange: { _, _, _, _ in
+        }, dismissAllTooltips: {
         }, updateHistoryFilter: { _ in
+        }, updateChatLocationThread: { _, _ in
+        }, toggleChatSidebarMode: {
         }, updateDisplayHistoryFilterAsList: { _ in
         }, requestLayout: { _ in
         }, chatController: {

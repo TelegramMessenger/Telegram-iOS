@@ -371,6 +371,7 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         }
     }
     
+    private var overrideLoopCount: Int?
     private var currentLoopCount: Int = 0
     
     public var isUnique: Bool = false
@@ -612,8 +613,10 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         
         var shouldBePlaying = self.isInHierarchyValue && self.isVisibleForAnimations
         
-        if shouldBePlaying, let loopCount = arguments.loopCount, self.currentLoopCount >= loopCount {
-            shouldBePlaying = false
+        if shouldBePlaying {
+            if let loopCount = self.overrideLoopCount ?? arguments.loopCount, self.currentLoopCount >= loopCount {
+                shouldBePlaying = false
+            }
         }
         
         if self.shouldBeAnimating != shouldBePlaying {
@@ -621,6 +624,7 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
             
             if !shouldBePlaying {
                 self.currentLoopCount = 0
+                self.overrideLoopCount = nil
             }
         }
     }
@@ -795,6 +799,12 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         }
     }
     
+    public func playOnce() {
+        self.currentLoopCount = 0
+        self.overrideLoopCount = 1
+        self.updatePlayback()
+    }
+    
     public func reloadAnimation() {
         self.updateFile(attemptSynchronousLoad: false)
     }
@@ -880,6 +890,7 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         
         if didLoop {
             self.currentLoopCount += 1
+            self.overrideLoopCount = nil
             if let loopCount = arguments.loopCount, self.currentLoopCount >= loopCount {
                 self.updatePlayback()
             }

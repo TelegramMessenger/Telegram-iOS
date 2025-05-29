@@ -195,7 +195,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                         }
                         
                         var isForum = false
-                        if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+                        if case let .channel(channel) = peer, channel.isForumOrMonoForum {
                             isForum = true
                         }
                         
@@ -581,7 +581,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
     }
 }
 
-func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: Int64, isPinned: Bool?, isClosed: Bool?, chatListController: ChatListControllerImpl?, joined: Bool, canSelect: Bool) -> Signal<[ContextMenuItem], NoError> {
+public func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: Int64, isPinned: Bool?, isClosed: Bool?, chatListController: ViewController?, joined: Bool, canSelect: Bool, customEdit: ((ContextController) -> Void)? = nil, customPinUnpin: ((ContextController) -> Void)? = nil, reorder: (() -> Void)? = nil) -> Signal<[ContextMenuItem], NoError> {
     let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
     let strings = presentationData.strings
 
@@ -603,8 +603,17 @@ func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: 
         
         if let isClosed = isClosed, isClosed && threadId != 1 {
         } else {
-            if let isPinned = isPinned, channel.hasPermission(.manageTopics) {
-                items.append(.action(ContextMenuActionItem(text: isPinned ? presentationData.strings.ChatList_Context_Unpin : presentationData.strings.ChatList_Context_Pin, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isPinned ? "Chat/Context Menu/Unpin": "Chat/Context Menu/Pin"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+            if let isPinned, channel.hasPermission(.manageTopics) {
+                items.append(.action(ContextMenuActionItem(text: isPinned ? presentationData.strings.ChatList_Context_Unpin : presentationData.strings.ChatList_Context_Pin, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isPinned ? "Chat/Context Menu/Unpin": "Chat/Context Menu/Pin"), color: theme.contextMenu.primaryColor) }, action: { c, f in
+                    if let customPinUnpin {
+                        if let c = c as? ContextController {
+                            customPinUnpin(c)
+                        } else {
+                            f(.default)
+                        }
+                        return
+                    }
+                    
                     f(.default)
                     
                     let _ = (context.engine.peers.toggleForumChannelTopicPinned(id: peerId, threadId: threadId)
@@ -621,6 +630,14 @@ func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: 
                         }
                     })
                 })))
+                
+                if isPinned, let reorder {
+                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_InlineTopicMenu_Reorder, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReorderItems"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+                        c?.dismiss(completion: {
+                        })
+                        reorder()
+                    })))
+                }
             }
         }
         
@@ -633,6 +650,26 @@ func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: 
             items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_MarkAsRead, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsRead"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                 let _ = context.engine.messages.markForumThreadAsRead(peerId: peerId, threadId: threadId).startStandalone()
                 f(.default)
+            })))
+        }
+        
+        var canOpenClose = false
+        if channel.flags.contains(.isCreator) {
+            canOpenClose = true
+        } else if channel.hasPermission(.manageTopics) {
+            canOpenClose = true
+        } else if threadData.isOwnedByMe {
+            canOpenClose = true
+        }
+        
+        if threadId != 1, canOpenClose, let customEdit {
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_InlineTopicMenu_Edit, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor) }, action: { c, f in
+                if let c = c as? ContextController {
+                    customEdit(c)
+                } else {
+                    f(.default)
+                }
+                return
             })))
         }
         
@@ -863,14 +900,6 @@ func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: 
         })))
         
         if threadId != 1 {
-            var canOpenClose = false
-            if channel.flags.contains(.isCreator) {
-                canOpenClose = true
-            } else if channel.hasPermission(.manageTopics) {
-                canOpenClose = true
-            } else if threadData.isOwnedByMe {
-                canOpenClose = true
-            }
             if canOpenClose {
                 items.append(.action(ContextMenuActionItem(text: threadData.isClosed ? presentationData.strings.ChatList_Context_ReopenTopic : presentationData.strings.ChatList_Context_CloseTopic, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: threadData.isClosed ? "Chat/Context Menu/Play": "Chat/Context Menu/Pause"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                     f(.default)
@@ -882,14 +911,36 @@ func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: 
                 items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_Delete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak chatListController] _, f in
                     f(.default)
                     
-                    chatListController?.deletePeerThread(peerId: peerId, threadId: threadId)
+                    if let chatListController = chatListController as? ChatListControllerImpl {
+                        chatListController.deletePeerThread(peerId: peerId, threadId: threadId)
+                    } else if let chatListController {
+                        let actionSheet = ActionSheetController(presentationData: presentationData)
+                        var items: [ActionSheetItem] = []
+                        
+                        items.append(ActionSheetTextItem(title: presentationData.strings.ChatList_DeleteTopicConfirmationText, parseMarkdown: true))
+                        items.append(ActionSheetButtonItem(title: presentationData.strings.ChatList_DeleteTopicConfirmationAction, color: .destructive, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            let _ = context.engine.peers.removeForumChannelThread(id: peerId, threadId: threadId).startStandalone(completed: {
+                            })
+                        }))
+                        
+                        actionSheet.setItemGroups([
+                            ActionSheetItemGroup(items: items),
+                            ActionSheetItemGroup(items: [
+                                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                })
+                            ])
+                        ])
+                        chatListController.present(actionSheet, in: .window(.root))
+                    }
                 })))
             }
         }
         
-        if canSelect {
+        if canSelect, let chatListController = chatListController as? ChatListControllerImpl {
             items.append(.separator)
-            items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_Select, textColor: .primary, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+            items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_Select, textColor: .primary, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) }, action: { [weak chatListController] _, f in
                 f(.default)
                 chatListController?.selectPeerThread(peerId: peerId, threadId: threadId)
             })))

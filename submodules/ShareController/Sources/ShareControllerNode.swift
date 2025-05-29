@@ -576,7 +576,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                     strongSelf.controllerInteraction!.selectedPeerIds.remove(peer.peerId)
                     strongSelf.controllerInteraction!.selectedPeers = strongSelf.controllerInteraction!.selectedPeers.filter({ $0.peerId != peer.peerId })
                 } else {
-                    if case let .channel(channel) = peer.peer, channel.flags.contains(.isForum) {
+                    if case let .channel(channel) = peer.peer, channel.isForumOrMonoForum {
                         if strongSelf.controllerInteraction!.selectedTopics[peer.peerId] != nil {
                             strongSelf.controllerInteraction!.selectedTopics[peer.peerId] = nil
                             strongSelf.peersContentNode?.update()
@@ -760,9 +760,14 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
             return
         }
         
+        var isMonoforum = false
+        if case let .channel(channel) = mainPeer {
+            isMonoforum = channel.isMonoForum
+        }
+        
         var didPresent = false
         var presentImpl: (() -> Void)?
-        let threads = threadList(accountPeerId: context.accountPeerId, postbox: context.stateManager.postbox, peerId: mainPeer.id)
+        let threads = threadList(accountPeerId: context.accountPeerId, postbox: context.stateManager.postbox, peerId: mainPeer.id, isMonoforum: isMonoforum)
         |> deliverOnMainQueue
         |> beforeNext { _ in
             if !didPresent {
@@ -1274,18 +1279,22 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
         if let context = self.context, let tryShare = self.tryShare {
             let _ = (context.stateManager.postbox.combinedView(
                 keys: peerIds.map { peerId in
-                    return PostboxViewKey.basicPeer(peerId)
+                    return PostboxViewKey.peer(peerId: peerId, components: [])
                 } + peerIds.map { peerId in
                     return PostboxViewKey.cachedPeerData(peerId: peerId)
                 }
             )
             |> take(1)
-            |> map { views -> ([EnginePeer.Id: EnginePeer?], [EnginePeer.Id: Int64]) in
-                var result: [EnginePeer.Id: EnginePeer?] = [:]
+            |> map { views -> ([EnginePeer.Id: EngineRenderedPeer?], [EnginePeer.Id: Int64]) in
+                var result: [EnginePeer.Id: EngineRenderedPeer?] = [:]
                 var requiresStars: [EnginePeer.Id: Int64] = [:]
                 for peerId in peerIds {
-                    if let view = views.views[PostboxViewKey.basicPeer(peerId)] as? BasicPeerView, let peer = view.peer {
-                        result[peerId] = EnginePeer(peer)
+                    if let view = views.views[PostboxViewKey.basicPeer(peerId)] as? PeerView, let peer = peerViewMainPeer(view) {
+                        var peers: [EnginePeer.Id: EnginePeer] = [peer.id: EnginePeer(peer)]
+                        if let channel = peer as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = view.peers[linkedMonoforumId] {
+                            peers[mainChannel.id] = EnginePeer(mainChannel)
+                        }
+                        result[peerId] = EngineRenderedPeer(peerId: peer.id, peers: peers, associatedMedia: [:])
                         if peer is TelegramUser, let cachedPeerDataView = views.views[PostboxViewKey.cachedPeerData(peerId: peerId)] as? CachedPeerDataView {
                             if let cachedData = cachedPeerDataView.cachedPeerData as? CachedUserData {
                                 requiresStars[peerId] = cachedData.sendPaidMessageStars?.value
@@ -1302,14 +1311,14 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                     return
                 }
                 
-                var mappedPeers: [EnginePeer] = []
+                var mappedPeers: [EngineRenderedPeer] = []
                 for peerId in peerIds {
                     if let maybePeer = peers[peerId], let peer = maybePeer {
                         mappedPeers.append(peer)
                     }
                 }
                 
-                if !tryShare(self.inputFieldNode.text, mappedPeers) {
+                if !tryShare(self.inputFieldNode.text, mappedPeers.compactMap(\.peer)) {
                     return
                 }
 
@@ -1323,15 +1332,15 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
         }
     }
     
-    private func presentPaidMessageAlertIfNeeded(peers: [EnginePeer], requiresStars: [EnginePeer.Id: Int64], completion: @escaping () -> Void) {
+    private func presentPaidMessageAlertIfNeeded(peers: [EngineRenderedPeer], requiresStars: [EnginePeer.Id: Int64], completion: @escaping () -> Void) {
         var count: Int32 = Int32(self.messageCount)
         if !self.inputFieldNode.text.isEmpty {
             count += 1
         }
-        var chargingPeers: [EnginePeer] = []
+        var chargingPeers: [EngineRenderedPeer] = []
         var totalAmount: StarsAmount = .zero
         for peer in peers {
-            if let stars = requiresStars[peer.id] {
+            if let stars = requiresStars[peer.peerId] {
                 chargingPeers.append(peer)
                 totalAmount = totalAmount + StarsAmount(value: stars, nanos: 0)
             }
@@ -1573,7 +1582,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
     
     func updatePeers(context: ShareControllerAccountContext, switchableAccounts: [ShareControllerSwitchableAccount], peers: [(peer: EngineRenderedPeer, presence: EnginePeer.Presence?, requiresPremiumForMessaging: Bool, requiresStars: Int64?)], accountPeer: EnginePeer, defaultAction: ShareControllerAction?) {
         self.context = context
-        
+                
         if let peersContentNode = self.peersContentNode, peersContentNode.accountPeer.id == accountPeer.id {
             peersContentNode.peersValue.set(.single(peers))
             return
@@ -1610,7 +1619,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
         }
         
         let animated = self.peersContentNode == nil
-        let peersContentNode = SharePeersContainerNode(environment: self.environment, context: context, switchableAccounts: switchableAccounts, theme: self.presentationData.theme, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder, peers: peers, accountPeer: accountPeer, controllerInteraction: self.controllerInteraction!, externalShare: self.externalShare, switchToAnotherAccount: { [weak self] in
+        let peersContentNode = SharePeersContainerNode(environment: self.environment, context: context, switchableAccounts: switchableAccounts, theme: self.presentationData.theme, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder, peers: peers, accountPeer: accountPeer, controllerInteraction: self.controllerInteraction!, externalShare: self.externalShare, isMainApp: self.environment.isMainApp, switchToAnotherAccount: { [weak self] in
             self?.switchToAnotherAccount?()
         }, debugAction: { [weak self] in
             self?.debugAction?()
@@ -1933,78 +1942,162 @@ private final class ShareContextReferenceContentSource: ContextReferenceContentS
     }
 }
 
-private func threadList(accountPeerId: EnginePeer.Id, postbox: Postbox, peerId: EnginePeer.Id) -> Signal<EngineChatList, NoError> {
-    let viewKey: PostboxViewKey = .messageHistoryThreadIndex(
-        id: peerId,
-        summaryComponents: ChatListEntrySummaryComponents(
-            components: [:]
-        )
-    )
-
-    return postbox.combinedView(keys: [viewKey])
-    |> mapToSignal { view -> Signal<CombinedView, NoError> in
-        return postbox.transaction { transaction -> CombinedView in
-            if let peer = transaction.getPeer(accountPeerId) {
-                transaction.updatePeersInternal([peer]) { current, _ in
-                    return current ?? peer
+private func threadList(accountPeerId: EnginePeer.Id, postbox: Postbox, peerId: EnginePeer.Id, isMonoforum: Bool) -> Signal<EngineChatList, NoError> {
+    if isMonoforum {
+        let viewKey: PostboxViewKey = .savedMessagesIndex(peerId: peerId)
+        let interfaceStateKey: PostboxViewKey = .chatInterfaceState(peerId: peerId)
+        
+        return postbox.combinedView(keys: [viewKey, interfaceStateKey])
+        |> map { views -> EngineChatList in
+            guard let view = views.views[viewKey] as? MessageHistorySavedMessagesIndexView else {
+                preconditionFailure()
+            }
+            
+            var draft: EngineChatList.Draft?
+            if let interfaceStateView = views.views[interfaceStateKey] as? ChatInterfaceStateView {
+                if let embeddedState = interfaceStateView.value, let _ = embeddedState.overrideChatTimestamp {
+                    if let opaqueState = _internal_decodeStoredChatInterfaceState(state: embeddedState) {
+                        if let text = opaqueState.synchronizeableInputState?.text {
+                            draft = EngineChatList.Draft(text: text, entities: opaqueState.synchronizeableInputState?.entities ?? [])
+                        }
+                    }
                 }
             }
-            return view
-        }
-    }
-    |> map { views -> EngineChatList in
-        guard let view = views.views[viewKey] as? MessageHistoryThreadIndexView else {
-            preconditionFailure()
-        }
-        
-        var items: [EngineChatList.Item] = []
-        for item in view.items {
-            guard let peer = view.peer else {
-                continue
-            }
-            guard let data = item.info.get(MessageHistoryThreadData.self) else {
-                continue
+             
+            var items: [EngineChatList.Item] = []
+            for item in view.items {
+                guard let sourcePeer = item.peer else {
+                    continue
+                }
+                
+                let sourceId = PeerId(item.id)
+                
+                var messages: [EngineMessage] = []
+                if let topMessage = item.topMessage {
+                    messages.append(EngineMessage(topMessage))
+                }
+                
+                let mappedMessageIndex = MessageIndex(id: MessageId(peerId: sourceId, namespace: item.index.id.namespace, id: item.index.id.id), timestamp: item.index.timestamp)
+                
+                let readCounters = EnginePeerReadCounters(state: CombinedPeerReadState(states: [(Namespaces.Message.Cloud, .idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: Int32(item.unreadCount), markedUnread: item.markedUnread))]), isMuted: false)
+                
+                var itemDraft: EngineChatList.Draft?
+                if let embeddedState = item.embeddedInterfaceState, let _ = embeddedState.overrideChatTimestamp {
+                    if let opaqueState = _internal_decodeStoredChatInterfaceState(state: embeddedState) {
+                        if let text = opaqueState.synchronizeableInputState?.text {
+                            itemDraft = EngineChatList.Draft(text: text, entities: opaqueState.synchronizeableInputState?.entities ?? [])
+                        }
+                    }
+                }
+                
+                items.append(EngineChatList.Item(
+                    id: .chatList(sourceId),
+                    index: .chatList(ChatListIndex(pinningIndex: item.pinnedIndex.flatMap(UInt16.init), messageIndex: mappedMessageIndex)),
+                    messages: messages,
+                    readCounters: readCounters,
+                    isMuted: false,
+                    draft: sourceId == accountPeerId ? draft : itemDraft,
+                    threadData: nil,
+                    renderedPeer: EngineRenderedPeer(peer: EnginePeer(sourcePeer)),
+                    presence: nil,
+                    hasUnseenMentions: false,
+                    hasUnseenReactions: false,
+                    forumTopicData: nil,
+                    topForumTopicItems: [],
+                    hasFailed: false,
+                    isContact: false,
+                    autoremoveTimeout: nil,
+                    storyStats: nil,
+                    displayAsTopicList: false,
+                    isPremiumRequiredToMessage: false,
+                    mediaDraftContentType: nil
+                ))
             }
             
-            let pinnedIndex: EngineChatList.Item.PinnedIndex
-            if let index = item.pinnedIndex {
-                pinnedIndex = .index(index)
-            } else {
-                pinnedIndex = .none
-            }
+            let list = EngineChatList(
+                items: items.reversed(),
+                groupItems: [],
+                additionalItems: [],
+                hasEarlier: false,
+                hasLater: false,
+                isLoading: view.isLoading
+            )
             
-            items.append(EngineChatList.Item(
-                id: .forum(item.id),
-                index: .forum(pinnedIndex: pinnedIndex, timestamp: item.index.timestamp, threadId: item.id, namespace: item.index.id.namespace, id: item.index.id.id),
-                messages: item.topMessage.flatMap { [EngineMessage($0)] } ?? [],
-                readCounters: nil,
-                isMuted: false,
-                draft: nil,
-                threadData: data,
-                renderedPeer: EngineRenderedPeer(peer: EnginePeer(peer)),
-                presence: nil,
-                hasUnseenMentions: false,
-                hasUnseenReactions: false,
-                forumTopicData: nil,
-                topForumTopicItems: [],
-                hasFailed: false,
-                isContact: false,
-                autoremoveTimeout: nil,
-                storyStats: nil,
-                displayAsTopicList: false,
-                isPremiumRequiredToMessage: false,
-                mediaDraftContentType: nil
-            ))
+            return list
         }
-        
-        let list = EngineChatList(
-            items: items,
-            groupItems: [],
-            additionalItems: [],
-            hasEarlier: false,
-            hasLater: false,
-            isLoading: view.isLoading
+    } else {
+        let viewKey: PostboxViewKey = .messageHistoryThreadIndex(
+            id: peerId,
+            summaryComponents: ChatListEntrySummaryComponents(
+                components: [:]
+            )
         )
-        return list
+
+        return postbox.combinedView(keys: [viewKey])
+        |> mapToSignal { view -> Signal<CombinedView, NoError> in
+            return postbox.transaction { transaction -> CombinedView in
+                if let peer = transaction.getPeer(accountPeerId) {
+                    transaction.updatePeersInternal([peer]) { current, _ in
+                        return current ?? peer
+                    }
+                }
+                return view
+            }
+        }
+        |> map { views -> EngineChatList in
+            guard let view = views.views[viewKey] as? MessageHistoryThreadIndexView else {
+                preconditionFailure()
+            }
+            
+            var items: [EngineChatList.Item] = []
+            for item in view.items {
+                guard let peer = view.peer else {
+                    continue
+                }
+                guard let data = item.info.get(MessageHistoryThreadData.self) else {
+                    continue
+                }
+                
+                let pinnedIndex: EngineChatList.Item.PinnedIndex
+                if let index = item.pinnedIndex {
+                    pinnedIndex = .index(index)
+                } else {
+                    pinnedIndex = .none
+                }
+                
+                items.append(EngineChatList.Item(
+                    id: .forum(item.id),
+                    index: .forum(pinnedIndex: pinnedIndex, timestamp: item.index.timestamp, threadId: item.id, namespace: item.index.id.namespace, id: item.index.id.id),
+                    messages: item.topMessage.flatMap { [EngineMessage($0)] } ?? [],
+                    readCounters: nil,
+                    isMuted: false,
+                    draft: nil,
+                    threadData: data,
+                    renderedPeer: EngineRenderedPeer(peer: EnginePeer(peer)),
+                    presence: nil,
+                    hasUnseenMentions: false,
+                    hasUnseenReactions: false,
+                    forumTopicData: nil,
+                    topForumTopicItems: [],
+                    hasFailed: false,
+                    isContact: false,
+                    autoremoveTimeout: nil,
+                    storyStats: nil,
+                    displayAsTopicList: false,
+                    isPremiumRequiredToMessage: false,
+                    mediaDraftContentType: nil
+                ))
+            }
+            
+            let list = EngineChatList(
+                items: items,
+                groupItems: [],
+                additionalItems: [],
+                hasEarlier: false,
+                hasLater: false,
+                isLoading: view.isLoading
+            )
+            return list
+        }
     }
 }

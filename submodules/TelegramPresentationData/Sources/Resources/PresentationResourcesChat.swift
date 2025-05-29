@@ -1109,6 +1109,23 @@ public struct PresentationResourcesChat {
         })
     }
     
+    public static func chatFreeNavigateToThreadButtonIcon(_ theme: PresentationTheme, wallpaper: TelegramWallpaper) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatFreeNavigateToThreadButtonIcon.rawValue, { _ in
+            return generateImage(CGSize(width: 8.0, height: 14.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.setStrokeColor(bubbleVariableColor(variableColor: theme.chat.message.shareButtonForegroundColor, wallpaper: wallpaper).cgColor)
+                context.setLineWidth(1.66)
+                context.setLineCap(.round)
+                context.setLineJoin(.round)
+                context.beginPath()
+                context.move(to: CGPoint(x: 1.0, y: 1.0))
+                context.addLine(to: CGPoint(x: size.width - 1.0, y: size.height / 2.0))
+                context.addLine(to: CGPoint(x: 1.0, y: size.height - 1.0))
+                context.strokePath()
+            })
+        })
+    }
+    
     public static func chatFreeShareButtonIcon(_ theme: PresentationTheme, wallpaper: TelegramWallpaper) -> UIImage? {
         return theme.image(PresentationResourceKey.chatFreeShareButtonIcon.rawValue, { _ in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/ShareIcon"), color: bubbleVariableColor(variableColor: theme.chat.message.shareButtonForegroundColor, wallpaper: wallpaper))

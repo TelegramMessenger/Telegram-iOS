@@ -704,8 +704,8 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
         }
         
         var threadInfo: ChatListItemContent.ThreadInfo?
-        if let threadData = entry.threadData, let threadId = threadId {
-            threadInfo = ChatListItemContent.ThreadInfo(id: threadId, info: threadData.info, isOwnedByMe: threadData.isOwnedByMe, isClosed: threadData.isClosed, isHidden: threadData.isHidden)
+        if let threadData = entry.threadData, let threadId {
+            threadInfo = ChatListItemContent.ThreadInfo(id: threadId, info: threadData.info, isOwnedByMe: threadData.isOwnedByMe, isClosed: threadData.isClosed, isHidden: threadData.isHidden, threadPeer: nil)
         }
 
         let entry: ChatListNodeEntry = .PeerEntry(ChatListNodeEntry.PeerEntryData(
@@ -863,7 +863,9 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
                         draftState: draftState,
                         mediaDraftContentType: item.item.mediaDraftContentType,
                         peer: item.item.renderedPeer,
-                        threadInfo: item.item.threadData.flatMap { ChatListItemContent.ThreadInfo(id: threadId, info: $0.info, isOwnedByMe: $0.isOwnedByMe, isClosed: $0.isClosed, isHidden: $0.isHidden) },
+                        threadInfo: item.item.threadData.flatMap {
+                            return ChatListItemContent.ThreadInfo(id: threadId, info: $0.info, isOwnedByMe: $0.isOwnedByMe, isClosed: $0.isClosed, isHidden: $0.isHidden, threadPeer: nil)
+                        },
                         presence: item.item.presence,
                         hasUnseenMentions: item.item.hasUnseenMentions,
                         hasUnseenReactions: item.item.hasUnseenReactions,
