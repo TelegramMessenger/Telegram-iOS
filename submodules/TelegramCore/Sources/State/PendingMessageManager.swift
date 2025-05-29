@@ -1863,6 +1863,15 @@ public final class PendingMessageManager {
     }
     
     private func applySentMessage(postbox: Postbox, stateManager: AccountStateManager, message: Message, content: PendingMessageUploadedContentAndReuploadInfo, result: Api.Updates) -> Signal<Void, NoError> {
+        if let channel = message.peers[message.id.peerId] as? TelegramChannel, channel.isMonoForum {
+            for attribute in message.attributes {
+                if let attribute = attribute as? PaidStarsMessageAttribute {
+                    stateManager.starsContext?.add(balance: StarsAmount(value: -attribute.stars.value, nanos: (attribute.stars.value == 0 && attribute.stars.nanos != 0 ? -1 : 1) * attribute.stars.nanos))
+                    break
+                }
+            }
+        }
+        
         var apiMessage: Api.Message?
         for resultMessage in result.messages {
             let targetNamespace: MessageId.Namespace
@@ -1919,6 +1928,15 @@ public final class PendingMessageManager {
     private func applySentGroupMessages(postbox: Postbox, stateManager: AccountStateManager, messages: [Message], result: Api.Updates) -> Signal<Void, NoError> {
         var namespace = Namespaces.Message.Cloud
         if let message = messages.first {
+            if let channel = message.peers[message.id.peerId] as? TelegramChannel, channel.isMonoForum {
+                for attribute in message.attributes {
+                    if let attribute = attribute as? PaidStarsMessageAttribute {
+                        stateManager.starsContext?.add(balance: StarsAmount(value: -attribute.stars.value, nanos: (attribute.stars.value == 0 && attribute.stars.nanos != 0 ? -1 : 1) * attribute.stars.nanos))
+                        break
+                    }
+                }
+            }
+            
             if message.id.namespace == Namespaces.Message.QuickReplyLocal {
                 namespace = Namespaces.Message.QuickReplyCloud
             } else if let apiMessage = result.messages.first, message.scheduleTime != nil && message.scheduleTime == apiMessage.timestamp {
