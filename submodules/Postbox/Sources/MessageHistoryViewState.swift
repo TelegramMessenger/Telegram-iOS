@@ -1308,6 +1308,7 @@ final class HistoryViewLoadedState {
     let halfLimit: Int
     let seedConfiguration: SeedConfiguration
     var orderedEntriesBySpace: [PeerIdAndNamespace: OrderedHistoryViewEntries]
+    var threadSummaries: [Int64: Int32]
     var holes: HistoryViewHoles
     var spacesWithRemovals = Set<PeerIdAndNamespace>()
     
@@ -1321,6 +1322,7 @@ final class HistoryViewLoadedState {
         self.halfLimit = halfLimit
         self.seedConfiguration = postbox.seedConfiguration
         self.orderedEntriesBySpace = [:]
+        self.threadSummaries = [:]
         self.holes = holes
         
         var peerIds: [PeerId] = []
@@ -1854,6 +1856,7 @@ final class HistoryViewLoadedState {
         var holesToLower = false
         var holesToHigher = false
         var result: [MessageHistoryMessageEntry] = []
+        
         if combinedSpacesAndIndicesByDirection.lowerOrAtAnchor.isEmpty && combinedSpacesAndIndicesByDirection.higherThanAnchor.isEmpty {
             if !clipRanges.isEmpty {
                 holesToLower = true

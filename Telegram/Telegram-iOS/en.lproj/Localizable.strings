@@ -14410,3 +14410,5 @@ Sorry for the inconvenience.";
 "Stars.SendMessage.AdjustmentSectionFooterValue" = "You will receive **%@ Stars**.";
 "Stars.SendMessage.AdjustmentSectionFooterEmpty" = "You will receive **80%**.";
 "Stars.SendMessage.AdjustmentAction" = "OK";
+
+"Stars.SendMessage.PriceFree" = "Free";
