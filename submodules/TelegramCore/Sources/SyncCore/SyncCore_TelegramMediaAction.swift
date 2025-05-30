@@ -160,6 +160,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case paidMessagesRefunded(count: Int32, stars: Int64)
     case paidMessagesPriceEdited(stars: Int64, broadcastMessagesAllowed: Bool)
     case conferenceCall(ConferenceCall)
+    case todoCompletions(completed: [Int32], incompleted: [Int32])
     
     public init(decoder: PostboxDecoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
@@ -295,6 +296,11 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                 flags: ConferenceCall.Flags(rawValue: decoder.decodeInt32ForKey("flags", orElse: 0)),
                 otherParticipants: decoder.decodeInt64ArrayForKey("part").map(PeerId.init)
             ))
+        case 49:
+            self = .todoCompletions(
+                completed: decoder.decodeInt32ArrayForKey("completed"),
+                incompleted: decoder.decodeInt32ArrayForKey("incompleted")
+            )
         default:
             self = .unknown
         }
@@ -698,6 +704,10 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             }
             encoder.encodeInt32(conferenceCall.flags.rawValue, forKey: "flags")
             encoder.encodeInt64Array(conferenceCall.otherParticipants.map({ $0.toInt64() }), forKey: "part")
+        case let .todoCompletions(completed, incompleted):
+            encoder.encodeInt32(49, forKey: "_rawValue")
+            encoder.encodeInt32Array(completed, forKey: "completed")
+            encoder.encodeInt32Array(incompleted, forKey: "incompleted")
         }
     }
     

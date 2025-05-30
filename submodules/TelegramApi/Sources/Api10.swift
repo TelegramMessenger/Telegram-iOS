@@ -572,6 +572,7 @@ public extension Api {
         case inputMediaPhotoExternal(flags: Int32, url: String, ttlSeconds: Int32?)
         case inputMediaPoll(flags: Int32, poll: Api.Poll, correctAnswers: [Buffer]?, solution: String?, solutionEntities: [Api.MessageEntity]?)
         case inputMediaStory(peer: Api.InputPeer, id: Int32)
+        case inputMediaTodo(todo: Api.TodoList)
         case inputMediaUploadedDocument(flags: Int32, file: Api.InputFile, thumb: Api.InputFile?, mimeType: String, attributes: [Api.DocumentAttribute], stickers: [Api.InputDocument]?, videoCover: Api.InputPhoto?, videoTimestamp: Int32?, ttlSeconds: Int32?)
         case inputMediaUploadedPhoto(flags: Int32, file: Api.InputFile, stickers: [Api.InputDocument]?, ttlSeconds: Int32?)
         case inputMediaVenue(geoPoint: Api.InputGeoPoint, title: String, address: String, provider: String, venueId: String, venueType: String)
@@ -712,6 +713,12 @@ public extension Api {
                     peer.serialize(buffer, true)
                     serializeInt32(id, buffer: buffer, boxed: false)
                     break
+                case .inputMediaTodo(let todo):
+                    if boxed {
+                        buffer.appendInt32(-1614454818)
+                    }
+                    todo.serialize(buffer, true)
+                    break
                 case .inputMediaUploadedDocument(let flags, let file, let thumb, let mimeType, let attributes, let stickers, let videoCover, let videoTimestamp, let ttlSeconds):
                     if boxed {
                         buffer.appendInt32(58495792)
@@ -798,6 +805,8 @@ public extension Api {
                 return ("inputMediaPoll", [("flags", flags as Any), ("poll", poll as Any), ("correctAnswers", correctAnswers as Any), ("solution", solution as Any), ("solutionEntities", solutionEntities as Any)])
                 case .inputMediaStory(let peer, let id):
                 return ("inputMediaStory", [("peer", peer as Any), ("id", id as Any)])
+                case .inputMediaTodo(let todo):
+                return ("inputMediaTodo", [("todo", todo as Any)])
                 case .inputMediaUploadedDocument(let flags, let file, let thumb, let mimeType, let attributes, let stickers, let videoCover, let videoTimestamp, let ttlSeconds):
                 return ("inputMediaUploadedDocument", [("flags", flags as Any), ("file", file as Any), ("thumb", thumb as Any), ("mimeType", mimeType as Any), ("attributes", attributes as Any), ("stickers", stickers as Any), ("videoCover", videoCover as Any), ("videoTimestamp", videoTimestamp as Any), ("ttlSeconds", ttlSeconds as Any)])
                 case .inputMediaUploadedPhoto(let flags, let file, let stickers, let ttlSeconds):
@@ -1093,6 +1102,19 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.InputMedia.inputMediaStory(peer: _1!, id: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputMediaTodo(_ reader: BufferReader) -> InputMedia? {
+            var _1: Api.TodoList?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.TodoList
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputMedia.inputMediaTodo(todo: _1!)
             }
             else {
                 return nil

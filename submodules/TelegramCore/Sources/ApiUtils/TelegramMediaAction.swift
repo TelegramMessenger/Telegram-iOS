@@ -224,6 +224,8 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
             flags: mappedFlags,
             otherParticipants: otherParticipants.flatMap({ return $0.map(\.peerId) }) ?? []
         )))
+    case let .messageActionTodoCompletions(completed, incompleted):
+        return TelegramMediaAction(action: .todoCompletions(completed: completed, incompleted: incompleted))
     }
 }
 

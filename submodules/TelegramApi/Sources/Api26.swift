@@ -763,6 +763,144 @@ public extension Api {
     }
 }
 public extension Api {
+    enum TodoCompletion: TypeConstructorDescription {
+        case todoCompletion(id: Int32, completedBy: Int64, date: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .todoCompletion(let id, let completedBy, let date):
+                    if boxed {
+                        buffer.appendInt32(1287725239)
+                    }
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    serializeInt64(completedBy, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .todoCompletion(let id, let completedBy, let date):
+                return ("todoCompletion", [("id", id as Any), ("completedBy", completedBy as Any), ("date", date as Any)])
+    }
+    }
+    
+        public static func parse_todoCompletion(_ reader: BufferReader) -> TodoCompletion? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.TodoCompletion.todoCompletion(id: _1!, completedBy: _2!, date: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum TodoItem: TypeConstructorDescription {
+        case todoItem(id: Int32, title: Api.TextWithEntities)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .todoItem(let id, let title):
+                    if boxed {
+                        buffer.appendInt32(-878074577)
+                    }
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    title.serialize(buffer, true)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .todoItem(let id, let title):
+                return ("todoItem", [("id", id as Any), ("title", title as Any)])
+    }
+    }
+    
+        public static func parse_todoItem(_ reader: BufferReader) -> TodoItem? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.TextWithEntities?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.TextWithEntities
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.TodoItem.todoItem(id: _1!, title: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum TodoList: TypeConstructorDescription {
+        case todoList(flags: Int32, title: Api.TextWithEntities, list: [Api.TodoItem])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .todoList(let flags, let title, let list):
+                    if boxed {
+                        buffer.appendInt32(1236871718)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    title.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(list.count))
+                    for item in list {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .todoList(let flags, let title, let list):
+                return ("todoList", [("flags", flags as Any), ("title", title as Any), ("list", list as Any)])
+    }
+    }
+    
+        public static func parse_todoList(_ reader: BufferReader) -> TodoList? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.TextWithEntities?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.TextWithEntities
+            }
+            var _3: [Api.TodoItem]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.TodoItem.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.TodoList.todoList(flags: _1!, title: _2!, list: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum TopPeer: TypeConstructorDescription {
         case topPeer(peer: Api.Peer, rating: Double)
     

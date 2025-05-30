@@ -383,6 +383,7 @@ public extension Api {
         case messageActionStarGift(flags: Int32, gift: Api.StarGift, message: Api.TextWithEntities?, convertStars: Int64?, upgradeMsgId: Int32?, upgradeStars: Int64?, fromId: Api.Peer?, peer: Api.Peer?, savedId: Int64?)
         case messageActionStarGiftUnique(flags: Int32, gift: Api.StarGift, canExportAt: Int32?, transferStars: Int64?, fromId: Api.Peer?, peer: Api.Peer?, savedId: Int64?, resaleStars: Int64?, canTransferAt: Int32?, canResellAt: Int32?)
         case messageActionSuggestProfilePhoto(photo: Api.Photo)
+        case messageActionTodoCompletions(completed: [Int32], incompleted: [Int32])
         case messageActionTopicCreate(flags: Int32, title: String, iconColor: Int32, iconEmojiId: Int64?)
         case messageActionTopicEdit(flags: Int32, title: String?, iconEmojiId: Int64?, closed: Api.Bool?, hidden: Api.Bool?)
         case messageActionWebViewDataSent(text: String)
@@ -789,6 +790,21 @@ public extension Api {
                     }
                     photo.serialize(buffer, true)
                     break
+                case .messageActionTodoCompletions(let completed, let incompleted):
+                    if boxed {
+                        buffer.appendInt32(-864265079)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(completed.count))
+                    for item in completed {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(incompleted.count))
+                    for item in incompleted {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }
+                    break
                 case .messageActionTopicCreate(let flags, let title, let iconColor, let iconEmojiId):
                     if boxed {
                         buffer.appendInt32(228168278)
@@ -920,6 +936,8 @@ public extension Api {
                 return ("messageActionStarGiftUnique", [("flags", flags as Any), ("gift", gift as Any), ("canExportAt", canExportAt as Any), ("transferStars", transferStars as Any), ("fromId", fromId as Any), ("peer", peer as Any), ("savedId", savedId as Any), ("resaleStars", resaleStars as Any), ("canTransferAt", canTransferAt as Any), ("canResellAt", canResellAt as Any)])
                 case .messageActionSuggestProfilePhoto(let photo):
                 return ("messageActionSuggestProfilePhoto", [("photo", photo as Any)])
+                case .messageActionTodoCompletions(let completed, let incompleted):
+                return ("messageActionTodoCompletions", [("completed", completed as Any), ("incompleted", incompleted as Any)])
                 case .messageActionTopicCreate(let flags, let title, let iconColor, let iconEmojiId):
                 return ("messageActionTopicCreate", [("flags", flags as Any), ("title", title as Any), ("iconColor", iconColor as Any), ("iconEmojiId", iconEmojiId as Any)])
                 case .messageActionTopicEdit(let flags, let title, let iconEmojiId, let closed, let hidden):
@@ -1710,6 +1728,24 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.MessageAction.messageActionSuggestProfilePhoto(photo: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageActionTodoCompletions(_ reader: BufferReader) -> MessageAction? {
+            var _1: [Int32]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            }
+            var _2: [Int32]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.MessageAction.messageActionTodoCompletions(completed: _1!, incompleted: _2!)
             }
             else {
                 return nil

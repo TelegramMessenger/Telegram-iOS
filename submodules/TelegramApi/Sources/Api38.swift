@@ -5068,6 +5068,27 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
+                static func appendTodoList(peer: Api.InputPeer, msgId: Int32, list: [Api.TodoItem]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(564531287)
+                    peer.serialize(buffer, true)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(list.count))
+                    for item in list {
+                        item.serialize(buffer, true)
+                    }
+                    return (FunctionDescription(name: "messages.appendTodoList", parameters: [("peer", String(describing: peer)), ("msgId", String(describing: msgId)), ("list", String(describing: list))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
                 static func checkChatInvite(hash: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.ChatInvite>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1051570619)
@@ -8875,6 +8896,32 @@ public extension Api.functions.messages {
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
+                static func toggleTodoCompleted(peer: Api.InputPeer, msgId: Int32, completed: [Int32], incompleted: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-740282076)
+                    peer.serialize(buffer, true)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(completed.count))
+                    for item in completed {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(incompleted.count))
+                    for item in incompleted {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }
+                    return (FunctionDescription(name: "messages.toggleTodoCompleted", parameters: [("peer", String(describing: peer)), ("msgId", String(describing: msgId)), ("completed", String(describing: completed)), ("incompleted", String(describing: incompleted))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
                         }
                         return result
                     })
