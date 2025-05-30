@@ -68,6 +68,8 @@ public enum ChatTitleContent: Equatable {
                 return false
             }
             if lhs.peerPresences.count != rhs.peerPresences.count {
+                return false
+            } else {
                 for (key, value) in lhs.peerPresences {
                     if let rhsValue = rhs.peerPresences[key] {
                         if !value.isEqual(to: rhsValue) {

@@ -397,21 +397,30 @@ extension ChatControllerImpl {
                     self.navigationActionDisposable.set((peerView.get()
                     |> take(1)
                     |> deliverOnMainQueue).startStrict(next: { [weak self] peerView in
-                        if let strongSelf = self, let peer = peerView.peers[peerView.peerId], peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil && !strongSelf.presentationInterfaceState.isNotAccessible {
-                                                        
-                            if peer.id == strongSelf.context.account.peerId {
-                                if let peer = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer, let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: true, requestsContext: nil) {
-                                    strongSelf.effectiveNavigationController?.pushViewController(infoController)
+                        guard let self else {
+                            return
+                        }
+                        guard var peer = peerView.peers[peerView.peerId] else {
+                            return
+                        }
+                        if let channel = peer as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainPeer = peerView.peers[linkedMonoforumId] {
+                            peer = mainPeer
+                        }
+                        
+                        if peer.restrictionText(platform: "ios", contentSettings: self.context.currentContentSettings.with { $0 }) == nil && !self.presentationInterfaceState.isNotAccessible {
+                            if peer.id == self.context.account.peerId {
+                                if let peer = self.presentationInterfaceState.renderedPeer?.chatMainPeer, let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: true, requestsContext: nil) {
+                                    self.effectiveNavigationController?.pushViewController(infoController)
                                 }
                             } else {
                                 var expandAvatar = expandAvatar
                                 if peer.smallProfileImage == nil {
                                     expandAvatar = false
                                 }
-                                if let validLayout = strongSelf.validLayout, validLayout.deviceMetrics.type == .tablet {
+                                if let validLayout = self.validLayout, validLayout.deviceMetrics.type == .tablet {
                                     expandAvatar = false
                                 }
-                                let  mode: PeerInfoControllerMode
+                                let mode: PeerInfoControllerMode
                                 switch section {
                                 case .groupsInCommon:
                                     mode = .groupsInCommon
@@ -420,12 +429,12 @@ extension ChatControllerImpl {
                                 default:
                                     mode = .generic
                                 }
-                                if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peer: peer, mode: mode, avatarInitiallyExpanded: expandAvatar, fromChat: true, requestsContext: strongSelf.contentData?.inviteRequestsContext) {
-                                    strongSelf.effectiveNavigationController?.pushViewController(infoController)
+                                if let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: peer, mode: mode, avatarInitiallyExpanded: expandAvatar, fromChat: true, requestsContext: self.contentData?.inviteRequestsContext) {
+                                    self.effectiveNavigationController?.pushViewController(infoController)
                                 }
                             }
                             
-                            let _ = strongSelf.dismissPreviewing?(false)
+                            let _ = self.dismissPreviewing?(false)
                         }
                     }))
                 case .replyThread:

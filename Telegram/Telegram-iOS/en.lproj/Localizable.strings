@@ -14383,7 +14383,7 @@ Sorry for the inconvenience.";
 "ChannelMessages.PriceSectionTitle" = "PRICE FOR EACH MESSAGE";
 "ChannelMessages.PriceSectionFooter" = "You will receive 85% of the selected fee for each incoming message.";
 
-"ChatList.MonoforumLabel" = "MESSAGES";
+"ChatList.MonoforumLabel" = "DIRECT";
 "ChatList.MonoforumEmptyText" = "No messages here yet...";
 
 "Chat.InlineTopicMenu.Reorder" = "Reorder";
@@ -14400,6 +14400,7 @@ Sorry for the inconvenience.";
 
 "Chat.EmptyStateMonoforum.Text" = "Send a direct message to the administrator of **%@**.";
 "Chat.EmptyStateMonoforumPaid.Text" = "**%1$@** charges **%2$@**\nper message to its admin.";
+"Chat.Monoforum.Subtitle" = "Direct messages";
 
 "Monoforum.NameFormat" = "%@ Messages";
 

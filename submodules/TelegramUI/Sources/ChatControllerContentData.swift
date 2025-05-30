@@ -548,9 +548,9 @@ extension ChatControllerImpl {
                             strongSelf.state.chatTitleContent = .custom(strings.Chat_TitlePinnedMessages(Int32(displayedCount ?? 1)), nil, false)
                         } else if let channel = peer as? TelegramChannel, channel.isMonoForum {
                             if let linkedMonoforumId = channel.linkedMonoforumId, let mainPeer = peerView.peers[linkedMonoforumId] {
-                                strongSelf.state.chatTitleContent = .custom(mainPeer.debugDisplayTitle, "Direct messages", false)
+                                strongSelf.state.chatTitleContent = .custom(mainPeer.debugDisplayTitle, strings.Chat_Monoforum_Subtitle, true)
                             } else {
-                                strongSelf.state.chatTitleContent = .custom(channel.debugDisplayTitle, nil, false)
+                                strongSelf.state.chatTitleContent = .custom(channel.debugDisplayTitle, nil, true)
                             }
                         } else {
                             strongSelf.state.chatTitleContent = .peer(peerView: ChatTitleContent.PeerData(peerView: peerView), customTitle: nil, onlineMemberCount: onlineMemberCount, isScheduledMessages: isScheduledMessages, isMuted: nil, customMessageCount: nil, isEnabled: hasPeerInfo)

@@ -2552,17 +2552,9 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 if self.leftPanel != nil || dismissedLeftPanel != nil {
                     titleTopicsAccessoryPanelNode.updateGlobalOffset(globalOffset: -titleTopicsAccessoryPanelFrame.height, transition: .immediate)
                 }
-
-                let topPanelTransition = ComponentTransition(transition)
-                /*switch topPanelTransition.animation {
-                case let .curve(duration, _):
-                    topPanelTransition = topPanelTransition.withAnimation(.curve(duration: duration, curve: ComponentTransition.Animation.Curve(ChatMessageTransitionNodeImpl.verticalAnimationCurve)))
-                default:
-                    break
-                }*/
                 
-                topPanelTransition.setFrame(view: titleTopicsAccessoryPanelNode.view, frame: titleTopicsAccessoryPanelFrame)
-                titleTopicsAccessoryPanelNode.updateGlobalOffset(globalOffset: 0.0, transition: topPanelTransition)
+                ComponentTransition(transition).setFrame(view: titleTopicsAccessoryPanelNode.view, frame: titleTopicsAccessoryPanelFrame)
+                titleTopicsAccessoryPanelNode.updateGlobalOffset(globalOffset: 0.0, transition: ComponentTransition(transition))
             } else {
                 let previousFrame = titleTopicsAccessoryPanelNode.frame
                 titleTopicsAccessoryPanelNode.frame = titleTopicsAccessoryPanelFrame
