@@ -4267,35 +4267,6 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     let titleFrame = CGRect(origin: CGPoint(x: contentRect.origin.x + titleOffset, y: contentRect.origin.y + UIScreenPixel), size: titleLayout.size)
                     strongSelf.titleNode.frame = titleFrame
                     
-                    if let (titleBadgeLayout, titleBadgeApply) = titleBadgeLayoutAndApply {
-                        let titleBadgeNode = titleBadgeApply()
-                        let backgroundView: UIImageView
-                        if let current = strongSelf.titleBadge {
-                            backgroundView = current.backgroundView
-                        } else {
-                            backgroundView = UIImageView(image: generateStretchableFilledCircleImage(radius: 4.0, color: .white)?.withRenderingMode(.alwaysTemplate))
-                            strongSelf.titleBadge = (backgroundView, titleBadgeNode)
-                            
-                            strongSelf.mainContentContainerNode.view.addSubview(backgroundView)
-                            strongSelf.mainContentContainerNode.addSubnode(titleBadgeNode)
-                        }
-                        let titleBadgeFrame = CGRect(origin: CGPoint(x: titleFrame.maxX + titleIconsWidth + 10.0, y: titleFrame.minY + floor((titleFrame.height - titleBadgeLayout.size.height) * 0.5)), size: titleBadgeLayout.size)
-                        titleBadgeNode.frame = titleBadgeFrame
-                        
-                        var titleBadgeBackgroundFrame = titleBadgeFrame.insetBy(dx: -4.0, dy: -2.0)
-                        titleBadgeBackgroundFrame.size.height -= 1.0
-                        backgroundView.frame = titleBadgeBackgroundFrame
-                        if item.presentationData.theme.overallDarkAppearance {
-                            backgroundView.tintColor = theme.titleColor.withMultipliedAlpha(0.1)
-                        } else {
-                            backgroundView.tintColor = theme.titleColor.withMultipliedAlpha(0.05)
-                        }
-                    } else if let titleBadge = strongSelf.titleBadge {
-                        strongSelf.titleBadge = nil
-                        titleBadge.backgroundView.removeFromSuperview()
-                        titleBadge.textNode.removeFromSupernode()
-                    }
-                    
                     let authorNodeFrame = CGRect(origin: CGPoint(x: contentRect.origin.x - 1.0, y: contentRect.minY + titleLayout.size.height), size: authorLayout)
                     strongSelf.authorNode.frame = authorNodeFrame
                     let textNodeFrame = CGRect(origin: CGPoint(x: contentRect.origin.x - 1.0, y: contentRect.minY + titleLayout.size.height - 1.0 + UIScreenPixel + (authorLayout.height.isZero ? 0.0 : (authorLayout.height - 3.0))), size: textLayout.size)
@@ -4865,6 +4836,40 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     } else {
                         strongSelf.mutedIconNode.image = nil
                         strongSelf.mutedIconNode.isHidden = true
+                    }
+                    
+                    if let (titleBadgeLayout, titleBadgeApply) = titleBadgeLayoutAndApply {
+                        let titleBadgeNode = titleBadgeApply()
+                        let backgroundView: UIImageView
+                        if let current = strongSelf.titleBadge {
+                            backgroundView = current.backgroundView
+                        } else {
+                            backgroundView = UIImageView(image: generateStretchableFilledCircleImage(radius: 4.0, color: .white)?.withRenderingMode(.alwaysTemplate))
+                            strongSelf.titleBadge = (backgroundView, titleBadgeNode)
+                            
+                            strongSelf.mainContentContainerNode.view.addSubview(backgroundView)
+                            strongSelf.mainContentContainerNode.addSubnode(titleBadgeNode)
+                        }
+                        if currentMutedIconImage != nil {
+                            nextTitleIconOrigin -= 7.0
+                        }
+                        nextTitleIconOrigin += 7.0
+                        let titleBadgeFrame = CGRect(origin: CGPoint(x: nextTitleIconOrigin, y: titleFrame.minY + floor((titleFrame.height - titleBadgeLayout.size.height) * 0.5)), size: titleBadgeLayout.size)
+                        nextTitleIconOrigin += titleBadgeLayout.size.width + 4.0
+                        titleBadgeNode.frame = titleBadgeFrame
+                        
+                        var titleBadgeBackgroundFrame = titleBadgeFrame.insetBy(dx: -4.0, dy: -2.0)
+                        titleBadgeBackgroundFrame.size.height -= 1.0
+                        backgroundView.frame = titleBadgeBackgroundFrame
+                        if item.presentationData.theme.overallDarkAppearance {
+                            backgroundView.tintColor = theme.titleColor.withMultipliedAlpha(0.1)
+                        } else {
+                            backgroundView.tintColor = theme.titleColor.withMultipliedAlpha(0.05)
+                        }
+                    } else if let titleBadge = strongSelf.titleBadge {
+                        strongSelf.titleBadge = nil
+                        titleBadge.backgroundView.removeFromSuperview()
+                        titleBadge.textNode.removeFromSupernode()
                     }
                     
                     let separatorInset: CGFloat
