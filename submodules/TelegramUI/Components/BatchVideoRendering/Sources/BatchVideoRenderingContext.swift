@@ -31,9 +31,53 @@ public final class BatchVideoRenderingContext {
     }
     
     public final class TargetState {
-        var currentFrameExpirationTimestamp: Double?
+        private var lastRenderedFrame: (timestamp: Double, pts: Double, duration: Double)?
+        private var ptsOffset: Double = 0.0
+        private(set) var sampleBuffers: [CMSampleBuffer] = []
         
         init() {
+        }
+        
+        func addSampleBuffers(sampleBuffers: [CMSampleBuffer]) {
+            for sampleBuffer in sampleBuffers {
+                self.sampleBuffers.append(sampleBuffer)
+            }
+        }
+        
+        func render(at timestamp: Double) -> CMSampleBuffer? {
+            if !self.sampleBuffers.isEmpty {
+                let sampleBuffer = self.sampleBuffers[0]
+                let sampleBufferPts = CMSampleBufferGetPresentationTimeStamp(sampleBuffer).seconds
+                let sampleBufferDuration = CMSampleBufferGetDuration(sampleBuffer).seconds
+                if let lastRenderedFrame = self.lastRenderedFrame {
+                    let elapsedTime = timestamp - lastRenderedFrame.timestamp
+                    let ptsDifference = sampleBufferPts - lastRenderedFrame.pts
+                    if ptsDifference < 0.0 {
+                        // Loop
+                        if elapsedTime >= lastRenderedFrame.duration {
+                            self.lastRenderedFrame = (timestamp, sampleBufferPts, sampleBufferDuration)
+                            self.sampleBuffers.removeFirst()
+                            return sampleBuffer
+                        } else {
+                            return nil
+                        }
+                    } else {
+                        if elapsedTime >= ptsDifference {
+                            self.lastRenderedFrame = (timestamp, sampleBufferPts, sampleBufferDuration)
+                            self.sampleBuffers.removeFirst()
+                            return sampleBuffer
+                        } else {
+                            return nil
+                        }
+                    }
+                } else {
+                    self.lastRenderedFrame = (timestamp, sampleBufferPts, sampleBufferDuration)
+                    self.sampleBuffers.removeFirst()
+                    return sampleBuffer
+                }
+            } else {
+                return nil
+            }
         }
     }
     
@@ -204,10 +248,8 @@ public final class BatchVideoRenderingContext {
             return
         }
         
-        let timestamp = CACurrentMediaTime()
-        
         var removeIds: [Int] = []
-        var renderIds: [Int] = []
+        var renderIds: [Int: Int] = [:]
         for (id, targetContext) in self.targetContexts {
             guard let target = targetContext.target else {
                 removeIds.append(id)
@@ -221,12 +263,8 @@ public final class BatchVideoRenderingContext {
                 target.batchVideoRenderingTargetState = targetState
             }
             
-            if let currentFrameExpirationTimestamp = targetState.currentFrameExpirationTimestamp {
-                if timestamp >= currentFrameExpirationTimestamp {
-                    renderIds.append(id)
-                }
-            } else {
-                renderIds.append(id)
+            if targetState.sampleBuffers.count < 2 {
+                renderIds[id] = 2 - targetState.sampleBuffers.count
             }
         }
         
@@ -237,26 +275,27 @@ public final class BatchVideoRenderingContext {
         if !renderIds.isEmpty {
             self.isRendering = true
             
-            var readingContexts: [Int: QueueLocalObject<ReadingContext>] = [:]
-            for id in renderIds {
+            var readingContexts: [Int: (Int, QueueLocalObject<ReadingContext>)] = [:]
+            for (id, count) in renderIds {
                 guard let targetContext = self.targetContexts[id] else {
                     continue
                 }
                 if let readingContext = targetContext.readingContext {
-                    readingContexts[id] = readingContext
+                    readingContexts[id] = (count, readingContext)
                 }
             }
             BatchVideoRenderingContext.sharedQueue.async { [weak self] in
-                var sampleBuffers: [Int: CMSampleBuffer?] = [:]
-                for (id, readingContext) in readingContexts {
+                var sampleBuffers: [Int: [CMSampleBuffer]] = [:]
+                for (id, (count, readingContext)) in readingContexts {
                     guard let readingContext = readingContext.unsafeGet() else {
-                        sampleBuffers[id] = nil
+                        sampleBuffers[id] = []
                         continue
                     }
-                    if let sampleBuffer = readingContext.advance() {
-                        sampleBuffers[id] = sampleBuffer
-                    } else {
-                        sampleBuffers[id] = nil
+                    sampleBuffers[id] = []
+                    for _ in 0 ..< count {
+                        if let sampleBuffer = readingContext.advance() {
+                            sampleBuffers[id]?.append(sampleBuffer)
+                        }
                     }
                 }
                 
@@ -266,21 +305,18 @@ public final class BatchVideoRenderingContext {
                     }
                     self.isRendering = false
                     
-                    for (id, sampleBuffer) in sampleBuffers {
+                    for (id, targetSampleBuffers) in sampleBuffers {
                         guard let targetContext = self.targetContexts[id], let target = targetContext.target, let targetState = target.batchVideoRenderingTargetState else {
-                            return
+                            continue
                         }
-                        if let sampleBuffer {
-                            target.setSampleBuffer(sampleBuffer: sampleBuffer)
-                            if let targetState = target.batchVideoRenderingTargetState {
-                                targetState.currentFrameExpirationTimestamp = CACurrentMediaTime() + CMSampleBufferGetDuration(sampleBuffer).seconds
-                            }
-                        } else {
-                            targetState.currentFrameExpirationTimestamp = CACurrentMediaTime() + 1.0 / 30.0
-                        }
+                        targetState.addSampleBuffers(sampleBuffers: targetSampleBuffers)
                     }
+                    
+                    self.updateFrames()
                 }
             }
+        } else {
+            self.updateFrames()
         }
         
         if !self.targetContexts.isEmpty {
@@ -294,6 +330,18 @@ public final class BatchVideoRenderingContext {
             }
         } else {
             self.displayLink = nil
+        }
+    }
+    
+    private func updateFrames() {
+        let timestamp = CACurrentMediaTime()
+        for (_, targetContext) in self.targetContexts {
+            guard let target = targetContext.target, let targetState = target.batchVideoRenderingTargetState else {
+                continue
+            }
+            if let sampleBuffer = targetState.render(at: timestamp) {
+                target.setSampleBuffer(sampleBuffer: sampleBuffer)
+            }
         }
     }
 }

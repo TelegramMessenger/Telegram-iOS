@@ -177,27 +177,6 @@ public protocol EmojiCustomContentView: UIView {
 }
 
 public final class EmojiPagerContentComponent: Component {
-    public static let staticEmojiMapping: [(EmojiPagerContentComponent.StaticEmojiSegment, [String])] = {
-        guard let path = getAppBundle().path(forResource: "emoji1016", ofType: "txt") else {
-            return []
-        }
-        guard let string = try? String(contentsOf: URL(fileURLWithPath: path)) else {
-            return []
-        }
-        
-        var result: [(EmojiPagerContentComponent.StaticEmojiSegment, [String])] = []
-        
-        let orderedSegments = EmojiPagerContentComponent.StaticEmojiSegment.allCases
-        
-        let segments = string.components(separatedBy: "\n\n")
-        for i in 0 ..< min(segments.count, orderedSegments.count) {
-            let list = segments[i].components(separatedBy: " ")
-            result.append((orderedSegments[i], list))
-        }
-        
-        return result
-    }()
-    
     public typealias EnvironmentType = (EntityKeyboardChildEnvironment, PagerComponentChildEnvironment)
     
     public final class ContentAnimation {
