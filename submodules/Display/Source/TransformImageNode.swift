@@ -97,22 +97,14 @@ open class TransformImageNode: ASDisplayNode {
         self.disposable.set((result |> deliverOnMainQueue).start(next: { [weak self] next in
             let apply: () -> Void = {
                 if let strongSelf = self {
+                    var animateFromContents: Any?
+                    
                     if strongSelf.contents == nil {
                         if strongSelf.contentAnimations.contains(.firstUpdate) && !attemptSynchronously {
                             strongSelf.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
                         }
                     } else if strongSelf.contentAnimations.contains(.subsequentUpdates) {
-                        let tempLayer = CALayer()
-                        if strongSelf.captureProtected {
-                            setLayerDisableScreenshots(tempLayer, strongSelf.captureProtected)
-                        }
-                        tempLayer.frame = strongSelf.bounds
-                        tempLayer.contentsGravity = strongSelf.layer.contentsGravity
-                        tempLayer.contents = strongSelf.contents
-                        strongSelf.layer.addSublayer(tempLayer)
-                        tempLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak tempLayer] _ in
-                            tempLayer?.removeFromSuperlayer()
-                        })
+                        animateFromContents = strongSelf.contents
                     }
                     
                     var imageUpdate: UIImage?
@@ -128,6 +120,23 @@ open class TransformImageNode: ASDisplayNode {
                     }
                     if let imageUpdated = strongSelf.imageUpdated {
                         imageUpdated(imageUpdate)
+                    }
+                    
+                    if let animateFromContents {
+                        let transition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .linear)
+                        transition.animateContents(layer: strongSelf.layer, from: animateFromContents)
+                        
+                        /*let tempLayer = CALayer()
+                        if strongSelf.captureProtected {
+                            setLayerDisableScreenshots(tempLayer, strongSelf.captureProtected)
+                        }
+                        tempLayer.frame = strongSelf.bounds
+                        tempLayer.contentsGravity = strongSelf.layer.contentsGravity
+                        tempLayer.contents = animateFromContents
+                        strongSelf.layer.addSublayer(tempLayer)
+                        tempLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak tempLayer] _ in
+                            tempLayer?.removeFromSuperlayer()
+                        })*/
                     }
                 }
             }
@@ -164,6 +173,34 @@ open class TransformImageNode: ASDisplayNode {
                     }
                 }
                 strongSelf.argumentsPromise.set(arguments)
+            }
+        }
+    }
+    
+    public func asyncLayoutWithAnimation() -> (TransformImageArguments) -> ((ListViewItemUpdateAnimation) -> Void) {
+        let currentTransform = self.currentTransform
+        let currentArguments = self.currentArguments
+        return { [weak self] arguments in
+            let updatedImage: UIImage?
+            
+            if currentArguments != arguments {
+                updatedImage = currentTransform?(arguments)?.generateImage()
+            } else {
+                updatedImage = nil
+            }
+            return { animation in
+                guard let self else {
+                    return
+                }
+                if let image = updatedImage {
+                    self.contents = image.cgImage
+                    self.image = image
+                    self.currentArguments = arguments
+                    if let _ = self.overlayColor {
+                        self.applyOverlayColor(animated: false)
+                    }
+                }
+                self.argumentsPromise.set(arguments)
             }
         }
     }

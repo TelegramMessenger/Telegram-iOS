@@ -402,7 +402,7 @@ public final class MediaPlayerNode: ASDisplayNode {
         }
     }
     
-    private func updateLayout() {
+    public func updateLayout() {
         let bounds = self.bounds
         if bounds.isEmpty {
             return

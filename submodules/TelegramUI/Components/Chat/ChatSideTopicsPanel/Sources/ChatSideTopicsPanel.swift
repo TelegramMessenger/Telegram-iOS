@@ -1359,7 +1359,7 @@ public final class ChatSideTopicsPanel: Component {
                         maximumNumberOfLines: 2
                     )),
                     environment: {},
-                    containerSize: CGSize(width: 200.0, height: 200.0)
+                    containerSize: CGSize(width: 400.0, height: 200.0)
                 )
                 
                 let contentSize: CGFloat = leftInset + rightInset + titleSize.height
