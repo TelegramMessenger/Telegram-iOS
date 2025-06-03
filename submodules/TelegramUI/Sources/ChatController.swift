@@ -4588,27 +4588,50 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             
-            let _ = (self.context.engine.peers.getPaidMessagesRevenue(peerId: peer.id)
-            |> deliverOnMainQueue).start(next: { [weak self] revenue in
-                guard let self else {
+            if let removePaidMessageFeeData = self.presentationInterfaceState.removePaidMessageFeeData {
+                guard let chatPeer = self.presentationInterfaceState.renderedPeer?.chatOrMonoforumMainPeer else {
                     return
                 }
                 let controller = chatMessageRemovePaymentAlertController(
                     context: self.context,
                     presentationData: self.presentationData,
                     updatedPresentationData: self.updatedPresentationData,
-                    peer: peer,
-                    amount: (revenue?.value ?? 0) > 0 ? revenue : nil,
+                    peer: removePaidMessageFeeData.peer,
+                    chatPeer: EnginePeer(chatPeer),
+                    amount: StarsAmount(value: 123, nanos: 0), //TODO:release
                     navigationController: self.navigationController as? NavigationController,
                     completion: { [weak self] refund in
                         guard let self else {
                             return
                         }
-                        let _ = self.context.engine.peers.addNoPaidMessagesException(peerId: peer.id, refundCharged: refund).start()
+                        let _ = self
                     }
                 )
                 self.present(controller, in: .window(.root))
-            })
+            } else {
+                let _ = (self.context.engine.peers.getPaidMessagesRevenue(peerId: peer.id)
+                |> deliverOnMainQueue).start(next: { [weak self] revenue in
+                    guard let self else {
+                        return
+                    }
+                    let controller = chatMessageRemovePaymentAlertController(
+                        context: self.context,
+                        presentationData: self.presentationData,
+                        updatedPresentationData: self.updatedPresentationData,
+                        peer: peer,
+                        chatPeer: peer,
+                        amount: (revenue?.value ?? 0) > 0 ? revenue : nil,
+                        navigationController: self.navigationController as? NavigationController,
+                        completion: { [weak self] refund in
+                            guard let self else {
+                                return
+                            }
+                            let _ = self.context.engine.peers.addNoPaidMessagesException(peerId: peer.id, refundCharged: refund).start()
+                        }
+                    )
+                    self.present(controller, in: .window(.root))
+                })
+            }
         }, requestMessageUpdate: { [weak self] id, scroll in
             if let self {
                 self.chatDisplayNode.historyNode.requestMessageUpdate(id, andScrollToItem: scroll)
@@ -9733,6 +9756,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         self.saveInterfaceState()
+        
+        self.chatDisplayNode.dismissTextInput()
         
         let updatedChatLocation: ChatLocation
         if let threadId {

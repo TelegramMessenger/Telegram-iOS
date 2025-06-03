@@ -231,7 +231,9 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
             
             if channel.flags.contains(.isMonoforum) {
                 if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = chatPresentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething), case .peer = chatPresentationInterfaceState.chatLocation {
-                    if chatPresentationInterfaceState.interfaceState.replyMessageSubject == nil {
+                    if chatPresentationInterfaceState.interfaceState.editMessage != nil {
+                        displayInputTextPanel = true
+                    } else if chatPresentationInterfaceState.interfaceState.replyMessageSubject == nil {
                         displayInputTextPanel = false
                         if let currentPanel = (currentPanel as? ChatRestrictedInputPanelNode) ?? (currentSecondaryPanel as? ChatRestrictedInputPanelNode) {
                             return (currentPanel, nil)

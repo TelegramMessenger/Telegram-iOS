@@ -1478,20 +1478,44 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 isAdaptive = true
                 
                 if let qualitySet = HLSQualitySet(baseFile: content.fileReference, codecConfiguration: HLSCodecConfiguration(isHardwareAv1Supported: false, isSoftwareAv1Supported: true)), let (quality, playlistFile) = qualitySet.playlistFiles.sorted(by: { $0.key < $1.key }).first, let dataFile = qualitySet.qualityFiles[quality] {
-                    var alternativeQualities: [(playlist: FileMediaReference, dataFile: FileMediaReference)] = []
-                    for (otherQuality, otherPlaylistFile) in qualitySet.playlistFiles {
-                        if otherQuality != quality, let otherDataFile = qualitySet.qualityFiles[otherQuality] {
-                            alternativeQualities.append((otherPlaylistFile, dataFile: otherDataFile))
+                    if !qualitySet.thumbnails.isEmpty {
+                        var selectedThumbnails: (file: FileMediaReference, fileMap: FileMediaReference)?
+                        let thumbnailQualities = qualitySet.thumbnails.keys.sorted()
+                        for quality in thumbnailQualities.reversed() {
+                            if quality <= 230 {
+                                selectedThumbnails = qualitySet.thumbnails[quality]
+                                break
+                            }
                         }
+                        if selectedThumbnails == nil, let quality = thumbnailQualities.last {
+                            selectedThumbnails = qualitySet.thumbnails[quality]
+                        }
+                        
+                        if let selectedThumbnails {
+                            self.videoFramePreview = MediaPlayerFramePreviewHLSThumbnails(
+                                postbox: item.context.account.postbox,
+                                userLocation: content.userLocation,
+                                userContentType: .video,
+                                file: selectedThumbnails.file,
+                                fileMap: selectedThumbnails.fileMap
+                            )
+                        }
+                    } else {
+                        var alternativeQualities: [(playlist: FileMediaReference, dataFile: FileMediaReference)] = []
+                        for (otherQuality, otherPlaylistFile) in qualitySet.playlistFiles {
+                            if otherQuality != quality, let otherDataFile = qualitySet.qualityFiles[otherQuality] {
+                                alternativeQualities.append((otherPlaylistFile, dataFile: otherDataFile))
+                            }
+                        }
+                        self.videoFramePreview = MediaPlayerFramePreviewHLS(
+                            postbox: item.context.account.postbox,
+                            userLocation: content.userLocation,
+                            userContentType: .video,
+                            playlistFile: playlistFile,
+                            mainDataFile: dataFile,
+                            alternativeQualities: alternativeQualities
+                        )
                     }
-                    self.videoFramePreview = MediaPlayerFramePreviewHLS(
-                        postbox: item.context.account.postbox,
-                        userLocation: content.userLocation,
-                        userContentType: .video,
-                        playlistFile: playlistFile,
-                        mainDataFile: dataFile,
-                        alternativeQualities: alternativeQualities
-                    )
                 }
             }
             
@@ -1533,10 +1557,37 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         strongSelf.playOnContentOwnership = false
                         strongSelf.initiallyActivated = true
                         strongSelf.skipInitialPause = true
+                        
+                        var seek = MediaPlayerSeek.start
+                        if let item = strongSelf.item {
+                            if let contentInfo = item.contentInfo, case let .message(message, _) = contentInfo {
+                                for attribute in message.attributes {
+                                    if let attribute = attribute as? ForwardVideoTimestampAttribute {
+                                        seek = .timecode(Double(attribute.timestamp))
+                                    }
+                                }
+                            }
+                            if let content = item.content as? NativeVideoContent {
+                                isAnimated = content.fileReference.media.isAnimated
+                                if let time = item.timecode {
+                                    seek = .timecode(time)
+                                }
+                            } else if let content = item.content as? HLSVideoContent {
+                                isAnimated = content.fileReference.media.isAnimated
+                                if let time = item.timecode {
+                                    seek = .timecode(time)
+                                }
+                            } else if let _ = item.content as? WebEmbedVideoContent {
+                                if let time = item.timecode {
+                                    seek = .timecode(time)
+                                }
+                            }
+                        }
+                        
                         if let item = strongSelf.item, let _ = item.content as? PlatformVideoContent {
                             strongSelf.videoNode?.play()
                         } else {
-                            strongSelf.videoNode?.playOnceWithSound(playAndRecord: false, seek: .none, actionAtEnd: isAnimated ? .loop : strongSelf.actionAtEnd)
+                            strongSelf.videoNode?.playOnceWithSound(playAndRecord: false, seek: seek, actionAtEnd: isAnimated ? .loop : strongSelf.actionAtEnd)
                         }
 
                         Queue.mainQueue().after(0.1) {

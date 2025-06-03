@@ -21,7 +21,7 @@ fileprivate struct InitialBannedRights {
 }
 
 extension ChatControllerImpl {
-    fileprivate func applyAdminUserActionsResult(messageIds: Set<MessageId>, result: AdminUserActionsSheet.Result, initialUserBannedRights: [EnginePeer.Id: InitialBannedRights]) {
+    fileprivate func applyAdminUserActionsResult(messageIds: Set<MessageId>, result: AdminUserActionsSheet.ChatResult, initialUserBannedRights: [EnginePeer.Id: InitialBannedRights]) {
         guard let messagesPeerId = self.chatLocation.peerId else {
             return
         }
@@ -223,14 +223,16 @@ extension ChatControllerImpl {
                     context: self.context,
                     chatPeer: chatPeer,
                     peers: renderedParticipants,
-                    messageCount: messageIds.count,
-                    deleteAllMessageCount: deleteAllMessageCount,
-                    completion: { [weak self] result in
-                        guard let self else {
-                            return
+                    mode: .chat(
+                        messageCount: messageIds.count,
+                        deleteAllMessageCount: deleteAllMessageCount,
+                        completion: { [weak self] result in
+                            guard let self else {
+                                return
+                            }
+                            self.applyAdminUserActionsResult(messageIds: messageIds, result: result, initialUserBannedRights: initialUserBannedRights)
                         }
-                        self.applyAdminUserActionsResult(messageIds: messageIds, result: result, initialUserBannedRights: initialUserBannedRights)
-                    }
+                    )
                 ))
             })
         }))
@@ -330,14 +332,16 @@ extension ChatControllerImpl {
                         participant: participant,
                         peer: authorPeer._asPeer()
                     )],
-                    messageCount: messageIds.count,
-                    deleteAllMessageCount: deleteAllMessageCount,
-                    completion: { [weak self] result in
-                        guard let self else {
-                            return
+                    mode: .chat(
+                        messageCount: messageIds.count,
+                        deleteAllMessageCount: deleteAllMessageCount,
+                        completion: { [weak self] result in
+                            guard let self else {
+                                return
+                            }
+                            self.applyAdminUserActionsResult(messageIds: messageIds, result: result, initialUserBannedRights: initialUserBannedRights)
                         }
-                        self.applyAdminUserActionsResult(messageIds: messageIds, result: result, initialUserBannedRights: initialUserBannedRights)
-                    }
+                    )
                 ))
             })
         }))
@@ -586,5 +590,60 @@ extension ChatControllerImpl {
         ])])
         self.chatDisplayNode.dismissInput()
         self.presentInGlobalOverlay(actionSheet)
+    }
+    
+    func openDeleteMonoforumPeer(peerId: EnginePeer.Id) {
+        guard let chatPeerId = self.chatLocation.peerId else {
+            return
+        }
+        guard let mainChannel = self.presentationInterfaceState.renderedPeer?.chatOrMonoforumMainPeer as? TelegramChannel else {
+            return
+        }
+        let _ = (self.context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: chatPeerId),
+            TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+        )
+        |> deliverOnMainQueue).startStandalone(next: { [weak self] chatPeer, authorPeer in
+            guard let self, let chatPeer, let authorPeer else {
+                return
+            }
+            var initialUserBannedRights: [EnginePeer.Id: InitialBannedRights] = [:]
+                initialUserBannedRights[authorPeer.id] = InitialBannedRights(value: nil)
+            let participant: ChannelParticipant = .member(id: authorPeer.id, invitedAt: 0, adminInfo: nil, banInfo: ChannelParticipantBannedInfo(
+                rights: TelegramChatBannedRights(flags: [], untilDate: 0),
+                restrictedBy: self.context.account.peerId,
+                timestamp: 0,
+                isMember: false
+            ), rank: nil, subscriptionUntilDate: nil)
+            self.push(AdminUserActionsSheet(
+                context: self.context,
+                chatPeer: chatPeer,
+                peers: [RenderedChannelParticipant(
+                    participant: participant,
+                    peer: authorPeer._asPeer()
+                )],
+                mode: .monoforum(completion: { [weak self] result in
+                    guard let self else {
+                        return
+                    }
+                    
+                    if self.chatLocation.threadId == peerId.toInt64() {
+                        self.updateChatLocationThread(threadId: nil)
+                    }
+                    
+                    let _ = self.context.engine.peers.removeForumChannelThread(id: chatPeerId, threadId: peerId.toInt64()).startStandalone(completed: {
+                    })
+                    if result.ban {
+                        let _ = self.context.engine.peers.updateChannelMemberBannedRights(peerId: mainChannel.id,
+                            memberId: peerId,
+                            rights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: Int32.max)
+                        ).startStandalone()
+                    }
+                    if result.reportSpam {
+                        let _ = self.context.engine.peers.reportPeer(peerId: peerId, reason: .spam, message: "").startStandalone()
+                    }
+                })
+            ))
+        })
     }
 }

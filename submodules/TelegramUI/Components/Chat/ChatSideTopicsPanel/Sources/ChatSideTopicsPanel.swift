@@ -55,6 +55,7 @@ public final class ChatSideTopicsPanel: Component {
     let controller: () -> ViewController?
     let togglePanel: () -> Void
     let updateTopicId: (Int64?, Bool) -> Void
+    let openDeletePeer: (Int64) -> Void
     
     public init(
         context: AccountContext,
@@ -66,7 +67,8 @@ public final class ChatSideTopicsPanel: Component {
         topicId: Int64?,
         controller: @escaping () -> ViewController?,
         togglePanel: @escaping () -> Void,
-        updateTopicId: @escaping (Int64?, Bool) -> Void
+        updateTopicId: @escaping (Int64?, Bool) -> Void,
+        openDeletePeer: @escaping (Int64) -> Void
     ) {
         self.context = context
         self.theme = theme
@@ -78,6 +80,7 @@ public final class ChatSideTopicsPanel: Component {
         self.controller = controller
         self.togglePanel = togglePanel
         self.updateTopicId = updateTopicId
+        self.openDeletePeer = openDeletePeer
     }
     
     public static func ==(lhs: ChatSideTopicsPanel, rhs: ChatSideTopicsPanel) -> Bool {
@@ -1958,37 +1961,10 @@ public final class ChatSideTopicsPanel: Component {
                             }
                             
                             c?.dismiss(completion: { [weak self] in
-                                guard let self, let component = self.component, let controller = component.controller() else {
+                                guard let self, let component = self.component else {
                                     return
                                 }
-                                
-                                let actionSheet = ActionSheetController(presentationData: presentationData)
-                                var items: [ActionSheetItem] = []
-                                
-                                items.append(ActionSheetTextItem(title: presentationData.strings.ChatList_DeleteTopicConfirmationText, parseMarkdown: true))
-                                items.append(ActionSheetButtonItem(title: presentationData.strings.ChatList_DeleteTopicConfirmationAction, color: .destructive, action: { [weak self, weak actionSheet] in
-                                    actionSheet?.dismissAnimated()
-                                    guard let self, let component = self.component else {
-                                        return
-                                    }
-                                    
-                                    if component.topicId == topicId {
-                                        component.updateTopicId(nil, false)
-                                    }
-                                    
-                                    let _ = component.context.engine.peers.removeForumChannelThread(id: component.peerId, threadId: topicId).startStandalone(completed: {
-                                    })
-                                }))
-                                
-                                actionSheet.setItemGroups([
-                                    ActionSheetItemGroup(items: items),
-                                    ActionSheetItemGroup(items: [
-                                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                                            actionSheet?.dismissAnimated()
-                                        })
-                                    ])
-                                ])
-                                controller.present(actionSheet, in: .window(.root))
+                                component.openDeletePeer(topicId)
                             })
                         })))
                         

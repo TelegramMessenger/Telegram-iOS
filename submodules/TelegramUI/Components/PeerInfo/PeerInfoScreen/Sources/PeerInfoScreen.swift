@@ -2172,7 +2172,6 @@ private func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostSt
                 let ItemAffiliatePrograms = 13
                 let ItemPostSuggestionsSettings = 14
                 let ItemPeerAutoTranslate = 15
-                let ItemChannelMessages = 16
                 
                 let isCreator = channel.flags.contains(.isCreator)
                 
@@ -2404,12 +2403,6 @@ private func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostSt
                     items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemRecentActions, label: .none, text: presentationData.strings.Group_Info_AdminLog, icon: UIImage(bundleImageName: "Chat/Info/RecentActionsIcon"), action: {
                         interaction.openRecentActions()
                     }))
-                    
-                    if channel.linkedMonoforumId != nil {
-                        items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemChannelMessages, label: .none, text: presentationData.strings.PeerInfo_ChannelMessages, icon: PresentationResourcesSettings.channelMessages, action: {
-                            interaction.openChannelMessages()
-                        }))
-                    }
                 }
                 
                 if channel.hasPermission(.changeInfo) {

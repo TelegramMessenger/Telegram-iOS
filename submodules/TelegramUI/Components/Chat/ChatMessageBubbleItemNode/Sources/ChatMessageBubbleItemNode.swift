@@ -2539,6 +2539,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     nameAvatarSpaceWidth += 26.0 + 5.0
                     if hasTitleTopicNavigation {
                         nameAvatarSpaceWidth += 4.0 + 26.0
+                        if let channel = item.message.peers[item.message.id.peerId], channel.isForum {
+                            nameAvatarSpaceWidth += 18.0
+                        }
                     }
                     nameNodeOriginY += 5.0
                 }
@@ -3447,6 +3450,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         
         strongSelf.backgroundType = backgroundType
         
+        let previousBackgroundFrame = strongSelf.backgroundNode.backgroundFrame
         strongSelf.backgroundNode.backgroundFrame = backgroundFrame
         
         if let avatarOffset {
@@ -3511,12 +3515,28 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
                 
                 let nameAvatarFrame = CGRect(origin: CGPoint(x: nameNodeFrame.minX, y: nameNodeFrame.minY - 4.0), size: CGSize(width: 26.0, height: 26.0))
-                let nameNavigateFrame = CGRect(origin: CGPoint(x: nameNodeFrame.maxX + 4.0 + nameNavigateButtonOffset, y: nameNodeFrame.minY - 4.0), size: CGSize(width: 26.0, height: 26.0))
+                
+                let nameNavigationSize: CGSize
+                var threadInfo: Message.AssociatedThreadInfo?
+                if let channel = item.message.peers[item.message.id.peerId], channel.isForum, let threadInfoValue = item.message.associatedThreadInfo {
+                    threadInfo = threadInfoValue
+                    nameNavigationSize = CGSize(width: 44.0, height: 26.0)
+                } else {
+                    nameNavigationSize = CGSize(width: 26.0, height: 26.0)
+                }
+                
+                let nameNavigateFrame = CGRect(origin: CGPoint(x: backgroundFrame.maxX - 10.0 - nameNavigationSize.width, y: nameNodeFrame.minY - 4.0), size: nameNavigationSize)
                 
                 if let peer = item.content.firstMessage.author, peer.smallProfileImage != nil {
                     nameAvatarNode.setPeerV2(context: item.context, theme: item.presentationData.theme.theme, peer: EnginePeer(peer), displayDimensions: nameAvatarFrame.size)
                 } else {
-                    nameAvatarNode.setPeer(context: item.context, theme: item.presentationData.theme.theme, peer: item.content.firstMessage.author.flatMap(EnginePeer.init), displayDimensions: nameAvatarFrame.size)
+                    var overrideImage: AvatarNodeImageOverride?
+                    if let peer = item.content.firstMessage.author.flatMap(EnginePeer.init) {
+                        if peer.isDeleted {
+                            overrideImage = .deletedIcon
+                        }
+                    }
+                    nameAvatarNode.setPeer(context: item.context, theme: item.presentationData.theme.theme, peer: item.content.firstMessage.author.flatMap(EnginePeer.init), overrideImage: overrideImage, displayDimensions: nameAvatarFrame.size)
                 }
                 nameAvatarNode.updateSize(size: nameAvatarFrame.size)
                 
@@ -3535,14 +3555,22 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                             item.controllerInteraction.updateChatLocationThread(item.content.firstMessage.threadId, nil)
                         }
                     }
-                    nameNavigateButton.update(size: nameNavigateFrame.size, color: authorNameColor ?? item.presentationData.theme.theme.chat.message.incoming.accentTextColor)
+                    nameNavigateButton.update(
+                        context: item.context,
+                        theme: item.presentationData.theme.theme,
+                        size: nameNavigateFrame.size,
+                        incoming: incoming,
+                        color: authorNameColor ?? item.presentationData.theme.theme.chat.message.incoming.accentTextColor,
+                        threadId: item.message.threadId ?? 0,
+                        threadInfo: threadInfo
+                    )
                 } else {
                     if let nameNavigateButton = strongSelf.nameNavigateButton {
                         strongSelf.nameNavigateButton = nil
                         nameNavigateButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak nameNavigateButton] _ in
                             nameNavigateButton?.removeFromSuperview()
                         })
-                        animation.animator.updateFrame(layer: nameNavigateButton.layer, frame: CGRect(origin: CGPoint(x: nameNodeFrame.maxX + nameNavigateButtonOffset - 26.0 * 0.5, y: nameNodeFrame.minY - 4.0), size: CGSize(width: 26.0, height: 26.0)), completion: nil)
+                        animation.animator.updateFrame(layer: nameNavigateButton.layer, frame: CGRect(origin: CGPoint(x: backgroundFrame.maxX - 10.0 - nameNavigateButton.bounds.width, y: nameNodeFrame.minY - 4.0), size: CGSize(width: 26.0, height: 26.0)), completion: nil)
                         animation.transition.updateTransformScale(layer: nameNavigateButton.layer, scale: CGPoint(x: 0.001, y: 0.001))
                     }
                 }
@@ -3561,7 +3589,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     }
                     
                     if let nameNavigateButton = strongSelf.nameNavigateButton {
-                        nameNavigateButton.frame = CGRect(origin: CGPoint(x: previousNameNodeFrame.maxX + nameNavigateButtonOffset - 26.0 * 0.5, y: previousNameNodeFrame.minY - 4.0), size: CGSize(width: 26.0, height: 26.0))
+                        nameNavigateButton.frame = CGRect(origin: CGPoint(x: previousBackgroundFrame.maxX - 10.0 - nameNavigateButton.bounds.width, y: previousNameNodeFrame.minY - 4.0), size: nameNavigationSize)
                         animation.animator.updateFrame(layer: nameNavigateButton.layer, frame: nameNavigateFrame, completion: nil)
                         if animation.isAnimated {
                             animation.transition.animateTransformScale(view: nameNavigateButton, from: 0.001)
@@ -3585,7 +3613,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     nameNavigateButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak nameNavigateButton] _ in
                         nameNavigateButton?.removeFromSuperview()
                     })
-                    animation.animator.updateFrame(layer: nameNavigateButton.layer, frame: CGRect(origin: CGPoint(x: nameNodeFrame.maxX + nameNavigateButtonOffset - 26.0 * 0.5, y: nameNodeFrame.minY - 4.0), size: CGSize(width: 26.0, height: 26.0)), completion: nil)
+                    animation.animator.updateFrame(layer: nameNavigateButton.layer, frame: CGRect(origin: CGPoint(x: backgroundFrame.maxX - 10.0 - nameNavigateButton.bounds.width, y: nameNodeFrame.minY - 4.0), size: CGSize(width: 26.0, height: 26.0)), completion: nil)
                     animation.transition.updateTransformScale(layer: nameNavigateButton.layer, scale: CGPoint(x: 0.001, y: 0.001))
                 }
             }
@@ -6644,16 +6672,22 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     }
 }
 
-private func generateNameNavigateButtonImage() -> UIImage {
+private func generateNameNavigateButtonBackgroundImage() -> UIImage {
     return generateImage(CGSize(width: 26.0, height: 26.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         context.setFillColor(UIColor(white: 1.0, alpha: 0.1).cgColor)
         context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+    })!.withRenderingMode(.alwaysTemplate).stretchableImage(withLeftCapWidth: 13, topCapHeight: 13)
+}
+
+private func generateNameNavigateButtonIconImage() -> UIImage {
+    return generateImage(CGSize(width: 26.0, height: 26.0), rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
         
         let arrowRect = CGSize(width: 4.0, height: 8.0).centered(in: CGRect(origin: CGPoint(), size: size)).offsetBy(dx: 1.0, dy: 0.0)
         
         context.setStrokeColor(UIColor.white.cgColor)
-        context.setLineWidth(1.0)
+        context.setLineWidth(1.33)
         context.setLineCap(.round)
         context.setLineJoin(.round)
         context.beginPath()
@@ -6666,17 +6700,25 @@ private func generateNameNavigateButtonImage() -> UIImage {
 }
 
 public final class NameNavigateButton: HighlightableButton {
-    private static let sharedImage: UIImage = generateNameNavigateButtonImage()
+    private static let sharedBackgroundImage: UIImage = generateNameNavigateButtonBackgroundImage()
+    private static let sharedIconImage: UIImage = generateNameNavigateButtonIconImage()
     
     private let backgroundView: UIImageView
+    private let iconView: UIImageView
+    
+    private var titleTopicIconView: ComponentView<Empty>?
+    private var titleTopicIconComponent: EmojiStatusComponent?
+    
     public var action: (() -> Void)?
     
     override public init(frame: CGRect) {
-        self.backgroundView = UIImageView(image: NameNavigateButton.sharedImage)
+        self.backgroundView = UIImageView(image: NameNavigateButton.sharedBackgroundImage)
+        self.iconView = UIImageView(image: NameNavigateButton.sharedIconImage)
         
         super.init(frame: frame)
         
         self.addSubview(self.backgroundView)
+        self.addSubview(self.iconView)
         
         self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
     }
@@ -6689,8 +6731,64 @@ public final class NameNavigateButton: HighlightableButton {
         self.action?()
     }
     
-    public func update(size: CGSize, color: UIColor) {
+    public func update(context: AccountContext, theme: PresentationTheme, size: CGSize, incoming: Bool, color: UIColor, threadId: Int64, threadInfo: Message.AssociatedThreadInfo?) {
         self.backgroundView.frame = CGRect(origin: CGPoint(), size: size)
         self.backgroundView.tintColor = color
+        
+        self.iconView.frame = CGRect(origin: CGPoint(x: size.width - 26.0, y: 0.0), size: CGSize(width: 26.0, height: 26.0))
+        self.iconView.tintColor = color
+        
+        if let threadInfo {
+            let titleTopicIconView: ComponentView<Empty>
+            if let current = self.titleTopicIconView {
+                titleTopicIconView = current
+            } else {
+                titleTopicIconView = ComponentView<Empty>()
+                self.titleTopicIconView = titleTopicIconView
+            }
+            
+            let titleTopicIconContent: EmojiStatusComponent.Content
+            var containerSize: CGSize = CGSize(width: 22.0, height: 22.0)
+            if threadId == 1 {
+                let generalThreadIcon = incoming ? PresentationResourcesChat.chatGeneralThreadIncomingIcon(theme) : PresentationResourcesChat.chatGeneralThreadOutgoingIcon(theme)
+                titleTopicIconContent = .image(image: generalThreadIcon, tintColor: nil)
+                containerSize = CGSize(width: 18.0, height: 18.0)
+            } else if let fileId = threadInfo.icon, fileId != 0 {
+                titleTopicIconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 36.0, height: 36.0), placeholderColor: theme.list.mediaPlaceholderColor, themeColor: tintColor, loopMode: .count(0))
+            } else {
+                titleTopicIconContent = .topic(title: String(threadInfo.title.prefix(1)), color: threadInfo.iconColor, size: CGSize(width: 22.0, height: 22.0))
+            }
+            
+            let iconX: CGFloat = floor((26.0 - containerSize.width) * 0.5)
+            let iconY: CGFloat = floor((26.0 - containerSize.height) * 0.5)
+            
+            let titleTopicIconComponent = EmojiStatusComponent(
+                context: context,
+                animationCache: context.animationCache,
+                animationRenderer: context.animationRenderer,
+                content: titleTopicIconContent,
+                roundMask: true,
+                isVisibleForAnimations: false,
+                action: nil
+            )
+            self.titleTopicIconComponent = titleTopicIconComponent
+            
+            let iconSize = titleTopicIconView.update(
+                transition: .immediate,
+                component: AnyComponent(titleTopicIconComponent),
+                environment: {},
+                containerSize: containerSize
+            )
+            if let titleTopicIconComponentView = titleTopicIconView.view {
+                if titleTopicIconComponentView.superview == nil {
+                    self.addSubview(titleTopicIconComponentView)
+                }
+                titleTopicIconComponentView.frame = CGRect(origin: CGPoint(x: 0.0 + iconX, y: 0.0 + iconY), size: iconSize)
+            }
+        } else if let titleTopicIconView = self.titleTopicIconView {
+            self.titleTopicIconView = nil
+            titleTopicIconView.view?.removeFromSuperview()
+            self.titleTopicIconComponent = nil
+        }
     }
 }

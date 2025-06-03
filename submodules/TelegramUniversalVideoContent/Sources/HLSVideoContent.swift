@@ -51,28 +51,54 @@ public extension HLSCodecConfiguration {
 public final class HLSQualitySet {
     public let qualityFiles: [Int: FileMediaReference]
     public let playlistFiles: [Int: FileMediaReference]
+    public let thumbnails: [Int: (file: FileMediaReference, fileMap: FileMediaReference)]
     
     public init?(baseFile: FileMediaReference, codecConfiguration: HLSCodecConfiguration) {
         var qualityFiles: [Int: FileMediaReference] = [:]
+        var thumbnailFiles: [FileMediaReference] = []
+        var thumbnailFileMaps: [Int: (mapFile: FileMediaReference, thumbnailFileId: Int64)] = [:]
+        
         for alternativeRepresentation in baseFile.media.alternativeRepresentations {
             let alternativeFile = alternativeRepresentation
-            for attribute in alternativeFile.attributes {
-                if case let .Video(_, size, _, _, _, videoCodec) = attribute {
-                    if let videoCodec, NativeVideoContent.isVideoCodecSupported(videoCodec: videoCodec, isHardwareAv1Supported: codecConfiguration.isHardwareAv1Supported, isSoftwareAv1Supported: codecConfiguration.isSoftwareAv1Supported) {
-                        let key = Int(min(size.width, size.height))
-                        if let currentFile = qualityFiles[key] {
-                            var currentCodec: String?
-                            for attribute in currentFile.media.attributes {
-                                if case let .Video(_, _, _, _, _, videoCodec) = attribute {
-                                    currentCodec = videoCodec
+            if alternativeFile.mimeType == "application/x-tgstoryboard" {
+                thumbnailFiles.append(baseFile.withMedia(alternativeFile))
+            } else if alternativeFile.mimeType == "application/x-tgstoryboardmap" {
+                var qualityId: Int?
+                for attribute in alternativeFile.attributes {
+                    switch attribute {
+                    case let .ImageSize(size):
+                        qualityId = Int(min(size.width, size.height))
+                    default:
+                        break
+                    }
+                }
+                
+                if let qualityId, let fileName = alternativeFile.fileName {
+                    if fileName.hasPrefix("mtproto:") {
+                        if let fileId = Int64(fileName[fileName.index(fileName.startIndex, offsetBy: "mtproto:".count)...]) {
+                            thumbnailFileMaps[qualityId] = (mapFile: baseFile.withMedia(alternativeFile), thumbnailFileId: fileId)
+                        }
+                    }
+                }
+            } else {
+                for attribute in alternativeFile.attributes {
+                    if case let .Video(_, size, _, _, _, videoCodec) = attribute {
+                        if let videoCodec, NativeVideoContent.isVideoCodecSupported(videoCodec: videoCodec, isHardwareAv1Supported: codecConfiguration.isHardwareAv1Supported, isSoftwareAv1Supported: codecConfiguration.isSoftwareAv1Supported) {
+                            let key = Int(min(size.width, size.height))
+                            if let currentFile = qualityFiles[key] {
+                                var currentCodec: String?
+                                for attribute in currentFile.media.attributes {
+                                    if case let .Video(_, _, _, _, _, videoCodec) = attribute {
+                                        currentCodec = videoCodec
+                                    }
                                 }
-                            }
-                            if let currentCodec, (currentCodec == "av1" || currentCodec == "av01") {
+                                if let currentCodec, (currentCodec == "av1" || currentCodec == "av01") {
+                                } else {
+                                    qualityFiles[key] = baseFile.withMedia(alternativeFile)
+                                }
                             } else {
                                 qualityFiles[key] = baseFile.withMedia(alternativeFile)
                             }
-                        } else {
-                            qualityFiles[key] = baseFile.withMedia(alternativeFile)
                         }
                     }
                 }
@@ -101,6 +127,19 @@ public final class HLSQualitySet {
         if !playlistFiles.isEmpty && playlistFiles.keys == qualityFiles.keys {
             self.qualityFiles = qualityFiles
             self.playlistFiles = playlistFiles
+            
+            var thumbnails: [Int: (file: FileMediaReference, fileMap: FileMediaReference)] = [:]
+            for (quality, thubmailMap) in thumbnailFileMaps {
+                for file in thumbnailFiles {
+                    if file.media.fileId.id == thubmailMap.thumbnailFileId {
+                        thumbnails[quality] = (
+                            file: file,
+                            fileMap: thubmailMap.mapFile
+                        )
+                    }
+                }
+            }
+            self.thumbnails = thumbnails
         } else {
             return nil
         }

@@ -283,6 +283,12 @@ func sidePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceState
                     },
                     updateTopicId: { [weak interfaceInteraction] topicId, direction in
                         interfaceInteraction?.updateChatLocationThread(topicId, direction ? .down : .up)
+                    },
+                    openDeletePeer: { [weak interfaceInteraction] threadId in
+                        guard let controller = interfaceInteraction?.chatController() as? ChatControllerImpl else {
+                            return
+                        }
+                        controller.openDeleteMonoforumPeer(peerId: EnginePeer.Id(threadId))
                     }
                 ))
             )
@@ -308,6 +314,12 @@ func sidePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceState
                     },
                     updateTopicId: { [weak interfaceInteraction] topicId, direction in
                         interfaceInteraction?.updateChatLocationThread(topicId, direction ? .down : .up)
+                    },
+                    openDeletePeer: { [weak interfaceInteraction] threadId in
+                        guard let controller = interfaceInteraction?.chatController() as? ChatControllerImpl else {
+                            return
+                        }
+                        controller.openDeleteMonoforumPeer(peerId: EnginePeer.Id(threadId))
                     }
                 ))
             )

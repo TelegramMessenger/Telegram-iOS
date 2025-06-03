@@ -136,12 +136,12 @@ extension ChatControllerImpl {
             var voiceMessagesAvailable: Bool = true
             var requestsState: PeerInvitationImportersState?
             var dismissedInvitationRequests: [Int64]?
-            
             var customEmojiAvailable: Bool = false
             var threadData: ChatPresentationInterfaceState.ThreadData?
             var forumTopicData: ChatPresentationInterfaceState.ThreadData?
             var isGeneralThreadClosed: Bool?
             var premiumGiftOptions: [CachedPremiumGiftOption] = []
+            var removePaidMessageFeeData: ChatPresentationInterfaceState.RemovePaidMessageFeeData?
         }
         
         private let presentationData: PresentationData
@@ -1460,12 +1460,23 @@ extension ChatControllerImpl {
                             }
                         }
                         
+                        var removePaidMessageFeeData: ChatPresentationInterfaceState.RemovePaidMessageFeeData?
+                        if let peer = savedMessagesPeer?.peer, let channel = peerView.peers[peerView.peerId] as? TelegramChannel, let sendPaidMessageStars = channel.sendPaidMessageStars, channel.isMonoForum {
+                            if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = peerView.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
+                                removePaidMessageFeeData = ChatPresentationInterfaceState.RemovePaidMessageFeeData(
+                                    peer: peer,
+                                    amount: sendPaidMessageStars
+                                )
+                            }
+                        }
+                        
                         strongSelf.state.renderedPeer = renderedPeer
                         strongSelf.state.savedMessagesTopicPeer = savedMessagesPeer?.peer
                         strongSelf.state.hasSearchTags = hasSearchTags
                         strongSelf.state.hasSavedChats = hasSavedChats
                         strongSelf.state.hasScheduledMessages = hasScheduledMessages
                         strongSelf.state.currentSendAsPeerId = currentSendAsPeerId
+                        strongSelf.state.removePaidMessageFeeData = removePaidMessageFeeData
                     } else {
                         let message = messageAndTopic.message
                         

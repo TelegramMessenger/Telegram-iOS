@@ -401,6 +401,7 @@ extension ChatControllerImpl {
             presentationInterfaceState = presentationInterfaceState.updatedForumTopicData(contentData.state.forumTopicData)
             presentationInterfaceState = presentationInterfaceState.updatedIsGeneralThreadClosed(contentData.state.isGeneralThreadClosed)
             presentationInterfaceState = presentationInterfaceState.updatedPremiumGiftOptions(contentData.state.premiumGiftOptions)
+            presentationInterfaceState = presentationInterfaceState.updatedRemovePaidMessageFeeData(contentData.state.removePaidMessageFeeData)
             
             presentationInterfaceState = presentationInterfaceState.updatedTitlePanelContext({ context in
                 if contentData.state.pinnedMessageId != nil {
@@ -594,6 +595,17 @@ extension ChatControllerImpl {
     }
     
     func loadDisplayNodeImpl() {
+        self.navigationBar?.backPressed = { [weak self] in
+            guard let self else {
+                return
+            }
+            if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isForumOrMonoForum, self.presentationInterfaceState.persistentData.topicListPanelLocation == true, self.presentationInterfaceState.chatLocation.threadId != nil {
+                self.updateChatLocationThread(threadId: nil, animationDirection: .left)
+            } else {
+                self.dismiss()
+            }
+        }
+        
         if #available(iOS 18.0, *) {
             if self.context.sharedContext.immediateExperimentalUISettings.enableLocalTranslation {
                 if engineExperimentalInternalTranslationService == nil, let hostView = self.context.sharedContext.mainWindow?.hostView {
@@ -1635,6 +1647,15 @@ extension ChatControllerImpl {
                             
                             return updated
                         }, completion: completion)
+                        
+                        if !strongSelf.chatDisplayNode.ensureInputViewFocused() {
+                            DispatchQueue.main.async { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                self.chatDisplayNode.ensureInputViewFocused()
+                            }
+                        }
                     }
                 }, alertAction: {
                     completion(.immediate)

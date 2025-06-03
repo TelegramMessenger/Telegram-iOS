@@ -61,6 +61,7 @@ public final class EmojiStatusComponent: Component {
     public let content: Content
     public let particleColor: UIColor?
     public let size: CGSize?
+    public let roundMask: Bool
     public let isVisibleForAnimations: Bool
     public let useSharedAnimation: Bool
     public let action: (() -> Void)?
@@ -74,6 +75,7 @@ public final class EmojiStatusComponent: Component {
         content: Content,
         particleColor: UIColor? = nil,
         size: CGSize? = nil,
+        roundMask: Bool = false,
         isVisibleForAnimations: Bool,
         useSharedAnimation: Bool = false,
         action: (() -> Void)?,
@@ -91,6 +93,7 @@ public final class EmojiStatusComponent: Component {
             content: content,
             particleColor: particleColor,
             size: size,
+            roundMask: roundMask,
             isVisibleForAnimations: isVisibleForAnimations,
             useSharedAnimation: useSharedAnimation,
             action: action,
@@ -108,6 +111,7 @@ public final class EmojiStatusComponent: Component {
         content: Content,
         particleColor: UIColor? = nil,
         size: CGSize? = nil,
+        roundMask: Bool = false,
         isVisibleForAnimations: Bool,
         useSharedAnimation: Bool = false,
         action: (() -> Void)?,
@@ -122,6 +126,7 @@ public final class EmojiStatusComponent: Component {
         self.content = content
         self.particleColor = particleColor
         self.size = size
+        self.roundMask = roundMask
         self.isVisibleForAnimations = isVisibleForAnimations
         self.useSharedAnimation = useSharedAnimation
         self.action = action
@@ -139,6 +144,7 @@ public final class EmojiStatusComponent: Component {
             content: self.content,
             particleColor: self.particleColor,
             size: self.size,
+            roundMask: self.roundMask,
             isVisibleForAnimations: isVisibleForAnimations,
             useSharedAnimation: self.useSharedAnimation,
             action: self.action,
@@ -167,6 +173,9 @@ public final class EmojiStatusComponent: Component {
             return false
         }
         if lhs.size != rhs.size {
+            return false
+        }
+        if lhs.roundMask != rhs.roundMask {
             return false
         }
         if lhs.isVisibleForAnimations != rhs.isVisibleForAnimations {

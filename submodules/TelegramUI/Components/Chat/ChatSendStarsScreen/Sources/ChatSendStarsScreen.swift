@@ -1443,6 +1443,7 @@ private final class ChatSendStarsScreenComponent: Component {
                 component: AnyComponent(
                     StarsBalanceOverlayComponent(
                         context: component.context,
+                        peerId: component.context.account.peerId,
                         theme: environment.theme,
                         action: { [weak self] in
                             guard let self, let starsContext = context.starsContext, let navigationController = self.environment?.controller()?.navigationController as? NavigationController else {

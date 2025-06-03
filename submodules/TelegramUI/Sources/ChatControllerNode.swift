@@ -1518,11 +1518,17 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         var feePanelHeight: CGFloat?
         
         var displayFeePanel = false
-        if let user = self.chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo == nil, let chatHistoryState = self.chatPresentationInterfaceState.chatHistoryState, case .loaded(false, _) = chatHistoryState {
-            if !self.chatPresentationInterfaceState.peerIsBlocked, let paidMessageStars = self.chatPresentationInterfaceState.contactStatus?.peerStatusSettings?.paidMessageStars, paidMessageStars.value > 0 {
+        if let chatHistoryState = self.chatPresentationInterfaceState.chatHistoryState, case .loaded(false, _) = chatHistoryState {
+            if let user = self.chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo == nil {
+                if !self.chatPresentationInterfaceState.peerIsBlocked, let paidMessageStars = self.chatPresentationInterfaceState.contactStatus?.peerStatusSettings?.paidMessageStars, paidMessageStars.value > 0 {
+                    displayFeePanel = true
+                }
+            } else if self.chatPresentationInterfaceState.removePaidMessageFeeData != nil {
                 displayFeePanel = true
             }
         }
+        
+        var immediatelyLayoutFeePanelNodeAndAnimateAppearance = false
         if displayFeePanel {
             var animateAppearance = false
             let feePanelNode: ChatFeePanelNode
@@ -1541,10 +1547,14 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 self.titleAccessoryPanelContainer.addSubnode(feePanelNode)
             }
             
-            let height = feePanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition, interfaceState: self.chatPresentationInterfaceState)
+            let height = feePanelNode.updateLayout(width: layout.size.width, leftInset: leftPanelSize?.width ?? layout.safeInsets.left, rightInset: layout.safeInsets.right, leftDisplayInset: leftPanelSize?.width ?? 0.0, transition: animateAppearance ? .immediate : transition, interfaceState: self.chatPresentationInterfaceState)
             
             feePanelHeight = height
             if transition.isAnimated && animateAppearance {
+                immediatelyLayoutFeePanelNodeAndAnimateAppearance = true
+            }
+            
+            if immediatelyLayoutFeePanelNodeAndAnimateAppearance {
                 feePanelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 feePanelNode.subnodeTransform = CATransform3DMakeTranslation(0.0, -height, 0.0)
                 transition.updateSublayerTransformOffset(layer: feePanelNode.layer, offset: CGPoint())
@@ -1852,6 +1862,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             extraNavigationBarHitTestSlop = titleAccessoryPanelHitTestSlop ?? 0.0
             titlePanelsContentOffset += panelHeight
         }
+        
+        let feePanelBaseY = titlePanelsContentOffset
         
         var translationPanelFrame: CGRect?
         if let _ = self.chatTranslationPanel, let panelHeight = translationPanelHeight {
@@ -2596,7 +2608,14 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         
         if let feePanelNode = self.feePanelNode, let feePanelFrame, !feePanelNode.frame.equalTo(feePanelFrame) {
+            let previousFrame = feePanelNode.frame
             feePanelNode.frame = feePanelFrame
+            if transition.isAnimated && previousFrame.width != feePanelFrame.width {
+            } else if immediatelyLayoutFeePanelNodeAndAnimateAppearance {
+                transition.animatePositionAdditive(node: feePanelNode, offset: CGPoint(x: 0.0, y: -feePanelFrame.height))
+            } else if previousFrame.minY != feePanelFrame.minY {
+                transition.animatePositionAdditive(node: feePanelNode, offset: CGPoint(x: 0.0, y: previousFrame.minY - feePanelFrame.minY))
+            }
         }
         
         if let secondaryInputPanelNode = self.secondaryInputPanelNode, let apparentSecondaryInputPanelFrame = apparentSecondaryInputPanelFrame, !secondaryInputPanelNode.frame.equalTo(apparentSecondaryInputPanelFrame) {
@@ -2743,8 +2762,13 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         
         if let dismissedFeePanelNode {
             var dismissedPanelFrame = dismissedFeePanelNode.frame
-            dismissedPanelFrame.origin.y = -dismissedPanelFrame.size.height
-            transition.updateAlpha(node: dismissedFeePanelNode, alpha: 0.0)
+            transition.updateSublayerTransformOffset(layer: dismissedFeePanelNode.layer, offset: CGPoint(x: 0.0, y: -dismissedPanelFrame.height))
+            dismissedPanelFrame.origin.y = feePanelBaseY
+            dismissedFeePanelNode.clipsToBounds = true
+            dismissedPanelFrame.size.height = 0.0
+            if transition.isAnimated {
+                dismissedFeePanelNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+            }
             transition.updateFrame(node: dismissedFeePanelNode, frame: dismissedPanelFrame, completion: { [weak dismissedFeePanelNode] _ in
                 dismissedFeePanelNode?.removeFromSupernode()
             })
