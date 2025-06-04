@@ -1461,7 +1461,7 @@ extension ChatControllerImpl {
                         }
                         
                         var removePaidMessageFeeData: ChatPresentationInterfaceState.RemovePaidMessageFeeData?
-                        if let peer = savedMessagesPeer?.peer, let channel = peerView.peers[peerView.peerId] as? TelegramChannel, let sendPaidMessageStars = channel.sendPaidMessageStars, channel.isMonoForum {
+                        if !"".isEmpty, let peer = savedMessagesPeer?.peer, let channel = peerView.peers[peerView.peerId] as? TelegramChannel, let sendPaidMessageStars = channel.sendPaidMessageStars, channel.isMonoForum {
                             if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = peerView.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
                                 removePaidMessageFeeData = ChatPresentationInterfaceState.RemovePaidMessageFeeData(
                                     peer: peer,
