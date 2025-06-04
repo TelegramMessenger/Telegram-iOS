@@ -370,7 +370,7 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
             }
         })
         
-        if let headerSeparableThreadId, let headerDisplayPeer {
+        if let headerSeparableThreadId, let headerDisplayPeer, !(associatedData.subject?.isService ?? false) {
             self.topicHeader = ChatMessageDateHeader(timestamp: content.index.timestamp, separableThreadId: headerSeparableThreadId, scheduled: false, displayHeader: headerDisplayPeer, presentationData: presentationData, controllerInteraction: controllerInteraction, context: context, action: { _, _ in
                 controllerInteraction.updateChatLocationThread(headerSeparableThreadId, nil)
             })

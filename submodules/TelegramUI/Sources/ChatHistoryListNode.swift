@@ -478,7 +478,8 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
     var messageTransitionNode: () -> ChatMessageTransitionNodeImpl?
     private let mode: ChatHistoryListMode
     
-    private var enableUnreadAlignment: Bool = true
+    var enableUnreadAlignment: Bool = true
+    var areContentAnimationsEnabled: Bool = false
     
     private var historyView: ChatHistoryView?
     public var originalHistoryView: MessageHistoryView? {
@@ -2076,6 +2077,12 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                 
                 var disableAnimations = false
                 var forceSynchronous = false
+                
+                if let strongSelf = self {
+                    if !strongSelf.areContentAnimationsEnabled {
+                        disableAnimations = true
+                    }
+                }
                 
                 if switchedToAnotherSource {
                     disableAnimations = true

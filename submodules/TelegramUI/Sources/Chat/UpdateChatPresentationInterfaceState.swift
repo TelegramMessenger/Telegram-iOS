@@ -23,6 +23,11 @@ func updateChatPresentationInterfaceStateImpl(
     _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState,
     completion externalCompletion: @escaping (ContainedViewLayoutTransition) -> Void
 ) {
+    var transition = transition
+    if !selfController.didAppear {
+        transition = .immediate
+    }
+    
     var completion = externalCompletion
     var temporaryChatPresentationInterfaceState = f(selfController.presentationInterfaceState)
     

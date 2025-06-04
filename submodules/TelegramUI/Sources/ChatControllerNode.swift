@@ -2061,7 +2061,10 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         
         if immediatelyLayoutLeftPanelNodeAndAnimateAppearance || dismissedLeftPanel != nil || immediatelyLayoutTitleTopicsAccessoryPanelNodeAndAnimateAppearance || dismissedTitleTopicsAccessoryPanelNode != nil {
-            self.historyNode.resetScrolledToItem()
+            if transition.isAnimated {
+                self.historyNode.resetScrolledToItem()
+                self.historyNode.enableUnreadAlignment = false
+            }
         }
         
         if let blurredHistoryNode = self.blurredHistoryNode {

@@ -6436,6 +6436,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.chatDisplayNode.historyNode.experimentalSnapScrollToItem = false
         self.chatDisplayNode.historyNode.canReadHistory.set(self.computedCanReadHistoryPromise.get())
+        self.chatDisplayNode.historyNode.areContentAnimationsEnabled = true
         
         if !self.alwaysShowSearchResultsAsList {
             self.chatDisplayNode.loadInputPanels(theme: self.presentationInterfaceState.theme, strings: self.presentationInterfaceState.strings, fontSize: self.presentationInterfaceState.fontSize)
@@ -9798,6 +9799,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             self.currentChatSwitchDirection = animationDirection
             self.chatLocation = updatedChatLocation
+            historyNode.areContentAnimationsEnabled = true
             self.chatDisplayNode.prepareSwitchToChatLocation(historyNode: historyNode, animationDirection: animationDirection)
             
             apply(true)
