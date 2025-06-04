@@ -152,6 +152,7 @@ objc_library(
         "-Ithird-party/libyuv/third_party/libyuv/include",
         "-Ithird-party/libyuv",
         "-Ithird-party/webrtc/webrtc/sdk/objc/api/video_codec",
+        "-Ithird-party/webrtc/absl/third_party/abseil-cpp",
         "-DWEBRTC_IOS",
         "-DWEBRTC_MAC",
         "-DWEBRTC_POSIX",
@@ -163,7 +164,8 @@ objc_library(
         "PublicHeaders",
     ],
     deps = [
-        "//third-party/webrtc:webrtc",
+        "//third-party/webrtc",
+        "//third-party/webrtc:webrtc_objc",
         "//submodules/MtProtoKit:MtProtoKit",
         "//third-party/boringssl:crypto",
         "//third-party/boringssl:ssl",
@@ -171,7 +173,7 @@ objc_library(
         "//third-party/opusfile:opusfile",
         "//submodules/ffmpeg:ffmpeg",
         "//third-party/rnnoise:rnnoise",
-        "//third-party/libyuv:libyuv",
+        "//third-party/libyuv",
         "//third-party/td:TdBinding",
     ] + (["//third-party/libx264:libx264"] if enable_x264 else []),
     sdk_frameworks = [

@@ -1783,6 +1783,7 @@ ios_application(
         #"//submodules/TelegramCore",
         #"//submodules/FFMpegBinding",
         "//third-party/webrtc",
+        "//third-party/webrtc:webrtc_objc",
         #"//submodules/AsyncDisplayKit",
         #"//submodules/ObjCRuntimeUtils",
     ],
@@ -1815,7 +1816,8 @@ ios_application(
         ":UrlTypesInfoPlist",
     ],
     deps = [
-        "//third-party/webrtc:webrtc",
+        "//third-party/webrtc",
+        "//third-party/webrtc:webrtc_objc",
     ],
 )
 
