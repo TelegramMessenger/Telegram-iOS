@@ -200,6 +200,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     
     private(set) var validLayout: (ContainerViewLayout, CGFloat)?
     private var visibleAreaInset = UIEdgeInsets()
+    private var loadingNodeInsets = UIEdgeInsets()
     private var currentListViewLayout: (size: CGSize, insets: UIEdgeInsets, scrollIndicatorInsets: UIEdgeInsets)?
     
     private(set) var searchNavigationNode: ChatSearchNavigationContentNode?
@@ -360,7 +361,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                         }
                     } else {
                         loadingPlaceholderNode = ChatLoadingPlaceholderNode(context: self.context, theme: self.chatPresentationInterfaceState.theme, chatWallpaper: self.chatPresentationInterfaceState.chatWallpaper, bubbleCorners: self.chatPresentationInterfaceState.bubbleCorners, backgroundNode: self.backgroundNode)
-                        loadingPlaceholderNode.updatePresentationInterfaceState(self.chatPresentationInterfaceState)
+                        loadingPlaceholderNode.updatePresentationInterfaceState(renderedPeer: self.chatPresentationInterfaceState.renderedPeer, chatLocation: self.chatLocation)
                         self.backgroundNode.supernode?.insertSubnode(loadingPlaceholderNode, aboveSubnode: self.backgroundNode)
                         
                         self.loadingPlaceholderNode = loadingPlaceholderNode
@@ -370,7 +371,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                         let contentBounds = self.loadingNode.frame
                         loadingPlaceholderNode.frame = contentBounds
                         if let loadingPlaceholderNode = self.loadingPlaceholderNode, let validLayout = self.validLayout {
-                            loadingPlaceholderNode.updateLayout(size: contentBounds.size, insets: self.visibleAreaInset, metrics: validLayout.0.metrics, transition: .immediate)
+                            loadingPlaceholderNode.updateLayout(size: contentBounds.size, insets: self.loadingNodeInsets, metrics: validLayout.0.metrics, transition: .immediate)
                             loadingPlaceholderNode.update(rect: contentBounds, within: contentBounds.size, transition: .immediate)
                         }
                     }
@@ -2245,6 +2246,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         if let leftPanelSize {
             loadingNodeInsets.left += leftPanelSize.width
         }
+        self.loadingNodeInsets = loadingNodeInsets
         self.loadingNode.updateLayout(size: contentBounds.size, insets: loadingNodeInsets, transition: transition)
         
         if let loadingPlaceholderNode = self.loadingPlaceholderNode {
@@ -3571,7 +3573,9 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             self.backgroundNode.update(wallpaper: chatPresentationInterfaceState.chatWallpaper, animated: true)
             
             self.historyNode.verticalScrollIndicatorColor = UIColor(white: 0.5, alpha: 0.8)
-            self.loadingPlaceholderNode?.updatePresentationInterfaceState(chatPresentationInterfaceState)
+            if self.pendingSwitchToChatLocation == nil {
+                self.loadingPlaceholderNode?.updatePresentationInterfaceState(renderedPeer: chatPresentationInterfaceState.renderedPeer, chatLocation: self.chatLocation)
+            }
             
             var updatedInputFocus = self.chatPresentationInterfaceStateRequiresInputFocus(self.chatPresentationInterfaceState) != self.chatPresentationInterfaceStateRequiresInputFocus(chatPresentationInterfaceState)
             if self.chatPresentationInterfaceStateInputView(self.chatPresentationInterfaceState) !== self.chatPresentationInterfaceStateInputView(chatPresentationInterfaceState) {
