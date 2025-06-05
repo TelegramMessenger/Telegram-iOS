@@ -179,6 +179,9 @@ final class PostSuggestionsSettingsScreenComponent: Component {
                     self.areSuggestionsEnabled = true
                 } else {
                     self.starCount = 20
+                    if let data = component.context.currentAppConfiguration.with({ $0 }).data, let value = data["stars_paid_messages_channel_amount_default"] as? Double {
+                        self.starCount = Int(value)
+                    }
                     self.areSuggestionsEnabled = false
                 }
             }
