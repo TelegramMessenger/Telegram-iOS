@@ -425,6 +425,28 @@ public extension ChatLocation {
             return .replyThread(message: message.normalized)
         }
     }
+    
+    var peerId: PeerId? {
+        switch self {
+        case let .peer(peerId):
+            return peerId
+        case let .replyThread(replyThreadMessage):
+            return replyThreadMessage.peerId
+        case .customChatContents:
+            return nil
+        }
+    }
+    
+    var threadId: Int64? {
+        switch self {
+        case .peer:
+            return nil
+        case let .replyThread(replyThreadMessage):
+            return replyThreadMessage.threadId
+        case .customChatContents:
+            return nil
+        }
+    }
 }
 
 public enum ChatControllerActivateInput {

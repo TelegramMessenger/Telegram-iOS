@@ -2545,8 +2545,14 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     }
                     nameNodeOriginY += 5.0
                 }
+                
+                var headerSizeWidth = nameAvatarSpaceWidth + nameNodeSizeApply.0.width + 8.0 + credibilityIconWidth + boostBadgeWidth + closeButtonWidth + bubbleWidthInsets
+                if hasTitleTopicNavigation {
+                } else {
+                    headerSizeWidth += adminBadgeSizeAndApply.0.size.width
+                }
                                 
-                headerSize.width = max(headerSize.width, nameAvatarSpaceWidth + nameNodeSizeApply.0.width + 8.0 + adminBadgeSizeAndApply.0.size.width + credibilityIconWidth + boostBadgeWidth + closeButtonWidth + bubbleWidthInsets)
+                headerSize.width = max(headerSize.width, headerSizeWidth)
                 headerSize.height += nameNodeSizeApply.0.height
             }
 
@@ -3881,12 +3887,14 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     }
                     strongSelf.clippingNode.addSubnode(adminBadgeNode)
                     adminBadgeNode.frame = adminBadgeFrame
+                    adminBadgeNode.alpha = hasTitleTopicNavigation ? 0.0 : 1.0
                     
-                    if animation.isAnimated {
-                        adminBadgeNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    if animation.isAnimated, adminBadgeNode.alpha != 0.0 {
+                        adminBadgeNode.layer.animateAlpha(from: 0.0, to: adminBadgeNode.alpha, duration: 0.2)
                     }
                 } else {
                     animation.animator.updateFrame(layer: adminBadgeNode.layer, frame: adminBadgeFrame, completion: nil)
+                    animation.animator.updateAlpha(layer: adminBadgeNode.layer, alpha: hasTitleTopicNavigation ? 0.0 : 1.0, completion: nil)
                 }
             } else {
                 strongSelf.adminBadgeNode?.removeFromSupernode()

@@ -3601,6 +3601,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         return true
     }
     
+    public func resetForumStackIfOpen() {
+        if self.secondaryContext != nil {
+            self.setInlineChatList(location: nil, animated: false)
+        }
+    }
+    
     public func setInlineChatList(location: ChatListControllerLocation?, animated: Bool = true) {
         if let location {
             let inlineNode = self.chatListDisplayNode.makeInlineChatList(location: location)

@@ -295,7 +295,7 @@ private final class SheetContent: CombinedComponent {
                     let amountValue = StarsAmount(value: fullValue / 1_000_000_000, nanos: Int32(fullValue % 1_000_000_000))
                     amountInfoString = NSAttributedString(attributedString: parseMarkdownIntoAttributedString(environment.strings.Stars_SendMessage_AdjustmentSectionFooterValue("\(amountValue)").string, attributes: amountMarkdownAttributes, textAlignment: .natural))
                 } else {
-                    amountInfoString = NSAttributedString(attributedString: parseMarkdownIntoAttributedString(environment.strings.Stars_SendMessage_AdjustmentSectionFooterEmpty, attributes: amountMarkdownAttributes, textAlignment: .natural))
+                    amountInfoString = NSAttributedString(attributedString: parseMarkdownIntoAttributedString(environment.strings.Stars_SendMessage_AdjustmentSectionFooterEmptyValue("\(fractionAfterCommission)").string, attributes: amountMarkdownAttributes, textAlignment: .natural))
                 }
                 amountFooter = AnyComponent(MultilineTextComponent(
                     text: .plain(amountInfoString),
@@ -389,6 +389,16 @@ private final class SheetContent: CombinedComponent {
                 buttonAttributedString.addAttribute(.kern, value: 2.0, range: NSRange(range, in: buttonAttributedString.string))
             }
             
+            var isButtonEnabled = false
+            let amount = state.amount ?? StarsAmount.zero
+            if amount > StarsAmount.zero {
+                isButtonEnabled = true
+            } else if case let .paidMessages(_, minValue, _, _) = context.component.mode {
+                if minValue <= 0 {
+                    isButtonEnabled = true
+                }
+            }
+            
             let button = button.update(
                 component: ButtonComponent(
                     background: ButtonComponent.Background(
@@ -401,7 +411,7 @@ private final class SheetContent: CombinedComponent {
                         id: AnyHashable(0),
                         component: AnyComponent(MultilineTextComponent(text: .plain(buttonAttributedString)))
                     ),
-                    isEnabled: (state.amount ?? StarsAmount.zero) > StarsAmount.zero,
+                    isEnabled: isButtonEnabled,
                     displaysProgress: false,
                     action: { [weak state] in
                         if let controller = controller() as? StarsWithdrawScreen, let amount = state?.amount {
@@ -815,31 +825,40 @@ private final class AmountFieldComponent: Component {
         }
         
         func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+            guard let component = self.component else {
+                return false
+            }
+            
             if string.rangeOfCharacter(from: invalidAmountCharacters) != nil {
                 return false
             }
+            
+            var acceptZero = false
+            if let minValue = component.minValue, minValue <= 0 {
+                acceptZero = true
+            }
+            
             var newText = ((textField.text ?? "") as NSString).replacingCharacters(in: range, with: string)
-            if newText == "0" || (newText.count > 1 && newText.hasPrefix("0")) {
+            if (newText == "0" && !acceptZero) || (newText.count > 1 && newText.hasPrefix("0")) {
                 newText.removeFirst()
                 textField.text = newText
                 self.textChanged(self.textField)
                 return false
             }
             
-            if let component = self.component {
-                let amount: Int64?
-                if !newText.isEmpty, let value = Int64(normalizeArabicNumeralString(newText, type: .western)) {
-                    amount = value
-                } else {
-                    amount = nil
-                }
-                if let amount, let maxAmount = component.maxValue, amount > maxAmount {
-                    textField.text = "\(maxAmount)"
-                    self.textChanged(self.textField)
-                    self.animateError()
-                    return false
-                }
+            let amount: Int64?
+            if !newText.isEmpty, let value = Int64(normalizeArabicNumeralString(newText, type: .western)) {
+                amount = value
+            } else {
+                amount = nil
             }
+            if let amount, let maxAmount = component.maxValue, amount > maxAmount {
+                textField.text = "\(maxAmount)"
+                self.textChanged(self.textField)
+                self.animateError()
+                return false
+            }
+            
             return true
         }
         

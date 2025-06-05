@@ -233,7 +233,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     private var chatTranslationPanel: ChatTranslationPanelNode?
     
     private var leftPanelContainer: ChatControllerTitlePanelNodeContainer
-    private var leftPanel: (component: AnyComponentWithIdentity<ChatSidePanelEnvironment>, view: ComponentView<ChatSidePanelEnvironment>)?
+    private(set) var leftPanel: (component: AnyComponentWithIdentity<ChatSidePanelEnvironment>, view: ComponentView<ChatSidePanelEnvironment>)?
     
     private(set) var inputPanelNode: ChatInputPanelNode?
     private(set) var inputPanelOverscrollNode: ChatInputPanelOverscrollNode?

@@ -694,7 +694,10 @@ extension ChatControllerImpl {
                         upgradedToPeerId = migrationReference.peerId
                     }
                     if let previous = strongSelf.state.peerView, let channel = previous.peers[previous.peerId] as? TelegramChannel, !channel.isForumOrMonoForum, let updatedChannel = peerView.peers[peerView.peerId] as? TelegramChannel, updatedChannel.isForumOrMonoForum {
-                        movedToForumTopics = true
+                        if updatedChannel.isForum && updatedChannel.flags.contains(.displayForumAsTabs) {
+                        } else {
+                            movedToForumTopics = true
+                        }
                     }
                     
                     var shouldDismiss = false
@@ -761,6 +764,7 @@ extension ChatControllerImpl {
                     }
                     var starGiftsAvailable = false
                     var peerDiscussionId: PeerId?
+                    var peerMonoforumId: PeerId?
                     var peerGeoLocation: PeerGeoLocation?
                     if let peer = peerView.peers[peerView.peerId] as? TelegramChannel, let cachedData = peerView.cachedData as? CachedChannelData {
                         if case .broadcast = peer.info {
@@ -770,6 +774,9 @@ extension ChatControllerImpl {
                         }
                         if case let .known(value) = cachedData.linkedDiscussionPeerId {
                             peerDiscussionId = value
+                        }
+                        if !peer.isMonoForum {
+                            peerMonoforumId = peer.linkedMonoforumId
                         }
                     }
                     var renderedPeer: RenderedPeer?
@@ -921,13 +928,14 @@ extension ChatControllerImpl {
                         explicitelyCanPinMessages = true
                     }
                     
-                    if strongSelf.preloadHistoryPeerId != peerDiscussionId {
-                        strongSelf.preloadHistoryPeerId = peerDiscussionId
-                        if let peerDiscussionId = peerDiscussionId, let channel = peerView.peers[peerView.peerId] as? TelegramChannel, case .broadcast = channel.info {
+                    let preloadHistoryPeerId = peerMonoforumId ?? peerDiscussionId
+                    if strongSelf.preloadHistoryPeerId != preloadHistoryPeerId {
+                        strongSelf.preloadHistoryPeerId = preloadHistoryPeerId
+                        if let preloadHistoryPeerId, let channel = peerView.peers[peerView.peerId] as? TelegramChannel, case .broadcast = channel.info {
                             let combinedDisposable = DisposableSet()
                             strongSelf.preloadHistoryPeerIdDisposable.set(combinedDisposable)
-                            combinedDisposable.add(context.account.viewTracker.polledChannel(peerId: peerDiscussionId).startStrict())
-                            combinedDisposable.add(context.account.addAdditionalPreloadHistoryPeerId(peerId: peerDiscussionId))
+                            combinedDisposable.add(context.account.viewTracker.polledChannel(peerId: preloadHistoryPeerId).startStrict())
+                            combinedDisposable.add(context.account.addAdditionalPreloadHistoryPeerId(peerId: preloadHistoryPeerId))
                         } else {
                             strongSelf.preloadHistoryPeerIdDisposable.set(nil)
                         }
@@ -1559,6 +1567,7 @@ extension ChatControllerImpl {
                         strongSelf.state.threadInfo = messageAndTopic.threadData?.info
                         
                         var peerDiscussionId: PeerId?
+                        var peerMonoforumId: PeerId?
                         var peerGeoLocation: PeerGeoLocation?
                         var currentSendAsPeerId: PeerId?
                         if let peer = peerView.peers[peerView.peerId] as? TelegramChannel, let cachedData = peerView.cachedData as? CachedChannelData {
@@ -1569,6 +1578,8 @@ extension ChatControllerImpl {
                                     currentSendAsPeerId = nil
                                 }
                             } else {
+                                peerMonoforumId = peer.linkedMonoforumId
+                                
                                 currentSendAsPeerId = cachedData.sendAsPeerId
                                 if case .group = peer.info {
                                     peerGeoLocation = cachedData.peerGeoLocation
@@ -1610,10 +1621,11 @@ extension ChatControllerImpl {
                             explicitelyCanPinMessages = true
                         }
                         
-                        if strongSelf.preloadHistoryPeerId != peerDiscussionId {
-                            strongSelf.preloadHistoryPeerId = peerDiscussionId
-                            if let peerDiscussionId = peerDiscussionId {
-                                strongSelf.preloadHistoryPeerIdDisposable.set(context.account.addAdditionalPreloadHistoryPeerId(peerId: peerDiscussionId))
+                        let preloadHistoryPeerId = peerMonoforumId ?? peerDiscussionId
+                        if strongSelf.preloadHistoryPeerId != preloadHistoryPeerId {
+                            strongSelf.preloadHistoryPeerId = preloadHistoryPeerId
+                            if let preloadHistoryPeerId {
+                                strongSelf.preloadHistoryPeerIdDisposable.set(context.account.addAdditionalPreloadHistoryPeerId(peerId: preloadHistoryPeerId))
                             } else {
                                 strongSelf.preloadHistoryPeerIdDisposable.set(nil)
                             }

@@ -416,10 +416,22 @@ public final class ChatLoadingPlaceholderNode: ASDisplayNode {
             } else if peer is TelegramGroup {
                 chatType = .group
             } else if let channel = peer as? TelegramChannel {
-                if case .group = channel.info {
-                    chatType = .group
+                if channel.isMonoForum {
+                    if let mainChannel = chatPresentationInterfaceState.renderedPeer?.chatOrMonoforumMainPeer as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
+                        if chatPresentationInterfaceState.chatLocation.threadId == nil {
+                            chatType = .group
+                        } else {
+                            chatType = .user
+                        }
+                    } else {
+                        chatType = .user
+                    }
                 } else {
-                    chatType = .channel
+                    if case .group = channel.info {
+                        chatType = .group
+                    } else {
+                        chatType = .channel
+                    }
                 }
             }
         }

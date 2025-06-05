@@ -14381,7 +14381,7 @@ Sorry for the inconvenience.";
 "ChannelMessages.Info" = "Allow users to send messages to your channel, with the option to charge a fee for each message.";
 "ChannelMessages.SwitchTitle" = "Allow Channel Messages";
 "ChannelMessages.PriceSectionTitle" = "PRICE FOR EACH MESSAGE";
-"ChannelMessages.PriceSectionFooter" = "You will receive 85% of the selected fee for each incoming message.";
+"ChannelMessages.PriceSectionFooterValue" = "You will receive %1$@% of the selected fee for each incoming message.";
 
 "ChatList.MonoforumLabel" = "DIRECT";
 "ChatList.MonoforumEmptyText" = "No messages here yet...";
@@ -14408,7 +14408,7 @@ Sorry for the inconvenience.";
 "Stars.SendMessage.AdjustmentPlaceholder" = "Price for each Message";
 "Stars.SendMessage.AdjustmentSectionHeader" = "PRICE IN STARS";
 "Stars.SendMessage.AdjustmentSectionFooterValue" = "You will receive **%@ Stars**.";
-"Stars.SendMessage.AdjustmentSectionFooterEmpty" = "You will receive **80%**.";
+"Stars.SendMessage.AdjustmentSectionFooterEmptyValue" = "You will receive **%1$@%**.";
 "Stars.SendMessage.AdjustmentAction" = "OK";
 
 "Stars.SendMessage.PriceFree" = "Free";

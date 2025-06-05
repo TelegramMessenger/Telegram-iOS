@@ -29,6 +29,7 @@ final class PostSuggestionsSettingsScreenComponent: Component {
     
     let context: AccountContext
     let usdWithdrawRate: Int64
+    let paidMessageCommissionPermille: Int
     let peer: EnginePeer?
     let initialPrice: StarsAmount?
     let completion: () -> Void
@@ -36,12 +37,14 @@ final class PostSuggestionsSettingsScreenComponent: Component {
     init(
         context: AccountContext,
         usdWithdrawRate: Int64,
+        paidMessageCommissionPermille: Int,
         peer: EnginePeer?,
         initialPrice: StarsAmount?,
         completion: @escaping () -> Void
     ) {
         self.context = context
         self.usdWithdrawRate = usdWithdrawRate
+        self.paidMessageCommissionPermille = paidMessageCommissionPermille
         self.peer = peer
         self.initialPrice = initialPrice
         self.completion = completion
@@ -367,7 +370,7 @@ final class PostSuggestionsSettingsScreenComponent: Component {
                         }
                         
                         let currentAmount: StarsAmount = StarsAmount(value: Int64(self.starCount), nanos: 0)
-                        let starsScreen = component.context.sharedContext.makeStarsWithdrawalScreen(context: component.context, subject: .enterAmount(current: currentAmount, minValue: StarsAmount(value: 0, nanos: 0), fractionAfterCommission: 85, kind: .postSuggestion), completion: { [weak self] amount in
+                        let starsScreen = component.context.sharedContext.makeStarsWithdrawalScreen(context: component.context, subject: .enterAmount(current: currentAmount, minValue: StarsAmount(value: 0, nanos: 0), fractionAfterCommission: component.paidMessageCommissionPermille / 10, kind: .postSuggestion), completion: { [weak self] amount in
                             guard let self else {
                                 return
                             }
@@ -398,9 +401,9 @@ final class PostSuggestionsSettingsScreenComponent: Component {
                     )),
                     footer: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: environment.strings.ChannelMessages_PriceSectionFooter,
+                            string: environment.strings.ChannelMessages_PriceSectionFooterValue("\(component.paidMessageCommissionPermille / 10)").string,
                             font: Font.regular(13.0),
-                            textColor: environment.theme.list.freeTextColor
+                            textColor: self.starCount == 0 ? .clear : environment.theme.list.freeTextColor
                         )),
                         maximumNumberOfLines: 0
                     )),
@@ -497,6 +500,7 @@ public final class PostSuggestionsSettingsScreen: ViewControllerComponentContain
         super.init(context: context, component: PostSuggestionsSettingsScreenComponent(
             context: context,
             usdWithdrawRate: configuration.usdWithdrawRate,
+            paidMessageCommissionPermille: Int(configuration.paidMessageCommissionPermille),
             peer: peer,
             initialPrice: initialPrice,
             completion: completion
