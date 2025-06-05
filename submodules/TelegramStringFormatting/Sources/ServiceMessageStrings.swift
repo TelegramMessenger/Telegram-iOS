@@ -1288,6 +1288,11 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 }
             case .unknown:
                 attributedString = nil
+            case let .todoCompletions(completed, incompleted):
+                //TODO:release
+                let _ = completed
+                let _ = incompleted
+                attributedString = nil
             }
             break
         } else if let expiredMedia = media as? TelegramMediaExpiredContent {

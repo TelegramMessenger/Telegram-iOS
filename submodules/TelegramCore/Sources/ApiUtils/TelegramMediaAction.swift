@@ -226,6 +226,9 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         )))
     case let .messageActionTodoCompletions(completed, incompleted):
         return TelegramMediaAction(action: .todoCompletions(completed: completed, incompleted: incompleted))
+    case .messageActionTodoAppendTasks:
+        //TODO:release
+        return nil
     }
 }
 

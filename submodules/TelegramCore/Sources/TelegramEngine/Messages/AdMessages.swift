@@ -430,7 +430,7 @@ private class AdMessagesHistoryContextImpl {
             guard let inputPeer else {
                 return .single((nil, []))
             }
-            return account.network.request(Api.functions.messages.getSponsoredMessages(peer: inputPeer))
+            return account.network.request(Api.functions.messages.getSponsoredMessages(flags: 0, peer: inputPeer, msgId: nil))
             |> map(Optional.init)
             |> `catch` { _ -> Signal<Api.messages.SponsoredMessages?, NoError> in
                 return .single(nil)
@@ -442,7 +442,10 @@ private class AdMessagesHistoryContextImpl {
 
                 return account.postbox.transaction { transaction -> (interPostInterval: Int32?, messages: [Message]) in
                     switch result {
-                    case let .sponsoredMessages(_, postsBetween, messages, chats, users):
+                    case let .sponsoredMessages(_, postsBetween, startDelay, betweenDelay, messages, chats, users):
+                        //TODO:release
+                        let _ = startDelay
+                        let _ = betweenDelay
                         let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                         updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
 
@@ -450,7 +453,11 @@ private class AdMessagesHistoryContextImpl {
 
                         for message in messages {
                             switch message {
-                            case let .sponsoredMessage(flags, randomId, url, title, message, entities, photo, media, color, buttonText, sponsorInfo, additionalInfo):
+                            case let .sponsoredMessage(flags, randomId, url, title, message, entities, photo, media, color, buttonText, sponsorInfo, additionalInfo, minDisplayDuration, maxDisplayDuration):
+                                //TODO:release
+                                let _ = minDisplayDuration
+                                let _ = maxDisplayDuration
+                                
                                 var parsedEntities: [MessageTextEntity] = []
                                 if let entities = entities {
                                     parsedEntities = messageTextEntitiesFromApiEntities(entities)
