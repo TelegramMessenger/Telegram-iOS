@@ -203,8 +203,13 @@ extension ChatControllerImpl {
                             .withUpdatedReplyToMessageId(replyMessageSubject?.subjectModel)
                             .withUpdatedCorrelationId(correlationId)
                         
+                        var shouldAnimateMessageTransition = self.chatDisplayNode.shouldAnimateMessageTransition
+                        if self.chatLocation.threadId == nil, let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = self.presentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
+                            shouldAnimateMessageTransition = false
+                        }
+                        
                         var usedCorrelationId = false
-                        if scheduleTime == nil, self.chatDisplayNode.shouldAnimateMessageTransition, let extractedView = videoController.extractVideoSnapshot() {
+                        if scheduleTime == nil, shouldAnimateMessageTransition, let extractedView = videoController.extractVideoSnapshot() {
                             usedCorrelationId = true
                             self.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source:  .videoMessage(ChatMessageTransitionNodeImpl.Source.VideoMessage(view: extractedView)), initiated: { [weak videoController, weak self] in
                                 videoController?.hideVideoSnapshot()
