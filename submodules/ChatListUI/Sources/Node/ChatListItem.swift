@@ -2154,7 +2154,11 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     topForumTopicItems = topForumTopicItemsValue
                 
                     if item.interaction.searchTextHighightState != nil, threadInfo == nil, topForumTopicItems.isEmpty, let message = messagesValue.first, let threadId = message.threadId, let associatedThreadInfo = message.associatedThreadInfo {
-                        topForumTopicItems = [EngineChatList.ForumTopicData(id: threadId, title: associatedThreadInfo.title, iconFileId: associatedThreadInfo.icon, iconColor: associatedThreadInfo.iconColor, maxOutgoingReadMessageId: message.id, isUnread: false, threadPeer: nil)]
+                        var threadPeer: EnginePeer?
+                        if case let .channel(channel) = peerValue.peer, channel.isMonoForum {
+                            threadPeer = message.peers[EnginePeer.Id(threadId)].flatMap(EnginePeer.init)
+                        }
+                        topForumTopicItems = [EngineChatList.ForumTopicData(id: threadId, title: associatedThreadInfo.title, iconFileId: associatedThreadInfo.icon, iconColor: associatedThreadInfo.iconColor, maxOutgoingReadMessageId: message.id, isUnread: false, threadPeer: threadPeer)]
                     }
                     
                     switch peerValue.peer {

@@ -234,6 +234,18 @@ func locallyRenderedMessage(message: StoreMessage, peers: [PeerId: Peer], associ
                 messagePeers[channelPeer.id] = channelPeer
             }
         }
+        
+        if let channel = peer as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId {
+            if let channelPeer = peers[linkedMonoforumId] {
+                messagePeers[channelPeer.id] = channelPeer
+            }
+            
+            if let threadId = message.threadId {
+                if let threadPeer = peers[PeerId(threadId)] {
+                    messagePeers[threadPeer.id] = threadPeer
+                }
+            }
+        }
     }
     
     for media in message.media {

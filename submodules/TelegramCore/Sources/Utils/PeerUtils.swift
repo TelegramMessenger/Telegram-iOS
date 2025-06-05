@@ -485,6 +485,10 @@ public extension RenderedPeer {
                 if let regularPeer = message.peers[peer.regularPeerId] {
                     peers[regularPeer.id] = regularPeer
                 }
+            } else if let peer = peer as? TelegramChannel, peer.isMonoForum, let linkedMonoforumId = peer.linkedMonoforumId {
+                if let regularPeer = message.peers[linkedMonoforumId] {
+                    peers[regularPeer.id] = regularPeer
+                }
             }
         }
         self.init(peerId: message.id.peerId, peers: peers, associatedMedia: [:])
