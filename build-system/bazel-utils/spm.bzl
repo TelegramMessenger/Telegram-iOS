@@ -317,6 +317,17 @@ def _collect_spm_modules_impl(target, ctx):
                 headers.append(hdr_file.path)
     current_target_headers = depset(current_target_hdr_files)
 
+    textual_hdrs = []
+    current_target_textual_hdr_files = []
+    if "textual_hdrs" in result_attrs:
+        for textual_hdr_target in result_attrs["textual_hdrs"]:
+            textual_hdr_files = textual_hdr_target.files.to_list()
+            for f in textual_hdr_files:
+                current_target_textual_hdr_files.append(f)
+            for hdr_file in textual_hdr_files:
+                textual_hdrs.append(hdr_file.path)
+    current_target_textual_headers = depset(current_target_textual_hdr_files)
+
     module_type = result_attrs["type"]
 
     if module_type == "root":
@@ -368,7 +379,7 @@ def _collect_spm_modules_impl(target, ctx):
                 "path": module_path,
                 "defines": result_attrs["defines"],
                 "deps": dep_names,
-                "sources": sorted(sources + headers),
+                "sources": sorted(sources + headers + textual_hdrs),
                 "module_name": module_name,
                 "copts": result_attrs["copts"],
                 "cxxopts": result_attrs["cxxopts"],
@@ -401,6 +412,7 @@ def _collect_spm_modules_impl(target, ctx):
         transitive_sources_from_deps, 
         current_target_sources, 
         current_target_headers,
+        current_target_textual_headers,
     ])
     
     # Return both the SPM output files and the provider with modules data and sources
