@@ -858,7 +858,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
     public func asyncLayout() -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ dateTimeFormat: PresentationDateTimeFormat, _ message: Message, _ associatedData: ChatMessageItemAssociatedData,  _ attributes: ChatMessageEntryAttributes, _ media: Media, _ mediaIndex: Int?, _ dateAndStatus: ChatMessageDateAndStatus?, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: MediaAutoDownloadPeerType, _ peerId: EnginePeer.Id?, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode, _ presentationContext: ChatPresentationContext) -> (CGSize, CGFloat, (CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void))) {
         let currentMessage = self.message
         let currentMedia = self.media
-        let imageLayout = self.imageNode.asyncLayout()
+        let imageLayout = self.imageNode.asyncLayoutWithAnimation()
         let statusLayout = self.dateAndStatusNode.asyncLayout()
         
         let currentVideoNode = self.videoNode
@@ -1894,7 +1894,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 timestampMaskView.image = strongSelf.generateTimestampMaskImage(corners: arguments.corners)
                             }
                             strongSelf.currentImageArguments = arguments
-                            imageApply()
+                            imageApply(transition)
 
                             if let statusApply = statusApply {
                                 let dateAndStatusFrame = CGRect(origin: CGPoint(x: cleanImageFrame.width - layoutConstants.image.statusInsets.right - statusSize.width, y: cleanImageFrame.height - layoutConstants.image.statusInsets.bottom - statusSize.height), size: statusSize)
@@ -2084,8 +2084,13 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                     strongSelf.imageNode.cornerRadius = 0.0
                                 }
                                 
-                                videoNode.updateLayout(size: arguments.drawingSize, transition: .immediate)
-                                videoNode.frame = CGRect(origin: CGPoint(), size: imageFrame.size)
+                                if videoNode.bounds.isEmpty {
+                                    videoNode.updateLayout(size: arguments.drawingSize, transition: .immediate)
+                                    videoNode.frame = CGRect(origin: CGPoint(), size: imageFrame.size)
+                                } else {
+                                    videoNode.updateLayout(size: arguments.drawingSize, transition: transition.transition)
+                                    transition.animator.updateFrame(layer: videoNode.layer, frame: CGRect(origin: CGPoint(), size: imageFrame.size), completion: nil)
+                                }
                                 
                                 if strongSelf.visibility && strongSelf.internallyVisible && !presentationData.isPreview {
                                     if !videoNode.canAttachContent {

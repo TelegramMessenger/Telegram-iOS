@@ -1591,7 +1591,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
-        if let message = messages.first, message.id.namespace == Namespaces.Message.Cloud, let channel = message.peers[message.id.peerId] as? TelegramChannel, !(message.media.first is TelegramMediaAction), !isReplyThreadHead, !isMigrated {
+        if let message = messages.first, message.id.namespace == Namespaces.Message.Cloud, let channel = message.peers[message.id.peerId] as? TelegramChannel, !channel.isMonoForum, !(message.media.first is TelegramMediaAction), !isReplyThreadHead, !isMigrated {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopyLink, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.actionSheet.primaryTextColor)
             }, action: { _, f in
@@ -1893,8 +1893,8 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         
         var canViewStats = false
         var canViewAuthor = false
-        if let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum {
-            if message.effectivelyIncoming(context.account.peerId) {
+        if let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum, let associatedPeerId = channel.associatedPeerId {
+            if message.effectivelyIncoming(context.account.peerId), message.author?.id == associatedPeerId {
                 canViewAuthor = true
             }
         } else if let messageReadStatsAreHidden = infoSummaryData.messageReadStatsAreHidden, !messageReadStatsAreHidden {

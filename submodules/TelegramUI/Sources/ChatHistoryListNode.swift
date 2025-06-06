@@ -681,6 +681,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
     
     private var loadedMessagesFromCachedDataDisposable: Disposable?
     
+    private var isSettingTopReplyThreadMessageShown: Bool = false
     let isTopReplyThreadMessageShown = ValuePromise<Bool>(false, ignoreRepeated: true)
     
     private var topVisibleMessageRangeValueInitialized: Bool = false
@@ -3178,8 +3179,15 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
             }
         }
         
-        
-        self.isTopReplyThreadMessageShown.set(isTopReplyThreadMessageShownValue)
+        if !self.isSettingTopReplyThreadMessageShown {
+            self.isSettingTopReplyThreadMessageShown = true
+            self.isTopReplyThreadMessageShown.set(isTopReplyThreadMessageShownValue)
+            self.isSettingTopReplyThreadMessageShown = false
+        } else {
+            #if DEBUG
+            print("Ignore repeated isTopReplyThreadMessageShown update")
+            #endif
+        }
         self.updateTopVisibleMessageRange(topVisibleMessageRange)
         let _ = self.visibleMessageRange.swap(topVisibleMessageRange.flatMap { range in
             return VisibleMessageRange(lowerBound: range.lowerBound, upperBound: range.upperBound)
