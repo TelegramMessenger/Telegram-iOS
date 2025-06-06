@@ -161,6 +161,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case paidMessagesPriceEdited(stars: Int64, broadcastMessagesAllowed: Bool)
     case conferenceCall(ConferenceCall)
     case todoCompletions(completed: [Int32], incompleted: [Int32])
+    case todoAppendTasks([TelegramMediaTodo.Item])
     
     public init(decoder: PostboxDecoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
@@ -300,6 +301,10 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             self = .todoCompletions(
                 completed: decoder.decodeInt32ArrayForKey("completed"),
                 incompleted: decoder.decodeInt32ArrayForKey("incompleted")
+            )
+        case 50:
+            self = .todoAppendTasks(
+                decoder.decodeObjectArrayWithDecoderForKey("tasks")
             )
         default:
             self = .unknown
@@ -708,6 +713,9 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             encoder.encodeInt32(49, forKey: "_rawValue")
             encoder.encodeInt32Array(completed, forKey: "completed")
             encoder.encodeInt32Array(incompleted, forKey: "incompleted")
+        case let .todoAppendTasks(tasks):
+            encoder.encodeInt32(50, forKey: "_rawValue")
+            encoder.encodeObjectArray(tasks, forKey: "tasks")
         }
     }
     

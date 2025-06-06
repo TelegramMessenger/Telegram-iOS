@@ -13,30 +13,23 @@ func _internal_requestUpdateTodoMessageItems(account: Account, messageId: Messag
     return account.postbox.loadedPeerWithId(messageId.peerId)
     |> take(1)
     |> castError(RequestUpdateTodoMessageError.self)
-    |> mapToSignal { peer in
+    |> mapToSignal { peer -> Signal<Never, RequestUpdateTodoMessageError> in
         if let inputPeer = apiInputPeer(peer) {
             return account.network.request(Api.functions.messages.toggleTodoCompleted(peer: inputPeer, msgId: messageId.id, completed: completedIds, incompleted: incompletedIds))
             |> mapError { _ -> RequestUpdateTodoMessageError in
                 return .generic
             }
-            |> mapToSignal { result -> Signal<TelegramMediaTodo?, RequestUpdateTodoMessageError> in
-                return account.postbox.transaction { transaction -> TelegramMediaTodo? in
-                    switch result {
-                    case let .updates(updates, _, _, _, _):
-                        let _ = updates
-                    default:
-                        break
-                    }
+            |> mapToSignal { result -> Signal<Void, RequestUpdateTodoMessageError> in
+                return account.postbox.transaction { transaction in
                     account.stateManager.addUpdates(result)
-                    return nil
                 }
                 |> castError(RequestUpdateTodoMessageError.self)
             }
+            |> ignoreValues
         } else {
-            return .single(nil)
+            return .complete()
         }
     }
-    |> ignoreValues
 }
 
 public enum AppendTodoMessageError {

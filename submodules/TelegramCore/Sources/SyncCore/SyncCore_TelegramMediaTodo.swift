@@ -69,7 +69,7 @@ public final class TelegramMediaTodo: Media, Equatable {
         return nil
     }
     public var peerIds: [PeerId] {
-        return []
+        return self.completions.map { $0.completedBy }
     }
     
     public let flags: Flags

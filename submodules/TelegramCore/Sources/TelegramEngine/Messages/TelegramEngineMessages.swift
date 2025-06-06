@@ -415,8 +415,8 @@ public extension TelegramEngine {
             }
         }
 
-        public func adMessages(peerId: PeerId) -> AdMessagesHistoryContext {
-            return AdMessagesHistoryContext(account: self.account, peerId: peerId)
+        public func adMessages(peerId: PeerId, messageId: EngineMessage.Id? = nil) -> AdMessagesHistoryContext {
+            return AdMessagesHistoryContext(account: self.account, peerId: peerId, messageId: messageId)
         }
 
         public func messageReadStats(id: MessageId) -> Signal<MessageReadStats?, NoError> {

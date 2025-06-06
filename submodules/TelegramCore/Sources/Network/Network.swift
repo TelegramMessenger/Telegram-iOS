@@ -438,7 +438,7 @@ public struct NetworkInitializationArguments {
     public let externalRecaptchaRequestVerification: (String, String) -> Signal<String?, NoError>
     public let autolockDeadine: Signal<Int32?, NoError>
     public let encryptionProvider: EncryptionProvider
-    public let deviceModelName:String?
+    public let deviceModelName: String?
     public let useBetaFeatures: Bool
     public let isICloudEnabled: Bool
     

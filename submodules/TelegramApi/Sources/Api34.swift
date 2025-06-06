@@ -304,17 +304,19 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum SponsoredMessages: TypeConstructorDescription {
-        case sponsoredMessages(flags: Int32, postsBetween: Int32?, messages: [Api.SponsoredMessage], chats: [Api.Chat], users: [Api.User])
+        case sponsoredMessages(flags: Int32, postsBetween: Int32?, startDelay: Int32?, betweenDelay: Int32?, messages: [Api.SponsoredMessage], chats: [Api.Chat], users: [Api.User])
         case sponsoredMessagesEmpty
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .sponsoredMessages(let flags, let postsBetween, let messages, let chats, let users):
+                case .sponsoredMessages(let flags, let postsBetween, let startDelay, let betweenDelay, let messages, let chats, let users):
                     if boxed {
-                        buffer.appendInt32(-907141753)
+                        buffer.appendInt32(-2464403)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(postsBetween!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(startDelay!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(betweenDelay!, buffer: buffer, boxed: false)}
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(messages.count))
                     for item in messages {
@@ -342,8 +344,8 @@ public extension Api.messages {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .sponsoredMessages(let flags, let postsBetween, let messages, let chats, let users):
-                return ("sponsoredMessages", [("flags", flags as Any), ("postsBetween", postsBetween as Any), ("messages", messages as Any), ("chats", chats as Any), ("users", users as Any)])
+                case .sponsoredMessages(let flags, let postsBetween, let startDelay, let betweenDelay, let messages, let chats, let users):
+                return ("sponsoredMessages", [("flags", flags as Any), ("postsBetween", postsBetween as Any), ("startDelay", startDelay as Any), ("betweenDelay", betweenDelay as Any), ("messages", messages as Any), ("chats", chats as Any), ("users", users as Any)])
                 case .sponsoredMessagesEmpty:
                 return ("sponsoredMessagesEmpty", [])
     }
@@ -354,25 +356,31 @@ public extension Api.messages {
             _1 = reader.readInt32()
             var _2: Int32?
             if Int(_1!) & Int(1 << 0) != 0 {_2 = reader.readInt32() }
-            var _3: [Api.SponsoredMessage]?
+            var _3: Int32?
+            if Int(_1!) & Int(1 << 1) != 0 {_3 = reader.readInt32() }
+            var _4: Int32?
+            if Int(_1!) & Int(1 << 2) != 0 {_4 = reader.readInt32() }
+            var _5: [Api.SponsoredMessage]?
             if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.SponsoredMessage.self)
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.SponsoredMessage.self)
             }
-            var _4: [Api.Chat]?
+            var _6: [Api.Chat]?
             if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
             }
-            var _5: [Api.User]?
+            var _7: [Api.User]?
             if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                _7 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
             }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
             let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.messages.SponsoredMessages.sponsoredMessages(flags: _1!, postsBetween: _2, messages: _3!, chats: _4!, users: _5!)
+            let _c6 = _6 != nil
+            let _c7 = _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.messages.SponsoredMessages.sponsoredMessages(flags: _1!, postsBetween: _2, startDelay: _3, betweenDelay: _4, messages: _5!, chats: _6!, users: _7!)
             }
             else {
                 return nil
