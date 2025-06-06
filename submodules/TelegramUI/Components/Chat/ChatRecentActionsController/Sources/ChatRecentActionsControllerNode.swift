@@ -1387,15 +1387,21 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                                     
                         let _ = (signal
                         |> deliverOnMainQueue).startStandalone(next: { [weak navigationController] resolvedCallLink in
-                            navigationController?.pushViewController(context.sharedContext.makeJoinSubjectScreen(context: context, mode: JoinSubjectScreenMode.groupCall(JoinSubjectScreenMode.GroupCall(
-                                id: resolvedCallLink.id,
-                                accessHash: resolvedCallLink.accessHash,
-                                slug: link,
-                                inviter: resolvedCallLink.inviter,
-                                members: resolvedCallLink.members,
-                                totalMemberCount: resolvedCallLink.totalMemberCount,
-                                info: resolvedCallLink
-                            ))))
+                            let _ = (context.engine.calls.getGroupCallPersistentSettings(callId: resolvedCallLink.id)
+                            |> deliverOnMainQueue).startStandalone(next: { value in
+                                let value: PresentationGroupCallPersistentSettings = value?.get(PresentationGroupCallPersistentSettings.self) ?? PresentationGroupCallPersistentSettings.default
+                                
+                                navigationController?.pushViewController(context.sharedContext.makeJoinSubjectScreen(context: context, mode: JoinSubjectScreenMode.groupCall(JoinSubjectScreenMode.GroupCall(
+                                    id: resolvedCallLink.id,
+                                    accessHash: resolvedCallLink.accessHash,
+                                    slug: link,
+                                    inviter: resolvedCallLink.inviter,
+                                    members: resolvedCallLink.members,
+                                    totalMemberCount: resolvedCallLink.totalMemberCount,
+                                    info: resolvedCallLink,
+                                    enableMicrophoneByDefault: value.isMicrophoneEnabledByDefault
+                                ))))
+                            })
                         })
                     case let .localization(identifier):
                         strongSelf.presentController(LanguageLinkPreviewController(context: strongSelf.context, identifier: identifier), .window(.root), nil)

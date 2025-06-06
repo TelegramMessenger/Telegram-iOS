@@ -429,6 +429,18 @@ public struct PresentationGroupCallInvitedPeer: Equatable {
     }
 }
 
+public struct PresentationGroupCallPersistentSettings: Codable {
+    public static let `default` = PresentationGroupCallPersistentSettings(
+        isMicrophoneEnabledByDefault: true
+    )
+    
+    public var isMicrophoneEnabledByDefault: Bool
+    
+    public init(isMicrophoneEnabledByDefault: Bool) {
+        self.isMicrophoneEnabledByDefault = isMicrophoneEnabledByDefault
+    }
+}
+
 public protocol PresentationGroupCall: AnyObject {
     var account: Account { get }
     var accountContext: AccountContext { get }
@@ -580,6 +592,7 @@ public protocol PresentationCallManager: AnyObject {
         reference: InternalGroupCallReference,
         beginWithVideo: Bool,
         invitePeerIds: [EnginePeer.Id],
-        endCurrentIfAny: Bool
+        endCurrentIfAny: Bool,
+        unmuteByDefault: Bool
     ) -> JoinGroupCallManagerResult
 }

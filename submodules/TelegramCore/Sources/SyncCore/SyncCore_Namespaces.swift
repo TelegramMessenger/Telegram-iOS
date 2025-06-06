@@ -142,6 +142,7 @@ public struct Namespaces {
         public static let recommendedBots: Int8 = 44
         public static let channelsForPublicReaction: Int8 = 45
         public static let cachedGroupsInCommon: Int8 = 46
+        public static let groupCallPersistentSettings: Int8 = 47
     }
     
     public struct UnorderedItemList {

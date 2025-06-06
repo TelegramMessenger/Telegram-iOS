@@ -2065,7 +2065,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     reference: .id(id: call.callInfo.id, accessHash: call.callInfo.accessHash),
                     beginWithVideo: isVideo,
                     invitePeerIds: peerIds,
-                    endCurrentIfAny: true
+                    endCurrentIfAny: true,
+                    unmuteByDefault: true
                 )
                 completion?()
             }

@@ -396,20 +396,26 @@ func openResolvedUrlImpl(
         
             let _ = (signal
             |> deliverOnMainQueue).startStandalone(next: { [weak navigationController] resolvedCallLink in
-                if let currentGroupCallController = context.sharedContext.currentGroupCallController as? VoiceChatController, case let .group(groupCall) = currentGroupCallController.call, let currentCallId = groupCall.callId, currentCallId == resolvedCallLink.id {
-                    context.sharedContext.navigateToCurrentCall()
-                    return
-                }
-                
-                navigationController?.pushViewController(context.sharedContext.makeJoinSubjectScreen(context: context, mode: JoinSubjectScreenMode.groupCall(JoinSubjectScreenMode.GroupCall(
-                    id: resolvedCallLink.id,
-                    accessHash: resolvedCallLink.accessHash,
-                    slug: link,
-                    inviter: resolvedCallLink.inviter,
-                    members: resolvedCallLink.members,
-                    totalMemberCount: resolvedCallLink.totalMemberCount,
-                    info: resolvedCallLink
-                ))))
+                let _ = (context.engine.calls.getGroupCallPersistentSettings(callId: resolvedCallLink.id)
+                |> deliverOnMainQueue).startStandalone(next: { value in
+                    let value: PresentationGroupCallPersistentSettings = value?.get(PresentationGroupCallPersistentSettings.self) ?? PresentationGroupCallPersistentSettings.default
+                    
+                    if let currentGroupCallController = context.sharedContext.currentGroupCallController as? VoiceChatController, case let .group(groupCall) = currentGroupCallController.call, let currentCallId = groupCall.callId, currentCallId == resolvedCallLink.id {
+                        context.sharedContext.navigateToCurrentCall()
+                        return
+                    }
+                    
+                    navigationController?.pushViewController(context.sharedContext.makeJoinSubjectScreen(context: context, mode: JoinSubjectScreenMode.groupCall(JoinSubjectScreenMode.GroupCall(
+                        id: resolvedCallLink.id,
+                        accessHash: resolvedCallLink.accessHash,
+                        slug: link,
+                        inviter: resolvedCallLink.inviter,
+                        members: resolvedCallLink.members,
+                        totalMemberCount: resolvedCallLink.totalMemberCount,
+                        info: resolvedCallLink,
+                        enableMicrophoneByDefault: value.isMicrophoneEnabledByDefault
+                    ))))
+                })
             }, error: { _ in
                 var elevatedLayout = true
                 if case .chat = urlContext {

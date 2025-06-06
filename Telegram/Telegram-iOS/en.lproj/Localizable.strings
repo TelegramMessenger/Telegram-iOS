@@ -14418,3 +14418,7 @@ Sorry for the inconvenience.";
 "Monoforum.DeleteTopic.Title" = "Delete %@";
 "Channel.RemoveFeeAlert.Text" = "Are you sure you want to allow **%@** to message your channel for free?";
 "StarsBalance.ChannelBalance" = "Your channel balance is %@";
+
+"Chat.TitleJoinGroupCall" = "Join";
+"Invitation.JoinGroupCall.EnableMicrophone" = "Switch on the microphone";
+"Chat.PinnedGroupCallTitle" = "Pinned Group Call";

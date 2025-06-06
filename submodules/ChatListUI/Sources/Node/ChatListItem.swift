@@ -2163,8 +2163,14 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     switch peerValue.peer {
                     case .user, .secretChat:
-                        if let peerPresence = peerPresence, case .present = peerPresence.status {
-                            inputActivities = inputActivitiesValue
+                        if let peerPresence = peerPresence {
+                            if case .present = peerPresence.status {
+                                inputActivities = inputActivitiesValue
+                            } else if item.context.sharedContext.immediateExperimentalUISettings.alwaysDisplayTyping {
+                                inputActivities = inputActivitiesValue
+                            } else {
+                                inputActivities = nil
+                            }
                         } else {
                             inputActivities = nil
                         }

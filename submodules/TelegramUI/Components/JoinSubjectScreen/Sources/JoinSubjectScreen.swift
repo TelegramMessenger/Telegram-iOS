@@ -12,12 +12,15 @@ import BalancedTextComponent
 import ButtonComponent
 import BundleIconComponent
 import Markdown
+import Postbox
 import TelegramCore
 import AvatarNode
 import TelegramStringFormatting
 import AnimatedAvatarSetNode
 import UndoUI
 import PresentationDataUtils
+import CheckComponent
+import PlainButtonComponent
 
 private final class JoinSubjectScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -83,6 +86,8 @@ private final class JoinSubjectScreenComponent: Component {
         private var previewPeersAvatarsNode: AnimatedAvatarSetNode?
         private var previewPeersAvatarsContext: AnimatedAvatarSetContext?
         
+        private var callMicrophoneOption: ComponentView<Empty>?
+        
         private let titleTransformContainer: UIView
         private let bottomPanelContainer: UIView
         private let actionButton = ComponentView<Empty>()
@@ -102,6 +107,8 @@ private final class JoinSubjectScreenComponent: Component {
         private var topOffsetDistance: CGFloat?
         
         private var cachedCloseImage: UIImage?
+        
+        private var callMicrophoneIsEnabled: Bool = true
 
         private var isJoining: Bool = false
         private var joinDisposable: Disposable?
@@ -394,7 +401,7 @@ private final class JoinSubjectScreenComponent: Component {
                     self.environment?.controller()?.dismiss()
                 })
             case let .groupCall(groupCall):
-                component.context.joinConferenceCall(call: groupCall.info, isVideo: false)
+                component.context.joinConferenceCall(call: groupCall.info, isVideo: false, unmuteByDefault: self.callMicrophoneIsEnabled)
                 
                 self.environment?.controller()?.dismiss()
             }
@@ -414,6 +421,12 @@ private final class JoinSubjectScreenComponent: Component {
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
             
             if self.component == nil {
+                switch component.mode {
+                case .group:
+                    break
+                case let .groupCall(groupCall):
+                    self.callMicrophoneIsEnabled = groupCall.enableMicrophoneByDefault
+                }
             }
             
             self.component = component
@@ -831,6 +844,85 @@ private final class JoinSubjectScreenComponent: Component {
                 if let previewPeersText = self.previewPeersText {
                     self.previewPeersText = nil
                     previewPeersText.view?.removeFromSuperview()
+                }
+            }
+            
+            if case .groupCall = component.mode {
+                let callMicrophoneOption: ComponentView<Empty>
+                var callMicrophoneOptionTransition = transition
+                if let current = self.callMicrophoneOption {
+                    callMicrophoneOption = current
+                } else {
+                    callMicrophoneOptionTransition = callMicrophoneOptionTransition.withAnimation(.none)
+                    callMicrophoneOption = ComponentView()
+                    self.callMicrophoneOption = callMicrophoneOption
+                }
+                
+                let checkTheme = CheckComponent.Theme(
+                    backgroundColor: environment.theme.list.itemCheckColors.fillColor,
+                    strokeColor: environment.theme.list.itemCheckColors.foregroundColor,
+                    borderColor: environment.theme.list.itemCheckColors.strokeColor,
+                    overlayBorder: false,
+                    hasInset: false,
+                    hasShadow: false
+                )
+                
+                let callMicrophoneOptionSize = callMicrophoneOption.update(
+                    transition: callMicrophoneOptionTransition,
+                    component: AnyComponent(PlainButtonComponent(
+                        content: AnyComponent(HStack([
+                            AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(CheckComponent(
+                                theme: checkTheme,
+                                size: CGSize(width: 18.0, height: 18.0),
+                                selected: self.callMicrophoneIsEnabled
+                            ))),
+                            AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
+                                text: .plain(NSAttributedString(string: environment.strings.Invitation_JoinGroupCall_EnableMicrophone, font: Font.regular(15.0), textColor: environment.theme.list.itemPrimaryTextColor))
+                            )))
+                        ], spacing: 10.0)),
+                        effectAlignment: .center,
+                        action: { [weak self] in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            self.callMicrophoneIsEnabled = !self.callMicrophoneIsEnabled
+                            let callMicrophoneIsEnabled = self.callMicrophoneIsEnabled
+                            
+                            if case let .groupCall(groupCall) = component.mode {
+                                let context = component.context
+                                let _ = (component.context.engine.calls.getGroupCallPersistentSettings(callId: groupCall.id)
+                                |> deliverOnMainQueue).startStandalone(next: { value in
+                                    var value: PresentationGroupCallPersistentSettings = value?.get(PresentationGroupCallPersistentSettings.self) ?? PresentationGroupCallPersistentSettings.default
+                                    value.isMicrophoneEnabledByDefault = callMicrophoneIsEnabled
+                                    if let entry = CodableEntry(value) {
+                                        context.engine.calls.setGroupCallPersistentSettings(callId: groupCall.id, value: entry)
+                                    }
+                                })
+                            }
+                            
+                            if !self.isUpdating {
+                                self.state?.updated(transition: .spring(duration: 0.4))
+                            }
+                        },
+                        animateAlpha: false,
+                        animateScale: false
+                    )),
+                    environment: {
+                    },
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
+                )
+                let callMicrophoneOptionFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - callMicrophoneOptionSize.width) * 0.5), y: contentHeight), size: callMicrophoneOptionSize)
+                if let callMicrophoneOptionView = callMicrophoneOption.view {
+                    if callMicrophoneOptionView.superview == nil {
+                        self.scrollContentView.addSubview(callMicrophoneOptionView)
+                    }
+                    callMicrophoneOptionTransition.setFrame(view: callMicrophoneOptionView, frame: callMicrophoneOptionFrame)
+                }
+                contentHeight += callMicrophoneOptionSize.height + 23.0
+            } else {
+                if let callMicrophoneOption = self.callMicrophoneOption {
+                    self.callMicrophoneOption = nil
+                    callMicrophoneOption.view?.removeFromSuperview()
                 }
             }
             

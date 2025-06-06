@@ -684,7 +684,7 @@ public final class AccountContextImpl: AccountContext {
         }
     }
     
-    public func joinConferenceCall(call: JoinCallLinkInformation, isVideo: Bool) {
+    public func joinConferenceCall(call: JoinCallLinkInformation, isVideo: Bool, unmuteByDefault: Bool) {
         guard let callManager = self.sharedContext.callManager else {
             return
         }
@@ -701,7 +701,8 @@ public final class AccountContextImpl: AccountContext {
             reference: call.reference,
             beginWithVideo: isVideo,
             invitePeerIds: [],
-            endCurrentIfAny: false
+            endCurrentIfAny: false,
+            unmuteByDefault: unmuteByDefault
         )
         if case let .alreadyInProgress(currentPeerId) = result {
             let dataInput: Signal<EnginePeer?, NoError>
@@ -749,7 +750,8 @@ public final class AccountContextImpl: AccountContext {
                                 reference: call.reference,
                                 beginWithVideo: isVideo,
                                 invitePeerIds: [],
-                                endCurrentIfAny: true
+                                endCurrentIfAny: true,
+                                unmuteByDefault: unmuteByDefault
                             )
                         })]), on: .root)
                     default:
@@ -772,7 +774,8 @@ public final class AccountContextImpl: AccountContext {
                                 reference: call.reference,
                                 beginWithVideo: isVideo,
                                 invitePeerIds: [],
-                                endCurrentIfAny: true
+                                endCurrentIfAny: true,
+                                unmuteByDefault: unmuteByDefault
                             )
                         })]), on: .root)
                     }

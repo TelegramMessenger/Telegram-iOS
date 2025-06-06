@@ -64,14 +64,23 @@ public final class CallKitIntegration {
     }
     
     func answerCall(uuid: UUID) {
+        #if DEBUG
+        print("CallKitIntegration: Answer call \(uuid)")
+        #endif
         sharedProviderDelegate?.answerCall(uuid: uuid)
     }
     
     public func dropCall(uuid: UUID) {
+        #if DEBUG
+        print("CallKitIntegration: Drop call \(uuid)")
+        #endif
         sharedProviderDelegate?.dropCall(uuid: uuid)
     }
     
     public func reportIncomingCall(uuid: UUID, stableId: Int64, handle: String, phoneNumber: String?, isVideo: Bool, displayTitle: String, completion: ((NSError?) -> Void)?) {
+        #if DEBUG
+        print("CallKitIntegration: Report incoming call \(uuid)")
+        #endif
         sharedProviderDelegate?.reportIncomingCall(uuid: uuid, stableId: stableId, handle: handle, phoneNumber: phoneNumber, isVideo: isVideo, displayTitle: displayTitle, completion: completion)
     }
     
@@ -183,6 +192,8 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     }
     
     func dropCall(uuid: UUID) {
+        self.alreadyReportedIncomingCalls.insert(uuid)
+        
         Logger.shared.log("CallKitIntegration", "report call ended \(uuid)")
         
         self.provider.reportCall(with: uuid, endedAt: nil, reason: CXCallEndedReason.remoteEnded)

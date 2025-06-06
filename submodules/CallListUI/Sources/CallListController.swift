@@ -278,7 +278,8 @@ public final class CallListController: TelegramBaseController {
                     reference: .id(id: call.callInfo.id, accessHash: call.callInfo.accessHash),
                     beginWithVideo: isVideo,
                     invitePeerIds: peerIds,
-                    endCurrentIfAny: true
+                    endCurrentIfAny: true,
+                    unmuteByDefault: true
                 )
                 completion?()
             }
@@ -714,7 +715,17 @@ public final class CallListController: TelegramBaseController {
             guard let self else {
                 return
             }
-            self.context.joinConferenceCall(call: resolvedCallLink, isVideo: conferenceCall.flags.contains(.isVideo))
+            
+            let _ = (self.context.engine.calls.getGroupCallPersistentSettings(callId: resolvedCallLink.id)
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] value in
+                guard let self else {
+                    return
+                }
+                
+                let value: PresentationGroupCallPersistentSettings = value?.get(PresentationGroupCallPersistentSettings.self) ?? PresentationGroupCallPersistentSettings.default
+                
+                self.context.joinConferenceCall(call: resolvedCallLink, isVideo: conferenceCall.flags.contains(.isVideo), unmuteByDefault: value.isMicrophoneEnabledByDefault)
+            })
         }, error: { [weak self] error in
             guard let self else {
                 return
