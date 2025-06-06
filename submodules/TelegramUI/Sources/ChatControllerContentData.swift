@@ -928,6 +928,10 @@ extension ChatControllerImpl {
                         explicitelyCanPinMessages = true
                     }
                     
+                    #if DEBUG
+                    peerMonoforumId = nil
+                    #endif
+                    
                     let preloadHistoryPeerId = peerMonoforumId ?? peerDiscussionId
                     if strongSelf.preloadHistoryPeerId != preloadHistoryPeerId {
                         strongSelf.preloadHistoryPeerId = preloadHistoryPeerId
@@ -1620,6 +1624,10 @@ extension ChatControllerImpl {
                         } else if peerView.peerId == context.account.peerId {
                             explicitelyCanPinMessages = true
                         }
+                        
+                        #if DEBUG
+                        peerMonoforumId = nil
+                        #endif
                         
                         let preloadHistoryPeerId = peerMonoforumId ?? peerDiscussionId
                         if strongSelf.preloadHistoryPeerId != preloadHistoryPeerId {

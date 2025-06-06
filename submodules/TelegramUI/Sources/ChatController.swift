@@ -8558,7 +8558,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             self?.playShakeAnimation()
                         }
                     } else if let navigationController = strongSelf.effectiveNavigationController {
-                        if case let .channel(channel) = peerId, channel.isForumOrMonoForum {
+                        if case let .channel(channel) = peerId, channel.isForum, !channel.displayForumAsTabs {
                             strongSelf.context.sharedContext.navigateToForumChannel(context: strongSelf.context, peerId: peerId.id, navigationController: navigationController)
                         } else {
                             strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), subject: subject, updateTextInputState: !peerId.id.isGroupOrChannel ? textInputState : nil, keepStack: .always, peekData: peekData))
