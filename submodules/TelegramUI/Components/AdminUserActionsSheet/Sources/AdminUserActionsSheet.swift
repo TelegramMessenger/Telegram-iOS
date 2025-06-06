@@ -901,11 +901,10 @@ private final class AdminUserActionsSheetComponent: Component {
             switch component.mode {
             case .monoforum:
                 if let peer = component.peers.first {
-                    titleString = "Delete \(EnginePeer(peer.peer).compactDisplayTitle)"
+                    titleString = environment.strings.Monoforum_DeleteTopic_Title(EnginePeer(peer.peer).compactDisplayTitle).string
                 } else {
                     titleString = environment.strings.Common_Delete
                 }
-                //TODO:localize
             case let .chat(messageCount, deleteAllMessageCount, _):
                 titleString = environment.strings.Chat_AdminActionSheet_DeleteTitle(Int32(messageCount))
                 if let deleteAllMessageCount {

@@ -130,8 +130,7 @@ public final class StarsBalanceOverlayComponent: Component {
             if component.peerId == component.context.account.peerId {
                 rawString = presentationData.strings.StarsBalance_YourBalance("**⭐️\(balance)**").string
             } else {
-                //TODO:localize
-                rawString = "Your channel balance is **⭐️\(balance)**"
+                rawString = presentationData.strings.StarsBalance_ChannelBalance("**⭐️\(balance)**").string
             }
             
             let attributedText = parseMarkdownIntoAttributedString(

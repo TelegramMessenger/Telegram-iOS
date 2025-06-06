@@ -235,13 +235,25 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                         displayInputTextPanel = true
                     } else if chatPresentationInterfaceState.interfaceState.replyMessageSubject == nil {
                         displayInputTextPanel = false
-                        if let currentPanel = (currentPanel as? ChatRestrictedInputPanelNode) ?? (currentSecondaryPanel as? ChatRestrictedInputPanelNode) {
-                            return (currentPanel, nil)
+                        
+                        if !isMember {
+                            if let currentPanel = (currentPanel as? ChatChannelSubscriberInputPanelNode) ?? (currentSecondaryPanel as? ChatChannelSubscriberInputPanelNode) {
+                                return (currentPanel, nil)
+                            } else {
+                                let panel = ChatChannelSubscriberInputPanelNode()
+                                panel.interfaceInteraction = interfaceInteraction
+                                panel.context = context
+                                return (panel, nil)
+                            }
                         } else {
-                            let panel = ChatRestrictedInputPanelNode()
-                            panel.context = context
-                            panel.interfaceInteraction = interfaceInteraction
-                            return (panel, nil)
+                            if let currentPanel = (currentPanel as? ChatRestrictedInputPanelNode) ?? (currentSecondaryPanel as? ChatRestrictedInputPanelNode) {
+                                return (currentPanel, nil)
+                            } else {
+                                let panel = ChatRestrictedInputPanelNode()
+                                panel.context = context
+                                panel.interfaceInteraction = interfaceInteraction
+                                return (panel, nil)
+                            }
                         }
                     }
                 } else {

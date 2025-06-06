@@ -66,7 +66,6 @@ final class ForumModeComponent: Component {
             let size = CGSize(width: availableSize.width, height: 224.0)
             
             let sideInset = (size.width - 160.0 * 2.0) / 2.0
-            //TODO:localize
             let tabsSize = self.tabs.update(
                 transition: transition,
                 component: AnyComponent(

@@ -5928,7 +5928,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.chatListDisplayNode.effectiveContainerNode.currentItemNode.setCurrentRemovingItemId(nil)
         let statusText: String
         if case let .channel(channel) = chatPeer {
-            if deleteGloballyIfPossible {
+            if channel.isMonoForum {
+                statusText = self.presentationData.strings.Undo_DeletedMonoforum
+            } else if deleteGloballyIfPossible {
                 if case .broadcast = channel.info {
                     statusText = self.presentationData.strings.Undo_DeletedChannel
                 } else {

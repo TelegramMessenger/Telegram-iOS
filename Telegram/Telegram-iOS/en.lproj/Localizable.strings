@@ -14412,3 +14412,9 @@ Sorry for the inconvenience.";
 "Stars.SendMessage.AdjustmentAction" = "OK";
 
 "Stars.SendMessage.PriceFree" = "Free";
+
+"Undo.DeletedMonoforum" = "Removed from your chat list.";
+
+"Monoforum.DeleteTopic.Title" = "Delete %@";
+"Channel.RemoveFeeAlert.Text" = "Are you sure you want to allow **%@** to message your channel for free?";
+"StarsBalance.ChannelBalance" = "Your channel balance is %@";

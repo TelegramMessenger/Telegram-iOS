@@ -516,8 +516,7 @@ public func chatMessageRemovePaymentAlertController(
     
     let text: String
     if let context, chatPeer.id != context.account.peerId {
-        //TODO:localize
-        text = "Are you sure you want to allow **\(peer.compactDisplayTitle)** to message your channel for free?"
+        text = strings.Channel_RemoveFeeAlert_Text(peer.compactDisplayTitle).string
     } else {
         text = strings.Chat_PaidMessage_RemoveFee_Text(peer.compactDisplayTitle).string
     }

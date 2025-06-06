@@ -1884,7 +1884,10 @@ extension ChatControllerImpl {
                     }
                         
                     strongSelf.initialInterfaceState = (interfaceState, initialEditMessage)
+                } else {
+                    strongSelf.initialInterfaceState = (ChatInterfaceState(), nil)
                 }
+                
                 if let readStateData = combinedInitialData.readStateData {
                     if case let .peer(peerId) = chatLocation, let peerReadStateData = readStateData[peerId], let notificationSettings = peerReadStateData.notificationSettings {
                         

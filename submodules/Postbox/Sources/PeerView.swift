@@ -22,6 +22,7 @@ final class MutablePeerView: MutablePostboxView {
     let components: PeerViewComponents
     var notificationSettings: PeerNotificationSettings?
     var cachedData: CachedPeerData?
+    var associatedCachedData: [PeerId: CachedPeerData] = [:]
     var peers: [PeerId: Peer] = [:]
     var peerPresences: [PeerId: PeerPresence] = [:]
     var messages: [MessageId: Message] = [:]
@@ -100,6 +101,10 @@ final class MutablePeerView: MutablePostboxView {
                 self.notificationSettings = postbox.peerNotificationSettingsTable.getEffective(associatedPeerId)
             } else {
                 self.notificationSettings = postbox.peerNotificationSettingsTable.getEffective(peerId)
+            }
+            
+            if let cachedData = postbox.cachedPeerDataTable.get(associatedPeerId) {
+                self.associatedCachedData[associatedPeerId] = cachedData
             }
         } else {
             self.notificationSettings = postbox.peerNotificationSettingsTable.getEffective(peerId)
@@ -279,9 +284,35 @@ final class MutablePeerView: MutablePostboxView {
                     updated = true
                 }
             }
-        } else if self.notificationSettings != nil {
-            self.notificationSettings = nil
-            updated = true
+            
+            if let associatedPeerId = peer.associatedPeerId {
+                if let value = updatedCachedPeerData[associatedPeerId] {
+                    if let current = self.associatedCachedData[associatedPeerId] {
+                        if !current.isEqual(to: value) {
+                            self.associatedCachedData[associatedPeerId] = value
+                            updated = true
+                        }
+                    } else {
+                        self.associatedCachedData[associatedPeerId] = value
+                        updated = true
+                    }
+                }
+            } else {
+                if !self.associatedCachedData.isEmpty {
+                    self.associatedCachedData.removeAll()
+                    updated = true
+                }
+            }
+        } else {
+            if self.notificationSettings != nil {
+                self.notificationSettings = nil
+                updated = true
+            }
+            
+            if !self.associatedCachedData.isEmpty {
+                self.associatedCachedData.removeAll()
+                updated = true
+            }
         }
         
         if let replaceContactPeerIds = replaceContactPeerIds {
@@ -377,6 +408,7 @@ public final class PeerView: PostboxView {
     public let groupId: PeerGroupId?
     public let storyStats: PeerStoryStats?
     public let memberStoryStats: [PeerId: PeerStoryStats]
+    public let associatedCachedData: [PeerId: CachedPeerData]
     
     init(_ mutableView: MutablePeerView) {
         self.peerId = mutableView.peerId
@@ -390,5 +422,6 @@ public final class PeerView: PostboxView {
         self.groupId = mutableView.groupId
         self.storyStats = mutableView.storyStats
         self.memberStoryStats = mutableView.memberStoryStats
+        self.associatedCachedData = mutableView.associatedCachedData
     }
 }
