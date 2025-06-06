@@ -227,7 +227,7 @@ final class WebAppWebView: WKWebView {
     }
     
     func sendEvent(name: String, data: String?) {
-        let script = "window.TelegramGameProxy.receiveEvent(\"\(name)\", \(data ?? "null"))"
+        let script = "window.TelegramGameProxy && window.TelegramGameProxy.receiveEvent && window.TelegramGameProxy.receiveEvent(\"\(name)\", \(data ?? "null"))"
         self.evaluateJavaScript(script, completionHandler: { _, _ in
         })
     }
