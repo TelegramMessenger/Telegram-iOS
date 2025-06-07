@@ -614,13 +614,13 @@ public class AdMessagesHistoryContext {
     public let peerId: EnginePeer.Id
     public let messageId: EngineMessage.Id?
     
-    public var state: Signal<(interPostInterval: Int32?, messages: [Message]), NoError> {
+    public var state: Signal<(interPostInterval: Int32?, messages: [Message], startDelay: Int32?, betweenDelay: Int32?), NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
             self.impl.with { impl in
                 let stateDisposable = impl.state.get().start(next: { state in
-                    subscriber.putNext((state.interPostInterval, state.messages))
+                    subscriber.putNext((state.interPostInterval, state.messages, state.startDelay, state.betweenDelay))
                 })
                 disposable.set(stateDisposable)
             }
