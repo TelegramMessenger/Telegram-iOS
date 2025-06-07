@@ -1525,6 +1525,7 @@ plist_fragment(
         <string>here-location</string>
         <string>yandexmaps</string>
         <string>yandexnavi</string>
+        <string>yangoride</string>
         <string>comgooglemaps</string>
         <string>youtube</string>
         <string>twitter</string>
