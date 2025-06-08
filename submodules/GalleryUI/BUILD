@@ -60,9 +60,12 @@ swift_library(
         "//submodules/TelegramUI/Components/AnimatedTextComponent",
         "//submodules/TelegramUI/Components/LottieComponent",
         "//submodules/Components/MultilineTextComponent",
+        "//submodules/Components/BundleIconComponent",                            
         "//submodules/Components/BalancedTextComponent",
         "//submodules/Components/ComponentDisplayAdapters",
         "//submodules/ComponentFlow",
+        "//submodules/TelegramUI/Components/ToastComponent",
+        "//submodules/SemanticStatusNode",
     ],
     visibility = [
         "//visibility:public",

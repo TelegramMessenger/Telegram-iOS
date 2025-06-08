@@ -26,6 +26,49 @@ import ChatPresentationInterfaceState
 import EmojiSuggestionsComponent
 import TextFormat
 import TextFieldComponent
+import ListComposePollOptionComponent
+
+public final class ComposedPoll {
+    public struct Text {
+        public let string: String
+        public let entities: [MessageTextEntity]
+        
+        public init(string: String, entities: [MessageTextEntity]) {
+            self.string = string
+            self.entities = entities
+        }
+    }
+    
+    public let publicity: TelegramMediaPollPublicity
+    public let kind: TelegramMediaPollKind
+
+    public let text: Text
+    public let options: [TelegramMediaPollOption]
+    public let correctAnswers: [Data]?
+    public let results: TelegramMediaPollResults
+    public let deadlineTimeout: Int32?
+    public let usedCustomEmojiFiles: [Int64: TelegramMediaFile]
+
+    public init(
+        publicity: TelegramMediaPollPublicity,
+        kind: TelegramMediaPollKind,
+        text: Text,
+        options: [TelegramMediaPollOption],
+        correctAnswers: [Data]?,
+        results: TelegramMediaPollResults,
+        deadlineTimeout: Int32?,
+        usedCustomEmojiFiles: [Int64: TelegramMediaFile]
+    ) {
+        self.publicity = publicity
+        self.kind = kind
+        self.text = text
+        self.options = options
+        self.correctAnswers = correctAnswers
+        self.results = results
+        self.deadlineTimeout = deadlineTimeout
+        self.usedCustomEmojiFiles = usedCustomEmojiFiles
+    }
+}
 
 final class ComposePollScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -1585,7 +1628,7 @@ public class ComposePollScreen: ViewControllerComponentContainer, AttachmentCont
             maxPollAnwsersCount = Int(value)
         }
         return InitialData(
-            maxPollTextLength: Int(200),
+            maxPollTextLength: 200,
             maxPollOptionLength: 100,
             maxPollAnwsersCount: maxPollAnwsersCount
         )

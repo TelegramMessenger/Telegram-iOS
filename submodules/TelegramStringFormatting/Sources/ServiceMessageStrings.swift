@@ -1286,6 +1286,80 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     }
                     attributedString = addAttributesToStringWithRanges(resultString._tuple, body: bodyAttributes, argumentAttributes: attributes)
                 }
+            case let .todoCompletions(completed, incompleted):
+                var todo: TelegramMediaTodo?
+                for attribute in message.attributes {
+                    if let attribute = attribute as? ReplyMessageAttribute, let message = message.associatedMessages[attribute.messageId] {
+                        for media in message.media {
+                            if let media = media as? TelegramMediaTodo {
+                                todo = media
+                            }
+                        }
+                    }
+                }
+                if let todo {
+                    if message.author?.id == accountPeerId {
+                        let resultString: PresentationStrings.FormattedString
+                        if let completedTaskId = completed.first, let completedTask = todo.items.first(where: { $0.id == completedTaskId }) {
+                            resultString = strings.Notification_TodoCompletedYou(completedTask.text)
+                        } else if let incompletedTaskId = incompleted.first, let incompletedTask = todo.items.first(where: { $0.id == incompletedTaskId }) {
+                            resultString = strings.Notification_TodoIncompletedYou(incompletedTask.text)
+                        } else {
+                            fatalError()
+                        }
+                        attributedString = addAttributesToStringWithRanges(resultString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+                    } else {
+                        let peerName = message.author?.compactDisplayTitle ?? ""
+                        
+                        var attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)])
+                        attributes[1] = boldAttributes
+                        
+                        let resultString: PresentationStrings.FormattedString
+                        if let completedTaskId = completed.first, let completedTask = todo.items.first(where: { $0.id == completedTaskId }) {
+                            resultString = strings.Notification_TodoCompleted(peerName, completedTask.text)
+                        } else if let incompletedTaskId = incompleted.first, let incompletedTask = todo.items.first(where: { $0.id == incompletedTaskId }) {
+                            resultString = strings.Notification_TodoIncompleted(peerName, incompletedTask.text)
+                        } else {
+                            fatalError()
+                        }
+                        attributedString = addAttributesToStringWithRanges(resultString._tuple, body: bodyAttributes, argumentAttributes: attributes)
+                    }
+                } else {
+                    attributedString = NSAttributedString(string: ".")
+                }
+            case let .todoAppendTasks(tasks):
+                var todoTitle = ""
+                for attribute in message.attributes {
+                    if let attribute = attribute as? ReplyMessageAttribute, let message = message.associatedMessages[attribute.messageId] {
+                        for media in message.media {
+                            if let todo = media as? TelegramMediaTodo {
+                                todoTitle = todo.text
+                            }
+                        }
+                    }
+                }
+                if message.author?.id == accountPeerId {
+                    let resultString: PresentationStrings.FormattedString
+                    if tasks.count == 1, let task = tasks.first {
+                        resultString = strings.Notification_TodoAddedTaskYou(task.text, todoTitle)
+                    } else {
+                        resultString = strings.Notification_TodoAddedMultipleTasksYou(strings.Notification_TodoTasks(Int32(tasks.count)), todoTitle)
+                    }
+                    attributedString = addAttributesToStringWithRanges(resultString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes, 1: boldAttributes])
+                } else {
+                    let peerName = message.author?.compactDisplayTitle ?? ""
+                    var attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)])
+                    attributes[1] = boldAttributes
+                    attributes[2] = boldAttributes
+                    
+                    let resultString: PresentationStrings.FormattedString
+                    if tasks.count == 1, let task = tasks.first {
+                        resultString = strings.Notification_TodoAddedTask(peerName, task.text, todoTitle)
+                    } else {
+                        resultString = strings.Notification_TodoAddedMultipleTasks(peerName, strings.Notification_TodoTasks(Int32(tasks.count)), todoTitle)
+                    }
+                    attributedString = addAttributesToStringWithRanges(resultString._tuple, body: bodyAttributes, argumentAttributes: attributes)
+                }
             case .unknown:
                 attributedString = nil
             }

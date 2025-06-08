@@ -11,7 +11,7 @@ func _internal_getPaidMessagesRevenue(account: Account, peerId: PeerId) -> Signa
         guard let inputUser else {
             return .single(nil)
         }
-        return account.network.request(Api.functions.account.getPaidMessagesRevenue(userId: inputUser))
+        return account.network.request(Api.functions.account.getPaidMessagesRevenue(flags: 0, parentPeer: nil, userId: inputUser))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.account.PaidMessagesRevenue?, NoError> in
             return .single(nil)
@@ -40,7 +40,7 @@ func _internal_addNoPaidMessagesException(account: Account, peerId: PeerId, refu
         if refundCharged {
             flags |= (1 << 0)
         }
-        return account.network.request(Api.functions.account.addNoPaidMessagesException(flags: flags, userId: inputUser))
+        return account.network.request(Api.functions.account.toggleNoPaidMessagesException(flags: flags, parentPeer: nil, userId: inputUser))
         |> `catch` { _ -> Signal<Api.Bool, NoError> in
             return .single(.boolFalse)
         } |> mapToSignal { _ in

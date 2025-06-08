@@ -22,22 +22,6 @@ public extension Api.functions.account {
                 }
 }
 public extension Api.functions.account {
-                static func addNoPaidMessagesException(flags: Int32, userId: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(1869122215)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    userId.serialize(buffer, true)
-                    return (FunctionDescription(name: "account.addNoPaidMessagesException", parameters: [("flags", String(describing: flags)), ("userId", String(describing: userId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Bool?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Bool
-                        }
-                        return result
-                    })
-                }
-}
-public extension Api.functions.account {
                 static func cancelPasswordEmail() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-1043606090)
@@ -666,11 +650,13 @@ public extension Api.functions.account {
                 }
 }
 public extension Api.functions.account {
-                static func getPaidMessagesRevenue(userId: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.account.PaidMessagesRevenue>) {
+                static func getPaidMessagesRevenue(flags: Int32, parentPeer: Api.InputPeer?, userId: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.account.PaidMessagesRevenue>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-249139400)
+                    buffer.appendInt32(431639143)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {parentPeer!.serialize(buffer, true)}
                     userId.serialize(buffer, true)
-                    return (FunctionDescription(name: "account.getPaidMessagesRevenue", parameters: [("userId", String(describing: userId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.account.PaidMessagesRevenue? in
+                    return (FunctionDescription(name: "account.getPaidMessagesRevenue", parameters: [("flags", String(describing: flags)), ("parentPeer", String(describing: parentPeer)), ("userId", String(describing: userId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.account.PaidMessagesRevenue? in
                         let reader = BufferReader(buffer)
                         var result: Api.account.PaidMessagesRevenue?
                         if let signature = reader.readInt32() {
@@ -1428,6 +1414,23 @@ public extension Api.functions.account {
                     peer.serialize(buffer, true)
                     paused.serialize(buffer, true)
                     return (FunctionDescription(name: "account.toggleConnectedBotPaused", parameters: [("peer", String(describing: peer)), ("paused", String(describing: paused))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.account {
+                static func toggleNoPaidMessagesException(flags: Int32, parentPeer: Api.InputPeer?, userId: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-30483850)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {parentPeer!.serialize(buffer, true)}
+                    userId.serialize(buffer, true)
+                    return (FunctionDescription(name: "account.toggleNoPaidMessagesException", parameters: [("flags", String(describing: flags)), ("parentPeer", String(describing: parentPeer)), ("userId", String(describing: userId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
@@ -5068,6 +5071,27 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
+                static func appendTodoList(peer: Api.InputPeer, msgId: Int32, list: [Api.TodoItem]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(564531287)
+                    peer.serialize(buffer, true)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(list.count))
+                    for item in list {
+                        item.serialize(buffer, true)
+                    }
+                    return (FunctionDescription(name: "messages.appendTodoList", parameters: [("peer", String(describing: peer)), ("msgId", String(describing: msgId)), ("list", String(describing: list))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
                 static func checkChatInvite(hash: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.ChatInvite>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1051570619)
@@ -7065,11 +7089,13 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func getSponsoredMessages(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.SponsoredMessages>) {
+                static func getSponsoredMessages(flags: Int32, peer: Api.InputPeer, msgId: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.SponsoredMessages>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1680673735)
+                    buffer.appendInt32(1030547536)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
-                    return (FunctionDescription(name: "messages.getSponsoredMessages", parameters: [("peer", String(describing: peer))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.SponsoredMessages? in
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(msgId!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "messages.getSponsoredMessages", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("msgId", String(describing: msgId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.SponsoredMessages? in
                         let reader = BufferReader(buffer)
                         var result: Api.messages.SponsoredMessages?
                         if let signature = reader.readInt32() {
@@ -8875,6 +8901,32 @@ public extension Api.functions.messages {
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
+                static func toggleTodoCompleted(peer: Api.InputPeer, msgId: Int32, completed: [Int32], incompleted: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-740282076)
+                    peer.serialize(buffer, true)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(completed.count))
+                    for item in completed {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(incompleted.count))
+                    for item in incompleted {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }
+                    return (FunctionDescription(name: "messages.toggleTodoCompleted", parameters: [("peer", String(describing: peer)), ("msgId", String(describing: msgId)), ("completed", String(describing: completed)), ("incompleted", String(describing: incompleted))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
                         }
                         return result
                     })

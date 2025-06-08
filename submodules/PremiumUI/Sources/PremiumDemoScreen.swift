@@ -1118,6 +1118,26 @@ private final class DemoSheetContent: CombinedComponent {
                     )
                 )
                 
+                //TODO:localize
+                availableItems[.todo] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.todo,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: component.context,
+                                    position: .top,
+                                    videoFile: configuration.videos["todo"],
+                                    decoration: .badgeStars
+                                )),
+                                title: "To-Do Lists",
+                                text: "Plan, assign and complete tasks – seamlessly and efficiently.",
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                
                 let index: Int = 0
                 var items: [DemoPagerComponent.Item] = []
                 if let item = availableItems.first(where: { $0.value.content.id == component.subject as AnyHashable }) {
@@ -1216,6 +1236,9 @@ private final class DemoSheetContent: CombinedComponent {
                 text = strings.Premium_MessageEffectsInfo
             case .paidMessages:
                 text = strings.Premium_PaidMessagesInfo
+            case .todo:
+                //TODO:localize
+                text = "Plan, assign and complete tasks – seamlessly and efficiently."
             default:
                 text = ""
             }
@@ -1301,6 +1324,8 @@ private final class DemoSheetContent: CombinedComponent {
                             buttonText = strings.Premium_EmojiStatus_Proceed
                             buttonAnimationName = "premium_unlock"
                         case .paidMessages:
+                            buttonText = strings.Premium_PaidMessages_Proceed
+                        case .todo:
                             buttonText = strings.Premium_PaidMessages_Proceed
                         default:
                             buttonText = strings.Common_OK
@@ -1492,6 +1517,7 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
         case folderTags
         case messageEffects
         case paidMessages
+        case todo
         
         case businessLocation
         case businessHours
@@ -1552,6 +1578,8 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
                 return .messageEffects
             case .paidMessages:
                 return .paidMessages
+            case .todo:
+                return .todo
             case .businessLocation:
                 return .businessLocation
             case .businessHours:

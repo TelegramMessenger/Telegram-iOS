@@ -423,6 +423,20 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                         if messageText.isEmpty, case let .Loaded(content) = webpage.content {
                             messageText = content.displayUrl
                         }
+                    case let todo as TelegramMediaTodo:
+                        let pollPrefix = "☑️ "
+                        let entityOffset = (pollPrefix as NSString).length
+                        messageText = "\(pollPrefix)\(todo.text)"
+                        for entity in todo.textEntities {
+                            if case let .CustomEmoji(_, fileId) = entity.type {
+                                if customEmojiRanges == nil {
+                                    customEmojiRanges = []
+                                }
+                                let range = NSRange(location: entityOffset + entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound)
+                                let attribute = ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: fileId, file: message.associatedMedia[EngineMedia.Id(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile)
+                                customEmojiRanges?.append((range, attribute))
+                            }
+                        }
                     default:
                         break
                 }

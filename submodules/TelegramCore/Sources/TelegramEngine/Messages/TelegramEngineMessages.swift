@@ -204,6 +204,14 @@ public extension TelegramEngine {
             return PollResultsContext(account: self.account, messageId: messageId, poll: poll)
         }
 
+        public func requestUpdateTodoMessageItems(messageId: MessageId, completedIds: [Int32], incompletedIds: [Int32]) -> Signal<Never, RequestUpdateTodoMessageError> {
+            return _internal_requestUpdateTodoMessageItems(account: self.account, messageId: messageId, completedIds: completedIds, incompletedIds: incompletedIds)
+        }
+        
+        public func appendTodoMessageItems(messageId: MessageId, items: [TelegramMediaTodo.Item]) -> Signal<Never, AppendTodoMessageError> {
+            return _internal_appendTodoMessageItems(account: self.account, messageId: messageId, items: items)
+        }
+        
         public func earliestUnseenPersonalMentionMessage(peerId: PeerId, threadId: Int64?) -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> {
             let account = self.account
             return _internal_earliestUnseenPersonalMentionMessage(account: self.account, peerId: peerId, threadId: threadId)
@@ -407,8 +415,8 @@ public extension TelegramEngine {
             }
         }
 
-        public func adMessages(peerId: PeerId) -> AdMessagesHistoryContext {
-            return AdMessagesHistoryContext(account: self.account, peerId: peerId)
+        public func adMessages(peerId: PeerId, messageId: EngineMessage.Id? = nil) -> AdMessagesHistoryContext {
+            return AdMessagesHistoryContext(account: self.account, peerId: peerId, messageId: messageId)
         }
 
         public func messageReadStats(id: MessageId) -> Signal<MessageReadStats?, NoError> {

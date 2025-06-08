@@ -835,11 +835,21 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     )
                 ))
             } else if case .unique = giftAnimationSubject {
+                let reason: String
+                if count < StarsAmount.zero, case let .transaction(transaction, _) = subject {
+                    if transaction.flags.contains(.isStarGiftResale) {
+                        reason = strings.Stars_Transaction_GiftPurchase
+                    } else {
+                        reason = strings.Stars_Transaction_GiftTransfer
+                    }
+                } else {
+                    reason = strings.Stars_Transaction_GiftSale
+                }
                 tableItems.append(.init(
                     id: "reason",
                     title: strings.Stars_Transaction_Giveaway_Reason,
                     component: AnyComponent(
-                        MultilineTextComponent(text: .plain(NSAttributedString(string: count < StarsAmount.zero ? strings.Stars_Transaction_GiftPurchase : strings.Stars_Transaction_GiftSale, font: tableFont, textColor: tableTextColor)))
+                        MultilineTextComponent(text: .plain(NSAttributedString(string: reason, font: tableFont, textColor: tableTextColor)))
                     )
                 ))
             }
