@@ -1,8 +1,8 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "ComposePollUI",
-    module_name = "ComposePollUI",
+    name = "ComposeTodoScreen",
+    module_name = "ComposeTodoScreen",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
@@ -42,6 +42,8 @@ swift_library(
         "//submodules/ChatPresentationInterfaceState",
         "//submodules/TelegramUI/Components/EmojiSuggestionsComponent",
         "//submodules/TelegramUI/Components/ListComposePollOptionComponent",
+        "//submodules/ComposePollUI",
+        "//submodules/Markdown",
     ],
     visibility = [
         "//visibility:public",

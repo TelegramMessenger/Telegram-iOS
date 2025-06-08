@@ -1479,25 +1479,33 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             isMigrated = false
         }
                 
-        if data.canEdit && !isPinnedMessages && !isMigrated {
-            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_MessageDialogEdit, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.actionSheet.primaryTextColor)
-            }, action: { c, f in
-                interfaceInteraction.setupEditMessage(messages[0].id, { transition in
-                    f(.custom(transition))
-                })
-            })))
-        }
-        
         var activePoll: TelegramMediaPoll?
+        var activeTodo: TelegramMediaTodo?
         for media in message.media {
             if let poll = media as? TelegramMediaPoll, !poll.isClosed, message.id.namespace == Namespaces.Message.Cloud, poll.pollId.namespace == Namespaces.Media.CloudPoll {
                 if !isPollEffectivelyClosed(message: message, poll: poll) {
                     activePoll = poll
                 }
+            } else if let todo = media as? TelegramMediaTodo {
+                activeTodo = todo
             }
         }
         
+        if data.canEdit && !isPinnedMessages && !isMigrated {
+            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_MessageDialogEdit, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.actionSheet.primaryTextColor)
+            }, action: { c, f in
+                if let _ = activeTodo {
+                    interfaceInteraction.editTodoMessage(messages[0].id, false)
+                    f(.dismissWithoutContent)
+                } else {
+                    interfaceInteraction.setupEditMessage(messages[0].id, { transition in
+                        f(.custom(transition))
+                    })
+                }
+            })))
+        }
+    
         if let activePoll = activePoll, let voters = activePoll.results.voters {
             var hasSelected = false
             for result in voters {
@@ -1511,6 +1519,21 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 }, action: { _, f in
                     interfaceInteraction.requestUnvoteInMessage(messages[0].id)
                     f(.default)
+                })))
+            }
+        }
+        
+        if let activeTodo {
+            var canAppend = false
+            if message.author?.id == context.account.peerId || activeTodo.flags.contains(.othersCanAppend) {
+                canAppend = true
+            }
+            if canAppend {
+                actions.append(.action(ContextMenuActionItem(text: "Add a Task", icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddCircle"), color: theme.actionSheet.primaryTextColor)
+                }, action: { _, f in
+                    interfaceInteraction.editTodoMessage(messages[0].id, true)
+                    f(.dismissWithoutContent)
                 })))
             }
         }

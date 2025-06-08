@@ -281,7 +281,8 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let playShakeAnimation:  () -> Void
     public let displayQuickShare: (MessageId, ASDisplayNode, ContextGesture) -> Void
     public let updateChatLocationThread: (Int64?, ChatControllerAnimateInnerChatSwitchDirection?) -> Void
-    
+    public let requestToggleTodoMessageItem: (MessageId, Int32, Bool) -> Void
+    public let displayTodoToggleUnavailable: (MessageId) -> Void
     public var canPlayMedia: Bool = false
     public var hiddenMedia: [MessageId: [Media]] = [:]
     public var expandedTranslationMessageStableIds: Set<UInt32> = Set()
@@ -444,6 +445,8 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         playShakeAnimation: @escaping () -> Void,
         displayQuickShare: @escaping (MessageId, ASDisplayNode, ContextGesture) -> Void,
         updateChatLocationThread: @escaping (Int64?, ChatControllerAnimateInnerChatSwitchDirection?) -> Void,
+        requestToggleTodoMessageItem: @escaping (MessageId, Int32, Bool) -> Void,
+        displayTodoToggleUnavailable: @escaping (MessageId) -> Void,
         automaticMediaDownloadSettings: MediaAutoDownloadSettings,
         pollActionState: ChatInterfacePollActionState,
         stickerSettings: ChatInterfaceStickerSettings,
@@ -563,6 +566,8 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         self.playShakeAnimation = playShakeAnimation
         self.displayQuickShare = displayQuickShare
         self.updateChatLocationThread = updateChatLocationThread
+        self.requestToggleTodoMessageItem = requestToggleTodoMessageItem
+        self.displayTodoToggleUnavailable = displayTodoToggleUnavailable
         
         self.automaticMediaDownloadSettings = automaticMediaDownloadSettings
         

@@ -33,6 +33,9 @@ import RasterizedCompositionComponent
 import BadgeComponent
 import ComponentFlow
 import ComponentDisplayAdapters
+import ToastComponent
+import MultilineTextComponent
+import BundleIconComponent
 
 public enum UniversalVideoGalleryItemContentInfo {
     case message(Message, Int?)
@@ -1390,7 +1393,93 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         if dismiss {
             self.dismiss()
         }
+        
+        if self.adDisposable == nil, let contentInfo = self.item?.contentInfo, case let .message(message, _) = contentInfo {
+            let adContext = self.context.engine.messages.adMessages(peerId: message.id.peerId, messageId: message.id)
+            self.adContext = adContext
+            self.adDisposable = (adContext.state
+            |> deliverOnMainQueue).start(next: { [weak self] state in
+                guard let self else {
+                    return
+                }
+                if let message = state.messages.first {
+                    Queue.mainQueue().after(2.0, {
+                        self.adMessage = message
+                        if let validLayout = self.validLayout {
+                            self.containerLayoutUpdated(validLayout.layout, navigationBarHeight: validLayout.navigationBarHeight, transition: .immediate)
+                        }
+                    })
+                }
+            })
+        }
+        
+        if let adMessage = self.adMessage {
+            let sideInset: CGFloat = 16.0
+            let title = adMessage.author.flatMap { EnginePeer($0) }?.compactDisplayTitle ?? ""
+            
+            let adSize = self.adView.update(
+                transition: .immediate,
+                component: AnyComponent(
+                    ToastContentComponent(
+                        icon: AnyComponent(
+                            BundleIconComponent(name: "Components/AdMock", tintColor: nil, maxSize: CGSize(width: 30.0, height: 30.0))
+                        ),
+                        content: AnyComponent(
+                            HStack([
+                                AnyComponentWithIdentity(id: 0, component: AnyComponent(
+                                    VStack([
+                                        AnyComponentWithIdentity(id: 0, component: AnyComponent(
+                                            HStack([
+                                                AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white))))),
+                                                AnyComponentWithIdentity(id: 1, component: AnyComponent(Image(image: PresentationResourcesChatList.searchAdIcon(presentationData.theme, strings: presentationData.strings), size: CGSize(width: 31.0, height: 15.0))))
+                                            ], spacing: 5.0)
+                                        )),
+                                        AnyComponentWithIdentity(id: 1, component: AnyComponent(
+                                            MultilineTextComponent(text: .plain(NSAttributedString(string: adMessage.text, font: Font.regular(14.0), textColor: .white)))
+                                        ))
+                                    ], alignment: .left, spacing: 3.0, fillWidth: false)
+                                )),
+                                AnyComponentWithIdentity(id: 1, component: AnyComponent(
+                                    AdRemainingProgressComponent(action: { [weak self] in
+                                        guard let self else {
+                                            return
+                                        }
+                                        self.adMessage = nil
+                                        if let validLayout = self.validLayout {
+                                            self.containerLayoutUpdated(validLayout.layout, navigationBarHeight: validLayout.navigationBarHeight, transition: .immediate)
+                                        }
+                                    })
+                                ))
+                            ], spacing: 16.0, alignment: .alternatingLeftRight)
+                        ), action: { [weak self] in
+                            if let self, let item = self.item, let ad = adMessage.adAttribute {
+                                item.performAction(.url(url: ad.url, concealed: false))
+                            }
+                        }
+                    )
+                ),
+                environment: {},
+                containerSize: CGSize(width: layout.size.width - sideInset * 2.0, height: 70.0)
+            )
+            if let adView = self.adView.view {
+                if adView.superview == nil {
+                    self.view.addSubview(adView)
+                    
+                    adView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                    adView.layer.animatePosition(from: CGPoint(x: 0.0, y: 64.0), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                }
+                adView.frame = CGRect(origin: CGPoint(x: sideInset, y: layout.size.height - adSize.height - 145.0), size: adSize)
+            }
+        } else if let adView = self.adView.view {
+            adView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
+            adView.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: 64.0), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+        }
     }
+    
+    private var adView = ComponentView<Empty>()
+    private var adContext: AdMessagesHistoryContext?
+    private var adDisposable: Disposable?
+    private var adMessage: Message?
     
     func setupItem(_ item: UniversalVideoGalleryItem) {
         if self.item?.content.id != item.content.id {            

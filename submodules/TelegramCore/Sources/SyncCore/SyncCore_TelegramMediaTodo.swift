@@ -131,4 +131,24 @@ public final class TelegramMediaTodo: Media, Equatable {
         }
         return true
     }
+    
+    func withUpdated(items: [TelegramMediaTodo.Item]) -> TelegramMediaTodo {
+        return TelegramMediaTodo(
+            flags: self.flags,
+            text: self.text,
+            textEntities: self.textEntities,
+            items: items,
+            completions: self.completions
+        )
+    }
+    
+    func withUpdated(completions: [TelegramMediaTodo.Completion]) -> TelegramMediaTodo {
+        return TelegramMediaTodo(
+            flags: self.flags,
+            text: self.text,
+            textEntities: self.textEntities,
+            items: self.items,
+            completions: completions
+        )
+    }
 }

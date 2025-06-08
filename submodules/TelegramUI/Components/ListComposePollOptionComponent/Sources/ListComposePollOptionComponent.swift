@@ -73,6 +73,7 @@ public final class ListComposePollOptionComponent: Component {
     public let theme: PresentationTheme
     public let strings: PresentationStrings
     public let placeholder: NSAttributedString?
+    public let isEnabled: Bool
     public let resetText: ResetText?
     public let assumeIsEditing: Bool
     public let characterLimit: Int?
@@ -92,6 +93,7 @@ public final class ListComposePollOptionComponent: Component {
         theme: PresentationTheme,
         strings: PresentationStrings,
         placeholder: NSAttributedString? = nil,
+        isEnabled: Bool = true,
         resetText: ResetText? = nil,
         assumeIsEditing: Bool = false,
         characterLimit: Int,
@@ -110,6 +112,7 @@ public final class ListComposePollOptionComponent: Component {
         self.theme = theme
         self.strings = strings
         self.placeholder = placeholder
+        self.isEnabled = isEnabled
         self.resetText = resetText
         self.assumeIsEditing = assumeIsEditing
         self.characterLimit = characterLimit
@@ -138,6 +141,9 @@ public final class ListComposePollOptionComponent: Component {
             return false
         }
         if lhs.placeholder != rhs.placeholder {
+            return false
+        }
+        if lhs.isEnabled != rhs.isEnabled {
             return false
         }
         if lhs.resetText != rhs.resetText {
@@ -400,6 +406,9 @@ public final class ListComposePollOptionComponent: Component {
                     self.textField.parentState = state
                 }
                 transition.setFrame(view: textFieldView, frame: textFieldFrame)
+                
+                transition.setAlpha(view: textFieldView, alpha: component.isEnabled ? 1.0 : 0.3)
+                textFieldView.isUserInteractionEnabled = component.isEnabled
             }
             
             if let selection = component.selection {

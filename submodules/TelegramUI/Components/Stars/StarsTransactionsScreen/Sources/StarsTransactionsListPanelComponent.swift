@@ -328,7 +328,15 @@ final class StarsTransactionsListPanelComponent: Component {
                                             break
                                         }
                                     }
-                                    itemSubtitle = item.count > StarsAmount.zero ? environment.strings.Stars_Intro_Transaction_GiftSale : environment.strings.Stars_Intro_Transaction_GiftPurchase
+                                    if item.count > StarsAmount.zero {
+                                        itemSubtitle = environment.strings.Stars_Intro_Transaction_GiftSale
+                                    } else {
+                                        if item.flags.contains(.isStarGiftResale) {
+                                            itemSubtitle = environment.strings.Stars_Intro_Transaction_GiftPurchase
+                                        } else {
+                                            itemSubtitle = environment.strings.Stars_Intro_Transaction_GiftTransfer
+                                        }
+                                    }
                                 }
                             }
                         } else if let _ = item.giveawayMessageId {

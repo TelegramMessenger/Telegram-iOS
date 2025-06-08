@@ -595,7 +595,17 @@ extension ChatControllerImpl {
         self.dismissAllTooltips()
         
         let insets = layout.insets(options: [.input])
-        let location = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.right - 42.0 - UIScreenPixel, y: layout.size.height - insets.bottom - 122.0), size: CGSize())
+        
+        var screenWidth = layout.size.width
+        if layout.metrics.isTablet {
+            if layout.size.height == layout.deviceMetrics.screenSize.width {
+                screenWidth = layout.deviceMetrics.screenSize.height
+            } else {
+                screenWidth = layout.deviceMetrics.screenSize.width
+            }
+        }
+        
+        let location = CGRect(origin: CGPoint(x: screenWidth - layout.safeInsets.right - 42.0 - UIScreenPixel, y: layout.size.height - insets.bottom - 122.0), size: CGSize())
         
         let tooltipController = TooltipScreen(
             account: self.context.account,

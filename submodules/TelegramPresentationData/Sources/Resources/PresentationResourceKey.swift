@@ -168,6 +168,11 @@ public enum PresentationResourceKey: Int32 {
     case chatBubbleFileCloudFetchedIncomingIcon
     case chatBubbleFileCloudFetchedOutgoingIcon
     
+    case chatBubbleTodoDotIncomingIcon
+    case chatBubbleTodoDotOutgoingIcon
+    case chatBubbleTodoCheckIncomingIcon
+    case chatBubbleTodoCheckOutgoingIcon
+    
     case chatBubbleReplyThumbnailPlayImage
     
     case chatBubbleDeliveryFailedIcon

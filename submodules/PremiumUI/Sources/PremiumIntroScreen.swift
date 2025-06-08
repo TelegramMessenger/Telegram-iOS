@@ -309,6 +309,12 @@ public enum PremiumSource: Equatable {
             } else {
                 return false
             }
+        case .todo:
+            if case .todo = rhs {
+                return true
+            } else {
+                return false
+            }
         case let .auth(lhsPrice):
             if case let .auth(rhsPrice) = rhs, lhsPrice == rhsPrice {
                 return true
@@ -363,6 +369,7 @@ public enum PremiumSource: Equatable {
     case folderTags
     case messageEffects
     case paidMessages
+    case todo
     case auth(String)
     
     var identifier: String? {
@@ -459,6 +466,8 @@ public enum PremiumSource: Equatable {
             return "effects"
         case .paidMessages:
             return "paid_messages"
+        case .todo:
+            return "todo"
         case .auth:
             return "auth"
         }
@@ -490,6 +499,7 @@ public enum PremiumPerk: CaseIterable {
     case folderTags
     case messageEffects
     case paidMessages
+    case todo
     
     case businessLocation
     case businessHours
@@ -601,6 +611,8 @@ public enum PremiumPerk: CaseIterable {
             return "effects"
         case .paidMessages:
             return "paid_messages"
+        case .todo:
+            return "todo"
         case .business:
             return "business"
         case .businessLocation:
@@ -672,6 +684,9 @@ public enum PremiumPerk: CaseIterable {
             return strings.Premium_MessageEffects
         case .paidMessages:
             return strings.Premium_PaidMessages
+        case .todo:
+            //TODO:localize
+            return "To-Do Lists"
         case .businessLocation:
             return strings.Business_Location
         case .businessHours:
@@ -741,6 +756,9 @@ public enum PremiumPerk: CaseIterable {
             return strings.Premium_MessageEffectsInfo
         case .paidMessages:
             return strings.Premium_PaidMessagesInfo
+        case .todo:
+            //TODO:localize
+            return "Plan, assign and complete tasks – seamlessly and efficiently."
         case .businessLocation:
             return strings.Business_LocationInfo
         case .businessHours:
@@ -809,6 +827,8 @@ public enum PremiumPerk: CaseIterable {
         case .messageEffects:
             return "Premium/Perk/MessageEffects"
         case .paidMessages:
+            return "Premium/Perk/PaidMessages"
+        case .todo:
             return "Premium/Perk/PaidMessages"
         case .businessLocation:
             return "Premium/BusinessPerk/Location"

@@ -27,128 +27,72 @@ import EmojiSuggestionsComponent
 import TextFormat
 import TextFieldComponent
 import ListComposePollOptionComponent
+import Markdown
 
-public final class ComposedPoll {
-    public struct Text {
-        public let string: String
-        public let entities: [MessageTextEntity]
-        
-        public init(string: String, entities: [MessageTextEntity]) {
-            self.string = string
-            self.entities = entities
-        }
-    }
-    
-    public let publicity: TelegramMediaPollPublicity
-    public let kind: TelegramMediaPollKind
-
-    public let text: Text
-    public let options: [TelegramMediaPollOption]
-    public let correctAnswers: [Data]?
-    public let results: TelegramMediaPollResults
-    public let deadlineTimeout: Int32?
-    public let usedCustomEmojiFiles: [Int64: TelegramMediaFile]
-
-    public init(
-        publicity: TelegramMediaPollPublicity,
-        kind: TelegramMediaPollKind,
-        text: Text,
-        options: [TelegramMediaPollOption],
-        correctAnswers: [Data]?,
-        results: TelegramMediaPollResults,
-        deadlineTimeout: Int32?,
-        usedCustomEmojiFiles: [Int64: TelegramMediaFile]
-    ) {
-        self.publicity = publicity
-        self.kind = kind
-        self.text = text
-        self.options = options
-        self.correctAnswers = correctAnswers
-        self.results = results
-        self.deadlineTimeout = deadlineTimeout
-        self.usedCustomEmojiFiles = usedCustomEmojiFiles
-    }
-}
-
-final class ComposePollScreenComponent: Component {
+final class ComposeTodoScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
     let peer: EnginePeer
-    let isQuiz: Bool?
-    let initialData: ComposePollScreen.InitialData
-    let completion: (ComposedPoll) -> Void
+    let initialData: ComposeTodoScreen.InitialData
+    let completion: (TelegramMediaTodo) -> Void
 
     init(
         context: AccountContext,
         peer: EnginePeer,
-        isQuiz: Bool?,
-        initialData: ComposePollScreen.InitialData,
-        completion: @escaping (ComposedPoll) -> Void
+        initialData: ComposeTodoScreen.InitialData,
+        completion: @escaping (TelegramMediaTodo) -> Void
     ) {
         self.context = context
         self.peer = peer
-        self.isQuiz = isQuiz
         self.initialData = initialData
         self.completion = completion
     }
 
-    static func ==(lhs: ComposePollScreenComponent, rhs: ComposePollScreenComponent) -> Bool {
+    static func ==(lhs: ComposeTodoScreenComponent, rhs: ComposeTodoScreenComponent) -> Bool {
         return true
     }
     
-    private final class PollOption {
-        let id: Int
+    private final class TodoItem {
+        let id: Int32
         let textInputState = TextFieldComponent.ExternalState()
         let textFieldTag = NSObject()
         var resetText: String?
         
-        init(id: Int) {
+        init(id: Int32) {
             self.id = id
         }
     }
     
     final class View: UIView, UIScrollViewDelegate {
         private let scrollView: UIScrollView
-        private var reactionInput: ComponentView<Empty>?
-        private let pollTextSection = ComponentView<Empty>()
-        private let quizAnswerSection = ComponentView<Empty>()
+
+        private let todoTextSection = ComponentView<Empty>()
         
-        private let pollOptionsSectionHeader = ComponentView<Empty>()
-        private let pollOptionsSectionFooterContainer = UIView()
-        private var pollOptionsSectionFooter = ComponentView<Empty>()
-        private var pollOptionsSectionContainer: ListSectionContentView
+        private let todoItemsSectionHeader = ComponentView<Empty>()
+        private let todoItemsSectionFooterContainer = UIView()
+        private var todoItemsSectionFooter = ComponentView<Empty>()
+        private var todoItemsSectionContainer: ListSectionContentView
         
-        private let pollSettingsSection = ComponentView<Empty>()
+        private let todoSettingsSection = ComponentView<Empty>()
         private let actionButton = ComponentView<Empty>()
-        
-        private var reactionSelectionControl: ComponentView<Empty>?
-        
+                
         private var isUpdating: Bool = false
         private var ignoreScrolling: Bool = false
         private var previousHadInputHeight: Bool = false
         
-        private var component: ComposePollScreenComponent?
+        private var component: ComposeTodoScreenComponent?
         private(set) weak var state: EmptyComponentState?
         private var environment: EnvironmentType?
         
-        private let pollTextInputState = TextFieldComponent.ExternalState()
-        private let pollTextFieldTag = NSObject()
-        private var resetPollText: String?
-        
-        private var quizAnswerTextInputState = TextFieldComponent.ExternalState()
-        private let quizAnswerTextInputTag = NSObject()
-        private var resetQuizAnswerText: String?
-        
-        private var nextPollOptionId: Int = 0
-        private var pollOptions: [PollOption] = []
-        private var currentPollOptionsLimitReached: Bool = false
-        
-        private var isAnonymous: Bool = true
-        private var isMultiAnswer: Bool = false
-        private var isQuiz: Bool = false
-        private var selectedQuizOptionId: Int?
-        
+        private let todoTextInputState = TextFieldComponent.ExternalState()
+        private let todoTextFieldTag = NSObject()
+        private var resetTodoText: String?
+                
+        private var nextTodoItemId: Int32 = 1
+        private var todoItems: [TodoItem] = []
+        private var currentTodoItemsLimitReached: Bool = false
+                
         private var currentInputMode: ListComposePollOptionComponent.InputMode = .keyboard
         
         private var inputMediaNodeData: ChatEntityKeyboardInputNode.InputData?
@@ -165,6 +109,9 @@ final class ComposePollScreenComponent: Component {
         
         private var currentEditingTag: AnyObject?
         
+        var isAppendableByOthers = false
+        var isCompletableByOthers = false
+        
         override init(frame: CGRect) {
             self.scrollView = UIScrollView()
             self.scrollView.showsVerticalScrollIndicator = true
@@ -175,7 +122,8 @@ final class ComposePollScreenComponent: Component {
             self.scrollView.contentInsetAdjustmentBehavior = .never
             self.scrollView.alwaysBounceVertical = true
             
-            self.pollOptionsSectionContainer = ListSectionContentView(frame: CGRect())
+            self.todoItemsSectionContainer = ListSectionContentView(frame: CGRect())
+            self.todoItemsSectionContainer.automaticallyLayoutExternalContentBackgroundView = false
             
             super.init(frame: frame)
             
@@ -195,30 +143,18 @@ final class ComposePollScreenComponent: Component {
             self.scrollView.setContentOffset(CGPoint(), animated: true)
         }
         
-        func validatedInput() -> ComposedPoll? {
-            if self.pollTextInputState.text.length == 0 {
+        func validatedInput() -> TelegramMediaTodo? {
+            if self.todoTextInputState.text.length == 0 {
                 return nil
             }
-            
-            let mappedKind: TelegramMediaPollKind
-            if self.isQuiz {
-                mappedKind = .quiz
-            } else {
-                mappedKind = .poll(multipleAnswers: self.isMultiAnswer)
-            }
-            
-            var mappedOptions: [TelegramMediaPollOption] = []
-            var selectedQuizOption: Data?
-            for pollOption in self.pollOptions {
-                if pollOption.textInputState.text.length == 0 {
+
+            var mappedItems: [TelegramMediaTodo.Item] = []
+            for todoItem in self.todoItems {
+                if todoItem.textInputState.text.length == 0 {
                     continue
                 }
-                let optionData = "\(mappedOptions.count)".data(using: .utf8)!
-                if self.selectedQuizOptionId == pollOption.id {
-                    selectedQuizOption = optionData
-                }
                 var entities: [MessageTextEntity] = []
-                for entity in generateChatInputTextEntities(pollOption.textInputState.text) {
+                for entity in generateChatInputTextEntities(todoItem.textInputState.text) {
                     switch entity.type {
                     case .CustomEmoji:
                         entities.append(entity)
@@ -226,44 +162,21 @@ final class ComposePollScreenComponent: Component {
                         break
                     }
                 }
-                
-                mappedOptions.append(TelegramMediaPollOption(
-                    text: pollOption.textInputState.text.string,
-                    entities: entities,
-                    opaqueIdentifier: optionData
-                ))
+                mappedItems.append(
+                    TelegramMediaTodo.Item(
+                        text: todoItem.textInputState.text.string,
+                        entities: entities,
+                        id: todoItem.id
+                    )
+                )
             }
             
-            if mappedOptions.count < 2 {
+            if mappedItems.count < 1 {
                 return nil
             }
-            
-            var mappedCorrectAnswers: [Data]?
-            if self.isQuiz {
-                if let selectedQuizOption {
-                    mappedCorrectAnswers = [selectedQuizOption]
-                } else {
-                    return nil
-                }
-            }
-            
-            var mappedSolution: (String, [MessageTextEntity])?
-            if self.isQuiz && self.quizAnswerTextInputState.text.length != 0 {
-                var solutionTextEntities: [MessageTextEntity] = []
-                for entity in generateChatInputTextEntities(self.quizAnswerTextInputState.text) {
-                    switch entity.type {
-                    case .CustomEmoji:
-                        solutionTextEntities.append(entity)
-                    default:
-                        break
-                    }
-                }
                 
-                mappedSolution = (self.quizAnswerTextInputState.text.string, solutionTextEntities)
-            }
-            
             var textEntities: [MessageTextEntity] = []
-            for entity in generateChatInputTextEntities(self.pollTextInputState.text) {
+            for entity in generateChatInputTextEntities(self.todoTextInputState.text) {
                 switch entity.type {
                 case .CustomEmoji:
                     textEntities.append(entity)
@@ -272,24 +185,19 @@ final class ComposePollScreenComponent: Component {
                 }
             }
             
-            let usedCustomEmojiFiles: [Int64: TelegramMediaFile] = [:]
+            var flags: TelegramMediaTodo.Flags = []
+            if self.isCompletableByOthers {
+                flags.insert(.othersCanComplete)
+                if self.isAppendableByOthers {
+                    flags.insert(.othersCanAppend)
+                }
+            }
             
-            return ComposedPoll(
-                publicity: self.isAnonymous ? .anonymous : .public,
-                kind: mappedKind,
-                text: ComposedPoll.Text(string: self.pollTextInputState.text.string, entities: textEntities),
-                options: mappedOptions,
-                correctAnswers: mappedCorrectAnswers,
-                results: TelegramMediaPollResults(
-                    voters: nil,
-                    totalVoters: nil,
-                    recentVoters: [],
-                    solution: mappedSolution.flatMap { mappedSolution in
-                        return TelegramMediaPollResults.Solution(text: mappedSolution.0, entities: mappedSolution.1)
-                    }
-                ),
-                deadlineTimeout: nil,
-                usedCustomEmojiFiles: usedCustomEmojiFiles
+            return TelegramMediaTodo(
+                flags: flags,
+                text: self.todoTextInputState.text.string,
+                textEntities: textEntities,
+                items: mappedItems
             )
         }
         
@@ -333,7 +241,7 @@ final class ComposePollScreenComponent: Component {
         }
         
         private func updateInputMediaNode(
-            component: ComposePollScreenComponent,
+            component: ComposeTodoScreenComponent,
             availableSize: CGSize,
             bottomInset: CGFloat,
             inputHeight: CGFloat,
@@ -486,7 +394,7 @@ final class ComposePollScreenComponent: Component {
                 }
             }*/
             
-            if let controller = self.environment?.controller() as? ComposePollScreen {
+            if let controller = self.environment?.controller() as? ComposeTodoScreen {
                 let isTabBarVisible = self.inputMediaNode == nil
                 DispatchQueue.main.async { [weak controller] in
                     controller?.updateTabBarVisibility(isTabBarVisible, transition.containedViewLayoutTransition)
@@ -498,24 +406,18 @@ final class ComposePollScreenComponent: Component {
         
         private func collectTextInputStates() -> [(view: ListComposePollOptionComponent.View, state: TextFieldComponent.ExternalState)] {
             var textInputStates: [(view: ListComposePollOptionComponent.View, state: TextFieldComponent.ExternalState)] = []
-            if let textInputView = self.pollTextSection.findTaggedView(tag: self.pollTextFieldTag) as? ListComposePollOptionComponent.View {
-                textInputStates.append((textInputView, self.pollTextInputState))
+            if let textInputView = self.todoTextSection.findTaggedView(tag: self.todoTextFieldTag) as? ListComposePollOptionComponent.View {
+                textInputStates.append((textInputView, self.todoTextInputState))
             }
-            for pollOption in self.pollOptions {
-                if let textInputView = findTaggedComponentViewImpl(view: self.pollOptionsSectionContainer, tag: pollOption.textFieldTag) as? ListComposePollOptionComponent.View {
-                    textInputStates.append((textInputView, pollOption.textInputState))
+            for todoItem in self.todoItems {
+                if let textInputView = findTaggedComponentViewImpl(view: self.todoItemsSectionContainer, tag: todoItem.textFieldTag) as? ListComposePollOptionComponent.View {
+                    textInputStates.append((textInputView, todoItem.textInputState))
                 }
             }
-            if self.isQuiz {
-                if let textInputView = self.quizAnswerSection.findTaggedView(tag: self.quizAnswerTextInputTag) as? ListComposePollOptionComponent.View {
-                    textInputStates.append((textInputView, self.quizAnswerTextInputState))
-                }
-            }
-            
             return textInputStates
         }
         
-        func update(component: ComposePollScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
+        func update(component: ComposeTodoScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
                 self.isUpdating = false
@@ -530,17 +432,32 @@ final class ComposePollScreenComponent: Component {
             let themeUpdated = self.environment?.theme !== environment.theme
             self.environment = environment
             
+            let isFirstTime = self.component == nil
             if self.component == nil {
-                self.isQuiz = component.isQuiz ?? false
-                
-                self.pollOptions.append(ComposePollScreenComponent.PollOption(
-                    id: self.nextPollOptionId
-                ))
-                self.nextPollOptionId += 1
-                self.pollOptions.append(ComposePollScreenComponent.PollOption(
-                    id: self.nextPollOptionId
-                ))
-                self.nextPollOptionId += 1
+                if let existingTodo = component.initialData.existingTodo {
+                    self.resetTodoText = existingTodo.text
+                    
+                    for item in existingTodo.items {
+                        let todoItem = ComposeTodoScreenComponent.TodoItem(
+                            id: item.id
+                        )
+                        todoItem.resetText = item.text
+                        self.todoItems.append(todoItem)
+                    }
+                    self.nextTodoItemId = (existingTodo.items.max(by: { $0.id < $1.id })?.id ?? 0) + 1
+                    
+                    self.isAppendableByOthers = existingTodo.flags.contains(.othersCanAppend)
+                    self.isCompletableByOthers = existingTodo.flags.contains(.othersCanComplete)
+                } else {
+                    self.todoItems.append(ComposeTodoScreenComponent.TodoItem(
+                        id: self.nextTodoItemId
+                    ))
+                    self.nextTodoItemId += 1
+                    self.todoItems.append(ComposeTodoScreenComponent.TodoItem(
+                        id: self.nextTodoItemId
+                    ))
+                    self.nextTodoItemId += 1
+                }
                 
                 self.inputMediaNodeDataPromise.set(
                     ChatEntityKeyboardInputNode.inputData(
@@ -650,7 +567,7 @@ final class ComposePollScreenComponent: Component {
                         guard let self else {
                             return nil
                         }
-                        guard let controller = self.environment?.controller() as? ComposePollScreen else {
+                        guard let controller = self.environment?.controller() as? ComposeTodoScreen else {
                             return nil
                         }
                         
@@ -691,26 +608,32 @@ final class ComposePollScreenComponent: Component {
             contentHeight += environment.navigationHeight
             contentHeight += topInset
             
-            var pollTextSectionItems: [AnyComponentWithIdentity<Empty>] = []
-            pollTextSectionItems.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(ListComposePollOptionComponent(
-                externalState: self.pollTextInputState,
+            var canEdit = true
+            if let _ = component.initialData.existingTodo, !component.initialData.canEdit {
+                canEdit = false
+            }
+            
+            var todoTextSectionItems: [AnyComponentWithIdentity<Empty>] = []
+            todoTextSectionItems.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(ListComposePollOptionComponent(
+                externalState: self.todoTextInputState,
                 context: component.context,
                 theme: environment.theme,
                 strings: environment.strings,
-                resetText: self.resetPollText.flatMap { resetText in
+                isEnabled: canEdit,
+                resetText: self.resetTodoText.flatMap { resetText in
                     return ListComposePollOptionComponent.ResetText(value: NSAttributedString(string: resetText))
                 },
-                assumeIsEditing: self.inputMediaNodeTargetTag === self.pollTextFieldTag,
-                characterLimit: component.initialData.maxPollTextLength,
+                assumeIsEditing: self.inputMediaNodeTargetTag === self.todoTextFieldTag,
+                characterLimit: component.initialData.maxTodoTextLength,
                 emptyLineHandling: .allowed,
                 returnKeyAction: { [weak self] in
                     guard let self else {
                         return
                     }
-                    if !self.pollOptions.isEmpty {
-                        if let pollOptionView = self.pollOptionsSectionContainer.itemViews[self.pollOptions[0].id] {
-                            if let pollOptionComponentView = pollOptionView.contents.view as? ListComposePollOptionComponent.View {
-                                pollOptionComponentView.activateInput()
+                    if !self.todoItems.isEmpty {
+                        if let todoItemView = self.todoItemsSectionContainer.itemViews[self.todoItems[0].id] {
+                            if let todoItemComponentView = todoItemView.contents.view as? ListComposePollOptionComponent.View {
+                                todoItemComponentView.activateInput()
                             }
                         }
                     }
@@ -730,85 +653,73 @@ final class ComposePollScreenComponent: Component {
                     }
                     self.state?.updated(transition: .spring(duration: 0.4))
                 },
-                tag: self.pollTextFieldTag
+                tag: self.todoTextFieldTag
             ))))
-            self.resetPollText = nil
+            self.resetTodoText = nil
             
-            let pollTextSectionSize = self.pollTextSection.update(
+            let todoTextSectionSize = self.todoTextSection.update(
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
                     theme: environment.theme,
-                    header: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(
-                            string: environment.strings.CreatePoll_TextHeader,
-                            font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
-                            textColor: environment.theme.list.freeTextColor
-                        )),
-                        maximumNumberOfLines: 0
-                    )),
+                    header: nil,
                     footer: nil,
-                    items: pollTextSectionItems
+                    items: todoTextSectionItems
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
             )
-            let pollTextSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: pollTextSectionSize)
-            if let pollTextSectionView = self.pollTextSection.view as? ListSectionComponent.View {
-                if pollTextSectionView.superview == nil {
-                    self.scrollView.addSubview(pollTextSectionView)
-                    self.pollTextSection.parentState = state
+            let todoTextSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: todoTextSectionSize)
+            if let todoTextSectionView = self.todoTextSection.view as? ListSectionComponent.View {
+                if todoTextSectionView.superview == nil {
+                    self.scrollView.addSubview(todoTextSectionView)
+                    self.todoTextSection.parentState = state
                 }
-                transition.setFrame(view: pollTextSectionView, frame: pollTextSectionFrame)
+                transition.setFrame(view: todoTextSectionView, frame: todoTextSectionFrame)
                 
-                if let itemView = pollTextSectionView.itemView(id: 0) as? ListComposePollOptionComponent.View {
-                    itemView.updateCustomPlaceholder(value: environment.strings.CreatePoll_TextPlaceholder, size: itemView.bounds.size, transition: .immediate)
+                if let itemView = todoTextSectionView.itemView(id: 0) as? ListComposePollOptionComponent.View {
+                    itemView.updateCustomPlaceholder(value: "Title", size: itemView.bounds.size, transition: .immediate)
                 }
             }
-            contentHeight += pollTextSectionSize.height
+            contentHeight += todoTextSectionSize.height
             contentHeight += sectionSpacing
             
-            var pollOptionsSectionItems: [AnyComponentWithIdentity<Empty>] = []
+            var todoItemsSectionItems: [AnyComponentWithIdentity<Empty>] = []
             
-            var pollOptionsSectionReadyItems: [ListSectionContentView.ReadyItem] = []
+            var todoItemsSectionReadyItems: [ListSectionContentView.ReadyItem] = []
             
-            let processPollOptionItem: (Int) -> Void = { i in
-                let pollOption = self.pollOptions[i]
+            let processTodoItemItem: (Int) -> Void = { i in
+                let todoItem = self.todoItems[i]
                 
-                let optionId = pollOption.id
+                let optionId = todoItem.id
                 
-                var optionSelection: ListComposePollOptionComponent.Selection?
-                if self.isQuiz {
-                    optionSelection = ListComposePollOptionComponent.Selection(isSelected: self.selectedQuizOptionId == optionId, toggle: { [weak self] in
-                        guard let self else {
-                            return
-                        }
-                        self.selectedQuizOptionId = optionId
-                        self.state?.updated(transition: .spring(duration: 0.35))
-                    })
+                var isEnabled = true
+                if !canEdit, let existingTodo = component.initialData.existingTodo, existingTodo.items.contains(where: { $0.id == todoItem.id }) {
+                    isEnabled = false
                 }
                 
-                pollOptionsSectionItems.append(AnyComponentWithIdentity(id: pollOption.id, component: AnyComponent(ListComposePollOptionComponent(
-                    externalState: pollOption.textInputState,
+                todoItemsSectionItems.append(AnyComponentWithIdentity(id: todoItem.id, component: AnyComponent(ListComposePollOptionComponent(
+                    externalState: todoItem.textInputState,
                     context: component.context,
                     theme: environment.theme,
                     strings: environment.strings,
-                    resetText: pollOption.resetText.flatMap { resetText in
+                    isEnabled: isEnabled,
+                    resetText: todoItem.resetText.flatMap { resetText in
                         return ListComposePollOptionComponent.ResetText(value: NSAttributedString(string: resetText))
                     },
-                    assumeIsEditing: self.inputMediaNodeTargetTag === pollOption.textFieldTag,
-                    characterLimit: component.initialData.maxPollOptionLength,
+                    assumeIsEditing: self.inputMediaNodeTargetTag === todoItem.textFieldTag,
+                    characterLimit: component.initialData.maxTodoItemLength,
                     emptyLineHandling: .notAllowed,
                     returnKeyAction: { [weak self] in
                         guard let self else {
                             return
                         }
-                        if let index = self.pollOptions.firstIndex(where: { $0.id == optionId }) {
-                            if index == self.pollOptions.count - 1 {
+                        if let index = self.todoItems.firstIndex(where: { $0.id == optionId }) {
+                            if index == self.todoItems.count - 1 {
                                 self.endEditing(true)
                             } else {
-                                if let pollOptionView = self.pollOptionsSectionContainer.itemViews[self.pollOptions[index + 1].id] {
-                                    if let pollOptionComponentView = pollOptionView.contents.view as? ListComposePollOptionComponent.View {
-                                        pollOptionComponentView.activateInput()
+                                if let todoItemView = self.todoItemsSectionContainer.itemViews[self.todoItems[index + 1].id] {
+                                    if let todoItemComponentView = todoItemView.contents.view as? ListComposePollOptionComponent.View {
+                                        todoItemComponentView.activateInput()
                                     }
                                 }
                             }
@@ -818,21 +729,21 @@ final class ComposePollScreenComponent: Component {
                         guard let self else {
                             return
                         }
-                        if let index = self.pollOptions.firstIndex(where: { $0.id == optionId }) {
+                        if let index = self.todoItems.firstIndex(where: { $0.id == optionId }) {
                             if index == 0 {
-                                if let textInputView = self.pollTextSection.findTaggedView(tag: self.pollTextFieldTag) as? ListComposePollOptionComponent.View {
+                                if let textInputView = self.todoTextSection.findTaggedView(tag: self.todoTextFieldTag) as? ListComposePollOptionComponent.View {
                                     textInputView.activateInput()
                                 }
                             } else {
-                                if let pollOptionView = self.pollOptionsSectionContainer.itemViews[self.pollOptions[index - 1].id] {
-                                    if let pollOptionComponentView = pollOptionView.contents.view as? ListComposePollOptionComponent.View {
-                                        pollOptionComponentView.activateInput()
+                                if let todoItemView = self.todoItemsSectionContainer.itemViews[self.todoItems[index - 1].id] {
+                                    if let todoItemComponentView = todoItemView.contents.view as? ListComposePollOptionComponent.View {
+                                        todoItemComponentView.activateInput()
                                     }
                                 }
                             }
                         }
                     },
-                    selection: optionSelection,
+                    selection: nil,
                     inputMode: self.currentInputMode,
                     toggleInputMode: { [weak self] in
                         guard let self else {
@@ -846,20 +757,20 @@ final class ComposePollScreenComponent: Component {
                         }
                         self.state?.updated(transition: .spring(duration: 0.4))
                     },
-                    tag: pollOption.textFieldTag
+                    tag: todoItem.textFieldTag
                 ))))
                 
-                let item = pollOptionsSectionItems[i]
+                let item = todoItemsSectionItems[i]
                 let itemId = item.id
                 
                 let itemView: ListSectionContentView.ItemView
                 var itemTransition = transition
-                if let current = self.pollOptionsSectionContainer.itemViews[itemId] {
+                if let current = self.todoItemsSectionContainer.itemViews[itemId] {
                     itemView = current
                 } else {
                     itemTransition = itemTransition.withAnimation(.none)
                     itemView = ListSectionContentView.ItemView()
-                    self.pollOptionsSectionContainer.itemViews[itemId] = itemView
+                    self.todoItemsSectionContainer.itemViews[itemId] = itemView
                     itemView.contents.parentState = state
                 }
                 
@@ -870,7 +781,7 @@ final class ComposePollScreenComponent: Component {
                     containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
                 )
                 
-                pollOptionsSectionReadyItems.append(ListSectionContentView.ReadyItem(
+                todoItemsSectionReadyItems.append(ListSectionContentView.ReadyItem(
                     id: itemId,
                     itemView: itemView,
                     size: itemSize,
@@ -878,43 +789,51 @@ final class ComposePollScreenComponent: Component {
                 ))
             }
             
-            for i in 0 ..< self.pollOptions.count {
-                processPollOptionItem(i)
+            for i in 0 ..< self.todoItems.count {
+                processTodoItemItem(i)
             }
             
-            if self.pollOptions.count > 2 {
-                let lastOption = self.pollOptions[self.pollOptions.count - 1]
-                let secondToLastOption = self.pollOptions[self.pollOptions.count - 2]
+            if self.todoItems.count > 2 {
+                let lastOption = self.todoItems[self.todoItems.count - 1]
+                let secondToLastOption = self.todoItems[self.todoItems.count - 2]
                 
                 if !lastOption.textInputState.isEditing && lastOption.textInputState.text.length == 0 && secondToLastOption.textInputState.text.length == 0 {
-                    self.pollOptions.removeLast()
-                    pollOptionsSectionItems.removeLast()
-                    pollOptionsSectionReadyItems.removeLast()
+                    self.todoItems.removeLast()
+                    todoItemsSectionItems.removeLast()
+                    todoItemsSectionReadyItems.removeLast()
                 }
             }
             
-            if self.pollOptions.count < component.initialData.maxPollAnswersCount, let lastOption = self.pollOptions.last {
+            if self.todoItems.count < component.initialData.maxTodoItemsCount, let lastOption = self.todoItems.last {
                 if lastOption.textInputState.text.length != 0 {
-                    self.pollOptions.append(PollOption(id: self.nextPollOptionId))
-                    self.nextPollOptionId += 1
-                    processPollOptionItem(self.pollOptions.count - 1)
+                    self.todoItems.append(TodoItem(id: self.nextTodoItemId))
+                    self.nextTodoItemId += 1
+                    processTodoItemItem(self.todoItems.count - 1)
                 }
             }
             
-            for i in 0 ..< pollOptionsSectionReadyItems.count {
+            for i in 0 ..< todoItemsSectionReadyItems.count {
+                var activate = false
                 let placeholder: String
-                if i == pollOptionsSectionReadyItems.count - 1 {
-                    placeholder = environment.strings.CreatePoll_AddOption
+                if i == todoItemsSectionReadyItems.count - 1 {
+                    placeholder = "Add a Task"
+                    if isFirstTime, component.initialData.append {
+                        activate = true
+                    }
                 } else {
-                    placeholder = environment.strings.CreatePoll_OptionPlaceholder
+                    placeholder = "Task"
                 }
                 
-                if let itemView = pollOptionsSectionReadyItems[i].itemView.contents.view as? ListComposePollOptionComponent.View {
-                    itemView.updateCustomPlaceholder(value: placeholder, size: pollOptionsSectionReadyItems[i].size, transition: pollOptionsSectionReadyItems[i].transition)
+                if let itemView = todoItemsSectionReadyItems[i].itemView.contents.view as? ListComposePollOptionComponent.View {
+                    itemView.updateCustomPlaceholder(value: placeholder, size: todoItemsSectionReadyItems[i].size, transition: todoItemsSectionReadyItems[i].transition)
+                    
+                    if activate {
+                        itemView.activateInput()
+                    }
                 }
             }
             
-            let pollOptionsSectionUpdateResult = self.pollOptionsSectionContainer.update(
+            let todoItemsSectionUpdateResult = self.todoItemsSectionContainer.update(
                 configuration: ListSectionContentView.Configuration(
                     theme: environment.theme,
                     displaySeparators: true,
@@ -923,16 +842,16 @@ final class ComposePollScreenComponent: Component {
                 ),
                 width: availableSize.width - sideInset * 2.0,
                 leftInset: 0.0,
-                readyItems: pollOptionsSectionReadyItems,
+                readyItems: todoItemsSectionReadyItems,
                 transition: transition
             )
             
             let sectionHeaderSideInset: CGFloat = 16.0
-            let pollOptionsSectionHeaderSize = self.pollOptionsSectionHeader.update(
+            let todoItemsSectionHeaderSize = self.todoItemsSectionHeader.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
                     text: .plain(NSAttributedString(
-                        string: environment.strings.CreatePoll_OptionsHeader,
+                        string: "TO DO LIST",
                         font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                         textColor: environment.theme.list.freeTextColor
                     )),
@@ -941,71 +860,105 @@ final class ComposePollScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - sectionHeaderSideInset * 2.0, height: 1000.0)
             )
-            let pollOptionsSectionHeaderFrame = CGRect(origin: CGPoint(x: sideInset + sectionHeaderSideInset, y: contentHeight), size: pollOptionsSectionHeaderSize)
-            if let pollOptionsSectionHeaderView = self.pollOptionsSectionHeader.view {
-                if pollOptionsSectionHeaderView.superview == nil {
-                    pollOptionsSectionHeaderView.layer.anchorPoint = CGPoint()
-                    self.scrollView.addSubview(pollOptionsSectionHeaderView)
+            let todoItemsSectionHeaderFrame = CGRect(origin: CGPoint(x: sideInset + sectionHeaderSideInset, y: contentHeight), size: todoItemsSectionHeaderSize)
+            if let todoItemsSectionHeaderView = self.todoItemsSectionHeader.view {
+                if todoItemsSectionHeaderView.superview == nil {
+                    todoItemsSectionHeaderView.layer.anchorPoint = CGPoint()
+                    self.scrollView.addSubview(todoItemsSectionHeaderView)
                 }
-                transition.setPosition(view: pollOptionsSectionHeaderView, position: pollOptionsSectionHeaderFrame.origin)
-                pollOptionsSectionHeaderView.bounds = CGRect(origin: CGPoint(), size: pollOptionsSectionHeaderFrame.size)
+                transition.setPosition(view: todoItemsSectionHeaderView, position: todoItemsSectionHeaderFrame.origin)
+                todoItemsSectionHeaderView.bounds = CGRect(origin: CGPoint(), size: todoItemsSectionHeaderFrame.size)
             }
-            contentHeight += pollOptionsSectionHeaderSize.height
+            contentHeight += todoItemsSectionHeaderSize.height
             contentHeight += 7.0
             
-            let pollOptionsSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: pollOptionsSectionUpdateResult.size)
-            if self.pollOptionsSectionContainer.superview == nil {
-                self.scrollView.addSubview(self.pollOptionsSectionContainer.externalContentBackgroundView)
-                self.scrollView.addSubview(self.pollOptionsSectionContainer)
+            let todoItemsSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: todoItemsSectionUpdateResult.size)
+            if self.todoItemsSectionContainer.superview == nil {
+                self.scrollView.addSubview(self.todoItemsSectionContainer.externalContentBackgroundView)
+                self.scrollView.addSubview(self.todoItemsSectionContainer)
             }
-            transition.setFrame(view: self.pollOptionsSectionContainer, frame: pollOptionsSectionFrame)
-            transition.setFrame(view: self.pollOptionsSectionContainer.externalContentBackgroundView, frame: pollOptionsSectionUpdateResult.backgroundFrame.offsetBy(dx: pollOptionsSectionFrame.minX, dy: pollOptionsSectionFrame.minY))
-            contentHeight += pollOptionsSectionUpdateResult.size.height
+            transition.setFrame(view: self.todoItemsSectionContainer, frame: todoItemsSectionFrame)
+            transition.setFrame(view: self.todoItemsSectionContainer.externalContentBackgroundView, frame: todoItemsSectionUpdateResult.backgroundFrame.offsetBy(dx: todoItemsSectionFrame.minX, dy: todoItemsSectionFrame.minY))
+            contentHeight += todoItemsSectionUpdateResult.size.height
             
             contentHeight += 7.0
             
-            let pollOptionsLimitReached = self.pollOptions.count >= component.initialData.maxPollAnswersCount
-            var animatePollOptionsFooterIn = false
-            var pollOptionsFooterTransition = transition
-            if self.currentPollOptionsLimitReached != pollOptionsLimitReached {
-                self.currentPollOptionsLimitReached = pollOptionsLimitReached
-                if let pollOptionsSectionFooterView = self.pollOptionsSectionFooter.view {
-                    animatePollOptionsFooterIn = true
-                    pollOptionsFooterTransition = pollOptionsFooterTransition.withAnimation(.none)
-                    alphaTransition.setAlpha(view: pollOptionsSectionFooterView, alpha: 0.0, completion: { [weak pollOptionsSectionFooterView] _ in
-                        pollOptionsSectionFooterView?.removeFromSuperview()
+            let todoItemsLimitReached = self.todoItems.count >= component.initialData.maxTodoItemsCount
+            var animateTodoItemsFooterIn = false
+            var todoItemsFooterTransition = transition
+            if self.currentTodoItemsLimitReached != todoItemsLimitReached {
+                self.currentTodoItemsLimitReached = todoItemsLimitReached
+                if let todoItemsSectionFooterView = self.todoItemsSectionFooter.view {
+                    animateTodoItemsFooterIn = true
+                    todoItemsFooterTransition = todoItemsFooterTransition.withAnimation(.none)
+                    alphaTransition.setAlpha(view: todoItemsSectionFooterView, alpha: 0.0, completion: { [weak todoItemsSectionFooterView] _ in
+                        todoItemsSectionFooterView?.removeFromSuperview()
                     })
-                    self.pollOptionsSectionFooter = ComponentView()
+                    self.todoItemsSectionFooter = ComponentView()
                 }
             }
             
-            let pollOptionsComponent: AnyComponent<Empty>
-            if pollOptionsLimitReached {
-                pollOptionsFooterTransition = pollOptionsFooterTransition.withAnimation(.none)
-                pollOptionsComponent = AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: environment.strings.CreatePoll_AllOptionsAdded, font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: environment.theme.list.freeTextColor)),
-                    maximumNumberOfLines: 0
+            let todoItemsComponent: AnyComponent<Empty>
+            if !"".isEmpty, todoItemsLimitReached {
+                todoItemsFooterTransition = todoItemsFooterTransition.withAnimation(.none)
+
+                let textFont = Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize)
+                let boldTextFont = Font.semibold(presentationData.listsFontSize.itemListBaseHeaderFontSize)
+                let textColor = environment.theme.list.freeTextColor
+                todoItemsComponent = AnyComponent(MultilineTextComponent(
+                    text: .markdown(
+                        text: "Limit of tasks reached. You can increase the limit to **20 tasks** by subscribing to [Telegram Premium]().",
+                        attributes: MarkdownAttributes(
+                            body: MarkdownAttributeSet(font: textFont, textColor: textColor),
+                            bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor),
+                            link: MarkdownAttributeSet(font: textFont, textColor: environment.theme.list.itemAccentColor),
+                            linkAttribute: { contents in
+                                return (TelegramTextAttributes.URL, contents)
+                            }
+                        )
+                    ),
+                    maximumNumberOfLines: 0,
+                    highlightColor: presentationData.theme.list.itemAccentColor.withAlphaComponent(0.2),
+                    highlightAction: { attributes in
+                        if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                            return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+                        } else {
+                            return nil
+                        }
+                    },
+                    tapAction: { [weak self] _, _ in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        let controller = component.context.sharedContext.makePremiumIntroController(
+                            context: component.context,
+                            source: .chatsPerFolder,
+                            forceDark: false,
+                            dismissed: nil
+                        )
+                        (self.environment?.controller() as? AttachmentContainable)?.parentController()?.push(controller)
+                    }
                 ))
             } else {
-                let remainingCount = component.initialData.maxPollAnswersCount - self.pollOptions.count
-                let rawString = environment.strings.CreatePoll_OptionCountFooterFormat(Int32(remainingCount))
+                let remainingCount = component.initialData.maxTodoItemsCount - self.todoItems.count
+                let rawString = "You can add {count} more tasks." //environment.strings.CreatePoll_OptionCountFooterFormat(Int32(remainingCount))
                 
-                var pollOptionsFooterItems: [AnimatedTextComponent.Item] = []
+                var todoItemsFooterItems: [AnimatedTextComponent.Item] = []
                 if let range = rawString.range(of: "{count}") {
                     if range.lowerBound != rawString.startIndex {
-                        pollOptionsFooterItems.append(AnimatedTextComponent.Item(
+                        todoItemsFooterItems.append(AnimatedTextComponent.Item(
                             id: 0,
                             isUnbreakable: true,
                             content: .text(String(rawString[rawString.startIndex ..< range.lowerBound]))
                         ))
                     }
-                    pollOptionsFooterItems.append(AnimatedTextComponent.Item(
+                    todoItemsFooterItems.append(AnimatedTextComponent.Item(
                         id: 1,
                         isUnbreakable: true,
                         content: .number(remainingCount, minDigits: 1)
                     ))
                     if range.upperBound != rawString.endIndex {
-                        pollOptionsFooterItems.append(AnimatedTextComponent.Item(
+                        todoItemsFooterItems.append(AnimatedTextComponent.Item(
                             id: 2,
                             isUnbreakable: true,
                             content: .text(String(rawString[range.upperBound ..< rawString.endIndex]))
@@ -1013,228 +966,112 @@ final class ComposePollScreenComponent: Component {
                     }
                 }
                 
-                pollOptionsComponent = AnyComponent(AnimatedTextComponent(
+                todoItemsComponent = AnyComponent(AnimatedTextComponent(
                     font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                     color: environment.theme.list.freeTextColor,
-                    items: pollOptionsFooterItems
+                    items: todoItemsFooterItems
                 ))
             }
             
-            let pollOptionsSectionFooterSize = self.pollOptionsSectionFooter.update(
-                transition: pollOptionsFooterTransition,
-                component: pollOptionsComponent,
+            let todoItemsSectionFooterSize = self.todoItemsSectionFooter.update(
+                transition: todoItemsFooterTransition,
+                component: todoItemsComponent,
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - sectionHeaderSideInset * 2.0, height: 1000.0)
             )
-            let pollOptionsSectionFooterFrame = CGRect(origin: CGPoint(x: sideInset + sectionHeaderSideInset, y: contentHeight), size: pollOptionsSectionFooterSize)
+            let todoItemsSectionFooterFrame = CGRect(origin: CGPoint(x: sideInset + sectionHeaderSideInset, y: contentHeight), size: todoItemsSectionFooterSize)
             
-            if self.pollOptionsSectionFooterContainer.superview == nil {
-                self.scrollView.addSubview(self.pollOptionsSectionFooterContainer)
+            if self.todoItemsSectionFooterContainer.superview == nil {
+                self.scrollView.addSubview(self.todoItemsSectionFooterContainer)
             }
-            transition.setFrame(view: self.pollOptionsSectionFooterContainer, frame: pollOptionsSectionFooterFrame)
+            transition.setFrame(view: self.todoItemsSectionFooterContainer, frame: todoItemsSectionFooterFrame)
             
-            if let pollOptionsSectionFooterView = self.pollOptionsSectionFooter.view {
-                if pollOptionsSectionFooterView.superview == nil {
-                    pollOptionsSectionFooterView.layer.anchorPoint = CGPoint()
-                    self.pollOptionsSectionFooterContainer.addSubview(pollOptionsSectionFooterView)
+            if let todoItemsSectionFooterView = self.todoItemsSectionFooter.view {
+                if todoItemsSectionFooterView.superview == nil {
+                    todoItemsSectionFooterView.layer.anchorPoint = CGPoint()
+                    self.todoItemsSectionFooterContainer.addSubview(todoItemsSectionFooterView)
                 }
-                pollOptionsFooterTransition.setPosition(view: pollOptionsSectionFooterView, position: CGPoint())
-                pollOptionsSectionFooterView.bounds = CGRect(origin: CGPoint(), size: pollOptionsSectionFooterFrame.size)
-                if animatePollOptionsFooterIn && !transition.animation.isImmediate {
-                    alphaTransition.animateAlpha(view: pollOptionsSectionFooterView, from: 0.0, to: 1.0)
+                todoItemsFooterTransition.setPosition(view: todoItemsSectionFooterView, position: CGPoint())
+                todoItemsSectionFooterView.bounds = CGRect(origin: CGPoint(), size: todoItemsSectionFooterFrame.size)
+                if animateTodoItemsFooterIn && !transition.animation.isImmediate {
+                    alphaTransition.animateAlpha(view: todoItemsSectionFooterView, from: 0.0, to: 1.0)
                 }
             }
-            contentHeight += pollOptionsSectionFooterSize.height
+            contentHeight += todoItemsSectionFooterSize.height
             contentHeight += sectionSpacing
             
-            var canBePublic = true
-            if case let .channel(channel) = component.peer, case .broadcast = channel.info {
-                canBePublic = false
-            }
-            
-            var pollSettingsSectionItems: [AnyComponentWithIdentity<Empty>] = []
-            if canBePublic {
-                pollSettingsSectionItems.append(AnyComponentWithIdentity(id: "anonymous", component: AnyComponent(ListActionItemComponent(
+            var todoSettingsSectionItems: [AnyComponentWithIdentity<Empty>] = []
+            if canEdit && component.peer.id != component.context.account.peerId {
+                todoSettingsSectionItems.append(AnyComponentWithIdentity(id: "completable", component: AnyComponent(ListActionItemComponent(
                     theme: environment.theme,
                     title: AnyComponent(VStack([
                         AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
-                                string: environment.strings.CreatePoll_Anonymous,
+                                string: "Allow Others to Mark as Done",
                                 font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                 textColor: environment.theme.list.itemPrimaryTextColor
                             )),
                             maximumNumberOfLines: 1
                         ))),
                     ], alignment: .left, spacing: 2.0)),
-                    accessory: .toggle(ListActionItemComponent.Toggle(style: .regular, isOn: self.isAnonymous, action: { [weak self] _ in
+                    accessory: .toggle(ListActionItemComponent.Toggle(style: .regular, isOn: self.isCompletableByOthers, action: { [weak self] _ in
                         guard let self else {
                             return
                         }
-                        self.isAnonymous = !self.isAnonymous
+                        self.isCompletableByOthers = !self.isCompletableByOthers
                         self.state?.updated(transition: .spring(duration: 0.4))
                     })),
                     action: nil
                 ))))
-            }
-            pollSettingsSectionItems.append(AnyComponentWithIdentity(id: "multiAnswer", component: AnyComponent(ListActionItemComponent(
-                theme: environment.theme,
-                title: AnyComponent(VStack([
-                    AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(
-                            string: environment.strings.CreatePoll_MultipleChoice,
-                            font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
-                            textColor: environment.theme.list.itemPrimaryTextColor
-                        )),
-                        maximumNumberOfLines: 1
-                    ))),
-                ], alignment: .left, spacing: 2.0)),
-                accessory: .toggle(ListActionItemComponent.Toggle(style: .regular, isOn: self.isMultiAnswer, action: { [weak self] _ in
-                    guard let self else {
-                        return
-                    }
-                    self.isMultiAnswer = !self.isMultiAnswer
-                    if self.isMultiAnswer {
-                        self.isQuiz = false
-                    }
-                    self.state?.updated(transition: .spring(duration: 0.4))
-                })),
-                action: nil
-            ))))
-            pollSettingsSectionItems.append(AnyComponentWithIdentity(id: "quiz", component: AnyComponent(ListActionItemComponent(
-                theme: environment.theme,
-                title: AnyComponent(VStack([
-                    AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(
-                            string: environment.strings.CreatePoll_Quiz,
-                            font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
-                            textColor: environment.theme.list.itemPrimaryTextColor
-                        )),
-                        maximumNumberOfLines: 1
-                    ))),
-                ], alignment: .left, spacing: 2.0)),
-                accessory: .toggle(ListActionItemComponent.Toggle(style: .regular, isOn: self.isQuiz, action: { [weak self] _ in
-                    guard let self else {
-                        return
-                    }
-                    self.isQuiz = !self.isQuiz
-                    if self.isQuiz {
-                        self.isMultiAnswer = false
-                    }
-                    self.state?.updated(transition: .spring(duration: 0.4))
-                })),
-                action: nil
-            ))))
-            
-            let pollSettingsSectionSize = self.pollSettingsSection.update(
-                transition: transition,
-                component: AnyComponent(ListSectionComponent(
-                    theme: environment.theme,
-                    header: nil,
-                    footer: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(
-                            string: environment.strings.CreatePoll_QuizInfo,
-                            font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
-                            textColor: environment.theme.list.freeTextColor
-                        )),
-                        maximumNumberOfLines: 0
-                    )),
-                    items: pollSettingsSectionItems
-                )),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
-            )
-            let pollSettingsSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: pollSettingsSectionSize)
-            if let pollSettingsSectionView = self.pollSettingsSection.view {
-                if pollSettingsSectionView.superview == nil {
-                    self.scrollView.addSubview(pollSettingsSectionView)
-                    self.pollSettingsSection.parentState = state
-                }
-                transition.setFrame(view: pollSettingsSectionView, frame: pollSettingsSectionFrame)
-            }
-            contentHeight += pollSettingsSectionSize.height
-            
-            var quizAnswerSectionHeight: CGFloat = 0.0
-            quizAnswerSectionHeight += sectionSpacing
-            let quizAnswerSectionSize = self.quizAnswerSection.update(
-                transition: transition,
-                component: AnyComponent(ListSectionComponent(
-                    theme: environment.theme,
-                    header: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(
-                            string: environment.strings.CreatePoll_ExplanationHeader,
-                            font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
-                            textColor: environment.theme.list.freeTextColor
-                        )),
-                        maximumNumberOfLines: 0
-                    )),
-                    footer: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(
-                            string: environment.strings.CreatePoll_ExplanationInfo,
-                            font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
-                            textColor: environment.theme.list.freeTextColor
-                        )),
-                        maximumNumberOfLines: 0
-                    )),
-                    items: [
-                        AnyComponentWithIdentity(id: 0, component: AnyComponent(ListComposePollOptionComponent(
-                            externalState: self.quizAnswerTextInputState,
-                            context: component.context,
-                            theme: environment.theme,
-                            strings: environment.strings,
-                            resetText: self.resetQuizAnswerText.flatMap { resetText in
-                                return ListComposePollOptionComponent.ResetText(value: NSAttributedString(string: resetText))
-                            },
-                            assumeIsEditing: self.inputMediaNodeTargetTag === self.quizAnswerTextInputTag,
-                            characterLimit: component.initialData.maxPollTextLength,
-                            emptyLineHandling: .allowed,
-                            returnKeyAction: { [weak self] in
-                                guard let self else {
-                                    return
-                                }
-                                self.endEditing(true)
-                            },
-                            backspaceKeyAction: nil,
-                            selection: nil,
-                            inputMode: self.currentInputMode,
-                            toggleInputMode: { [weak self] in
-                                guard let self else {
-                                    return
-                                }
-                                switch self.currentInputMode {
-                                case .keyboard:
-                                    self.currentInputMode = .emoji
-                                case .emoji:
-                                    self.currentInputMode = .keyboard
-                                }
-                                self.state?.updated(transition: .spring(duration: 0.4))
-                            },
-                            tag: self.quizAnswerTextInputTag
-                        )))
-                    ]
-                )),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
-            )
-            self.resetQuizAnswerText = nil
-            let quizAnswerSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight + quizAnswerSectionHeight), size: quizAnswerSectionSize)
-            if let quizAnswerSectionView = self.quizAnswerSection.view as? ListSectionComponent.View {
-                if quizAnswerSectionView.superview == nil {
-                    self.scrollView.addSubview(quizAnswerSectionView)
-                    self.quizAnswerSection.parentState = state
-                }
-                transition.setFrame(view: quizAnswerSectionView, frame: quizAnswerSectionFrame)
-                transition.setAlpha(view: quizAnswerSectionView, alpha: self.isQuiz ? 1.0 : 0.0)
                 
-                if let itemView = quizAnswerSectionView.itemView(id: 0) as? ListComposePollOptionComponent.View {
-                    itemView.updateCustomPlaceholder(value: environment.strings.CreatePoll_Explanation, size: itemView.bounds.size, transition: .immediate)
+                if self.isCompletableByOthers {
+                    todoSettingsSectionItems.append(AnyComponentWithIdentity(id: "editable", component: AnyComponent(ListActionItemComponent(
+                        theme: environment.theme,
+                        title: AnyComponent(VStack([
+                            AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
+                                text: .plain(NSAttributedString(
+                                    string: "Allow Others to Add Tasks",
+                                    font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                                    textColor: environment.theme.list.itemPrimaryTextColor
+                                )),
+                                maximumNumberOfLines: 1
+                            ))),
+                        ], alignment: .left, spacing: 2.0)),
+                        accessory: .toggle(ListActionItemComponent.Toggle(style: .regular, isOn: self.isAppendableByOthers, action: { [weak self] _ in
+                            guard let self else {
+                                return
+                            }
+                            self.isAppendableByOthers = !self.isAppendableByOthers
+                            self.state?.updated(transition: .spring(duration: 0.4))
+                        })),
+                        action: nil
+                    ))))
                 }
             }
-            quizAnswerSectionHeight += quizAnswerSectionSize.height
             
-            if self.isQuiz {
-                contentHeight += quizAnswerSectionHeight
+            if !todoSettingsSectionItems.isEmpty {
+                let todoSettingsSectionSize = self.todoSettingsSection.update(
+                    transition: transition,
+                    component: AnyComponent(ListSectionComponent(
+                        theme: environment.theme,
+                        header: nil,
+                        footer: nil,
+                        items: todoSettingsSectionItems
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                )
+                let todoSettingsSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: todoSettingsSectionSize)
+                if let todoSettingsSectionView = self.todoSettingsSection.view {
+                    if todoSettingsSectionView.superview == nil {
+                        self.scrollView.addSubview(todoSettingsSectionView)
+                        self.todoSettingsSection.parentState = state
+                    }
+                    transition.setFrame(view: todoSettingsSectionView, frame: todoSettingsSectionFrame)
+                }
+                contentHeight += todoSettingsSectionSize.height
             }
-            
+                      
             var inputHeight: CGFloat = 0.0
             inputHeight += self.updateInputMediaNode(
                 component: component,
@@ -1473,7 +1310,7 @@ final class ComposePollScreenComponent: Component {
             self.updateScrolling(transition: transition)
             
             if isEditing {
-                if let controller = environment.controller() as? ComposePollScreen {
+                if let controller = environment.controller() as? ComposeTodoScreen {
                     DispatchQueue.main.async { [weak controller] in
                         controller?.requestAttachmentMenuExpansion()
                     }
@@ -1481,14 +1318,9 @@ final class ComposePollScreenComponent: Component {
             }
             
             let isValid = self.validatedInput() != nil
-            if let controller = environment.controller() as? ComposePollScreen, let sendButtonItem = controller.sendButtonItem {
+            if let controller = environment.controller() as? ComposeTodoScreen, let sendButtonItem = controller.sendButtonItem {
                 if sendButtonItem.isEnabled != isValid {
                     sendButtonItem.isEnabled = isValid
-                }
-                
-                let controllerTitle = self.isQuiz ? presentationData.strings.CreatePoll_QuizTitle : presentationData.strings.CreatePoll_Title
-                if controller.title != controllerTitle {
-                    controller.title = controllerTitle
                 }
             }
             
@@ -1500,6 +1332,10 @@ final class ComposePollScreenComponent: Component {
                     self.currentInputMode = .keyboard
                     self.state?.updated(transition: .spring(duration: 0.4))
                 }
+            }
+            
+            for i in 0 ..< self.todoItems.count {
+                self.todoItems[i].resetText = nil
             }
             
             return availableSize
@@ -1515,25 +1351,34 @@ final class ComposePollScreenComponent: Component {
     }
 }
 
-public class ComposePollScreen: ViewControllerComponentContainer, AttachmentContainable {
+public class ComposeTodoScreen: ViewControllerComponentContainer, AttachmentContainable {
     public final class InitialData {
-        fileprivate let maxPollTextLength: Int
-        fileprivate let maxPollOptionLength: Int
-        fileprivate let maxPollAnswersCount: Int
+        fileprivate let maxTodoTextLength: Int
+        fileprivate let maxTodoItemLength: Int
+        fileprivate let maxTodoItemsCount: Int
+        fileprivate let existingTodo: TelegramMediaTodo?
+        fileprivate let append: Bool
+        fileprivate let canEdit: Bool
         
         fileprivate init(
-            maxPollTextLength: Int,
-            maxPollOptionLength: Int,
-            maxPollAnwsersCount: Int
+            maxTodoTextLength: Int,
+            maxTodoItemLength: Int,
+            maxTodoItemsCount: Int,
+            existingTodo: TelegramMediaTodo?,
+            append: Bool,
+            canEdit: Bool
         ) {
-            self.maxPollTextLength = maxPollTextLength
-            self.maxPollOptionLength = maxPollOptionLength
-            self.maxPollAnswersCount = maxPollAnwsersCount
+            self.maxTodoTextLength = maxTodoTextLength
+            self.maxTodoItemLength = maxTodoItemLength
+            self.maxTodoItemsCount = maxTodoItemsCount
+            self.existingTodo = existingTodo
+            self.append = append
+            self.canEdit = canEdit
         }
     }
     
     private let context: AccountContext
-    private let completion: (ComposedPoll) -> Void
+    private let completion: (TelegramMediaTodo) -> Void
     private var isDismissed: Bool = false
     
     fileprivate private(set) var sendButtonItem: UIBarButtonItem?
@@ -1563,7 +1408,7 @@ public class ComposePollScreen: ViewControllerComponentContainer, AttachmentCont
     
     public var isPanGestureEnabled: (() -> Bool)? {
         return { [weak self] in
-            guard let self, let componentView = self.node.hostView.componentView as? ComposePollScreenComponent.View else {
+            guard let self, let componentView = self.node.hostView.componentView as? ComposeTodoScreenComponent.View else {
                 return true
             }
             return componentView.isPanGestureEnabled()
@@ -1574,40 +1419,42 @@ public class ComposePollScreen: ViewControllerComponentContainer, AttachmentCont
         context: AccountContext,
         initialData: InitialData,
         peer: EnginePeer,
-        isQuiz: Bool?,
-        completion: @escaping (ComposedPoll) -> Void
+        completion: @escaping (TelegramMediaTodo) -> Void
     ) {
         self.context = context
         self.completion = completion
         
-        super.init(context: context, component: ComposePollScreenComponent(
+        super.init(context: context, component: ComposeTodoScreenComponent(
             context: context,
             peer: peer,
-            isQuiz: isQuiz,
             initialData: initialData,
             completion: completion
         ), navigationBarAppearance: .default, theme: .default)
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        self.title = isQuiz == true ? presentationData.strings.CreatePoll_QuizTitle : presentationData.strings.CreatePoll_Title
+        if !initialData.canEdit && initialData.existingTodo != nil {
+            self.title = "Add a Task"
+        } else {
+            self.title = initialData.existingTodo != nil ? "Edit To Do List" : "New To Do List"
+        }
         
         self.navigationItem.setLeftBarButton(UIBarButtonItem(title: presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed)), animated: false)
         
-        let sendButtonItem = UIBarButtonItem(title: presentationData.strings.CreatePoll_Create, style: .done, target: self, action: #selector(self.sendPressed))
+        let sendButtonItem = UIBarButtonItem(title: initialData.existingTodo != nil ? "Save" : presentationData.strings.CreatePoll_Create, style: .done, target: self, action: #selector(self.sendPressed))
         self.sendButtonItem = sendButtonItem
         self.navigationItem.setRightBarButton(sendButtonItem, animated: false)
         sendButtonItem.isEnabled = false
         
         self.scrollToTop = { [weak self] in
-            guard let self, let componentView = self.node.hostView.componentView as? ComposePollScreenComponent.View else {
+            guard let self, let componentView = self.node.hostView.componentView as? ComposeTodoScreenComponent.View else {
                 return
             }
             componentView.scrollToTop()
         }
         
         self.attemptNavigation = { [weak self] complete in
-            guard let self, let componentView = self.node.hostView.componentView as? ComposePollScreenComponent.View else {
+            guard let self, let componentView = self.node.hostView.componentView as? ComposeTodoScreenComponent.View else {
                 return true
             }
             
@@ -1622,15 +1469,28 @@ public class ComposePollScreen: ViewControllerComponentContainer, AttachmentCont
     deinit {
     }
     
-    public static func initialData(context: AccountContext) -> InitialData {
-        var maxPollAnwsersCount: Int = 10
-        if let data = context.currentAppConfiguration.with({ $0 }).data, let value = data["poll_answers_max"] as? Double {
-            maxPollAnwsersCount = Int(value)
+    public static func initialData(context: AccountContext, existingTodo: TelegramMediaTodo? = nil, append: Bool = false, canEdit: Bool = false) -> InitialData {
+        var maxTodoTextLength: Int = 32
+        var maxTodoItemLength: Int = 64
+        var maxTodoItemsCount: Int = 30
+        if let data = context.currentAppConfiguration.with({ $0 }).data {
+            if let value = data["todo_title_length_max"] as? Double {
+                maxTodoTextLength = Int(value)
+            }
+            if let value = data["todo_item_length_max"] as? Double {
+                maxTodoItemLength = Int(value)
+            }
+            if let value = data["todo_items_max"] as? Double {
+                maxTodoItemsCount = Int(value)
+            }
         }
         return InitialData(
-            maxPollTextLength: 200,
-            maxPollOptionLength: 100,
-            maxPollAnwsersCount: maxPollAnwsersCount
+            maxTodoTextLength: maxTodoTextLength,
+            maxTodoItemLength: maxTodoItemLength,
+            maxTodoItemsCount: maxTodoItemsCount,
+            existingTodo: existingTodo,
+            append: append,
+            canEdit: canEdit
         )
     }
     
@@ -1639,7 +1499,7 @@ public class ComposePollScreen: ViewControllerComponentContainer, AttachmentCont
     }
     
     @objc private func sendPressed() {
-        guard let componentView = self.node.hostView.componentView as? ComposePollScreenComponent.View else {
+        guard let componentView = self.node.hostView.componentView as? ComposeTodoScreenComponent.View else {
             return
         }
         if let input = componentView.validatedInput() {
