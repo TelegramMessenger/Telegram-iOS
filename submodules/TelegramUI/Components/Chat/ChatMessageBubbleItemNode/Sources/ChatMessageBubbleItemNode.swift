@@ -414,6 +414,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
         if result.last?.1 == ChatMessageTextBubbleContentNode.self {
         } else {
             if result.last?.1 == ChatMessagePollBubbleContentNode.self ||
+               result.last?.1 == ChatMessageTodoBubbleContentNode.self ||
                result.last?.1 == ChatMessageContactBubbleContentNode.self ||
                result.last?.1 == ChatMessageGameBubbleContentNode.self ||
                result.last?.1 == ChatMessageInvoiceBubbleContentNode.self ||
@@ -423,8 +424,9 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
             } else if result.last?.1 == ChatMessageCommentFooterContentNode.self {
                 if result.count >= 2 {
                     if result[result.count - 2].1 == ChatMessagePollBubbleContentNode.self ||
-                        result[result.count - 2].1 == ChatMessageContactBubbleContentNode.self ||
-                        result[result.count - 2].1 == ChatMessageGiveawayBubbleContentNode.self {
+                       result[result.count - 2].1 == ChatMessageTodoBubbleContentNode.self ||
+                       result[result.count - 2].1 == ChatMessageContactBubbleContentNode.self ||
+                       result[result.count - 2].1 == ChatMessageGiveawayBubbleContentNode.self {
                         result.insert((firstMessage, ChatMessageReactionsFooterContentNode.self, ChatMessageEntryAttributes(), BubbleItemAttributes(isAttachment: true, neighborType: .reactions, neighborSpacing: .default)), at: result.count - 1)
                     }
                 }

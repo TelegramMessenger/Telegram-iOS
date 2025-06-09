@@ -625,6 +625,7 @@ final class ComposeTodoScreenComponent: Component {
                 },
                 assumeIsEditing: self.inputMediaNodeTargetTag === self.todoTextFieldTag,
                 characterLimit: component.initialData.maxTodoTextLength,
+                canReorder: canEdit,
                 emptyLineHandling: .allowed,
                 returnKeyAction: { [weak self] in
                     guard let self else {

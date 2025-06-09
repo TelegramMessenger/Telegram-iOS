@@ -78,6 +78,7 @@ public final class ListComposePollOptionComponent: Component {
     public let assumeIsEditing: Bool
     public let characterLimit: Int?
     public let enableInlineAnimations: Bool
+    public let canReorder: Bool
     public let emptyLineHandling: TextFieldComponent.EmptyLineHandling
     public let returnKeyAction: (() -> Void)?
     public let backspaceKeyAction: (() -> Void)?
@@ -98,6 +99,7 @@ public final class ListComposePollOptionComponent: Component {
         assumeIsEditing: Bool = false,
         characterLimit: Int,
         enableInlineAnimations: Bool = true,
+        canReorder: Bool = false,
         emptyLineHandling: TextFieldComponent.EmptyLineHandling,
         returnKeyAction: (() -> Void)?,
         backspaceKeyAction: (() -> Void)?,
@@ -117,6 +119,7 @@ public final class ListComposePollOptionComponent: Component {
         self.assumeIsEditing = assumeIsEditing
         self.characterLimit = characterLimit
         self.enableInlineAnimations = enableInlineAnimations
+        self.canReorder = canReorder
         self.emptyLineHandling = emptyLineHandling
         self.returnKeyAction = returnKeyAction
         self.backspaceKeyAction = backspaceKeyAction
@@ -156,6 +159,9 @@ public final class ListComposePollOptionComponent: Component {
             return false
         }
         if lhs.enableInlineAnimations != rhs.enableInlineAnimations {
+            return false
+        }
+        if lhs.canReorder != rhs.canReorder {
             return false
         }
         if lhs.emptyLineHandling != rhs.emptyLineHandling {
