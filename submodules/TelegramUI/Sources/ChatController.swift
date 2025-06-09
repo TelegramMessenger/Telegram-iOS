@@ -4808,8 +4808,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             var incompletedIds: [Int32] = []
             if value {
                 completedIds.append(itemId)
+                
+                if self.selectPollOptionFeedback == nil {
+                    self.selectPollOptionFeedback = HapticFeedback()
+                }
+                self.selectPollOptionFeedback?.success()
             } else {
                 incompletedIds.append(itemId)
+                
+                if self.selectPollOptionFeedback == nil {
+                    self.selectPollOptionFeedback = HapticFeedback()
+                }
+                self.selectPollOptionFeedback?.impact(.medium)
             }
             let signal = self.context.engine.messages.requestUpdateTodoMessageItems(messageId: messageId, completedIds: completedIds, incompletedIds: incompletedIds)
             disposables.set((signal
