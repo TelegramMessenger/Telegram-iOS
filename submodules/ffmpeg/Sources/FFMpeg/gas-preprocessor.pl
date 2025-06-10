@@ -27,7 +27,6 @@ my $as_type = "apple-gas";
 
 my $fix_unreq = $^O eq "darwin";
 my $force_thumb = 0;
-my $verbose = 0;
 
 my $arm_cond_codes = "eq|ne|cs|cc|mi|pl|vs|vc|hi|ls|ge|lt|gt|le|al|hs|lo";
 
@@ -49,7 +48,6 @@ command. Following options are currently supported:
     -force-thumb  - assemble as thumb regardless of the input source
                     (note, this is incomplete and only works for sources
                     it explicitly was tested with)
-    -verbose      - print executed commands
 ";
 
 sub usage() {
@@ -63,8 +61,6 @@ while (@ARGV) {
         $fix_unreq = $1 ne "no-";
     } elsif ($opt eq "-force-thumb") {
         $force_thumb = 1;
-    } elsif ($opt eq "-verbose") {
-        $verbose = 1;
     } elsif ($opt eq "-arch") {
         $arch = shift;
         die "unknown arch: '$arch'\n" if not exists $canonical_arch{$arch};
@@ -94,7 +90,6 @@ if (grep /\.c$/, @gcc_cmd) {
     # pass -v/--version along, used during probing. Matching '-v' might have
     # uninteded results but it doesn't matter much if gas-preprocessor or
     # the compiler fails.
-    print STDERR join(" ", @gcc_cmd)."\n" if $verbose;
     exec(@gcc_cmd);
 } else {
     die "Unrecognized input filetype";
@@ -120,7 +115,6 @@ if ($as_type eq "armasm") {
         $index++;
     }
     if (grep /^-MM$/, @preprocess_c_cmd) {
-        print STDERR join(" ", @preprocess_c_cmd)."\n" if $verbose;
         system(@preprocess_c_cmd) == 0 or die "Error running preprocessor";
         exit 0;
     }
@@ -212,14 +206,12 @@ $comm = ";" if $as_type =~ /armasm/;
 my %ppc_spr = (ctr    => 9,
                vrsave => 256);
 
-print STDERR join(" ", @preprocess_c_cmd)."\n" if $verbose;
 open(INPUT, "-|", @preprocess_c_cmd) || die "Error running preprocessor";
 
 if ($ENV{GASPP_DEBUG}) {
     open(ASMFILE, ">&STDOUT");
 } else {
     if ($as_type ne "armasm") {
-        print STDERR join(" ", @gcc_cmd)."\n" if $verbose;
         open(ASMFILE, "|-", @gcc_cmd) or die "Error running assembler";
     } else {
         open(ASMFILE, ">", $tempfile);
@@ -383,12 +375,12 @@ sub parse_line {
     return if (parse_if_line($line));
 
     if (scalar(@rept_lines) == 0) {
-        if ($line =~ /\.macro/) {
+        if (/\.macro/) {
             $macro_level++;
             if ($macro_level > 1 && !$current_macro) {
                 die "nested macros but we don't have master macro";
             }
-        } elsif ($line =~ /\.endm/) {
+        } elsif (/\.endm/) {
             $macro_level--;
             if ($macro_level < 0) {
                 die "unmatched .endm";
@@ -887,7 +879,7 @@ sub handle_serialized_line {
 
 
         # Check branch instructions
-        if ($line =~ /(?:^|\n)\s*(\w+\s*:\s*)?(bl?x?\.?([^\s]{2})?(\.w)?)\s+(\w+)/) {
+        if ($line =~ /(?:^|\n)\s*(\w+\s*:\s*)?(bl?x?\.?(..)?(\.w)?)\s+(\w+)/) {
             my $instr = $2;
             my $cond = $3;
             my $width = $4;
@@ -930,7 +922,7 @@ sub handle_serialized_line {
         # ALIGN in armasm syntax is the actual number of bytes
         if ($line =~ /\.(?:p2)?align\s+(\d+)/) {
             my $align = 1 << $1;
-            $line =~ s/\.(?:p2)?align\s+(\d+)/ALIGN $align/;
+            $line =~ s/\.(?:p2)?align\s(\d+)/ALIGN $align/;
         }
         # Convert gas style [r0, :128] into armasm [r0@128] alignment specification
         $line =~ s/\[([^\[,]+),?\s*:(\d+)\]/[$1\@$2]/g;
@@ -981,8 +973,8 @@ sub handle_serialized_line {
                 my $reg = $1;
                 my $sym = $2;
                 my $offset = eval_expr($3);
-                if ($offset < 0 and $ENV{GASPP_ARMASM64_SKIP_NEG_OFFSET}) {
-                    # armasm64 in VS < 15.6 is buggy with ldr x0, =sym+offset where the
+                if ($offset < 0) {
+                    # armasm64 is buggy with ldr x0, =sym+offset where the
                     # offset is a negative value; it does write a negative
                     # offset into the literal pool as it should, but the
                     # negative offset only covers the lower 32 bit of the 64
@@ -1013,7 +1005,7 @@ sub handle_serialized_line {
 
             # Convert e.g. "add x0, x0, w0, uxtw" into "add x0, x0, w0, uxtw #0",
             # or "ldr x0, [x0, w0, uxtw]" into "ldr x0, [x0, w0, uxtw #0]".
-            $line =~ s/(uxt[whb]|sxt[whb])(\s*\]?\s*)$/\1 #0\2/i;
+            $line =~ s/(uxtw|sxtw)(\s*\]?\s*)$/\1 #0\2/i;
 
             # Convert "mov x0, v0.d[0]" into "umov x0, v0.d[0]"
             $line =~ s/\bmov\s+[xw]\d+\s*,\s*v\d+\.[ds]/u$&/i;
@@ -1028,13 +1020,10 @@ sub handle_serialized_line {
             # Convert "cset w0, lo" into "csetlo w0"
             $line =~ s/(cset)\s+([xw]\w+)\s*,\s*($arm_cond_codes)/\1\3 \2/;
 
-            if ($ENV{GASPP_ARMASM64_SKIP_PRFUM}) {
-                # Strip out prfum; armasm64 (VS < 15.5) fails to assemble any
-                # variant/combination of prfum tested so far, but since it is
-                # a prefetch instruction it can be skipped without changing
-                # results.
-                $line =~ s/prfum.*\]//;
-            }
+            # Strip out prfum; armasm64 fails to assemble any
+            # variant/combination of prfum tested so far, but it can be
+            # left out without any
+            $line =~ s/prfum.*\]//;
 
             # Convert "ldrb w0, [x0, #-1]" into "ldurb w0, [x0, #-1]".
             # Don't do this for forms with writeback though.
@@ -1052,30 +1041,12 @@ sub handle_serialized_line {
             if ($ENV{GASPP_ARMASM64_INVERT_SCALE}) {
                 # Instructions like fcvtzs and scvtf store the scale value
                 # inverted in the opcode (stored as 64 - scale), but armasm64
-                # in VS < 15.5 stores it as-is. Thus convert from
+                # in early versions stores it as-is. Thus convert from
                 # "fcvtzs w0, s0, #8" into "fcvtzs w0, s0, #56".
                 if ($line =~ /(?:fcvtzs|scvtf)\s+(\w+)\s*,\s*(\w+)\s*,\s*#(\d+)/) {
                     my $scale = $3;
                     my $inverted_scale = 64 - $3;
                     $line =~ s/#$scale/#$inverted_scale/;
-                }
-            }
-
-            # Convert "ld1 {v0.4h-v3.4h}" into "ld1 {v0.4h,v1.4h,v2.4h,v3.4h}"
-            if ($line =~ /(?:ld|st)\d\s+({\s*v(\d+)\.(\d[bhsdBHSD])\s*-\s*v(\d+)\.(\d[bhsdBHSD])\s*})/) {
-                my $regspec = $1;
-                my $reg1 = $2;
-                my $layout1 = $3;
-                my $reg2 = $4;
-                my $layout2 = $5;
-                if ($layout1 eq $layout2) {
-                    my $new_regspec = "{";
-                    foreach my $i ($reg1 .. $reg2) {
-                        $new_regspec .= "," if ($i > $reg1);
-                        $new_regspec .= "v$i.$layout1";
-                    }
-                    $new_regspec .= "}";
-                    $line =~ s/$regspec/$new_regspec/;
                 }
             }
         }
@@ -1146,7 +1117,6 @@ sub handle_serialized_line {
     }
     if ($as_type eq "armasm") {
         $line =~ s/\.global/EXPORT/x;
-        $line =~ s/\.extern/IMPORT/x;
         $line =~ s/\.int/dcd/x;
         $line =~ s/\.long/dcd/x;
         $line =~ s/\.float/dcfs/x;
@@ -1160,7 +1130,7 @@ sub handle_serialized_line {
         $line =~ s/\.arm/ARM/x;
         # The alignment in AREA is the power of two, just as .align in gas
         $line =~ s/\.text/AREA |.text|, CODE, READONLY, ALIGN=4, CODEALIGN/;
-        $line =~ s/(\s*)(.*)\.ro?data/$1AREA |.rdata|, DATA, READONLY, ALIGN=5/;
+        $line =~ s/(\s*)(.*)\.rodata/$1AREA |.rodata|, DATA, READONLY, ALIGN=5/;
         $line =~ s/\.data/AREA |.data|, DATA, ALIGN=5/;
     }
     if ($as_type eq "armasm" and $arch eq "arm") {
@@ -1200,7 +1170,6 @@ if ($as_type ne "armasm") {
 close(INPUT) or exit 1;
 close(ASMFILE) or exit 1;
 if ($as_type eq "armasm" and ! defined $ENV{GASPP_DEBUG}) {
-    print STDERR join(" ", @gcc_cmd)."\n" if $verbose;
     system(@gcc_cmd) == 0 or die "Error running assembler";
 }
 
