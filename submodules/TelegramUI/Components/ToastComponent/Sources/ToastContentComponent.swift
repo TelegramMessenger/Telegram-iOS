@@ -9,20 +9,17 @@ public final class ToastContentComponent: Component {
     public let content: AnyComponent<Empty>
     public let insets: UIEdgeInsets
     public let iconSpacing: CGFloat
-    public let action: (() -> Void)?
 
     public init(
         icon: AnyComponent<Empty>,
         content: AnyComponent<Empty>,
         insets: UIEdgeInsets = UIEdgeInsets(top: 10.0, left: 10.0, bottom: 10.0, right: 10.0),
-        iconSpacing: CGFloat = 10.0,
-        action: (() -> Void)? = nil
+        iconSpacing: CGFloat = 10.0
     ) {
         self.icon = icon
         self.content = content
         self.insets = insets
         self.iconSpacing = iconSpacing
-        self.action = action
     }
 
     public static func ==(lhs: ToastContentComponent, rhs: ToastContentComponent) -> Bool {
@@ -69,18 +66,9 @@ public final class ToastContentComponent: Component {
         }
         
         
-        @objc private func tapped() {
-            self.component?.action?()
-        }
-        
         func update(component: ToastContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             var contentHeight: CGFloat = 0.0
             
-            if self.component == nil {
-                if let _ = component.action {
-                    self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapped)))
-                }
-            }
             self.component = component
             
             let leftInset: CGFloat = component.insets.left

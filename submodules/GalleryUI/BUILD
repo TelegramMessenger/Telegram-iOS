@@ -66,6 +66,9 @@ swift_library(
         "//submodules/ComponentFlow",
         "//submodules/TelegramUI/Components/ToastComponent",
         "//submodules/SemanticStatusNode",
+        "//submodules/TelegramUI/Components/PlainButtonComponent",
+        "//submodules/AvatarNode",
+        "//submodules/PhotoResources",
     ],
     visibility = [
         "//visibility:public",

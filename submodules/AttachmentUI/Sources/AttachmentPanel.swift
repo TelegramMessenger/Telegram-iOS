@@ -837,7 +837,7 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
         transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: size.width - statusSize.width - 15.0, y: floorToScreenPixels((size.height - statusSize.height) / 2.0)), size: statusSize))
         
         self.statusNode.foregroundNodeColor = state.textColor
-        self.statusNode.transitionToState(state.progress == .side ? .progress(value: nil, cancelEnabled: false, appearance: SemanticStatusNodeState.ProgressAppearance(inset: 0.0, lineWidth: 2.0)) : .none)
+        self.statusNode.transitionToState(state.progress == .side ? .progress(value: nil, cancelEnabled: false, appearance: SemanticStatusNodeState.ProgressAppearance(inset: 0.0, lineWidth: 2.0), animateRotation: true) : .none)
     }
 }
 

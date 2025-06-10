@@ -684,6 +684,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     
     private struct HighlightedState: Equatable {
         var quote: ChatInterfaceHighlightedState.Quote?
+        var todoTaskId: Int32?
     }
     private var highlightedState: HighlightedState?
     
@@ -5899,7 +5900,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         if let highlightedStateValue = item.controllerInteraction.highlightedState {
             for (message, _) in item.content {
                 if highlightedStateValue.messageStableId == message.stableId {
-                    highlightedState = HighlightedState(quote: highlightedStateValue.quote)
+                    highlightedState = HighlightedState(quote: highlightedStateValue.quote, todoTaskId: highlightedStateValue.todoTaskId)
                     break
                 }
             }
@@ -5911,6 +5912,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             for contentNode in self.contentNodes {
                 if let contentNode = contentNode as? ChatMessageTextBubbleContentNode {
                     contentNode.updateQuoteTextHighlightState(text: nil, offset: nil, color: .clear, animated: true)
+                } else if let _ = contentNode as? ChatMessageTodoBubbleContentNode {
+                    
                 }
             }
             
@@ -5988,6 +5991,34 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                                         
                                         backgroundHighlightNode.updateLayout(size: quoteFrame.size, transition: transition)
                                         transition.updateFrame(node: backgroundHighlightNode, frame: quoteFrame)
+                                        backgroundHighlightNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, delay: 0.05, removeOnCompletion: false, completion: { [weak backgroundHighlightNode] _ in
+                                            backgroundHighlightNode?.removeFromSupernode()
+                                        })
+                                    }
+                                }
+                            })
+                        } else if highlightedState?.todoTaskId != nil {
+                            Queue.mainQueue().after(0.3, { [weak self] in
+                                guard let self, let _ = self.item, let backgroundHighlightNode = self.backgroundHighlightNode else {
+                                    return
+                                }
+                                
+                                if let highlightedState = self.highlightedState, let todoTaskId = highlightedState.todoTaskId {
+                                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.4, curve: .spring)
+                                    
+                                    var taskFrame: CGRect?
+                                    for contentNode in self.contentNodes {
+                                        if let contentNode = contentNode as? ChatMessageTodoBubbleContentNode, let localFrame = contentNode.taskItemFrame(id: todoTaskId) {
+                                            taskFrame = contentNode.view.convert(localFrame, to: backgroundHighlightNode.view.superview)
+                                            break
+                                        }
+                                    }
+                                    
+                                    if let taskFrame {
+                                        self.backgroundHighlightNode = nil
+                                        
+                                        backgroundHighlightNode.updateLayout(size: taskFrame.size, transition: transition)
+                                        transition.updateFrame(node: backgroundHighlightNode, frame: taskFrame)
                                         backgroundHighlightNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, delay: 0.05, removeOnCompletion: false, completion: { [weak backgroundHighlightNode] _ in
                                             backgroundHighlightNode?.removeFromSupernode()
                                         })

@@ -756,7 +756,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         guard let controller = self.baseNavigationController()?.topViewController as? ViewController else {
             return
         }
-        let contextController = ContextController(presentationData: self.presentationData.withUpdated(theme: defaultDarkColorPresentationTheme), source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceNode: self.moreBarButton.referenceNode)), items: items |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
+        let contextController = ContextController(presentationData: self.presentationData.withUpdated(theme: defaultDarkColorPresentationTheme), source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceNode: self.moreBarButton.referenceNode, actionsOnTop: false)), items: items |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
         controller.presentInGlobalOverlay(contextController)
     }
     

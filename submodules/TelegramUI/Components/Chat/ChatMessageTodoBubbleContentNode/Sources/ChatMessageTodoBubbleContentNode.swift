@@ -1241,4 +1241,13 @@ public class ChatMessageTodoBubbleContentNode: ChatMessageBubbleContentNode {
         }
         return nil
     }
+    
+    public func taskItemFrame(id: Int32) -> CGRect? {
+        for node in self.optionNodes {
+            if node.option?.id == id {
+                return node.frame
+            }
+        }
+        return nil
+    }
 }

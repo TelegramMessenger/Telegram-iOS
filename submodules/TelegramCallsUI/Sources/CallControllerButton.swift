@@ -160,7 +160,7 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                     let statusNode = SemanticStatusNode(backgroundNodeColor: .white, foregroundNodeColor: .clear, cutout: statusFrame.insetBy(dx: 8.0, dy: 8.0))
                     self.statusNode = statusNode
                     self.contentContainer.insertSubnode(statusNode, belowSubnode: self.contentNode)
-                    statusNode.transitionToState(.progress(value: nil, cancelEnabled: false, appearance: SemanticStatusNodeState.ProgressAppearance(inset: 4.0, lineWidth: 3.0)), animated: false, completion: {})
+                    statusNode.transitionToState(.progress(value: nil, cancelEnabled: false, appearance: SemanticStatusNodeState.ProgressAppearance(inset: 4.0, lineWidth: 3.0), animateRotation: true), animated: false, completion: {})
                 }
                 if let statusNode = self.statusNode {
                     statusNode.frame = statusFrame

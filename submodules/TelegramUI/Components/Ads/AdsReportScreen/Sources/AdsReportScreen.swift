@@ -92,8 +92,8 @@ private final class SheetPageContent: CombinedComponent {
             let state = context.state
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-            let theme = presentationData.theme
-            let strings = presentationData.strings
+            let theme = environment.theme
+            let strings = environment.strings
             
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
             
