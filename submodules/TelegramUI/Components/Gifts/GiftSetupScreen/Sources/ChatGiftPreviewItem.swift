@@ -257,18 +257,17 @@ final class ChatGiftPreviewItemNode: ListViewItemNode {
                 currentNodes = nil
             }
             
+            let transition = ControlledTransition(duration: 0.2, curve: .spring, interactive: false)
             if let messageNodes = currentNodes {
                 nodes = messageNodes
                 for i in 0 ..< items.count {
                     let itemNode = messageNodes[i]
                     items[i].updateNode(async: { $0() }, node: {
                         return itemNode
-                    }, params: params, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], animation: .System(duration: 0.2, transition: ControlledTransition(duration: 0.2, curve: .spring, interactive: false)), completion: { (layout, apply) in
-                        let nodeFrame = CGRect(origin: itemNode.frame.origin, size: CGSize(width: layout.size.width, height: layout.size.height))
-                        
+                    }, params: params, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], animation: .System(duration: 0.2, transition: transition), completion: { (layout, apply) in
+                        itemNode.bounds = CGRect(origin: .zero, size: layout.size)
                         itemNode.contentSize = layout.contentSize
                         itemNode.insets = layout.insets
-                        itemNode.frame = nodeFrame
                         itemNode.isUserInteractionEnabled = false
                         itemNode.visibility = .visible(1.0, .infinite)
                         
@@ -333,12 +332,14 @@ final class ChatGiftPreviewItemNode: ListViewItemNode {
                             strongSelf.containerNode.addSubnode(node)
                         }
                         let bubbleHeight: CGFloat
-                        if node.frame.height > 44.0, let initialBubbleHeight = strongSelf.initialBubbleHeight {
-                            bubbleHeight = max(node.frame.height, initialBubbleHeight)
-                        } else {
+//                        if node.frame.height > 44.0, let initialBubbleHeight = strongSelf.initialBubbleHeight {
+//                            bubbleHeight = max(node.frame.height, initialBubbleHeight)
+//                        } else {
                             bubbleHeight = node.frame.height
-                        }
-                        node.updateFrame(CGRect(origin: CGPoint(x: 0.0, y: originY), size: node.frame.size), within: layoutSize)
+//                        }
+                        transition.legacyAnimator.transition.updateFrame(node: node, frame: CGRect(origin: CGPoint(x: 0.0, y: originY), size: node.frame.size))
+                        
+                        //node.updateFrame(CGRect(origin: CGPoint(x: 0.0, y: originY), size: node.frame.size), within: layoutSize, transition: transition)
                         originY += bubbleHeight
                     }
                     

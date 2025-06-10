@@ -33,6 +33,8 @@ import AutomaticBusinessMessageSetupScreen
 import MediaEditorScreen
 import CameraScreen
 import ShareController
+import ComposeTodoScreen
+import ComposePollUI
 
 extension ChatControllerImpl {
     enum AttachMenuSubject {
@@ -112,6 +114,8 @@ extension ChatControllerImpl {
         if canSendPolls {
             availableButtons.insert(.poll, at: max(0, availableButtons.count - 1))
         }
+        
+        availableButtons.append(.todo)
         
         let presentationData = self.presentationData
         
@@ -622,6 +626,26 @@ extension ChatControllerImpl {
                         completion(controller, controller.mediaPickerContext)
                         strongSelf.controllerNavigationDisposable.set(nil)
                     }
+                case .todo:
+                    if strongSelf.context.isPremium {
+                        if let controller = strongSelf.configureTodoCreation() as? AttachmentContainable {
+                            completion(controller, controller.mediaPickerContext)
+                            strongSelf.controllerNavigationDisposable.set(nil)
+                        }
+                    } else {
+                        var replaceImpl: ((ViewController) -> Void)?
+                        let demoController = strongSelf.context.sharedContext.makePremiumDemoController(context: strongSelf.context, subject: .todo, forceDark: false, action: {
+                            let controller = context.sharedContext.makePremiumIntroController(context: context, source: .todo, forceDark: false, dismissed: nil)
+                            replaceImpl?(controller)
+                        }, dismissed: nil)
+                        replaceImpl = { [weak demoController] c in
+                            demoController?.replace(with: c)
+                        }
+                        strongSelf.push(demoController)
+                        Queue.mainQueue().after(0.4) {
+                            strongSelf.attachmentController?.dismiss(animated: false)
+                        }
+                    }
                 case .gift:
                     if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer, let starsContext = context.starsContext {
                         let premiumGiftOptions = strongSelf.presentationInterfaceState.premiumGiftOptions
@@ -677,12 +701,12 @@ extension ChatControllerImpl {
                                     let _ = self.context.engine.messages.acceptAttachMenuBotDisclaimer(botId: bot.peer.id).startStandalone()
                                 }
                                 let _ = (self.context.engine.messages.addBotToAttachMenu(botId: bot.peer.id, allowWrite: allowWrite)
-                                         |> deliverOnMainQueue).startStandalone(error: { _ in
+                                |> deliverOnMainQueue).startStandalone(error: { _ in
                                 }, completed: { [weak controller] in
                                     controller?.refresh()
                                 })
                             },
-                                                                             dismissed: {
+                            dismissed: {
                                 strongSelf.attachmentController?.dismiss(animated: true)
                             })
                             strongSelf.present(alertController, in: .window(.root))
@@ -1966,5 +1990,148 @@ extension ChatControllerImpl {
         mainController.navigationPresentation = .flatModal
         mainController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         self.push(mainController)
+    }
+    
+    func configurePollCreation(isQuiz: Bool? = nil) -> ViewController? {
+        guard let peer = self.presentationInterfaceState.renderedPeer?.peer else {
+            return nil
+        }
+        return ComposePollScreen(
+            context: self.context,
+            initialData: ComposePollScreen.initialData(context: self.context),
+            peer: EnginePeer(peer),
+            isQuiz: isQuiz,
+            completion: { [weak self] poll in
+                guard let self else {
+                    return
+                }
+                self.presentPaidMessageAlertIfNeeded(completion: { [weak self] postpone in
+                    guard let self else {
+                        return
+                    }
+                    let replyMessageSubject = self.presentationInterfaceState.interfaceState.replyMessageSubject
+                    self.chatDisplayNode.setupSendActionOnViewUpdate({ [weak self] in
+                        if let self {
+                            self.chatDisplayNode.collapseInput()
+                            
+                            self.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                                $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil) }
+                            })
+                        }
+                    }, nil)
+                    let message: EnqueueMessage = .message(
+                        text: "",
+                        attributes: [],
+                        inlineStickers: [:],
+                        mediaReference: .standalone(media: TelegramMediaPoll(
+                            pollId: MediaId(namespace: Namespaces.Media.LocalPoll, id: Int64.random(in: Int64.min...Int64.max)),
+                            publicity: poll.publicity,
+                            kind: poll.kind,
+                            text: poll.text.string,
+                            textEntities: poll.text.entities,
+                            options: poll.options,
+                            correctAnswers: poll.correctAnswers,
+                            results: poll.results,
+                            isClosed: false,
+                            deadlineTimeout: poll.deadlineTimeout
+                        )),
+                        threadId: self.chatLocation.threadId,
+                        replyToMessageId: nil,
+                        replyToStoryId: nil,
+                        localGroupingKey: nil,
+                        correlationId: nil,
+                        bubbleUpEmojiOrStickersets: []
+                    )
+                    self.sendMessages([message.withUpdatedReplyToMessageId(replyMessageSubject?.subjectModel)])
+                })
+            }
+        )
+    }
+    
+    func configureTodoCreation() -> ViewController? {
+        guard let peer = self.presentationInterfaceState.renderedPeer?.peer else {
+            return nil
+        }
+        return ComposeTodoScreen(
+            context: self.context,
+            initialData: ComposeTodoScreen.initialData(
+                context: self.context
+            ),
+            peer: EnginePeer(peer),
+            completion: { [weak self] todo in
+                guard let self else {
+                    return
+                }
+                self.presentPaidMessageAlertIfNeeded(completion: { [weak self] postpone in
+                    guard let self else {
+                        return
+                    }
+                    let replyMessageSubject = self.presentationInterfaceState.interfaceState.replyMessageSubject
+                    self.chatDisplayNode.setupSendActionOnViewUpdate({ [weak self] in
+                        if let self {
+                            self.chatDisplayNode.collapseInput()
+                            
+                            self.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                                $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil) }
+                            })
+                        }
+                    }, nil)
+                    let message: EnqueueMessage = .message(
+                        text: "",
+                        attributes: [],
+                        inlineStickers: [:],
+                        mediaReference: .standalone(media: todo),
+                        threadId: self.chatLocation.threadId,
+                        replyToMessageId: nil,
+                        replyToStoryId: nil,
+                        localGroupingKey: nil,
+                        correlationId: nil,
+                        bubbleUpEmojiOrStickersets: []
+                    )
+                    self.sendMessages([message.withUpdatedReplyToMessageId(replyMessageSubject?.subjectModel)])
+                })
+            }
+        )
+    }
+    
+    func openTodoEditing(messageId: EngineMessage.Id, append: Bool) {
+        guard let message = self.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId), let peer = self.presentationInterfaceState.renderedPeer?.peer else {
+            return
+        }
+        guard let existingTodo = message.media.first(where: { $0 is TelegramMediaTodo }) as? TelegramMediaTodo else {
+            return
+        }
+        
+        let canEdit = canEditMessage(context: self.context, limitsConfiguration: self.context.currentLimitsConfiguration.with { EngineConfiguration.Limits($0) }, message: message)
+        
+        let controller = ComposeTodoScreen(
+            context: self.context,
+            initialData: ComposeTodoScreen.initialData(
+                context: self.context,
+                existingTodo: existingTodo,
+                append: append,
+                canEdit: canEdit
+            ),
+            peer: EnginePeer(peer),
+            completion: { [weak self] todo in
+                guard let self else {
+                    return
+                }
+                if canEdit {
+                    let _ = self.context.engine.messages.requestEditMessage(
+                        messageId: messageId,
+                        text: "",
+                        media: .update(.standalone(media: todo)),
+                        entities: nil,
+                        inlineStickers: [:]
+                    ).start()
+                } else {
+                    let appendedItems = Array(todo.items[existingTodo.items.count ..< todo.items.count])
+                    let _ = self.context.engine.messages.appendTodoMessageItems(messageId: messageId, items: appendedItems).start()
+                }
+            }
+        )
+        controller.navigationPresentation = .modal
+        self.push(controller)
     }
 }

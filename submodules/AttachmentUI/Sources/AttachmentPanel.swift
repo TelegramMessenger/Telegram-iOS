@@ -195,6 +195,9 @@ private final class AttachButtonComponent: CombinedComponent {
             case .location:
                 name = strings.Attachment_Location
                 imageName = "Chat/Attach Menu/Location"
+            case .todo:
+                name = "To Do List"
+                imageName = "Chat/Attach Menu/Todo"
             case .contact:
                 name = strings.Attachment_Contact
                 imageName = "Chat/Attach Menu/Contact"
@@ -1267,6 +1270,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
         }, openBoostToUnrestrict: {
         }, updateRecordingTrimRange: { _, _, _, _ in
         }, dismissAllTooltips: {  
+        }, editTodoMessage: { _, _ in
         }, updateHistoryFilter: { _ in
         }, updateChatLocationThread: { _, _ in
         }, toggleChatSidebarMode: {
@@ -1490,6 +1494,9 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
                 accessibilityTitle = self.presentationData.strings.Attachment_File
             case .location:
                 accessibilityTitle = self.presentationData.strings.Attachment_Location
+            case .todo:
+                //TODO:localize
+                accessibilityTitle = "To Do List"
             case .contact:
                 accessibilityTitle = self.presentationData.strings.Attachment_Contact
             case .poll:

@@ -647,6 +647,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, playShakeAnimation: {
         }, displayQuickShare: { _, _ ,_ in
         }, updateChatLocationThread: { _, _ in
+        }, requestToggleTodoMessageItem: { _, _, _ in
+        }, displayTodoToggleUnavailable: { _ in
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
         pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(), presentationContext: ChatPresentationContext(context: context, backgroundNode: self.backgroundNode))
         self.controllerInteraction = controllerInteraction

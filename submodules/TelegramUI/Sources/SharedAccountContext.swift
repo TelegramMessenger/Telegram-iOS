@@ -2400,6 +2400,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }, playShakeAnimation: {
         }, displayQuickShare: { _, _ ,_ in
         }, updateChatLocationThread: { _, _ in
+        }, requestToggleTodoMessageItem: { _, _, _ in
+        }, displayTodoToggleUnavailable: { _ in
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
         pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(), presentationContext: ChatPresentationContext(context: context, backgroundNode: backgroundNode as? WallpaperBackgroundNode))
         
@@ -2715,6 +2717,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSource = .animatedEmoji
         case .paidMessages:
             mappedSource = .paidMessages
+        case .todo:
+            mappedSource = .paidMessages
         case let .auth(price):
             mappedSource = .auth(price)
         }
@@ -2793,6 +2797,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSubject = .messageEffects
         case .paidMessages:
             mappedSubject = .paidMessages
+        case .todo:
+            mappedSubject = .todo
         case .business:
             mappedSubject = .business
             buttonText = presentationData.strings.Chat_EmptyStateIntroFooterPremiumActionButton

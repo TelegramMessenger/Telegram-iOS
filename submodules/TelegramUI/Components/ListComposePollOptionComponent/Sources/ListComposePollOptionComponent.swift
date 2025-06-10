@@ -73,10 +73,12 @@ public final class ListComposePollOptionComponent: Component {
     public let theme: PresentationTheme
     public let strings: PresentationStrings
     public let placeholder: NSAttributedString?
+    public let isEnabled: Bool
     public let resetText: ResetText?
     public let assumeIsEditing: Bool
     public let characterLimit: Int?
     public let enableInlineAnimations: Bool
+    public let canReorder: Bool
     public let emptyLineHandling: TextFieldComponent.EmptyLineHandling
     public let returnKeyAction: (() -> Void)?
     public let backspaceKeyAction: (() -> Void)?
@@ -92,10 +94,12 @@ public final class ListComposePollOptionComponent: Component {
         theme: PresentationTheme,
         strings: PresentationStrings,
         placeholder: NSAttributedString? = nil,
+        isEnabled: Bool = true,
         resetText: ResetText? = nil,
         assumeIsEditing: Bool = false,
         characterLimit: Int,
         enableInlineAnimations: Bool = true,
+        canReorder: Bool = false,
         emptyLineHandling: TextFieldComponent.EmptyLineHandling,
         returnKeyAction: (() -> Void)?,
         backspaceKeyAction: (() -> Void)?,
@@ -110,10 +114,12 @@ public final class ListComposePollOptionComponent: Component {
         self.theme = theme
         self.strings = strings
         self.placeholder = placeholder
+        self.isEnabled = isEnabled
         self.resetText = resetText
         self.assumeIsEditing = assumeIsEditing
         self.characterLimit = characterLimit
         self.enableInlineAnimations = enableInlineAnimations
+        self.canReorder = canReorder
         self.emptyLineHandling = emptyLineHandling
         self.returnKeyAction = returnKeyAction
         self.backspaceKeyAction = backspaceKeyAction
@@ -140,6 +146,9 @@ public final class ListComposePollOptionComponent: Component {
         if lhs.placeholder != rhs.placeholder {
             return false
         }
+        if lhs.isEnabled != rhs.isEnabled {
+            return false
+        }
         if lhs.resetText != rhs.resetText {
             return false
         }
@@ -150,6 +159,9 @@ public final class ListComposePollOptionComponent: Component {
             return false
         }
         if lhs.enableInlineAnimations != rhs.enableInlineAnimations {
+            return false
+        }
+        if lhs.canReorder != rhs.canReorder {
             return false
         }
         if lhs.emptyLineHandling != rhs.emptyLineHandling {
@@ -400,6 +412,9 @@ public final class ListComposePollOptionComponent: Component {
                     self.textField.parentState = state
                 }
                 transition.setFrame(view: textFieldView, frame: textFieldFrame)
+                
+                transition.setAlpha(view: textFieldView, alpha: component.isEnabled ? 1.0 : 0.3)
+                textFieldView.isUserInteractionEnabled = component.isEnabled
             }
             
             if let selection = component.selection {

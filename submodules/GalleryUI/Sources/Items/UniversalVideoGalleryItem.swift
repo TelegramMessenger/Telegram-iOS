@@ -33,6 +33,9 @@ import RasterizedCompositionComponent
 import BadgeComponent
 import ComponentFlow
 import ComponentDisplayAdapters
+import ToastComponent
+import MultilineTextComponent
+import BundleIconComponent
 
 public enum UniversalVideoGalleryItemContentInfo {
     case message(Message, Int?)

@@ -1402,4 +1402,28 @@ public struct PresentationResourcesChat {
             return nil
         })
     }
+    
+    public static func chatBubbleTodoDotIncomingIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatBubbleTodoDotIncomingIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/TodoDot"), color: theme.chat.message.incoming.accentTextColor)
+        })
+    }
+    
+    public static func chatBubbleTodoDotOutgoingIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatBubbleTodoDotOutgoingIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/TodoDot"), color: theme.chat.message.outgoing.accentTextColor)
+        })
+    }
+    
+    public static func chatBubbleTodoCheckIncomingIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatBubbleTodoCheckIncomingIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/TodoCheck"), color: theme.chat.message.incoming.accentTextColor)
+        })
+    }
+    
+    public static func chatBubbleTodoCheckOutgoingIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatBubbleTodoCheckOutgoingIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/TodoCheck"), color: theme.chat.message.outgoing.accentTextColor)
+        })
+    }
 }

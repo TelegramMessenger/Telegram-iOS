@@ -22,6 +22,7 @@ import ShareController
 import UrlEscaping
 import ContextUI
 import ComposePollUI
+import ComposeTodoScreen
 import AlertUI
 import PresentationDataUtils
 import UndoUI
@@ -341,6 +342,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     var selectMessagePollOptionDisposables: DisposableDict<MessageId>?
     var selectPollOptionFeedback: HapticFeedback?
+    
+    var updateMessageTodoDisposables: DisposableDict<MessageId>?
     
     var resolveUrlDisposable: MetaDisposable?
     
@@ -964,7 +967,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return false
                     }
                     switch action.action {
-                        case .pinnedMessageUpdated, .gameScore, .setSameChatWallpaper, .giveawayResults, .customText:
+                        case .pinnedMessageUpdated, .gameScore, .setSameChatWallpaper, .giveawayResults, .customText, .todoCompletions, .todoAppendTasks:
                             for attribute in message.attributes {
                                 if let attribute = attribute as? ReplyMessageAttribute {
                                     self.navigateToMessage(from: message.id, to: .id(attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.isQuote ? attribute.quote.flatMap { quote in NavigateToMessageParams.Quote(string: quote.text, offset: quote.offset) } : nil)))
@@ -4789,6 +4792,78 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return direction ? .right : .left
             }
             self.updateChatLocationThread(threadId: threadId, animationDirection: animationDirection ?? defaultDirection)
+        }, requestToggleTodoMessageItem: { [weak self] messageId, itemId, value in
+            guard let self else {
+                return
+            }
+
+            let disposables: DisposableDict<MessageId>
+            if let current = self.updateMessageTodoDisposables {
+                disposables = current
+            } else {
+                disposables = DisposableDict()
+                self.updateMessageTodoDisposables = disposables
+            }
+            var completedIds: [Int32] = []
+            var incompletedIds: [Int32] = []
+            if value {
+                completedIds.append(itemId)
+                
+                if self.selectPollOptionFeedback == nil {
+                    self.selectPollOptionFeedback = HapticFeedback()
+                }
+                self.selectPollOptionFeedback?.success()
+            } else {
+                incompletedIds.append(itemId)
+                
+                if self.selectPollOptionFeedback == nil {
+                    self.selectPollOptionFeedback = HapticFeedback()
+                }
+                self.selectPollOptionFeedback?.impact(.medium)
+            }
+            let signal = self.context.engine.messages.requestUpdateTodoMessageItems(messageId: messageId, completedIds: completedIds, incompletedIds: incompletedIds)
+            disposables.set((signal
+            |> deliverOnMainQueue).startStrict(next: { todo in
+               
+            }, error: { _ in
+
+            }), forKey: messageId)
+        }, displayTodoToggleUnavailable: { [weak self] messageId in
+            guard let self else {
+                return
+            }
+            self.dismissAllUndoControllers()
+            //TODO:localize
+            if !self.context.isPremium {
+                let controller = UndoOverlayController(
+                    presentationData: self.presentationData,
+                    content: .premiumPaywall(title: nil, text: "Only [Telegram Premium]() subscribers can mark tasks as done.", customUndoText: nil, timeout: nil, linkAction: nil),
+                    action: { [weak self] action in
+                        guard let self else {
+                            return false
+                        }
+                        if case .info = action {
+                            let controller = self.context.sharedContext.makePremiumIntroController(context: context, source: .presence, forceDark: false, dismissed: nil)
+                            self.push(controller)
+                        }
+                        return false
+                    }
+                )
+                self.present(controller, in: .current)
+            } else if let message = self.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
+                var peerName = ""
+                if let author = message.author {
+                    peerName = EnginePeer(author).compactDisplayTitle
+                }
+                let controller = UndoOverlayController(
+                    presentationData: self.presentationData,
+                    content: .universalImage(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Stickers/Lock"), color: .white)!, size: nil, title: nil, text: "\(peerName) has restricted others from editing this to do list.", customUndoText: nil, timeout: nil),
+                    action: { _ in
+                        return false
+                    }
+                )
+                self.present(controller, in: .current)
+            }
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: self.stickerSettings, presentationContext: ChatPresentationContext(context: context, backgroundNode: self.chatBackgroundNode))
         controllerInteraction.enableFullTranslucency = context.sharedContext.energyUsageSettings.fullTranslucency
         
@@ -5845,6 +5920,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.updateChatLocationThreadDisposable?.dispose()
         self.accountPeerDisposable?.dispose()
         self.contentDataDisposable?.dispose()
+        self.updateMessageTodoDisposables?.dispose()
     }
     
     public func updatePresentationMode(_ mode: ChatControllerPresentationMode) {
@@ -7576,57 +7652,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.present(tooltipScreen, in: .current)
     }
-        
-    func configurePollCreation(isQuiz: Bool? = nil) -> ViewController? {
-        guard let peer = self.presentationInterfaceState.renderedPeer?.peer else {
-            return nil
-        }
-        return createPollController(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: EnginePeer(peer), isQuiz: isQuiz, completion: { [weak self] poll in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.presentPaidMessageAlertIfNeeded(completion: { [weak self] postpone in
-                guard let strongSelf = self else {
-                    return
-                }
-                let replyMessageSubject = strongSelf.presentationInterfaceState.interfaceState.replyMessageSubject
-                strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
-                    if let strongSelf = self {
-                        strongSelf.chatDisplayNode.collapseInput()
-                        
-                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil) }
-                        })
-                    }
-                }, nil)
-                let message: EnqueueMessage = .message(
-                    text: "",
-                    attributes: [],
-                    inlineStickers: [:],
-                    mediaReference: .standalone(media: TelegramMediaPoll(
-                        pollId: MediaId(namespace: Namespaces.Media.LocalPoll, id: Int64.random(in: Int64.min ... Int64.max)),
-                        publicity: poll.publicity,
-                        kind: poll.kind,
-                        text: poll.text.string,
-                        textEntities: poll.text.entities,
-                        options: poll.options,
-                        correctAnswers: poll.correctAnswers,
-                        results: poll.results,
-                        isClosed: false,
-                        deadlineTimeout: poll.deadlineTimeout
-                    )),
-                    threadId: strongSelf.chatLocation.threadId,
-                    replyToMessageId: nil,
-                    replyToStoryId: nil,
-                    localGroupingKey: nil,
-                    correlationId: nil,
-                    bubbleUpEmojiOrStickersets: []
-                )
-                strongSelf.sendMessages([message.withUpdatedReplyToMessageId(replyMessageSubject?.subjectModel)])
-            })
-        })
-    }
-    
+            
     func transformEnqueueMessages(_ messages: [EnqueueMessage], postpone: Bool = false) -> [EnqueueMessage] {
         let silentPosting = self.presentationInterfaceState.interfaceState.silentPosting
         return transformEnqueueMessages(messages, silentPosting: silentPosting, postpone: postpone)

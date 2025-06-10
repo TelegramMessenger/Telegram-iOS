@@ -1092,7 +1092,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                         })
                                     }
                                     backgroundContent.view.mask = strongSelf.mediaBackgroundMaskNode.view
-                                    strongSelf.mediaBackgroundMaskNode.frame = CGRect(origin: .zero, size: backgroundMaskFrame.size)
+                                    animation.animator.updateFrame(layer: strongSelf.mediaBackgroundMaskNode.layer, frame: CGRect(origin: .zero, size: backgroundMaskFrame.size), completion: nil)
                                 } else {
                                     animation.animator.updateFrame(layer: backgroundContent.layer, frame: mediaBackgroundFrame, completion: nil)
                                     backgroundContent.clipsToBounds = true
@@ -1153,7 +1153,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 }
 
                                 if let backgroundNode = strongSelf.backgroundNode {
-                                    backgroundNode.frame = CGRect(origin: CGPoint(x: baseBackgroundFrame.minX + offset.x, y: baseBackgroundFrame.minY + offset.y), size: image.size)
+                                    animation.animator.updateFrame(layer: backgroundNode.layer, frame: CGRect(origin: CGPoint(x: baseBackgroundFrame.minX + offset.x, y: baseBackgroundFrame.minY + offset.y), size: image.size), completion: nil)
                                 }
                                 strongSelf.backgroundMaskNode.image = image
                                 strongSelf.backgroundMaskNode.frame = CGRect(origin: CGPoint(), size: image.size)

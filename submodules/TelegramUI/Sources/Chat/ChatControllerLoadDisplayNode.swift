@@ -21,7 +21,6 @@ import DeviceLocationManager
 import ShareController
 import UrlEscaping
 import ContextUI
-import ComposePollUI
 import AlertUI
 import PresentationDataUtils
 import UndoUI
@@ -4148,6 +4147,11 @@ extension ChatControllerImpl {
                 return
             }
             self.dismissAllTooltips()
+        }, editTodoMessage: { [weak self] messageId, append in
+            guard let self else {
+                return
+            }
+            self.openTodoEditing(messageId: messageId, append: append)
         }, updateHistoryFilter: { [weak self] update in
             guard let self else {
                 return

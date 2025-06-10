@@ -137,7 +137,7 @@ func apiMessagePeerId(_ messsage: Api.Message) -> PeerId? {
             } else {
                 return nil
             }
-        case let .messageService(_, _, _, chatPeerId, _, _, _, _, _):
+        case let .messageService(_, _, _, chatPeerId, _, _, _, _, _, _):
             return chatPeerId.peerId
     }
 }
@@ -218,7 +218,7 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
             return result
         case .messageEmpty:
             return []
-        case let .messageService(_, _, fromId, chatPeerId, _, _, action, _, _):
+        case let .messageService(_, _, fromId, chatPeerId, savedPeerId, _, _, action, _, _):
             let peerId: PeerId = chatPeerId.peerId
             var result = [peerId]
             
@@ -227,9 +227,12 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
             if resolvedFromId != peerId {
                 result.append(resolvedFromId)
             }
+            if let savedPeerId, resolvedFromId != savedPeerId.peerId {
+                result.append(savedPeerId.peerId)
+            }
             
             switch action {
-            case .messageActionChannelCreate, .messageActionChatDeletePhoto, .messageActionChatEditPhoto, .messageActionChatEditTitle, .messageActionEmpty, .messageActionPinMessage, .messageActionHistoryClear, .messageActionGameScore, .messageActionPaymentSent, .messageActionPaymentSentMe, .messageActionPhoneCall, .messageActionScreenshotTaken, .messageActionCustomAction, .messageActionBotAllowed, .messageActionSecureValuesSent, .messageActionSecureValuesSentMe, .messageActionContactSignUp, .messageActionGroupCall, .messageActionSetMessagesTTL, .messageActionGroupCallScheduled, .messageActionSetChatTheme, .messageActionChatJoinedByRequest, .messageActionWebViewDataSent, .messageActionWebViewDataSentMe, .messageActionGiftPremium, .messageActionGiftStars, .messageActionTopicCreate, .messageActionTopicEdit, .messageActionSuggestProfilePhoto, .messageActionSetChatWallPaper, .messageActionGiveawayLaunch, .messageActionGiveawayResults, .messageActionBoostApply, .messageActionRequestedPeerSentMe, .messageActionStarGift, .messageActionStarGiftUnique, .messageActionPaidMessagesRefunded, .messageActionPaidMessagesPrice:
+            case .messageActionChannelCreate, .messageActionChatDeletePhoto, .messageActionChatEditPhoto, .messageActionChatEditTitle, .messageActionEmpty, .messageActionPinMessage, .messageActionHistoryClear, .messageActionGameScore, .messageActionPaymentSent, .messageActionPaymentSentMe, .messageActionPhoneCall, .messageActionScreenshotTaken, .messageActionCustomAction, .messageActionBotAllowed, .messageActionSecureValuesSent, .messageActionSecureValuesSentMe, .messageActionContactSignUp, .messageActionGroupCall, .messageActionSetMessagesTTL, .messageActionGroupCallScheduled, .messageActionSetChatTheme, .messageActionChatJoinedByRequest, .messageActionWebViewDataSent, .messageActionWebViewDataSentMe, .messageActionGiftPremium, .messageActionGiftStars, .messageActionTopicCreate, .messageActionTopicEdit, .messageActionSuggestProfilePhoto, .messageActionSetChatWallPaper, .messageActionGiveawayLaunch, .messageActionGiveawayResults, .messageActionBoostApply, .messageActionRequestedPeerSentMe, .messageActionStarGift, .messageActionStarGiftUnique, .messageActionPaidMessagesRefunded, .messageActionPaidMessagesPrice, .messageActionTodoCompletions, .messageActionTodoAppendTasks:
                     break
                 case let .messageActionChannelMigrateFrom(_, chatId):
                     result.append(PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(chatId)))
@@ -301,7 +304,7 @@ func apiMessageAssociatedMessageIds(_ message: Api.Message) -> (replyIds: Refere
             }
         case .messageEmpty:
             break
-        case let .messageService(_, id, _, chatPeerId, replyHeader, _, _, _, _):
+        case let .messageService(_, id, _, chatPeerId, _, replyHeader, _, _, _, _):
             if let replyHeader = replyHeader {
                 switch replyHeader {
                 case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyHeader, replyMedia, replyToTopId, quoteText, quoteEntities, quoteOffset):
@@ -427,6 +430,30 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
                 }
                 
                 return (TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.CloudPoll, id: id), publicity: publicity, kind: kind, text: questionText, textEntities: questionEntities, options: answers.map(TelegramMediaPollOption.init(apiOption:)), correctAnswers: nil, results: TelegramMediaPollResults(apiResults: results), isClosed: (flags & (1 << 0)) != 0, deadlineTimeout: closePeriod), nil, nil, nil, nil, nil)
+            }
+        case let .messageMediaToDo(_, todo, completions):
+            switch todo {
+            case let .todoList(apiFlags, title, list):
+                var flags: TelegramMediaTodo.Flags = []
+                if (apiFlags & (1 << 0)) != 0 {
+                    flags.insert(.othersCanAppend)
+                }
+                if (apiFlags & (1 << 1)) != 0 {
+                    flags.insert(.othersCanComplete)
+                }
+                
+                let todoText: String
+                let todoEntities: [MessageTextEntity]
+                switch title {
+                case let .textWithEntities(text, entities):
+                    todoText = text
+                    todoEntities = messageTextEntitiesFromApiEntities(entities)
+                }
+                var todoCompletions: [TelegramMediaTodo.Completion] = []
+                if let completions {
+                    todoCompletions = completions.map(TelegramMediaTodo.Completion.init(apiCompletion:))
+                }
+                return (TelegramMediaTodo(flags: flags, text: todoText, textEntities: todoEntities, items: list.map(TelegramMediaTodo.Item.init(apiItem:)), completions: todoCompletions), nil, nil, nil, nil, nil)
             }
         case let .messageMediaDice(value, emoticon):
             return (TelegramMediaDice(emoji: emoticon, value: value), nil, nil, nil, nil, nil)
@@ -1037,14 +1064,16 @@ extension StoreMessage {
                 self.init(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: groupingId, threadId: threadId, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: forwardInfo, authorId: authorId, text: messageText, attributes: attributes, media: medias)
             case .messageEmpty:
                 return nil
-            case let .messageService(flags, id, fromId, chatPeerId, replyTo, date, action, reactions, ttlPeriod):
+            case let .messageService(flags, id, fromId, chatPeerId, savedPeerId, replyTo, date, action, reactions, ttlPeriod):
                 let peerId: PeerId = chatPeerId.peerId
                 let authorId: PeerId? = fromId?.peerId ?? chatPeerId.peerId
                 
                 var attributes: [MessageAttribute] = []
                 
                 var threadId: Int64?
-                if let replyTo = replyTo {
+                if let savedPeerId {
+                    threadId = savedPeerId.peerId.toInt64()
+                } else if let replyTo = replyTo {
                     var threadMessageId: MessageId?
                     switch replyTo {
                     case let .messageReplyHeader(innerFlags, replyToMsgId, replyToPeerId, replyHeader, replyMedia, replyToTopId, quoteText, quoteEntities, quoteOffset):
