@@ -55,7 +55,7 @@ def session_ssh(session, command):
     return os.system(ssh_command)
 
 
-def remote_build(darwin_containers_path, darwin_containers_host, macos_version, bazel_cache_host, configuration, build_input_data_path):
+def remote_build_darwin_containers(darwin_containers_path, darwin_containers_host, macos_version, bazel_cache_host, configuration, build_input_data_path):
     DarwinContainers = import_module_from_file('darwin-containers', darwin_containers_path)
 
     base_dir = os.getcwd()
