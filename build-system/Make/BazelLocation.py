@@ -35,6 +35,8 @@ def calculate_sha256(file_path):
     return sha256_hash.hexdigest()
 
 def resolve_cache_host(cache_host):
+    if cache_host is None:
+        return None
     if "@auto" in cache_host:
         host_parts = cache_host.split("@auto")
         host_left_part = host_parts[0]
