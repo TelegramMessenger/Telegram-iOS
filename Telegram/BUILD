@@ -138,7 +138,7 @@ genrule(
     ],
 )
 
-minimum_os_version = "12.0"
+minimum_os_version = "13.0"
 
 notificationServiceExtensionVersion = "v1"
 
@@ -1630,7 +1630,7 @@ plist_fragment(
         <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
     <key>UIViewControllerBasedStatusBarAppearance</key>
-    <false/>
+    <true/>
     <key>UIViewEdgeAntialiasing</key>
     <false/>
     <key>UIViewGroupOpacity</key>

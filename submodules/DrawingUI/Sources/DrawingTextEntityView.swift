@@ -1007,7 +1007,7 @@ final class DrawingTextLayoutManager: NSLayoutManager {
         }
     }
     
-    override func showCGGlyphs(_ glyphs: UnsafePointer<CGGlyph>, positions: UnsafePointer<CGPoint>, count glyphCount: Int, font: UIFont, matrix textMatrix: CGAffineTransform, attributes: [NSAttributedString.Key : Any] = [:], in graphicsContext: CGContext) {
+    override func showCGGlyphs(_ glyphs: UnsafePointer<CGGlyph>, positions: UnsafePointer<CGPoint>, count glyphCount: Int, font: UIFont, textMatrix: CGAffineTransform, attributes: [NSAttributedString.Key : Any] = [:], in graphicsContext: CGContext) {
         if let strokeColor = self.strokeColor {
             graphicsContext.setStrokeColor(strokeColor.cgColor)
             graphicsContext.setLineJoin(.round)
@@ -1019,7 +1019,7 @@ final class DrawingTextLayoutManager: NSLayoutManager {
             graphicsContext.saveGState()
             graphicsContext.translateBy(x: self.strokeOffset.x, y: self.strokeOffset.y)
             
-            super.showCGGlyphs(glyphs, positions: positions, count: glyphCount, font: font, matrix: textMatrix, attributes: attributes, in: graphicsContext)
+            super.showCGGlyphs(glyphs, positions: positions, count: glyphCount, font: font, textMatrix: textMatrix, attributes: attributes, in: graphicsContext)
             
             graphicsContext.restoreGState()
             
@@ -1028,7 +1028,7 @@ final class DrawingTextLayoutManager: NSLayoutManager {
             graphicsContext.setFillColor(textColor.cgColor)
             graphicsContext.setTextDrawingMode(.fill)
         }
-        super.showCGGlyphs(glyphs, positions: positions, count: glyphCount, font: font, matrix: textMatrix, attributes: attributes, in: graphicsContext)
+        super.showCGGlyphs(glyphs, positions: positions, count: glyphCount, font: font, textMatrix: textMatrix, attributes: attributes, in: graphicsContext)
     }
     
     override func drawBackground(forGlyphRange glyphsToShow: NSRange, at origin: CGPoint) {

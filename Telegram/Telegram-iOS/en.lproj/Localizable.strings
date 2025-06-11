@@ -14438,3 +14438,7 @@ Sorry for the inconvenience.";
 
 "Stars.Transaction.GiftTransfer" = "Gift Transfer";
 "Stars.Intro.Transaction.GiftTransfer" = "Gift Transfer";
+
+"SuggestPost.SetTimeFormat.Date" = "%@";
+"SuggestPost.SetTimeFormat.TodayAt" = "Today at %@";
+"SuggestPost.SetTimeFormat.TomorrowAt" = "Tomorrow at %@";

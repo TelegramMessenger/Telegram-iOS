@@ -161,6 +161,7 @@ public final class WindowHostView {
     let updateSupportedInterfaceOrientations: (UIInterfaceOrientationMask) -> Void
     let updateDeferScreenEdgeGestures: (UIRectEdge) -> Void
     let updatePrefersOnScreenNavigationHidden: (Bool) -> Void
+    let updateStatusBar: (UIStatusBarStyle, Bool, ContainedViewLayoutTransition) -> Void
     
     var present: ((ContainableController, PresentationSurfaceLevel, Bool, @escaping () -> Void) -> Void)?
     var presentInGlobalOverlay: ((_ controller: ContainableController) -> Void)?
@@ -179,7 +180,7 @@ public final class WindowHostView {
     var forEachController: (((ContainableController) -> Void) -> Void)?
     var getAccessibilityElements: (() -> [Any]?)?
     
-    init(containerView: UIView, eventView: UIView, isRotating: @escaping () -> Bool, systemUserInterfaceStyle: Signal<WindowUserInterfaceStyle, NoError>, currentInterfaceOrientation: @escaping () -> UIInterfaceOrientation, updateSupportedInterfaceOrientations: @escaping (UIInterfaceOrientationMask) -> Void, updateDeferScreenEdgeGestures: @escaping (UIRectEdge) -> Void, updatePrefersOnScreenNavigationHidden: @escaping (Bool) -> Void) {
+    init(containerView: UIView, eventView: UIView, isRotating: @escaping () -> Bool, systemUserInterfaceStyle: Signal<WindowUserInterfaceStyle, NoError>, currentInterfaceOrientation: @escaping () -> UIInterfaceOrientation, updateSupportedInterfaceOrientations: @escaping (UIInterfaceOrientationMask) -> Void, updateDeferScreenEdgeGestures: @escaping (UIRectEdge) -> Void, updatePrefersOnScreenNavigationHidden: @escaping (Bool) -> Void, updateStatusBar: @escaping (UIStatusBarStyle, Bool, ContainedViewLayoutTransition) -> Void) {
         self.containerView = containerView
         self.eventView = eventView
         self.isRotating = isRotating
@@ -188,6 +189,7 @@ public final class WindowHostView {
         self.updateSupportedInterfaceOrientations = updateSupportedInterfaceOrientations
         self.updateDeferScreenEdgeGestures = updateDeferScreenEdgeGestures
         self.updatePrefersOnScreenNavigationHidden = updatePrefersOnScreenNavigationHidden
+        self.updateStatusBar = updateStatusBar
     }
     
     fileprivate var onScreenNavigationHeight: CGFloat? {
@@ -385,6 +387,9 @@ public class Window1 {
         self.presentationContext.updateIsInteractionBlocked = { [weak self] value in
             self?.isInteractionBlocked = value
         }
+        self.presentationContext.updateStatusBar = { [weak self] transition in
+            self?.updateStatusBar(transition: transition)
+        }
         
         let updateOpaqueOverlays: () -> Void = { [weak self] in
             guard let strongSelf = self else {
@@ -397,6 +402,9 @@ public class Window1 {
         }
         self.topPresentationContext.updateHasOpaqueOverlay = { value in
             updateOpaqueOverlays()
+        }
+        self.topPresentationContext.updateStatusBar = { [weak self] transition in
+            self?.updateStatusBar(transition: transition)
         }
         
         self.hostView.present = { [weak self] controller, level, blockInteraction, completion in
@@ -460,14 +468,16 @@ public class Window1 {
         self.topPresentationContext.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout, deviceMetrics: self.deviceMetrics), transition: .immediate)
         self.overlayPresentationContext.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout, deviceMetrics: self.deviceMetrics), transition: .immediate)
         
-        self.statusBarChangeObserver = NotificationCenter.default.addObserver(forName: UIApplication.willChangeStatusBarFrameNotification, object: nil, queue: OperationQueue.main, using: { [weak self] notification in
+        //TODO:release check old iOS
+        /*self.statusBarChangeObserver = NotificationCenter.default.addObserver(forName: UIApplication.willChangeStatusBarFrameNotification, object: nil, queue: OperationQueue.main, using: { [weak self] notification in
             if let strongSelf = self, strongSelf.statusBarHost != nil {
                 let statusBarHeight: CGFloat = max(defaultStatusBarHeight, (notification.userInfo?[UIApplication.statusBarFrameUserInfoKey] as? NSValue)?.cgRectValue.height ?? defaultStatusBarHeight)
                 
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .easeInOut)
                 strongSelf.updateLayout { $0.update(statusBarHeight: statusBarHeight, transition: transition, overrideTransition: false) }
             }
-        })
+        })*/
+        
         self.keyboardRotationChangeObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name("UITextEffectsWindowDidRotateNotification"), object: nil, queue: nil, using: { [weak self] notification in
             if let strongSelf = self {
                 if !strongSelf.hostView.isUpdatingOrientationLayout {
@@ -879,11 +889,18 @@ public class Window1 {
                         }
                         strongSelf.hostView.updateSupportedInterfaceOrientations(resolvedOrientations)
                     }
+                    rootController.updateStatusBar = { [weak self] transition in
+                        guard let self else {
+                            return
+                        }
+                        self.updateStatusBar(transition: transition)
+                    }
                     rootController.keyboardViewManager = self.keyboardViewManager
                     rootController.inCallNavigate = { [weak self] in
                         self?.inCallNavigate?()
                     }
                 }
+                
                 self.hostView.containerView.insertSubview(rootController.view, at: 0)
                 if !self.windowLayout.size.width.isZero && !self.windowLayout.size.height.isZero {
                     rootController.displayNode.frame = CGRect(origin: CGPoint(), size: self.windowLayout.size)
@@ -966,6 +983,29 @@ public class Window1 {
                 }
             }
         }
+    }
+    
+    private func updateStatusBar(transition: ContainedViewLayoutTransition) {
+        var style: UIStatusBarStyle = .default
+        var isHidden = false
+        
+        if let rootController = self._rootController as? NavigationController {
+            let statusBar = rootController.statusBar
+            style = statusBar.style
+            isHidden = statusBar.isHidden
+        }
+        
+        if let statusBar = self.presentationContext.statusBar {
+            style = statusBar.style
+            isHidden = statusBar.isHidden
+        }
+        
+        if let statusBar = self.topPresentationContext.statusBar {
+            style = statusBar.style
+            isHidden = statusBar.isHidden
+        }
+        
+        self.hostView.updateStatusBar(style, isHidden, transition)
     }
     
     private func layoutSubviews(force: Bool) {

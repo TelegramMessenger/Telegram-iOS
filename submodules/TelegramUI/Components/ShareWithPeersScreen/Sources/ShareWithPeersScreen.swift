@@ -2988,8 +2988,8 @@ final class ShareWithPeersScreenComponent: Component {
             }
             let contentInset: UIEdgeInsets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: bottomPanelHeight + bottomPanelInset, right: 0.0)
             let indicatorInset = UIEdgeInsets(top: max(itemLayout.containerInset, environment.safeInsets.top + navigationHeight), left: 0.0, bottom: contentInset.bottom, right: 0.0)
-            if indicatorInset != self.scrollView.scrollIndicatorInsets {
-                self.scrollView.scrollIndicatorInsets = indicatorInset
+            if indicatorInset != self.scrollView.verticalScrollIndicatorInsets {
+                self.scrollView.verticalScrollIndicatorInsets = indicatorInset
             }
             if contentInset != self.scrollView.contentInset {
                 self.scrollView.contentInset = contentInset

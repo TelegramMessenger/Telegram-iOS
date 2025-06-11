@@ -107,16 +107,6 @@ final class PrivateCallPictureInPictureView: UIView {
     override var frame: CGRect {
         didSet {
             if !self.bounds.isEmpty {
-                /*if let testView = self.viewWithTag(123) {
-                    testView.frame = self.bounds.insetBy(dx: 10.0, dy: 10.0)
-                } else {
-                    let testView = AnimationTrackingView(frame: self.bounds.insetBy(dx: 10.0, dy: 10.0))
-                    testView.layer.borderColor = UIColor.red.cgColor
-                    testView.layer.borderWidth = 2.0
-                    testView.tag = 123
-                    self.addSubview(testView)
-                }*/
-                
                 self.updateLayout(size: self.bounds.size)
             }
         }
@@ -169,8 +159,22 @@ final class PrivateCallPictureInPictureView: UIView {
             return
         }
         
+        var interfaceOrientation: UIInterfaceOrientation = .portrait
+        switch UIDevice.current.orientation {
+        case .portrait:
+            interfaceOrientation = .portrait
+        case .landscapeLeft:
+            interfaceOrientation = .landscapeLeft
+        case .landscapeRight:
+            interfaceOrientation = .landscapeRight
+        case .portraitUpsideDown:
+            interfaceOrientation = .portraitUpsideDown
+        default:
+            break
+        }
+        
         if let videoMetrics = self.videoMetrics {
-            let resolvedRotationAngle = resolveCallVideoRotationAngle(angle: videoMetrics.rotationAngle, followsDeviceOrientation: videoMetrics.followsDeviceOrientation, interfaceOrientation: UIApplication.shared.statusBarOrientation)
+            let resolvedRotationAngle = resolveCallVideoRotationAngle(angle: videoMetrics.rotationAngle, followsDeviceOrientation: videoMetrics.followsDeviceOrientation, interfaceOrientation: interfaceOrientation)
             
             var rotatedResolution = videoMetrics.resolution
             var videoIsRotated = false

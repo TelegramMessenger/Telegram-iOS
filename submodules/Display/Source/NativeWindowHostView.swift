@@ -87,7 +87,7 @@ private final class WindowRootViewControllerView: UIView {
     }
 }
 
-private final class WindowRootViewController: UIViewController, UIViewControllerPreviewingDelegate {
+private final class WindowRootViewController: UIViewController {
     private var voiceOverStatusObserver: AnyObject?
     private var registeredForPreviewing = false
     
@@ -135,23 +135,44 @@ private final class WindowRootViewController: UIViewController, UIViewController
     var prefersOnScreenNavigationHidden: Bool = false {
         didSet {
             if oldValue != self.prefersOnScreenNavigationHidden {
-                if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
-                    self.setNeedsUpdateOfHomeIndicatorAutoHidden()
+                self.setNeedsUpdateOfHomeIndicatorAutoHidden()
+            }
+        }
+    }
+    
+    private var statusBarStyle: UIStatusBarStyle = .default
+    private var isStatusBarHidden: Bool = false
+    
+    func updateStatusBar(style: UIStatusBarStyle, isHidden: Bool, transition: ContainedViewLayoutTransition) {
+        if self.statusBarStyle != style || self.isStatusBarHidden != isHidden {
+            self.statusBarStyle = style
+            self.isStatusBarHidden = isHidden
+            
+            switch transition {
+            case .immediate:
+                self.setNeedsStatusBarAppearanceUpdate()
+            case .animated:
+                transition.animateView {
+                    self.setNeedsStatusBarAppearanceUpdate()
                 }
             }
         }
     }
     
     override var preferredStatusBarStyle: UIStatusBarStyle {
-        return .default
+        return self.statusBarStyle
     }
     
     override var prefersStatusBarHidden: Bool {
-        return false
+        return self.isStatusBarHidden
+    }
+    
+    override var preferredStatusBarUpdateAnimation: UIStatusBarAnimation {
+        return .fade
     }
     
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
-        return orientations
+        return self.orientations
     }
     
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
@@ -165,13 +186,8 @@ private final class WindowRootViewController: UIViewController, UIViewController
         
         self.extendedLayoutIncludesOpaqueBars = true
         
-        if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
-            self.voiceOverStatusObserver = NotificationCenter.default.addObserver(forName: UIAccessibility.voiceOverStatusDidChangeNotification, object: nil, queue: OperationQueue.main, using: { [weak self] _ in
-                if let strongSelf = self {
-                    strongSelf.updatePreviewingRegistration()
-                }
-            })
-        }
+        self.voiceOverStatusObserver = NotificationCenter.default.addObserver(forName: UIAccessibility.voiceOverStatusDidChangeNotification, object: nil, queue: OperationQueue.main, using: { _ in
+        })
         
         if #available(iOS 13.0, *) {
             self._systemUserInterfaceStyle.set(WindowUserInterfaceStyle(style: self.traitCollection.userInterfaceStyle))
@@ -211,43 +227,6 @@ private final class WindowRootViewController: UIViewController, UIViewController
         self.view = WindowRootViewControllerView()
         self.view.isOpaque = false
         self.view.backgroundColor = nil
-        
-        self.updatePreviewingRegistration()
-    }
-    
-    private var previewingContext: AnyObject?
-    
-    private func updatePreviewingRegistration() {
-    }
-    
-    private weak var previousPreviewingHostView: (UIView & PreviewingHostView)?
-    
-    public func previewingContext(_ previewingContext: UIViewControllerPreviewing, viewControllerForLocation location: CGPoint) -> UIViewController? {
-        if UIAccessibility.isVoiceOverRunning {
-            return nil
-        }
-        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-            guard let result = self.view.hitTest(location, with: nil) else {
-                return nil
-            }
-            if let (result, resultPoint) = tracePreviewingHostView(view: result, point: self.view.convert(location, to: result)), let delegate = result.previewingDelegate {
-                self.previousPreviewingHostView = result
-                if let (controller, rect) = delegate.controllerForLocation(previewingContext.sourceView, resultPoint) {
-                    previewingContext.sourceRect = rect
-                    return controller
-                }
-            }
-        }
-        return nil
-    }
-    
-    public func previewingContext(_ previewingContext: UIViewControllerPreviewing, commit viewControllerToCommit: UIViewController) {
-        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-            if let previousPreviewingHostView = self.previousPreviewingHostView, let delegate = previousPreviewingHostView.previewingDelegate {
-                delegate.commitController(viewControllerToCommit)
-            }
-            self.previousPreviewingHostView = nil
-        }
     }
     
     override public func present(_ viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)? = nil) {
@@ -410,6 +389,9 @@ public func nativeWindowHostView() -> (UIWindow & WindowHost, WindowHostView) {
         },
         updatePrefersOnScreenNavigationHidden: { value in
             rootViewController.prefersOnScreenNavigationHidden = value
+        },
+        updateStatusBar: { statusBarStyle, isStatusBarHidden, transition in
+            rootViewController.updateStatusBar(style: statusBarStyle, isHidden: isStatusBarHidden, transition: transition)
         }
     )
     

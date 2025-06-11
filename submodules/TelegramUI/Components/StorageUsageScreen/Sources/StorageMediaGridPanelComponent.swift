@@ -641,7 +641,7 @@ final class StorageMediaGridPanelComponent: Component {
             if self.scrollView.contentSize != contentSize {
                 self.scrollView.contentSize = contentSize
             }
-            self.scrollView.scrollIndicatorInsets = environment.containerInsets
+            self.scrollView.verticalScrollIndicatorInsets = environment.containerInsets
             if !transition.animation.isImmediate && self.scrollView.bounds.minY != contentOffset {
                 let deltaOffset = self.scrollView.bounds.minY - contentOffset
                 transition.animateBoundsOrigin(view: self.scrollView, from: CGPoint(x: 0.0, y: -deltaOffset), to: CGPoint(), additive: true)

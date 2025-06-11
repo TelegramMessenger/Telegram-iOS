@@ -1006,7 +1006,7 @@ final class StorageUsageScreenComponent: Component {
                 } else {
                     let style: UIActivityIndicatorView.Style
                     if environment.theme.overallDarkAppearance {
-                        style = .whiteLarge
+                        style = .large
                     } else {
                         if #available(iOS 13.0, *) {
                             style = .large
