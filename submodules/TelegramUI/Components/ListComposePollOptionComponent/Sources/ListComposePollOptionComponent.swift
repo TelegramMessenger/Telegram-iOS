@@ -257,6 +257,7 @@ public final class ListComposePollOptionComponent: Component {
         private let textField = ComponentView<Empty>()
         
         private var modeSelector: ComponentView<Empty>?
+        private var reorderIconView: UIImageView?
         
         private var checkView: CheckView?
         
@@ -454,6 +455,43 @@ public final class ListComposePollOptionComponent: Component {
                     checkView?.removeFromSuperview()
                 })
             }
+                
+            var rightIconsInset: CGFloat = 0.0
+            if component.canReorder, let externalState = component.externalState, externalState.hasText {
+                var reorderIconTransition = transition
+                let reorderIconView: UIImageView
+                if let current = self.reorderIconView {
+                    reorderIconView = current
+                } else {
+                    reorderIconTransition = reorderIconTransition.withAnimation(.none)
+                    reorderIconView = UIImageView()
+                    self.reorderIconView = reorderIconView
+                    self.addSubview(reorderIconView)
+                }
+                reorderIconView.image = PresentationResourcesItemList.itemListReorderIndicatorIcon(component.theme)
+                
+                var reorderIconSize = CGSize()
+                if let icon = reorderIconView.image {
+                    reorderIconSize = icon.size
+                }
+                
+                let reorderIconFrame = CGRect(origin: CGPoint(x: size.width - 14.0 - reorderIconSize.width, y: floor((size.height - reorderIconSize.height) * 0.5)), size: reorderIconSize)
+                reorderIconTransition.setPosition(view: reorderIconView, position: reorderIconFrame.center)
+                reorderIconTransition.setBounds(view: reorderIconView, bounds: CGRect(origin: CGPoint(), size: reorderIconFrame.size))
+                
+                rightIconsInset += 36.0
+            } else if let reorderIconView = self.reorderIconView {
+                self.reorderIconView = nil
+                if !transition.animation.isImmediate {
+                    let alphaTransition: ComponentTransition = .easeInOut(duration: 0.2)
+                    alphaTransition.setAlpha(view: reorderIconView, alpha: 0.0, completion: { [weak reorderIconView] _ in
+                        reorderIconView?.removeFromSuperview()
+                    })
+                    alphaTransition.setScale(view: reorderIconView, scale: 0.001)
+                } else {
+                    reorderIconView.removeFromSuperview()
+                }
+            }
             
             if let inputMode = component.inputMode {
                 var modeSelectorTransition = transition
@@ -501,7 +539,7 @@ public final class ListComposePollOptionComponent: Component {
                     environment: {},
                     containerSize: modeSelectorSize
                 )
-                let modeSelectorFrame = CGRect(origin: CGPoint(x: size.width - 4.0 - modeSelectorSize.width, y: floor((size.height - modeSelectorSize.height) * 0.5)), size: modeSelectorSize)
+                let modeSelectorFrame = CGRect(origin: CGPoint(x: size.width - rightIconsInset - 4.0 - modeSelectorSize.width, y: floor((size.height - modeSelectorSize.height) * 0.5)), size: modeSelectorSize)
                 if let modeSelectorView = modeSelector.view as? PlainButtonComponent.View {
                     let alphaTransition: ComponentTransition = .easeInOut(duration: 0.2)
                     

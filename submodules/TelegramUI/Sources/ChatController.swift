@@ -970,7 +970,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         case .pinnedMessageUpdated, .gameScore, .setSameChatWallpaper, .giveawayResults, .customText, .todoCompletions, .todoAppendTasks:
                             for attribute in message.attributes {
                                 if let attribute = attribute as? ReplyMessageAttribute {
-                                    self.navigateToMessage(from: message.id, to: .id(attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.isQuote ? attribute.quote.flatMap { quote in NavigateToMessageParams.Quote(string: quote.text, offset: quote.offset) } : nil)))
+                                    var todoTaskId: Int32?
+                                    if case let .todoCompletions(completed, incompleted) = action.action {
+                                        if let completedTaskId = completed.first {
+                                            todoTaskId = completedTaskId
+                                        } else if let incompletedTaskId = incompleted.first {
+                                            todoTaskId = incompletedTaskId
+                                        }
+                                    }
+                                    self.navigateToMessage(from: message.id, to: .id(attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.isQuote ? attribute.quote.flatMap { quote in NavigateToMessageParams.Quote(string: quote.text, offset: quote.offset) } : nil, todoTaskId: todoTaskId)))
                                     break
                                 }
                             }
@@ -4840,7 +4848,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let self else {
                 return
             }
-            self.dismissAllUndoControllers()
+            self.dismissAllTooltips()
             //TODO:localize
             if !self.context.isPremium {
                 let controller = UndoOverlayController(

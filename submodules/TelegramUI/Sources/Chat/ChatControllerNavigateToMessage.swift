@@ -340,13 +340,15 @@ extension ChatControllerImpl {
                     }
                     
                     var quote: (string: String, offset: Int?)?
+                    var todoTaskId: Int32?
                     var setupReply = false
                     if case let .id(_, params) = messageLocation {
                         quote = params.quote.flatMap { quote in (string: quote.string, offset: quote.offset) }
                         setupReply = params.setupReply
+                        todoTaskId = params.todoTaskId
                     }
 
-                    self.chatDisplayNode.historyNode.scrollToMessage(from: scrollFromIndex, to: message.index, animated: animated, quote: quote, scrollPosition: scrollPosition, setupReply: setupReply)
+                    self.chatDisplayNode.historyNode.scrollToMessage(from: scrollFromIndex, to: message.index, animated: animated, quote: quote, todoTaskId: todoTaskId, scrollPosition: scrollPosition, setupReply: setupReply)
                     
                     if delayCompletion {
                         Queue.mainQueue().after(0.25, {

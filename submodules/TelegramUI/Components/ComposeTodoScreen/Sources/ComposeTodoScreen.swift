@@ -109,6 +109,9 @@ final class ComposeTodoScreenComponent: Component {
         
         private var currentEditingTag: AnyObject?
         
+        private var reorderRecognizer: ReorderGestureRecognizer?
+        private var reorderingItem: (id: AnyHashable, snapshotView: UIView, backgroundView: UIView, initialPosition: CGPoint, position: CGPoint)?
+        
         var isAppendableByOthers = false
         var isCompletableByOthers = false
         
@@ -129,6 +132,39 @@ final class ComposeTodoScreenComponent: Component {
             
             self.scrollView.delegate = self
             self.addSubview(self.scrollView)
+            
+            let reorderRecognizer = ReorderGestureRecognizer(
+                shouldBegin: { [weak self] point in
+                    guard let self, let (id, item) = self.item(at: point) else {
+                        return (allowed: false, requiresLongPress: false, id: nil, item: nil)
+                    }
+                    return (allowed: true, requiresLongPress: false, id: id, item: item)
+                },
+                willBegin: { point in
+                },
+                began: { [weak self] item in
+                    guard let self else {
+                        return
+                    }
+                    self.setReorderingItem(item: item)
+                },
+                ended: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.setReorderingItem(item: nil)
+                },
+                moved: { [weak self] distance in
+                    guard let self else {
+                        return
+                    }
+                    self.moveReorderingItem(distance: distance)
+                },
+                isActiveUpdated: { _ in
+                }
+            )
+            self.reorderRecognizer = reorderRecognizer
+            self.addGestureRecognizer(reorderRecognizer)
         }
         
         required init?(coder: NSCoder) {
@@ -141,6 +177,124 @@ final class ComposeTodoScreenComponent: Component {
 
         func scrollToTop() {
             self.scrollView.setContentOffset(CGPoint(), animated: true)
+        }
+        
+        private func item(at point: CGPoint) -> (AnyHashable, ComponentView<Empty>)? {
+            let localPoint = self.todoItemsSectionContainer.convert(point, from: self)
+            for (id, itemView) in self.todoItemsSectionContainer.itemViews {
+                if let view = itemView.contents.view {
+                    let viewFrame = view.convert(view.bounds, to: self.todoItemsSectionContainer)
+                    let iconFrame = CGRect(origin: CGPoint(x: viewFrame.maxX - viewFrame.height, y: viewFrame.minY), size: CGSize(width: viewFrame.height, height: viewFrame.height))
+                    if iconFrame.contains(localPoint) {
+                        return (id, itemView.contents)
+                    }
+                }
+            }
+            return nil
+        }
+        
+        func setReorderingItem(item: AnyHashable?) {
+            guard let environment = self.environment else {
+                return
+            }
+            var mappedItem: (AnyHashable, ComponentView<Empty>)?
+            for (id, itemView) in self.todoItemsSectionContainer.itemViews {
+                if id == item {
+                    mappedItem = (id, itemView.contents)
+                    break
+                }
+            }
+            if self.reorderingItem?.id != mappedItem?.0 {
+                if let (id, visibleItem) = mappedItem, let view = visibleItem.view, !view.isHidden, let viewSuperview = view.superview, let snapshotView = view.snapshotView(afterScreenUpdates: false) {
+                    let mappedCenter = viewSuperview.convert(view.center, to: self.scrollView)
+                    
+                    let wrapperView = UIView()
+                    wrapperView.alpha = 0.8
+                    wrapperView.frame = CGRect(origin: mappedCenter.offsetBy(dx: -snapshotView.bounds.width / 2.0, dy: -snapshotView.bounds.height / 2.0), size: snapshotView.bounds.size)
+                    
+                    let theme = environment.theme.withModalBlocksBackground()
+                    let backgroundView = UIImageView(image: generateReorderingBackgroundImage(backgroundColor: theme.list.itemBlocksBackgroundColor))
+                    backgroundView.frame = wrapperView.bounds.insetBy(dx: -10.0, dy: -10.0)
+                    snapshotView.frame = snapshotView.bounds
+                    
+                    wrapperView.addSubview(backgroundView)
+                    wrapperView.addSubview(snapshotView)
+                    
+                    backgroundView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    wrapperView.transform = CGAffineTransformMakeScale(1.04, 1.04)
+                    wrapperView.layer.animateScale(from: 1.0, to: 1.04, duration: 0.2)
+                    
+                    self.scrollView.addSubview(wrapperView)
+                    self.reorderingItem = (id, wrapperView, backgroundView, mappedCenter, mappedCenter)
+                    self.state?.updated()
+                } else {
+                    if let reorderingItem = self.reorderingItem {
+                        self.reorderingItem = nil
+                        for (itemId, itemView) in self.todoItemsSectionContainer.itemViews {
+                            if itemId == reorderingItem.id, let view = itemView.contents.view {
+                                let viewFrame = view.convert(view.bounds, to: self)
+                                let transition = ComponentTransition.spring(duration: 0.3)
+                                transition.setPosition(view: reorderingItem.snapshotView, position: viewFrame.center)
+                                transition.setAlpha(view: reorderingItem.backgroundView, alpha: 0.0, completion: { _ in
+                                    reorderingItem.snapshotView.removeFromSuperview()
+                                    self.state?.updated()
+                                })
+                                transition.setScale(view: reorderingItem.snapshotView, scale: 1.0)
+                                break
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        func moveReorderingItem(distance: CGPoint) {
+            if let (id, snapshotView, backgroundView, initialPosition, _) = self.reorderingItem {
+                let targetPosition = CGPoint(x: initialPosition.x + distance.x, y: initialPosition.y + distance.y)
+                self.reorderingItem = (id, snapshotView, backgroundView, initialPosition, targetPosition)
+                
+                snapshotView.center = targetPosition
+                
+                for (itemId, itemView) in self.todoItemsSectionContainer.itemViews {
+                    if itemId == id {
+                        continue
+                    }
+                    if let view = itemView.contents.view {
+                        let viewFrame = view.convert(view.bounds, to: self)
+                        if viewFrame.contains(targetPosition) {
+                            if let targetIndex = self.todoItems.firstIndex(where: { AnyHashable($0.id) == itemId }), let reorderingItem = self.todoItems.first(where: { AnyHashable($0.id) == id }) {
+                                self.reorderIfPossible(item: reorderingItem, toIndex: targetIndex)
+                            }
+                            break
+                        }
+                    }
+                }
+            }
+        }
+        
+        private func reorderIfPossible(item: TodoItem, toIndex: Int) {
+            guard let component = self.component else {
+                return
+            }
+            let targetItem = self.todoItems[toIndex]
+            guard targetItem.textInputState.hasText else {
+                return
+            }
+            var canEdit = true
+            if let _ = component.initialData.existingTodo, !component.initialData.canEdit {
+                canEdit = false
+            }
+            if !canEdit, let existingTodo = component.initialData.existingTodo, existingTodo.items.contains(where: { $0.id == targetItem.id }) {
+                return
+            }
+            if let fromIndex = self.todoItems.firstIndex(where: { $0.id == item.id }) {
+                self.todoItems[toIndex] = item
+                self.todoItems[fromIndex] = targetItem
+                
+                HapticFeedback().tap()
+                
+                self.state?.updated(transition: .spring(duration: 0.4))
+            }
         }
         
         func validatedInput() -> TelegramMediaTodo? {
@@ -432,6 +586,8 @@ final class ComposeTodoScreenComponent: Component {
             let themeUpdated = self.environment?.theme !== environment.theme
             self.environment = environment
             
+            let theme = environment.theme.withModalBlocksBackground()
+            
             let isFirstTime = self.component == nil
             if self.component == nil {
                 if let existingTodo = component.initialData.existingTodo {
@@ -599,7 +755,7 @@ final class ComposeTodoScreenComponent: Component {
             let sectionSpacing: CGFloat = 24.0
             
             if themeUpdated {
-                self.backgroundColor = environment.theme.list.blocksBackgroundColor
+                self.backgroundColor = theme.list.blocksBackgroundColor
             }
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
@@ -617,7 +773,7 @@ final class ComposeTodoScreenComponent: Component {
             todoTextSectionItems.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(ListComposePollOptionComponent(
                 externalState: self.todoTextInputState,
                 context: component.context,
-                theme: environment.theme,
+                theme: theme,
                 strings: environment.strings,
                 isEnabled: canEdit,
                 resetText: self.resetTodoText.flatMap { resetText in
@@ -625,7 +781,6 @@ final class ComposeTodoScreenComponent: Component {
                 },
                 assumeIsEditing: self.inputMediaNodeTargetTag === self.todoTextFieldTag,
                 characterLimit: component.initialData.maxTodoTextLength,
-                canReorder: canEdit,
                 emptyLineHandling: .allowed,
                 returnKeyAction: { [weak self] in
                     guard let self else {
@@ -661,7 +816,7 @@ final class ComposeTodoScreenComponent: Component {
             let todoTextSectionSize = self.todoTextSection.update(
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
-                    theme: environment.theme,
+                    theme: theme,
                     header: nil,
                     footer: nil,
                     items: todoTextSectionItems
@@ -701,7 +856,7 @@ final class ComposeTodoScreenComponent: Component {
                 todoItemsSectionItems.append(AnyComponentWithIdentity(id: todoItem.id, component: AnyComponent(ListComposePollOptionComponent(
                     externalState: todoItem.textInputState,
                     context: component.context,
-                    theme: environment.theme,
+                    theme: theme,
                     strings: environment.strings,
                     isEnabled: isEnabled,
                     resetText: todoItem.resetText.flatMap { resetText in
@@ -709,6 +864,7 @@ final class ComposeTodoScreenComponent: Component {
                     },
                     assumeIsEditing: self.inputMediaNodeTargetTag === todoItem.textFieldTag,
                     characterLimit: component.initialData.maxTodoItemLength,
+                    canReorder: isEnabled,
                     emptyLineHandling: .notAllowed,
                     returnKeyAction: { [weak self] in
                         guard let self else {
@@ -774,7 +930,7 @@ final class ComposeTodoScreenComponent: Component {
                     self.todoItemsSectionContainer.itemViews[itemId] = itemView
                     itemView.contents.parentState = state
                 }
-                
+            
                 let itemSize = itemView.contents.update(
                     transition: itemTransition,
                     component: item.component,
@@ -788,6 +944,12 @@ final class ComposeTodoScreenComponent: Component {
                     size: itemSize,
                     transition: itemTransition
                 ))
+                
+                var isReordering = false
+                if let reorderingItem = self.reorderingItem, itemId == reorderingItem.id {
+                    isReordering = true
+                }
+                itemView.contents.view?.isHidden = isReordering
             }
             
             for i in 0 ..< self.todoItems.count {
@@ -836,7 +998,7 @@ final class ComposeTodoScreenComponent: Component {
             
             let todoItemsSectionUpdateResult = self.todoItemsSectionContainer.update(
                 configuration: ListSectionContentView.Configuration(
-                    theme: environment.theme,
+                    theme: theme,
                     displaySeparators: true,
                     extendsItemHighlightToSection: false,
                     background: .all
@@ -854,7 +1016,7 @@ final class ComposeTodoScreenComponent: Component {
                     text: .plain(NSAttributedString(
                         string: "TO DO LIST",
                         font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
-                        textColor: environment.theme.list.freeTextColor
+                        textColor: theme.list.freeTextColor
                     )),
                     maximumNumberOfLines: 0
                 )),
@@ -900,19 +1062,19 @@ final class ComposeTodoScreenComponent: Component {
             }
             
             let todoItemsComponent: AnyComponent<Empty>
-            if !"".isEmpty, todoItemsLimitReached {
+            if todoItemsLimitReached {
                 todoItemsFooterTransition = todoItemsFooterTransition.withAnimation(.none)
 
                 let textFont = Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize)
                 let boldTextFont = Font.semibold(presentationData.listsFontSize.itemListBaseHeaderFontSize)
-                let textColor = environment.theme.list.freeTextColor
+                let textColor = theme.list.freeTextColor
                 todoItemsComponent = AnyComponent(MultilineTextComponent(
                     text: .markdown(
-                        text: "Limit of tasks reached. You can increase the limit to **20 tasks** by subscribing to [Telegram Premium]().",
+                        text: "Maximum number of tasks reached.",
                         attributes: MarkdownAttributes(
                             body: MarkdownAttributeSet(font: textFont, textColor: textColor),
                             bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor),
-                            link: MarkdownAttributeSet(font: textFont, textColor: environment.theme.list.itemAccentColor),
+                            link: MarkdownAttributeSet(font: textFont, textColor: theme.list.itemAccentColor),
                             linkAttribute: { contents in
                                 return (TelegramTextAttributes.URL, contents)
                             }
@@ -969,7 +1131,7 @@ final class ComposeTodoScreenComponent: Component {
                 
                 todoItemsComponent = AnyComponent(AnimatedTextComponent(
                     font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
-                    color: environment.theme.list.freeTextColor,
+                    color: theme.list.freeTextColor,
                     items: todoItemsFooterItems
                 ))
             }
@@ -1004,13 +1166,13 @@ final class ComposeTodoScreenComponent: Component {
             var todoSettingsSectionItems: [AnyComponentWithIdentity<Empty>] = []
             if canEdit && component.peer.id != component.context.account.peerId {
                 todoSettingsSectionItems.append(AnyComponentWithIdentity(id: "completable", component: AnyComponent(ListActionItemComponent(
-                    theme: environment.theme,
+                    theme: theme,
                     title: AnyComponent(VStack([
                         AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
                                 string: "Allow Others to Mark as Done",
                                 font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
-                                textColor: environment.theme.list.itemPrimaryTextColor
+                                textColor: theme.list.itemPrimaryTextColor
                             )),
                             maximumNumberOfLines: 1
                         ))),
@@ -1027,13 +1189,13 @@ final class ComposeTodoScreenComponent: Component {
                 
                 if self.isCompletableByOthers {
                     todoSettingsSectionItems.append(AnyComponentWithIdentity(id: "editable", component: AnyComponent(ListActionItemComponent(
-                        theme: environment.theme,
+                        theme: theme,
                         title: AnyComponent(VStack([
                             AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                                 text: .plain(NSAttributedString(
                                     string: "Allow Others to Add Tasks",
                                     font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
-                                    textColor: environment.theme.list.itemPrimaryTextColor
+                                    textColor: theme.list.itemPrimaryTextColor
                                 )),
                                 maximumNumberOfLines: 1
                             ))),
@@ -1054,7 +1216,7 @@ final class ComposeTodoScreenComponent: Component {
                 let todoSettingsSectionSize = self.todoSettingsSection.update(
                     transition: transition,
                     component: AnyComponent(ListSectionComponent(
-                        theme: environment.theme,
+                        theme: theme,
                         header: nil,
                         footer: nil,
                         items: todoSettingsSectionItems
@@ -1164,7 +1326,7 @@ final class ComposeTodoScreenComponent: Component {
                     component: AnyComponent(EmojiSuggestionsComponent(
                         context: component.context,
                         userLocation: .other,
-                        theme: EmojiSuggestionsComponent.Theme(theme: environment.theme, backgroundColor: environment.theme.list.itemBlocksBackgroundColor),
+                        theme: EmojiSuggestionsComponent.Theme(theme: theme, backgroundColor: theme.list.itemBlocksBackgroundColor),
                         animationCache: component.context.animationCache,
                         animationRenderer: component.context.animationRenderer,
                         files: value,
@@ -1529,4 +1691,213 @@ public class ComposeTodoScreen: ViewControllerComponentContainer, AttachmentCont
     public func shouldDismissImmediately() -> Bool {
         return true
     }
+}
+
+private final class ReorderGestureRecognizer: UIGestureRecognizer {
+    private let shouldBegin: (CGPoint) -> (allowed: Bool, requiresLongPress: Bool, id: AnyHashable?, item: ComponentView<Empty>?)
+    private let willBegin: (CGPoint) -> Void
+    private let began: (AnyHashable) -> Void
+    private let ended: () -> Void
+    private let moved: (CGPoint) -> Void
+    private let isActiveUpdated: (Bool) -> Void
+    
+    private var initialLocation: CGPoint?
+    private var longTapTimer: SwiftSignalKit.Timer?
+    private var longPressTimer: SwiftSignalKit.Timer?
+    
+    private var id: AnyHashable?
+    private var itemView: ComponentView<Empty>?
+    
+    public init(shouldBegin: @escaping (CGPoint) -> (allowed: Bool, requiresLongPress: Bool, id: AnyHashable?, item: ComponentView<Empty>?), willBegin: @escaping (CGPoint) -> Void, began: @escaping (AnyHashable) -> Void, ended: @escaping () -> Void, moved: @escaping (CGPoint) -> Void, isActiveUpdated: @escaping (Bool) -> Void) {
+        self.shouldBegin = shouldBegin
+        self.willBegin = willBegin
+        self.began = began
+        self.ended = ended
+        self.moved = moved
+        self.isActiveUpdated = isActiveUpdated
+        
+        super.init(target: nil, action: nil)
+    }
+    
+    deinit {
+        self.longTapTimer?.invalidate()
+        self.longPressTimer?.invalidate()
+    }
+    
+    private func startLongTapTimer() {
+        self.longTapTimer?.invalidate()
+        let longTapTimer = SwiftSignalKit.Timer(timeout: 0.25, repeat: false, completion: { [weak self] in
+            self?.longTapTimerFired()
+        }, queue: Queue.mainQueue())
+        self.longTapTimer = longTapTimer
+        longTapTimer.start()
+    }
+    
+    private func stopLongTapTimer() {
+        self.itemView = nil
+        self.longTapTimer?.invalidate()
+        self.longTapTimer = nil
+    }
+    
+    private func startLongPressTimer() {
+        self.longPressTimer?.invalidate()
+        let longPressTimer = SwiftSignalKit.Timer(timeout: 0.6, repeat: false, completion: { [weak self] in
+            self?.longPressTimerFired()
+        }, queue: Queue.mainQueue())
+        self.longPressTimer = longPressTimer
+        longPressTimer.start()
+    }
+    
+    private func stopLongPressTimer() {
+        self.itemView = nil
+        self.longPressTimer?.invalidate()
+        self.longPressTimer = nil
+    }
+    
+    override public func reset() {
+        super.reset()
+        
+        self.itemView = nil
+        self.stopLongTapTimer()
+        self.stopLongPressTimer()
+        self.initialLocation = nil
+        
+        self.isActiveUpdated(false)
+    }
+    
+    private func longTapTimerFired() {
+        guard let location = self.initialLocation else {
+            return
+        }
+        
+        self.longTapTimer?.invalidate()
+        self.longTapTimer = nil
+        
+        self.willBegin(location)
+    }
+    
+    private func longPressTimerFired() {
+        guard let _ = self.initialLocation else {
+            return
+        }
+        
+        self.isActiveUpdated(true)
+        self.state = .began
+        self.longPressTimer?.invalidate()
+        self.longPressTimer = nil
+        self.longTapTimer?.invalidate()
+        self.longTapTimer = nil
+        if let id = self.id {
+            self.began(id)
+        }
+        self.isActiveUpdated(true)
+    }
+    
+    override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesBegan(touches, with: event)
+        
+        if self.numberOfTouches > 1 {
+            self.isActiveUpdated(false)
+            self.state = .failed
+            self.ended()
+            return
+        }
+        
+        if self.state == .possible {
+            if let location = touches.first?.location(in: self.view) {
+                let (allowed, requiresLongPress, id, itemView) = self.shouldBegin(location)
+                if allowed {
+                    self.isActiveUpdated(true)
+                    
+                    self.id = id
+                    self.itemView = itemView
+                    self.initialLocation = location
+                    if requiresLongPress {
+                        self.startLongTapTimer()
+                        self.startLongPressTimer()
+                    } else {
+                        self.state = .began
+                        if let id = self.id {
+                            self.began(id)
+                        }
+                    }
+                } else {
+                    self.isActiveUpdated(false)
+                    self.state = .failed
+                }
+            } else {
+                self.isActiveUpdated(false)
+                self.state = .failed
+            }
+        }
+    }
+    
+    override public func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesEnded(touches, with: event)
+        
+        self.initialLocation = nil
+        
+        self.stopLongTapTimer()
+        if self.longPressTimer != nil {
+            self.stopLongPressTimer()
+            self.isActiveUpdated(false)
+            self.state = .failed
+        }
+        if self.state == .began || self.state == .changed {
+            self.isActiveUpdated(false)
+            self.ended()
+            self.state = .failed
+        }
+    }
+    
+    override public func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesCancelled(touches, with: event)
+        
+        self.initialLocation = nil
+        
+        self.stopLongTapTimer()
+        if self.longPressTimer != nil {
+            self.isActiveUpdated(false)
+            self.stopLongPressTimer()
+            self.state = .failed
+        }
+        if self.state == .began || self.state == .changed {
+            self.isActiveUpdated(false)
+            self.ended()
+            self.state = .failed
+        }
+    }
+    
+    override public func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesMoved(touches, with: event)
+        
+        if (self.state == .began || self.state == .changed), let initialLocation = self.initialLocation, let location = touches.first?.location(in: self.view) {
+            self.state = .changed
+            let offset = CGPoint(x: location.x - initialLocation.x, y: location.y - initialLocation.y)
+            self.moved(offset)
+        } else if let touch = touches.first, let initialTapLocation = self.initialLocation, self.longPressTimer != nil {
+            let touchLocation = touch.location(in: self.view)
+            let dX = touchLocation.x - initialTapLocation.x
+            let dY = touchLocation.y - initialTapLocation.y
+            
+            if dX * dX + dY * dY > 3.0 * 3.0 {
+                self.stopLongTapTimer()
+                self.stopLongPressTimer()
+                self.initialLocation = nil
+                self.isActiveUpdated(false)
+                self.state = .failed
+            }
+        }
+    }
+}
+
+private func generateReorderingBackgroundImage(backgroundColor: UIColor) -> UIImage? {
+    return generateImage(CGSize(width: 64.0, height: 64.0), contextGenerator: { size, context in
+        context.clear(CGRect(origin: .zero, size: size))
+        
+        context.addPath(UIBezierPath(roundedRect: CGRect(x: 10, y: 10, width: 44, height: 44), cornerRadius: 10).cgPath)
+        context.setShadow(offset: CGSize(width: 0.0, height: 0.0), blur: 24.0, color: UIColor(white: 0.0, alpha: 0.35).cgColor)
+        context.setFillColor(backgroundColor.cgColor)
+        context.fillPath()
+    })?.stretchableImage(withLeftCapWidth: 32, topCapHeight: 32)
 }

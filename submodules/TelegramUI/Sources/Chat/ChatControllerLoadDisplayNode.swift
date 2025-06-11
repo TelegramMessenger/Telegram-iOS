@@ -4766,7 +4766,7 @@ extension ChatControllerImpl {
                             }
                         }
                         
-                        let highlightedState = ChatInterfaceHighlightedState(messageStableId: message.stableId, quote: toSubject.quote.flatMap { quote in ChatInterfaceHighlightedState.Quote(string: quote.string, offset: quote.offset) })
+                        let highlightedState = ChatInterfaceHighlightedState(messageStableId: message.stableId, quote: toSubject.quote.flatMap { quote in ChatInterfaceHighlightedState.Quote(string: quote.string, offset: quote.offset) }, todoTaskId: toSubject.todoTaskId)
                         controllerInteraction.highlightedState = highlightedState
                         strongSelf.updateItemNodesHighlightedStates(animated: initial)
                         strongSelf.contentData?.scrolledToMessageIdValue = ScrolledToMessageId(id: mappedId, allowedReplacementDirection: [])

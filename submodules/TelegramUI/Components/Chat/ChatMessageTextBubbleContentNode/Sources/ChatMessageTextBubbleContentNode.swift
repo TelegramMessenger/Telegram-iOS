@@ -1297,7 +1297,6 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     public func updateQuoteTextHighlightState(text: String?, offset: Int?, color: UIColor, animated: Bool) {
         var rectsSet: [CGRect] = []
         if let text = text, !text.isEmpty, let cachedLayout = self.textNode.textNode.cachedLayout, let string = cachedLayout.attributedString?.string {
-            
             let quoteRange = findQuoteRange(string: string, quoteText: text, offset: offset)
             if let quoteRange, let rects = cachedLayout.rangeRects(in: quoteRange)?.rects, !rects.isEmpty {
                 rectsSet = rects

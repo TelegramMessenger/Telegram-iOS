@@ -31,10 +31,12 @@ public struct ChatInterfaceHighlightedState: Equatable {
     
     public let messageStableId: UInt32
     public let quote: Quote?
+    public let todoTaskId: Int32?
     
-    public init(messageStableId: UInt32, quote: Quote?) {
+    public init(messageStableId: UInt32, quote: Quote?, todoTaskId: Int32?) {
         self.messageStableId = messageStableId
         self.quote = quote
+        self.todoTaskId = todoTaskId
     }
 }
 
@@ -96,13 +98,15 @@ public struct NavigateToMessageParams {
     
     public var timestamp: Double?
     public var quote: Quote?
+    public var todoTaskId: Int32?
     public var progress: Promise<Bool>?
     public var forceNew: Bool
     public var setupReply: Bool
     
-    public init(timestamp: Double?, quote: Quote?, progress: Promise<Bool>? = nil, forceNew: Bool = false, setupReply: Bool = false) {
+    public init(timestamp: Double?, quote: Quote?, todoTaskId: Int32? = nil, progress: Promise<Bool>? = nil, forceNew: Bool = false, setupReply: Bool = false) {
         self.timestamp = timestamp
         self.quote = quote
+        self.todoTaskId = todoTaskId
         self.progress = progress
         self.forceNew = forceNew
         self.setupReply = setupReply

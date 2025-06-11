@@ -530,6 +530,8 @@ final class ComposePollScreenComponent: Component {
             let themeUpdated = self.environment?.theme !== environment.theme
             self.environment = environment
             
+            let theme = environment.theme.withModalBlocksBackground()
+            
             if self.component == nil {
                 self.isQuiz = component.isQuiz ?? false
                 
@@ -682,7 +684,7 @@ final class ComposePollScreenComponent: Component {
             let sectionSpacing: CGFloat = 24.0
             
             if themeUpdated {
-                self.backgroundColor = environment.theme.list.blocksBackgroundColor
+                self.backgroundColor = theme.list.blocksBackgroundColor
             }
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
@@ -695,7 +697,7 @@ final class ComposePollScreenComponent: Component {
             pollTextSectionItems.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(ListComposePollOptionComponent(
                 externalState: self.pollTextInputState,
                 context: component.context,
-                theme: environment.theme,
+                theme: theme,
                 strings: environment.strings,
                 resetText: self.resetPollText.flatMap { resetText in
                     return ListComposePollOptionComponent.ResetText(value: NSAttributedString(string: resetText))
@@ -737,12 +739,12 @@ final class ComposePollScreenComponent: Component {
             let pollTextSectionSize = self.pollTextSection.update(
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
-                    theme: environment.theme,
+                    theme: theme,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
                             string: environment.strings.CreatePoll_TextHeader,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
-                            textColor: environment.theme.list.freeTextColor
+                            textColor: theme.list.freeTextColor
                         )),
                         maximumNumberOfLines: 0
                     )),
@@ -790,7 +792,7 @@ final class ComposePollScreenComponent: Component {
                 pollOptionsSectionItems.append(AnyComponentWithIdentity(id: pollOption.id, component: AnyComponent(ListComposePollOptionComponent(
                     externalState: pollOption.textInputState,
                     context: component.context,
-                    theme: environment.theme,
+                    theme: theme,
                     strings: environment.strings,
                     resetText: pollOption.resetText.flatMap { resetText in
                         return ListComposePollOptionComponent.ResetText(value: NSAttributedString(string: resetText))
@@ -916,7 +918,7 @@ final class ComposePollScreenComponent: Component {
             
             let pollOptionsSectionUpdateResult = self.pollOptionsSectionContainer.update(
                 configuration: ListSectionContentView.Configuration(
-                    theme: environment.theme,
+                    theme: theme,
                     displaySeparators: true,
                     extendsItemHighlightToSection: false,
                     background: .all
@@ -934,7 +936,7 @@ final class ComposePollScreenComponent: Component {
                     text: .plain(NSAttributedString(
                         string: environment.strings.CreatePoll_OptionsHeader,
                         font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
-                        textColor: environment.theme.list.freeTextColor
+                        textColor: theme.list.freeTextColor
                     )),
                     maximumNumberOfLines: 0
                 )),
@@ -983,7 +985,7 @@ final class ComposePollScreenComponent: Component {
             if pollOptionsLimitReached {
                 pollOptionsFooterTransition = pollOptionsFooterTransition.withAnimation(.none)
                 pollOptionsComponent = AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: environment.strings.CreatePoll_AllOptionsAdded, font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: environment.theme.list.freeTextColor)),
+                    text: .plain(NSAttributedString(string: environment.strings.CreatePoll_AllOptionsAdded, font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: theme.list.freeTextColor)),
                     maximumNumberOfLines: 0
                 ))
             } else {
@@ -1015,7 +1017,7 @@ final class ComposePollScreenComponent: Component {
                 
                 pollOptionsComponent = AnyComponent(AnimatedTextComponent(
                     font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
-                    color: environment.theme.list.freeTextColor,
+                    color: theme.list.freeTextColor,
                     items: pollOptionsFooterItems
                 ))
             }
@@ -1055,13 +1057,13 @@ final class ComposePollScreenComponent: Component {
             var pollSettingsSectionItems: [AnyComponentWithIdentity<Empty>] = []
             if canBePublic {
                 pollSettingsSectionItems.append(AnyComponentWithIdentity(id: "anonymous", component: AnyComponent(ListActionItemComponent(
-                    theme: environment.theme,
+                    theme: theme,
                     title: AnyComponent(VStack([
                         AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
                                 string: environment.strings.CreatePoll_Anonymous,
                                 font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
-                                textColor: environment.theme.list.itemPrimaryTextColor
+                                textColor: theme.list.itemPrimaryTextColor
                             )),
                             maximumNumberOfLines: 1
                         ))),
@@ -1077,13 +1079,13 @@ final class ComposePollScreenComponent: Component {
                 ))))
             }
             pollSettingsSectionItems.append(AnyComponentWithIdentity(id: "multiAnswer", component: AnyComponent(ListActionItemComponent(
-                theme: environment.theme,
+                theme: theme,
                 title: AnyComponent(VStack([
                     AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
                             string: environment.strings.CreatePoll_MultipleChoice,
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
-                            textColor: environment.theme.list.itemPrimaryTextColor
+                            textColor: theme.list.itemPrimaryTextColor
                         )),
                         maximumNumberOfLines: 1
                     ))),
@@ -1101,13 +1103,13 @@ final class ComposePollScreenComponent: Component {
                 action: nil
             ))))
             pollSettingsSectionItems.append(AnyComponentWithIdentity(id: "quiz", component: AnyComponent(ListActionItemComponent(
-                theme: environment.theme,
+                theme: theme,
                 title: AnyComponent(VStack([
                     AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
                             string: environment.strings.CreatePoll_Quiz,
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
-                            textColor: environment.theme.list.itemPrimaryTextColor
+                            textColor: theme.list.itemPrimaryTextColor
                         )),
                         maximumNumberOfLines: 1
                     ))),
@@ -1128,13 +1130,13 @@ final class ComposePollScreenComponent: Component {
             let pollSettingsSectionSize = self.pollSettingsSection.update(
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
-                    theme: environment.theme,
+                    theme: theme,
                     header: nil,
                     footer: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
                             string: environment.strings.CreatePoll_QuizInfo,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
-                            textColor: environment.theme.list.freeTextColor
+                            textColor: theme.list.freeTextColor
                         )),
                         maximumNumberOfLines: 0
                     )),
@@ -1158,12 +1160,12 @@ final class ComposePollScreenComponent: Component {
             let quizAnswerSectionSize = self.quizAnswerSection.update(
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
-                    theme: environment.theme,
+                    theme: theme,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
                             string: environment.strings.CreatePoll_ExplanationHeader,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
-                            textColor: environment.theme.list.freeTextColor
+                            textColor: theme.list.freeTextColor
                         )),
                         maximumNumberOfLines: 0
                     )),
@@ -1171,7 +1173,7 @@ final class ComposePollScreenComponent: Component {
                         text: .plain(NSAttributedString(
                             string: environment.strings.CreatePoll_ExplanationInfo,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
-                            textColor: environment.theme.list.freeTextColor
+                            textColor: theme.list.freeTextColor
                         )),
                         maximumNumberOfLines: 0
                     )),
@@ -1179,7 +1181,7 @@ final class ComposePollScreenComponent: Component {
                         AnyComponentWithIdentity(id: 0, component: AnyComponent(ListComposePollOptionComponent(
                             externalState: self.quizAnswerTextInputState,
                             context: component.context,
-                            theme: environment.theme,
+                            theme: theme,
                             strings: environment.strings,
                             resetText: self.resetQuizAnswerText.flatMap { resetText in
                                 return ListComposePollOptionComponent.ResetText(value: NSAttributedString(string: resetText))
@@ -1326,7 +1328,7 @@ final class ComposePollScreenComponent: Component {
                     component: AnyComponent(EmojiSuggestionsComponent(
                         context: component.context,
                         userLocation: .other,
-                        theme: EmojiSuggestionsComponent.Theme(theme: environment.theme, backgroundColor: environment.theme.list.itemBlocksBackgroundColor),
+                        theme: EmojiSuggestionsComponent.Theme(theme: theme, backgroundColor: theme.list.itemBlocksBackgroundColor),
                         animationCache: component.context.animationCache,
                         animationRenderer: component.context.animationRenderer,
                         files: value,

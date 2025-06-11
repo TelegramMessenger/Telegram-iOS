@@ -20,11 +20,13 @@ public struct MessageHistoryScrollToSubject: Equatable {
     
     public var index: MessageHistoryAnchorIndex
     public var quote: Quote?
+    public var todoTaskId: Int32?
     public var setupReply: Bool
     
-    public init(index: MessageHistoryAnchorIndex, quote: Quote?, setupReply: Bool = false) {
+    public init(index: MessageHistoryAnchorIndex, quote: Quote?, todoTaskId: Int32? = nil, setupReply: Bool = false) {
         self.index = index
         self.quote = quote
+        self.todoTaskId = todoTaskId
         self.setupReply = setupReply
     }
 }
