@@ -84,14 +84,17 @@ private func isKeyboardViewContainer(view: NSObject) -> Bool {
 }
 
 private class ApplicationStatusBarHost: StatusBarHost {
-    private let scene: UIWindowScene
+    private weak var scene: UIWindowScene?
     
-    init(scene: UIWindowScene) {
+    init(scene: UIWindowScene?) {
         self.scene = scene
     }
     
     var isApplicationInForeground: Bool {
-        switch self.scene.activationState {
+        guard let scene = self.scene else {
+            return false
+        }
+        switch scene.activationState {
         case .unattached:
             return false
         case .foregroundActive:
@@ -106,26 +109,10 @@ private class ApplicationStatusBarHost: StatusBarHost {
     }
     
     var statusBarFrame: CGRect {
-        return self.scene.statusBarManager?.statusBarFrame ?? CGRect()
-    }
-    var statusBarStyle: UIStatusBarStyle {
-        get {
-            return self.scene.statusBarManager?.statusBarStyle ?? .default
-        } set(value) {
-            self.setStatusBarStyle(value, animated: false)
+        guard let scene = self.scene else {
+            return CGRect()
         }
-    }
-    
-    func setStatusBarStyle(_ style: UIStatusBarStyle, animated: Bool) {
-        /*if self.shouldChangeStatusBarStyle?(style) ?? true {
-            self.application.internalSetStatusBarStyle(style, animated: animated)
-        }*/
-    }
-    
-    var shouldChangeStatusBarStyle: ((UIStatusBarStyle) -> Bool)?
-    
-    func setStatusBarHidden(_ value: Bool, animated: Bool) {
-        //self.application.internalSetStatusBarHidden(value, animation: animated ? .fade : .none)
+        return scene.statusBarManager?.statusBarFrame ?? CGRect()
     }
     
     var keyboardWindow: UIWindow? {
@@ -345,7 +332,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         let launchStartTime = CFAbsoluteTimeGetCurrent()
         
         let (window, hostView) = nativeWindowHostView()
-        let statusBarHost = ApplicationStatusBarHost(scene: window.windowScene!)
+        let statusBarHost = ApplicationStatusBarHost(scene: window.windowScene)
         self.mainWindow = Window1(hostView: hostView, statusBarHost: statusBarHost)
         if let traitCollection = window.rootViewController?.traitCollection {
             if #available(iOS 13.0, *) {

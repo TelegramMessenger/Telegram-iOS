@@ -8,6 +8,4 @@ public protocol StatusBarHost {
     var keyboardView: UIView? { get }
     
     var isApplicationInForeground: Bool { get }
-    
-    var shouldChangeStatusBarStyle: ((UIStatusBarStyle) -> Bool)? { get set }
 }
