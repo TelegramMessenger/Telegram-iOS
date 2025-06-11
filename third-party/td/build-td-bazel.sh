@@ -29,7 +29,7 @@ cd ..
 if [ "$ARCH" = "arm64" ]; then
   IOS_PLATFORMDIR="$(xcode-select -p)/Platforms/iPhoneOS.platform"
   IOS_SYSROOT=($IOS_PLATFORMDIR/Developer/SDKs/iPhoneOS*.sdk)
-  export CFLAGS="-arch arm64 -miphoneos-version-min=13.0"
+  export CFLAGS="-arch arm64 --target=arm64-apple-ios13.0 -miphoneos-version-min=13.0"
 elif [ "$ARCH" = "sim_arm64" ]; then
   IOS_PLATFORMDIR="$(xcode-select -p)/Platforms/iPhoneSimulator.platform"
   IOS_SYSROOT=($IOS_PLATFORMDIR/Developer/SDKs/iPhoneSimulator*.sdk)
