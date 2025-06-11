@@ -261,14 +261,10 @@ genrule(
         BUILD_DIR="$$ABS_RULEDIR/build"
         rm -rf "$$BUILD_DIR"
         mkdir -p "$$BUILD_DIR"
-        YASM_DIR="$$BUILD_DIR/yasm"
-        rm -rf "$$YASM_DIR"
-        mkdir -p "$$YASM_DIR"
-        tar -xf "$(location //third-party/yasm:yasm.tar)" -C "$$YASM_DIR"
 
         VARIANT=release
 
-        FFMPEG_VERSION="7.1"
+        FFMPEG_VERSION="7.1.1"
 
         if [ "$(TARGET_CPU)" == "ios_armv7" ]; then
             BUILD_ARCH="armv7"
@@ -283,7 +279,7 @@ genrule(
             echo "Unsupported architecture $(TARGET_CPU)"
         fi
 
-        PATH="$$PATH:$$YASM_DIR" "$$SOURCE_PATH/build-ffmpeg-bazel.sh" "$$VARIANT" "$$BUILD_ARCH" "$$BUILD_DIR" "$$SOURCE_PATH" "$$FFMPEG_VERSION"
+        "$$SOURCE_PATH/build-ffmpeg-bazel.sh" "$$VARIANT" "$$BUILD_ARCH" "$$BUILD_DIR" "$$SOURCE_PATH" "$$FFMPEG_VERSION"
     """ + "\n" + "\n".join([
         "cp \"$$BUILD_DIR/FFmpeg-iOS/include/{header_path}\" \"$(location Public/third_party/ffmpeg/{header_path})\"".format(header_path = header_path) for header_path in ffmpeg_header_paths
     ]) + "\n" + "\n".join([
@@ -296,9 +292,6 @@ genrule(
     ] + [
         "Public/{}".format(header_path) for header_path in ffmpeg_header_paths
     ] + ffmpeg_libs,
-    tools = [
-        "//third-party/yasm:yasm.tar",
-    ],
     visibility = [
         "//visibility:public",
     ],

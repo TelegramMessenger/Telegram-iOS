@@ -13,7 +13,7 @@ SCRATCH="$BUILD_DIR/scratch"
 #set -e
 #devnull='> /dev/null 2>&1'
 
-DEPLOYMENT_TARGET="9.0"
+DEPLOYMENT_TARGET="13.0"
 CONFIGURE_FLAGS="--enable-static --enable-pic --disable-cli --bit-depth=8 --disable-opencl"
 
 echo "building $RAW_ARCH..."

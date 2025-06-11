@@ -217,8 +217,6 @@ private final class InnerActionsContainerNode: ASDisplayNode {
                     } else {
                         effectView = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterialLight))
                     }
-                } else if #available(iOS 10.0, *) {
-                    effectView = UIVisualEffectView(effect: UIBlurEffect(style: .regular))
                 } else {
                     effectView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
                 }
@@ -572,8 +570,6 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
                     } else {
                         effectView = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterialLight))
                     }
-                } else if #available(iOS 10.0, *) {
-                    effectView = UIVisualEffectView(effect: UIBlurEffect(style: .regular))
                 } else {
                     effectView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
                 }

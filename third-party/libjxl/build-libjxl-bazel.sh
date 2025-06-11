@@ -14,7 +14,7 @@ CMAKE_OPTIONS="-DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DJPEGXL_ENABLE_BE
 if [ "$ARCH" = "arm64" ]; then
   IOS_PLATFORMDIR="$(xcode-select -p)/Platforms/iPhoneOS.platform"
   IOS_SYSROOT=($IOS_PLATFORMDIR/Developer/SDKs/iPhoneOS*.sdk)
-  export CFLAGS="-Wall -arch arm64 -miphoneos-version-min=12.0 -funwind-tables"
+  export CFLAGS="-Wall -arch arm64 -miphoneos-version-min=13.0 -funwind-tables"
   export CXXFLAGS="$CFLAGS"
 
   cd "$BUILD_DIR"
@@ -31,7 +31,7 @@ if [ "$ARCH" = "arm64" ]; then
 elif [ "$ARCH" = "sim_arm64" ]; then
   IOS_PLATFORMDIR="$(xcode-select -p)/Platforms/iPhoneSimulator.platform"
   IOS_SYSROOT=($IOS_PLATFORMDIR/Developer/SDKs/iPhoneSimulator*.sdk)
-  export CFLAGS="-Wall -arch arm64 --target=arm64-apple-ios12.0-simulator -miphonesimulator-version-min=12.0 -funwind-tables"
+  export CFLAGS="-Wall -arch arm64 --target=arm64-apple-ios13.0-simulator -miphonesimulator-version-min=13.0 -funwind-tables"
   export CXXFLAGS="$CFLAGS"
   
   cd "$BUILD_DIR"
@@ -48,7 +48,7 @@ elif [ "$ARCH" = "sim_arm64" ]; then
 elif [ "$ARCH" = "x86_64" ]; then
   IOS_PLATFORMDIR="$(xcode-select -p)/Platforms/iPhoneSimulator.platform"
   IOS_SYSROOT=($IOS_PLATFORMDIR/Developer/SDKs/iPhoneSimulator*.sdk)
-  export CFLAGS="-Wall -arch x86_64 -miphoneos-version-min=12.0 -funwind-tables"
+  export CFLAGS="-Wall -arch x86_64 -miphoneos-version-min=13.0 -funwind-tables"
   export CXXFLAGS="$CFLAGS"
   
   cd "$BUILD_DIR"

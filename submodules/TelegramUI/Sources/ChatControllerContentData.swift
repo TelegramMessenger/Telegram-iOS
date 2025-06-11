@@ -1189,13 +1189,15 @@ extension ChatControllerImpl {
                     savedMessagesPeerId = nil
                 }
                 
-                let savedMessagesPeer: Signal<(peer: EnginePeer?, messageCount: Int, presence: EnginePeer.Presence?)?, NoError>
+                let savedMessagesPeer: Signal<(peer: EnginePeer?, messageCount: Int, presence: EnginePeer.Presence?, isMonoforumFeeRemoved: Bool)?, NoError>
                 if let savedMessagesPeerId {
                     let threadPeerId = savedMessagesPeerId
                     let basicPeerKey: PostboxViewKey = .peer(peerId: threadPeerId, components: [])
                     let countViewKey: PostboxViewKey = .historyTagSummaryView(tag: MessageTags(), peerId: peerId, threadId: savedMessagesPeerId.toInt64(), namespace: Namespaces.Message.Cloud, customTag: nil)
-                    savedMessagesPeer = context.account.postbox.combinedView(keys: [basicPeerKey, countViewKey])
-                    |> map { views -> (peer: EnginePeer?, messageCount: Int, presence: EnginePeer.Presence?)? in
+                    let threadInfoKey: PostboxViewKey = .messageHistoryThreadInfo(peerId: peerId, threadId: savedMessagesPeerId.toInt64())
+                    
+                    savedMessagesPeer = context.account.postbox.combinedView(keys: [basicPeerKey, countViewKey, threadInfoKey])
+                    |> map { views -> (peer: EnginePeer?, messageCount: Int, presence: EnginePeer.Presence?, isMonoforumFeeRemoved: Bool)? in
                         var peer: EnginePeer?
                         var presence: EnginePeer.Presence?
                         if let peerView = views.views[basicPeerKey] as? PeerView {
@@ -1208,7 +1210,12 @@ extension ChatControllerImpl {
                             messageCount += Int(count)
                         }
                         
-                        return (peer, messageCount, presence)
+                        var isMonoforumFeeRemoved = false
+                        if let threadInfoView = views.views[threadInfoKey] as? MessageHistoryThreadInfoView, let threadInfo = threadInfoView.info?.data.get(MessageHistoryThreadData.self) {
+                            isMonoforumFeeRemoved = threadInfo.isMessageFeeRemoved
+                        }
+                        
+                        return (peer, messageCount, presence, isMonoforumFeeRemoved)
                     }
                     |> distinctUntilChanged(isEqual: { lhs, rhs in
                         if lhs?.peer != rhs?.peer {
@@ -1218,6 +1225,9 @@ extension ChatControllerImpl {
                             return false
                         }
                         if lhs?.presence != rhs?.presence {
+                            return false
+                        }
+                        if lhs?.isMonoforumFeeRemoved != rhs?.isMonoforumFeeRemoved {
                             return false
                         }
                         return true
@@ -1473,7 +1483,7 @@ extension ChatControllerImpl {
                         }
                         
                         var removePaidMessageFeeData: ChatPresentationInterfaceState.RemovePaidMessageFeeData?
-                        if !"".isEmpty, let peer = savedMessagesPeer?.peer, let channel = peerView.peers[peerView.peerId] as? TelegramChannel, let sendPaidMessageStars = channel.sendPaidMessageStars, channel.isMonoForum {
+                        if let savedMessagesPeer, !savedMessagesPeer.isMonoforumFeeRemoved, let peer = savedMessagesPeer.peer, let channel = peerView.peers[peerView.peerId] as? TelegramChannel, let sendPaidMessageStars = channel.sendPaidMessageStars, channel.isMonoForum {
                             if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = peerView.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
                                 removePaidMessageFeeData = ChatPresentationInterfaceState.RemovePaidMessageFeeData(
                                     peer: peer,

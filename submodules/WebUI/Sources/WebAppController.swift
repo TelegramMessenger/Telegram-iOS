@@ -854,7 +854,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 
                 if webView.scrollView.contentInset != scrollInset {
                     webView.scrollView.contentInset = scrollInset
-                    webView.scrollView.scrollIndicatorInsets = scrollInset
+                    webView.scrollView.horizontalScrollIndicatorInsets = scrollInset
+                    webView.scrollView.verticalScrollIndicatorInsets = scrollInset
                 }
                 
                 if previousLayout != nil && (previousLayout?.inputHeight ?? 0.0).isZero, let inputHeight = layout.inputHeight, inputHeight > 44.0, transition.isAnimated {

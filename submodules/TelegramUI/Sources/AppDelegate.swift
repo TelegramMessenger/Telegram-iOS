@@ -84,38 +84,35 @@ private func isKeyboardViewContainer(view: NSObject) -> Bool {
 }
 
 private class ApplicationStatusBarHost: StatusBarHost {
-    private let application = UIApplication.shared
+    private weak var scene: UIWindowScene?
+    
+    init(scene: UIWindowScene?) {
+        self.scene = scene
+    }
     
     var isApplicationInForeground: Bool {
-        switch self.application.applicationState {
+        guard let scene = self.scene else {
+            return false
+        }
+        switch scene.activationState {
+        case .unattached:
+            return false
+        case .foregroundActive:
+            return true
+        case .foregroundInactive:
+            return true
         case .background:
             return false
-        default:
-            return true
+        @unknown default:
+            return false
         }
     }
     
     var statusBarFrame: CGRect {
-        return self.application.statusBarFrame
-    }
-    var statusBarStyle: UIStatusBarStyle {
-        get {
-            return self.application.statusBarStyle
-        } set(value) {
-            self.setStatusBarStyle(value, animated: false)
+        guard let scene = self.scene else {
+            return CGRect()
         }
-    }
-    
-    func setStatusBarStyle(_ style: UIStatusBarStyle, animated: Bool) {
-        if self.shouldChangeStatusBarStyle?(style) ?? true {
-            self.application.internalSetStatusBarStyle(style, animated: animated)
-        }
-    }
-    
-    var shouldChangeStatusBarStyle: ((UIStatusBarStyle) -> Bool)?
-    
-    func setStatusBarHidden(_ value: Bool, animated: Bool) {
-        self.application.internalSetStatusBarHidden(value, animation: animated ? .fade : .none)
+        return scene.statusBarManager?.statusBarFrame ?? CGRect()
     }
     
     var keyboardWindow: UIWindow? {
@@ -158,16 +155,12 @@ protocol SupportedStartCallIntent {
     var contacts: [INPerson]? { get }
 }
 
-@available(iOS 10.0, *)
-extension INStartAudioCallIntent: SupportedStartCallIntent {}
+extension INStartCallIntent: SupportedStartCallIntent {}
 
 protocol SupportedStartVideoCallIntent {
     @available(iOS 10.0, *)
     var contacts: [INPerson]? { get }
 }
-
-@available(iOS 10.0, *)
-extension INStartVideoCallIntent: SupportedStartVideoCallIntent {}
 
 private enum QueuedWakeup: Int32 {
     case call
@@ -235,7 +228,6 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     let hasActiveAudioSession = Promise<Bool>(false)
     
     private let sharedContextPromise = Promise<SharedApplicationContext>()
-    //private let watchCommunicationManagerPromise = Promise<WatchCommunicationManager?>()
 
     private var accountManager: AccountManager<TelegramAccountManagerTypes>?
     private var accountManagerState: AccountManagerState?
@@ -339,8 +331,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         
         let launchStartTime = CFAbsoluteTimeGetCurrent()
         
-        let statusBarHost = ApplicationStatusBarHost()
         let (window, hostView) = nativeWindowHostView()
+        let statusBarHost = ApplicationStatusBarHost(scene: window.windowScene)
         self.mainWindow = Window1(hostView: hostView, statusBarHost: statusBarHost)
         if let traitCollection = window.rootViewController?.traitCollection {
             if #available(iOS 13.0, *) {
@@ -1477,9 +1469,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             }
         }
         
-        if UIApplication.shared.isStatusBarHidden {
+        /*if UIApplication.shared.isStatusBarHidden {
             UIApplication.shared.internalSetStatusBarHidden(false, animation: .none)
-        }
+        }*/
         
         /*if #available(iOS 13.0, *) {
             BGTaskScheduler.shared.register(forTaskWithIdentifier: baseAppBundleId + ".refresh", using: nil, launchHandler: { task in

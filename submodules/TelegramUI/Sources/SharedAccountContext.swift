@@ -3715,26 +3715,28 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func makeStarsAmountScreen(context: AccountContext, initialValue: Int64?, completion: @escaping (Int64) -> Void) -> ViewController {
-        return StarsWithdrawScreen(context: context, mode: .paidMedia(initialValue), completion: completion)
+        return StarsWithdrawScreen(context: context, mode: .paidMedia(initialValue, completion: completion))
     }
     
     public func makeStarsWithdrawalScreen(context: AccountContext, stats: StarsRevenueStats, completion: @escaping (Int64) -> Void) -> ViewController {
-        return StarsWithdrawScreen(context: context, mode: .withdraw(stats), completion: completion)
+        return StarsWithdrawScreen(context: context, mode: .withdraw(stats, completion: completion))
     }
     
-    public func makeStarsWithdrawalScreen(context: AccountContext, subject: StarsWithdrawalScreenSubject, completion: @escaping (Int64) -> Void) -> ViewController {
+    public func makeStarsWithdrawalScreen(context: AccountContext, subject: StarsWithdrawalScreenSubject) -> ViewController {
         let mode: StarsWithdrawScreen.Mode
         switch subject {
-        case .withdraw:
-            mode = .accountWithdraw
-        case let .enterAmount(current, minValue, fractionAfterCommission, kind):
-            mode = .paidMessages(current: current.value, minValue: minValue.value, fractionAfterCommission: fractionAfterCommission, kind: kind)
+        case let .withdraw(completion):
+            mode = .accountWithdraw(completion: completion)
+        case let .enterAmount(current, minValue, fractionAfterCommission, kind, completion):
+            mode = .paidMessages(current: current.value, minValue: minValue.value, fractionAfterCommission: fractionAfterCommission, kind: kind, completion: completion)
+        case let .postSuggestion(channel, current, timestamp, completion):
+            mode = .suggestedPost(mode: .sender(channel: channel), price: current.value, timestamp: timestamp, completion: completion)
         }
-        return StarsWithdrawScreen(context: context, mode: mode, completion: completion)
+        return StarsWithdrawScreen(context: context, mode: mode)
     }
     
     public func makeStarGiftResellScreen(context: AccountContext, gift: StarGift.UniqueGift, update: Bool, completion: @escaping (Int64) -> Void) -> ViewController {
-        return StarsWithdrawScreen(context: context, mode: .starGiftResell(gift, update), completion: completion)
+        return StarsWithdrawScreen(context: context, mode: .starGiftResell(gift, update, completion: completion))
     }
     
     public func makeStarsGiftScreen(context: AccountContext, message: EngineMessage) -> ViewController {

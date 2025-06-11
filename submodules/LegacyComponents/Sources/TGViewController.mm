@@ -1204,7 +1204,7 @@ static id<LegacyComponentsContext> _defaultContext = nil;
     UIEdgeInsets finalInset = self.controllerInset;
     
     scrollView.contentInset = finalInset;
-    scrollView.scrollIndicatorInsets = _explicitScrollIndicatorInset;
+    scrollView.verticalScrollIndicatorInsets = _explicitScrollIndicatorInset;
 
     if (!UIEdgeInsetsEqualToEdgeInsets(previousInset, UIEdgeInsetsZero))
     {

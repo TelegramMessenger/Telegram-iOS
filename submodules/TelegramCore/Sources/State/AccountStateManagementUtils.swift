@@ -2107,7 +2107,8 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                                                     maxOutgoingReadId: readOutboxMaxId,
                                                     isClosed: (flags & (1 << 2)) != 0,
                                                     isHidden: (flags & (1 << 6)) != 0,
-                                                    notificationSettings: TelegramPeerNotificationSettings(apiSettings: notifySettings)
+                                                    notificationSettings: TelegramPeerNotificationSettings(apiSettings: notifySettings),
+                                                    isMessageFeeRemoved: false
                                                 ),
                                                 topMessageId: topMessage,
                                                 unreadMentionCount: unreadMentionsCount,
@@ -2140,7 +2141,8 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                                                     maxOutgoingReadId: readOutboxMaxId,
                                                     isClosed: false,
                                                     isHidden: false,
-                                                    notificationSettings: TelegramPeerNotificationSettings.defaultSettings
+                                                    notificationSettings: TelegramPeerNotificationSettings.defaultSettings,
+                                                    isMessageFeeRemoved: (flags & (1 << 4)) != 0
                                                 ),
                                                 topMessageId: topMessage,
                                                 unreadMentionCount: 0,
@@ -2266,7 +2268,8 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                                                 maxOutgoingReadId: readOutboxMaxId,
                                                 isClosed: (flags & (1 << 2)) != 0,
                                                 isHidden: (flags & (1 << 6)) != 0,
-                                                notificationSettings: TelegramPeerNotificationSettings(apiSettings: notifySettings)
+                                                notificationSettings: TelegramPeerNotificationSettings(apiSettings: notifySettings),
+                                                isMessageFeeRemoved: false
                                             )
                                             if let entry = StoredMessageHistoryThreadInfo(data) {
                                                 transaction.setMessageHistoryThreadInfo(peerId: peerId, threadId: Int64(id), info: entry)
@@ -2296,7 +2299,8 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                                                 maxOutgoingReadId: readOutboxMaxId,
                                                 isClosed: false,
                                                 isHidden: false,
-                                                notificationSettings: TelegramPeerNotificationSettings.defaultSettings
+                                                notificationSettings: TelegramPeerNotificationSettings.defaultSettings,
+                                                isMessageFeeRemoved: (flags & (1 << 4)) != 0
                                             )
                                             if let entry = StoredMessageHistoryThreadInfo(data) {
                                                 transaction.setMessageHistoryThreadInfo(peerId: peerId, threadId: peer.peerId.toInt64(), info: entry)
@@ -2429,7 +2433,8 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                                                 maxOutgoingReadId: readOutboxMaxId,
                                                 isClosed: (flags & (1 << 2)) != 0,
                                                 isHidden: (flags & (1 << 6)) != 0,
-                                                notificationSettings: TelegramPeerNotificationSettings(apiSettings: notifySettings)
+                                                notificationSettings: TelegramPeerNotificationSettings(apiSettings: notifySettings),
+                                                isMessageFeeRemoved: false
                                             ),
                                             topMessageId: topMessage,
                                             unreadMentionCount: unreadMentionsCount,
@@ -2459,7 +2464,8 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                                                 maxOutgoingReadId: readOutboxMaxId,
                                                 isClosed: false,
                                                 isHidden: false,
-                                                notificationSettings: TelegramPeerNotificationSettings.defaultSettings
+                                                notificationSettings: TelegramPeerNotificationSettings.defaultSettings,
+                                                isMessageFeeRemoved: (flags & (1 << 4)) != 0
                                             ),
                                             topMessageId: topMessage,
                                             unreadMentionCount: 0,

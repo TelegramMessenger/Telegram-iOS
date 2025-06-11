@@ -34,6 +34,15 @@ def calculate_sha256(file_path):
             sha256_hash.update(byte_block)
     return sha256_hash.hexdigest()
 
+def resolve_cache_host(cache_host):
+    if cache_host is None:
+        return None
+    if "@auto" in cache_host:
+        host_parts = cache_host.split("@auto")
+        host_left_part = host_parts[0]
+        host_right_part = host_parts[1]
+        return f"{host_left_part}localhost{host_right_part}"
+    return cache_host
 
 def locate_bazel(base_path, cache_host):
     build_input_dir = '{}/build-input'.format(base_path)
@@ -48,9 +57,11 @@ def locate_bazel(base_path, cache_host):
     bazel_name = 'bazel-{version}-{arch}'.format(version=versions.bazel_version, arch=arch)
     bazel_path = '{}/build-input/{}'.format(base_path, bazel_name)
 
+    resolved_cache_host = resolve_cache_host(cache_host)
+
     if not os.path.isfile(bazel_path):
-        if cache_host is not None and versions.bazel_version_sha256 is not None:
-            http_cache_host = transform_cache_host_into_http(cache_host)
+        if resolved_cache_host is not None and versions.bazel_version_sha256 is not None:
+            http_cache_host = transform_cache_host_into_http(resolved_cache_host)
 
             with tempfile.NamedTemporaryFile(delete=True) as temp_output_file:
                 call_executable([
@@ -93,8 +104,8 @@ def locate_bazel(base_path, cache_host):
                 print(f"Bazel at {bazel_path} does not match SHA256 {versions.bazel_version_sha256}, removing")
                 os.remove(bazel_path)
 
-        if cache_host is not None and versions.bazel_version_sha256 is not None:
-            http_cache_host = transform_cache_host_into_http(cache_host)
+        if resolved_cache_host is not None and versions.bazel_version_sha256 is not None:
+            http_cache_host = transform_cache_host_into_http(resolved_cache_host)
             print(f"Uploading bazel@{versions.bazel_version_sha256} to bazel-remote")
             call_executable([
                 'curl',

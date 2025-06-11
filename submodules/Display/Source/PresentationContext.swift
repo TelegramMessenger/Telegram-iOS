@@ -46,6 +46,29 @@ public final class PresentationContext {
         }
     }
     
+    var statusBar: (style: UIStatusBarStyle, isHidden: Bool)? {
+        for (controller, _) in self.controllers.reversed() {
+            if let controller = controller as? ViewController {
+                if controller.statusBar.statusBarStyle != .Ignore {
+                    var style: UIStatusBarStyle = .default
+                    var isHidden: Bool = false
+                    switch controller.statusBar.statusBarStyle {
+                    case .White:
+                        style = .lightContent
+                    case .Black:
+                        style = .darkContent
+                    case .Ignore, .Hide:
+                        style = .darkContent
+                        isHidden = true
+                    }
+                    return (style, isHidden)
+                }
+            }
+        }
+        return nil
+    }
+    var updateStatusBar: ((ContainedViewLayoutTransition) -> Void)?
+    
     private var layout: ContainerViewLayout?
     
     private var ready: Bool {
@@ -308,6 +331,8 @@ public final class PresentationContext {
                 controller.displayNode.accessibilityElementsHidden = false
             }
         }
+        
+        self.updateStatusBar?(.animated(duration: 0.2, curve: .easeInOut))
     }
     
     private func notifyAccessibilityScreenChanged() {

@@ -246,6 +246,7 @@ def ipadiff(self_base_path, ipa1, ipa2):
     ipa2_dir = tempdir + '/ipa2'
 
     print('ipa1_dir = {}'.format(ipa1_dir))
+    print('ipa2_dir = {}'.format(ipa2_dir))
 
     ZipFile(ipa1, 'r').extractall(path=ipa1_dir)
     ZipFile(ipa2, 'r').extractall(path=ipa2_dir)

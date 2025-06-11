@@ -68,6 +68,7 @@ public struct MessageHistoryThreadData: Codable, Equatable {
         case isHidden
         case notificationSettings
         case isMarkedUnread
+        case isMessageFeeRemoved
     }
     
     public var creationDate: Int32
@@ -82,6 +83,7 @@ public struct MessageHistoryThreadData: Codable, Equatable {
     public var isClosed: Bool
     public var isHidden: Bool
     public var notificationSettings: TelegramPeerNotificationSettings
+    public var isMessageFeeRemoved: Bool
     
     public init(
         creationDate: Int32,
@@ -95,7 +97,8 @@ public struct MessageHistoryThreadData: Codable, Equatable {
         maxOutgoingReadId: Int32,
         isClosed: Bool,
         isHidden: Bool,
-        notificationSettings: TelegramPeerNotificationSettings
+        notificationSettings: TelegramPeerNotificationSettings,
+        isMessageFeeRemoved: Bool
     ) {
         self.creationDate = creationDate
         self.isOwnedByMe = isOwnedByMe
@@ -109,6 +112,7 @@ public struct MessageHistoryThreadData: Codable, Equatable {
         self.isClosed = isClosed
         self.isHidden = isHidden
         self.notificationSettings = notificationSettings
+        self.isMessageFeeRemoved = isMessageFeeRemoved
     }
     
     public init(from decoder: Decoder) throws {
@@ -126,6 +130,7 @@ public struct MessageHistoryThreadData: Codable, Equatable {
         self.isClosed = try container.decodeIfPresent(Bool.self, forKey: .isClosed) ?? false
         self.isHidden = try container.decodeIfPresent(Bool.self, forKey: .isHidden) ?? false
         self.notificationSettings = try container.decode(TelegramPeerNotificationSettings.self, forKey: .notificationSettings)
+        self.isMessageFeeRemoved = try container.decodeIfPresent(Bool.self, forKey: .isMessageFeeRemoved) ?? false
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -143,6 +148,7 @@ public struct MessageHistoryThreadData: Codable, Equatable {
         try container.encode(self.isClosed, forKey: .isClosed)
         try container.encode(self.isHidden, forKey: .isHidden)
         try container.encode(self.notificationSettings, forKey: .notificationSettings)
+        try container.encode(self.isMessageFeeRemoved, forKey: .isMessageFeeRemoved)
     }
 }
 
@@ -668,7 +674,8 @@ public func _internal_fillSavedMessageHistory(accountPeerId: PeerId, postbox: Po
                     maxOutgoingReadId: 0,
                     isClosed: false,
                     isHidden: false,
-                    notificationSettings: TelegramPeerNotificationSettings.defaultSettings
+                    notificationSettings: TelegramPeerNotificationSettings.defaultSettings,
+                    isMessageFeeRemoved: false
                 ),
                 topMessage: message.id.id,
                 unreadMentionsCount: 0,
@@ -786,7 +793,8 @@ func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Post
                                 maxOutgoingReadId: 0,
                                 isClosed: false,
                                 isHidden: false,
-                                notificationSettings: TelegramPeerNotificationSettings.defaultSettings
+                                notificationSettings: TelegramPeerNotificationSettings.defaultSettings,
+                                isMessageFeeRemoved: false
                             )
                             
                             var topTimestamp: Int32 = 1
@@ -840,7 +848,8 @@ func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Post
                                 maxOutgoingReadId: readOutboxMaxId,
                                 isClosed: false,
                                 isHidden: false,
-                                notificationSettings: TelegramPeerNotificationSettings.defaultSettings
+                                notificationSettings: TelegramPeerNotificationSettings.defaultSettings,
+                                isMessageFeeRemoved: (flags & (1 << 4)) != 0
                             )
                             
                             var topTimestamp: Int32 = 1
@@ -989,7 +998,8 @@ func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Post
                                     maxOutgoingReadId: readOutboxMaxId,
                                     isClosed: (flags & (1 << 2)) != 0,
                                     isHidden: (flags & (1 << 6)) != 0,
-                                    notificationSettings: TelegramPeerNotificationSettings(apiSettings: notifySettings)
+                                    notificationSettings: TelegramPeerNotificationSettings(apiSettings: notifySettings),
+                                    isMessageFeeRemoved: false
                                 )
                                 
                                 var topTimestamp = date

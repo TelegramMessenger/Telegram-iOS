@@ -373,7 +373,7 @@ final class PostSuggestionsSettingsScreenComponent: Component {
                         }
                         
                         let currentAmount: StarsAmount = StarsAmount(value: Int64(self.starCount), nanos: 0)
-                        let starsScreen = component.context.sharedContext.makeStarsWithdrawalScreen(context: component.context, subject: .enterAmount(current: currentAmount, minValue: StarsAmount(value: 0, nanos: 0), fractionAfterCommission: component.paidMessageCommissionPermille / 10, kind: .postSuggestion), completion: { [weak self] amount in
+                        let starsScreen = component.context.sharedContext.makeStarsWithdrawalScreen(context: component.context, subject: .enterAmount(current: currentAmount, minValue: StarsAmount(value: 0, nanos: 0), fractionAfterCommission: component.paidMessageCommissionPermille / 10, kind: .postSuggestion, completion: { [weak self] amount in
                             guard let self else {
                                 return
                             }
@@ -382,7 +382,7 @@ final class PostSuggestionsSettingsScreenComponent: Component {
                             if !self.isUpdating {
                                 self.state?.updated(transition: .immediate)
                             }
-                        })
+                        }))
                         environment.controller()?.push(starsScreen)
                     },
                     openPremiumInfo: nil
@@ -442,8 +442,8 @@ final class PostSuggestionsSettingsScreenComponent: Component {
                 self.scrollView.contentSize = contentSize
             }
             let scrollInsets = UIEdgeInsets(top: environment.navigationHeight, left: 0.0, bottom: 0.0, right: 0.0)
-            if self.scrollView.scrollIndicatorInsets != scrollInsets {
-                self.scrollView.scrollIndicatorInsets = scrollInsets
+            if self.scrollView.verticalScrollIndicatorInsets != scrollInsets {
+                self.scrollView.verticalScrollIndicatorInsets = scrollInsets
             }
                         
             if !previousBounds.isEmpty, !transition.animation.isImmediate {

@@ -63,7 +63,7 @@ private func fetchMapSnapshotResource(resource: MapSnapshotMediaResource) -> Sig
             let latitude = adjustGMapLatitude(resource.latitude, offset: -10, zoom: 15)
             options.region = MKCoordinateRegion(center: CLLocationCoordinate2DMake(latitude, resource.longitude), span: MKCoordinateSpan(latitudeDelta: 0.003, longitudeDelta: 0.003))
             options.mapType = .standard
-            options.showsPointsOfInterest = false
+            options.pointOfInterestFilter = .excludingAll
             options.showsBuildings = true
             options.size = CGSize(width: CGFloat(resource.width + 1), height: CGFloat(resource.height + 10))
             options.scale = 2.0

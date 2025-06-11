@@ -306,6 +306,9 @@ extension ChatControllerImpl {
         if let requestsState = previousState.requestsState, requestsState.count > 0 && !previousInvitationRequestsPeersDismissed {
             didDisplayActionsPanel = true
         }
+        if previousState.removePaidMessageFeeData != nil {
+            didDisplayActionsPanel = true
+        }
         
         var displayActionsPanel = false
         if let contactStatus = contentData.state.contactStatus, !contactStatus.isEmpty, let peerStatusSettings = contactStatus.peerStatusSettings {
@@ -337,6 +340,9 @@ extension ChatControllerImpl {
             invitationRequestsPeersDismissed = true
         }
         if let requestsState = contentData.state.requestsState, requestsState.count > 0 && !invitationRequestsPeersDismissed {
+            displayActionsPanel = true
+        }
+        if contentData.state.removePaidMessageFeeData != nil {
             displayActionsPanel = true
         }
         
@@ -1894,6 +1900,11 @@ extension ChatControllerImpl {
                 return
             }
             presentChatLinkOptions(selfController: self, sourceNode: sourceNode)
+        }, presentSuggestPostOptions: { [weak self] in
+            guard let self else {
+                return
+            }
+            self.presentSuggestPostOptions()
         }, shareSelectedMessages: { [weak self] in
             if let strongSelf = self, let selectedIds = strongSelf.presentationInterfaceState.interfaceState.selectionState?.selectedIds, !selectedIds.isEmpty {
                 strongSelf.commitPurposefulAction()
@@ -3734,7 +3745,7 @@ extension ChatControllerImpl {
             if let strongSelf = self {
                 strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(title: nil, text: strongSelf.presentationData.strings.Conversation_GigagroupDescription, timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return true }), in: .current)
             }
-        }, openSuggestPost: { [weak self] in
+        }, openMonoforum: { [weak self] in
             guard let self else {
                 return
             }
@@ -4084,6 +4095,22 @@ extension ChatControllerImpl {
                 })
                 self.push(controller)
             }
+        }, openSuggestPost: { [weak self] in
+            guard let self else {
+                return
+            }
+            self.updateChatPresentationInterfaceState(interactive: true, { state in
+                var state = state
+                state = state.updatedInterfaceState { interfaceState in
+                    var interfaceState = interfaceState
+                    interfaceState = interfaceState.withUpdatedPostSuggestionState(ChatInterfaceState.PostSuggestionState(
+                        price: 0,
+                        timestamp: nil
+                    ))
+                    return interfaceState
+                }
+                return state
+            })
         }, openPremiumRequiredForMessaging: { [weak self] in
             guard let self else {
                 return

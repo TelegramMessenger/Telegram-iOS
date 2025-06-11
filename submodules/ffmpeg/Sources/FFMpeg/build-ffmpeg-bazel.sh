@@ -73,7 +73,7 @@ fi
 
 COMPILE="y"
 
-DEPLOYMENT_TARGET="9.0"
+DEPLOYMENT_TARGET="13.0"
 
 LIBS_HASH=""
 for ARCH in $ARCHS
@@ -90,10 +90,6 @@ done
 
 if [ "$COMPILE" ]
 then
-	if [ ! `which yasm` ]; then
-		echo 'Yasm not found'
-		exit 1
-	fi
 	if [ ! `which pkg-config` ]; then
 		echo 'pkg-config not found'
 		exit 1
@@ -171,7 +167,7 @@ then
 			    --target-os=darwin \
 			    --arch=$ARCH \
 			    --cc="$CC" \
-			    --as="$AS" \
+				--as="$AS" \
 			    $CONFIGURE_FLAGS \
 			    --extra-cflags="$CFLAGS" \
 			    --extra-ldflags="$LDFLAGS" \

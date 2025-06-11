@@ -141,7 +141,7 @@ public final class LegacyControllerContext: NSObject, LegacyComponentsContext {
     }
     
     public func statusBarFrame() -> CGRect {
-        return legacyComponentsApplication!.statusBarFrame
+        return legacyComponentsApplication!.delegate!.window!?.windowScene!.statusBarManager?.statusBarFrame ?? CGRect()
     }
     
     public func isStatusBarHidden() -> Bool {
