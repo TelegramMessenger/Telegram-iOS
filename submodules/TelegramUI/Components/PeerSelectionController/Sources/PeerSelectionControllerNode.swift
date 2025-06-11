@@ -594,6 +594,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             strongSelf.controller?.presentInGlobalOverlay(contextController)
         }, presentReplyOptions: { _ in
         }, presentLinkOptions: { _ in
+        }, presentSuggestPostOptions: {
         }, shareSelectedMessages: {
         }, updateTextInputStateAndMode: { [weak self] f in
             if let strongSelf = self {
@@ -799,7 +800,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }, joinGroupCall: { _ in
         }, presentInviteMembers: {
         }, presentGigagroupHelp: {
-        }, openSuggestPost: {
+        }, openMonoforum: {
         }, editMessageMedia: { _, _ in
         }, updateShowCommands: { _ in
         }, updateShowSendAsPeers: { _ in
@@ -817,6 +818,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }, addDoNotTranslateLanguage: { _ in
         }, hideTranslationPanel: {
         }, openPremiumGift: {
+        }, openSuggestPost: {
         }, openPremiumRequiredForMessaging: {
         }, openStarsPurchase: { _ in
         }, openMessagePayment: {

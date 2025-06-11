@@ -37,6 +37,7 @@ swift_library(
         "//submodules/Components/BundleIconComponent",
         "//submodules/PasswordSetupUI",
         "//submodules/TelegramUI/Components/PeerManagement/OwnershipTransferController",
+        "//submodules/TelegramUI/Components/ChatScheduleTimeController",
     ],
     visibility = [
         "//visibility:public",

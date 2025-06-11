@@ -228,7 +228,7 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
     }
 
     @objc private func suggestedPostPressed() {
-        self.interfaceInteraction?.openSuggestPost()
+        self.interfaceInteraction?.openMonoforum()
     }
     
     @objc private func buttonPressed() {

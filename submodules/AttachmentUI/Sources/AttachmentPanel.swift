@@ -961,6 +961,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
         }, presentForwardOptions: { _ in
         }, presentReplyOptions: { _ in
         }, presentLinkOptions: { _ in
+        }, presentSuggestPostOptions: {
         }, shareSelectedMessages: {
         }, updateTextInputStateAndMode: { [weak self] f in
             if let strongSelf = self {
@@ -1246,7 +1247,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
         }, joinGroupCall: { _ in
         }, presentInviteMembers: {
         }, presentGigagroupHelp: {
-        }, openSuggestPost: {
+        }, openMonoforum: {
         }, editMessageMedia: { _, _ in
         }, updateShowCommands: { _ in
         }, updateShowSendAsPeers: { _ in
@@ -1264,6 +1265,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
         }, addDoNotTranslateLanguage: { _ in
         }, hideTranslationPanel: {
         }, openPremiumGift: {
+        }, openSuggestPost: {
         }, openPremiumRequiredForMessaging: {
         }, openStarsPurchase: { _ in
         }, openMessagePayment: {

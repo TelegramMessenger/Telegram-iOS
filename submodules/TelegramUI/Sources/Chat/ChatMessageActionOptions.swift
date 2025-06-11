@@ -977,3 +977,39 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASD
 func presentChatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASDisplayNode) {
     presentChatInputOptions(selfController: selfController, sourceNode: sourceNode, initialId: .link)
 }
+
+extension ChatControllerImpl {
+    func presentSuggestPostOptions() {
+        guard let channel = self.presentationInterfaceState.renderedPeer?.chatOrMonoforumMainPeer as? TelegramChannel else {
+            return
+        }
+        guard let postSuggestionState = self.presentationInterfaceState.interfaceState.postSuggestionState else {
+            return
+        }
+        self.push(self.context.sharedContext.makeStarsWithdrawalScreen(
+            context: self.context,
+            subject: .postSuggestion(
+                channel: .channel(channel),
+                current: StarsAmount(value: postSuggestionState.price, nanos: 0),
+                timestamp: postSuggestionState.timestamp,
+                completion: { [weak self] price, timestamp in
+                    guard let self else {
+                        return
+                    }
+                    self.updateChatPresentationInterfaceState(interactive: true, { state in
+                        var state = state
+                        state = state.updatedInterfaceState { interfaceState in
+                            var interfaceState = interfaceState
+                            interfaceState = interfaceState.withUpdatedPostSuggestionState(ChatInterfaceState.PostSuggestionState(
+                                price: price,
+                                timestamp: timestamp
+                            ))
+                            return interfaceState
+                        }
+                        return state
+                    })
+                }
+            )
+        ))
+    }
+}

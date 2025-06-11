@@ -2436,7 +2436,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 
                 if isSidePanelOpen && incoming {
                     hasTitleAvatar = true
-                    hasTitleTopicNavigation = item.chatLocation.threadId == nil
+                    
+                    if let channel = item.message.peers[item.message.id.peerId], channel.isMonoForum {
+                    } else {
+                        hasTitleTopicNavigation = item.chatLocation.threadId == nil
+                    }
                 }
                 
                 let inlineBotNameColor = messageTheme.accentTextColor

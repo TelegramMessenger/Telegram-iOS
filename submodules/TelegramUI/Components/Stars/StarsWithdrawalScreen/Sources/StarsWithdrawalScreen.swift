@@ -21,6 +21,8 @@ import PresentationDataUtils
 import ListSectionComponent
 import TelegramStringFormatting
 import UndoUI
+import ListActionItemComponent
+import ChatScheduleTimeController
 
 private let amountTag = GenericComponentViewTag()
 
@@ -29,25 +31,22 @@ private final class SheetContent: CombinedComponent {
     
     let context: AccountContext
     let mode: StarsWithdrawScreen.Mode
+    let controller: () -> ViewController?
     let dismiss: () -> Void
     
     init(
         context: AccountContext,
         mode: StarsWithdrawScreen.Mode,
+        controller: @escaping () -> ViewController?,
         dismiss: @escaping () -> Void
     ) {
         self.context = context
         self.mode = mode
+        self.controller = controller
         self.dismiss = dismiss
     }
     
     static func ==(lhs: SheetContent, rhs: SheetContent) -> Bool {
-        if lhs.context !== rhs.context {
-            return false
-        }
-        if lhs.mode != rhs.mode {
-            return false
-        }
         return true
     }
     
@@ -56,6 +55,7 @@ private final class SheetContent: CombinedComponent {
         let title = Child(Text.self)
         let amountSection = Child(ListSectionComponent.self)
         let amountAdditionalLabel = Child(MultilineTextComponent.self)
+        let timestampSection = Child(ListSectionComponent.self)
         let button = Child(ButtonComponent.self)
         let balanceTitle = Child(MultilineTextComponent.self)
         let balanceValue = Child(MultilineTextComponent.self)
@@ -65,6 +65,8 @@ private final class SheetContent: CombinedComponent {
             let environment = context.environment[EnvironmentType.self]
             let component = context.component
             let state = context.state
+            
+            state.component = component
             
             let controller = environment.controller
             
@@ -111,7 +113,7 @@ private final class SheetContent: CombinedComponent {
             let resaleConfiguration = StarsSubscriptionConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
             
             switch component.mode {
-            case let .withdraw(status):
+            case let .withdraw(status, _):
                 titleString = environment.strings.Stars_Withdraw_Title
                 amountTitle = environment.strings.Stars_Withdraw_AmountTitle
                 amountPlaceholder = environment.strings.Stars_Withdraw_AmountPlaceholder
@@ -144,19 +146,27 @@ private final class SheetContent: CombinedComponent {
                 
                 minAmount = StarsAmount(value: 1, nanos: 0)
                 maxAmount = withdrawConfiguration.maxPaidMediaAmount.flatMap { StarsAmount(value: $0, nanos: 0) }
-            case let .starGiftResell(_, update):
+            case let .starGiftResell(_, update, _):
                 titleString = update ? environment.strings.Stars_SellGift_EditTitle : environment.strings.Stars_SellGift_Title
                 amountTitle = environment.strings.Stars_SellGift_AmountTitle
                 amountPlaceholder = environment.strings.Stars_SellGift_AmountPlaceholder
                 
                 minAmount = StarsAmount(value: resaleConfiguration.starGiftResaleMinAmount, nanos: 0)
                 maxAmount = StarsAmount(value: resaleConfiguration.starGiftResaleMaxAmount, nanos: 0)
-            case let .paidMessages(_, minAmountValue, _, _):
+            case let .paidMessages(_, minAmountValue, _, _, _):
                 titleString = environment.strings.Stars_SendMessage_AdjustmentTitle
                 amountTitle = environment.strings.Stars_SendMessage_AdjustmentSectionHeader
                 amountPlaceholder = environment.strings.Stars_SendMessage_AdjustmentPlaceholder
                 
                 minAmount = StarsAmount(value: minAmountValue, nanos: 0)
+                maxAmount = StarsAmount(value: resaleConfiguration.paidMessageMaxAmount, nanos: 0)
+            case .suggestedPost:
+                //TODO:localize
+                titleString = "Suggest Terms"
+                amountTitle = "ENTER A PRICE IN STARS"
+                amountPlaceholder = environment.strings.Stars_SendMessage_AdjustmentPlaceholder
+                
+                minAmount = StarsAmount(value: 1, nanos: 0)
                 maxAmount = StarsAmount(value: resaleConfiguration.paidMessageMaxAmount, nanos: 0)
             }
             
@@ -176,7 +186,7 @@ private final class SheetContent: CombinedComponent {
                 balance = state.balance
             } else if case .reaction = component.mode {
                 balance = state.balance
-            } else if case let .withdraw(starsState) = component.mode {
+            } else if case let .withdraw(starsState, _) = component.mode {
                 balance = starsState.balances.availableBalance
             } else {
                 balance = nil
@@ -264,7 +274,7 @@ private final class SheetContent: CombinedComponent {
                         }
                     }
                 ))
-            case let .reaction(starsToTop):
+            case let .reaction(starsToTop, _):
                 let amountInfoString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(environment.strings.Stars_SendStars_AmountInfo("\(starsToTop ?? 0)").string, attributes: amountMarkdownAttributes, textAlignment: .natural))
                 amountFooter = AnyComponent(MultilineTextComponent(
                     text: .plain(amountInfoString),
@@ -288,7 +298,7 @@ private final class SheetContent: CombinedComponent {
                     text: .plain(amountInfoString),
                     maximumNumberOfLines: 0
                 ))
-            case let .paidMessages(_, _, fractionAfterCommission, _):
+            case let .paidMessages(_, _, fractionAfterCommission, _, _):
                 let amountInfoString: NSAttributedString
                 if let value = state.amount?.value, value > 0 {
                     let fullValue: Int64 = Int64(value) * 1_000_000_000 * Int64(fractionAfterCommission) / 100
@@ -301,6 +311,16 @@ private final class SheetContent: CombinedComponent {
                     text: .plain(amountInfoString),
                     maximumNumberOfLines: 0
                 ))
+            case let .suggestedPost(mode, _, _, _):
+                switch mode {
+                case let .sender(channel):
+                    //TODO:localize
+                    let amountInfoString = NSAttributedString(attributedString: parseMarkdownIntoAttributedString("Choose how many Stars you want to offer \(channel.compactDisplayTitle) to publish this message.", attributes: amountMarkdownAttributes, textAlignment: .natural))
+                    amountFooter = AnyComponent(MultilineTextComponent(
+                        text: .plain(amountInfoString),
+                        maximumNumberOfLines: 0
+                    ))
+                }
             default:
                 amountFooter = nil
             }
@@ -358,6 +378,103 @@ private final class SheetContent: CombinedComponent {
                 context.add(amountAdditionalLabel
                     .position(CGPoint(x: context.availableSize.width - amountAdditionalLabel.size.width / 2.0 - sideInset - 16.0, y: contentSize.height - amountAdditionalLabel.size.height / 2.0)))
             }
+            
+            if case .suggestedPost = component.mode {
+                contentSize.height += 24.0
+                
+                //TODO:localize
+                let timestampFooterString = NSAttributedString(attributedString: parseMarkdownIntoAttributedString("Select the date and time you want your message to be published.", attributes: amountMarkdownAttributes, textAlignment: .natural))
+                let timestampFooter = AnyComponent(MultilineTextComponent(
+                    text: .plain(timestampFooterString),
+                    maximumNumberOfLines: 0
+                ))
+                
+                let timeString: String
+                if let timestamp = state.timestamp {
+                    timeString = humanReadableStringForTimestamp(strings: strings, dateTimeFormat: presentationData.dateTimeFormat, timestamp: timestamp, alwaysShowTime: true, allowYesterday: true, format: HumanReadableStringFormat(
+                        dateFormatString: { value in
+                            return PresentationStrings.FormattedString(string: strings.SuggestPost_SetTimeFormat_Date(value).string, ranges: [])
+                        },
+                        tomorrowFormatString: { value in
+                            return PresentationStrings.FormattedString(string: strings.SuggestPost_SetTimeFormat_TomorrowAt(value).string, ranges: [])
+                        },
+                        todayFormatString: { value in
+                            return PresentationStrings.FormattedString(string: strings.SuggestPost_SetTimeFormat_TodayAt(value).string, ranges: [])
+                        },
+                        yesterdayFormatString: { value in
+                            return PresentationStrings.FormattedString(string: strings.SuggestPost_SetTimeFormat_TodayAt(value).string, ranges: [])
+                        }
+                    )).string
+                } else {
+                    timeString = "Anytime"
+                }
+                
+                let timestampSection = timestampSection.update(
+                    component: ListSectionComponent(
+                        theme: theme,
+                        header: nil,
+                        footer: timestampFooter,
+                        items: [AnyComponentWithIdentity(
+                            id: "timestamp",
+                            component: AnyComponent(ListActionItemComponent(
+                                theme: theme,
+                                title: AnyComponent(VStack([
+                                    AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
+                                        text: .plain(NSAttributedString(
+                                            string: "Time",
+                                            font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                                            textColor: environment.theme.list.itemPrimaryTextColor
+                                        )),
+                                        maximumNumberOfLines: 1
+                                    ))),
+                                ], alignment: .left, spacing: 2.0)),
+                                icon: ListActionItemComponent.Icon(component: AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
+                                    text: .plain(NSAttributedString(
+                                        string: timeString,
+                                        font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                                        textColor: environment.theme.list.itemSecondaryTextColor
+                                    )),
+                                    maximumNumberOfLines: 1
+                                )))),
+                                accessory: .arrow,
+                                action: { [weak state] _ in
+                                    guard let state else {
+                                        return
+                                    }
+                                    let component = state.component
+                                    guard case let .suggestedPost(mode, _, _, _) = component.mode else {
+                                        return
+                                    }
+                                    guard case let .sender(channel) = mode else {
+                                        return
+                                    }
+                                    
+                                    let theme = environment.theme
+                                    let controller = ChatScheduleTimeController(context: state.context, updatedPresentationData: (state.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), state.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) }), peerId: channel.id, mode: .suggestPost, style: .default, currentTime: state.timestamp, minimalTime: nil, dismissByTapOutside: true, completion: { [weak state] time in
+                                        guard let state else {
+                                            return
+                                        }
+                                        state.timestamp = time == 0 ? nil : time
+                                        state.updated(transition: .immediate)
+                                    })
+                                    component.controller()?.view.endEditing(true)
+                                    component.controller()?.present(controller, in: .window(.root))
+                                }
+                            ))
+                        )]
+                    ),
+                    environment: {},
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: .greatestFiniteMagnitude),
+                    transition: context.transition
+                )
+                context.add(timestampSection
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + timestampSection.size.height / 2.0))
+                    .clipsToBounds(true)
+                    .cornerRadius(10.0)
+                )
+                contentSize.height += timestampSection.size.height
+            }
+            
             contentSize.height += 32.0
     
             let buttonString: String
@@ -371,6 +488,16 @@ private final class SheetContent: CombinedComponent {
                 }
             } else if case .paidMessages = component.mode {
                 buttonString = environment.strings.Stars_SendMessage_AdjustmentAction
+            } else if case let .suggestedPost(mode, _, _, _) = component.mode {
+                //TODO:localize
+                switch mode {
+                case .sender:
+                    if let amount = state.amount {
+                        buttonString = "Offer  # \(presentationStringsFormattedNumber(amount, environment.dateTimeFormat.groupingSeparator))"
+                    } else {
+                        buttonString = "Offer"
+                    }
+                }
             } else if let amount = state.amount {
                 buttonString = "\(environment.strings.Stars_Withdraw_Withdraw)  # \(presentationStringsFormattedNumber(amount, environment.dateTimeFormat.groupingSeparator))"
             } else {
@@ -393,7 +520,7 @@ private final class SheetContent: CombinedComponent {
             let amount = state.amount ?? StarsAmount.zero
             if amount > StarsAmount.zero {
                 isButtonEnabled = true
-            } else if case let .paidMessages(_, minValue, _, _) = context.component.mode {
+            } else if case let .paidMessages(_, minValue, _, _, _) = context.component.mode {
                 if minValue <= 0 {
                     isButtonEnabled = true
                 }
@@ -414,11 +541,27 @@ private final class SheetContent: CombinedComponent {
                     isEnabled: isButtonEnabled,
                     displaysProgress: false,
                     action: { [weak state] in
-                        if let controller = controller() as? StarsWithdrawScreen, let amount = state?.amount {
+                        if let controller = controller() as? StarsWithdrawScreen, let state, let amount = state.amount {
                             if let minAmount, amount < minAmount {
                                 controller.presentMinAmountTooltip(minAmount.value)
                             } else {
-                                controller.completion(amount.value)
+                                switch state.mode {
+                                case let .withdraw(_, completion):
+                                    completion(amount.value)
+                                case let .accountWithdraw(completion):
+                                    completion(amount.value)
+                                case let .paidMedia(_, completion):
+                                    completion(amount.value)
+                                case let .reaction(_, completion):
+                                    completion(amount.value)
+                                case let .starGiftResell(_, _, completion):
+                                    completion(amount.value)
+                                case let .paidMessages(_, _, _, _, completion):
+                                    completion(amount.value)
+                                case let .suggestedPost(_, _, _, completion):
+                                    completion(amount.value, state.timestamp)
+                                }
+                                
                                 controller.dismissAnimated()
                             }
                         }
@@ -442,10 +585,13 @@ private final class SheetContent: CombinedComponent {
     }
     
     final class State: ComponentState {
-        private let context: AccountContext
-        private let mode: StarsWithdrawScreen.Mode
+        fileprivate let context: AccountContext
+        fileprivate let mode: StarsWithdrawScreen.Mode
+        
+        fileprivate var component: SheetContent
         
         fileprivate var amount: StarsAmount?
+        fileprivate var timestamp: Int32?
         
         fileprivate var balance: StarsAmount?
         private var stateDisposable: Disposable?
@@ -454,27 +600,30 @@ private final class SheetContent: CombinedComponent {
         var cachedStarImage: (UIImage, PresentationTheme)?
         var cachedChevronImage: (UIImage, PresentationTheme)?
         
-        init(
-            context: AccountContext,
-            mode: StarsWithdrawScreen.Mode
-        ) {
-            self.context = context
-            self.mode = mode
+        init(component: SheetContent) {
+            self.context = component.context
+            self.mode = component.mode
+            self.component = component
             
             var amount: StarsAmount?
             switch mode {
-            case let .withdraw(stats):
+            case let .withdraw(stats, _):
                 amount = StarsAmount(value: stats.balances.availableBalance.value, nanos: 0)
             case .accountWithdraw:
                 amount = context.starsContext?.currentState.flatMap { StarsAmount(value: $0.balance.value, nanos: 0) }
-            case let .paidMedia(initialValue):
+            case let .paidMedia(initialValue, _):
                 amount = initialValue.flatMap { StarsAmount(value: $0, nanos: 0) }
             case .reaction:
                 amount = nil
             case .starGiftResell:
                 amount = nil
-            case let .paidMessages(initialValue, _, _, _):
+            case let .paidMessages(initialValue, _, _, _, _):
                 amount = StarsAmount(value: initialValue, nanos: 0)
+            case let .suggestedPost(_, initialValue, initialTimestamp, _):
+                if initialValue != 0 {
+                    amount = StarsAmount(value: initialValue, nanos: 0)
+                }
+                self.timestamp = initialTimestamp
             }
             
             self.amount = amount
@@ -491,7 +640,7 @@ private final class SheetContent: CombinedComponent {
                 })
             }
             
-            if case let .starGiftResell(giftToMatch, update) = self.mode {
+            if case let .starGiftResell(giftToMatch, update, _) = self.mode {
                 if update {
                     if let resellStars = giftToMatch.resellStars {
                         self.amount = StarsAmount(value: resellStars, nanos: 0)
@@ -528,7 +677,7 @@ private final class SheetContent: CombinedComponent {
     }
     
     func makeState() -> State {
-        return State(context: self.context, mode: self.mode)
+        return State(component: self)
     }
 }
 
@@ -547,12 +696,6 @@ private final class StarsWithdrawSheetComponent: CombinedComponent {
     }
     
     static func ==(lhs: StarsWithdrawSheetComponent, rhs: StarsWithdrawSheetComponent) -> Bool {
-        if lhs.context !== rhs.context {
-            return false
-        }
-        if lhs.mode != rhs.mode {
-            return false
-        }
         return true
     }
         
@@ -570,6 +713,9 @@ private final class StarsWithdrawSheetComponent: CombinedComponent {
                     content: AnyComponent<EnvironmentType>(SheetContent(
                         context: context.component.context,
                         mode: context.component.mode,
+                        controller: {
+                            return controller()
+                        },
                         dismiss: {
                             animateOut.invoke(Action { _ in
                                 if let controller = controller() {
@@ -620,27 +766,29 @@ private final class StarsWithdrawSheetComponent: CombinedComponent {
 }
 
 public final class StarsWithdrawScreen: ViewControllerComponentContainer {
-    public enum Mode: Equatable {
-        case withdraw(StarsRevenueStats)
-        case accountWithdraw
-        case paidMedia(Int64?)
-        case reaction(Int64?)
-        case starGiftResell(StarGift.UniqueGift, Bool)
-        case paidMessages(current: Int64, minValue: Int64, fractionAfterCommission: Int, kind: StarsWithdrawalScreenSubject.PaidMessageKind)
+    public enum Mode {
+        public enum SuggestedPostMode {
+            case sender(channel: EnginePeer)
+        }
+        
+        case withdraw(StarsRevenueStats, completion: (Int64) -> Void)
+        case accountWithdraw(completion: (Int64) -> Void)
+        case paidMedia(Int64?, completion: (Int64) -> Void)
+        case reaction(Int64?, completion: (Int64) -> Void)
+        case starGiftResell(StarGift.UniqueGift, Bool, completion: (Int64) -> Void)
+        case paidMessages(current: Int64, minValue: Int64, fractionAfterCommission: Int, kind: StarsWithdrawalScreenSubject.PaidMessageKind, completion: (Int64) -> Void)
+        case suggestedPost(mode: SuggestedPostMode, price: Int64, timestamp: Int32?, completion: (Int64, Int32?) -> Void)
     }
     
     private let context: AccountContext
     private let mode: StarsWithdrawScreen.Mode
-    fileprivate let completion: (Int64) -> Void
         
     public init(
         context: AccountContext,
-        mode: StarsWithdrawScreen.Mode,
-        completion: @escaping (Int64) -> Void
+        mode: StarsWithdrawScreen.Mode
     ) {
         self.context = context
         self.mode = mode
-        self.completion = completion
         
         super.init(
             context: context,

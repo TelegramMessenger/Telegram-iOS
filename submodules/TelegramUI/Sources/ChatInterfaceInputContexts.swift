@@ -233,6 +233,12 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                     }
                 }
                 
+                if isTextEmpty, let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum, let mainChannel = chatPresentationInterfaceState.renderedPeer?.chatOrMonoforumMainPeer as? TelegramChannel, !mainChannel.hasPermission(.sendSomething) {
+                    if chatPresentationInterfaceState.interfaceState.postSuggestionState == nil {
+                        accessoryItems.append(.suggestPost)
+                    }
+                }
+                
                 if case let .customChatContents(customChatContents) = chatPresentationInterfaceState.subject {
                     switch customChatContents.kind {
                     case .hashTagSearch:

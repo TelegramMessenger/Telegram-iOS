@@ -1031,8 +1031,9 @@ public enum StarsWithdrawalScreenSubject {
         case postSuggestion
     }
     
-    case withdraw
-    case enterAmount(current: StarsAmount, minValue: StarsAmount, fractionAfterCommission: Int, kind: PaidMessageKind)
+    case withdraw(completion: (Int64) -> Void)
+    case enterAmount(current: StarsAmount, minValue: StarsAmount, fractionAfterCommission: Int, kind: PaidMessageKind, completion: (Int64) -> Void)
+    case postSuggestion(channel: EnginePeer, current: StarsAmount, timestamp: Int32?, completion: (Int64, Int32?) -> Void)
 }
 
 public protocol SharedAccountContext: AnyObject {
@@ -1221,7 +1222,7 @@ public protocol SharedAccountContext: AnyObject {
     func makeStarsStatisticsScreen(context: AccountContext, peerId: EnginePeer.Id, revenueContext: StarsRevenueStatsContext) -> ViewController
     func makeStarsAmountScreen(context: AccountContext, initialValue: Int64?, completion: @escaping (Int64) -> Void) -> ViewController
     func makeStarsWithdrawalScreen(context: AccountContext, stats: StarsRevenueStats, completion: @escaping (Int64) -> Void) -> ViewController
-    func makeStarsWithdrawalScreen(context: AccountContext, subject: StarsWithdrawalScreenSubject, completion: @escaping (Int64) -> Void) -> ViewController
+    func makeStarsWithdrawalScreen(context: AccountContext, subject: StarsWithdrawalScreenSubject) -> ViewController
     func makeStarGiftResellScreen(context: AccountContext, gift: StarGift.UniqueGift, update: Bool, completion: @escaping (Int64) -> Void) -> ViewController
     func makeStarsGiftScreen(context: AccountContext, message: EngineMessage) -> ViewController
     func makeStarsGiveawayBoostScreen(context: AccountContext, peerId: EnginePeer.Id, boost: ChannelBoostersContext.State.Boost) -> ViewController

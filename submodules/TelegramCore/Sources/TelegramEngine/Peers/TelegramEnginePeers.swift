@@ -1494,12 +1494,12 @@ public extension TelegramEngine {
             return _internal_applyChannelBoost(account: self.account, peerId: peerId, slots: slots)
         }
         
-        public func getPaidMessagesRevenue(peerId: EnginePeer.Id) -> Signal<StarsAmount?, NoError> {
-            return _internal_getPaidMessagesRevenue(account: self.account, peerId: peerId)
+        public func getPaidMessagesRevenue(scopePeerId: EnginePeer.Id, peerId: EnginePeer.Id) -> Signal<StarsAmount?, NoError> {
+            return _internal_getPaidMessagesRevenue(account: self.account, scopePeerId: scopePeerId, peerId: peerId)
         }
         
-        public func addNoPaidMessagesException(peerId: EnginePeer.Id, refundCharged: Bool) -> Signal<Never, NoError> {
-            return _internal_addNoPaidMessagesException(account: self.account, peerId: peerId, refundCharged: refundCharged)
+        public func addNoPaidMessagesException(scopePeerId: EnginePeer.Id, peerId: EnginePeer.Id, refundCharged: Bool) -> Signal<Never, NoError> {
+            return _internal_addNoPaidMessagesException(account: self.account, scopePeerId: scopePeerId, peerId: peerId, refundCharged: refundCharged)
         }
         
         public func updateChannelPaidMessagesStars(peerId: EnginePeer.Id, stars: StarsAmount?, broadcastMessagesAllowed: Bool) -> Signal<Never, NoError> {

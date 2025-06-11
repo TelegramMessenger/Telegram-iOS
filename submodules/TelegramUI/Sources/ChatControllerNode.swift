@@ -32,6 +32,7 @@ import ChatInputPanelNode
 import ChatInputContextPanelNode
 import TextSelectionNode
 import ReplyAccessoryPanelNode
+import SuggestPostAccessoryPanelNode
 import ChatMessageItemView
 import ChatMessageSelectionNode
 import ManagedDiceAnimationNode
@@ -371,7 +372,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                         let contentBounds = self.loadingNode.frame
                         loadingPlaceholderNode.frame = contentBounds
                         if let loadingPlaceholderNode = self.loadingPlaceholderNode, let validLayout = self.validLayout {
-                            loadingPlaceholderNode.updateLayout(size: contentBounds.size, insets: self.loadingNodeInsets, metrics: validLayout.0.metrics, transition: .immediate)
+                            loadingPlaceholderNode.updateLayout(size: contentBounds.size, isSidebarOpen: self.leftPanel != nil, insets: self.loadingNodeInsets, metrics: validLayout.0.metrics, transition: .immediate)
                             loadingPlaceholderNode.update(rect: contentBounds, within: contentBounds.size, transition: .immediate)
                         }
                     }
@@ -1712,6 +1713,12 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                             strongSelf.interfaceInteraction?.setupEditMessage(nil, { _ in })
                         } else if let _ = accessoryPanelNode as? WebpagePreviewAccessoryPanelNode {
                             strongSelf.dismissUrlPreview()
+                        } else if let _ = accessoryPanelNode as? SuggestPostAccessoryPanelNode {
+                            strongSelf.requestUpdateChatInterfaceState(.animated(duration: 0.4, curve: .spring), false, { state in
+                                var state = state
+                                state = state.withUpdatedPostSuggestionState(nil)
+                                return state
+                            })
                         }
                     }
                 }
@@ -2250,7 +2257,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         self.loadingNode.updateLayout(size: contentBounds.size, insets: loadingNodeInsets, transition: transition)
         
         if let loadingPlaceholderNode = self.loadingPlaceholderNode {
-            loadingPlaceholderNode.updateLayout(size: contentBounds.size, insets: loadingNodeInsets, metrics: layout.metrics, transition: transition)
+            loadingPlaceholderNode.updateLayout(size: contentBounds.size, isSidebarOpen: leftPanelSize != nil, insets: loadingNodeInsets, metrics: layout.metrics, transition: transition)
             loadingPlaceholderNode.update(rect: contentBounds, within: contentBounds.size, transition: transition)
         }
         

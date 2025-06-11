@@ -335,6 +335,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, presentForwardOptions: { _ in
         }, presentReplyOptions: { _ in
         }, presentLinkOptions: { _ in
+        }, presentSuggestPostOptions: {
         }, shareSelectedMessages: {
             shareMessages()
         }, updateTextInputStateAndMode: { _ in
@@ -410,7 +411,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, joinGroupCall: { _ in
         }, presentInviteMembers: {
         }, presentGigagroupHelp: {
-        }, openSuggestPost: {
+        }, openMonoforum: {
         }, editMessageMedia: { _, _ in
         }, updateShowCommands: { _ in
         }, updateShowSendAsPeers: { _ in
@@ -429,6 +430,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, addDoNotTranslateLanguage: { _ in
         }, hideTranslationPanel: {
         }, openPremiumGift: {
+        }, openSuggestPost: {
         }, openPremiumRequiredForMessaging: {
         }, openStarsPurchase: { _ in
         }, openMessagePayment: {
@@ -1252,6 +1254,7 @@ private enum InfoSection: Int, CaseIterable {
     case peerInfoTrailing
     case peerSettings
     case peerMembers
+    case channelMonoforum
     case botAffiliateProgram
 }
 
@@ -1698,6 +1701,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
         let ItemMemberRequests = 8
         let ItemBalance = 9
         let ItemEdit = 10
+        let ItemPeerPersonalChannel = 11
         
         if let _ = data.threadData {
             let mainUsername: String
@@ -1933,6 +1937,21 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                     }
                     items[section]!.append(PeerInfoScreenDisclosureItem(id: ItemEdit, label: .none, text: settingsTitle, icon: UIImage(bundleImageName: "Chat/Info/SettingsIcon"), action: {
                         interaction.openEditing()
+                    }))
+                }
+                
+                if let personalChannel = data.personalChannel {
+                    let peerId = personalChannel.peer.peerId
+                    items[.channelMonoforum]?.append(PeerInfoScreenPersonalChannelItem(id: ItemPeerPersonalChannel, context: context, data: personalChannel, controller: { [weak interaction] in
+                        guard let interaction else {
+                            return nil
+                        }
+                        return interaction.getController()
+                    }, action: { [weak interaction] in
+                        guard let interaction else {
+                            return
+                        }
+                        interaction.openChat(peerId)
                     }))
                 }
             }

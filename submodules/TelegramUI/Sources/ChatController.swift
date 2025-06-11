@@ -4595,24 +4595,32 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 guard let chatPeer = self.presentationInterfaceState.renderedPeer?.chatOrMonoforumMainPeer else {
                     return
                 }
-                let controller = chatMessageRemovePaymentAlertController(
-                    context: self.context,
-                    presentationData: self.presentationData,
-                    updatedPresentationData: self.updatedPresentationData,
-                    peer: removePaidMessageFeeData.peer,
-                    chatPeer: EnginePeer(chatPeer),
-                    amount: StarsAmount(value: 123, nanos: 0), //TODO:release
-                    navigationController: self.navigationController as? NavigationController,
-                    completion: { [weak self] refund in
-                        guard let self else {
-                            return
-                        }
-                        let _ = self
+                
+                let _ = (self.context.engine.peers.getPaidMessagesRevenue(scopePeerId: peer.id, peerId: removePaidMessageFeeData.peer.id)
+                |> deliverOnMainQueue).start(next: { [weak self] revenue in
+                    guard let self else {
+                        return
                     }
-                )
-                self.present(controller, in: .window(.root))
+                    
+                    let controller = chatMessageRemovePaymentAlertController(
+                        context: self.context,
+                        presentationData: self.presentationData,
+                        updatedPresentationData: self.updatedPresentationData,
+                        peer: removePaidMessageFeeData.peer,
+                        chatPeer: EnginePeer(chatPeer),
+                        amount: revenue == StarsAmount(value: 0, nanos: 0) ? nil : revenue,
+                        navigationController: self.navigationController as? NavigationController,
+                        completion: { [weak self] refund in
+                            guard let self else {
+                                return
+                            }
+                            let _ = self.context.engine.peers.addNoPaidMessagesException(scopePeerId: peer.id, peerId: removePaidMessageFeeData.peer.id, refundCharged: refund).start()
+                        }
+                    )
+                    self.present(controller, in: .window(.root))
+                })
             } else {
-                let _ = (self.context.engine.peers.getPaidMessagesRevenue(peerId: peer.id)
+                let _ = (self.context.engine.peers.getPaidMessagesRevenue(scopePeerId: self.context.account.peerId, peerId: peer.id)
                 |> deliverOnMainQueue).start(next: { [weak self] revenue in
                     guard let self else {
                         return
@@ -4629,7 +4637,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             guard let self else {
                                 return
                             }
-                            let _ = self.context.engine.peers.addNoPaidMessagesException(peerId: peer.id, refundCharged: refund).start()
+                            let _ = self.context.engine.peers.addNoPaidMessagesException(scopePeerId: self.context.account.peerId, peerId: peer.id, refundCharged: refund).start()
                         }
                     )
                     self.present(controller, in: .window(.root))
