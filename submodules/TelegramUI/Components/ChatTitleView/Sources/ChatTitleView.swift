@@ -283,7 +283,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                                         titleCredibilityIcon = .fake
                                     } else if peer.isScam {
                                         titleCredibilityIcon = .scam
-                                    } else if let emojiStatus = peer.emojiStatus, !premiumConfiguration.isPremiumDisabled {
+                                    } else if let emojiStatus = peer.emojiStatus {
                                         titleStatusIcon = .emojiStatus(emojiStatus)
                                     } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
                                         titleCredibilityIcon = .premium
