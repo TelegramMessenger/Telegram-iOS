@@ -111,6 +111,53 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
         }
     }
     
+    public enum SuggestedPostApprovalStatus: PostboxCoding, Equatable {
+        public enum RejectionReason {
+            case generic
+            case lowBalance
+        }
+        
+        case approved
+        case rejected(reason: RejectionReason)
+        
+        public init(decoder: PostboxDecoder) {
+            switch decoder.decodeInt32ForKey("_t", orElse: 0) {
+            case 0:
+                self = .approved
+            case 1:
+                let reason: RejectionReason
+                switch decoder.decodeInt32ForKey("rs", orElse: 0) {
+                case 0:
+                    reason = .generic
+                case 1:
+                    reason = .lowBalance
+                default:
+                    assertionFailure()
+                    reason = .generic
+                }
+                self = .rejected(reason: reason)
+            default:
+                assertionFailure()
+                self = .rejected(reason: .generic)
+            }
+        }
+        
+        public func encode(_ encoder: PostboxEncoder) {
+            switch self {
+            case .approved:
+                encoder.encodeInt32(0, forKey: "_t")
+            case let .rejected(reason):
+                encoder.encodeInt32(1, forKey: "_t")
+                switch reason {
+                case .generic:
+                    encoder.encodeInt32(0, forKey: "rs")
+                case .lowBalance:
+                    encoder.encodeInt32(1, forKey: "rs")
+                }
+            }
+        }
+    }
+    
     case unknown
     case groupCreated(title: String)
     case addedMembers(peerIds: [PeerId])
@@ -162,6 +209,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case conferenceCall(ConferenceCall)
     case todoCompletions(completed: [Int32], incompleted: [Int32])
     case todoAppendTasks([TelegramMediaTodo.Item])
+    case suggestedPostApprovalStatus(status: SuggestedPostApprovalStatus)
     
     public init(decoder: PostboxDecoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
@@ -306,6 +354,9 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             self = .todoAppendTasks(
                 decoder.decodeObjectArrayWithDecoderForKey("tasks")
             )
+        case 51:
+            let status: SuggestedPostApprovalStatus? = decoder.decodeObjectForKey("st", decoder: { SuggestedPostApprovalStatus(decoder: $0) }) as? SuggestedPostApprovalStatus
+            self = .suggestedPostApprovalStatus(status: status ?? .rejected(reason: .generic))
         default:
             self = .unknown
         }
@@ -716,6 +767,9 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
         case let .todoAppendTasks(tasks):
             encoder.encodeInt32(50, forKey: "_rawValue")
             encoder.encodeObjectArray(tasks, forKey: "tasks")
+        case let .suggestedPostApprovalStatus(status):
+            encoder.encodeInt32(51, forKey: "_rawValue")
+            encoder.encodeObject(status, forKey: "st")
         }
     }
     

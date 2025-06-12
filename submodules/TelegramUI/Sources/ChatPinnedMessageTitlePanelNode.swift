@@ -935,10 +935,10 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                         controllerInteraction.shareAccountContact()
                         return
                     case .openWebApp:
-                        controllerInteraction.requestMessageActionCallback(message.id, nil, true, false)
+                        controllerInteraction.requestMessageActionCallback(message, nil, true, false)
                         return
                     case let .callback(requiresPassword, data):
-                        controllerInteraction.requestMessageActionCallback(message.id, data, false, requiresPassword)
+                        controllerInteraction.requestMessageActionCallback(message, data, false, requiresPassword)
                         return
                     case let .switchInline(samePeer, query, peerTypes):
                         var botPeer: Peer?

@@ -1587,5 +1587,43 @@ public extension TelegramEngine {
         public func requestMessageAuthor(id: EngineMessage.Id) -> Signal<EnginePeer?, NoError> {
             return _internal_requestMessageAuthor(account: self.account, id: id)
         }
+        
+        public func monoforumPerformSuggestedPostAction(id: EngineMessage.Id, approve: Bool, timestamp: Int32?) -> Signal<Never, NoError> {
+            return _internal_monoforumPerformSuggestedPostAction(account: self.account, id: id, approve: approve, timestamp: timestamp)
+        }
+    }
+}
+
+func _internal_monoforumPerformSuggestedPostAction(account: Account, id: EngineMessage.Id, approve: Bool, timestamp: Int32?) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> Api.InputPeer? in
+        return transaction.getPeer(id.peerId).flatMap(apiInputPeer)
+    }
+    |> mapToSignal { inputPeer -> Signal<Never, NoError> in
+        guard let inputPeer else {
+            return .complete()
+        }
+        if id.namespace != Namespaces.Message.Cloud {
+            return .complete()
+        }
+        
+        var flags: Int32 = 0
+        if !approve {
+            flags |= 1 << 1
+        }
+        if timestamp != nil {
+            flags |= 1 << 0
+        }
+        return account.network.request(Api.functions.messages.toggleSuggestedPostApproval(flags: flags, peer: inputPeer, msgId: id.id, scheduleDate: timestamp))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { updates -> Signal<Never, NoError> in
+            if let updates {
+                account.stateManager.addUpdates(updates)
+            }
+            
+            return .complete()
+        }
     }
 }

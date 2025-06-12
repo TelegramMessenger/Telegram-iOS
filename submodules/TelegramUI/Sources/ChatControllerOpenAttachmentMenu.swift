@@ -418,7 +418,7 @@ extension ChatControllerImpl {
                                         strongSelf.chatDisplayNode.collapseInput()
                                         
                                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil) }
+                                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withUpdatedPostSuggestionState(nil) }
                                         })
                                     }
                                 }, nil)
@@ -483,7 +483,7 @@ extension ChatControllerImpl {
                                                 strongSelf.chatDisplayNode.collapseInput()
                                                 
                                                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                                                    $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil) }
+                                                    $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withUpdatedPostSuggestionState(nil) }
                                                 })
                                             }
                                         }, nil)
@@ -560,7 +560,7 @@ extension ChatControllerImpl {
                                                     strongSelf.chatDisplayNode.collapseInput()
                                                     
                                                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                                                        $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil) }
+                                                        $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withUpdatedPostSuggestionState(nil) }
                                                     })
                                                 }
                                             }, nil)
@@ -596,7 +596,7 @@ extension ChatControllerImpl {
                                                             strongSelf.chatDisplayNode.collapseInput()
                                                             
                                                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                                                                $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil) }
+                                                                $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withUpdatedPostSuggestionState(nil) }
                                                             })
                                                         }
                                                     }, nil)
@@ -684,7 +684,7 @@ extension ChatControllerImpl {
                         controller.completion = { [weak self] in
                             if let strongSelf = self {
                                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                                    $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil) }
+                                    $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withUpdatedPostSuggestionState(nil) }
                                 })
                                 strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
                             }
@@ -1180,7 +1180,7 @@ extension ChatControllerImpl {
                                             strongSelf.chatDisplayNode.collapseInput()
                                             
                                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                                                $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil) }
+                                                $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withUpdatedPostSuggestionState(nil) }
                                             })
                                         }
                                     }, nil)
@@ -1633,7 +1633,7 @@ extension ChatControllerImpl {
                             strongSelf.chatDisplayNode.collapseInput()
                             
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                                $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil) }
+                                $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withUpdatedPostSuggestionState(nil) }
                             })
                         }
                     }, nil)
@@ -1683,7 +1683,7 @@ extension ChatControllerImpl {
                                     strongSelf.chatDisplayNode.collapseInput()
                                     
                                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                                        $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil) }
+                                        $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withUpdatedPostSuggestionState(nil) }
                                     })
                                 }
                             }, nil)
@@ -1749,7 +1749,7 @@ extension ChatControllerImpl {
                                         strongSelf.chatDisplayNode.collapseInput()
                                         
                                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil) }
+                                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withUpdatedPostSuggestionState(nil) }
                                         })
                                     }
                                 }, nil)
@@ -1774,7 +1774,7 @@ extension ChatControllerImpl {
                                                 strongSelf.chatDisplayNode.collapseInput()
                                                 
                                                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                                                    $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil) }
+                                                    $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withUpdatedPostSuggestionState(nil) }
                                                 })
                                             }
                                         }, nil)
@@ -2015,7 +2015,7 @@ extension ChatControllerImpl {
                             self.chatDisplayNode.collapseInput()
                             
                             self.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                                $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil) }
+                                $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withUpdatedPostSuggestionState(nil) }
                             })
                         }
                     }, nil)
@@ -2072,7 +2072,7 @@ extension ChatControllerImpl {
                             self.chatDisplayNode.collapseInput()
                             
                             self.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                                $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil) }
+                                $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withUpdatedPostSuggestionState(nil) }
                             })
                         }
                     }, nil)

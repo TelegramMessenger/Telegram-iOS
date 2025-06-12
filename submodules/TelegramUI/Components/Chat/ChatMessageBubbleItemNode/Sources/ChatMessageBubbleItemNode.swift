@@ -2790,6 +2790,35 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             actionButtonsFinalize = buttonsLayout
             
             lastNodeTopPosition = .None(.Both)
+        } else if incoming, let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.isMonoForum, item.chatLocation.threadId != nil, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = item.message.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething), let attribute = item.message.attributes.first(where: { $0 is SuggestedPostMessageAttribute }) as? SuggestedPostMessageAttribute, attribute.state == nil {
+            //TODO:localize
+            var buttonDecline: UInt8 = 0
+            var buttonApprove: UInt8 = 1
+            var buttonSuggestChanges: UInt8 = 2
+            
+            let (minWidth, buttonsLayout) = actionButtonsLayout(
+                item.context,
+                item.presentationData.theme,
+                item.presentationData.chatBubbleCorners,
+                item.presentationData.strings,
+                item.controllerInteraction.presentationContext.backgroundNode,
+                ReplyMarkupMessageAttribute(
+                    rows: [
+                        ReplyMarkupRow(buttons: [
+                            ReplyMarkupButton(title: "Decline", titleWhenForwarded: nil, action: .callback(requiresPassword: false, data: MemoryBuffer(data: Data(bytes: &buttonDecline, count: 1)))),
+                            ReplyMarkupButton(title: "Approve", titleWhenForwarded: nil, action: .callback(requiresPassword: false, data: MemoryBuffer(data: Data(bytes: &buttonApprove, count: 1))))
+                        ]),
+                        ReplyMarkupRow(buttons: [
+                            ReplyMarkupButton(title: "Suggest Changes", titleWhenForwarded: nil, action: .callback(requiresPassword: false, data: MemoryBuffer(data: Data(bytes: &buttonSuggestChanges, count: 1))))
+                        ])
+                    ],
+                    flags: [],
+                    placeholder: nil
+            ), item.message, maximumNodeWidth)
+            maxContentWidth = max(maxContentWidth, minWidth)
+            actionButtonsFinalize = buttonsLayout
+            
+            lastNodeTopPosition = .None(.Both)
         } else if let replyMarkup = replyMarkup, !item.presentationData.isPreview {
             let (minWidth, buttonsLayout) = actionButtonsLayout(item.context, item.presentationData.theme, item.presentationData.chatBubbleCorners, item.presentationData.strings, item.controllerInteraction.presentationContext.backgroundNode, replyMarkup, item.message, maximumNodeWidth)
             maxContentWidth = max(maxContentWidth, minWidth)

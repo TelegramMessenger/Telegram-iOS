@@ -164,9 +164,10 @@ private final class SheetContent: CombinedComponent {
                 //TODO:localize
                 titleString = "Suggest Terms"
                 amountTitle = "ENTER A PRICE IN STARS"
-                amountPlaceholder = environment.strings.Stars_SendMessage_AdjustmentPlaceholder
+                amountPlaceholder = "Price"
                 
                 minAmount = StarsAmount(value: 1, nanos: 0)
+                //TODO:release
                 maxAmount = StarsAmount(value: resaleConfiguration.paidMessageMaxAmount, nanos: 0)
             }
             

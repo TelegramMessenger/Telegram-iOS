@@ -821,9 +821,9 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
                 case .requestPhone:
                     item.controllerInteraction.shareAccountContact()
                 case .openWebApp:
-                    item.controllerInteraction.requestMessageActionCallback(item.message.id, nil, true, false)
+                    item.controllerInteraction.requestMessageActionCallback(item.message, nil, true, false)
                 case let .callback(requiresPassword, data):
-                    item.controllerInteraction.requestMessageActionCallback(item.message.id, data, false, requiresPassword)
+                    item.controllerInteraction.requestMessageActionCallback(item.message, data, false, requiresPassword)
                 case let .switchInline(samePeer, query, peerTypes):
                     var botPeer: Peer?
                     

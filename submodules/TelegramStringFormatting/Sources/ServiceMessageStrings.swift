@@ -1380,6 +1380,31 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     }
                     attributedString = addAttributesToStringWithRanges(resultString._tuple, body: bodyAttributes, argumentAttributes: attributes)
                 }
+            case let .suggestedPostApprovalStatus(status):
+                //TODO:localize
+                var messageText = ""
+                for attribute in message.attributes {
+                    if let attribute = attribute as? ReplyMessageAttribute, let message = message.associatedMessages[attribute.messageId] {
+                        messageText = message.text
+                    }
+                }
+                
+                let string: String
+                switch status {
+                case .approved:
+                    if messageText.isEmpty {
+                        string = "Your message was approved"
+                    } else {
+                        string = "Your message \"\(messageText)\" was approved"
+                    }
+                case .rejected:
+                    if messageText.isEmpty {
+                        string = "Your message was rejected"
+                    } else {
+                        string = "Your message \"\(messageText)\" was rejected"
+                    }
+                }
+                attributedString = NSAttributedString(string: string, font: titleFont, textColor: primaryTextColor)
             case .unknown:
                 attributedString = nil
             }

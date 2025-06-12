@@ -236,6 +236,7 @@ private var declaredEncodables: Void = {
     declareEncodable(TelegramMediaTodo.self, f: { TelegramMediaTodo(decoder: $0) })
     declareEncodable(TelegramMediaTodo.Item.self, f: { TelegramMediaTodo.Item(decoder: $0) })
     declareEncodable(TelegramMediaTodo.Completion.self, f: { TelegramMediaTodo.Completion(decoder: $0) })
+    declareEncodable(SuggestedPostMessageAttribute.self, f: { SuggestedPostMessageAttribute(decoder: $0) })
     return
 }()
 
