@@ -90,6 +90,45 @@ func _internal_addNoPaidMessagesException(account: Account, scopePeerId: PeerId,
     }
 }
 
+func _internal_reinstateNoPaidMessagesException(account: Account, scopePeerId: PeerId, peerId: PeerId) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> (Api.InputPeer?, Api.InputUser?) in
+        return (transaction.getPeer(scopePeerId).flatMap(apiInputPeer), transaction.getPeer(peerId).flatMap(apiInputUser))
+    }
+    |> mapToSignal { scopeInputPeer, inputUser -> Signal<Never, NoError> in
+        if scopePeerId != account.peerId {
+            if scopeInputPeer == nil {
+                return .never()
+            }
+        } else {
+            return .never()
+        }
+        guard let inputUser else {
+            return .never()
+        }
+        var flags: Int32 = 0
+        flags |= (1 << 2)
+        return account.network.request(Api.functions.account.toggleNoPaidMessagesException(flags: flags, parentPeer: scopeInputPeer, userId: inputUser))
+        |> `catch` { _ -> Signal<Api.Bool, NoError> in
+            return .single(.boolFalse)
+        } |> mapToSignal { _ in
+            return account.postbox.transaction { transaction -> Void in
+                if scopePeerId != account.peerId {
+                    guard var data = transaction.getMessageHistoryThreadInfo(peerId: scopePeerId, threadId: peerId.toInt64())?.data.get(MessageHistoryThreadData.self) else {
+                        return
+                    }
+                    data.isMessageFeeRemoved = false
+                    
+                    if let entry = StoredMessageHistoryThreadInfo(data) {
+                        transaction.setMessageHistoryThreadInfo(peerId: scopePeerId, threadId: peerId.toInt64(), info: entry)
+                    }
+                }
+            }
+            |> ignoreValues
+        }
+        |> ignoreValues
+    }
+}
+
 func _internal_updateChannelPaidMessagesStars(account: Account, peerId: PeerId, stars: StarsAmount?, broadcastMessagesAllowed: Bool) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Signal<Never, NoError> in
         guard let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) else {
