@@ -112,8 +112,8 @@ final class ComposeTodoScreenComponent: Component {
         private var reorderRecognizer: ReorderGestureRecognizer?
         private var reorderingItem: (id: AnyHashable, snapshotView: UIView, backgroundView: UIView, initialPosition: CGPoint, position: CGPoint)?
         
-        var isAppendableByOthers = false
-        var isCompletableByOthers = false
+        var isAppendableByOthers = true
+        var isCompletableByOthers = true
         
         override init(frame: CGRect) {
             self.scrollView = UIScrollView()
@@ -298,13 +298,13 @@ final class ComposeTodoScreenComponent: Component {
         }
         
         func validatedInput() -> TelegramMediaTodo? {
-            if self.todoTextInputState.text.length == 0 {
+            if self.todoTextInputState.text.string.trimmingCharacters(in: .whitespacesAndNewlines).count == 0 {
                 return nil
             }
 
             var mappedItems: [TelegramMediaTodo.Item] = []
             for todoItem in self.todoItems {
-                if todoItem.textInputState.text.length == 0 {
+                if todoItem.textInputState.text.string.trimmingCharacters(in: .whitespacesAndNewlines).count == 0 {
                     continue
                 }
                 var entities: [MessageTextEntity] = []
@@ -1171,7 +1171,7 @@ final class ComposeTodoScreenComponent: Component {
             contentHeight += sectionSpacing
             
             var todoSettingsSectionItems: [AnyComponentWithIdentity<Empty>] = []
-            if canEdit && component.peer.id != component.context.account.peerId {
+            if canEdit {
                 todoSettingsSectionItems.append(AnyComponentWithIdentity(id: "completable", component: AnyComponent(ListActionItemComponent(
                     theme: theme,
                     title: AnyComponent(VStack([
