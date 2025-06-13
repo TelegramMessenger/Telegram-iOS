@@ -83,7 +83,11 @@ public final class ChatMessageSuggestedPostInfoNode: ASDisplayNode {
             //TODO:localize
             let titleText: String
             if !item.message.effectivelyIncoming(item.context.account.peerId) {
-                titleText = "You suggest to post\nthis message."
+                if item.message.attributes.contains(where: { $0 is ReplyMessageAttribute }) {
+                    titleText = "You suggest a new price,\ntime and text for this message."
+                } else {
+                    titleText = "You suggest to post\nthis message."
+                }
             } else {
                 if item.message.author is TelegramChannel {
                     titleText = "**\(item.message.author.flatMap(EnginePeer.init)?.compactDisplayTitle ?? " ")** suggests a new price,\ntime, and text for your message."
