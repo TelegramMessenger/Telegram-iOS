@@ -189,7 +189,7 @@ private final class PromptAlertContentNode: AlertContentNode {
         return self.isUserInteractionEnabled
     }
     
-    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, actions: [TextAlertAction], text: String, titleFont: PromptControllerTitleFont, value: String?, characterLimit: Int) {
+    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, actions: [TextAlertAction], text: String, titleFont: PromptControllerTitleFont, value: String?, placeholder: String?, characterLimit: Int) {
         self.strings = strings
         self.text = text
         self.titleFont = titleFont
@@ -197,7 +197,7 @@ private final class PromptAlertContentNode: AlertContentNode {
         self.textNode = ASTextNode()
         self.textNode.maximumNumberOfLines = 2
         
-        self.inputFieldNode = PromptInputFieldNode(theme: ptheme, placeholder: "", characterLimit: characterLimit)
+        self.inputFieldNode = PromptInputFieldNode(theme: ptheme, placeholder: placeholder ?? "", characterLimit: characterLimit)
         self.inputFieldNode.text = value ?? ""
         
         self.actionNodesSeparator = ASDisplayNode()
@@ -407,7 +407,7 @@ public enum PromptControllerTitleFont {
     case bold
 }
 
-public func promptController(sharedContext: SharedAccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, text: String, titleFont: PromptControllerTitleFont = .regular, value: String?, characterLimit: Int = 1000, apply: @escaping (String?) -> Void) -> AlertController {
+public func promptController(sharedContext: SharedAccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, text: String, titleFont: PromptControllerTitleFont = .regular, value: String?, placeholder: String? = nil, characterLimit: Int = 1000, apply: @escaping (String?) -> Void) -> AlertController {
     let presentationData = updatedPresentationData?.initial ?? sharedContext.currentPresentationData.with { $0 }
     
     var dismissImpl: ((Bool) -> Void)?
@@ -421,8 +421,9 @@ public func promptController(sharedContext: SharedAccountContext, updatedPresent
         applyImpl?()
     })]
     
-    let contentNode = PromptAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: presentationData.strings, actions: actions, text: text, titleFont: titleFont, value: value, characterLimit: characterLimit)
+    let contentNode = PromptAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: presentationData.strings, actions: actions, text: text, titleFont: titleFont, value: value, placeholder: placeholder, characterLimit: characterLimit)
     contentNode.complete = {
+        dismissImpl?(true)
         applyImpl?()
     }
     applyImpl = { [weak contentNode] in

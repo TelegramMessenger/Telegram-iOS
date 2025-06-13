@@ -466,6 +466,7 @@ final class StoryItemSetContainerSendMessage {
         guard let peerId = focusedItem.peerId else {
             return
         }
+        let _ = peerId
         let controller = component.controller() as? StoryContainerScreen
         
         var sendWhenOnlineAvailable = false
@@ -473,7 +474,7 @@ final class StoryItemSetContainerSendMessage {
             sendWhenOnlineAvailable = true
         }
         
-        let timeController = ChatScheduleTimeController(context: component.context, updatedPresentationData: nil, peerId: peerId, mode: .scheduledMessages(sendWhenOnlineAvailable: sendWhenOnlineAvailable), style: .media, currentTime: nil, minimalTime: nil, dismissByTapOutside: true, completion: { [weak self, weak view] time in
+        let timeController = ChatScheduleTimeController(context: component.context, updatedPresentationData: nil, mode: .scheduledMessages(sendWhenOnlineAvailable: sendWhenOnlineAvailable), style: .media, currentTime: nil, minimalTime: nil, dismissByTapOutside: true, completion: { [weak self, weak view] time in
             guard let self, let view else {
                 return
             }
@@ -2607,7 +2608,7 @@ final class StoryItemSetContainerSendMessage {
                 mode = .scheduledMessages(sendWhenOnlineAvailable: sendWhenOnlineAvailable)
             }
             let theme = component.theme
-            let controller = ChatScheduleTimeController(context: component.context, updatedPresentationData: (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) }), peerId: peer.id, mode: mode, style: style, currentTime: selectedTime, minimalTime: nil, dismissByTapOutside: dismissByTapOutside, completion: { time in
+            let controller = ChatScheduleTimeController(context: component.context, updatedPresentationData: (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) }), mode: mode, style: style, currentTime: selectedTime, minimalTime: nil, dismissByTapOutside: dismissByTapOutside, completion: { time in
                 completion(time)
             })
             view.endEditing(true)

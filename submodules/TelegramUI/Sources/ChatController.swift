@@ -137,6 +137,7 @@ import ChatMessagePaymentAlertController
 import TelegramCallsUI
 import QuickShareScreen
 import PostSuggestionsSettingsScreen
+import PromptUI
 
 public final class ChatControllerOverlayPresentationData {
     public let expandData: (ASDisplayNode?, () -> Void)
@@ -2331,16 +2332,49 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if message.effectivelyIncoming(strongSelf.context.account.peerId) {
                     switch buttonType {
                     case 0:
-                        let _ = strongSelf.context.engine.messages.monoforumPerformSuggestedPostAction(id: message.id, action: .reject(comment: nil)).startStandalone()
+                        //TODO:localize
+                        let promptController = promptController(sharedContext: strongSelf.context.sharedContext, updatedPresentationData: strongSelf.updatedPresentationData, text: "Comment", titleFont: .bold, value: "", placeholder: "Optional", characterLimit: 4096, apply: { value in
+                            guard let self else {
+                                return
+                            }
+                            if let value {
+                                let _ = self.context.engine.messages.monoforumPerformSuggestedPostAction(id: message.id, action: .reject(comment: value.isEmpty ? nil : value)).startStandalone()
+                            }
+                        })
+                        strongSelf.present(promptController, in: .window(.root))
                     case 1:
                         var timestamp: Int32?
                         if attribute.timestamp == nil {
+                            let controller = ChatScheduleTimeController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, mode: .suggestPost(needsTime: true), style: .default, currentTime: nil, minimalTime: nil, dismissByTapOutside: true, completion: { [weak strongSelf] time in
+                                guard let strongSelf else {
+                                    return
+                                }
+                                if time != 0 {
+                                    let _ = strongSelf.context.engine.messages.monoforumPerformSuggestedPostAction(id: message.id, action: .approve(timestamp: time)).startStandalone()
+                                }
+                            })
+                            strongSelf.view.endEditing(true)
+                            strongSelf.present(controller, in: .window(.root))
+                            
                             timestamp = Int32(Date().timeIntervalSince1970) + 1 * 60 * 60
+                        } else {
+                            let _ = strongSelf.context.engine.messages.monoforumPerformSuggestedPostAction(id: message.id, action: .approve(timestamp: timestamp)).startStandalone()
                         }
-                        let _ = strongSelf.context.engine.messages.monoforumPerformSuggestedPostAction(id: message.id, action: .approve(timestamp: timestamp)).startStandalone()
                     case 2:
-                        //suggest changes
-                        break
+                        strongSelf.push(strongSelf.context.sharedContext.makeStarsWithdrawalScreen(
+                            context: strongSelf.context,
+                            subject: .postSuggestionModification(
+                                current: StarsAmount(value: attribute.amount, nanos: 0),
+                                timestamp: attribute.timestamp,
+                                completion: { [weak strongSelf] price, timestamp in
+                                    guard let strongSelf else {
+                                        return
+                                    }
+                                    
+                                    let _ = strongSelf.context.engine.messages.monoforumPerformSuggestedPostAction(id: message.id, action: .proposeChanges(amount: price, timestamp: timestamp)).startStandalone()
+                                }
+                            )
+                        ))
                     default:
                         break
                     }
@@ -9525,7 +9559,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             } else {
                 mode = .scheduledMessages(sendWhenOnlineAvailable: sendWhenOnlineAvailable)
             }
-            let controller = ChatScheduleTimeController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peerId, mode: mode, style: style, currentTime: selectedTime, minimalTime: strongSelf.presentationInterfaceState.slowmodeState?.timeout, dismissByTapOutside: dismissByTapOutside, completion: { time in
+            let controller = ChatScheduleTimeController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, mode: mode, style: style, currentTime: selectedTime, minimalTime: strongSelf.presentationInterfaceState.slowmodeState?.timeout, dismissByTapOutside: dismissByTapOutside, completion: { time in
                 completion(time)
             })
             strongSelf.chatDisplayNode.dismissInput()

@@ -1400,13 +1400,10 @@ private final class ChatSendStarsScreenComponent: Component {
             guard let environment = self.environment else {
                 return
             }
-            guard case let .suggestPost(suggestPostData) = component.initialData.subjectInitialData else {
-                return
-            }
             
-            let mode: ChatScheduleTimeControllerMode = .suggestPost
+            let mode: ChatScheduleTimeControllerMode = .suggestPost(needsTime: false)
             let theme = environment.theme
-            let controller = ChatScheduleTimeController(context: component.context, updatedPresentationData: (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) }), peerId: suggestPostData.peer.id, mode: mode, style: .default, currentTime: self.currentSuggestPostTimestamp, minimalTime: nil, dismissByTapOutside: true, completion: { [weak self] time in
+            let controller = ChatScheduleTimeController(context: component.context, updatedPresentationData: (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) }), mode: mode, style: .default, currentTime: self.currentSuggestPostTimestamp, minimalTime: nil, dismissByTapOutside: true, completion: { [weak self] time in
                 guard let self else {
                     return
                 }

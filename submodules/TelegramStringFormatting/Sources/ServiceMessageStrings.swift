@@ -1390,18 +1390,35 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 }
                 
                 let string: String
-                switch status {
-                case .approved:
-                    if messageText.isEmpty {
-                        string = "Your message was approved"
-                    } else {
-                        string = "Your message \"\(messageText)\" was approved"
+                if !message.flags.contains(.Incoming) {
+                    switch status {
+                    case .approved:
+                        if messageText.isEmpty {
+                            string = "The message was approved"
+                        } else {
+                            string = "The message \"\(messageText)\" was approved"
+                        }
+                    case .rejected:
+                        if messageText.isEmpty {
+                            string = "The message was declined"
+                        } else {
+                            string = "The message \"\(messageText)\" was declined"
+                        }
                     }
-                case .rejected:
-                    if messageText.isEmpty {
-                        string = "Your message was rejected"
-                    } else {
-                        string = "Your message \"\(messageText)\" was rejected"
+                } else {
+                    switch status {
+                    case .approved:
+                        if messageText.isEmpty {
+                            string = "Your message was approved"
+                        } else {
+                            string = "Your message \"\(messageText)\" was approved"
+                        }
+                    case .rejected:
+                        if messageText.isEmpty {
+                            string = "Your message was declined"
+                        } else {
+                            string = "Your message \"\(messageText)\" was declined"
+                        }
                     }
                 }
                 attributedString = NSAttributedString(string: string, font: titleFont, textColor: primaryTextColor)

@@ -50,7 +50,7 @@ private final class SheetContent: CombinedComponent {
         return true
     }
     
-    static var body: Body {
+    static var body: (CombinedComponentContext<SheetContent>) -> CGSize {
         let closeButton = Child(Button.self)
         let title = Child(Text.self)
         let amountSection = Child(ListSectionComponent.self)
@@ -61,7 +61,7 @@ private final class SheetContent: CombinedComponent {
         let balanceValue = Child(MultilineTextComponent.self)
         let balanceIcon = Child(BundleIconComponent.self)
         
-        return { context in
+        return { (context: CombinedComponentContext<SheetContent>) -> CGSize in
             let environment = context.environment[EnvironmentType.self]
             let component = context.component
             let state = context.state
@@ -160,9 +160,14 @@ private final class SheetContent: CombinedComponent {
                 
                 minAmount = StarsAmount(value: minAmountValue, nanos: 0)
                 maxAmount = StarsAmount(value: resaleConfiguration.paidMessageMaxAmount, nanos: 0)
-            case .suggestedPost:
+            case let .suggestedPost(mode, _, _, _):
                 //TODO:localize
-                titleString = "Suggest Terms"
+                switch mode {
+                case .sender:
+                    titleString = "Suggest Terms"
+                case .admin:
+                    titleString = "Suggest Changes"
+                }
                 amountTitle = "ENTER A PRICE IN STARS"
                 amountPlaceholder = "Price"
                 
@@ -321,6 +326,13 @@ private final class SheetContent: CombinedComponent {
                         text: .plain(amountInfoString),
                         maximumNumberOfLines: 0
                     ))
+                case .admin:
+                    //TODO:localize
+                    let amountInfoString = NSAttributedString(attributedString: parseMarkdownIntoAttributedString("Choose how many Stars you charge for the message.", attributes: amountMarkdownAttributes, textAlignment: .natural))
+                    amountFooter = AnyComponent(MultilineTextComponent(
+                        text: .plain(amountInfoString),
+                        maximumNumberOfLines: 0
+                    ))
                 }
             default:
                 amountFooter = nil
@@ -380,11 +392,19 @@ private final class SheetContent: CombinedComponent {
                     .position(CGPoint(x: context.availableSize.width - amountAdditionalLabel.size.width / 2.0 - sideInset - 16.0, y: contentSize.height - amountAdditionalLabel.size.height / 2.0)))
             }
             
-            if case .suggestedPost = component.mode {
+            if case let .suggestedPost(mode, _, _, _) = component.mode {
                 contentSize.height += 24.0
                 
                 //TODO:localize
-                let timestampFooterString = NSAttributedString(attributedString: parseMarkdownIntoAttributedString("Select the date and time you want your message to be published.", attributes: amountMarkdownAttributes, textAlignment: .natural))
+                let footerString: String
+                switch mode {
+                case .sender:
+                    footerString = "Select the date and time you want your message to be published."
+                case .admin:
+                    footerString = "Select the date and time you want to publish the message."
+                }
+                
+                let timestampFooterString = NSAttributedString(attributedString: parseMarkdownIntoAttributedString(footerString, attributes: amountMarkdownAttributes, textAlignment: .natural))
                 let timestampFooter = AnyComponent(MultilineTextComponent(
                     text: .plain(timestampFooterString),
                     maximumNumberOfLines: 0
@@ -443,15 +463,9 @@ private final class SheetContent: CombinedComponent {
                                         return
                                     }
                                     let component = state.component
-                                    guard case let .suggestedPost(mode, _, _, _) = component.mode else {
-                                        return
-                                    }
-                                    guard case let .sender(channel) = mode else {
-                                        return
-                                    }
                                     
                                     let theme = environment.theme
-                                    let controller = ChatScheduleTimeController(context: state.context, updatedPresentationData: (state.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), state.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) }), peerId: channel.id, mode: .suggestPost, style: .default, currentTime: state.timestamp, minimalTime: nil, dismissByTapOutside: true, completion: { [weak state] time in
+                                    let controller = ChatScheduleTimeController(context: state.context, updatedPresentationData: (state.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), state.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) }), mode: .suggestPost(needsTime: false), style: .default, currentTime: state.timestamp, minimalTime: nil, dismissByTapOutside: true, completion: { [weak state] time in
                                         guard let state else {
                                             return
                                         }
@@ -498,6 +512,8 @@ private final class SheetContent: CombinedComponent {
                     } else {
                         buttonString = "Offer"
                     }
+                case .admin:
+                    buttonString = "Update Terms"
                 }
             } else if let amount = state.amount {
                 buttonString = "\(environment.strings.Stars_Withdraw_Withdraw)  # \(presentationStringsFormattedNumber(amount, environment.dateTimeFormat.groupingSeparator))"
@@ -770,6 +786,7 @@ public final class StarsWithdrawScreen: ViewControllerComponentContainer {
     public enum Mode {
         public enum SuggestedPostMode {
             case sender(channel: EnginePeer)
+            case admin
         }
         
         case withdraw(StarsRevenueStats, completion: (Int64) -> Void)

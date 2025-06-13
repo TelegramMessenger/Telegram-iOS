@@ -22,6 +22,7 @@ swift_library(
         "//submodules/WallpaperBackgroundNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageItem",
         "//submodules/TelegramStringFormatting",
+        "//submodules/Markdown",
     ],
     visibility = [
         "//visibility:public",

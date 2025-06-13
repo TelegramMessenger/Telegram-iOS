@@ -12,6 +12,7 @@ import AccountContext
 import WallpaperBackgroundNode
 import ChatMessageItem
 import TelegramStringFormatting
+import Markdown
 
 public final class ChatMessageSuggestedPostInfoNode: ASDisplayNode {
     private var titleNode: TextNode?
@@ -84,10 +85,23 @@ public final class ChatMessageSuggestedPostInfoNode: ASDisplayNode {
             if !item.message.effectivelyIncoming(item.context.account.peerId) {
                 titleText = "You suggest to post\nthis message."
             } else {
-                titleText = "\(item.message.author.flatMap(EnginePeer.init)?.compactDisplayTitle ?? " ") suggests to post\nthis message."
+                if item.message.author is TelegramChannel {
+                    titleText = "**\(item.message.author.flatMap(EnginePeer.init)?.compactDisplayTitle ?? " ")** suggests a new price,\ntime, and text for your message."
+                } else {
+                    titleText = "**\(item.message.author.flatMap(EnginePeer.init)?.compactDisplayTitle ?? " ")** suggests to post\nthis message."
+                }
             }
             
-            let titleLayout = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: titleText, font: Font.regular(13.0), textColor: serviceColor.primaryText), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: maxWidth - insets.left - insets.right, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+            let titleAttributedText = parseMarkdownIntoAttributedString(titleText, attributes: MarkdownAttributes(
+                body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: serviceColor.primaryText),
+                bold: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: serviceColor.primaryText),
+                link: MarkdownAttributeSet(font: Font.regular(13.0), textColor: serviceColor.primaryText),
+                linkAttribute: { url in
+                    return ("URL", url)
+                }
+            ))
+            
+            let titleLayout = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: maxWidth - insets.left - insets.right, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
             let priceLabelLayout = makePriceLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "Price", font: Font.regular(13.0), textColor: serviceColor.primaryText.withMultipliedAlpha(0.5)), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: maxWidth - insets.left - insets.right, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let timeLabelLayout = makeTimeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "Time", font: Font.regular(13.0), textColor: serviceColor.primaryText.withMultipliedAlpha(0.5)), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: maxWidth - insets.left - insets.right, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))

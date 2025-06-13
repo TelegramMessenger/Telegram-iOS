@@ -231,22 +231,27 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                         //TODO:localize
                         let timeString = humanReadableStringForTimestamp(strings: item.presentationData.strings, dateTimeFormat: item.presentationData.dateTimeFormat, timestamp: timestamp ?? 0, alwaysShowTime: true, allowYesterday: false, format: HumanReadableStringFormat(
                             dateFormatString: { value in
-                                return PresentationStrings.FormattedString(string: item.presentationData.strings.SuggestPost_SetTimeFormat_Date(value).string, ranges: [])
+                                return PresentationStrings.FormattedString(string: item.presentationData.strings.SuggestPost_SetTimeFormat_Date(value).string.lowercased(), ranges: [])
                             },
                             tomorrowFormatString: { value in
-                                return PresentationStrings.FormattedString(string: item.presentationData.strings.SuggestPost_SetTimeFormat_TomorrowAt(value).string, ranges: [])
+                                return PresentationStrings.FormattedString(string: item.presentationData.strings.SuggestPost_SetTimeFormat_TomorrowAt(value).string.lowercased(), ranges: [])
                             },
                             todayFormatString: { value in
-                                return PresentationStrings.FormattedString(string: item.presentationData.strings.SuggestPost_SetTimeFormat_TodayAt(value).string, ranges: [])
+                                return PresentationStrings.FormattedString(string: item.presentationData.strings.SuggestPost_SetTimeFormat_TodayAt(value).string.lowercased(), ranges: [])
                             },
                             yesterdayFormatString: { value in
-                                return PresentationStrings.FormattedString(string: item.presentationData.strings.SuggestPost_SetTimeFormat_TodayAt(value).string, ranges: [])
+                                return PresentationStrings.FormattedString(string: item.presentationData.strings.SuggestPost_SetTimeFormat_TodayAt(value).string.lowercased(), ranges: [])
                             }
                         )).string
                         
                         let amountString = amount == 1 ? "\(amount) Star" : "\(amount) Stars"
                         
-                        let rawString = "📅 Your post will be automatically published on **\(channelName)** **\(timeString)**.\n\n💰 You have been charged \(amountString).\n\n⌛ **\(channelName)** will receive your Stars once the post has been live for 24 hours.\n\n🔄 If **\(channelName)** removes the post before it has been live for 24 hours, your Stars will be refunded."
+                        let rawString: String
+                        if !item.message.effectivelyIncoming(item.context.account.peerId) {
+                            rawString = "📅 The post will be automatically published on **\(channelName)** **\(timeString)**.\n\n💰 The user have been charged \(amountString).\n\n⌛ **\(channelName)** will receive the Stars once the post has been live for 24 hours.\n\n🔄 If your remove the post before it has been live for 24 hours, the user's Stars will be refunded."
+                        } else {
+                            rawString = "📅 Your post will be automatically published on **\(channelName)** **\(timeString)**.\n\n💰 You have been charged \(amountString).\n\n⌛ **\(channelName)** will receive your Stars once the post has been live for 24 hours.\n\n🔄 If **\(channelName)** removes the post before it has been live for 24 hours, your Stars will be refunded."
+                        }
                         updatedAttributedString = parseMarkdownIntoAttributedString(rawString, attributes: MarkdownAttributes(
                             body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: primaryTextColor),
                             bold: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: primaryTextColor),
@@ -257,15 +262,28 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                         ))
                     case let .rejected(reason, comment):
                         let rawString: String
-                        switch reason {
-                        case .generic:
-                            if let comment {
-                                rawString = "**\(channelName)** declined your post with the following comment:\n\n" + comment
-                            } else {
-                                rawString = "**\(channelName)** declined your post."
+                        if !item.message.effectivelyIncoming(item.context.account.peerId) {
+                            switch reason {
+                            case .generic:
+                                if let comment {
+                                    rawString = "You declined the post with the following comment:\n\n" + comment
+                                } else {
+                                    rawString = "You declined the post."
+                                }
+                            case .lowBalance:
+                                rawString = "**\(channelName)** was unable to post the message, because the user did not have enough Stars."
                             }
-                        case .lowBalance:
-                            rawString = "**\(channelName)** was unable to post your message, because you did not have enough Stars."
+                        } else {
+                            switch reason {
+                            case .generic:
+                                if let comment {
+                                    rawString = "**\(channelName)** declined your post with the following comment:\n\n" + comment
+                                } else {
+                                    rawString = "**\(channelName)** declined your post."
+                                }
+                            case .lowBalance:
+                                rawString = "**\(channelName)** was unable to post your message, because you did not have enough Stars."
+                            }
                         }
                         updatedAttributedString = parseMarkdownIntoAttributedString(rawString, attributes: MarkdownAttributes(
                             body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: primaryTextColor),
@@ -344,7 +362,7 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                     backgroundSize.height += imageSize.height + 10.0
                 }
                 
-                let titleSpacing: CGFloat = 18.0
+                let titleSpacing: CGFloat = 14.0
                 
                 var contentInsets = UIEdgeInsets()
                 var contentOuterInsets = UIEdgeInsets()
@@ -353,8 +371,8 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                     backgroundSize.width = max(backgroundSize.width, titleLayoutAndApply.0.size.width)
                     backgroundSize.height += titleSpacing + titleLayoutAndApply.0.size.height
                     
-                    contentInsets = UIEdgeInsets(top: 16.0, left: 16.0, bottom: 16.0, right: 16.0)
-                    contentOuterInsets = UIEdgeInsets(top: 8.0, left: 0.0, bottom: 8.0, right: 0.0)
+                    contentInsets = UIEdgeInsets(top: 12.0, left: 16.0, bottom: 12.0, right: 16.0)
+                    contentOuterInsets = UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0, right: 0.0)
                     
                     backgroundSize.width += contentInsets.left + contentInsets.right
                     backgroundSize.height += contentInsets.top + contentInsets.bottom
