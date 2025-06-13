@@ -228,7 +228,7 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         return TelegramMediaAction(action: .todoCompletions(completed: completed, incompleted: incompleted))
     case let .messageActionTodoAppendTasks(list):
         return TelegramMediaAction(action: .todoAppendTasks(list.map { TelegramMediaTodo.Item(apiItem: $0) }))
-    case let .messageActionSuggestedPostApproval(flags):
+    case let .messageActionSuggestedPostApproval(flags, rejectComment, scheduleDate, starsAmount):
         let status: TelegramMediaActionType.SuggestedPostApprovalStatus
         if (flags & (1 << 0)) != 0 {
             let reason: TelegramMediaActionType.SuggestedPostApprovalStatus.RejectionReason
@@ -237,9 +237,9 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
             } else {
                 reason = .generic
             }
-            status = .rejected(reason: reason)
+            status = .rejected(reason: reason, comment: rejectComment)
         } else {
-            status = .approved
+            status = .approved(timestamp: scheduleDate, amount: starsAmount ?? 0)
         }
         return TelegramMediaAction(action: .suggestedPostApprovalStatus(status: status))
     }

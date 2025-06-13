@@ -395,7 +395,7 @@ public extension Api {
         case messageActionStarGift(flags: Int32, gift: Api.StarGift, message: Api.TextWithEntities?, convertStars: Int64?, upgradeMsgId: Int32?, upgradeStars: Int64?, fromId: Api.Peer?, peer: Api.Peer?, savedId: Int64?)
         case messageActionStarGiftUnique(flags: Int32, gift: Api.StarGift, canExportAt: Int32?, transferStars: Int64?, fromId: Api.Peer?, peer: Api.Peer?, savedId: Int64?, resaleStars: Int64?, canTransferAt: Int32?, canResellAt: Int32?)
         case messageActionSuggestProfilePhoto(photo: Api.Photo)
-        case messageActionSuggestedPostApproval(flags: Int32)
+        case messageActionSuggestedPostApproval(flags: Int32, rejectComment: String?, scheduleDate: Int32?, starsAmount: Int64?)
         case messageActionTodoAppendTasks(list: [Api.TodoItem])
         case messageActionTodoCompletions(completed: [Int32], incompleted: [Int32])
         case messageActionTopicCreate(flags: Int32, title: String, iconColor: Int32, iconEmojiId: Int64?)
@@ -804,11 +804,14 @@ public extension Api {
                     }
                     photo.serialize(buffer, true)
                     break
-                case .messageActionSuggestedPostApproval(let flags):
+                case .messageActionSuggestedPostApproval(let flags, let rejectComment, let scheduleDate, let starsAmount):
                     if boxed {
-                        buffer.appendInt32(866770590)
+                        buffer.appendInt32(-1354584535)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 2) != 0 {serializeString(rejectComment!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {serializeInt32(scheduleDate!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 4) != 0 {serializeInt64(starsAmount!, buffer: buffer, boxed: false)}
                     break
                 case .messageActionTodoAppendTasks(let list):
                     if boxed {
@@ -966,8 +969,8 @@ public extension Api {
                 return ("messageActionStarGiftUnique", [("flags", flags as Any), ("gift", gift as Any), ("canExportAt", canExportAt as Any), ("transferStars", transferStars as Any), ("fromId", fromId as Any), ("peer", peer as Any), ("savedId", savedId as Any), ("resaleStars", resaleStars as Any), ("canTransferAt", canTransferAt as Any), ("canResellAt", canResellAt as Any)])
                 case .messageActionSuggestProfilePhoto(let photo):
                 return ("messageActionSuggestProfilePhoto", [("photo", photo as Any)])
-                case .messageActionSuggestedPostApproval(let flags):
-                return ("messageActionSuggestedPostApproval", [("flags", flags as Any)])
+                case .messageActionSuggestedPostApproval(let flags, let rejectComment, let scheduleDate, let starsAmount):
+                return ("messageActionSuggestedPostApproval", [("flags", flags as Any), ("rejectComment", rejectComment as Any), ("scheduleDate", scheduleDate as Any), ("starsAmount", starsAmount as Any)])
                 case .messageActionTodoAppendTasks(let list):
                 return ("messageActionTodoAppendTasks", [("list", list as Any)])
                 case .messageActionTodoCompletions(let completed, let incompleted):
@@ -1770,9 +1773,18 @@ public extension Api {
         public static func parse_messageActionSuggestedPostApproval(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
             _1 = reader.readInt32()
+            var _2: String?
+            if Int(_1!) & Int(1 << 2) != 0 {_2 = parseString(reader) }
+            var _3: Int32?
+            if Int(_1!) & Int(1 << 3) != 0 {_3 = reader.readInt32() }
+            var _4: Int64?
+            if Int(_1!) & Int(1 << 4) != 0 {_4 = reader.readInt64() }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.MessageAction.messageActionSuggestedPostApproval(flags: _1!)
+            let _c2 = (Int(_1!) & Int(1 << 2) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 3) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 4) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.MessageAction.messageActionSuggestedPostApproval(flags: _1!, rejectComment: _2, scheduleDate: _3, starsAmount: _4)
             }
             else {
                 return nil

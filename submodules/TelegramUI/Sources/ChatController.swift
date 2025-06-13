@@ -2331,13 +2331,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if message.effectivelyIncoming(strongSelf.context.account.peerId) {
                     switch buttonType {
                     case 0:
-                        let _ = strongSelf.context.engine.messages.monoforumPerformSuggestedPostAction(id: message.id, approve: false, timestamp: nil).startStandalone()
+                        let _ = strongSelf.context.engine.messages.monoforumPerformSuggestedPostAction(id: message.id, action: .reject(comment: nil)).startStandalone()
                     case 1:
                         var timestamp: Int32?
                         if attribute.timestamp == nil {
                             timestamp = Int32(Date().timeIntervalSince1970) + 1 * 60 * 60
                         }
-                        let _ = strongSelf.context.engine.messages.monoforumPerformSuggestedPostAction(id: message.id, approve: true, timestamp: timestamp).startStandalone()
+                        let _ = strongSelf.context.engine.messages.monoforumPerformSuggestedPostAction(id: message.id, action: .approve(timestamp: timestamp)).startStandalone()
                     case 2:
                         //suggest changes
                         break

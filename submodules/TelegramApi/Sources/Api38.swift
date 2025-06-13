@@ -8909,14 +8909,15 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func toggleSuggestedPostApproval(flags: Int32, peer: Api.InputPeer, msgId: Int32, scheduleDate: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func toggleSuggestedPostApproval(flags: Int32, peer: Api.InputPeer, msgId: Int32, scheduleDate: Int32?, rejectComment: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(806598987)
+                    buffer.appendInt32(-2130229924)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
                     serializeInt32(msgId, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(scheduleDate!, buffer: buffer, boxed: false)}
-                    return (FunctionDescription(name: "messages.toggleSuggestedPostApproval", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("msgId", String(describing: msgId)), ("scheduleDate", String(describing: scheduleDate))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    if Int(flags) & Int(1 << 2) != 0 {serializeString(rejectComment!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "messages.toggleSuggestedPostApproval", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("msgId", String(describing: msgId)), ("scheduleDate", String(describing: scheduleDate)), ("rejectComment", String(describing: rejectComment))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {

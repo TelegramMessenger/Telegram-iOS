@@ -1588,13 +1588,18 @@ public extension TelegramEngine {
             return _internal_requestMessageAuthor(account: self.account, id: id)
         }
         
-        public func monoforumPerformSuggestedPostAction(id: EngineMessage.Id, approve: Bool, timestamp: Int32?) -> Signal<Never, NoError> {
-            return _internal_monoforumPerformSuggestedPostAction(account: self.account, id: id, approve: approve, timestamp: timestamp)
+        public enum MonoforumSuggestedPostAction {
+            case approve(timestamp: Int32?)
+            case reject(comment: String?)
+        }
+        
+        public func monoforumPerformSuggestedPostAction(id: EngineMessage.Id, action: MonoforumSuggestedPostAction) -> Signal<Never, NoError> {
+            return _internal_monoforumPerformSuggestedPostAction(account: self.account, id: id, action: action)
         }
     }
 }
 
-func _internal_monoforumPerformSuggestedPostAction(account: Account, id: EngineMessage.Id, approve: Bool, timestamp: Int32?) -> Signal<Never, NoError> {
+func _internal_monoforumPerformSuggestedPostAction(account: Account, id: EngineMessage.Id, action: TelegramEngine.Messages.MonoforumSuggestedPostAction) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(id.peerId).flatMap(apiInputPeer)
     }
@@ -1607,13 +1612,22 @@ func _internal_monoforumPerformSuggestedPostAction(account: Account, id: EngineM
         }
         
         var flags: Int32 = 0
-        if !approve {
+        var timestamp: Int32?
+        var rejectComment: String?
+        switch action {
+        case let .approve(timestampValue):
+            timestamp = timestampValue
+            if timestamp != nil {
+                flags |= 1 << 0
+            }
+        case let .reject(commentValue):
             flags |= 1 << 1
+            rejectComment = commentValue
+            if rejectComment != nil {
+                flags |= 1 << 2
+            }
         }
-        if timestamp != nil {
-            flags |= 1 << 0
-        }
-        return account.network.request(Api.functions.messages.toggleSuggestedPostApproval(flags: flags, peer: inputPeer, msgId: id.id, scheduleDate: timestamp))
+        return account.network.request(Api.functions.messages.toggleSuggestedPostApproval(flags: flags, peer: inputPeer, msgId: id.id, scheduleDate: timestamp, rejectComment: rejectComment))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
             return .single(nil)
