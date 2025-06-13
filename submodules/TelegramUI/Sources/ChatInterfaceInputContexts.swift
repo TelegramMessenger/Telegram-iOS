@@ -233,7 +233,7 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                     }
                 }
                 
-                if isTextEmpty, let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum, let mainChannel = chatPresentationInterfaceState.renderedPeer?.chatOrMonoforumMainPeer as? TelegramChannel, !mainChannel.hasPermission(.sendSomething) {
+                if let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum, let mainChannel = chatPresentationInterfaceState.renderedPeer?.chatOrMonoforumMainPeer as? TelegramChannel, !mainChannel.hasPermission(.sendSomething) {
                     if chatPresentationInterfaceState.interfaceState.postSuggestionState == nil {
                         accessoryItems.append(.suggestPost)
                     }

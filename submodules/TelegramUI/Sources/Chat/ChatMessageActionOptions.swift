@@ -481,7 +481,7 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
                 }
                 var replySubject = replySubject
                 replySubject.quote = nil
-                selfController.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withoutSelectionState() }).updatedSearch(nil) })
+                selfController.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withUpdatedPostSuggestionState(nil).withoutSelectionState() }).updatedSearch(nil) })
             })))
         }
         
@@ -675,7 +675,7 @@ func moveReplyToChat(selfController: ChatControllerImpl, peerId: EnginePeer.Id, 
             guard let selfController else {
                 return
             }
-            selfController.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withoutSelectionState() }) })
+            selfController.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withUpdatedPostSuggestionState(nil).withoutSelectionState() }) })
             
             let navigationController: NavigationController?
             if let parentController = selfController.parentController {

@@ -206,7 +206,7 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         let isMissed = (flags & (1 << 0)) != 0
         let isActive = (flags & (1 << 1)) != 0
         let isVideo = (flags & (1 << 4)) != 0
-
+        
         var mappedFlags = TelegramMediaActionType.ConferenceCall.Flags()
         if isMissed {
             mappedFlags.insert(.isMissed)
@@ -217,7 +217,7 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         if isVideo {
             mappedFlags.insert(.isVideo)
         }
-
+        
         return TelegramMediaAction(action: .conferenceCall(TelegramMediaActionType.ConferenceCall(
             callId: callId,
             duration: duration,
@@ -228,6 +228,20 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         return TelegramMediaAction(action: .todoCompletions(completed: completed, incompleted: incompleted))
     case let .messageActionTodoAppendTasks(list):
         return TelegramMediaAction(action: .todoAppendTasks(list.map { TelegramMediaTodo.Item(apiItem: $0) }))
+    case let .messageActionSuggestedPostApproval(flags, rejectComment, scheduleDate, starsAmount):
+        let status: TelegramMediaActionType.SuggestedPostApprovalStatus
+        if (flags & (1 << 0)) != 0 {
+            let reason: TelegramMediaActionType.SuggestedPostApprovalStatus.RejectionReason
+            if (flags & (1 << 0)) != 1 {
+                reason = .lowBalance
+            } else {
+                reason = .generic
+            }
+            status = .rejected(reason: reason, comment: rejectComment)
+        } else {
+            status = .approved(timestamp: scheduleDate, amount: starsAmount ?? 0)
+        }
+        return TelegramMediaAction(action: .suggestedPostApprovalStatus(status: status))
     }
 }
 

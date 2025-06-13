@@ -1034,6 +1034,7 @@ public enum StarsWithdrawalScreenSubject {
     case withdraw(completion: (Int64) -> Void)
     case enterAmount(current: StarsAmount, minValue: StarsAmount, fractionAfterCommission: Int, kind: PaidMessageKind, completion: (Int64) -> Void)
     case postSuggestion(channel: EnginePeer, current: StarsAmount, timestamp: Int32?, completion: (Int64, Int32?) -> Void)
+    case postSuggestionModification(current: StarsAmount, timestamp: Int32?, completion: (Int64, Int32?) -> Void)
 }
 
 public protocol SharedAccountContext: AnyObject {

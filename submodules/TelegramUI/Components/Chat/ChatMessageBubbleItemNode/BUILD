@@ -91,6 +91,7 @@ swift_library(
         "//submodules/TelegramUI/Components/LottieMetal",
         "//submodules/TelegramStringFormatting",
         "//submodules/AvatarNode",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageSuggestedPostInfoNode",
     ],
     visibility = [
         "//visibility:public",

@@ -1587,5 +1587,88 @@ public extension TelegramEngine {
         public func requestMessageAuthor(id: EngineMessage.Id) -> Signal<EnginePeer?, NoError> {
             return _internal_requestMessageAuthor(account: self.account, id: id)
         }
+        
+        public enum MonoforumSuggestedPostAction {
+            case approve(timestamp: Int32?)
+            case reject(comment: String?)
+            case proposeChanges(amount: Int64, timestamp: Int32?)
+        }
+        
+        public func monoforumPerformSuggestedPostAction(id: EngineMessage.Id, action: MonoforumSuggestedPostAction) -> Signal<Never, NoError> {
+            return _internal_monoforumPerformSuggestedPostAction(account: self.account, id: id, action: action)
+        }
+    }
+}
+
+func _internal_monoforumPerformSuggestedPostAction(account: Account, id: EngineMessage.Id, action: TelegramEngine.Messages.MonoforumSuggestedPostAction) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> Api.InputPeer? in
+        if case let .proposeChanges(amount, timestamp) = action, let message = transaction.getMessage(id) {
+            var attributes: [MessageAttribute] = []
+            attributes.append(SuggestedPostMessageAttribute(
+                amount: amount,
+                timestamp: timestamp,
+                state: nil
+            ))
+            
+            var mediaReference: AnyMediaReference?
+            if let media = message.media.first {
+                mediaReference = .message(message: MessageReference(message), media: media)
+            }
+            
+            let enqueueMessage: EnqueueMessage = .message(
+                text: message.text,
+                attributes: attributes,
+                inlineStickers: [:],
+                mediaReference: mediaReference,
+                threadId: message.threadId,
+                replyToMessageId: EngineMessageReplySubject(messageId: message.id, quote: nil),
+                replyToStoryId: nil,
+                localGroupingKey: nil,
+                correlationId: nil,
+                bubbleUpEmojiOrStickersets: []
+            )
+            let _ = enqueueMessages(transaction: transaction, account: account, peerId: id.peerId, messages: [(true, enqueueMessage)])
+        }
+        
+        return transaction.getPeer(id.peerId).flatMap(apiInputPeer)
+    }
+    |> mapToSignal { inputPeer -> Signal<Never, NoError> in
+        guard let inputPeer else {
+            return .complete()
+        }
+        if id.namespace != Namespaces.Message.Cloud {
+            return .complete()
+        }
+        
+        var flags: Int32 = 0
+        var timestamp: Int32?
+        var rejectComment: String?
+        switch action {
+        case let .approve(timestampValue):
+            timestamp = timestampValue
+            if timestamp != nil {
+                flags |= 1 << 0
+            }
+        case let .reject(commentValue):
+            flags |= 1 << 1
+            rejectComment = commentValue
+            if rejectComment != nil {
+                flags |= 1 << 2
+            }
+        case .proposeChanges:
+            flags |= 1 << 1
+        }
+        return account.network.request(Api.functions.messages.toggleSuggestedPostApproval(flags: flags, peer: inputPeer, msgId: id.id, scheduleDate: timestamp, rejectComment: rejectComment))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { updates -> Signal<Never, NoError> in
+            if let updates {
+                account.stateManager.addUpdates(updates)
+            }
+            
+            return .complete()
+        }
     }
 }

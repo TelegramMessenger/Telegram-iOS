@@ -557,7 +557,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1098720356] = { return Api.MediaArea.parse_mediaAreaVenue($0) }
     dict[1235637404] = { return Api.MediaArea.parse_mediaAreaWeather($0) }
     dict[-808853502] = { return Api.MediaAreaCoordinates.parse_mediaAreaCoordinates($0) }
-    dict[-356721331] = { return Api.Message.parse_message($0) }
+    dict[-1743401272] = { return Api.Message.parse_message($0) }
     dict[-1868117372] = { return Api.Message.parse_messageEmpty($0) }
     dict[2055212554] = { return Api.Message.parse_messageService($0) }
     dict[-872240531] = { return Api.MessageAction.parse_messageActionBoostApply($0) }
@@ -607,6 +607,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1192749220] = { return Api.MessageAction.parse_messageActionStarGift($0) }
     dict[775611918] = { return Api.MessageAction.parse_messageActionStarGiftUnique($0) }
     dict[1474192222] = { return Api.MessageAction.parse_messageActionSuggestProfilePhoto($0) }
+    dict[-1354584535] = { return Api.MessageAction.parse_messageActionSuggestedPostApproval($0) }
     dict[-940721021] = { return Api.MessageAction.parse_messageActionTodoAppendTasks($0) }
     dict[-864265079] = { return Api.MessageAction.parse_messageActionTodoCompletions($0) }
     dict[228168278] = { return Api.MessageAction.parse_messageActionTopicCreate($0) }
@@ -999,6 +1000,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1870436597] = { return Api.StoryView.parse_storyViewPublicForward($0) }
     dict[-1116418231] = { return Api.StoryView.parse_storyViewPublicRepost($0) }
     dict[-1923523370] = { return Api.StoryViews.parse_storyViews($0) }
+    dict[-1779537299] = { return Api.SuggestedPost.parse_suggestedPost($0) }
     dict[1964978502] = { return Api.TextWithEntities.parse_textWithEntities($0) }
     dict[-1609668650] = { return Api.Theme.parse_theme($0) }
     dict[-94849324] = { return Api.ThemeSettings.parse_themeSettings($0) }
@@ -2201,6 +2203,8 @@ public extension Api {
             case let _1 as Api.StoryView:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.StoryViews:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.SuggestedPost:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.TextWithEntities:
                 _1.serialize(buffer, boxed)

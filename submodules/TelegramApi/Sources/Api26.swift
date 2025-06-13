@@ -531,6 +531,50 @@ public extension Api {
     }
 }
 public extension Api {
+    enum SuggestedPost: TypeConstructorDescription {
+        case suggestedPost(flags: Int32, starsAmount: Int64, scheduleDate: Int32?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .suggestedPost(let flags, let starsAmount, let scheduleDate):
+                    if boxed {
+                        buffer.appendInt32(-1779537299)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(starsAmount, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(scheduleDate!, buffer: buffer, boxed: false)}
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .suggestedPost(let flags, let starsAmount, let scheduleDate):
+                return ("suggestedPost", [("flags", flags as Any), ("starsAmount", starsAmount as Any), ("scheduleDate", scheduleDate as Any)])
+    }
+    }
+    
+        public static func parse_suggestedPost(_ reader: BufferReader) -> SuggestedPost? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int32?
+            if Int(_1!) & Int(1 << 0) != 0 {_3 = reader.readInt32() }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.SuggestedPost.suggestedPost(flags: _1!, starsAmount: _2!, scheduleDate: _3)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum TextWithEntities: TypeConstructorDescription {
         case textWithEntities(text: String, entities: [Api.MessageEntity])
     

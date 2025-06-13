@@ -111,6 +111,67 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
         }
     }
     
+    public enum SuggestedPostApprovalStatus: PostboxCoding, Equatable {
+        public enum RejectionReason {
+            case generic
+            case lowBalance
+        }
+        
+        case approved(timestamp: Int32?, amount: Int64)
+        case rejected(reason: RejectionReason, comment: String?)
+        
+        public init(decoder: PostboxDecoder) {
+            switch decoder.decodeInt32ForKey("_t", orElse: 0) {
+            case 0:
+                self = .approved(
+                    timestamp: decoder.decodeOptionalInt32ForKey("ts"),
+                    amount: decoder.decodeInt64ForKey("am", orElse: 0)
+                )
+            case 1:
+                let reason: RejectionReason
+                switch decoder.decodeInt32ForKey("rs", orElse: 0) {
+                case 0:
+                    reason = .generic
+                case 1:
+                    reason = .lowBalance
+                default:
+                    assertionFailure()
+                    reason = .generic
+                }
+                self = .rejected(reason: reason, comment: decoder.decodeOptionalStringForKey("com"))
+            default:
+                assertionFailure()
+                self = .rejected(reason: .generic, comment: nil)
+            }
+        }
+        
+        public func encode(_ encoder: PostboxEncoder) {
+            switch self {
+            case let .approved(timestamp, amount):
+                encoder.encodeInt32(0, forKey: "_t")
+                if let timestamp {
+                    encoder.encodeInt32(timestamp, forKey: "ts")
+                } else {
+                    encoder.encodeNil(forKey: "ts")
+                }
+                encoder.encodeInt64(amount, forKey: "am")
+            case let .rejected(reason, comment):
+                encoder.encodeInt32(1, forKey: "_t")
+                switch reason {
+                case .generic:
+                    encoder.encodeInt32(0, forKey: "rs")
+                case .lowBalance:
+                    encoder.encodeInt32(1, forKey: "rs")
+                }
+                if let comment {
+                    encoder.encodeString(comment, forKey: "com")
+                } else {
+                    encoder.encodeNil(forKey: "com")
+                }
+            }
+        }
+    }
+    
     case unknown
     case groupCreated(title: String)
     case addedMembers(peerIds: [PeerId])
@@ -162,6 +223,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case conferenceCall(ConferenceCall)
     case todoCompletions(completed: [Int32], incompleted: [Int32])
     case todoAppendTasks([TelegramMediaTodo.Item])
+    case suggestedPostApprovalStatus(status: SuggestedPostApprovalStatus)
     
     public init(decoder: PostboxDecoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
@@ -306,6 +368,9 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             self = .todoAppendTasks(
                 decoder.decodeObjectArrayWithDecoderForKey("tasks")
             )
+        case 51:
+            let status: SuggestedPostApprovalStatus? = decoder.decodeObjectForKey("st", decoder: { SuggestedPostApprovalStatus(decoder: $0) }) as? SuggestedPostApprovalStatus
+            self = .suggestedPostApprovalStatus(status: status ?? .rejected(reason: .generic, comment: nil))
         default:
             self = .unknown
         }
@@ -716,6 +781,9 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
         case let .todoAppendTasks(tasks):
             encoder.encodeInt32(50, forKey: "_rawValue")
             encoder.encodeObjectArray(tasks, forKey: "tasks")
+        case let .suggestedPostApprovalStatus(status):
+            encoder.encodeInt32(51, forKey: "_rawValue")
+            encoder.encodeObject(status, forKey: "st")
         }
     }
     

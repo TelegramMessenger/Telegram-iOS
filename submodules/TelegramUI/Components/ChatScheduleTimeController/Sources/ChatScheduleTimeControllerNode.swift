@@ -100,10 +100,16 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, ASScrollViewDel
             title = self.presentationData.strings.Conversation_ScheduleMessage_Title
         case .reminders:
             title = self.presentationData.strings.Conversation_SetReminder_Title
-        case .suggestPost:
-            //TODO:localize
-            title = "Time"
-            text = "Set the date and time you want\nyour message to be published."
+        case let .suggestPost(needsTime):
+            if needsTime {
+                //TODO:localize
+                title = "Time"
+                text = "Set the date and time you want\nthis message to be published."
+            } else {
+                //TODO:localize
+                title = "Time"
+                text = "Set the date and time you want\nyour message to be published."
+            }
         }
         
         self.titleNode = ASTextNode()
@@ -169,7 +175,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, ASScrollViewDel
         self.contentContainerNode.addSubnode(self.doneButton)
         if case .scheduledMessages(true) = self.mode {
             self.contentContainerNode.addSubnode(self.onlineButton)
-        } else if case .suggestPost = self.mode {
+        } else if case let .suggestPost(needsTime) = self.mode, !needsTime {
             self.contentContainerNode.addSubnode(self.onlineButton)
         }
         
@@ -425,7 +431,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, ASScrollViewDel
         var buttonOffset: CGFloat = 0.0
         if case .scheduledMessages(true) = self.mode {
             buttonOffset += 64.0
-        } else if case .suggestPost = self.mode {
+        } else if case let .suggestPost(needsTime) = self.mode, !needsTime {
             buttonOffset += 64.0
         }
         

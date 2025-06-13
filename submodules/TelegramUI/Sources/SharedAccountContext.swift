@@ -3731,6 +3731,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mode = .paidMessages(current: current.value, minValue: minValue.value, fractionAfterCommission: fractionAfterCommission, kind: kind, completion: completion)
         case let .postSuggestion(channel, current, timestamp, completion):
             mode = .suggestedPost(mode: .sender(channel: channel), price: current.value, timestamp: timestamp, completion: completion)
+        case let .postSuggestionModification(current, timestamp, completion):
+            mode = .suggestedPost(mode: .admin, price: current.value, timestamp: timestamp, completion: completion)
         }
         return StarsWithdrawScreen(context: context, mode: mode)
     }
