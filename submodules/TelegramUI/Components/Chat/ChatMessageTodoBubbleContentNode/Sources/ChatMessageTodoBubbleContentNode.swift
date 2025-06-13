@@ -1242,10 +1242,73 @@ public class ChatMessageTodoBubbleContentNode: ChatMessageBubbleContentNode {
         return nil
     }
     
-    public func taskItemFrame(id: Int32) -> CGRect? {
+    private var taskHighlightingNode: LinkHighlightingNode?
+    public func updateTaskHighlightState(id: Int32?, color: UIColor, animated: Bool) {
+        var rectsSet: [CGRect] = []
         for node in self.optionNodes {
             if node.option?.id == id {
-                return node.frame
+                rectsSet.append(node.frame.insetBy(dx: 3.0 - UIScreenPixel, dy: 2.0 - UIScreenPixel))
+            }
+        }
+        if !rectsSet.isEmpty {
+            let rects = rectsSet
+            let taskHighlightingNode: LinkHighlightingNode
+            if let current = self.taskHighlightingNode {
+                taskHighlightingNode = current
+            } else {
+                taskHighlightingNode = LinkHighlightingNode(color: color)
+                taskHighlightingNode.innerRadius = 0.0
+                taskHighlightingNode.outerRadius = 0.0
+                self.taskHighlightingNode = taskHighlightingNode
+                self.insertSubnode(taskHighlightingNode, belowSubnode: self.buttonNode)
+            }
+            taskHighlightingNode.frame = self.bounds
+            taskHighlightingNode.updateRects(rects)
+        } else {
+            if let taskHighlightingNode = self.taskHighlightingNode {
+                self.taskHighlightingNode = nil
+                if animated {
+                    taskHighlightingNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak taskHighlightingNode] _ in
+                        taskHighlightingNode?.removeFromSupernode()
+                    })
+                } else {
+                    taskHighlightingNode.removeFromSupernode()
+                }
+            }
+        }
+    }
+    
+    public func animateTaskItemHighlightIn(id: Int32, sourceFrame: CGRect, transition: ContainedViewLayoutTransition) -> CGRect? {
+        if let taskHighlightingNode = self.taskHighlightingNode {
+            var currentRect = CGRect()
+            for rect in taskHighlightingNode.rects {
+                if currentRect.isEmpty {
+                    currentRect = rect
+                } else {
+                    currentRect = currentRect.union(rect)
+                }
+            }
+            if !currentRect.isEmpty {
+                currentRect = currentRect.insetBy(dx: -taskHighlightingNode.inset, dy: -taskHighlightingNode.inset)
+                let innerRect = currentRect.offsetBy(dx: taskHighlightingNode.frame.minX, dy: taskHighlightingNode.frame.minY)
+                
+                taskHighlightingNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1, delay: 0.04)
+                
+                let fromScale = CGPoint(x: sourceFrame.width / innerRect.width, y: sourceFrame.height / innerRect.height)
+                
+                var fromTransform = CATransform3DIdentity
+                let fromOffset = CGPoint(x: sourceFrame.midX - innerRect.midX, y: sourceFrame.midY - innerRect.midY)
+                
+                fromTransform = CATransform3DTranslate(fromTransform, fromOffset.x, fromOffset.y, 0.0)
+                
+                fromTransform = CATransform3DTranslate(fromTransform, -taskHighlightingNode.bounds.width * 0.5 + currentRect.midX, -taskHighlightingNode.bounds.height * 0.5 + currentRect.midY, 0.0)
+                fromTransform = CATransform3DScale(fromTransform, fromScale.x, fromScale.y, 1.0)
+                fromTransform = CATransform3DTranslate(fromTransform, taskHighlightingNode.bounds.width * 0.5 - currentRect.midX, taskHighlightingNode.bounds.height * 0.5 - currentRect.midY, 0.0)
+                
+                taskHighlightingNode.transform = fromTransform
+                transition.updateTransform(node: taskHighlightingNode, transform: CGAffineTransformIdentity)
+                
+                return currentRect.offsetBy(dx: taskHighlightingNode.frame.minX, dy: taskHighlightingNode.frame.minY)
             }
         }
         return nil

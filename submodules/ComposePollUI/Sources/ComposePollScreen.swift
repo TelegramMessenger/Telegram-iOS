@@ -165,6 +165,9 @@ final class ComposePollScreenComponent: Component {
         
         private var currentEditingTag: AnyObject?
         
+        private var reorderRecognizer: ReorderGestureRecognizer?
+        private var reorderingItem: (id: AnyHashable, snapshotView: UIView, backgroundView: UIView, initialPosition: CGPoint, position: CGPoint)?
+        
         override init(frame: CGRect) {
             self.scrollView = UIScrollView()
             self.scrollView.showsVerticalScrollIndicator = true
@@ -181,6 +184,39 @@ final class ComposePollScreenComponent: Component {
             
             self.scrollView.delegate = self
             self.addSubview(self.scrollView)
+            
+            let reorderRecognizer = ReorderGestureRecognizer(
+                shouldBegin: { [weak self] point in
+                    guard let self, let (id, item) = self.item(at: point) else {
+                        return (allowed: false, requiresLongPress: false, id: nil, item: nil)
+                    }
+                    return (allowed: true, requiresLongPress: false, id: id, item: item)
+                },
+                willBegin: { point in
+                },
+                began: { [weak self] item in
+                    guard let self else {
+                        return
+                    }
+                    self.setReorderingItem(item: item)
+                },
+                ended: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.setReorderingItem(item: nil)
+                },
+                moved: { [weak self] distance in
+                    guard let self else {
+                        return
+                    }
+                    self.moveReorderingItem(distance: distance)
+                },
+                isActiveUpdated: { _ in
+                }
+            )
+            self.reorderRecognizer = reorderRecognizer
+            self.addGestureRecognizer(reorderRecognizer)
         }
         
         required init?(coder: NSCoder) {
@@ -193,6 +229,114 @@ final class ComposePollScreenComponent: Component {
 
         func scrollToTop() {
             self.scrollView.setContentOffset(CGPoint(), animated: true)
+        }
+        
+        private func item(at point: CGPoint) -> (AnyHashable, ComponentView<Empty>)? {
+            let localPoint = self.pollOptionsSectionContainer.convert(point, from: self)
+            for (id, itemView) in self.pollOptionsSectionContainer.itemViews {
+                if let view = itemView.contents.view as? ListComposePollOptionComponent.View, !view.isRevealed {
+                    let viewFrame = view.convert(view.bounds, to: self.pollOptionsSectionContainer)
+                    let iconFrame = CGRect(origin: CGPoint(x: viewFrame.maxX - viewFrame.height, y: viewFrame.minY), size: CGSize(width: viewFrame.height, height: viewFrame.height))
+                    if iconFrame.contains(localPoint) {
+                        return (id, itemView.contents)
+                    }
+                }
+            }
+            return nil
+        }
+        
+        func setReorderingItem(item: AnyHashable?) {
+            guard let environment = self.environment else {
+                return
+            }
+            var mappedItem: (AnyHashable, ComponentView<Empty>)?
+            for (id, itemView) in self.pollOptionsSectionContainer.itemViews {
+                if id == item {
+                    mappedItem = (id, itemView.contents)
+                    break
+                }
+            }
+            if self.reorderingItem?.id != mappedItem?.0 {
+                if let (id, visibleItem) = mappedItem, let view = visibleItem.view, !view.isHidden, let viewSuperview = view.superview, let snapshotView = view.snapshotView(afterScreenUpdates: false) {
+                    let mappedCenter = viewSuperview.convert(view.center, to: self.scrollView)
+                    
+                    let wrapperView = UIView()
+                    wrapperView.alpha = 0.8
+                    wrapperView.frame = CGRect(origin: mappedCenter.offsetBy(dx: -snapshotView.bounds.width / 2.0, dy: -snapshotView.bounds.height / 2.0), size: snapshotView.bounds.size)
+                    
+                    let theme = environment.theme.withModalBlocksBackground()
+                    let backgroundView = UIImageView(image: generateReorderingBackgroundImage(backgroundColor: theme.list.itemBlocksBackgroundColor))
+                    backgroundView.frame = wrapperView.bounds.insetBy(dx: -10.0, dy: -10.0)
+                    snapshotView.frame = snapshotView.bounds
+                    
+                    wrapperView.addSubview(backgroundView)
+                    wrapperView.addSubview(snapshotView)
+                    
+                    backgroundView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    wrapperView.transform = CGAffineTransformMakeScale(1.04, 1.04)
+                    wrapperView.layer.animateScale(from: 1.0, to: 1.04, duration: 0.2)
+                    
+                    self.scrollView.addSubview(wrapperView)
+                    self.reorderingItem = (id, wrapperView, backgroundView, mappedCenter, mappedCenter)
+                    self.state?.updated()
+                } else {
+                    if let reorderingItem = self.reorderingItem {
+                        self.reorderingItem = nil
+                        for (itemId, itemView) in self.pollOptionsSectionContainer.itemViews {
+                            if itemId == reorderingItem.id, let view = itemView.contents.view {
+                                let viewFrame = view.convert(view.bounds, to: self)
+                                let transition = ComponentTransition.spring(duration: 0.3)
+                                transition.setPosition(view: reorderingItem.snapshotView, position: viewFrame.center)
+                                transition.setAlpha(view: reorderingItem.backgroundView, alpha: 0.0, completion: { _ in
+                                    reorderingItem.snapshotView.removeFromSuperview()
+                                    self.state?.updated()
+                                })
+                                transition.setScale(view: reorderingItem.snapshotView, scale: 1.0)
+                                break
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        func moveReorderingItem(distance: CGPoint) {
+            if let (id, snapshotView, backgroundView, initialPosition, _) = self.reorderingItem {
+                let targetPosition = CGPoint(x: initialPosition.x + distance.x, y: initialPosition.y + distance.y)
+                self.reorderingItem = (id, snapshotView, backgroundView, initialPosition, targetPosition)
+                
+                snapshotView.center = targetPosition
+                
+                for (itemId, itemView) in self.pollOptionsSectionContainer.itemViews {
+                    if itemId == id {
+                        continue
+                    }
+                    if let view = itemView.contents.view {
+                        let viewFrame = view.convert(view.bounds, to: self)
+                        if viewFrame.contains(targetPosition) {
+                            if let targetIndex = self.pollOptions.firstIndex(where: { AnyHashable($0.id) == itemId }), let reorderingItem = self.pollOptions.first(where: { AnyHashable($0.id) == id }) {
+                                self.reorderIfPossible(item: reorderingItem, toIndex: targetIndex)
+                            }
+                            break
+                        }
+                    }
+                }
+            }
+        }
+        
+        private func reorderIfPossible(item: PollOption, toIndex: Int) {
+            let targetItem = self.pollOptions[toIndex]
+            guard targetItem.textInputState.hasText else {
+                return
+            }
+            if let fromIndex = self.pollOptions.firstIndex(where: { $0.id == item.id }) {
+                self.pollOptions[toIndex] = item
+                self.pollOptions[fromIndex] = targetItem
+                
+                HapticFeedback().tap()
+                
+                self.state?.updated(transition: .spring(duration: 0.4))
+            }
         }
         
         func validatedInput() -> ComposedPoll? {
@@ -799,6 +943,7 @@ final class ComposePollScreenComponent: Component {
                     },
                     assumeIsEditing: self.inputMediaNodeTargetTag === pollOption.textFieldTag,
                     characterLimit: component.initialData.maxPollOptionLength,
+                    canReorder: true,
                     emptyLineHandling: .notAllowed,
                     returnKeyAction: { [weak self] in
                         guard let self else {
@@ -848,6 +993,13 @@ final class ComposePollScreenComponent: Component {
                         }
                         self.state?.updated(transition: .spring(duration: 0.4))
                     },
+                    deleteAction: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.pollOptions.removeAll(where: { $0.id == optionId })
+                        self.state?.updated(transition: .spring(duration: 0.4))
+                    },
                     tag: pollOption.textFieldTag
                 ))))
                 
@@ -878,6 +1030,12 @@ final class ComposePollScreenComponent: Component {
                     size: itemSize,
                     transition: itemTransition
                 ))
+                
+                var isReordering = false
+                if let reorderingItem = self.reorderingItem, itemId == reorderingItem.id {
+                    isReordering = true
+                }
+                itemView.contents.view?.isHidden = isReordering
             }
             
             for i in 0 ..< self.pollOptions.count {

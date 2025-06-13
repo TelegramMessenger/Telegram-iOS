@@ -1753,6 +1753,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         self?.webView?.sendEvent(name: "secure_storage_cleared", data: data.string)
                     })
                 }
+            case "web_app_hide_keyboard":
+                self.view.window?.endEditing(true)
             default:
                 break
             }

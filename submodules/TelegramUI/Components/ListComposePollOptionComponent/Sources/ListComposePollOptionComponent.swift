@@ -86,6 +86,7 @@ public final class ListComposePollOptionComponent: Component {
     public let inputMode: InputMode?
     public let alwaysDisplayInputModeSelector: Bool
     public let toggleInputMode: (() -> Void)?
+    public let deleteAction: (() -> Void)?
     public let tag: AnyObject?
     
     public init(
@@ -107,6 +108,7 @@ public final class ListComposePollOptionComponent: Component {
         inputMode: InputMode?,
         alwaysDisplayInputModeSelector: Bool = false,
         toggleInputMode: (() -> Void)?,
+        deleteAction: (() -> Void)? = nil,
         tag: AnyObject? = nil
     ) {
         self.externalState = externalState
@@ -127,6 +129,7 @@ public final class ListComposePollOptionComponent: Component {
         self.inputMode = inputMode
         self.alwaysDisplayInputModeSelector = alwaysDisplayInputModeSelector
         self.toggleInputMode = toggleInputMode
+        self.deleteAction = deleteAction
         self.tag = tag
     }
     
@@ -176,7 +179,9 @@ public final class ListComposePollOptionComponent: Component {
         if lhs.alwaysDisplayInputModeSelector != rhs.alwaysDisplayInputModeSelector {
             return false
         }
-
+        if (lhs.deleteAction == nil) != (rhs.deleteAction == nil) {
+            return false
+        }
         return true
     }
     
@@ -253,13 +258,127 @@ public final class ListComposePollOptionComponent: Component {
         }
     }
     
-    public final class View: UIView, ListSectionComponent.ChildView, ComponentTaggedView {
+    private final class DeleteRevealView: UIView {
+        private let backgroundView: UIView
+        
+        private let _title: String
+        private let title = ComponentView<Empty>()
+        
+        private var revealOffset: CGFloat = 0.0
+                
+        var currentSize = CGSize()
+        
+        var tapped: (Bool) -> Void = { _ in }
+        
+        init(title: String, color: UIColor) {
+            self._title = title
+            
+            self.backgroundView = UIView()
+            self.backgroundView.backgroundColor = color
+            self.backgroundView.isUserInteractionEnabled = false
+                
+            super.init(frame: .zero)
+                        
+            self.clipsToBounds = true
+            
+            self.addSubview(self.backgroundView)
+            
+            let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.handleTap(_:)))
+            self.addGestureRecognizer(tapRecognizer)
+        }
+        
+        required public init?(coder: NSCoder) {
+            preconditionFailure()
+        }
+        
+        @objc private func handleTap(_ gestureRecignizer: UITapGestureRecognizer) {
+            let location = gestureRecignizer.location(in: self)
+            if self.backgroundView.frame.contains(location) {
+                self.tapped(true)
+            } else {
+                self.tapped(false)
+            }
+        }
+        
+        override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+            if abs(self.revealOffset) < .ulpOfOne {
+                return false
+            }
+            return super.point(inside: point, with: event)
+        }
+        
+        func updateLayout(availableSize: CGSize, revealOffset: CGFloat, transition: ComponentTransition) -> CGSize {
+            let previousRevealOffset = self.revealOffset
+            self.revealOffset = revealOffset
+            
+            let titleSize = self.title.update(
+                transition: .immediate,
+                component: AnyComponent(
+                    MultilineTextComponent(
+                        text: .plain(
+                            NSAttributedString(
+                                string: self._title,
+                                font: Font.regular(17.0),
+                                textColor: .white
+                            )
+                        )
+                    )
+                ),
+                environment: {},
+                containerSize: availableSize
+            )
+            let size = CGSize(width: max(74.0, titleSize.width + 20.0), height: availableSize.height)
+            let previousRevealFactor = abs(previousRevealOffset) / size.width
+            let revealFactor = abs(revealOffset) / size.width
+            let backgroundWidth = size.width * max(1.0, abs(revealFactor))
+            
+            let previousIsExtended = previousRevealFactor >= 2.0
+            let isExtended = revealFactor >= 2.0
+            var titleTransition = transition
+            if isExtended != previousIsExtended {
+                titleTransition = .spring(duration: 0.3)
+            }
+                                                  
+            if let titleView = self.title.view {
+                if titleView.superview == nil {
+                    self.backgroundView.addSubview(titleView)
+                }
+                let titleFrame = CGRect(
+                    origin: CGPoint(
+                        x: revealFactor > 2.0 ? 10.0 : max(10.0, backgroundWidth - titleSize.width - 10.0),
+                        y: floor((size.height - titleSize.height) / 2.0)
+                    ),
+                    size: titleSize
+                )
+                
+                if titleTransition.animation.isImmediate && titleView.layer.animation(forKey: "position") != nil {   
+                } else {
+                    titleTransition.setFrame(view: titleView, frame: titleFrame)
+                }
+            }
+            
+            let backgroundFrame = CGRect(origin: CGPoint(x: availableSize.width + revealOffset, y: 0.0), size: CGSize(width: backgroundWidth, height: size.height))
+            transition.setFrame(view: self.backgroundView, frame: backgroundFrame)
+            
+            self.currentSize = size
+            
+            return size
+        }
+    }
+    
+    public final class View: UIView, ListSectionComponent.ChildView, ComponentTaggedView, UIGestureRecognizerDelegate {
         private let textField = ComponentView<Empty>()
         
         private var modeSelector: ComponentView<Empty>?
         private var reorderIconView: UIImageView?
         
         private var checkView: CheckView?
+        
+        private var deleteRevealView: DeleteRevealView?
+        private var revealOffset: CGFloat = 0.0
+        public private(set) var isRevealed: Bool = false
+        
+        private var recognizer: RevealOptionsGestureRecognizer?
         
         private var customPlaceholder: ComponentView<Empty>?
         
@@ -293,7 +412,7 @@ public final class ListComposePollOptionComponent: Component {
         
         public var customUpdateIsHighlighted: ((Bool) -> Void)?
         public private(set) var separatorInset: CGFloat = 0.0
-        
+                
         public override init(frame: CGRect) {
             super.init(frame: CGRect())
         }
@@ -330,6 +449,97 @@ public final class ListComposePollOptionComponent: Component {
             }
         }
         
+        override public func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            if let recognizer = self.recognizer, gestureRecognizer == self.recognizer, recognizer.numberOfTouches == 0 {
+                let translation = recognizer.velocity(in: recognizer.view)
+                if abs(translation.y) > 4.0 && abs(translation.y) > abs(translation.x) * 2.5 {
+                    return false
+                }
+            }
+            if gestureRecognizer == self.recognizer, let externalState = self.component?.externalState, !externalState.hasText {
+                return false
+            }
+            return true
+        }
+        
+        @objc private func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
+            guard let component = self.component, component.deleteAction != nil else {
+                return
+            }
+            
+            let translation = gestureRecognizer.translation(in: self)
+            let velocity = gestureRecognizer.velocity(in: self)
+            let revealWidth: CGFloat = self.deleteRevealView?.currentSize.width ?? 74.0
+            
+            switch gestureRecognizer.state {
+            case .began:
+                self.window?.endEditing(true)
+                
+                if self.isRevealed {
+                    let location = gestureRecognizer.location(in: self)
+                    if location.x > self.bounds.width - revealWidth {
+                        gestureRecognizer.isEnabled = false
+                        gestureRecognizer.isEnabled = true
+                        return
+                    }
+                }
+                
+            case .changed:
+                var offset = self.revealOffset + translation.x
+                offset = max(-revealWidth * 6.0, min(0, offset))
+                
+                self.revealOffset = offset
+                self.state?.updated()
+                gestureRecognizer.setTranslation(CGPoint(), in: self)
+                
+            case .ended, .cancelled:
+                var shouldReveal = false
+                
+                if abs(velocity.x) >= 100.0 {
+                    shouldReveal = velocity.x < 0
+                } else {
+                    if self.revealOffset.isZero && self.revealOffset < 0 {
+                        shouldReveal = self.revealOffset < -revealWidth * 0.5
+                    } else if self.isRevealed {
+                        shouldReveal = self.revealOffset < -revealWidth * 0.3
+                    } else {
+                        shouldReveal = self.revealOffset < -revealWidth * 0.5
+                    }
+                }
+                
+                let isExtendedSwipe = self.revealOffset < -revealWidth * 2.0
+
+                if isExtendedSwipe && shouldReveal {
+                    component.deleteAction?()
+                    
+                    self.isRevealed = false
+                    let transition = ComponentTransition(animation: .curve(duration: 0.3, curve: .spring))
+                    self.revealOffset = 0.0
+                    self.state?.updated(transition: transition)
+                } else {
+                    let targetOffset: CGFloat = shouldReveal ? -revealWidth : 0.0
+                    self.isRevealed = shouldReveal
+                    
+                    let transition = ComponentTransition(animation: .curve(duration: 0.3, curve: .spring))
+                    self.revealOffset = targetOffset
+                    self.state?.updated(transition: transition)
+                }
+            default:
+                break
+            }
+        }
+        
+        @objc private func handleTap(_ gestureRecognizer: UITapGestureRecognizer) {
+            guard self.isRevealed else {
+                return
+            }
+            
+            let location = gestureRecognizer.location(in: self)
+            if location.x >= self.bounds.width + self.revealOffset {
+                self.component?.deleteAction?()
+            }
+        }
+                
         func update(component: ListComposePollOptionComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
@@ -405,7 +615,7 @@ public final class ListComposePollOptionComponent: Component {
             )
             
             let size = CGSize(width: availableSize.width, height: textFieldSize.height - 1.0)
-            let textFieldFrame = CGRect(origin: CGPoint(x: leftInset - 16.0, y: 0.0), size: textFieldSize)
+            let textFieldFrame = CGRect(origin: CGPoint(x: leftInset - 16.0 + self.revealOffset, y: 0.0), size: textFieldSize)
             
             if let textFieldView = self.textField.view {
                 if textFieldView.superview == nil {
@@ -437,7 +647,7 @@ public final class ListComposePollOptionComponent: Component {
                     }
                 }
                 let checkSize = CGSize(width: 22.0, height: 22.0)
-                let checkFrame = CGRect(origin: CGPoint(x: floor((leftInset - checkSize.width) * 0.5), y: floor((size.height - checkSize.height) * 0.5)), size: checkSize)
+                let checkFrame = CGRect(origin: CGPoint(x: floor((leftInset - checkSize.width) * 0.5) + self.revealOffset, y: floor((size.height - checkSize.height) * 0.5)), size: checkSize)
                 
                 if animateIn {
                     checkView.frame = CGRect(origin: CGPoint(x: -checkSize.width, y: self.bounds.height == 0.0 ? checkFrame.minY : floor((self.bounds.height - checkSize.height) * 0.5)), size: checkFrame.size)
@@ -475,7 +685,7 @@ public final class ListComposePollOptionComponent: Component {
                     reorderIconSize = icon.size
                 }
                 
-                let reorderIconFrame = CGRect(origin: CGPoint(x: size.width - 14.0 - reorderIconSize.width, y: floor((size.height - reorderIconSize.height) * 0.5)), size: reorderIconSize)
+                let reorderIconFrame = CGRect(origin: CGPoint(x: size.width - 14.0 - reorderIconSize.width + self.revealOffset, y: floor((size.height - reorderIconSize.height) * 0.5)), size: reorderIconSize)
                 reorderIconTransition.setPosition(view: reorderIconView, position: reorderIconFrame.center)
                 reorderIconTransition.setBounds(view: reorderIconView, bounds: CGRect(origin: CGPoint(), size: reorderIconFrame.size))
                 
@@ -539,7 +749,7 @@ public final class ListComposePollOptionComponent: Component {
                     environment: {},
                     containerSize: modeSelectorSize
                 )
-                let modeSelectorFrame = CGRect(origin: CGPoint(x: size.width - rightIconsInset - 4.0 - modeSelectorSize.width, y: floor((size.height - modeSelectorSize.height) * 0.5)), size: modeSelectorSize)
+                let modeSelectorFrame = CGRect(origin: CGPoint(x: size.width - rightIconsInset - 4.0 - modeSelectorSize.width + self.revealOffset, y: floor((size.height - modeSelectorSize.height) * 0.5)), size: modeSelectorSize)
                 if let modeSelectorView = modeSelector.view as? PlainButtonComponent.View {
                     let alphaTransition: ComponentTransition = .easeInOut(duration: 0.2)
                     
@@ -578,6 +788,51 @@ public final class ListComposePollOptionComponent: Component {
                         modeSelectorView.removeFromSuperview()
                     }
                 }
+            }
+            
+            if let deleteAction = component.deleteAction {
+                if self.deleteRevealView == nil {
+                    let deleteRevealView = DeleteRevealView(title: component.strings.Common_Delete, color: component.theme.list.itemDisclosureActions.destructive.fillColor)
+                    deleteRevealView.tapped = { [weak self] action in
+                        guard let self else {
+                            return
+                        }
+                        if action {
+                            deleteAction()
+                        } else {
+                            self.revealOffset = 0.0
+                            self.isRevealed = false
+                            self.state?.updated(transition: .spring(duration: 0.3))
+                        }
+                    }
+                    self.deleteRevealView = deleteRevealView
+                    self.addSubview(deleteRevealView)
+                }
+                
+                if self.recognizer == nil {
+                    let recognizer = RevealOptionsGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
+                    recognizer.delegate = self
+                    self.addGestureRecognizer(recognizer)
+                    self.recognizer = recognizer
+                }
+            } else {
+                if let deleteRevealView = self.deleteRevealView {
+                    self.deleteRevealView = nil
+                    deleteRevealView.removeFromSuperview()
+                }
+                
+                if let panGestureRecognizer = self.recognizer {
+                    self.recognizer = nil
+                    self.removeGestureRecognizer(panGestureRecognizer)
+                }
+                
+                self.isRevealed = false
+                self.revealOffset = 0.0
+            }
+            
+            if let deleteRevealView = self.deleteRevealView {
+                let _ = deleteRevealView.updateLayout(availableSize: size, revealOffset: self.revealOffset, transition: transition)
+                deleteRevealView.frame = CGRect(origin: .zero, size: size)
             }
             
             self.separatorInset = leftInset
@@ -644,5 +899,60 @@ public final class ListComposePollOptionComponent: Component {
     
     public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
+final class RevealOptionsGestureRecognizer: UIPanGestureRecognizer {
+    var validatedGesture = false
+    var firstLocation: CGPoint = CGPoint()
+    
+    var allowAnyDirection = false
+    var lastVelocity: CGPoint = CGPoint()
+    
+    override public init(target: Any?, action: Selector?) {
+        super.init(target: target, action: action)
+        
+        if #available(iOS 13.4, *) {
+            self.allowedScrollTypesMask = .continuous
+        }
+        
+        self.maximumNumberOfTouches = 1
+    }
+    
+    override public func reset() {
+        super.reset()
+        
+        self.validatedGesture = false
+    }
+    
+    func becomeCancelled() {
+        self.state = .cancelled
+    }
+    
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesBegan(touches, with: event)
+        
+        let touch = touches.first!
+        self.firstLocation = touch.location(in: self.view)
+    }
+    
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+        let location = touches.first!.location(in: self.view)
+        let translation = CGPoint(x: location.x - self.firstLocation.x, y: location.y - self.firstLocation.y)
+        
+        if !self.validatedGesture {
+            if !self.allowAnyDirection && translation.x > 0.0 {
+                self.state = .failed
+            } else if abs(translation.y) > 4.0 && abs(translation.y) > abs(translation.x) * 2.5 {
+                self.state = .failed
+            } else if abs(translation.x) > 4.0 && abs(translation.y) * 2.5 < abs(translation.x) {
+                self.validatedGesture = true
+            }
+        }
+        
+        if self.validatedGesture {
+            self.lastVelocity = self.velocity(in: self.view)
+            super.touchesMoved(touches, with: event)
+        }
     }
 }

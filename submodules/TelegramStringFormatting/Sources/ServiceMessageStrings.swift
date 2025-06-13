@@ -1298,7 +1298,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     }
                 }
                 
-                var taskTitle = "DELETED"
+                var taskTitle: String?
                 if let todo {
                     if let completedTaskId = completed.first, let completedTask = todo.items.first(where: { $0.id == completedTaskId }) {
                         taskTitle = completedTask.text
@@ -1306,16 +1306,20 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         taskTitle = incompletedTask.text
                     }
                 }
-                if taskTitle.count > 20 {
-                    taskTitle = taskTitle.prefix(20) + "…"
+                if let taskTitleValue = taskTitle, taskTitleValue.count > 20 {
+                    taskTitle = taskTitleValue.prefix(20) + "…"
                 }
                 
                 if message.author?.id == accountPeerId {
                     let resultString: PresentationStrings.FormattedString
-                    if let _ = completed.first {
-                        resultString = strings.Notification_TodoCompletedYou(taskTitle)
+                    if completed.count > 1 || (completed.count == 1 && taskTitle == nil) {
+                        resultString = strings.Notification_TodoMultipleCompletedYou(strings.Notification_TodoTasks(Int32(completed.count)))
+                    } else if let _ = completed.first {
+                        resultString = strings.Notification_TodoCompletedYou(taskTitle ?? "")
+                    } else if incompleted.count > 1 || (incompleted.count == 1 && taskTitle == nil) {
+                        resultString = strings.Notification_TodoMultipleIncompletedYou(strings.Notification_TodoTasks(Int32(incompleted.count)))
                     } else if let _ = incompleted.first {
-                        resultString = strings.Notification_TodoIncompletedYou(taskTitle)
+                        resultString = strings.Notification_TodoIncompletedYou(taskTitle ?? "")
                     } else {
                         resultString = strings.Notification_TodoCompletedYou("")
                     }
@@ -1327,10 +1331,14 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     attributes[1] = boldAttributes
                     
                     let resultString: PresentationStrings.FormattedString
-                    if let _ = completed.first {
-                        resultString = strings.Notification_TodoCompleted(peerName, taskTitle)
+                    if completed.count > 1 {
+                        resultString = strings.Notification_TodoMultipleCompleted(peerName, strings.Notification_TodoTasks(Int32(completed.count)))
+                    } else if let _ = completed.first {
+                        resultString = strings.Notification_TodoCompleted(peerName, taskTitle ?? "")
+                    } else if incompleted.count > 1 {
+                        resultString = strings.Notification_TodoMultipleIncompleted(peerName, strings.Notification_TodoTasks(Int32(incompleted.count)))
                     } else if let _ = incompleted.first {
-                        resultString = strings.Notification_TodoIncompleted(peerName, taskTitle)
+                        resultString = strings.Notification_TodoIncompleted(peerName, taskTitle ?? "")
                     } else {
                         resultString = strings.Notification_TodoCompleted(peerName, "")
                     }
@@ -1359,7 +1367,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         }
                         resultString = strings.Notification_TodoAddedTaskYou(taskTitle, todoTitle)
                     } else {
-                        resultString = strings.Notification_TodoAddedMultipleTasksYou(strings.Notification_TodoTasks(Int32(tasks.count)), todoTitle)
+                        resultString = strings.Notification_TodoAddedMultipleTasksYou(strings.Notification_TodoAddedTasks(Int32(tasks.count)), todoTitle)
                     }
                     attributedString = addAttributesToStringWithRanges(resultString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes, 1: boldAttributes])
                 } else {
@@ -1376,7 +1384,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         }
                         resultString = strings.Notification_TodoAddedTask(peerName, taskTitle, todoTitle)
                     } else {
-                        resultString = strings.Notification_TodoAddedMultipleTasks(peerName, strings.Notification_TodoTasks(Int32(tasks.count)), todoTitle)
+                        resultString = strings.Notification_TodoAddedMultipleTasks(peerName, strings.Notification_TodoAddedTasks(Int32(tasks.count)), todoTitle)
                     }
                     attributedString = addAttributesToStringWithRanges(resultString._tuple, body: bodyAttributes, argumentAttributes: attributes)
                 }

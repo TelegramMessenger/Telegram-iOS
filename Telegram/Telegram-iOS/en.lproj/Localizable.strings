@@ -14428,11 +14428,18 @@ Sorry for the inconvenience.";
 
 "Notification.TodoCompleted" = "%1$@ marked \"%2$@\" as done.";
 "Notification.TodoIncompleted" = "%1$@ marked \"%2$@\" as undone.";
-"Notification.TodoAddedTask" = "%1$@ added a new task \"%2$@\" to \"%3$@\".";
-"Notification.TodoAddedMultipleTasks" = "%1$@ added %2$@ to \"%3$@\".";
-
+"Notification.TodoMultipleCompleted" = "%1$@ marked %2$@ as done.";
+"Notification.TodoMultipleIncompleted" = "%1$@ marked %2$@ as undone.";
 "Notification.TodoCompletedYou" = "You marked \"%1$@\" as done.";
 "Notification.TodoIncompletedYou" = "You marked \"%1$@\" as not done.";
+"Notification.TodoMultipleCompletedYou" = "You marked %1$@ as done.";
+"Notification.TodoMultipleIncompletedYou" = "You marked %1$@ as not done.";
+
+"Notification.TodoAddedTasks_1" = "%@ task";
+"Notification.TodoAddedTasks_any" = "%@ tasks";
+
+"Notification.TodoAddedTask" = "%1$@ added a new task \"%2$@\" to \"%3$@\".";
+"Notification.TodoAddedMultipleTasks" = "%1$@ added %2$@ to \"%3$@\".";
 "Notification.TodoAddedTaskYou" = "You added a new task \"%1$@\" to \"%2$@\".";
 "Notification.TodoAddedMultipleTasksYou" = "You added %1$@ to \"%2$@\".";
 
