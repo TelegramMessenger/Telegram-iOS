@@ -4464,11 +4464,6 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     }
     
     func sendCurrentMessage(silentPosting: Bool? = nil, scheduleTime: Int32? = nil, postpone: Bool = false, messageEffect: ChatSendMessageEffect? = nil, completion: @escaping () -> Void = {}) {
-        if let postSuggestionState = self.chatPresentationInterfaceState.interfaceState.postSuggestionState, postSuggestionState.price == 0 {
-            self.interfaceInteraction?.presentSuggestPostOptions()
-            return
-        }
-        
         if let textInputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode {
             self.historyNode.justSentTextMessage = true
             

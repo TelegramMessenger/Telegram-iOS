@@ -161,16 +161,32 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
         }
     }
     
-    class func asyncLayout(_ maybeNode: ChatMessageActionButtonNode?) -> (_ context: AccountContext, _ theme: ChatPresentationThemeData, _ bubbleCorners: PresentationChatBubbleCorners, _ strings: PresentationStrings, _ backgroundNode: WallpaperBackgroundNode?, _ message: Message, _ button: ReplyMarkupButton, _ constrainedWidth: CGFloat, _ position: MessageBubbleActionButtonPosition) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageActionButtonNode))) {
+    class func asyncLayout(_ maybeNode: ChatMessageActionButtonNode?) -> (_ context: AccountContext, _ theme: ChatPresentationThemeData, _ bubbleCorners: PresentationChatBubbleCorners, _ strings: PresentationStrings, _ backgroundNode: WallpaperBackgroundNode?, _ message: Message, _ button: ReplyMarkupButton, _ customIcon: ChatMessageActionButtonsNode.CustomIcon?, _ constrainedWidth: CGFloat, _ position: MessageBubbleActionButtonPosition) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageActionButtonNode))) {
         let titleLayout = TextNode.asyncLayout(maybeNode?.titleNode)
         
-        return { context, theme, bubbleCorners, strings, backgroundNode, message, button, constrainedWidth, position in
+        return { context, theme, bubbleCorners, strings, backgroundNode, message, button, customIcon, constrainedWidth, position in
             let incoming = message.effectivelyIncoming(context.account.peerId)
             let graphics = PresentationResourcesChat.additionalGraphics(theme.theme, wallpaper: theme.wallpaper, bubbleCorners: bubbleCorners)
             
+            let messageTheme = incoming ? theme.theme.chat.message.incoming : theme.theme.chat.message.outgoing
+            
+            let titleColor = bubbleVariableColor(variableColor: messageTheme.actionButtonsTextColor, wallpaper: theme.wallpaper)
+            
             var isStarsPayment = false
             let iconImage: UIImage?
-            switch button.action {
+            var tintColor: UIColor?
+            if let customIcon {
+                switch customIcon {
+                case .suggestedPostReject:
+                    iconImage = PresentationResourcesChat.messageButtonsPostReject(theme.theme)
+                case .suggestedPostApprove:
+                    iconImage = PresentationResourcesChat.messageButtonsPostApprove(theme.theme)
+                case .suggestedPostEdit:
+                    iconImage = PresentationResourcesChat.messageButtonsPostEdit(theme.theme)
+                }
+                tintColor = titleColor
+            } else {
+                switch button.action {
                 case .text:
                     iconImage = incoming ? graphics.chatBubbleActionButtonIncomingMessageIconImage : graphics.chatBubbleActionButtonOutgoingMessageIconImage
                 case let .url(value):
@@ -214,6 +230,7 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                     iconImage = incoming ? graphics.chatBubbleActionButtonIncomingCopyIconImage : graphics.chatBubbleActionButtonOutgoingCopyIconImage
                 default:
                     iconImage = nil
+                }
             }
             
             let sideInset: CGFloat = 8.0
@@ -230,9 +247,6 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                 }
             }
             
-            let messageTheme = incoming ? theme.theme.chat.message.incoming : theme.theme.chat.message.outgoing
-            
-            let titleColor = bubbleVariableColor(variableColor: messageTheme.actionButtonsTextColor, wallpaper: theme.wallpaper)
             let attributedTitle: NSAttributedString
             if isStarsPayment {
                 let updatedTitle = title.replacingOccurrences(of: "⭐️", with: " # ")
@@ -247,9 +261,15 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                 attributedTitle = NSAttributedString(string: title, font: titleFont, textColor: titleColor)
             }
             
-            let (titleSize, titleApply) = titleLayout(TextNodeLayoutArguments(attributedString: attributedTitle, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(44.0, constrainedWidth - minimumSideInset - minimumSideInset), height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets(top: 1.0, left: 0.0, bottom: 1.0, right: 0.0)))
+            var customIconSpaceWidth: CGFloat = 0.0
+            if let iconImage, customIcon != nil {
+                customIconSpaceWidth = 3.0 + iconImage.size.width
+            }
+            
+            let (titleSize, titleApply) = titleLayout(TextNodeLayoutArguments(attributedString: attributedTitle, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(44.0, constrainedWidth - minimumSideInset - minimumSideInset - customIconSpaceWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets(top: 1.0, left: 0.0, bottom: 1.0, right: 0.0)))
+            let contentWidth = titleSize.size.width + sideInset + sideInset + customIconSpaceWidth
 
-            return (titleSize.size.width + sideInset + sideInset, { width in
+            return (contentWidth, { width in
                 return (CGSize(width: width, height: 42.0), { animation in
                     var animation = animation
                     
@@ -361,6 +381,7 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                             node.addSubnode(iconNode)
                         }
                         node.iconNode?.image = iconImage
+                        node.iconNode?.customTintColor = tintColor
                     } else if node.iconNode != nil {
                         node.iconNode?.removeFromSupernode()
                         node.iconNode = nil
@@ -373,7 +394,10 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                         titleNode.isUserInteractionEnabled = false
                     }
                     
-                    let titleFrame = CGRect(origin: CGPoint(x: floor((width - titleSize.size.width) / 2.0), y: floor((42.0 - titleSize.size.height) / 2.0) + 1.0), size: titleSize.size)
+                    var titleFrame = CGRect(origin: CGPoint(x: floor((width - titleSize.size.width) / 2.0), y: floor((42.0 - titleSize.size.height) / 2.0) + 1.0), size: titleSize.size)
+                    if let image = node.iconNode?.image, customIcon != nil {
+                        titleFrame.origin.x = floorToScreenPixels((width - titleSize.size.width - image.size.width - 3.0) * 0.5) + 3.0 + image.size.width
+                    }
                     titleNode.layer.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
                     animation.animator.updatePosition(layer: titleNode.layer, position: CGPoint(x: titleFrame.midX, y: titleFrame.midY), completion: nil)
                     
@@ -381,7 +405,13 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                         buttonView.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: 42.0))
                     }
                     if let iconNode = node.iconNode {
-                        animation.animator.updateFrame(layer: iconNode.layer, frame: CGRect(x: width - 16.0, y: 4.0, width: 12.0, height: 12.0), completion: nil)
+                        let iconFrame: CGRect
+                        if customIcon != nil, let image = iconNode.image {
+                            iconFrame = CGRect(x: titleFrame.minX - 3.0 - image.size.width, y: titleFrame.minY + floorToScreenPixels((titleFrame.height - image.size.height) * 0.5) - 1.0, width: image.size.width, height: image.size.height)
+                        } else {
+                            iconFrame = CGRect(x: width - 16.0, y: 4.0, width: 12.0, height: 12.0)
+                        }
+                        animation.animator.updateFrame(layer: iconNode.layer, frame: iconFrame, completion: nil)
                     }
                     
                     if let (rect, size) = node.absolutePosition {
@@ -399,6 +429,12 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
 }
 
 public final class ChatMessageActionButtonsNode: ASDisplayNode {
+    public enum CustomIcon {
+        case suggestedPostApprove
+        case suggestedPostReject
+        case suggestedPostEdit
+    }
+    
     private var buttonNodes: [ChatMessageActionButtonNode] = []
     
     private var buttonPressedWrapper: ((ReplyMarkupButton) -> Void)?
@@ -435,10 +471,10 @@ public final class ChatMessageActionButtonsNode: ASDisplayNode {
         }
     }
     
-    public class func asyncLayout(_ maybeNode: ChatMessageActionButtonsNode?) -> (_ context: AccountContext, _ theme: ChatPresentationThemeData, _ chatBubbleCorners: PresentationChatBubbleCorners, _ strings: PresentationStrings, _ backgroundNode: WallpaperBackgroundNode?, _ replyMarkup: ReplyMarkupMessageAttribute, _ message: Message, _ constrainedWidth: CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (_ animation: ListViewItemUpdateAnimation) -> ChatMessageActionButtonsNode)) {
+    public class func asyncLayout(_ maybeNode: ChatMessageActionButtonsNode?) -> (_ context: AccountContext, _ theme: ChatPresentationThemeData, _ chatBubbleCorners: PresentationChatBubbleCorners, _ strings: PresentationStrings, _ backgroundNode: WallpaperBackgroundNode?, _ replyMarkup: ReplyMarkupMessageAttribute, _ customIcons: [MemoryBuffer: CustomIcon], _ message: Message, _ constrainedWidth: CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (_ animation: ListViewItemUpdateAnimation) -> ChatMessageActionButtonsNode)) {
         let currentButtonLayouts = maybeNode?.buttonNodes.map { ChatMessageActionButtonNode.asyncLayout($0) } ?? []
         
-        return { context, theme, chatBubbleCorners, strings, backgroundNode, replyMarkup, message, constrainedWidth in
+        return { context, theme, chatBubbleCorners, strings, backgroundNode, replyMarkup, customIcons, message, constrainedWidth in
             let buttonHeight: CGFloat = 42.0
             let buttonSpacing: CGFloat = 2.0
             
@@ -454,6 +490,11 @@ public final class ChatMessageActionButtonsNode: ASDisplayNode {
                 var finalizeRowButtonLayouts: [((CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageActionButtonNode))] = []
                 var rowButtonIndex = 0
                 for button in row.buttons {
+                    var customIcon: CustomIcon?
+                    if case let .callback(_, data) = button.action {
+                        customIcon = customIcons[data]
+                    }
+                    
                     let buttonPosition: MessageBubbleActionButtonPosition
                     if rowIndex == replyMarkup.rows.count - 1 {
                         if row.buttons.count == 1 {
@@ -471,9 +512,9 @@ public final class ChatMessageActionButtonsNode: ASDisplayNode {
                     
                     let prepareButtonLayout: (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageActionButtonNode)))
                     if buttonIndex < currentButtonLayouts.count {
-                        prepareButtonLayout = currentButtonLayouts[buttonIndex](context, theme, chatBubbleCorners, strings, backgroundNode, message, button, maximumButtonWidth, buttonPosition)
+                        prepareButtonLayout = currentButtonLayouts[buttonIndex](context, theme, chatBubbleCorners, strings, backgroundNode, message, button, customIcon, maximumButtonWidth, buttonPosition)
                     } else {
-                        prepareButtonLayout = ChatMessageActionButtonNode.asyncLayout(nil)(context, theme, chatBubbleCorners, strings, backgroundNode, message, button, maximumButtonWidth, buttonPosition)
+                        prepareButtonLayout = ChatMessageActionButtonNode.asyncLayout(nil)(context, theme, chatBubbleCorners, strings, backgroundNode, message, button, customIcon, maximumButtonWidth, buttonPosition)
                     }
                     
                     maximumRowButtonWidth = max(maximumRowButtonWidth, prepareButtonLayout.minimumWidth)

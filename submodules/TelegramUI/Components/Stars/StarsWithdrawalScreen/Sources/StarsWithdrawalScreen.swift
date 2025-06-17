@@ -52,6 +52,7 @@ private final class SheetContent: CombinedComponent {
     
     static var body: (CombinedComponentContext<SheetContent>) -> CGSize {
         let closeButton = Child(Button.self)
+        let balance = Child(BalanceComponent.self)
         let title = Child(Text.self)
         let amountSection = Child(ListSectionComponent.self)
         let amountAdditionalLabel = Child(MultilineTextComponent.self)
@@ -61,7 +62,7 @@ private final class SheetContent: CombinedComponent {
         let balanceValue = Child(MultilineTextComponent.self)
         let balanceIcon = Child(BundleIconComponent.self)
         
-        return { (context: CombinedComponentContext<SheetContent>) -> CGSize in
+        let body: (CombinedComponentContext<SheetContent>) -> CGSize = { (context: CombinedComponentContext<SheetContent>) -> CGSize in
             let environment = context.environment[EnvironmentType.self]
             let component = context.component
             let state = context.state
@@ -79,26 +80,64 @@ private final class SheetContent: CombinedComponent {
             
             let constrainedTitleWidth = context.availableSize.width - 16.0 * 2.0
             
-            let closeImage: UIImage
-            if let (image, theme) = state.cachedCloseImage, theme === environment.theme {
-                closeImage = image
+            if case let .suggestedPost(mode, _, _, _) = component.mode {
+                switch mode {
+                case .sender:
+                    let balance = balance.update(
+                        component: BalanceComponent(
+                            context: component.context,
+                            theme: environment.theme,
+                            strings: environment.strings,
+                            balance: state.balance,
+                            alignment: .right
+                        ),
+                        availableSize: CGSize(width: 200.0, height: 200.0),
+                        transition: .immediate
+                    )
+                    let balanceFrame = CGRect(origin: CGPoint(x: context.availableSize.width - balance.size.width - 15.0, y: floor((56.0 - balance.size.height) * 0.5)), size: balance.size)
+                    context.add(balance
+                        .position(balanceFrame.center)
+                    )
+                case .admin:
+                    break
+                }
+                
+                let closeButton = closeButton.update(
+                    component: Button(
+                        content: AnyComponent(Text(text: environment.strings.Common_Cancel, font: Font.regular(17.0), color: environment.theme.list.itemAccentColor)),
+                        action: {
+                            component.dismiss()
+                        }
+                    ).minSize(CGSize(width: 8.0, height: 44.0)),
+                    availableSize: CGSize(width: 200.0, height: 100.0),
+                    transition: .immediate
+                )
+                let closeFrame = CGRect(origin: CGPoint(x: 16.0, y: floor((56.0 - closeButton.size.height) * 0.5)), size: closeButton.size)
+                context.add(closeButton
+                    .position(closeFrame.center)
+                )
             } else {
-                closeImage = generateCloseButtonImage(backgroundColor: UIColor(rgb: 0x808084, alpha: 0.1), foregroundColor: theme.actionSheet.inputClearButtonColor)!
-                state.cachedCloseImage = (closeImage, theme)
+                let closeImage: UIImage
+                if let (image, theme) = state.cachedCloseImage, theme === environment.theme {
+                    closeImage = image
+                } else {
+                    closeImage = generateCloseButtonImage(backgroundColor: UIColor(rgb: 0x808084, alpha: 0.1), foregroundColor: theme.actionSheet.inputClearButtonColor)!
+                    state.cachedCloseImage = (closeImage, theme)
+                }
+                let closeButton = closeButton.update(
+                    component: Button(
+                        content: AnyComponent(Image(image: closeImage)),
+                        action: {
+                            component.dismiss()
+                        }
+                    ),
+                    availableSize: CGSize(width: 30.0, height: 30.0),
+                    transition: .immediate
+                )
+                context.add(closeButton
+                    .position(CGPoint(x: context.availableSize.width - closeButton.size.width, y: 28.0))
+                )
             }
-            let closeButton = closeButton.update(
-                component: Button(
-                    content: AnyComponent(Image(image: closeImage)),
-                    action: {
-                        component.dismiss()
-                    }
-                ),
-                availableSize: CGSize(width: 30.0, height: 30.0),
-                transition: .immediate
-            )
-            context.add(closeButton
-                .position(CGPoint(x: context.availableSize.width - closeButton.size.width, y: 28.0))
-            )
             
             let titleString: String
             let amountTitle: String
@@ -171,7 +210,7 @@ private final class SheetContent: CombinedComponent {
                 amountTitle = "ENTER A PRICE IN STARS"
                 amountPlaceholder = "Price"
                 
-                minAmount = StarsAmount(value: 1, nanos: 0)
+                minAmount = StarsAmount(value: 0, nanos: 0)
                 //TODO:release
                 maxAmount = StarsAmount(value: resaleConfiguration.paidMessageMaxAmount, nanos: 0)
             }
@@ -510,7 +549,7 @@ private final class SheetContent: CombinedComponent {
                     if let amount = state.amount {
                         buttonString = "Set  # \(presentationStringsFormattedNumber(amount, environment.dateTimeFormat.groupingSeparator))"
                     } else {
-                        buttonString = "Set"
+                        buttonString = "Set  # Free"
                     }
                 case .admin:
                     buttonString = "Update Terms"
@@ -541,6 +580,8 @@ private final class SheetContent: CombinedComponent {
                 if minValue <= 0 {
                     isButtonEnabled = true
                 }
+            } else if case .suggestedPost = context.component.mode {
+                isButtonEnabled = true
             }
             
             let button = button.update(
@@ -558,7 +599,9 @@ private final class SheetContent: CombinedComponent {
                     isEnabled: isButtonEnabled,
                     displaysProgress: false,
                     action: { [weak state] in
-                        if let controller = controller() as? StarsWithdrawScreen, let state, let amount = state.amount {
+                        if let controller = controller() as? StarsWithdrawScreen, let state {
+                            let amount = state.amount ?? StarsAmount.zero
+                            
                             if let minAmount, amount < minAmount {
                                 controller.presentMinAmountTooltip(minAmount.value)
                             } else {
@@ -599,6 +642,8 @@ private final class SheetContent: CombinedComponent {
 
             return contentSize
         }
+        
+        return body
     }
     
     final class State: ComponentState {
@@ -647,7 +692,21 @@ private final class SheetContent: CombinedComponent {
             
             super.init()
             
-            if case .reaction = self.mode, let starsContext = context.starsContext {
+            var needsBalance = false
+            switch self.mode {
+            case .reaction:
+                needsBalance = true
+            case let .suggestedPost(mode, _, _, _):
+                switch mode {
+                case .sender:
+                    needsBalance = true
+                case .admin:
+                    break
+                }
+            default:
+                break
+            }
+            if needsBalance, let starsContext = component.context.starsContext {
                 self.stateDisposable = (starsContext.state
                 |> deliverOnMainQueue).startStrict(next: { [weak self] state in
                     if let self, let balance = state?.balance {
@@ -1064,8 +1123,8 @@ private final class AmountFieldComponent: Component {
                        
             let size = CGSize(width: availableSize.width, height: 44.0)
             
-            let sideInset: CGFloat = 15.0
-            var leftInset: CGFloat = 15.0
+            let sideInset: CGFloat = 16.0
+            var leftInset: CGFloat = 16.0
             if let icon = self.iconView.image {
                 leftInset += icon.size.width + 6.0
                 self.iconView.frame = CGRect(origin: CGPoint(x: 15.0, y: floorToScreenPixels((size.height - icon.size.height) / 2.0)), size: icon.size)
@@ -1188,6 +1247,136 @@ private struct StarsWithdrawConfiguration {
             return StarsWithdrawConfiguration(minWithdrawAmount: minWithdrawAmount, maxPaidMediaAmount: maxPaidMediaAmount, usdWithdrawRate: usdWithdrawRate)
         } else {
             return .defaultValue
+        }
+    }
+}
+
+private final class BalanceComponent: CombinedComponent {
+    let context: AccountContext
+    let theme: PresentationTheme
+    let strings: PresentationStrings
+    let balance: StarsAmount?
+    let alignment: NSTextAlignment
+    
+    init(
+        context: AccountContext,
+        theme: PresentationTheme,
+        strings: PresentationStrings,
+        balance: StarsAmount?,
+        alignment: NSTextAlignment
+    ) {
+        self.context = context
+        self.theme = theme
+        self.strings = strings
+        self.balance = balance
+        self.alignment = alignment
+    }
+    
+    static func ==(lhs: BalanceComponent, rhs: BalanceComponent) -> Bool {
+        if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.strings !== rhs.strings {
+            return false
+        }
+        if lhs.balance != rhs.balance {
+            return false
+        }
+        if lhs.alignment != rhs.alignment {
+            return false
+        }
+        return true
+    }
+    
+    static var body: Body {
+        let title = Child(MultilineTextComponent.self)
+        let balance = Child(MultilineTextComponent.self)
+        let icon = Child(BundleIconComponent.self)
+        
+        return { context in
+            var size = CGSize(width: 0.0, height: 0.0)
+            
+            let title = title.update(
+                component: MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: context.component.strings.SendStarReactions_Balance, font: Font.regular(14.0), textColor: context.component.theme.list.itemPrimaryTextColor))
+                ),
+                availableSize: context.availableSize,
+                transition: .immediate
+            )
+            
+            size.width = max(size.width, title.size.width)
+            size.height += title.size.height
+            
+            let balanceText: String
+            if let value = context.component.balance {
+                balanceText = "\(value.stringValue)"
+            } else {
+                balanceText = "..."
+            }
+            let balance = balance.update(
+                component: MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: balanceText, font: Font.medium(15.0), textColor: context.component.theme.list.itemPrimaryTextColor))
+                ),
+                availableSize: context.availableSize,
+                transition: .immediate
+            )
+            
+            let iconSize = CGSize(width: 18.0, height: 18.0)
+            let icon = icon.update(
+                component: BundleIconComponent(
+                    name: "Premium/Stars/StarLarge",
+                    tintColor: nil
+                ),
+                availableSize: iconSize,
+                transition: context.transition
+            )
+            
+            let titleSpacing: CGFloat = 1.0
+            let iconSpacing: CGFloat = 2.0
+            
+            size.height += titleSpacing
+            
+            size.width = max(size.width, icon.size.width + iconSpacing + balance.size.width)
+            size.height += balance.size.height
+            
+            if context.component.alignment == .right {
+                context.add(
+                    title.position(
+                        title.size.centered(in: CGRect(origin: CGPoint(x: size.width - title.size.width, y: 0.0), size: title.size)).center
+                    )
+                )
+                context.add(
+                    balance.position(
+                        balance.size.centered(in: CGRect(origin: CGPoint(x: size.width - balance.size.width, y: title.size.height + titleSpacing), size: balance.size)).center
+                    )
+                )
+                context.add(
+                    icon.position(
+                        icon.size.centered(in: CGRect(origin: CGPoint(x: size.width - balance.size.width - icon.size.width - 1.0, y: title.size.height + titleSpacing), size: icon.size)).center
+                    )
+                )
+            } else {
+                context.add(
+                    title.position(
+                        title.size.centered(in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: title.size)).center
+                    )
+                )
+                context.add(
+                    balance.position(
+                        balance.size.centered(in: CGRect(origin: CGPoint(x: icon.size.width + iconSpacing, y: title.size.height + titleSpacing), size: balance.size)).center
+                    )
+                )
+                context.add(
+                    icon.position(
+                        icon.size.centered(in: CGRect(origin: CGPoint(x: -1.0, y: title.size.height + titleSpacing), size: icon.size)).center
+                    )
+                )
+            }
+
+            return size
         }
     }
 }
