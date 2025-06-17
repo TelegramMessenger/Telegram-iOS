@@ -4140,6 +4140,7 @@ extension ChatControllerImpl {
                 state = state.updatedInterfaceState { interfaceState in
                     var interfaceState = interfaceState
                     interfaceState = interfaceState.withUpdatedPostSuggestionState(ChatInterfaceState.PostSuggestionState(
+                        editingOriginalMessageId: nil,
                         price: 0,
                         timestamp: nil
                     ))

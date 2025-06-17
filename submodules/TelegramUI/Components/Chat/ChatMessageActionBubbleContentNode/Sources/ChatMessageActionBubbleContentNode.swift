@@ -24,6 +24,7 @@ import ChatMessageItemCommon
 import Markdown
 import ComponentFlow
 import ReactionSelectionNode
+import MultilineTextComponent
 
 private func attributedServiceMessageString(theme: ChatPresentationThemeData, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, message: Message, messageCount: Int? = nil, accountPeerId: PeerId, forForumOverview: Bool) -> NSAttributedString? {
     return universalServiceMessageString(presentationData: (theme.theme, theme.wallpaper), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: EngineMessage(message), messageCount: messageCount, accountPeerId: accountPeerId, forChatList: false, forForumOverview: forForumOverview)
@@ -40,7 +41,7 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
     public let backgroundMaskNode: ASImageNode
     public var linkHighlightingNode: LinkHighlightingNode?
     
-    private var buyStarsTitle: ComponentView<Empty>?
+    private var buyStarsTitle: TextNode?
     private var buyStarsButton: HighlightTrackingButton?
     private var buttonStarsNode: PremiumStarsNode?
     
@@ -162,9 +163,16 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         return mediaHidden
     }
     
+    @objc private func buyStarsPressed() {
+        if let item = self.item {
+            item.controllerInteraction.openStarsPurchase(nil)
+        }
+    }
+    
     override public func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, unboundSize: CGSize?, maxWidth: CGFloat, layout: (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeLabelLayout = TextNodeWithEntities.asyncLayout(self.labelNode)
+        let makeBuyStarsTitleLayout = TextNode.asyncLayout(self.buyStarsTitle)
 
         let cachedMaskBackgroundImage = self.cachedMaskBackgroundImage
         
@@ -322,6 +330,7 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                     
                     let rawString: String
+                    var smallFont = false
                     switch suggestedPost {
                     case .approved:
                         rawString = "🤝 Agreement Reached!"
@@ -336,6 +345,7 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                 }
                             case .lowBalance:
                                 rawString = "⚠️ **Transaction failed** because the user didn't have enough Stars."
+                                smallFont = true
                             }
                         } else {
                             switch reason {
@@ -347,13 +357,15 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                 }
                             case .lowBalance:
                                 rawString = "⚠️ **Transaction failed** because you didn't have enough Stars."
+                                smallFont = true
                             }
                         }
                     }
+                    let baseFontSize: CGFloat = smallFont ? 13.0 : 15.0
                     let titleString = parseMarkdownIntoAttributedString(rawString, attributes: MarkdownAttributes(
-                        body: MarkdownAttributeSet(font: Font.regular(15.0), textColor: primaryTextColor),
-                        bold: MarkdownAttributeSet(font: Font.bold(15.0), textColor: primaryTextColor),
-                        link: MarkdownAttributeSet(font: Font.semibold(15.0), textColor: primaryTextColor),
+                        body: MarkdownAttributeSet(font: Font.regular(baseFontSize), textColor: primaryTextColor),
+                        bold: MarkdownAttributeSet(font: Font.bold(baseFontSize), textColor: primaryTextColor),
+                        link: MarkdownAttributeSet(font: Font.semibold(baseFontSize), textColor: primaryTextColor),
                         linkAttribute: { url in
                             return ("URL", url)
                         }
@@ -427,6 +439,26 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                 } else {
                     backgroundSize.width += 8.0 + 8.0
                     backgroundSize.height += 4.0
+                }
+                
+                var hasBuyStarsButton = false
+                if item.message.effectivelyIncoming(item.context.account.peerId), let suggestedPost, case let .rejected(reason, _) = suggestedPost, case .lowBalance = reason {
+                    hasBuyStarsButton = true
+                }
+                
+                var buyStarsTitleLayoutAndApply: (TextNodeLayout, () -> TextNode)?
+                var buyStarsButtonSize: CGSize?
+                if hasBuyStarsButton {
+                    //TODO:localize
+                    let serviceColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+                    let buyStarsTitleLayoutAndApplyValue = makeBuyStarsTitleLayout(TextNodeLayoutArguments(attributedString:  NSAttributedString(string: "Buy Stars", font: Font.semibold(15.0), textColor: serviceColor.primaryText), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: textAlignment, cutout: nil, insets: UIEdgeInsets()))
+                    buyStarsTitleLayoutAndApply = buyStarsTitleLayoutAndApplyValue
+                    
+                    let buyStarsButtonSizeValue = CGSize(width: buyStarsTitleLayoutAndApplyValue.0.size.width + 20.0 * 2.0, height: buyStarsTitleLayoutAndApplyValue.0.size.height + 8.0 * 2.0)
+                    buyStarsButtonSize = buyStarsButtonSizeValue
+                    
+                    backgroundSize.width = max(backgroundSize.width, buyStarsButtonSizeValue.width + 8.0 * 2.0)
+                    backgroundSize.height += 15.0 + buyStarsButtonSizeValue.height
                 }
                 
                 return (backgroundSize.width, { boundingWidth in
@@ -540,40 +572,66 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                     animation.animator.updatePosition(layer: titleNode.layer, position: titleFrame.origin, completion: nil)
                                     titleNode.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
                                 }
-                                
                             } else {
                                 labelFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((boundingWidth - labelLayout.size.width) / 2.0) - 1.0, y: image != nil ? 2.0 : floorToScreenPixels((backgroundSize.height - labelLayout.size.height) / 2.0) - 1.0), size: labelLayout.size)
                                 contentFrame = labelFrame
                             }
                             
-                            if item.message.effectivelyIncoming(item.context.account.peerId), let suggestedPost, case let .rejected(reason, _) = suggestedPost, case .lowBalance = reason {
-                                let buyStarsTitle: ComponentView<Empty>?
-                                if let current = strongSelf.buyStarsTitle {
-                                    buyStarsTitle = current
-                                } else {
-                                    buyStarsTitle = ComponentView()
-                                    strongSelf.buyStarsTitle = buyStarsTitle
-                                }
-                                
-                                let buyStarsButton: HighlightTrackingButton?
+                            if hasBuyStarsButton, let (buyStarsTitleLayout, buyStarsTitleApply) = buyStarsTitleLayoutAndApply, let buyStarsButtonSize {
+                                let buyStarsButton: HighlightTrackingButton
                                 if let current = strongSelf.buyStarsButton {
                                     buyStarsButton = current
                                 } else {
                                     buyStarsButton = HighlightTrackingButton()
+                                    buyStarsButton.clipsToBounds = true
                                     strongSelf.buyStarsButton = buyStarsButton
+                                    strongSelf.view.addSubview(buyStarsButton)
+                                    buyStarsButton.highligthedChanged = { [weak buyStarsButton] highlighted in
+                                        guard let buyStarsButton else {
+                                            return
+                                        }
+                                        if highlighted {
+                                            buyStarsButton.layer.removeAnimation(forKey: "opacity")
+                                            buyStarsButton.alpha = 0.6
+                                        } else {
+                                            buyStarsButton.alpha = 1.0
+                                            buyStarsButton.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                                        }
+                                    }
+                                    buyStarsButton.addTarget(strongSelf, action: #selector(strongSelf.buyStarsPressed), for: .touchUpInside)
                                 }
                                 
-                                let buttonStarsNode: PremiumStarsNode?
+                                let buttonStarsNode: PremiumStarsNode
                                 if let current = strongSelf.buttonStarsNode {
                                     buttonStarsNode = current
                                 } else {
                                     buttonStarsNode = PremiumStarsNode()
+                                    buttonStarsNode.isUserInteractionEnabled = false
                                     strongSelf.buttonStarsNode = buttonStarsNode
+                                    buyStarsButton.addSubview(buttonStarsNode.view)
                                 }
+                                
+                                let buyStarsTitle = buyStarsTitleApply()
+                                if buyStarsTitle !== strongSelf.buyStarsTitle {
+                                    buyStarsTitle.isUserInteractionEnabled = false
+                                    strongSelf.buyStarsTitle?.view.removeFromSuperview()
+                                }
+                                strongSelf.buyStarsTitle = buyStarsTitle
+                                buyStarsButton.addSubview(buyStarsTitle.view)
+                                
+                                let buttonTitleSize = buyStarsTitleLayout.size
+                                
+                                let buttonFrame = CGRect(origin: CGPoint(x: contentFrame.minX + floor((contentFrame.width - buyStarsButtonSize.width) * 0.5), y: labelFrame.minY - 2.0), size: buyStarsButtonSize)
+                                buyStarsButton.frame = buttonFrame
+                                buyStarsButton.layer.cornerRadius = buttonFrame.height * 0.5
+                                buyStarsTitle.frame = CGRect(origin: CGPoint(x: floor((buyStarsButtonSize.width - buttonTitleSize.width) * 0.5), y: floor((buyStarsButtonSize.height - buttonTitleSize.height) * 0.5)), size: buttonTitleSize)
+                                
+                                buyStarsButton.backgroundColor = item.presentationData.theme.theme.overallDarkAppearance ? UIColor(rgb: 0xffffff, alpha: 0.12) : UIColor(rgb: 0x000000, alpha: 0.12)
+                                buttonStarsNode.frame = CGRect(origin: CGPoint(), size: buyStarsButtonSize)
                             } else {
                                 if let buyStarsTitle = strongSelf.buyStarsTitle {
                                     strongSelf.buyStarsTitle = nil
-                                    buyStarsTitle.view?.removeFromSuperview()
+                                    buyStarsTitle.view.removeFromSuperview()
                                 }
                                 if let buyStarsButton = strongSelf.buyStarsButton {
                                     strongSelf.buyStarsButton = nil
@@ -871,8 +929,11 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                 return ChatMessageBubbleContentTapAction(content: .hashtag(hashtag.peerName, hashtag.hashtag))
             }
         }
-        if let imageNode = imageNode, imageNode.frame.contains(point) {
+        if let imageNode = self.imageNode, imageNode.frame.contains(point) {
             return ChatMessageBubbleContentTapAction(content: .openMessage)
+        }
+        if let buyStarsButton = self.buyStarsButton, buyStarsButton.frame.contains(point) {
+            return ChatMessageBubbleContentTapAction(content: .ignore)
         }
         
         if let backgroundNode = self.backgroundNode, backgroundNode.frame.contains(point) {

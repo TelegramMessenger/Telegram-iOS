@@ -1716,7 +1716,12 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                         } else if let _ = accessoryPanelNode as? SuggestPostAccessoryPanelNode {
                             strongSelf.requestUpdateChatInterfaceState(.animated(duration: 0.4, curve: .spring), false, { state in
                                 var state = state
-                                state = state.withUpdatedPostSuggestionState(nil)
+                                if let postSuggestionState = state.postSuggestionState {
+                                    state = state.withUpdatedPostSuggestionState(nil)
+                                    if postSuggestionState.editingOriginalMessageId != nil {
+                                        state = state.withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: "")))
+                                    }
+                                }
                                 return state
                             })
                         }

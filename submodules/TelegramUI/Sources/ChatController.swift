@@ -2358,20 +2358,28 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             let _ = strongSelf.context.engine.messages.monoforumPerformSuggestedPostAction(id: message.id, action: .approve(timestamp: timestamp)).startStandalone()
                         }
                     case 2:
-                        strongSelf.push(strongSelf.context.sharedContext.makeStarsWithdrawalScreen(
-                            context: strongSelf.context,
-                            subject: .postSuggestionModification(
-                                current: StarsAmount(value: attribute.amount, nanos: 0),
-                                timestamp: attribute.timestamp,
-                                completion: { [weak strongSelf] price, timestamp in
-                                    guard let strongSelf else {
-                                        return
-                                    }
-                                    
-                                    let _ = strongSelf.context.engine.messages.monoforumPerformSuggestedPostAction(id: message.id, action: .proposeChanges(amount: price, timestamp: timestamp)).startStandalone()
-                                }
-                            )
-                        ))
+                        var entities: [MessageTextEntity] = []
+                        for attribute in message.attributes {
+                            if let attribute = attribute as? TextEntitiesMessageAttribute {
+                                entities = attribute.entities
+                                break
+                            }
+                        }
+                        let inputText = chatInputStateStringWithAppliedEntities(message.text, entities: entities)
+                        
+                        strongSelf.updateChatPresentationInterfaceState(interactive: true, { state in
+                            var state = state
+                            state = state.updatedInterfaceState { interfaceState in
+                                var interfaceState = interfaceState
+                                interfaceState = interfaceState.withUpdatedPostSuggestionState(ChatInterfaceState.PostSuggestionState(
+                                    editingOriginalMessageId: message.id,
+                                    price: attribute.amount,
+                                    timestamp: attribute.timestamp
+                                )).withUpdatedComposeInputState(ChatTextInputState(inputText: inputText))
+                                return interfaceState
+                            }
+                            return state
+                        })
                     default:
                         break
                     }
@@ -4946,6 +4954,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 )
                 self.present(controller, in: .current)
             }
+        }, openStarsPurchase: { [weak self] amount in
+            self?.interfaceInteraction?.openStarsPurchase(amount)
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: self.stickerSettings, presentationContext: ChatPresentationContext(context: context, backgroundNode: self.chatBackgroundNode))
         controllerInteraction.enableFullTranslucency = context.sharedContext.energyUsageSettings.fullTranslucency
         
@@ -7916,6 +7926,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         case .customChatContents:
             break
+        }
+        if let postSuggestionState = self.presentationInterfaceState.interfaceState.postSuggestionState, let editingOriginalMessageId = postSuggestionState.editingOriginalMessageId {
+            defaultReplyMessageSubject = EngineMessageReplySubject(messageId: editingOriginalMessageId, quote: nil)
         }
         
         return messages.map { message in

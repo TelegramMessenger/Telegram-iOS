@@ -288,6 +288,8 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let updateChatLocationThread: (Int64?, ChatControllerAnimateInnerChatSwitchDirection?) -> Void
     public let requestToggleTodoMessageItem: (MessageId, Int32, Bool) -> Void
     public let displayTodoToggleUnavailable: (MessageId) -> Void
+    public let openStarsPurchase: (Int64?) -> Void
+    
     public var canPlayMedia: Bool = false
     public var hiddenMedia: [MessageId: [Media]] = [:]
     public var expandedTranslationMessageStableIds: Set<UInt32> = Set()
@@ -452,6 +454,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         updateChatLocationThread: @escaping (Int64?, ChatControllerAnimateInnerChatSwitchDirection?) -> Void,
         requestToggleTodoMessageItem: @escaping (MessageId, Int32, Bool) -> Void,
         displayTodoToggleUnavailable: @escaping (MessageId) -> Void,
+        openStarsPurchase: @escaping (Int64?) -> Void,
         automaticMediaDownloadSettings: MediaAutoDownloadSettings,
         pollActionState: ChatInterfacePollActionState,
         stickerSettings: ChatInterfaceStickerSettings,
@@ -573,6 +576,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         self.updateChatLocationThread = updateChatLocationThread
         self.requestToggleTodoMessageItem = requestToggleTodoMessageItem
         self.displayTodoToggleUnavailable = displayTodoToggleUnavailable
+        self.openStarsPurchase = openStarsPurchase
         
         self.automaticMediaDownloadSettings = automaticMediaDownloadSettings
         

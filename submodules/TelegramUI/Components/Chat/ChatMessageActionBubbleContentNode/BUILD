@@ -34,6 +34,7 @@ swift_library(
         "//submodules/Markdown",
         "//submodules/ComponentFlow",
         "//submodules/ReactionSelectionNode",
+        "//submodules/Components/MultilineTextComponent",
     ],
     visibility = [
         "//visibility:public",

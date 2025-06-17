@@ -496,10 +496,12 @@ public final class ChatInterfaceState: Codable, Equatable {
     }
     
     public struct PostSuggestionState: Codable, Equatable {
+        public var editingOriginalMessageId: MessageId?
         public var price: Int64
         public var timestamp: Int32?
         
-        public init(price: Int64, timestamp: Int32?) {
+        public init(editingOriginalMessageId: MessageId?, price: Int64, timestamp: Int32?) {
+            self.editingOriginalMessageId = editingOriginalMessageId
             self.price = price
             self.timestamp = timestamp
         }

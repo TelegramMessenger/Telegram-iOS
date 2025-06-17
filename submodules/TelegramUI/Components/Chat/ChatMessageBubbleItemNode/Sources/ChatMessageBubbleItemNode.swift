@@ -1059,6 +1059,12 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
 
         self.backgroundWallpaperNode.animateFrom(sourceView: textInput.backgroundView, transition: transition)
         self.backgroundNode.animateFrom(sourceView: textInput.backgroundView, transition: transition)
+        
+        if let suggestedPostInfoNode = self.suggestedPostInfoNode {
+            transition.horizontal.animatePositionAdditive(layer: suggestedPostInfoNode.layer, offset: CGPoint(x: -widthDifference, y: 0.0))
+            transition.horizontal.animateTransformScale(view: suggestedPostInfoNode.view, from: 0.001)
+            suggestedPostInfoNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+        }
 
         for contentNode in self.contentNodes {
             if let contentNode = contentNode as? ChatMessageTextBubbleContentNode {
@@ -3526,11 +3532,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 strongSelf.suggestedPostInfoNode?.removeFromSupernode()
                 strongSelf.suggestedPostInfoNode = suggestedPostInfoNode
                 strongSelf.mainContextSourceNode.contentNode.addSubnode(suggestedPostInfoNode)
-                
-                let suggestedPostInfoFrame = CGRect(origin: CGPoint(x: floor((params.width - suggestedPostInfoSize.width) * 0.5), y: 4.0), size: suggestedPostInfoSize)
-                suggestedPostInfoNode.frame = suggestedPostInfoFrame
-                //animation.animator.updateFrame(layer: suggestedPostInfoNode.layer, frame: suggestedPostInfoFrame, completion: nil)
             }
+            let suggestedPostInfoFrame = CGRect(origin: CGPoint(x: floor((params.width - suggestedPostInfoSize.width) * 0.5), y: 4.0), size: suggestedPostInfoSize)
+            suggestedPostInfoNode.frame = suggestedPostInfoFrame
         } else if let suggestedPostInfoNode = strongSelf.suggestedPostInfoNode {
             strongSelf.suggestedPostInfoNode = nil
             suggestedPostInfoNode.removeFromSupernode()

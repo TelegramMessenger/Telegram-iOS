@@ -1348,7 +1348,7 @@ public final class ChatEmptyNodePremiumRequiredChatContent: ASDisplayNode, ChatE
                     text: .plain(NSAttributedString(string: actionText, font: Font.semibold(15.0), textColor: serviceColor.primaryText))
                 )),
                 environment: {},
-                containerSize: CGSize(width: 200.0, height: 100.0)
+                containerSize: CGSize(width: 250.0, height: 100.0)
             )
         } else {
             self.buttonTitle.view?.removeFromSuperview()
