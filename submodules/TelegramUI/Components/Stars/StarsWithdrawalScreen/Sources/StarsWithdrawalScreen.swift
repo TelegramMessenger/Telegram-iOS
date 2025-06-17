@@ -547,9 +547,9 @@ private final class SheetContent: CombinedComponent {
                 switch mode {
                 case .sender:
                     if let amount = state.amount {
-                        buttonString = "Set  # \(presentationStringsFormattedNumber(amount, environment.dateTimeFormat.groupingSeparator))"
+                        buttonString = "Offer  # \(presentationStringsFormattedNumber(amount, environment.dateTimeFormat.groupingSeparator))"
                     } else {
-                        buttonString = "Set  # Free"
+                        buttonString = "Offer for Free"
                     }
                 case .admin:
                     buttonString = "Update Terms"

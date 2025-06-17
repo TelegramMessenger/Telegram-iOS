@@ -1719,7 +1719,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                                 if let postSuggestionState = state.postSuggestionState {
                                     state = state.withUpdatedPostSuggestionState(nil)
                                     if postSuggestionState.editingOriginalMessageId != nil {
-                                        state = state.withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: "")))
+                                        state = state.withUpdatedEditMessage(nil)
                                     }
                                 }
                                 return state
@@ -4476,7 +4476,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 effectivePresentationInterfaceState = effectivePresentationInterfaceState.updatedInterfaceState { $0.withUpdatedEffectiveInputState(textInputPanelNode.inputTextState) }
             }
             
-            if let _ = effectivePresentationInterfaceState.interfaceState.editMessage {
+            if let _ = effectivePresentationInterfaceState.interfaceState.editMessage, effectivePresentationInterfaceState.interfaceState.postSuggestionState == nil {
                 self.interfaceInteraction?.editMessage()
             } else {
                 var isScheduledMessages = false
@@ -4493,7 +4493,13 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 
                 var messages: [EnqueueMessage] = []
                 
-                let effectiveInputText = expandedInputStateAttributedString(effectivePresentationInterfaceState.interfaceState.composeInputState.inputText)
+                let effectiveInputText: NSAttributedString
+                
+                if effectivePresentationInterfaceState.interfaceState.editMessage != nil && effectivePresentationInterfaceState.interfaceState.postSuggestionState != nil {
+                    effectiveInputText = expandedInputStateAttributedString(effectivePresentationInterfaceState.interfaceState.effectiveInputState.inputText)
+                } else {
+                    effectiveInputText = expandedInputStateAttributedString(effectivePresentationInterfaceState.interfaceState.composeInputState.inputText)
+                }
                 
                 let peerSpecificEmojiPack = (self.controller?.contentData?.state.peerView?.cachedData as? CachedChannelData)?.emojiPack
                 
@@ -4609,6 +4615,30 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 } else {
                     let inputText = convertMarkdownToAttributes(effectiveInputText)
                     
+                    var mediaReference: AnyMediaReference?
+                    var webpage: TelegramMediaWebpage?
+                    if let urlPreview = self.chatPresentationInterfaceState.urlPreview {
+                        if self.chatPresentationInterfaceState.interfaceState.composeDisableUrlPreviews.contains(urlPreview.url) {
+                        } else {
+                            webpage = urlPreview.webPage
+                        }
+                    }
+                    mediaReference = webpage.flatMap(AnyMediaReference.standalone)
+                    
+                    if let postSuggestionState = effectivePresentationInterfaceState.interfaceState.postSuggestionState, let editingOriginalMessageId = postSuggestionState.editingOriginalMessageId {
+                        if let editMessageState = effectivePresentationInterfaceState.editMessageState, let mediaReferenceValue = editMessageState.mediaReference {
+                            mediaReference = mediaReferenceValue
+                        } else {
+                            if let message = self.historyNode.messageInCurrentHistoryView(editingOriginalMessageId) {
+                                for media in message.media {
+                                    if media is TelegramMediaFile || media is TelegramMediaImage {
+                                        mediaReference = .message(message: MessageReference(message), media: media)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
                     for text in breakChatInputText(trimChatInputText(inputText)) {
                         if text.length != 0 {
                             var attributes: [MessageAttribute] = []
@@ -4622,12 +4652,10 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                                 attributes.append(TextEntitiesMessageAttribute(entities: entities))
                             }
                                                         
-                            var webpage: TelegramMediaWebpage?
                             if let urlPreview = self.chatPresentationInterfaceState.urlPreview {
                                 if self.chatPresentationInterfaceState.interfaceState.composeDisableUrlPreviews.contains(urlPreview.url) {
                                     attributes.append(OutgoingContentInfoMessageAttribute(flags: [.disableLinkPreviews]))
                                 } else {
-                                    webpage = urlPreview.webPage
                                     attributes.append(WebpagePreviewMessageAttribute(leadingPreview: !urlPreview.positionBelowText, forceLargeMedia: urlPreview.largeMedia, isManuallyAdded: true, isSafe: false))
                                 }
                             }
@@ -4647,8 +4675,14 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                                 bubbleUpEmojiOrStickersets.removeAll()
                             }
 
-                            messages.append(.message(text: text.string, attributes: attributes, inlineStickers: inlineStickers, mediaReference: webpage.flatMap(AnyMediaReference.standalone), threadId: self.chatLocation.threadId, replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageSubject?.subjectModel, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets))
+                            messages.append(.message(text: text.string, attributes: attributes, inlineStickers: inlineStickers, mediaReference: mediaReference, threadId: self.chatLocation.threadId, replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageSubject?.subjectModel, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets))
+                            mediaReference = nil
                         }
+                    }
+                    
+                    if let mediaReferenceValue = mediaReference {
+                        mediaReference = nil
+                        messages.append(.message(text: "", attributes: [], inlineStickers: inlineStickers, mediaReference: mediaReferenceValue, threadId: self.chatLocation.threadId, replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageSubject?.subjectModel, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
                     }
 
                     var forwardingToSameChat = false
@@ -4723,7 +4757,21 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                             
                             strongSelf.ignoreUpdateHeight = true
                             textInputPanelNode.text = ""
-                            strongSelf.requestUpdateChatInterfaceState(.immediate, true, { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withUpdatedPostSuggestionState(nil).withUpdatedForwardMessageIds(nil).withUpdatedForwardOptionsState(nil).withUpdatedComposeDisableUrlPreviews([]) })
+                            strongSelf.requestUpdateChatInterfaceState(.immediate, true, { state in
+                                var state = state
+                                state = state.withUpdatedReplyMessageSubject(nil)
+                                state = state.withUpdatedSendMessageEffect(nil)
+                                
+                                if state.postSuggestionState != nil {
+                                    state = state.withUpdatedPostSuggestionState(nil)
+                                    state = state.withUpdatedEditMessage(nil)
+                                }
+                                
+                                state = state.withUpdatedForwardMessageIds(nil)
+                                state = state.withUpdatedForwardOptionsState(nil)
+                                state = state.withUpdatedComposeDisableUrlPreviews([])
+                                return state
+                            })
                             strongSelf.ignoreUpdateHeight = false
                         }
                     }, usedCorrelationId)

@@ -564,6 +564,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
     
     let attachmentButton: HighlightableButtonNode
     let attachmentButtonDisabledNode: HighlightableButtonNode
+    
+    
+    
     let searchLayoutClearButton: HighlightableButton
     private let searchLayoutClearImageNode: ASImageNode
     private var searchActivityIndicator: ActivityIndicator?

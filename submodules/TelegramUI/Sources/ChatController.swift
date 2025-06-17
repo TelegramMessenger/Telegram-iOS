@@ -2358,27 +2358,54 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             let _ = strongSelf.context.engine.messages.monoforumPerformSuggestedPostAction(id: message.id, action: .approve(timestamp: timestamp)).startStandalone()
                         }
                     case 2:
-                        var entities: [MessageTextEntity] = []
-                        for attribute in message.attributes {
-                            if let attribute = attribute as? TextEntitiesMessageAttribute {
-                                entities = attribute.entities
-                                break
-                            }
-                        }
-                        let inputText = chatInputStateStringWithAppliedEntities(message.text, entities: entities)
-                        
                         strongSelf.updateChatPresentationInterfaceState(interactive: true, { state in
-                            var state = state
-                            state = state.updatedInterfaceState { interfaceState in
+                            var entities: [MessageTextEntity] = []
+                            for attribute in message.attributes {
+                                if let attribute = attribute as? TextEntitiesMessageAttribute {
+                                    entities = attribute.entities
+                                    break
+                                }
+                            }
+                            var inputTextMaxLength: Int32 = 4096
+                            var webpageUrl: String?
+                            for media in message.media {
+                                if media is TelegramMediaImage || media is TelegramMediaFile {
+                                    inputTextMaxLength = strongSelf.context.userLimits.maxCaptionLength
+                                } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
+                                    webpageUrl = content.url
+                                }
+                            }
+                            
+                            let inputText = chatInputStateStringWithAppliedEntities(message.text, entities: entities)
+                            var disableUrlPreviews: [String] = []
+                            if webpageUrl == nil {
+                                disableUrlPreviews = detectUrls(inputText)
+                            }
+                            
+                            var updated = state.updatedInterfaceState { interfaceState in
+                                return interfaceState.withUpdatedEditMessage(ChatEditMessageState(messageId: messageId, inputState: ChatTextInputState(inputText: inputText), disableUrlPreviews: disableUrlPreviews, inputTextMaxLength: inputTextMaxLength, mediaCaptionIsAbove: nil))
+                            }
+                            
+                            let (updatedState, updatedPreviewQueryState) = updatedChatEditInterfaceMessageState(context: strongSelf.context, state: updated, message: message)
+                            updated = updatedState
+                            strongSelf.editingUrlPreviewQueryState?.1.dispose()
+                            strongSelf.editingUrlPreviewQueryState = updatedPreviewQueryState
+                            
+                            updated = updated.updatedInputMode({ _ in
+                                return .text
+                            })
+                            updated = updated.updatedShowCommands(false)
+                            updated = updated.updatedInterfaceState { interfaceState in
                                 var interfaceState = interfaceState
+                                
                                 interfaceState = interfaceState.withUpdatedPostSuggestionState(ChatInterfaceState.PostSuggestionState(
                                     editingOriginalMessageId: message.id,
                                     price: attribute.amount,
                                     timestamp: attribute.timestamp
-                                )).withUpdatedComposeInputState(ChatTextInputState(inputText: inputText))
+                                ))
                                 return interfaceState
                             }
-                            return state
+                            return updated
                         })
                     default:
                         break
@@ -7421,7 +7448,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 return state
             })
-            self.interfaceInteraction?.editMessage()
+            if self.presentationInterfaceState.interfaceState.postSuggestionState == nil {
+                self.interfaceInteraction?.editMessage()
+            }
         }
     }
     

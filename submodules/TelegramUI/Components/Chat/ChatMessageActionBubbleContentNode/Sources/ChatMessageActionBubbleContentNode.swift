@@ -342,6 +342,7 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                     rawString = "❌ You rejected the message with the comment:"
                                 } else {
                                     rawString = "❌ You rejected the message."
+                                    smallFont = true
                                 }
                             case .lowBalance:
                                 rawString = "⚠️ **Transaction failed** because the user didn't have enough Stars."
@@ -354,6 +355,7 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                     rawString = "❌ **\(channelName)** rejected your message with the comment:"
                                 } else {
                                     rawString = "❌ **\(channelName)** rejected your message."
+                                    smallFont = true
                                 }
                             case .lowBalance:
                                 rawString = "⚠️ **Transaction failed** because you didn't have enough Stars."
