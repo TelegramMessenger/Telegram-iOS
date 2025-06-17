@@ -282,7 +282,7 @@ func chatHistoryViewForLocation(
                         
                         preloaded = true
                         
-                        return .HistoryView(view: view, type: reportUpdateType, scrollPosition: .index(subject: MessageHistoryScrollToSubject(index: anchorIndex, quote: searchLocationSubject.quote.flatMap { quote in MessageHistoryScrollToSubject.Quote(string: quote.string, offset: quote.offset) }, setupReply: setupReply), position: .center(.bottom), directionHint: .Down, animated: false, highlight: highlight, displayLink: false, setupReply: setupReply), flashIndicators: false, originalScrollPosition: nil, initialData: ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData), id: location.id)
+                        return .HistoryView(view: view, type: reportUpdateType, scrollPosition: .index(subject: MessageHistoryScrollToSubject(index: anchorIndex, quote: searchLocationSubject.quote.flatMap { quote in MessageHistoryScrollToSubject.Quote(string: quote.string, offset: quote.offset) }, todoTaskId: searchLocationSubject.todoTaskId, setupReply: setupReply), position: .center(.bottom), directionHint: .Down, animated: false, highlight: highlight, displayLink: false, setupReply: setupReply), flashIndicators: false, originalScrollPosition: nil, initialData: ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData), id: location.id)
                     }
                 }
             case let .Navigation(index, anchorIndex, count, _):
@@ -415,7 +415,7 @@ func fetchAndPreloadReplyThreadInfo(context: AccountContext, subject: ReplyThrea
         case .automatic:
             if let atMessageId = atMessageId {
                 input = ChatHistoryLocationInput(
-                    content: .InitialSearch(subject: MessageHistoryInitialSearchSubject(location: .id(atMessageId), quote: nil), count: 40, highlight: true, setupReply: false),
+                    content: .InitialSearch(subject: MessageHistoryInitialSearchSubject(location: .id(atMessageId)), count: 40, highlight: true, setupReply: false),
                     id: 0
                 )
             } else {

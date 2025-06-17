@@ -5982,8 +5982,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             for contentNode in self.contentNodes {
                 if let contentNode = contentNode as? ChatMessageTextBubbleContentNode {
                     contentNode.updateQuoteTextHighlightState(text: nil, offset: nil, color: .clear, animated: true)
-                } else if let _ = contentNode as? ChatMessageTodoBubbleContentNode {
-                    
+                } else if let contentNode = contentNode as? ChatMessageTodoBubbleContentNode {
+                    contentNode.updateTaskHighlightState(id: nil, color: .clear, animated: true)
                 }
             }
             
@@ -6078,8 +6078,19 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                                     
                                     var taskFrame: CGRect?
                                     for contentNode in self.contentNodes {
-                                        if let contentNode = contentNode as? ChatMessageTodoBubbleContentNode, let localFrame = contentNode.taskItemFrame(id: todoTaskId) {
-                                            taskFrame = contentNode.view.convert(localFrame, to: backgroundHighlightNode.view.superview)
+                                        if let contentNode = contentNode as? ChatMessageTodoBubbleContentNode {
+                                            contentNode.updateTaskHighlightState(id: todoTaskId, color: highlightColor, animated: false)
+                                            var sourceFrame = backgroundHighlightNode.view.convert(backgroundHighlightNode.bounds, to: contentNode.view)
+                                            if item.message.effectivelyIncoming(item.context.account.peerId) {
+                                                sourceFrame.origin.x += 6.0
+                                                sourceFrame.size.width -= 6.0
+                                            } else {
+                                                sourceFrame.size.width -= 6.0
+                                            }
+                                            
+                                            if let localFrame = contentNode.animateTaskItemHighlightIn(id: todoTaskId, sourceFrame: sourceFrame, transition: transition) {
+                                                taskFrame = contentNode.view.convert(localFrame, to: backgroundHighlightNode.view.superview).insetBy(dx: -3.0, dy: 0.0)
+                                            }
                                             break
                                         }
                                     }
