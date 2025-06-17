@@ -1800,62 +1800,99 @@ extension ChatControllerImpl {
                 strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             })
         }, deleteMessages: { [weak self] messages, contextController, completion in
-            if let strongSelf = self, !messages.isEmpty {
-                guard !strongSelf.presentAccountFrozenInfoIfNeeded(delay: true) else {
-                    completion(.default)
+            guard let self else {
+                return
+            }
+            if messages.isEmpty {
+                return
+            }
+            guard !self.presentAccountFrozenInfoIfNeeded(delay: true) else {
+                completion(.default)
+                return
+            }
+            
+            let messageIds = Set(messages.map { $0.id })
+            self.messageContextDisposable.set((self.context.sharedContext.chatAvailableMessageActions(engine: self.context.engine, accountPeerId: self.context.account.peerId, messageIds: messageIds, keepUpdated: false)
+            |> deliverOnMainQueue).startStrict(next: { [weak self] actions in
+                guard let self, !actions.options.isEmpty else {
                     return
                 }
                 
-                let messageIds = Set(messages.map { $0.id })
-                strongSelf.messageContextDisposable.set((strongSelf.context.sharedContext.chatAvailableMessageActions(engine: strongSelf.context.engine, accountPeerId: strongSelf.context.account.peerId, messageIds: messageIds, keepUpdated: false)
-                |> deliverOnMainQueue).startStrict(next: { actions in
-                    if let strongSelf = self, !actions.options.isEmpty {
-                        if let banAuthor = actions.banAuthor {
-                            if let contextController = contextController {
-                                contextController.dismiss(completion: {
-                                    guard let strongSelf = self else {
+                if actions.options.contains(.deleteGlobally) && messages.contains(where: { message in message.attributes.contains(where: { $0 is PublishedSuggestedPostMessageAttribute }) }) {
+                    let commit = { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        //TODO:localize
+                        self.present(standardTextAlertController(
+                            theme: AlertControllerTheme(presentationData: self.presentationData),
+                            title: "Stars Will Be Lost",
+                            text: "You won't receive **Stars** for this post if you delete it now. The post must remain visible for at least **24 hours** after publication.",
+                            actions: [
+                                TextAlertAction(type: .destructiveAction, title: "Delete Anyway", action: { [weak self] in
+                                    guard let self else {
                                         return
                                     }
-                                    strongSelf.presentBanMessageOptions(accountPeerId: strongSelf.context.account.peerId, author: banAuthor, messageIds: messageIds, options: actions.options)
-                                })
-                            } else {
-                                strongSelf.presentBanMessageOptions(accountPeerId: strongSelf.context.account.peerId, author: banAuthor, messageIds: messageIds, options: actions.options)
-                                completion(.default)
+                                    self.beginDeleteMessagesWithUndo(messageIds: Set(messages.map({ $0.id })), type: .forEveryone)
+                                }),
+                                TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_Cancel, action: {})
+                            ],
+                            actionLayout: .vertical,
+                            parseMarkdown: true
+                        ), in: .window(.root))
+                    }
+                    if let contextController {
+                        contextController.dismiss(completion: commit)
+                    } else {
+                        commit()
+                    }
+                    return
+                }
+                
+                if let banAuthor = actions.banAuthor {
+                    if let contextController = contextController {
+                        contextController.dismiss(completion: { [weak self] in
+                            guard let self else {
+                                return
                             }
-                        } else {
-                            var isAction = false
-                            if messages.count == 1 {
-                                for media in messages[0].media {
-                                    if media is TelegramMediaAction {
-                                        isAction = true
-                                    }
-                                }
-                            }
-                            if isAction && (actions.options == .deleteGlobally || actions.options == .deleteLocally) {
-                                let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: actions.options == .deleteLocally ? .forLocalPeer : .forEveryone).startStandalone()
-                                completion(.dismissWithoutContent)
-                            } else if (messages.first?.flags.isSending ?? false) {
-                                let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forEveryone, deleteAllInGroup: true).startStandalone()
-                                completion(.dismissWithoutContent)
-                            } else {
-                                if actions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty {
-                                    strongSelf.presentClearCacheSuggestion()
-                                    completion(.default)
-                                } else {
-                                    var isScheduled = false
-                                    for id in messageIds {
-                                        if Namespaces.Message.allScheduled.contains(id.namespace) {
-                                            isScheduled = true
-                                            break
-                                        }
-                                    }
-                                    strongSelf.presentDeleteMessageOptions(messageIds: messageIds, options: isScheduled ? [.deleteLocally] : actions.options, contextController: contextController, completion: completion)
-                                }
+                            self.presentBanMessageOptions(accountPeerId: self.context.account.peerId, author: banAuthor, messageIds: messageIds, options: actions.options)
+                        })
+                    } else {
+                        self.presentBanMessageOptions(accountPeerId: self.context.account.peerId, author: banAuthor, messageIds: messageIds, options: actions.options)
+                        completion(.default)
+                    }
+                } else {
+                    var isAction = false
+                    if messages.count == 1 {
+                        for media in messages[0].media {
+                            if media is TelegramMediaAction {
+                                isAction = true
                             }
                         }
                     }
-                }))
-            }
+                    if isAction && (actions.options == .deleteGlobally || actions.options == .deleteLocally) {
+                        let _ = self.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: actions.options == .deleteLocally ? .forLocalPeer : .forEveryone).startStandalone()
+                        completion(.dismissWithoutContent)
+                    } else if (messages.first?.flags.isSending ?? false) {
+                        let _ = self.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forEveryone, deleteAllInGroup: true).startStandalone()
+                        completion(.dismissWithoutContent)
+                    } else {
+                        if actions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty {
+                            self.presentClearCacheSuggestion()
+                            completion(.default)
+                        } else {
+                            var isScheduled = false
+                            for id in messageIds {
+                                if Namespaces.Message.allScheduled.contains(id.namespace) {
+                                    isScheduled = true
+                                    break
+                                }
+                            }
+                            self.presentDeleteMessageOptions(messageIds: messageIds, options: isScheduled ? [.deleteLocally] : actions.options, contextController: contextController, completion: completion)
+                        }
+                    }
+                }
+            }))
         }, forwardSelectedMessages: { [weak self] in
             if let strongSelf = self {
                 strongSelf.commitPurposefulAction()
@@ -4111,6 +4148,7 @@ extension ChatControllerImpl {
                 }
                 return state
             })
+            self.presentSuggestPostOptions()
         }, openPremiumRequiredForMessaging: { [weak self] in
             guard let self else {
                 return

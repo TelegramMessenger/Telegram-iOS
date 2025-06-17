@@ -1869,7 +1869,7 @@ public final class ChatEmptyNode: ASDisplayNode {
                         }
                     }
                 } else if let channel = peer as? TelegramChannel, channel.isMonoForum {
-                    if let mainChannel = interfaceState.renderedPeer?.chatOrMonoforumMainPeer as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
+                    if let mainChannel = interfaceState.renderedPeer?.chatOrMonoforumMainPeer as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
                         contentType = .regular
                     } else {
                         contentType = .starsRequired(interfaceState.sendPaidMessageStars?.value)

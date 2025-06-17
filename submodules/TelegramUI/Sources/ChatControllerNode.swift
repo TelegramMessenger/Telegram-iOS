@@ -3040,7 +3040,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 displayInlineSearch = true
             }
         }
-        if self.chatLocation.threadId == nil, let channel = self.chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = self.chatPresentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
+        if self.chatLocation.threadId == nil, let channel = self.chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = self.chatPresentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
             if self.chatPresentationInterfaceState.search != nil {
                 displayInlineSearch = true
             }
@@ -3078,7 +3078,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 } else {
                     mappedContents = .empty
                 }
-            } else if self.chatLocation.threadId == nil, let channel = self.chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = self.chatPresentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
+            } else if self.chatLocation.threadId == nil, let channel = self.chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = self.chatPresentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
                 mappedContents = .monoforumChats(query: self.chatPresentationInterfaceState.search?.query ?? "")
             } else if case .peer(self.context.account.peerId) = self.chatPresentationInterfaceState.chatLocation {
                 mappedContents = .tag(MemoryBuffer())
@@ -3204,7 +3204,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                             self.controller?.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
                                 var state = state
                                 state = state.updatedDisplayHistoryFilterAsList(false)
-                                if let channel = state.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = self.chatPresentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
+                                if let channel = state.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = self.chatPresentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
                                     state = state.updatedSearch(nil)
                                 }
                                 return state
@@ -4459,6 +4459,11 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     }
     
     func sendCurrentMessage(silentPosting: Bool? = nil, scheduleTime: Int32? = nil, postpone: Bool = false, messageEffect: ChatSendMessageEffect? = nil, completion: @escaping () -> Void = {}) {
+        if let postSuggestionState = self.chatPresentationInterfaceState.interfaceState.postSuggestionState, postSuggestionState.price == 0 {
+            self.interfaceInteraction?.presentSuggestPostOptions()
+            return
+        }
+        
         if let textInputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode {
             self.historyNode.justSentTextMessage = true
             

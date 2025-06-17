@@ -1932,54 +1932,76 @@ public final class ChatSideTopicsPanel: Component {
                 var itemContextGesture: ((ContextGesture, ContextExtractedContentContainingNode) -> Void)?
                 if !self.isReordering && component.isMonoforum {
                     itemContextGesture = { [weak self] gesture, sourceNode in
-                        guard let self, let component = self.component else {
-                            return
-                        }
-                        guard let controller = component.controller() else {
-                            return
-                        }
-                        
-                        let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
-                        
-                        if let listView = self.list.view as? AsyncListComponent.View {
-                            listView.stopScrolling()
-                        }
-                        
-                        let topicId: Int64
-                        switch item.item.id {
-                        case let .chatList(peerId):
-                            topicId = peerId.toInt64()
-                        case let .forum(topicIdValue):
-                            topicId = topicIdValue
-                        }
-                        
-                        var items: [ContextMenuItem] = []
-                        
-                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.ChatList_Context_Delete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self] c, _ in
-                            guard let self else {
+                        Task { @MainActor in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            guard let controller = component.controller() else {
                                 return
                             }
                             
-                            c?.dismiss(completion: { [weak self] in
-                                guard let self, let component = self.component else {
+                            let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
+                            
+                            if let listView = self.list.view as? AsyncListComponent.View {
+                                listView.stopScrolling()
+                            }
+                            
+                            let topicId: Int64
+                            switch item.item.id {
+                            case let .chatList(peerId):
+                                topicId = peerId.toInt64()
+                            case let .forum(topicIdValue):
+                                topicId = topicIdValue
+                            }
+                            
+                            var items: [ContextMenuItem] = []
+                            
+                            let threadInfo = await component.context.engine.data.get(
+                                TelegramEngine.EngineData.Item.Messages.ThreadInfo(peerId: component.peerId, threadId: topicId)
+                            ).get()
+                            
+                            if let threadInfo, threadInfo.isMessageFeeRemoved {
+                                //TODO:localize
+                                items.append(.action(ContextMenuActionItem(text: "Charge Message Fee", textColor: .primary, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Rate"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+                                    guard let self, let component = self.component else {
+                                        return
+                                    }
+                                    
+                                    c?.dismiss(completion: {})
+                                    
+                                    let _ = component.context.engine.peers.reinstateNoPaidMessagesException(scopePeerId: component.peerId, peerId: EnginePeer.Id(topicId)).startStandalone()
+                                })))
+                            }
+                            
+                            if !items.isEmpty {
+                                items.append(.separator)
+                            }
+                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.ChatList_Context_Delete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self] c, _ in
+                                guard let self else {
                                     return
                                 }
-                                component.openDeletePeer(topicId)
-                            })
-                        })))
-                        
-                        let contextController = ContextController(
-                            presentationData: presentationData,
-                            source: .extracted(ItemExtractedContentSource(
-                                sourceNode: sourceNode,
-                                containerView: self,
-                                keepInPlace: false
-                            )),
-                            items: .single(ContextController.Items(content: .list(items))),
-                            recognizer: nil,
-                            gesture: gesture
-                        )
-                        controller.presentInGlobalOverlay(contextController)
+                                
+                                c?.dismiss(completion: { [weak self] in
+                                    guard let self, let component = self.component else {
+                                        return
+                                    }
+                                    component.openDeletePeer(topicId)
+                                })
+                            })))
+                            
+                            let contextController = ContextController(
+                                presentationData: presentationData,
+                                source: .extracted(ItemExtractedContentSource(
+                                    sourceNode: sourceNode,
+                                    containerView: self,
+                                    keepInPlace: false
+                                )),
+                                items: .single(ContextController.Items(content: .list(items))),
+                                recognizer: nil,
+                                gesture: gesture
+                            )
+                            controller.presentInGlobalOverlay(contextController)
+                        }
                     }
                 } else if !self.isReordering {
                     itemContextGesture = { [weak self] gesture, sourceNode in

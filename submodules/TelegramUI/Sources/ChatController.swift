@@ -2349,9 +2349,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 guard let strongSelf else {
                                     return
                                 }
-                                if time != 0 {
-                                    let _ = strongSelf.context.engine.messages.monoforumPerformSuggestedPostAction(id: message.id, action: .approve(timestamp: time)).startStandalone()
-                                }
+                                let _ = strongSelf.context.engine.messages.monoforumPerformSuggestedPostAction(id: message.id, action: .approve(timestamp: time != 0 ? time : nil)).startStandalone()
                             })
                             strongSelf.view.endEditing(true)
                             strongSelf.present(controller, in: .window(.root))
@@ -7976,7 +7974,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum {
                     attributes.removeAll(where: { $0 is SendAsMessageAttribute })
-                    if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = self.presentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
+                    if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = self.presentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
                         if let sendAsPeerId = self.presentationInterfaceState.currentSendAsPeerId {
                             attributes.append(SendAsMessageAttribute(peerId: sendAsPeerId))
                         } else {

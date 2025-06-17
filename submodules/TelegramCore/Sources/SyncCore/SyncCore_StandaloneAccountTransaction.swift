@@ -82,7 +82,7 @@ public let telegramPostboxSeedConfiguration: SeedConfiguration = {
                         return (true, false)
                     }
                 } else if channel.flags.contains(.isMonoforum) {
-                    if let associatedPeer = associatedPeer as? TelegramChannel, associatedPeer.hasPermission(.sendSomething) {
+                    if let associatedPeer = associatedPeer as? TelegramChannel, associatedPeer.hasPermission(.manageDirect) {
                         return (true, true)
                     } else {
                         return (false, false)

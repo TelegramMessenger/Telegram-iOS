@@ -22,7 +22,7 @@ func _internal_getPaidMessagesRevenue(account: Account, scopePeerId: PeerId, pee
             flags |= 1 << 0
         }
         
-        return account.network.request(Api.functions.account.getPaidMessagesRevenue(flags: 0, parentPeer: scopeInputPeer, userId: inputUser))
+        return account.network.request(Api.functions.account.getPaidMessagesRevenue(flags: flags, parentPeer: scopeInputPeer, userId: inputUser))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.account.PaidMessagesRevenue?, NoError> in
             return .single(nil)

@@ -112,9 +112,9 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     }
     
     public enum SuggestedPostApprovalStatus: PostboxCoding, Equatable {
-        public enum RejectionReason {
+        public enum RejectionReason: Equatable {
             case generic
-            case lowBalance
+            case lowBalance(balanceNeeded: Int64)
         }
         
         case approved(timestamp: Int32?, amount: Int64)
@@ -133,7 +133,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                 case 0:
                     reason = .generic
                 case 1:
-                    reason = .lowBalance
+                    reason = .lowBalance(balanceNeeded: decoder.decodeInt64ForKey("lowbal.val", orElse: 0))
                 default:
                     assertionFailure()
                     reason = .generic
@@ -160,8 +160,9 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                 switch reason {
                 case .generic:
                     encoder.encodeInt32(0, forKey: "rs")
-                case .lowBalance:
+                case let .lowBalance(balanceNeeded):
                     encoder.encodeInt32(1, forKey: "rs")
+                    encoder.encodeInt64(balanceNeeded, forKey: "lowbal.val")
                 }
                 if let comment {
                     encoder.encodeString(comment, forKey: "com")

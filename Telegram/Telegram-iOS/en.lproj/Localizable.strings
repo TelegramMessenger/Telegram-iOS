@@ -2731,6 +2731,7 @@ Unused sets are archived when you add more.";
 "Channel.AdminLog.CanEditMessages" = "Edit Messages";
 "Channel.AdminLog.CanManageCalls" = "Manage Voice Chats";
 "Channel.AdminLog.CanManageLiveStreams" = "Manage Live Streams";
+"Channel.AdminLog.CanManageDirect" = "Manage Direct Messages";
 
 "Channel.AdminLog.MessageToggleInvitesOn" = "%@ enabled group invites";
 "Channel.AdminLog.MessageToggleInvitesOff" = "%@ disabled group invites";
@@ -14442,3 +14443,11 @@ Sorry for the inconvenience.";
 "SuggestPost.SetTimeFormat.Date" = "%@";
 "SuggestPost.SetTimeFormat.TodayAt" = "Today at %@";
 "SuggestPost.SetTimeFormat.TomorrowAt" = "Tomorrow at %@";
+
+"SuggestPost.Time.ProposeToday" = "Post today at %@";
+"SuggestPost.Time.ProposeTomorrow" = "Post tomorrow at %@";
+"SuggestPost.Time.ProposeOn" = "Post on %@ at %@";
+
+"SuggestPost.Time.SendToday" = "Post today at %@";
+"SuggestPost.Time.SendTomorrow" = "Post tomorrow at %@";
+"SuggestPost.Time.SendOn" = "Post on %@ at %@";

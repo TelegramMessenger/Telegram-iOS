@@ -22,6 +22,8 @@ import TextNodeWithEntities
 import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
 import Markdown
+import ComponentFlow
+import ReactionSelectionNode
 
 private func attributedServiceMessageString(theme: ChatPresentationThemeData, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, message: Message, messageCount: Int? = nil, accountPeerId: PeerId, forForumOverview: Bool) -> NSAttributedString? {
     return universalServiceMessageString(presentationData: (theme.theme, theme.wallpaper), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: EngineMessage(message), messageCount: messageCount, accountPeerId: accountPeerId, forChatList: false, forForumOverview: forForumOverview)
@@ -37,6 +39,10 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
     public var backgroundColorNode: ASDisplayNode
     public let backgroundMaskNode: ASImageNode
     public var linkHighlightingNode: LinkHighlightingNode?
+    
+    private var buyStarsTitle: ComponentView<Empty>?
+    private var buyStarsButton: HighlightTrackingButton?
+    private var buttonStarsNode: PremiumStarsNode?
     
     private let mediaBackgroundNode: ASImageNode
     fileprivate var imageNode: TransformImageNode?
@@ -247,10 +253,18 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                         let amountString = amount == 1 ? "\(amount) Star" : "\(amount) Stars"
                         
                         let rawString: String
-                        if !item.message.effectivelyIncoming(item.context.account.peerId) {
-                            rawString = "📅 The post will be automatically published on **\(channelName)** **\(timeString)**.\n\n💰 The user have been charged \(amountString).\n\n⌛ **\(channelName)** will receive the Stars once the post has been live for 24 hours.\n\n🔄 If your remove the post before it has been live for 24 hours, the user's Stars will be refunded."
+                        if timestamp != nil {
+                            if !item.message.effectivelyIncoming(item.context.account.peerId) {
+                                rawString = "📅 The post will be automatically published in **\(channelName)** **\(timeString)**.\n\n💰 The user have been charged \(amountString).\n\n⌛ **\(channelName)** will receive the Stars once the post has been live for 24 hours.\n\n🔄 If your remove the post before it has been live for 24 hours, the user's Stars will be refunded."
+                            } else {
+                                rawString = "📅 Your post will be automatically published in **\(channelName)** **\(timeString)**.\n\n💰 You have been charged \(amountString).\n\n⌛ **\(channelName)** will receive your Stars once the post has been live for 24 hours.\n\n🔄 If **\(channelName)** removes the post before it has been live for 24 hours, your Stars will be refunded."
+                            }
                         } else {
-                            rawString = "📅 Your post will be automatically published on **\(channelName)** **\(timeString)**.\n\n💰 You have been charged \(amountString).\n\n⌛ **\(channelName)** will receive your Stars once the post has been live for 24 hours.\n\n🔄 If **\(channelName)** removes the post before it has been live for 24 hours, your Stars will be refunded."
+                            if !item.message.effectivelyIncoming(item.context.account.peerId) {
+                                rawString = "📅 The post will be automatically published in **\(channelName)**.\n\n💰 The user have been charged \(amountString).\n\n⌛ **\(channelName)** will receive the Stars once the post has been live for 24 hours.\n\n🔄 If your remove the post before it has been live for 24 hours, the user's Stars will be refunded."
+                            } else {
+                                rawString = "📅 Your post will be automatically published in **\(channelName)**.\n\n💰 You have been charged \(amountString).\n\n⌛ **\(channelName)** will receive your Stars once the post has been live for 24 hours.\n\n🔄 If **\(channelName)** removes the post before it has been live for 24 hours, your Stars will be refunded."
+                            }
                         }
                         updatedAttributedString = parseMarkdownIntoAttributedString(rawString, attributes: MarkdownAttributes(
                             body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: primaryTextColor),
@@ -271,20 +285,21 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                     rawString = "You declined the post."
                                 }
                             case .lowBalance:
-                                rawString = "**\(channelName)** was unable to post the message, because the user did not have enough Stars."
+                                rawString = ""
                             }
                         } else {
                             switch reason {
                             case .generic:
                                 if let comment {
-                                    rawString = "**\(channelName)** declined your post with the following comment:\n\n" + comment
+                                    rawString = "\"\(comment)\""
                                 } else {
-                                    rawString = "**\(channelName)** declined your post."
+                                    rawString = ""
                                 }
                             case .lowBalance:
-                                rawString = "**\(channelName)** was unable to post your message, because you did not have enough Stars."
+                                rawString = ""
                             }
                         }
+                        textAlignment = .center
                         updatedAttributedString = parseMarkdownIntoAttributedString(rawString, attributes: MarkdownAttributes(
                             body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: primaryTextColor),
                             bold: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: primaryTextColor),
@@ -296,17 +311,47 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 
+                //TODO:localize
                 var titleLayoutAndApply: (TextNodeLayout, () -> TextNode)?
                 if let suggestedPost {
+                    let channelName: String
+                    if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, peer.isMonoForum, let linkedMonoforumId = peer.linkedMonoforumId, let mainChannel = item.message.peers[linkedMonoforumId] as? TelegramChannel {
+                        channelName = EnginePeer(mainChannel).compactDisplayTitle
+                    } else {
+                        channelName = " "
+                    }
+                    
                     let rawString: String
                     switch suggestedPost {
                     case .approved:
                         rawString = "🤝 Agreement Reached!"
-                    case .rejected:
-                        rawString = "Declined"
+                    case let .rejected(reason, comment):
+                        if !item.message.effectivelyIncoming(item.context.account.peerId) {
+                            switch reason {
+                            case .generic:
+                                if comment != nil {
+                                    rawString = "❌ You rejected the message with the comment:"
+                                } else {
+                                    rawString = "❌ You rejected the message."
+                                }
+                            case .lowBalance:
+                                rawString = "⚠️ **Transaction failed** because the user didn't have enough Stars."
+                            }
+                        } else {
+                            switch reason {
+                            case .generic:
+                                if comment != nil {
+                                    rawString = "❌ **\(channelName)** rejected your message with the comment:"
+                                } else {
+                                    rawString = "❌ **\(channelName)** rejected your message."
+                                }
+                            case .lowBalance:
+                                rawString = "⚠️ **Transaction failed** because you didn't have enough Stars."
+                            }
+                        }
                     }
                     let titleString = parseMarkdownIntoAttributedString(rawString, attributes: MarkdownAttributes(
-                        body: MarkdownAttributeSet(font: Font.semibold(15.0), textColor: primaryTextColor),
+                        body: MarkdownAttributeSet(font: Font.regular(15.0), textColor: primaryTextColor),
                         bold: MarkdownAttributeSet(font: Font.bold(15.0), textColor: primaryTextColor),
                         link: MarkdownAttributeSet(font: Font.semibold(15.0), textColor: primaryTextColor),
                         linkAttribute: { url in
@@ -314,7 +359,7 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                         }
                     ))
                     
-                    titleLayoutAndApply = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: textAlignment, cutout: nil, insets: UIEdgeInsets()))
+                    titleLayoutAndApply = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
                 }
                 
                 let (labelLayout, apply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: updatedAttributedString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: textAlignment, cutout: nil, insets: UIEdgeInsets()))
@@ -369,7 +414,10 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 if let titleLayoutAndApply {
                     backgroundSize.width = max(backgroundSize.width, titleLayoutAndApply.0.size.width)
-                    backgroundSize.height += titleSpacing + titleLayoutAndApply.0.size.height
+                    if labelLayout.size.width != 0.0 {
+                        backgroundSize.height += titleSpacing
+                    }
+                    backgroundSize.height += titleLayoutAndApply.0.size.height
                     
                     contentInsets = UIEdgeInsets(top: 12.0, left: 16.0, bottom: 12.0, right: 16.0)
                     contentOuterInsets = UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0, right: 0.0)
@@ -468,7 +516,7 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                 attemptSynchronous: synchronousLoads
                             ))
                             
-                            let labelFrame: CGRect
+                            var labelFrame: CGRect
                             let contentFrame: CGRect
                             
                             if let (titleLayout, titleApply) = titleLayoutAndApply {
@@ -476,6 +524,9 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                 
                                 let titleFrame = CGRect(origin: CGPoint(x: contentFrame.minX + floor((contentFrame.width - titleLayout.size.width) * 0.5), y: contentFrame.minY + contentInsets.top), size: titleLayout.size)
                                 labelFrame = CGRect(origin: CGPoint(x: contentFrame.minX + contentInsets.left, y: titleFrame.maxY + titleSpacing), size: labelLayout.size)
+                                if textAlignment == .center {
+                                    labelFrame.origin.x = contentFrame.minX + floor((contentFrame.width - labelFrame.width) * 0.5)
+                                }
                             
                                 let titleNode = titleApply()
                                 if strongSelf.titleNode !== titleNode {
@@ -489,9 +540,49 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                     animation.animator.updatePosition(layer: titleNode.layer, position: titleFrame.origin, completion: nil)
                                     titleNode.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
                                 }
+                                
                             } else {
                                 labelFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((boundingWidth - labelLayout.size.width) / 2.0) - 1.0, y: image != nil ? 2.0 : floorToScreenPixels((backgroundSize.height - labelLayout.size.height) / 2.0) - 1.0), size: labelLayout.size)
                                 contentFrame = labelFrame
+                            }
+                            
+                            if item.message.effectivelyIncoming(item.context.account.peerId), let suggestedPost, case let .rejected(reason, _) = suggestedPost, case .lowBalance = reason {
+                                let buyStarsTitle: ComponentView<Empty>?
+                                if let current = strongSelf.buyStarsTitle {
+                                    buyStarsTitle = current
+                                } else {
+                                    buyStarsTitle = ComponentView()
+                                    strongSelf.buyStarsTitle = buyStarsTitle
+                                }
+                                
+                                let buyStarsButton: HighlightTrackingButton?
+                                if let current = strongSelf.buyStarsButton {
+                                    buyStarsButton = current
+                                } else {
+                                    buyStarsButton = HighlightTrackingButton()
+                                    strongSelf.buyStarsButton = buyStarsButton
+                                }
+                                
+                                let buttonStarsNode: PremiumStarsNode?
+                                if let current = strongSelf.buttonStarsNode {
+                                    buttonStarsNode = current
+                                } else {
+                                    buttonStarsNode = PremiumStarsNode()
+                                    strongSelf.buttonStarsNode = buttonStarsNode
+                                }
+                            } else {
+                                if let buyStarsTitle = strongSelf.buyStarsTitle {
+                                    strongSelf.buyStarsTitle = nil
+                                    buyStarsTitle.view?.removeFromSuperview()
+                                }
+                                if let buyStarsButton = strongSelf.buyStarsButton {
+                                    strongSelf.buyStarsButton = nil
+                                    buyStarsButton.removeFromSuperview()
+                                }
+                                if let buttonStarsNode = strongSelf.buttonStarsNode {
+                                    strongSelf.buttonStarsNode = nil
+                                    buttonStarsNode.view.removeFromSuperview()
+                                }
                             }
                             
                             if story != nil {

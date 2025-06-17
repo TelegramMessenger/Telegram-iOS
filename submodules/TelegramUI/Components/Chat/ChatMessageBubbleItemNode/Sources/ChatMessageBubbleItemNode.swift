@@ -2797,7 +2797,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             actionButtonsFinalize = buttonsLayout
             
             lastNodeTopPosition = .None(.Both)
-        } else if incoming, /*let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = item.message.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething),*/ let attribute = item.message.attributes.first(where: { $0 is SuggestedPostMessageAttribute }) as? SuggestedPostMessageAttribute, attribute.state == nil {
+        } else if incoming, /*let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = item.message.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect),*/ let attribute = item.message.attributes.first(where: { $0 is SuggestedPostMessageAttribute }) as? SuggestedPostMessageAttribute, attribute.state == nil {
             //TODO:localize
             var buttonDecline: UInt8 = 0
             var buttonApprove: UInt8 = 1

@@ -535,6 +535,8 @@ private func stringForRight(strings: PresentationStrings, right: TelegramChatAdm
         } else {
             return strings.Channel_AdminLog_CanManageCalls
         }
+    } else if right.contains(.canManageDirect) {
+        return strings.Channel_AdminLog_CanManageDirect
     } else if right.contains(.canPostStories) {
         return strings.Channel_EditAdmin_PermissionPostStories
     } else if right.contains(.canEditStories) {
@@ -562,6 +564,8 @@ private func rightDependencies(_ right: TelegramChatAdminRightsFlags) -> [Telegr
     } else if right.contains(.canPinMessages) {
         return []
     } else if right.contains(.canAddAdmins) {
+        return []
+    } else if right.contains(.canManageDirect) {
         return []
     } else if right.contains(.canManageCalls) {
         return []
@@ -655,6 +659,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                     .sub(.messages, messageRelatedFlags),
                     .sub(.stories, storiesRelatedFlags),
                     .direct(.canInviteUsers),
+                    .direct(.canManageDirect),
                     .direct(.canManageCalls),
                     .direct(.canAddAdmins)
                 ]

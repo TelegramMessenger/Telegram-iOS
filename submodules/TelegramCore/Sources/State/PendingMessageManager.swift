@@ -949,7 +949,7 @@ public final class PendingMessageManager {
                     var monoforumPeerId: Api.InputPeer?
                     if let threadId = messages[0].0.threadId {
                         if let channel = peer as? TelegramChannel, channel.flags.contains(.isMonoforum) {
-                            if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = transaction.getPeer(linkedMonoforumId) as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
+                            if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = transaction.getPeer(linkedMonoforumId) as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
                                 monoforumPeerId = transaction.getPeer(PeerId(threadId)).flatMap(apiInputPeer)
                             }
                         } else {
@@ -1045,7 +1045,7 @@ public final class PendingMessageManager {
                     var monoforumPeerId: Api.InputPeer?
                     if let threadId = messages[0].0.threadId {
                         if let channel = peer as? TelegramChannel, channel.flags.contains(.isMonoforum) {
-                            if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = transaction.getPeer(linkedMonoforumId) as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
+                            if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = transaction.getPeer(linkedMonoforumId) as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
                                 monoforumPeerId = transaction.getPeer(PeerId(threadId)).flatMap(apiInputPeer)
                             }
                         } else {
@@ -1357,7 +1357,7 @@ public final class PendingMessageManager {
                 var monoforumPeerId: Api.InputPeer?
                 if let threadId = message.threadId {
                     if let channel = peer as? TelegramChannel, channel.flags.contains(.isMonoforum) {
-                        if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = transaction.getPeer(linkedMonoforumId) as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
+                        if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = transaction.getPeer(linkedMonoforumId) as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
                             monoforumPeerId = transaction.getPeer(PeerId(threadId)).flatMap(apiInputPeer)
                         }
                     } else {
@@ -1630,7 +1630,7 @@ public final class PendingMessageManager {
                         var monoforumPeerId: Api.InputPeer?
                         if let threadId = message.threadId {
                             if let channel = peer as? TelegramChannel, channel.flags.contains(.isMonoforum) {
-                                if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = transaction.getPeer(linkedMonoforumId) as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
+                                if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = transaction.getPeer(linkedMonoforumId) as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
                                     monoforumPeerId = transaction.getPeer(PeerId(threadId)).flatMap(apiInputPeer)
                                 }
                             } else {

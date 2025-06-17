@@ -430,7 +430,7 @@ public final class ChatLoadingPlaceholderNode: ASDisplayNode {
                 chatType = .group
             } else if let channel = peer as? TelegramChannel {
                 if channel.isMonoForum {
-                    if let mainChannel = renderedPeer?.chatOrMonoforumMainPeer as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
+                    if let mainChannel = renderedPeer?.chatOrMonoforumMainPeer as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
                         if chatLocation.threadId == nil {
                             chatType = .group
                         } else {
