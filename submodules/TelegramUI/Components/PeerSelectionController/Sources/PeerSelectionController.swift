@@ -275,36 +275,46 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
         }
         
         self.peerSelectionNode.requestOpenPeer = { [weak self] peer, threadId in
-            if let strongSelf = self, let peerSelected = strongSelf.peerSelected {
-                if case let .channel(peer) = peer, peer.isForumOrMonoForum, threadId == nil, strongSelf.selectForumThreads {
-                    let mainPeer: Signal<EnginePeer?, NoError>
-                    if peer.isMonoForum, let linkedMonoforumId = peer.linkedMonoforumId {
-                        mainPeer = strongSelf.context.engine.data.get(
-                            TelegramEngine.EngineData.Item.Peer.Peer(id: linkedMonoforumId)
-                        )
-                    } else {
-                        mainPeer = .single(nil)
+            guard let self else {
+                return
+            }
+            guard let peerSelected = self.peerSelected else {
+                return
+            }
+            
+            if case let .channel(peer) = peer, peer.isForumOrMonoForum, threadId == nil, self.selectForumThreads {
+                let mainPeer: Signal<EnginePeer?, NoError>
+                if peer.isMonoForum, let linkedMonoforumId = peer.linkedMonoforumId {
+                    mainPeer = self.context.engine.data.get(
+                        TelegramEngine.EngineData.Item.Peer.Peer(id: linkedMonoforumId)
+                    )
+                } else {
+                    mainPeer = .single(nil)
+                }
+                
+                let _ = (mainPeer |> deliverOnMainQueue).startStandalone(next: { [weak self] mainPeer in
+                    guard let self else {
+                        return
+                    }
+                    guard case let .channel(mainChannel) = mainPeer else {
+                        return
                     }
                     
-                    let _ = (mainPeer |> deliverOnMainQueue).startStandalone(next: { [weak strongSelf] mainPeer in
-                        guard let strongSelf else {
-                            return
-                        }
-                        
-                        let displayPeer = mainPeer ?? EnginePeer(peer)
+                    if mainChannel.hasPermission(.manageDirect) {
+                        let displayPeer = EnginePeer(mainChannel)
                         
                         let controller = PeerSelectionControllerImpl(
                             PeerSelectionControllerParams(
-                                context: strongSelf.context,
+                                context: self.context,
                                 updatedPresentationData: nil,
-                                filter: strongSelf.filter,
+                                filter: self.filter,
                                 forumPeerId: (peer.id, peer.isMonoForum),
                                 hasFilters: false,
                                 hasChatListSelector: false,
                                 hasContactSelector: false,
                                 hasGlobalSearch: false,
                                 title: displayPeer.compactDisplayTitle,
-                                attemptSelection: strongSelf.attemptSelection,
+                                attemptSelection: self.attemptSelection,
                                 createNewGroup: nil,
                                 pretendPresentedInModal: false,
                                 multipleSelection: false,
@@ -313,12 +323,14 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
                                 selectForumThreads: false
                             )
                         )
-                        controller.peerSelected = strongSelf.peerSelected
-                        strongSelf.push(controller)
-                    })
-                } else {
-                    peerSelected(peer, threadId)
-                }
+                        controller.peerSelected = self.peerSelected
+                        self.push(controller)
+                    } else {
+                        peerSelected(.channel(peer), threadId)
+                    }
+                })
+            } else {
+                peerSelected(peer, threadId)
             }
         }
         
