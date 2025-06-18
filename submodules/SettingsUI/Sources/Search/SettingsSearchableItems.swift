@@ -895,9 +895,6 @@ private func languageSearchableItems(context: AccountContext, localizations: [Lo
 }
 
 func settingsSearchableItems(context: AccountContext, notificationExceptionsList: Signal<NotificationExceptionsList?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>, privacySettings: Signal<AccountPrivacySettings?, NoError>, hasTwoStepAuth: Signal<Bool?, NoError>, twoStepAuthData: Signal<TwoStepVerificationAccessConfiguration?, NoError>, activeSessionsContext: Signal<ActiveSessionsContext?, NoError>, webSessionsContext: Signal<WebSessionsContext?, NoError>) -> Signal<[SettingsSearchableItem], NoError> {
-    let watchAppInstalled = (context.watchManager?.watchAppInstalled ?? .single(false))
-    |> take(1)
-
     let canAddAccount = activeAccountsAndPeers(context: context)
     |> take(1)
     |> map { accountsAndPeers -> Bool in
@@ -991,8 +988,8 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
         }
     }
     
-    return combineLatest(watchAppInstalled, canAddAccount, localizations, notificationSettings, notificationExceptionsList, archivedStickerPacks, proxyServers, privacySettings, hasTwoStepAuth, twoStepAuthData, activeSessionsContext, activeWebSessionsContext)
-    |> map { watchAppInstalled, canAddAccount, localizations, notificationSettings, notificationExceptionsList, archivedStickerPacks, proxyServers, privacySettings, hasTwoStepAuth, twoStepAuthData, activeSessionsContext, activeWebSessionsContext in
+    return combineLatest(canAddAccount, localizations, notificationSettings, notificationExceptionsList, archivedStickerPacks, proxyServers, privacySettings, hasTwoStepAuth, twoStepAuthData, activeSessionsContext, activeWebSessionsContext)
+    |> map { canAddAccount, localizations, notificationSettings, notificationExceptionsList, archivedStickerPacks, proxyServers, privacySettings, hasTwoStepAuth, twoStepAuthData, activeSessionsContext, activeWebSessionsContext in
         let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
         
         var allItems: [SettingsSearchableItem] = []
@@ -1042,13 +1039,6 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
 
         let storiesItems = storiesSearchableItems(context: context)
         allItems.append(contentsOf: storiesItems)
-        
-        if watchAppInstalled {
-            let watch = SettingsSearchableItem(id: .watch(0), title: strings.Settings_AppleWatch, alternate: synonyms(strings.SettingsSearch_Synonyms_Watch), icon: .watch, breadcrumbs: [], present: { context, _, present in
-                present(.push, watchSettingsController(context: context))
-            })
-            allItems.append(watch)
-        }
         
         if let hasTwoStepAuth = hasTwoStepAuth, hasTwoStepAuth {
             let passport = SettingsSearchableItem(id: .passport(0), title: strings.Settings_Passport, alternate: synonyms(strings.SettingsSearch_Synonyms_Passport), icon: .passport, breadcrumbs: [], present: { context, _, present in

@@ -19,7 +19,6 @@ import OverlayStatusController
 import UndoUI
 import LegacyUI
 import PassportUI
-import WatchBridge
 import SettingsUI
 import AppBundle
 import UrlHandling
@@ -1052,26 +1051,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                     return .single(nil)
                 }
             }
-            /*let watchTasks = self.context.get()
-            |> mapToSignal { context -> Signal<AccountRecordId?, NoError> in
-                if let context = context, let watchManager = context.context.watchManager {
-                    let accountId = context.context.account.id
-                    let runningTasks: Signal<WatchRunningTasks?, NoError> = .single(nil)
-                    |> then(watchManager.runningTasks)
-                    return runningTasks
-                    |> distinctUntilChanged
-                    |> map { value -> AccountRecordId? in
-                        if let value = value, value.running {
-                            return accountId
-                        } else {
-                            return nil
-                        }
-                    }
-                    |> distinctUntilChanged
-                } else {
-                    return .single(nil)
-                }
-            }*/
+            
             let wakeupManager = SharedWakeupManager(beginBackgroundTask: { name, expiration in
                 let id = application.beginBackgroundTask(withName: name, expirationHandler: expiration)
                 Logger.shared.log("App \(self.episodeId)", "Begin background task \(name): \(id)")
@@ -1101,8 +1081,6 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             
             return .single(sharedApplicationContext)
         })
-        
-        //let watchManagerArgumentsPromise = Promise<WatchManagerArguments?>()
             
         self.context.set(self.sharedContextPromise.get()
         |> deliverOnMainQueue
@@ -1141,7 +1119,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             |> deliverOnMainQueue
             |> map { accountAndSettings -> AuthorizedApplicationContext? in
                 return accountAndSettings.flatMap { context, callListSettings in
-                    return AuthorizedApplicationContext(sharedApplicationContext: sharedApplicationContext, mainWindow: self.mainWindow, watchManagerArguments: .single(nil), context: context as! AccountContextImpl, accountManager: sharedApplicationContext.sharedContext.accountManager, showCallsTab: callListSettings.showTab, reinitializedNotificationSettings: {
+                    return AuthorizedApplicationContext(sharedApplicationContext: sharedApplicationContext, mainWindow: self.mainWindow, context: context as! AccountContextImpl, accountManager: sharedApplicationContext.sharedContext.accountManager, showCallsTab: callListSettings.showTab, reinitializedNotificationSettings: {
                         let _ = (self.context.get()
                         |> take(1)
                         |> deliverOnMainQueue).start(next: { context in
@@ -1384,20 +1362,6 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 return updated
             }).start()
         }))
-        
-        /*self.watchCommunicationManagerPromise.set(watchCommunicationManager(context: self.context.get() |> flatMap { WatchCommunicationManagerContext(context: $0.context) }, allowBackgroundTimeExtension: { timeout in
-            let _ = (self.sharedContextPromise.get()
-            |> take(1)).start(next: { sharedContext in
-                sharedContext.wakeupManager.allowBackgroundTimeExtension(timeout: timeout)
-            })
-        }))
-        let _ = self.watchCommunicationManagerPromise.get().start(next: { manager in
-            if let manager = manager {
-                watchManagerArgumentsPromise.set(.single(manager.arguments))
-            } else {
-                watchManagerArgumentsPromise.set(.single(nil))
-            }
-        })*/
         
         self.resetBadge()
         
