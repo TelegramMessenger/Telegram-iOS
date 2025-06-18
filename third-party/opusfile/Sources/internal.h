@@ -29,7 +29,7 @@
 # endif
 
 # include <stdlib.h>
-# include <opusfile.h>
+# include <opusfile/opusfile.h>
 
 typedef struct OggOpusLink OggOpusLink;
 

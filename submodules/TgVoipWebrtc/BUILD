@@ -146,7 +146,6 @@ objc_library(
         "-Ithird-party/webrtc/webrtc/sdk/objc/components/renderer/metal",
         "-Ithird-party/webrtc/webrtc/sdk/objc/components/renderer/opengl",
         "-Ithird-party/webrtc/webrtc/sdk/objc/components/video_codec",
-        "-Ithird-party/libyuv/third_party/libyuv/include",
         "-Ithird-party/libyuv",
         "-Ithird-party/webrtc/webrtc/sdk/objc/api/video_codec",
         "-Ithird-party/webrtc/absl",
