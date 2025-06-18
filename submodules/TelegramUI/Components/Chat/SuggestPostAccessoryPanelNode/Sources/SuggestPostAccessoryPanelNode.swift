@@ -93,11 +93,6 @@ public final class SuggestPostAccessoryPanelNode: AccessoryPanelNode {
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
         self.addSubnode(self.actionArea)
-        
-        //TODO:localize
-        var titleText: [CompositeTextNode.Component] = []
-        titleText.append(.text(NSAttributedString(string: "Suggest a post below", font: Font.medium(15.0), textColor: self.theme.chat.inputPanel.panelControlAccentColor)))
-        self.titleNode.components = titleText
     }
     
     deinit {
@@ -187,11 +182,6 @@ public final class SuggestPostAccessoryPanelNode: AccessoryPanelNode {
         
         let imageTextInset: CGFloat = 0.0
         
-        let titleSize = self.titleNode.update(constrainedSize: CGSize(width: bounds.size.width - leftInset - textLineInset - rightInset - textRightInset - imageTextInset, height: bounds.size.height))
-        if self.titleNode.supernode == self {
-            self.titleNode.frame = CGRect(origin: CGPoint(x: leftInset + textLineInset + imageTextInset, y: 7.0), size: titleSize)
-        }
-        
         let textFont = Font.regular(15.0)
         
         var inlineTextStarImage: UIImage?
@@ -211,6 +201,20 @@ public final class SuggestPostAccessoryPanelNode: AccessoryPanelNode {
                 })?.withRenderingMode(.alwaysOriginal)
                 self.inlineTextStarImage = inlineTextStarImage
             }
+        }
+        
+        //TODO:localize
+        var titleText: [CompositeTextNode.Component] = []
+        if let postSuggestionState = interfaceState.interfaceState.postSuggestionState, postSuggestionState.editingOriginalMessageId != nil {
+            titleText.append(.text(NSAttributedString(string: "Suggest Changes", font: Font.medium(15.0), textColor: self.theme.chat.inputPanel.panelControlAccentColor)))
+        } else {
+            titleText.append(.text(NSAttributedString(string: "Suggest a post below", font: Font.medium(15.0), textColor: self.theme.chat.inputPanel.panelControlAccentColor)))
+        }
+        self.titleNode.components = titleText
+        
+        let titleSize = self.titleNode.update(constrainedSize: CGSize(width: bounds.size.width - leftInset - textLineInset - rightInset - textRightInset - imageTextInset, height: bounds.size.height))
+        if self.titleNode.supernode == self {
+            self.titleNode.frame = CGRect(origin: CGPoint(x: leftInset + textLineInset + imageTextInset, y: 7.0), size: titleSize)
         }
         
         let textString: NSAttributedString

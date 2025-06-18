@@ -28,7 +28,7 @@ func accessoryPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceS
         break
     }
     
-    if let editMessage = chatPresentationInterfaceState.interfaceState.editMessage {
+    if let editMessage = chatPresentationInterfaceState.interfaceState.editMessage, chatPresentationInterfaceState.interfaceState.postSuggestionState == nil {
         if let editingUrlPreview = chatPresentationInterfaceState.editingUrlPreview, !editMessage.disableUrlPreviews.contains(editingUrlPreview.url) {
             if let previewPanelNode = currentPanel as? WebpagePreviewAccessoryPanelNode {
                 previewPanelNode.interfaceInteraction = interfaceInteraction

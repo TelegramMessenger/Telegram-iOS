@@ -82,3 +82,18 @@ extension SuggestedPostMessageAttribute {
         return .suggestedPost(flags: flags, starsAmount: self.amount, scheduleDate: self.timestamp)
     }
 }
+
+public final class PublishedSuggestedPostMessageAttribute: Equatable, MessageAttribute {
+    public init() {
+    }
+    
+    public init(decoder: PostboxDecoder) {
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+    }
+    
+    public static func == (lhs: PublishedSuggestedPostMessageAttribute, rhs: PublishedSuggestedPostMessageAttribute) -> Bool {
+        return true
+    }
+}

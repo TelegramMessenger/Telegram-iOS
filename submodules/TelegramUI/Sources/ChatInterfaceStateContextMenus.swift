@@ -124,6 +124,9 @@ private func canEditMessage(accountPeerId: PeerId, limitsConfiguration: EngineCo
             if let _ = attribute as? InlineBotMessageAttribute {
                 hasUneditableAttributes = true
                 break
+            } else if let _ = attribute as? PublishedSuggestedPostMessageAttribute {
+                hasUneditableAttributes = true
+                break
             }
         }
         if message.forwardInfo != nil {

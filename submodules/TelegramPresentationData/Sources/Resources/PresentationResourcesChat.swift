@@ -1432,4 +1432,22 @@ public struct PresentationResourcesChat {
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/TodoCheck"), color: theme.chat.message.outgoing.accentTextColor)
         })
     }
+    
+    public static func messageButtonsPostReject(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.messageButtonsPostReject.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/SuggestPostDecline"), color: .white)
+        })
+    }
+    
+    public static func messageButtonsPostApprove(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.messageButtonsPostApprove.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/SuggestPostApprove"), color: .white)
+        })
+    }
+    
+    public static func messageButtonsPostEdit(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.messageButtonsPostEdit.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/SuggestPostChange"), color: .white)
+        })
+    }
 }

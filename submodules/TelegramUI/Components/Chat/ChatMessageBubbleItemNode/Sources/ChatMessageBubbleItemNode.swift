@@ -1059,6 +1059,12 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
 
         self.backgroundWallpaperNode.animateFrom(sourceView: textInput.backgroundView, transition: transition)
         self.backgroundNode.animateFrom(sourceView: textInput.backgroundView, transition: transition)
+        
+        if let suggestedPostInfoNode = self.suggestedPostInfoNode {
+            transition.horizontal.animatePositionAdditive(layer: suggestedPostInfoNode.layer, offset: CGPoint(x: -widthDifference, y: 0.0))
+            transition.horizontal.animateTransformScale(view: suggestedPostInfoNode.view, from: 0.001)
+            suggestedPostInfoNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+        }
 
         for contentNode in self.contentNodes {
             if let contentNode = contentNode as? ChatMessageTextBubbleContentNode {
@@ -1483,7 +1489,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         threadInfoLayout: (ChatMessageThreadInfoNode.Arguments) -> (CGSize, (Bool) -> ChatMessageThreadInfoNode),
         forwardInfoLayout: (AccountContext, ChatPresentationData, PresentationStrings, ChatMessageForwardInfoType, Peer?, String?, String?, ChatMessageForwardInfoNode.StoryData?, CGSize) -> (CGSize, (CGFloat) -> ChatMessageForwardInfoNode),
         replyInfoLayout: (ChatMessageReplyInfoNode.Arguments) -> (CGSize, (CGSize, Bool, ListViewItemUpdateAnimation) -> ChatMessageReplyInfoNode),
-        actionButtonsLayout: (AccountContext, ChatPresentationThemeData, PresentationChatBubbleCorners, PresentationStrings, WallpaperBackgroundNode?, ReplyMarkupMessageAttribute, Message, CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageActionButtonsNode)),
+        actionButtonsLayout: (AccountContext, ChatPresentationThemeData, PresentationChatBubbleCorners, PresentationStrings, WallpaperBackgroundNode?, ReplyMarkupMessageAttribute, [MemoryBuffer: ChatMessageActionButtonsNode.CustomIcon], Message, CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageActionButtonsNode)),
         reactionButtonsLayout: (ChatMessageReactionButtonsNode.Arguments) -> (minWidth: CGFloat, layout: (CGFloat) -> (size: CGSize, apply: (ListViewItemUpdateAnimation) -> ChatMessageReactionButtonsNode)),
         unlockButtonLayout: (ChatMessageUnlockMediaNode.Arguments) -> (CGSize, (Bool) -> ChatMessageUnlockMediaNode),
         mediaInfoLayout: (ChatMessageStarsMediaInfoNode.Arguments) -> (CGSize, (Bool) -> ChatMessageStarsMediaInfoNode),
@@ -2792,16 +2798,25 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     ],
                     flags: [],
                     placeholder: nil
-            ), item.message, maximumNodeWidth)
+            ), [:], item.message, maximumNodeWidth)
             maxContentWidth = max(maxContentWidth, minWidth)
             actionButtonsFinalize = buttonsLayout
             
             lastNodeTopPosition = .None(.Both)
-        } else if incoming, /*let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = item.message.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething),*/ let attribute = item.message.attributes.first(where: { $0 is SuggestedPostMessageAttribute }) as? SuggestedPostMessageAttribute, attribute.state == nil {
+        } else if incoming, /*let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = item.message.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect),*/ let attribute = item.message.attributes.first(where: { $0 is SuggestedPostMessageAttribute }) as? SuggestedPostMessageAttribute, attribute.state == nil {
             //TODO:localize
-            var buttonDecline: UInt8 = 0
-            var buttonApprove: UInt8 = 1
-            var buttonSuggestChanges: UInt8 = 2
+            var buttonDeclineValue: UInt8 = 0
+            let buttonDecline = MemoryBuffer(data: Data(bytes: &buttonDeclineValue, count: 1))
+            var buttonApproveValue: UInt8 = 1
+            let buttonApprove = MemoryBuffer(data: Data(bytes: &buttonApproveValue, count: 1))
+            var buttonSuggestChangesValue: UInt8 = 2
+            let buttonSuggestChanges = MemoryBuffer(data: Data(bytes: &buttonSuggestChangesValue, count: 1))
+            
+            let customIcons: [MemoryBuffer: ChatMessageActionButtonsNode.CustomIcon] = [
+                buttonDecline: .suggestedPostReject,
+                buttonApprove: .suggestedPostApprove,
+                buttonSuggestChanges: .suggestedPostEdit
+            ]
             
             let (minWidth, buttonsLayout) = actionButtonsLayout(
                 item.context,
@@ -2812,22 +2827,22 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 ReplyMarkupMessageAttribute(
                     rows: [
                         ReplyMarkupRow(buttons: [
-                            ReplyMarkupButton(title: "Decline", titleWhenForwarded: nil, action: .callback(requiresPassword: false, data: MemoryBuffer(data: Data(bytes: &buttonDecline, count: 1)))),
-                            ReplyMarkupButton(title: "Approve", titleWhenForwarded: nil, action: .callback(requiresPassword: false, data: MemoryBuffer(data: Data(bytes: &buttonApprove, count: 1))))
+                            ReplyMarkupButton(title: "Decline", titleWhenForwarded: nil, action: .callback(requiresPassword: false, data: buttonDecline)),
+                            ReplyMarkupButton(title: "Approve", titleWhenForwarded: nil, action: .callback(requiresPassword: false, data: buttonApprove))
                         ]),
                         ReplyMarkupRow(buttons: [
-                            ReplyMarkupButton(title: "Suggest Changes", titleWhenForwarded: nil, action: .callback(requiresPassword: false, data: MemoryBuffer(data: Data(bytes: &buttonSuggestChanges, count: 1))))
+                            ReplyMarkupButton(title: "Suggest Changes", titleWhenForwarded: nil, action: .callback(requiresPassword: false, data: buttonSuggestChanges))
                         ])
                     ],
                     flags: [],
                     placeholder: nil
-            ), item.message, maximumNodeWidth)
+            ), customIcons, item.message, maximumNodeWidth)
             maxContentWidth = max(maxContentWidth, minWidth)
             actionButtonsFinalize = buttonsLayout
             
             lastNodeTopPosition = .None(.Both)
         } else if let replyMarkup = replyMarkup, !item.presentationData.isPreview {
-            let (minWidth, buttonsLayout) = actionButtonsLayout(item.context, item.presentationData.theme, item.presentationData.chatBubbleCorners, item.presentationData.strings, item.controllerInteraction.presentationContext.backgroundNode, replyMarkup, item.message, maximumNodeWidth)
+            let (minWidth, buttonsLayout) = actionButtonsLayout(item.context, item.presentationData.theme, item.presentationData.chatBubbleCorners, item.presentationData.strings, item.controllerInteraction.presentationContext.backgroundNode, replyMarkup, [:], item.message, maximumNodeWidth)
             maxContentWidth = max(maxContentWidth, minWidth)
             actionButtonsFinalize = buttonsLayout
         }
@@ -3526,11 +3541,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 strongSelf.suggestedPostInfoNode?.removeFromSupernode()
                 strongSelf.suggestedPostInfoNode = suggestedPostInfoNode
                 strongSelf.mainContextSourceNode.contentNode.addSubnode(suggestedPostInfoNode)
-                
-                let suggestedPostInfoFrame = CGRect(origin: CGPoint(x: floor((params.width - suggestedPostInfoSize.width) * 0.5), y: 4.0), size: suggestedPostInfoSize)
-                suggestedPostInfoNode.frame = suggestedPostInfoFrame
-                //animation.animator.updateFrame(layer: suggestedPostInfoNode.layer, frame: suggestedPostInfoFrame, completion: nil)
             }
+            let suggestedPostInfoFrame = CGRect(origin: CGPoint(x: floor((params.width - suggestedPostInfoSize.width) * 0.5), y: 4.0), size: suggestedPostInfoSize)
+            suggestedPostInfoNode.frame = suggestedPostInfoFrame
         } else if let suggestedPostInfoNode = strongSelf.suggestedPostInfoNode {
             strongSelf.suggestedPostInfoNode = nil
             suggestedPostInfoNode.removeFromSupernode()

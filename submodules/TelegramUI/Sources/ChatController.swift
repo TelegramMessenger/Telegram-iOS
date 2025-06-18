@@ -2348,9 +2348,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 guard let strongSelf else {
                                     return
                                 }
-                                if time != 0 {
-                                    let _ = strongSelf.context.engine.messages.monoforumPerformSuggestedPostAction(id: message.id, action: .approve(timestamp: time)).startStandalone()
-                                }
+                                let _ = strongSelf.context.engine.messages.monoforumPerformSuggestedPostAction(id: message.id, action: .approve(timestamp: time != 0 ? time : nil)).startStandalone()
                             })
                             strongSelf.view.endEditing(true)
                             strongSelf.present(controller, in: .window(.root))
@@ -2360,20 +2358,55 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             let _ = strongSelf.context.engine.messages.monoforumPerformSuggestedPostAction(id: message.id, action: .approve(timestamp: timestamp)).startStandalone()
                         }
                     case 2:
-                        strongSelf.push(strongSelf.context.sharedContext.makeStarsWithdrawalScreen(
-                            context: strongSelf.context,
-                            subject: .postSuggestionModification(
-                                current: StarsAmount(value: attribute.amount, nanos: 0),
-                                timestamp: attribute.timestamp,
-                                completion: { [weak strongSelf] price, timestamp in
-                                    guard let strongSelf else {
-                                        return
-                                    }
-                                    
-                                    let _ = strongSelf.context.engine.messages.monoforumPerformSuggestedPostAction(id: message.id, action: .proposeChanges(amount: price, timestamp: timestamp)).startStandalone()
+                        strongSelf.updateChatPresentationInterfaceState(interactive: true, { state in
+                            var entities: [MessageTextEntity] = []
+                            for attribute in message.attributes {
+                                if let attribute = attribute as? TextEntitiesMessageAttribute {
+                                    entities = attribute.entities
+                                    break
                                 }
-                            )
-                        ))
+                            }
+                            var inputTextMaxLength: Int32 = 4096
+                            var webpageUrl: String?
+                            for media in message.media {
+                                if media is TelegramMediaImage || media is TelegramMediaFile {
+                                    inputTextMaxLength = strongSelf.context.userLimits.maxCaptionLength
+                                } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
+                                    webpageUrl = content.url
+                                }
+                            }
+                            
+                            let inputText = chatInputStateStringWithAppliedEntities(message.text, entities: entities)
+                            var disableUrlPreviews: [String] = []
+                            if webpageUrl == nil {
+                                disableUrlPreviews = detectUrls(inputText)
+                            }
+                            
+                            var updated = state.updatedInterfaceState { interfaceState in
+                                return interfaceState.withUpdatedEditMessage(ChatEditMessageState(messageId: messageId, inputState: ChatTextInputState(inputText: inputText), disableUrlPreviews: disableUrlPreviews, inputTextMaxLength: inputTextMaxLength, mediaCaptionIsAbove: nil))
+                            }
+                            
+                            let (updatedState, updatedPreviewQueryState) = updatedChatEditInterfaceMessageState(context: strongSelf.context, state: updated, message: message)
+                            updated = updatedState
+                            strongSelf.editingUrlPreviewQueryState?.1.dispose()
+                            strongSelf.editingUrlPreviewQueryState = updatedPreviewQueryState
+                            
+                            updated = updated.updatedInputMode({ _ in
+                                return .text
+                            })
+                            updated = updated.updatedShowCommands(false)
+                            updated = updated.updatedInterfaceState { interfaceState in
+                                var interfaceState = interfaceState
+                                
+                                interfaceState = interfaceState.withUpdatedPostSuggestionState(ChatInterfaceState.PostSuggestionState(
+                                    editingOriginalMessageId: message.id,
+                                    price: attribute.amount,
+                                    timestamp: attribute.timestamp
+                                ))
+                                return interfaceState
+                            }
+                            return updated
+                        })
                     default:
                         break
                     }
@@ -4953,6 +4986,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 )
                 self.present(controller, in: .current)
             }
+        }, openStarsPurchase: { [weak self] amount in
+            self?.interfaceInteraction?.openStarsPurchase(amount)
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: self.stickerSettings, presentationContext: ChatPresentationContext(context: context, backgroundNode: self.chatBackgroundNode))
         controllerInteraction.enableFullTranslucency = context.sharedContext.energyUsageSettings.fullTranslucency
         
@@ -7418,7 +7453,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 return state
             })
-            self.interfaceInteraction?.editMessage()
+            if self.presentationInterfaceState.interfaceState.postSuggestionState == nil {
+                self.interfaceInteraction?.editMessage()
+            }
         }
     }
     
@@ -7924,6 +7961,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         case .customChatContents:
             break
         }
+        if let postSuggestionState = self.presentationInterfaceState.interfaceState.postSuggestionState, let editingOriginalMessageId = postSuggestionState.editingOriginalMessageId {
+            defaultReplyMessageSubject = EngineMessageReplySubject(messageId: editingOriginalMessageId, quote: nil)
+        }
         
         return messages.map { message in
             var message = message
@@ -7980,7 +8020,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum {
                     attributes.removeAll(where: { $0 is SendAsMessageAttribute })
-                    if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = self.presentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
+                    if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = self.presentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
                         if let sendAsPeerId = self.presentationInterfaceState.currentSendAsPeerId {
                             attributes.append(SendAsMessageAttribute(peerId: sendAsPeerId))
                         } else {

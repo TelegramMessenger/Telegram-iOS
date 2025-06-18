@@ -818,7 +818,7 @@ extension ChatControllerImpl {
                             
                             if let channel = peerView.peers[peerView.peerId] as? TelegramChannel {
                                 if channel.isMonoForum {
-                                    if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = peerView.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
+                                    if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = peerView.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
                                     } else {
                                         sendPaidMessageStars = channel.sendPaidMessageStars
                                     }
@@ -880,7 +880,7 @@ extension ChatControllerImpl {
                             }
                         } else if let cachedChannelData = peerView.cachedData as? CachedChannelData {
                             if let channel = peer as? TelegramChannel, channel.isMonoForum {
-                                if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = peerView.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
+                                if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = peerView.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
                                     currentSendAsPeerId = channel.linkedMonoforumId
                                 } else {
                                     currentSendAsPeerId = nil
@@ -1395,7 +1395,7 @@ extension ChatControllerImpl {
                            
                             if let channel = peerView.peers[peerView.peerId] as? TelegramChannel {
                                 if channel.isMonoForum {
-                                    if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = peerView.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
+                                    if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = peerView.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
                                     } else {
                                         sendPaidMessageStars = channel.sendPaidMessageStars
                                     }
@@ -1472,7 +1472,7 @@ extension ChatControllerImpl {
                         var currentSendAsPeerId: PeerId?
                         if let peer = peerView.peers[peerView.peerId] as? TelegramChannel, let cachedData = peerView.cachedData as? CachedChannelData {
                             if peer.isMonoForum {
-                                if let linkedMonoforumId = peer.linkedMonoforumId, let mainChannel = peerView.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
+                                if let linkedMonoforumId = peer.linkedMonoforumId, let mainChannel = peerView.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
                                     currentSendAsPeerId = peer.linkedMonoforumId
                                 } else {
                                     currentSendAsPeerId = nil
@@ -1484,7 +1484,7 @@ extension ChatControllerImpl {
                         
                         var removePaidMessageFeeData: ChatPresentationInterfaceState.RemovePaidMessageFeeData?
                         if let savedMessagesPeer, !savedMessagesPeer.isMonoforumFeeRemoved, let peer = savedMessagesPeer.peer, let channel = peerView.peers[peerView.peerId] as? TelegramChannel, let sendPaidMessageStars = channel.sendPaidMessageStars, channel.isMonoForum {
-                            if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = peerView.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
+                            if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = peerView.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
                                 removePaidMessageFeeData = ChatPresentationInterfaceState.RemovePaidMessageFeeData(
                                     peer: peer,
                                     amount: sendPaidMessageStars
@@ -1586,7 +1586,7 @@ extension ChatControllerImpl {
                         var currentSendAsPeerId: PeerId?
                         if let peer = peerView.peers[peerView.peerId] as? TelegramChannel, let cachedData = peerView.cachedData as? CachedChannelData {
                             if peer.isMonoForum {
-                                if let linkedMonoforumId = peer.linkedMonoforumId, let mainChannel = peerView.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
+                                if let linkedMonoforumId = peer.linkedMonoforumId, let mainChannel = peerView.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
                                     currentSendAsPeerId = peer.linkedMonoforumId
                                 } else {
                                     currentSendAsPeerId = nil

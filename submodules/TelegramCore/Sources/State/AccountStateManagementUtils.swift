@@ -1582,9 +1582,16 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 switch draft {
                     case .draftMessageEmpty:
                         inputState = nil
-                    case let .draftMessage(_, replyToMsgHeader, message, entities, media, date, messageEffectId):
+                    case let .draftMessage(_, replyToMsgHeader, message, entities, media, date, messageEffectId, suggestedPost):
                         let _ = media
                         var replySubject: EngineMessageReplySubject?
+                        var parsedSuggestedPost: SynchronizeableChatInputState.SuggestedPost?
+                        if let suggestedPost {
+                            switch suggestedPost {
+                            case let .suggestedPost(_, starsAmount, scheduleDate):
+                                parsedSuggestedPost = SynchronizeableChatInputState.SuggestedPost(price: starsAmount, timestamp: scheduleDate)
+                            }
+                        }
                         if let replyToMsgHeader {
                             switch replyToMsgHeader {
                             case let .inputReplyToMessage(_, replyToMsgId, topMsgId, replyToPeerId, quoteText, quoteEntities, quoteOffset, monoforumPeerId):
@@ -1631,7 +1638,7 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                                 break
                             }
                         }
-                        inputState = SynchronizeableChatInputState(replySubject: replySubject, text: message, entities: messageTextEntitiesFromApiEntities(entities ?? []), timestamp: date, textSelection: nil, messageEffectId: messageEffectId)
+                        inputState = SynchronizeableChatInputState(replySubject: replySubject, text: message, entities: messageTextEntitiesFromApiEntities(entities ?? []), timestamp: date, textSelection: nil, messageEffectId: messageEffectId, suggestedPost: parsedSuggestedPost)
                 }
                 var threadId: Int64?
                 if let savedPeerId {

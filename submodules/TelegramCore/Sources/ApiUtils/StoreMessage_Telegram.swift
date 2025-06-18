@@ -1015,6 +1015,10 @@ extension StoreMessage {
                 if let suggestedPost {
                     attributes.append(SuggestedPostMessageAttribute(apiSuggestedPost: suggestedPost))
                 }
+            
+                if (flags2 & (1 << 8)) != 0 {
+                    attributes.append(PublishedSuggestedPostMessageAttribute())
+                }
                 
                 var storeFlags = StoreMessageFlags()
                 
