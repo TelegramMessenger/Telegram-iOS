@@ -664,6 +664,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
             if #available(iOS 13.0, *) {
                 let appleIdProvider = ASAuthorizationAppleIDProvider()
                 let request = appleIdProvider.createRequest()
+                request.requestedScopes = [.email]
                 request.user = number
                  
                 let authorizationController = ASAuthorizationController(authorizationRequests: [request])

@@ -2094,7 +2094,7 @@ extension ChatControllerImpl {
         )
     }
     
-    func openTodoEditing(messageId: EngineMessage.Id, append: Bool) {
+    func openTodoEditing(messageId: EngineMessage.Id, itemId: Int32?, append: Bool) {
         guard let message = self.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId), let peer = self.presentationInterfaceState.renderedPeer?.peer else {
             return
         }
@@ -2109,6 +2109,7 @@ extension ChatControllerImpl {
             initialData: ComposeTodoScreen.initialData(
                 context: self.context,
                 existingTodo: existingTodo,
+                focusedId: itemId,
                 append: append,
                 canEdit: canEdit
             ),

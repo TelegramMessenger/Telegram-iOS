@@ -17,6 +17,7 @@ import ChatMessageItemCommon
 import PollBubbleTimerNode
 import TextNodeWithEntities
 import ShimmeringLinkNode
+import ChatControllerInteraction
 
 private final class ChatMessageTaskOptionRadioNodeParameters: NSObject {
     let timestamp: Double
@@ -372,22 +373,28 @@ private func generatePercentageAnimationImages(presentationData: ChatPresentatio
 }
 
 private final class ChatMessageTodoItemNode: ASDisplayNode {
-    private let highlightedBackgroundNode: ASDisplayNode
+    fileprivate let highlightedBackgroundNode: ASDisplayNode
     private var avatarNode: AvatarNode?
     private(set) var radioNode: ChatMessageTaskOptionRadioNode?
     private var iconNode: ASImageNode?
     fileprivate var titleNode: TextNodeWithEntities?
+    fileprivate var nameNode: TextNode?
     private let buttonNode: HighlightTrackingButtonNode
     let separatorNode: ASDisplayNode
     var option: TelegramMediaTodo.Item?
     var pressed: (() -> Void)?
     var selectionUpdated: (() -> Void)?
+    
+    var longTapped: (() -> Void)?
+    
     private var theme: PresentationTheme?
     
     weak var previousOptionNode: ChatMessageTodoItemNode?
     
     private var canMark = false
     private var isPremium = false
+    
+    private var ignoreNextTap = false
     
     var visibilityRect: CGRect? {
         didSet {
@@ -438,6 +445,13 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
                     
                     strongSelf.previousOptionNode?.separatorNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.previousOptionNode?.separatorNode.alpha = 0.0
+                    
+                    Queue.mainQueue().after(0.8) {
+                        if strongSelf.highlightedBackgroundNode.alpha == 1.0 {
+                            strongSelf.ignoreNextTap = true
+                            strongSelf.longTapped?()
+                        }
+                    }
                 } else {
                     strongSelf.highlightedBackgroundNode.alpha = 0.0
                     strongSelf.highlightedBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, completion: { finished in
@@ -459,6 +473,10 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
     }
     
     @objc private func buttonPressed() {
+        guard !self.ignoreNextTap else {
+            self.ignoreNextTap = false
+            return
+        }
         if let radioNode = self.radioNode, let isChecked = radioNode.isChecked, self.canMark, self.isPremium {
             radioNode.updateIsChecked(!isChecked, animated: true)
             self.selectionUpdated?()
@@ -469,6 +487,7 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
     
     static func asyncLayout(_ maybeNode: ChatMessageTodoItemNode?) -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ todo: TelegramMediaTodo, _ option: TelegramMediaTodo.Item, _ completion: TelegramMediaTodo.Completion?, _ translation: TranslationMessageAttribute.Additional?, _ constrainedWidth: CGFloat) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, (Bool, Bool, Bool) -> ChatMessageTodoItemNode))) {
         let makeTitleLayout = TextNodeWithEntities.asyncLayout(maybeNode?.titleNode)
+        let makeNameLayout = TextNode.asyncLayout(maybeNode?.nameNode)
         
         return { context, presentationData, message, todo, option, completion, translation, constrainedWidth in
             var canMark = false
@@ -480,6 +499,7 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
             let rightInset: CGFloat = 12.0
             
             let incoming = message.effectivelyIncoming(context.account.peerId)
+            let messageTheme = incoming ? presentationData.theme.theme.chat.message.incoming : presentationData.theme.theme.chat.message.outgoing
             
             var optionText = option.text
             var optionEntities = option.entities
@@ -492,7 +512,7 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
                 optionEntities.append(MessageTextEntity(range: 0 ..< (optionText as NSString).length, type: .Strikethrough))
             }
             
-            let optionTextColor: UIColor = incoming ? presentationData.theme.theme.chat.message.incoming.primaryTextColor : presentationData.theme.theme.chat.message.outgoing.primaryTextColor
+            let optionTextColor: UIColor = messageTheme.primaryTextColor
             let optionAttributedText = stringWithAppliedEntities(
                 optionText,
                 entities: optionEntities,
@@ -509,6 +529,13 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
             )
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: optionAttributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: max(1.0, constrainedWidth - leftInset - rightInset), height: CGFloat.greatestFiniteMagnitude), alignment: .left, cutout: nil, insets: UIEdgeInsets(top: 1.0, left: 0.0, bottom: 1.0, right: 0.0)))
+            
+            let nameLayoutAndApply: (TextNodeLayout, () -> TextNode)?
+            if let completion, let peer = message.peers[completion.completedBy], todo.flags.contains(.othersCanComplete) {
+                nameLayoutAndApply = makeNameLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), font: Font.regular(11.0), textColor: messageTheme.secondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: max(1.0, constrainedWidth - leftInset - rightInset), height: CGFloat.greatestFiniteMagnitude), alignment: .left, cutout: nil, insets: UIEdgeInsets(top: 1.0, left: 0.0, bottom: 1.0, right: 0.0)))
+            } else {
+                nameLayoutAndApply = nil
+            }
             
             let contentHeight: CGFloat = max(46.0, titleLayout.size.height + 22.0)
             
@@ -558,12 +585,16 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
                         placeholderColor: incoming ? presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor,
                         attemptSynchronous: attemptSynchronous
                     ))
-                    let titleNodeFrame: CGRect
+                    var titleNodeFrame: CGRect
                     if titleLayout.hasRTL {
                         titleNodeFrame = CGRect(origin: CGPoint(x: width - rightInset - titleLayout.size.width, y: 12.0), size: titleLayout.size)
                     } else {
                         titleNodeFrame = CGRect(origin: CGPoint(x: leftInset, y: 12.0), size: titleLayout.size)
                     }
+                    if let _ = completion, canMark && todo.flags.contains(.othersCanComplete) {
+                        titleNodeFrame = titleNodeFrame.offsetBy(dx: 0.0, dy: -6.0)
+                    }
+                    
                     if node.titleNode !== titleNode {
                         node.titleNode = titleNode
                         node.addSubnode(titleNode.textNode)
@@ -573,7 +604,42 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
                             titleNode.visibilityRect = visibilityRect.offsetBy(dx: 0.0, dy: titleNodeFrame.minY)
                         }
                     }
+                    
+                    let previousFrame = titleNode.textNode.frame
                     titleNode.textNode.frame = titleNodeFrame
+                    
+                    if animated, previousFrame != titleNodeFrame {
+                        titleNode.textNode.layer.animateFrame(from: previousFrame, to: titleNodeFrame, duration: 0.2)
+                    }
+                    
+                    if let (nameLayout, nameApply) = nameLayoutAndApply {
+                        var nameNodeFrame: CGRect
+                        if titleLayout.hasRTL {
+                            nameNodeFrame = CGRect(origin: CGPoint(x: width - rightInset - nameLayout.size.width, y: 26.0), size: nameLayout.size)
+                        } else {
+                            nameNodeFrame = CGRect(origin: CGPoint(x: leftInset, y: 26.0), size: nameLayout.size)
+                        }
+                        let nameNode = nameApply()
+                        if node.nameNode !== nameNode {
+                            node.nameNode = nameNode
+                            node.addSubnode(nameNode)
+                            nameNode.isUserInteractionEnabled = false
+                            
+                            if animated {
+                                nameNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                            }
+                        }
+                        nameNode.frame = nameNodeFrame
+                    } else if let nameNode = node.nameNode {
+                        node.nameNode = nil
+                        if animated {
+                            nameNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak nameNode] _ in
+                                nameNode?.removeFromSupernode()
+                            })
+                        } else {
+                            nameNode.removeFromSupernode()
+                        }
+                    }
                     
                     if let completion, canMark && todo.flags.contains(.othersCanComplete) {
                         let avatarNode: AvatarNode
@@ -882,9 +948,8 @@ public class ChatMessageTodoBubbleContentNode: ChatMessageBubbleContentNode {
 
                 let messageTheme = incoming ? item.presentationData.theme.theme.chat.message.incoming : item.presentationData.theme.theme.chat.message.outgoing
                 
-                
-                var pollTitleText = todo?.text ?? ""
-                var pollTitleEntities = todo?.textEntities ?? []
+                var todoTitleText = todo?.text ?? ""
+                var todoTitleEntities = todo?.textEntities ?? []
                 var pollOptions: [TranslationMessageAttribute.Additional] = []
                 
                 var isTranslating = false
@@ -892,8 +957,8 @@ public class ChatMessageTodoBubbleContentNode: ChatMessageBubbleContentNode {
                     isTranslating = true
                     for attribute in item.message.attributes {
                         if let attribute = attribute as? TranslationMessageAttribute, !attribute.text.isEmpty, attribute.toLang == translateToLanguage {
-                            pollTitleText = attribute.text
-                            pollTitleEntities = attribute.entities
+                            todoTitleText = attribute.text
+                            todoTitleEntities = attribute.entities
                             pollOptions = attribute.additional
                             isTranslating = false
                             break
@@ -902,8 +967,8 @@ public class ChatMessageTodoBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 
                 let attributedText = stringWithAppliedEntities(
-                    pollTitleText,
-                    entities: pollTitleEntities,
+                    todoTitleText,
+                    entities: todoTitleEntities,
                     baseColor: messageTheme.primaryTextColor,
                     linkColor: messageTheme.linkTextColor,
                     baseFont: item.presentationData.messageBoldFont,
@@ -1062,9 +1127,6 @@ public class ChatMessageTodoBubbleContentNode: ChatMessageBubbleContentNode {
                                 var isRequesting = false
                                 if let todo, i < todo.items.count {
                                     isRequesting = false
-//                                    if let inProgressOpaqueIds = item.controllerInteraction.pollActionState.pollMessageIdsInProgress[item.message.id] {
-//                                        isRequesting = inProgressOpaqueIds.contains(poll.options[i].opaqueIdentifier)
-//                                    }
                                 }
                                 let optionNode = apply(animation.isAnimated, isRequesting, synchronousLoad)
                                 let optionNodeFrame = CGRect(origin: CGPoint(x: layoutConstants.bubble.borderInset, y: verticalOffset), size: size)
@@ -1082,6 +1144,12 @@ public class ChatMessageTodoBubbleContentNode: ChatMessageBubbleContentNode {
                                             return
                                         }
                                         item.controllerInteraction.displayTodoToggleUnavailable(item.message.id)
+                                    }
+                                    optionNode.longTapped = { [weak optionNode] in
+                                        guard let strongSelf = self, let item = strongSelf.item, let todoItem, let optionNode, let contentNode = strongSelf.contextContentNodeForItem(itemNode: optionNode) else {
+                                            return
+                                        }
+                                        item.controllerInteraction.todoItemLongTap(todoItem.id, ChatControllerInteraction.LongTapParams(message: message, contentNode: contentNode, messageNode: strongSelf, progress: nil))
                                     }
                                     optionNode.frame = optionNodeFrame
                                 } else {
@@ -1312,5 +1380,43 @@ public class ChatMessageTodoBubbleContentNode: ChatMessageBubbleContentNode {
             }
         }
         return nil
+    }
+    
+    private func contextContentNodeForItem(itemNode: ChatMessageTodoItemNode) -> ContextExtractedContentContainingNode? {
+        guard let item = self.item else {
+            return nil
+        }
+        let containingNode = ContextExtractedContentContainingNode()
+        
+        let incoming = item.content.effectivelyIncoming(item.context.account.peerId, associatedData: item.associatedData)
+                
+        itemNode.highlightedBackgroundNode.alpha = 0.0
+        guard let snapshotView = itemNode.view.snapshotContentTree() else {
+            return nil
+        }
+        
+        let backgroundNode = ASDisplayNode()
+        backgroundNode.backgroundColor = (incoming ? item.presentationData.theme.theme.chat.message.incoming.bubble.withoutWallpaper.fill : item.presentationData.theme.theme.chat.message.outgoing.bubble.withoutWallpaper.fill).first ?? .black
+        backgroundNode.clipsToBounds = true
+        backgroundNode.cornerRadius = 10.0
+        
+        let insets = UIEdgeInsets.zero
+        let backgroundSize = CGSize(width: snapshotView.frame.width + insets.left + insets.right, height: snapshotView.frame.height + insets.top + insets.bottom)
+        backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: backgroundSize)
+        snapshotView.frame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: snapshotView.frame.size)
+        backgroundNode.view.addSubview(snapshotView)
+        
+        let origin = CGPoint(x: 3.0, y: 1.0) //self.backgroundNode.frame.minX + 3.0, y: 1.0)
+        
+        containingNode.frame = CGRect(origin: origin, size: CGSize(width: backgroundSize.width, height: backgroundSize.height + 20.0))
+        containingNode.contentNode.frame = CGRect(origin: .zero, size: backgroundSize)
+        containingNode.contentRect = CGRect(origin: .zero, size: backgroundSize)
+        containingNode.contentNode.addSubnode(backgroundNode)
+        
+        containingNode.contentNode.alpha = 0.0
+        
+        self.addSubnode(containingNode)
+        
+        return containingNode
     }
 }

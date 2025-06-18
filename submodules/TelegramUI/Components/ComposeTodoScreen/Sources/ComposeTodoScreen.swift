@@ -982,6 +982,11 @@ final class ComposeTodoScreenComponent: Component {
                 }
             }
             
+            var focusedIndex: Int?
+            if isFirstTime, let focusedId = component.initialData.focusedId {
+                focusedIndex = self.todoItems.firstIndex(where: { $0.id == focusedId })
+            }
+            
             for i in 0 ..< todoItemsSectionReadyItems.count {
                 var activate = false
                 let placeholder: String
@@ -992,6 +997,10 @@ final class ComposeTodoScreenComponent: Component {
                     }
                 } else {
                     placeholder = "Task"
+                }
+                
+                if let focusedIndex, i == focusedIndex {
+                    activate = true
                 }
                 
                 if let itemView = todoItemsSectionReadyItems[i].itemView.contents.view as? ListComposePollOptionComponent.View {
@@ -1527,6 +1536,7 @@ public class ComposeTodoScreen: ViewControllerComponentContainer, AttachmentCont
         fileprivate let maxTodoItemLength: Int
         fileprivate let maxTodoItemsCount: Int
         fileprivate let existingTodo: TelegramMediaTodo?
+        fileprivate let focusedId: Int32?
         fileprivate let append: Bool
         fileprivate let canEdit: Bool
         
@@ -1535,6 +1545,7 @@ public class ComposeTodoScreen: ViewControllerComponentContainer, AttachmentCont
             maxTodoItemLength: Int,
             maxTodoItemsCount: Int,
             existingTodo: TelegramMediaTodo?,
+            focusedId: Int32?,
             append: Bool,
             canEdit: Bool
         ) {
@@ -1542,6 +1553,7 @@ public class ComposeTodoScreen: ViewControllerComponentContainer, AttachmentCont
             self.maxTodoItemLength = maxTodoItemLength
             self.maxTodoItemsCount = maxTodoItemsCount
             self.existingTodo = existingTodo
+            self.focusedId = focusedId
             self.append = append
             self.canEdit = canEdit
         }
@@ -1639,7 +1651,7 @@ public class ComposeTodoScreen: ViewControllerComponentContainer, AttachmentCont
     deinit {
     }
     
-    public static func initialData(context: AccountContext, existingTodo: TelegramMediaTodo? = nil, append: Bool = false, canEdit: Bool = false) -> InitialData {
+    public static func initialData(context: AccountContext, existingTodo: TelegramMediaTodo? = nil, focusedId: Int32? = nil, append: Bool = false, canEdit: Bool = false) -> InitialData {
         var maxTodoTextLength: Int = 32
         var maxTodoItemLength: Int = 64
         var maxTodoItemsCount: Int = 30
@@ -1659,6 +1671,7 @@ public class ComposeTodoScreen: ViewControllerComponentContainer, AttachmentCont
             maxTodoItemLength: maxTodoItemLength,
             maxTodoItemsCount: maxTodoItemsCount,
             existingTodo: existingTodo,
+            focusedId: focusedId,
             append: append,
             canEdit: canEdit
         )

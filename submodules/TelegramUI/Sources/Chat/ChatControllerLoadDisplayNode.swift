@@ -4173,11 +4173,11 @@ extension ChatControllerImpl {
                 return
             }
             self.dismissAllTooltips()
-        }, editTodoMessage: { [weak self] messageId, append in
+        }, editTodoMessage: { [weak self] messageId, itemId, append in
             guard let self else {
                 return
             }
-            self.openTodoEditing(messageId: messageId, append: append)
+            self.openTodoEditing(messageId: messageId, itemId: itemId, append: append)
         }, updateHistoryFilter: { [weak self] update in
             guard let self else {
                 return

@@ -15,23 +15,10 @@ import ChatControllerInteraction
 
 extension ChatControllerImpl {
     func openMentionContextMenu(username: String, peerId: EnginePeer.Id?, params: ChatControllerInteraction.LongTapParams) -> Void {
-        guard let message = params.message, let contentNode = params.contentNode else {
+        guard let _ = params.message, let contentNode = params.contentNode else {
             return
         }
-        
-        guard let messages = self.chatDisplayNode.historyNode.messageGroupInCurrentHistoryView(message.id) else {
-            return
-        }
-        
-        var updatedMessages = messages
-        for i in 0 ..< updatedMessages.count {
-            if updatedMessages[i].id == message.id {
-                let message = updatedMessages.remove(at: i)
-                updatedMessages.insert(message, at: 0)
-                break
-            }
-        }
-        
+    
         let recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil// anyRecognizer as? TapLongTapOrDoubleTapGestureRecognizer
         let gesture: ContextGesture? = nil // anyRecognizer as? ContextGesture
         

@@ -215,6 +215,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let callPeer: (PeerId, Bool) -> Void
     public let openConferenceCall: (Message) -> Void
     public let longTap: (ChatControllerInteractionLongTapAction, LongTapParams?) -> Void
+    public let todoItemLongTap: (Int32, LongTapParams?) -> Void
     public let openCheckoutOrReceipt: (MessageId, OpenMessageParams?) -> Void
     public let openSearch: () -> Void
     public let setupReply: (MessageId) -> Void
@@ -379,6 +380,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         callPeer: @escaping (PeerId, Bool) -> Void,
         openConferenceCall: @escaping (Message) -> Void,
         longTap: @escaping (ChatControllerInteractionLongTapAction, LongTapParams?) -> Void,
+        todoItemLongTap: @escaping (Int32, LongTapParams?) -> Void,
         openCheckoutOrReceipt: @escaping (MessageId, OpenMessageParams?) -> Void,
         openSearch: @escaping () -> Void,
         setupReply: @escaping (MessageId) -> Void,
@@ -499,6 +501,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         self.callPeer = callPeer
         self.openConferenceCall = openConferenceCall
         self.longTap = longTap
+        self.todoItemLongTap = todoItemLongTap
         self.openCheckoutOrReceipt = openCheckoutOrReceipt
         self.openSearch = openSearch
         self.setupReply = setupReply

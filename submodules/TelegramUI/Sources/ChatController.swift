@@ -2891,12 +2891,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let self else {
                 return
             }
-            
             self.joinConferenceCall(message: EngineMessage(message))
         }, longTap: { [weak self] action, params in
-            if let self {
-                self.openLinkLongTap(action, params: params)
+            guard let self else {
+                return
             }
+            self.openLinkLongTap(action, params: params)
+        }, todoItemLongTap: { [weak self] todoItemId, params in
+            guard let self, let params else {
+                return
+            }
+            self.openTodoItemContextMenu(todoItemId: todoItemId, params: params)
         }, openCheckoutOrReceipt: { [weak self] messageId, params in
             guard let strongSelf = self else {
                 return

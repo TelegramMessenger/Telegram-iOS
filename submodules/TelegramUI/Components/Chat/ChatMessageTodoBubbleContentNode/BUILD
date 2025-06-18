@@ -28,6 +28,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/MergedAvatarsNode",
         "//submodules/TelegramUI/Components/TextNodeWithEntities",
         "//submodules/TelegramUI/Components/Chat/ShimmeringLinkNode",
+        "//submodules/TelegramUI/Components/ChatControllerInteraction",
     ],
     visibility = [
         "//visibility:public",

@@ -14449,3 +14449,7 @@ Sorry for the inconvenience.";
 "SuggestPost.SetTimeFormat.Date" = "%@";
 "SuggestPost.SetTimeFormat.TodayAt" = "Today at %@";
 "SuggestPost.SetTimeFormat.TomorrowAt" = "Tomorrow at %@";
+
+"Chat.TodoItemCompletionTimestamp.Date" = "completed %@";
+"Chat.TodoItemCompletionTimestamp.TodayAt" = "completed today at %@";
+"Chat.TodoItemCompletionTimestamp.YesterdayAt" = "completed yesterday at %@";

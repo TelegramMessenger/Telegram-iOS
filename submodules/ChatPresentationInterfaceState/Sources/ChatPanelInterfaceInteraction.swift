@@ -179,7 +179,7 @@ public final class ChatPanelInterfaceInteraction {
     public let openBoostToUnrestrict: () -> Void
     public let updateRecordingTrimRange: (Double, Double, Bool, Bool) -> Void
     public let dismissAllTooltips: () -> Void
-    public let editTodoMessage: (MessageId, Bool) -> Void
+    public let editTodoMessage: (MessageId, Int32?, Bool) -> Void
     public let requestLayout: (ContainedViewLayoutTransition) -> Void
     public let chatController: () -> ViewController?
     public let statuses: ChatPanelInterfaceInteractionStatuses?
@@ -298,7 +298,7 @@ public final class ChatPanelInterfaceInteraction {
         openBoostToUnrestrict: @escaping () -> Void,
         updateRecordingTrimRange: @escaping (Double, Double, Bool, Bool) -> Void,
         dismissAllTooltips: @escaping () -> Void,
-        editTodoMessage: @escaping (MessageId, Bool) -> Void,
+        editTodoMessage: @escaping (MessageId, Int32?, Bool) -> Void,
         updateHistoryFilter: @escaping ((ChatPresentationInterfaceState.HistoryFilter?) -> ChatPresentationInterfaceState.HistoryFilter?) -> Void,
         updateChatLocationThread: @escaping (Int64?, ChatControllerAnimateInnerChatSwitchDirection?) -> Void,
         toggleChatSidebarMode: @escaping () -> Void,
@@ -551,7 +551,7 @@ public final class ChatPanelInterfaceInteraction {
         }, openBoostToUnrestrict: {
         }, updateRecordingTrimRange: { _, _, _, _ in
         }, dismissAllTooltips: {
-        }, editTodoMessage: { _, _ in
+        }, editTodoMessage: { _, _, _ in
         }, updateHistoryFilter: { _ in
         }, updateChatLocationThread: { _, _ in
         }, toggleChatSidebarMode: {
