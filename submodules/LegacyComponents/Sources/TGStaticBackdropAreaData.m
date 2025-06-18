@@ -1,4 +1,4 @@
-#import "TGStaticBackdropAreaData.h"
+#import <LegacyComponents/TGStaticBackdropAreaData.h>
 
 @implementation TGStaticBackdropAreaData
 

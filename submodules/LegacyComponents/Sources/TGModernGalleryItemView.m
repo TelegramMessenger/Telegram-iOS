@@ -1,9 +1,9 @@
-#import "TGModernGalleryItemView.h"
+#import <LegacyComponents/TGModernGalleryItemView.h>
 
 #import "LegacyComponentsInternal.h"
 
-#import "TGModernGalleryDefaultFooterView.h"
-#import "TGModernGalleryDefaultFooterAccessoryView.h"
+#import <LegacyComponents/TGModernGalleryDefaultFooterView.h>
+#import <LegacyComponents/TGModernGalleryDefaultFooterAccessoryView.h>
 
 @implementation TGModernGalleryItemView
 
@@ -101,6 +101,10 @@
 
 - (SSignal *)contentAvailabilityStateSignal
 {
+    return nil;
+}
+
+- (UIView *)transitionContentView {
     return nil;
 }
 

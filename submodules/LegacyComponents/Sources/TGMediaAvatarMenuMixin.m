@@ -1,3 +1,5 @@
+#import <LegacyComponents/LegacyComponents.h>
+#import <LegacyComponents/TGPassportAttachMenu.h>
 #import <LegacyComponents/TGMediaAvatarMenuMixin.h>
 
 #import "LegacyComponentsInternal.h"
@@ -8,8 +10,8 @@
 #import "TGOverlayFormsheetWindow.h"
 
 #import <LegacyComponents/TGCameraPreviewView.h>
-#import "TGAttachmentCameraView.h"
-#import "TGAttachmentCarouselItemView.h"
+#import <LegacyComponents/TGAttachmentCameraView.h>
+#import <LegacyComponents/TGAttachmentCarouselItemView.h>
 
 #import <LegacyComponents/TGCameraController.h>
 #import <LegacyComponents/TGMediaAssetsController.h>
@@ -353,7 +355,7 @@
         else
             controllerWindow.frame = [_context fullscreenBounds];
         
-        bool standalone = true;
+        __unused bool standalone = true;
         CGRect startFrame = CGRectMake(0, screenSize.height, screenSize.width, screenSize.height);
         if (cameraView != nil)
         {

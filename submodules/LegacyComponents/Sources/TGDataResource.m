@@ -1,4 +1,4 @@
-#import "TGDataResource.h"
+#import <LegacyComponents/TGDataResource.h>
 
 @interface TGDataResource ()
 {

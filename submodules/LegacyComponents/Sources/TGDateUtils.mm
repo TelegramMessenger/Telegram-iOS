@@ -1,9 +1,9 @@
-#include "TGDateUtils.h"
+#import <LegacyComponents/TGDateUtils.h>
 #include <time.h>
 
 #import "LegacyComponentsInternal.h"
-#import "TGStringUtils.h"
-#import "TGLocalization.h"
+#import <LegacyComponents/TGStringUtils.h>
+#import <LegacyComponents/TGLocalization.h>
 
 static bool value_dateHas12hFormat = false;
 static __strong NSString *value_monthNamesGenShort[] = {

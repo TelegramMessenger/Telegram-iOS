@@ -1,12 +1,12 @@
-#import "TGDocumentMediaAttachment.h"
+#import <LegacyComponents/TGDocumentMediaAttachment.h>
 
 #import "LegacyComponentsInternal.h"
 
-#import "PSCoding.h"
-#import "PSKeyValueEncoder.h"
-#import "PSKeyValueDecoder.h"
+#import <LegacyComponents/PSCoding.h>
+#import <LegacyComponents/PSKeyValueEncoder.h>
+#import <LegacyComponents/PSKeyValueDecoder.h>
 
-#import "TGMessage.h"
+#import <LegacyComponents/TGMessage.h>
 
 @interface TGDocumentMediaAttachment () {
     NSArray *_textCheckingResults;
@@ -167,7 +167,7 @@
     
     NSData *originData = nil;
     @try {
-        originData = [NSKeyedArchiver archivedDataWithRootObject:_originInfo];
+        originData = [NSKeyedArchiver archivedDataWithRootObject:_originInfo requiringSecureCoding:false error:nil];
     } @catch (NSException *e) {
         
     }
@@ -286,7 +286,7 @@
             NSData *data = [[NSData alloc] initWithBytesNoCopy:originBytes length:originLength freeWhenDone:true];
             TGMediaOriginInfo *origin = nil;
             @try {
-                origin = [NSKeyedUnarchiver unarchiveObjectWithData:data];
+                origin = [NSKeyedUnarchiver unarchivedObjectOfClass:[TGMediaOriginInfo class] fromData:data error:nil];
             } @catch (NSException *e) {
                 
             }

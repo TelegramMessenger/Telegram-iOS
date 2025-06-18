@@ -1,8 +1,8 @@
-#import "TGKeyCommandController.h"
+#import <LegacyComponents/TGKeyCommandController.h>
 
 #import "LegacyComponentsInternal.h"
-#import "TGViewController.h"
-#import "TGViewController+TGRecursiveEnumeration.h"
+#import <LegacyComponents/TGViewController.h>
+#import <LegacyComponents/TGViewController+TGRecursiveEnumeration.h>
 
 @interface TGKeyCommandController ()
 {

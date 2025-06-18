@@ -1,4 +1,4 @@
-#import "TGCameraCapturedPhoto.h"
+#import <LegacyComponents/TGCameraCapturedPhoto.h>
 #import <SSignalKit/SSignalKit.h>
 #import <LegacyComponents/TGImageUtils.h>
 #import <LegacyComponents/TGPhotoEditorUtils.h>

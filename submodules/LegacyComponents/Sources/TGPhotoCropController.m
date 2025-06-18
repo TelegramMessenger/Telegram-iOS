@@ -1,3 +1,4 @@
+#import <LegacyComponents/LegacyComponents.h>
 #import "TGPhotoCropController.h"
 
 #import "LegacyComponentsInternal.h"
@@ -9,7 +10,7 @@
 
 #import <LegacyComponents/TGPhotoEditorAnimation.h>
 #import <LegacyComponents/TGPhotoEditorUtils.h>
-#import "TGPhotoEditorInterfaceAssets.h"
+#import <LegacyComponents/TGPhotoEditorInterfaceAssets.h>
 
 #import "PGPhotoEditor.h"
 
@@ -19,9 +20,9 @@
 
 #import "TGPhotoEditorPreviewView.h"
 #import "TGPhotoCropView.h"
-#import "TGModernButton.h"
+#import <LegacyComponents/TGModernButton.h>
 
-#import "TGMenuSheetController.h"
+#import <LegacyComponents/TGMenuSheetController.h>
 
 const CGFloat TGPhotoCropButtonsWrapperSize = 61.0f;
 const CGSize TGPhotoCropAreaInsetSize = { 9, 9 };
@@ -580,10 +581,13 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
                 [strongSelf _updateTabs];
             };
             
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
             if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad)
                 setAspectRatioBlock();
             else
                 TGDispatchAfter(0.1f, dispatch_get_main_queue(), setAspectRatioBlock);
+#pragma clang diagnostic pop
             
             [strongController dismissAnimated:true];
         };

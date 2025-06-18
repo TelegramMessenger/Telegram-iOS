@@ -1,8 +1,8 @@
-#import "TGStickerPackReference.h"
+#import <LegacyComponents/TGStickerPackReference.h>
 
 #import "LegacyComponentsInternal.h"
 
-#import "PSKeyValueCoder.h"
+#import <LegacyComponents/PSKeyValueCoder.h>
 
 @implementation TGStickerPackBuiltinReference
 

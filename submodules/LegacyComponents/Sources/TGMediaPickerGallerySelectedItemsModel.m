@@ -1,4 +1,4 @@
-#import "TGMediaPickerGallerySelectedItemsModel.h"
+#import <LegacyComponents/TGMediaPickerGallerySelectedItemsModel.h>
 
 @interface TGMediaPickerGallerySelectedItemsModel ()
 {

@@ -1,5 +1,8 @@
 #import "GPUImageTwoInputFilter.h"
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 NSString *const kGPUImageTwoInputTextureVertexShaderString = SHADER_STRING
 (
  attribute vec4 position;
@@ -213,8 +216,6 @@ NSString *const kGPUImageTwoInputTextureVertexShaderString = SHADER_STRING
         return;
     }
     
-    BOOL updatedMovieFrameOppositeStillImage = NO;
-    
     if (textureIndex == 0)
     {
         hasReceivedFirstFrame = YES;
@@ -228,7 +229,6 @@ NSString *const kGPUImageTwoInputTextureVertexShaderString = SHADER_STRING
         {
             if CMTIME_IS_INDEFINITE(secondFrameTime)
             {
-                updatedMovieFrameOppositeStillImage = YES;
             }
         }
     }
@@ -245,7 +245,6 @@ NSString *const kGPUImageTwoInputTextureVertexShaderString = SHADER_STRING
         {
             if CMTIME_IS_INDEFINITE(firstFrameTime)
             {
-                updatedMovieFrameOppositeStillImage = YES;
             }
         }
     }
@@ -261,3 +260,5 @@ NSString *const kGPUImageTwoInputTextureVertexShaderString = SHADER_STRING
 }
 
 @end
+
+#pragma clang diagnostic pop

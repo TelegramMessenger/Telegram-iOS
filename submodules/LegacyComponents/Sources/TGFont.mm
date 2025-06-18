@@ -1,7 +1,7 @@
-#import "TGFont.h"
+#import <LegacyComponents/TGFont.h>
 
 #import "LegacyComponentsInternal.h"
-#import "NSObject+TGLock.h"
+#import <LegacyComponents/NSObject+TGLock.h>
 
 #import <map>
 

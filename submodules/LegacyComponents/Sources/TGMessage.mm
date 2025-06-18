@@ -1,15 +1,15 @@
-#import "TGMessage.h"
+#import <LegacyComponents/TGMessage.h>
 
 #import "LegacyComponentsInternal.h"
 
-#import "PSKeyValueCoder.h"
-#import "PSKeyValueEncoder.h"
-#import "PSKeyValueDecoder.h"
+#import <LegacyComponents/PSKeyValueCoder.h>
+#import <LegacyComponents/PSKeyValueEncoder.h>
+#import <LegacyComponents/PSKeyValueDecoder.h>
 #import <objc/runtime.h>
 
-#import "TGTextCheckingResult.h"
-#import "TGPeerIdAdapter.h"
-#import "TGPhoneUtils.h"
+#import <LegacyComponents/TGTextCheckingResult.h>
+#import <LegacyComponents/TGPeerIdAdapter.h>
+#import <LegacyComponents/TGPhoneUtils.h>
 
 #include <unordered_map>
 
@@ -571,7 +571,7 @@ typedef enum {
         }];
         
         static NSCharacterSet *characterSet = nil;
-        static NSCharacterSet *punctuationSet = nil;
+        __unused static NSCharacterSet *punctuationSet = nil;
         static dispatch_once_t onceToken;
         dispatch_once(&onceToken, ^
         {

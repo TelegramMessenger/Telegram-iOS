@@ -1,11 +1,11 @@
 #import "TGMediaPickerPhotoStripView.h"
 
 #import "LegacyComponentsInternal.h"
-#import "TGImageUtils.h"
+#import <LegacyComponents/TGImageUtils.h>
 
-#import "POPAnimation.h"
-#import "POPAnimatableProperty.h"
-#import "POPSpringAnimation.h"
+#import <LegacyComponents/POPAnimation.h>
+#import <LegacyComponents/POPAnimatableProperty.h>
+#import <LegacyComponents/POPSpringAnimation.h>
 
 #import <LegacyComponents/TGPhotoEditorInterfaceAssets.h>
 
@@ -16,7 +16,7 @@
 
 #import "TGMediaPickerPhotoStripCell.h"
 
-#import "TGMediaPickerGallerySelectedItemsModel.h"
+#import <LegacyComponents/TGMediaPickerGallerySelectedItemsModel.h>
 
 @interface TGMediaPickerPhotoStripView () <TGDraggableCollectionViewDataSource, UICollectionViewDelegate>
 {

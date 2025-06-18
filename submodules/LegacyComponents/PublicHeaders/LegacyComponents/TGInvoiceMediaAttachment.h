@@ -1,4 +1,4 @@
-#import "TGMediaAttachment.h"
+#import <LegacyComponents/TGMediaAttachment.h>
 
 #import <LegacyComponents/TGWebDocument.h>
 

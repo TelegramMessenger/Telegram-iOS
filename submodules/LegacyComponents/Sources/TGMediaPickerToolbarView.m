@@ -1,12 +1,12 @@
-#import "TGMediaPickerToolbarView.h"
+#import <LegacyComponents/TGMediaPickerToolbarView.h>
 
 #import "LegacyComponentsInternal.h"
-#import "TGImageUtils.h"
-#import "TGFont.h"
+#import <LegacyComponents/TGImageUtils.h>
+#import <LegacyComponents/TGFont.h>
 #import "TGColor.h"
 
 #import <LegacyComponents/TGModernButton.h>
-#import "TGMediaAssetsController.h"
+#import <LegacyComponents/TGMediaAssetsController.h>
 
 const CGFloat TGMediaPickerToolbarHeight = 44.0f;
 

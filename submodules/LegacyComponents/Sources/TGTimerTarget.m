@@ -1,4 +1,4 @@
-#import "TGTimerTarget.h"
+#import <LegacyComponents/TGTimerTarget.h>
 
 @implementation TGTimerTarget
 

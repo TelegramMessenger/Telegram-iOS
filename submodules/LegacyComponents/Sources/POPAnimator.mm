@@ -16,10 +16,10 @@
 
 #import <QuartzCore/QuartzCore.h>
 
-#import "POPAnimation.h"
+#import <LegacyComponents/POPAnimation.h>
 #import "POPAnimationExtras.h"
 #import "POPBasicAnimationInternal.h"
-#import "POPDecayAnimation.h"
+#import <LegacyComponents/POPDecayAnimation.h>
 
 #import <os/lock.h>
 

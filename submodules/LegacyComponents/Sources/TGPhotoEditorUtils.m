@@ -1,7 +1,7 @@
-#import "TGPhotoEditorUtils.h"
+#import <LegacyComponents/TGPhotoEditorUtils.h>
 
 #import "LegacyComponentsInternal.h"
-#import "TGImageUtils.h"
+#import <LegacyComponents/TGImageUtils.h>
 
 #import <AVFoundation/AVFoundation.h>
 #import <Accelerate/Accelerate.h>

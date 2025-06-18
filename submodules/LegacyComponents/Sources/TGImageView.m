@@ -1,4 +1,4 @@
-#import "TGImageView.h"
+#import <LegacyComponents/TGImageView.h>
 
 #import "LegacyComponentsInternal.h"
 

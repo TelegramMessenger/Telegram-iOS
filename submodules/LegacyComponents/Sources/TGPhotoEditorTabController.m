@@ -1,15 +1,15 @@
-#import "TGPhotoEditorTabController.h"
+#import <LegacyComponents/TGPhotoEditorTabController.h>
 
 #import "LegacyComponentsInternal.h"
 
 #import <LegacyComponents/LegacyComponents.h>
 
-#import "TGPhotoEditorController.h"
+#import <LegacyComponents/TGPhotoEditorController.h>
 
 #import <LegacyComponents/TGPhotoEditorAnimation.h>
 
 #import "TGPhotoEditorPreviewView.h"
-#import "TGPhotoToolbarView.h"
+#import <LegacyComponents/TGPhotoToolbarView.h>
 
 #import <LegacyComponents/PGPhotoEditorValues.h>
 #import <LegacyComponents/TGVideoEditAdjustments.h>

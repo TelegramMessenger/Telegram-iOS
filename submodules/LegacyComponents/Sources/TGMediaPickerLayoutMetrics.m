@@ -1,4 +1,4 @@
-#import "TGMediaPickerLayoutMetrics.h"
+#import <LegacyComponents/TGMediaPickerLayoutMetrics.h>
 
 #import <LegacyComponents/LegacyComponents.h>
 

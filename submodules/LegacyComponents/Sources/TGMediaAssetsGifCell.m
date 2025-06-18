@@ -1,7 +1,7 @@
 #import "TGMediaAssetsGifCell.h"
 
 #import "LegacyComponentsInternal.h"
-#import "TGFont.h"
+#import <LegacyComponents/TGFont.h>
 
 NSString *const TGMediaAssetsGifCellKind = @"TGMediaAssetsGifCellKind";
 

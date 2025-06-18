@@ -1,5 +1,8 @@
 #import "GPUImageTwoPassTextureSamplingFilter.h"
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 @implementation GPUImageTwoPassTextureSamplingFilter
 
 @synthesize verticalTexelSpacing = _verticalTexelSpacing;
@@ -83,3 +86,5 @@
 }
 
 @end
+
+#pragma clang diagnostic pop

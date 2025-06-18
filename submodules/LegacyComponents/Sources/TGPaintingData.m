@@ -1,11 +1,11 @@
-#import "TGPaintingData.h"
+#import <LegacyComponents/TGPaintingData.h>
 
 #import <SSignalKit/SQueue.h>
 
-#import "TGPaintUtils.h"
-#import "TGPhotoPaintStickerEntity.h"
+#import <LegacyComponents/TGPaintUtils.h>
+#import <LegacyComponents/TGPhotoPaintStickerEntity.h>
 
-#import "TGMediaEditingContext.h"
+#import <LegacyComponents/TGMediaEditingContext.h>
 
 @interface TGPaintingData ()
 {

@@ -1,6 +1,6 @@
-#import "TGOverlayController.h"
+#import <LegacyComponents/TGOverlayController.h>
 
-#import "TGOverlayControllerWindow.h"
+#import <LegacyComponents/TGOverlayControllerWindow.h>
 
 @interface TGOverlayController ()
 

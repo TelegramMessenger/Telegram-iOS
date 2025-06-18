@@ -1,4 +1,4 @@
-#import "TGStaticBackdropImageData.h"
+#import <LegacyComponents/TGStaticBackdropImageData.h>
 
 NSString *TGStaticBackdropMessageActionCircle = @"TGStaticBackdropMessageActionCircle";
 NSString *TGStaticBackdropMessageTimestamp = @"TGStaticBackdropMessageTimestamp";

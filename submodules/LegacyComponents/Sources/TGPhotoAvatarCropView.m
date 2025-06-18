@@ -1,4 +1,4 @@
-#import "TGPhotoAvatarCropView.h"
+#import <LegacyComponents/TGPhotoAvatarCropView.h>
 #import <AVFoundation/AVFoundation.h>
 
 #import <LegacyComponents/LegacyComponents.h>
@@ -6,7 +6,7 @@
 #import <LegacyComponents/TGPhotoEditorUtils.h>
 
 #import <LegacyComponents/TGPhotoEditorAnimation.h>
-#import "TGPhotoEditorInterfaceAssets.h"
+#import <LegacyComponents/TGPhotoEditorInterfaceAssets.h>
 
 #import "PGPhotoEditorView.h"
 

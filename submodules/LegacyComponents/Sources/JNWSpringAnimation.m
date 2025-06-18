@@ -1,7 +1,7 @@
-#import "JNWSpringAnimation.h"
+#import <LegacyComponents/JNWSpringAnimation.h>
 #import "NSValue+JNWAdditions.h"
 
-#import "TGHacks.h"
+#import <LegacyComponents/TGHacks.h>
 
 static const CGFloat JNWSpringAnimationDefaultMass = 5.f;
 static const CGFloat JNWSpringAnimationDefaultDamping = 30.f;

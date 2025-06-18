@@ -1,9 +1,10 @@
-#import "TGMediaPickerGalleryVideoItemView.h"
+#import <LegacyComponents/LegacyComponents.h>
+#import <LegacyComponents/TGMediaPickerGalleryVideoItemView.h>
 
 #import "LegacyComponentsInternal.h"
-#import "TGFont.h"
-#import "TGImageUtils.h"
-#import "TGStringUtils.h"
+#import <LegacyComponents/TGFont.h>
+#import <LegacyComponents/TGImageUtils.h>
+#import <LegacyComponents/TGStringUtils.h>
 
 #import <AVFoundation/AVFoundation.h>
 #import <MediaPlayer/MediaPlayer.h>
@@ -17,10 +18,10 @@
 #import <LegacyComponents/TGPhotoEditorInterfaceAssets.h>
 #import <LegacyComponents/TGPhotoEditorAnimation.h>
 
-#import "TGMediaPickerGalleryItem.h"
-#import "TGMediaPickerGalleryVideoItem.h"
+#import <LegacyComponents/TGMediaPickerGalleryItem.h>
+#import <LegacyComponents/TGMediaPickerGalleryVideoItem.h>
 
-#import "TGCameraCapturedVideo.h"
+#import <LegacyComponents/TGCameraCapturedVideo.h>
 
 #import <LegacyComponents/TGVideoEditAdjustments.h>
 #import <LegacyComponents/TGPaintingData.h>
@@ -1011,7 +1012,7 @@
         CGSize originalSize = _videoDimensions;
         CGRect cropRect = CGRectMake(0, 0, _videoDimensions.width, _videoDimensions.height);
         UIImageOrientation cropOrientation = UIImageOrientationUp;
-        bool cropMirrored = false;
+        __unused bool cropMirrored = false;
         if (adjustments != nil)
         {
             cropRect = adjustments.cropRect;

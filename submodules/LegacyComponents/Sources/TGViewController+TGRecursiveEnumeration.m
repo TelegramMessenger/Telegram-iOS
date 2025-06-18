@@ -1,4 +1,4 @@
-#import "TGViewController+TGRecursiveEnumeration.h"
+#import <LegacyComponents/TGViewController+TGRecursiveEnumeration.h>
 
 @implementation UIViewController (TGRecursiveEnumeration)
 

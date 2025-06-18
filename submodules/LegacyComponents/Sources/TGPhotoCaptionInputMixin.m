@@ -1,10 +1,10 @@
-#import "TGPhotoCaptionInputMixin.h"
+#import <LegacyComponents/TGPhotoCaptionInputMixin.h>
 
 #import <LegacyComponents/LegacyComponents.h>
 
 #import <LegacyComponents/TGObserverProxy.h>
 
-#import "TGPhotoPaintStickersContext.h"
+#import <LegacyComponents/TGPhotoPaintStickersContext.h>
 
 @interface TGPhotoCaptionInputMixin ()
 {

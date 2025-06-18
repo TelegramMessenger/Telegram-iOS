@@ -1,11 +1,11 @@
-#import "TGModernCache.h"
+#import <LegacyComponents/TGModernCache.h>
 
 #import "LegacyComponentsInternal.h"
-#import "TGStringUtils.h"
+#import <LegacyComponents/TGStringUtils.h>
 
 #import <SSignalKit/SSignalKit.h>
 
-#import "PSLMDBKeyValueStore.h"
+#import <LegacyComponents/PSLMDBKeyValueStore.h>
 
 typedef enum {
     TGModernCacheKeyspaceGlobalProperties = 1,

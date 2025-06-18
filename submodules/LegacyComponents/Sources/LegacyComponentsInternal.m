@@ -1,6 +1,6 @@
 #import "LegacyComponentsInternal.h"
 
-#import "TGLocalization.h"
+#import <LegacyComponents/TGLocalization.h>
 
 #import <UIKit/UIKit.h>
 

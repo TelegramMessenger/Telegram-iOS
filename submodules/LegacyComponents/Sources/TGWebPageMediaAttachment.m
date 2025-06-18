@@ -1,8 +1,8 @@
-#import "TGWebPageMediaAttachment.h"
+#import <LegacyComponents/TGWebPageMediaAttachment.h>
 
 #import "LegacyComponentsInternal.h"
 
-#import "NSInputStream+TL.h"
+#import <LegacyComponents/NSInputStream+TL.h>
 
 @implementation TGWebPageMediaAttachment
 
@@ -149,7 +149,7 @@
 
 - (void)serialize:(NSMutableData *)data
 {
-    NSData *serializedData = [NSKeyedArchiver archivedDataWithRootObject:self];
+    NSData *serializedData = [NSKeyedArchiver archivedDataWithRootObject:self requiringSecureCoding:false error:nil];
     int32_t length = (int32_t)serializedData.length;
     [data appendBytes:&length length:4];
     [data appendData:serializedData];
@@ -160,7 +160,7 @@
     int32_t length = [is readInt32];
     NSData *data = [is readData:length];
     @try {
-        return [NSKeyedUnarchiver unarchiveObjectWithData:data];
+        return [NSKeyedUnarchiver unarchivedObjectOfClass:[TGWebPageMediaAttachment class] fromData:data error:nil];
     } @catch (NSException *e) {
     }
     return nil;

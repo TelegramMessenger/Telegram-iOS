@@ -1,4 +1,4 @@
-#import "TGIconSwitchView.h"
+#import <LegacyComponents/TGIconSwitchView.h>
 
 #import <LegacyComponents/LegacyComponents.h>
 

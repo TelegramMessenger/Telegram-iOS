@@ -1,5 +1,5 @@
-#import "PGCameraCaptureSession.h"
-#import "PGCameraMovieWriter.h"
+#import <LegacyComponents/PGCameraCaptureSession.h>
+#import <LegacyComponents/PGCameraMovieWriter.h>
 #import "PGRectangleDetector.h"
 
 #import <LegacyComponents/LegacyComponentsGlobals.h>
@@ -15,7 +15,10 @@
 #import <AVFoundation/AVFoundation.h>
 #import <SSignalKit/SSignalKit.h>
 
-#import "POPSpringAnimation.h"
+#import <LegacyComponents/POPSpringAnimation.h>
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
 const NSInteger PGCameraFrameRate = 30;
 
@@ -319,13 +322,11 @@ const NSInteger PGCameraFrameRate = 30;
 
 - (void)switchToBestVideoFormatForDevice:(AVCaptureDevice *)device
 {
-    bool preferZoomableFormat = [self hasTelephotoCamera] || [self hasUltrawideCamera];
     [self _reconfigureDevice:device withBlock:^(AVCaptureDevice *device)
     {
         NSArray *availableFormats = device.formats;
         AVCaptureDeviceFormat *preferredFormat = nil;
         NSMutableArray *maybeFormats = nil;
-        bool hasSecondaryZoomLevels = false;
         int32_t maxWidth = 0;
         int32_t maxHeight = 0;
         for (AVCaptureDeviceFormat *format in availableFormats)
@@ -337,7 +338,6 @@ const NSInteger PGCameraFrameRate = 30;
             if (dimensions.width >= maxWidth && dimensions.width <= 1920 && dimensions.height >= maxHeight && dimensions.height <= 1080)
             {
                 if (dimensions.width > maxWidth) {
-                    hasSecondaryZoomLevels = false;
                     maybeFormats = [[NSMutableArray alloc] init];
                 }
                 FourCharCode mediaSubType = CMFormatDescriptionGetMediaSubType(format.formatDescription);
@@ -357,10 +357,13 @@ const NSInteger PGCameraFrameRate = 30;
                     }
                     
                     if (supportedRate) {
-                        if (iosMajorVersion() >= 16 && format.secondaryNativeResolutionZoomFactors.count > 0) {
-                            hasSecondaryZoomLevels = true;
-                            [maybeFormats addObject:format];
-                        } else if (!hasSecondaryZoomLevels) {
+                        if (@available(iOS 16.0, *)) {
+                            if (format.secondaryNativeResolutionZoomFactors.count > 0) {
+                                [maybeFormats addObject:format];
+                            } else {
+                                [maybeFormats addObject:format];
+                            }
+                        } else {
                             [maybeFormats addObject:format];
                         }
                     }
@@ -1156,3 +1159,5 @@ static UIImageOrientation TGSnapshotOrientationForVideoOrientation(bool mirrored
 }
 
 @end
+
+#pragma clang diagnostic pop

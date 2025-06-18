@@ -1,10 +1,10 @@
 #import "TGMediaPickerGalleryVideoScrubber.h"
 
 #import "LegacyComponentsInternal.h"
-#import "TGFont.h"
-#import "TGImageUtils.h"
+#import <LegacyComponents/TGFont.h>
+#import <LegacyComponents/TGImageUtils.h>
 
-#import "POPBasicAnimation.h"
+#import <LegacyComponents/POPBasicAnimation.h>
 
 #import <LegacyComponents/UIControl+HitTestEdgeInsets.h>
 

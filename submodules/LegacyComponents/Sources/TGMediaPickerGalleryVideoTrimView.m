@@ -5,7 +5,7 @@
 #import <LegacyComponents/TGImageUtils.h>
 #import <LegacyComponents/UIControl+HitTestEdgeInsets.h>
 
-#import "TGPhotoEditorInterfaceAssets.h"
+#import <LegacyComponents/TGPhotoEditorInterfaceAssets.h>
 
 @interface TGMediaPickerGalleryVideoTrimView () <UIGestureRecognizerDelegate>
 {

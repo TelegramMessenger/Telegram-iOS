@@ -1,7 +1,7 @@
 #import "TGVideoMessageScrubberThumbnailView.h"
 
 #import "LegacyComponentsInternal.h"
-#import "TGImageUtils.h"
+#import <LegacyComponents/TGImageUtils.h>
 
 #import <LegacyComponents/TGPhotoEditorUtils.h>
 

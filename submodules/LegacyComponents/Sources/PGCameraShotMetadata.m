@@ -1,4 +1,4 @@
-#import "PGCameraShotMetadata.h"
+#import <LegacyComponents/PGCameraShotMetadata.h>
 
 @implementation PGCameraShotMetadata
 

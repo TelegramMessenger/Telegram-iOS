@@ -1,13 +1,13 @@
-#import "TGVideoEditAdjustments.h"
+#import <LegacyComponents/TGVideoEditAdjustments.h>
 
-#import "TGPhotoEditorUtils.h"
+#import <LegacyComponents/TGPhotoEditorUtils.h>
 
-#import "TGPaintingData.h"
+#import <LegacyComponents/TGPaintingData.h>
 
-#import "PGPhotoEditorValues.h"
+#import <LegacyComponents/PGPhotoEditorValues.h>
 
-#import "TGPhotoPaintStickerEntity.h"
-#import "TGPhotoPaintTextEntity.h"
+#import <LegacyComponents/TGPhotoPaintStickerEntity.h>
+#import <LegacyComponents/TGPhotoPaintTextEntity.h>
 
 #import "PGTintTool.h"
 #import "PGCurvesTool.h"

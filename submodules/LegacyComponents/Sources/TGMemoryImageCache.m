@@ -1,4 +1,4 @@
-#import "TGMemoryImageCache.h"
+#import <LegacyComponents/TGMemoryImageCache.h>
 
 #import <SSignalKit/SSignalKit.h>
 
