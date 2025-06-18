@@ -1282,7 +1282,7 @@ if __name__ == '__main__':
 
     bazel_path = None
     if args.bazel is None:
-        bazel_path = locate_bazel(base_path=os.getcwd(), cache_host=args.cacheHost)
+        bazel_path = locate_bazel(base_path=os.getcwd(), cache_host_or_path=args.cacheHost, cache_dir=args.cacheDir)
     else:
         bazel_path = args.bazel
 

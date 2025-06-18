@@ -2507,6 +2507,7 @@ ios_objc_sources = [
     "objc/base/RTCEncodedImage.m",
     "objc/base/RTCVideoCapturer.m",
     "objc/base/RTCVideoCodecInfo.m",
+    "objc/base/RTCVideoEncoderQpThresholds.h",
     "objc/base/RTCVideoEncoderQpThresholds.m",
     "objc/base/RTCVideoEncoderSettings.m",
     "objc/helpers/RTCDispatcher.m",
@@ -3063,7 +3064,7 @@ objc_library(
         "-Ithird-party/webrtc/webrtc/sdk/objc/base",
         "-Ithird-party/libyuv",
         "-Ithird-party/libyuv/third_party/libyuv/include",
-        "-Ithird-party/webrtc/absl/third_party/abseil-cpp",
+        "-Ithird-party/webrtc/absl",
         "-DBSD=1",
         "-DUSE_KISS_FFT",
         "-DHAVE_PTHREAD",
@@ -3121,6 +3122,7 @@ objc_library(
     enable_modules = True,
     module_name = "webrtc_objc",
     srcs = [ "webrtc/sdk/" + path for path in ios_objc_sources ] + [
+        "webrtc/sdk/" + path for path in ios_objcpp_sources ] + [
         "webrtc/rtc_base/system/gcd_helpers.m",
     ],
     copts = [
@@ -3130,7 +3132,7 @@ objc_library(
         "-Ithird-party/webrtc/webrtc/sdk/objc/base",
         "-Ithird-party/libyuv",
         "-Ithird-party/libyuv/third_party/libyuv/include",
-        "-Ithird-party/webrtc/absl/third_party/abseil-cpp",
+        "-Ithird-party/webrtc/absl",
         "-DBSD=1",
         "-DUSE_KISS_FFT",
         "-DHAVE_PTHREAD",
@@ -3162,7 +3164,9 @@ objc_library(
         "//third-party/openh264",
         ":field_trials_header",
         "//third-party/webrtc/absl",
-        ":webrtc_objcpp",
+    ],
+    cxxopts = [
+        "-std=c++17",
     ],
     sdk_frameworks = [
         "AVFoundation",
@@ -3193,7 +3197,7 @@ objc_library(
         "-Ithird-party/webrtc/webrtc/",
         "-Ithird-party/libyuv",
         "-Ithird-party/libyuv/third_party/libyuv/include",
-        "-Ithird-party/webrtc/absl/third_party/abseil-cpp",
+        "-Ithird-party/webrtc/absl",
         "-DBSD=1",
         "-DUSE_KISS_FFT",
         "-DHAVE_PTHREAD",

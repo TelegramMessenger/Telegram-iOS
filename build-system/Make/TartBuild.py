@@ -27,7 +27,7 @@ class TartVMManager:
     def __init__(self):
         self.active_vms: Dict[str, Dict] = {}
         
-    def create_vm(self, session_id: str, image: str) -> Dict:
+    def create_vm(self, session_id: str, image: str, mount_directories: Dict[str, str]) -> Dict:
         """Create a new ephemeral VM for the session"""
         vm_name = f"telegrambuild-{session_id}"
         
@@ -53,9 +53,10 @@ class TartVMManager:
             def run_vm():
                 """Run the VM in background thread"""
                 try:
-                    subprocess.run([
-                        "tart", "run", vm_name
-                    ], check=True, capture_output=False, text=True)
+                    run_arguments = ["tart", "run", vm_name]
+                    for mount_directory in mount_directories.keys():
+                        run_arguments.append(f"--dir={mount_directory}:{mount_directories[mount_directory]}")
+                    subprocess.run(run_arguments, check=True, capture_output=False, text=True)
                 except subprocess.CalledProcessError as e:
                     logger.error(f"VM {vm_name} exited with error: {e}")
                 except Exception as e:
@@ -462,10 +463,11 @@ class TartBuildSession(RemoteBuildSessionInterface):
 class TartBuildSessionContext(RemoteBuildSessionContextInterface):
     """Context manager for Tart VM sessions"""
     
-    def __init__(self, vm_manager: TartVMManager, image: str, session_id: str):
+    def __init__(self, vm_manager: TartVMManager, image: str, session_id: str, mount_directories: Dict[str, str]):
         self.vm_manager = vm_manager
         self.image = image
         self.session_id = session_id
+        self.mount_directories = mount_directories
         self.session = None
         
     def __enter__(self) -> TartBuildSession:
@@ -473,7 +475,7 @@ class TartBuildSessionContext(RemoteBuildSessionContextInterface):
         print(f"Creating VM session with image: {self.image}")
         
         # Create the VM
-        self.vm_manager.create_vm(session_id=self.session_id, image=self.image)
+        self.vm_manager.create_vm(session_id=self.session_id, image=self.image, mount_directories=self.mount_directories)
         
         print(f"✓ VM session created: {self.session_id}")
         
@@ -502,12 +504,12 @@ class TartBuild(RemoteBuildInterface):
     def __init__(self):
         self.vm_manager = TartVMManager()
     
-    def session(self, macos_version: str, xcode_version: str) -> TartBuildSessionContext:
+    def session(self, macos_version: str, xcode_version: str, mount_directories: Dict[str, str]) -> TartBuildSessionContext:
         image_name = f"macos-{macos_version}-xcode-{xcode_version}"
         print(f"Image name: {image_name}")
         session_id = str(uuid.uuid4())
 
-        return TartBuildSessionContext(self.vm_manager, image_name, session_id)
+        return TartBuildSessionContext(self.vm_manager, image_name, session_id, mount_directories)
 
 def create_rsync_ignore_file(exclude_patterns: List[str] = []):
     """Create a temporary rsync ignore file with exclusion patterns"""
@@ -551,7 +553,12 @@ def remote_build_tart(macos_version, bazel_cache_host, configuration, build_inpu
     transient_data_dir = '{}/transient-data'.format(buildbox_dir)
     os.makedirs(transient_data_dir, exist_ok=True)
 
-    with TartBuild().session(macos_version=macos_version, xcode_version=xcode_version) as session:
+    mount_directories = {}
+    if bazel_cache_host is not None and bazel_cache_host.startswith("file://"):
+        local_path = bazel_cache_host.replace("file://", "")
+        mount_directories["bazel-cache"] = local_path
+
+    with TartBuild().session(macos_version=macos_version, xcode_version=xcode_version, mount_directories=mount_directories) as session:
         print('Uploading data to VM...')
         session.upload_directory(local_path=build_input_data_path, remote_path="telegram-build-input")
         
@@ -576,20 +583,26 @@ def remote_build_tart(macos_version, bazel_cache_host, configuration, build_inpu
             python3 build-system/Make/ImportCertificates.py --path $HOME/telegram-build-input/certs
         '''
 
-        if "@auto" in bazel_cache_host:
-            host_parts = bazel_cache_host.split("@auto")
-            host_left_part = host_parts[0]
-            host_right_part = host_parts[1]
-            guest_host_command = "export CACHE_HOST_IP=\"$(netstat -nr | grep default | head -n 1 | awk '{print $2}')\""
-            guest_build_sh += guest_host_command + "\n"
-            guest_host_string = f"export CACHE_HOST=\"{host_left_part}$CACHE_HOST_IP{host_right_part}\""
-            guest_build_sh += guest_host_string + "\n"
-        else:
-            guest_build_sh += f"export CACHE_HOST=\"{bazel_cache_host}\"\n"
+        if bazel_cache_host is not None:
+            if bazel_cache_host.startswith("file://"):
+                pass
+            elif "@auto" in bazel_cache_host:
+                host_parts = bazel_cache_host.split("@auto")
+                host_left_part = host_parts[0]
+                host_right_part = host_parts[1]
+                guest_host_command = "export CACHE_HOST_IP=\"$(netstat -nr | grep default | head -n 1 | awk '{print $2}')\""
+                guest_build_sh += guest_host_command + "\n"
+                guest_host_string = f"export CACHE_HOST=\"{host_left_part}$CACHE_HOST_IP{host_right_part}\""
+                guest_build_sh += guest_host_string + "\n"
+            else:
+                guest_build_sh += f"export CACHE_HOST=\"{bazel_cache_host}\"\n"
 
         guest_build_sh += 'python3 build-system/Make/Make.py \\'
         if bazel_cache_host is not None:
-            guest_build_sh += '--cacheHost="$CACHE_HOST" \\'
+            if bazel_cache_host.startswith("file://"):
+                guest_build_sh += '--cacheDir="/Volumes/My Shared Files/bazel-cache" \\'
+            else:
+                guest_build_sh += '--cacheHost="$CACHE_HOST" \\'
         guest_build_sh += 'build \\'
         guest_build_sh += '--lock \\'
         guest_build_sh += '--buildNumber={} \\'.format(build_number)

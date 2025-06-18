@@ -91,13 +91,30 @@ for name, module in sorted(modules.items()):
     if module_type == "objc_library" or module_type == "cc_library" or module_type == "swift_library":
         combined_lines.append("        .target(")
         combined_lines.append("            name: \"%s\"," % name)
-
-        # Always create a symlinked directory for every module
-
-        relative_module_path = module["path"]
+        
+        relative_module_path = module["path"] + "/Module_" + name
         module_directory = spm_files_dir + "/" + relative_module_path
         os.makedirs(module_directory, exist_ok=True)
+
+        module_sources_directory = module_directory + "/Sources"
+        if not os.path.exists(module_sources_directory):
+            os.makedirs(module_sources_directory)
         
+        module_public_includes_directory = module_directory + "/PublicIncludes"
+        if not os.path.exists(module_public_includes_directory):
+            os.makedirs(module_public_includes_directory)
+
+        module_public_headers_prefix = None
+        if len(module["includes"]) > 1:
+            print("{}: Multiple includes are not yet supported: {}".format(name, module["includes"]))
+            sys.exit(1)
+        elif len(module["includes"]) == 1:
+            for include_directory in module["includes"]:
+                if include_directory != ".":
+                    #print("{}: Include directory: {}".format(name, include_directory))
+                    module_public_headers_prefix = include_directory
+                    break
+
         combined_lines.append("            dependencies: [")
         for dep in module["deps"]:
             if not parsed_modules[dep]["is_empty"]:
@@ -129,10 +146,20 @@ for name, module in sorted(modules.items()):
                 source_file_name = source[len(module["path"]) + 1:]
 
             # Create symlink for this source file
-            symlink_location = os.path.join(module_directory, source_file_name)
-            source_dir = os.path.dirname(symlink_location)
-            if source_dir and not os.path.exists(source_dir):
-                os.makedirs(source_dir)
+            is_public_include = False
+            if module_public_headers_prefix is not None:
+                if source_file_name.startswith(module_public_headers_prefix):
+                    symlink_location = os.path.join(module_public_includes_directory, source_file_name[len(module_public_headers_prefix) + 1:])
+                    #print("{}: Public include: {}".format(source_file_name, symlink_location))
+                    is_public_include = True
+
+            if not is_public_include:
+                symlink_location = os.path.join(module_sources_directory, source_file_name)
+
+            # Create parent directory for symlink if it doesn't exist
+            symlink_parent = os.path.dirname(symlink_location)
+            if not os.path.exists(symlink_parent):
+                os.makedirs(symlink_parent)
             
             # Calculate relative path from symlink back to original file
             # Count directory depth: spm-files/module_name/... -> workspace root
@@ -143,32 +170,24 @@ for name, module in sorted(modules.items()):
             # Create the symlink
             if os.path.lexists(symlink_location):
                 os.unlink(symlink_location)
-            if "arm_arch64_common_macro" in symlink_target:
-                print("Creating symlink from {} to {}".format(symlink_target, symlink_location))
             os.symlink(symlink_target, symlink_location)
             
             # Add to sources list (exclude certain file types)
             if not source.endswith(('.h', '.hpp', '.a', '.inc')):
-                combined_lines.append("                \"%s\"," % source_file_name)
+                combined_lines.append("                \"%s\"," % ("Sources/" + source_file_name))
+                
         combined_lines.append("            ],")
         if module_type == "objc_library" or module_type == "cc_library":
-            if len(module["includes"]) == 0:
-                # Create dummy headers directory if none specified
-                dummy_headers_path = os.path.join(module_directory, "dummy-headers-path")
-                if not os.path.exists(dummy_headers_path):
-                    os.makedirs(dummy_headers_path)
-                combined_lines.append("            publicHeadersPath: \"dummy-headers-path\",")
-            elif len(module["includes"]) == 1:
-                combined_lines.append("            publicHeadersPath: \"%s\"," % module["includes"][0])
-            else:
+            combined_lines.append("            publicHeadersPath: \"PublicIncludes\",")
+
+            if len(module["includes"]) > 1:
                 print("{}: Multiple includes are not yet supported: {}".format(name, module["includes"]))
-                sys.exit(1)
 
             defines = module.get("defines", [])
             copts = module.get("copts", [])
             cxxopts = module.get("cxxopts", [])
 
-            if defines or copts:
+            if defines or copts or (module_public_headers_prefix is not None):
                 combined_lines.append("            cSettings: [")
                 if defines:
                     for define in defines:
@@ -182,7 +201,32 @@ for name, module in sorted(modules.items()):
                     for flag in copts:
                         escaped_flag = escape_swift_string_literal_component(flag)
                         combined_lines.append(f'                    "{escaped_flag}",')
-                    combined_lines.append("                ])")
+                        if escaped_flag.startswith("-I"):
+                            include_path = escaped_flag[2:]
+                            print("{}: Include path: {}".format(name, include_path))
+                            for another_module_name, another_module in sorted(modules.items()):
+                                another_module_path = another_module["path"]
+                                if include_path.startswith(another_module_path):
+                                    relative_module_include_path = include_path[len(another_module_path) + 1:]
+                                    #print("    {}: Matches module: {}".format(another_module_name, another_module_path))
+
+                                    combined_lines.append(f'                    "-I{another_module_path}/Sources/{relative_module_include_path}",')
+
+                                another_module_public_headers_prefix = None
+                                if len(another_module["includes"]) == 1:
+                                    for include_directory in another_module["includes"]:
+                                        if include_directory != ".":
+                                            another_module_public_headers_prefix = another_module_path + "/" + include_directory
+                                            print("    {}: Another module public include: {}".format(another_module_name, another_module_public_headers_prefix))
+                                if another_module_public_headers_prefix is not None:
+                                    if include_path.startswith(another_module_public_headers_prefix):
+                                        relative_module_include_path = include_path[len(another_module_public_headers_prefix) + 1:]
+                                        print("    {}: Matches module public include: {}".format(another_module_name, another_module_public_headers_prefix))
+
+                                        combined_lines.append(f'                    -"-I{another_module_path}/PublicIncludes/{relative_module_include_path}",')
+                    combined_lines.append("                ]),")
+                if module_public_headers_prefix is not None:
+                    combined_lines.append(f"                .headerSearchPath(\"{module_public_headers_prefix}\"),")
                 combined_lines.append("            ],")
 
             if defines or cxxopts: # Check for defines OR cxxopts

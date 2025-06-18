@@ -25,7 +25,6 @@ def transform_cache_host_into_http(grpc_url):
     
     return transformed_url
 
-
 def calculate_sha256(file_path):
     sha256_hash = hashlib.sha256()
     with open(file_path, "rb") as file:
@@ -37,6 +36,8 @@ def calculate_sha256(file_path):
 def resolve_cache_host(cache_host):
     if cache_host is None:
         return None
+    if cache_host.startswith("file://"):
+        return None
     if "@auto" in cache_host:
         host_parts = cache_host.split("@auto")
         host_left_part = host_parts[0]
@@ -44,7 +45,18 @@ def resolve_cache_host(cache_host):
         return f"{host_left_part}localhost{host_right_part}"
     return cache_host
 
-def locate_bazel(base_path, cache_host):
+def resolve_cache_path(cache_host_or_path, cache_dir):
+    if cache_dir is not None:
+        return cache_dir
+    if cache_host_or_path is not None:
+        if cache_host_or_path.startswith("file://"):
+            return cache_host_or_path.replace("file://", "")
+    return None
+
+def cache_cas_name(digest):
+    return (digest[:2], digest)
+
+def locate_bazel(base_path, cache_host_or_path, cache_dir):
     build_input_dir = '{}/build-input'.format(base_path)
     if not os.path.isdir(build_input_dir):
         os.mkdir(build_input_dir)
@@ -57,7 +69,8 @@ def locate_bazel(base_path, cache_host):
     bazel_name = 'bazel-{version}-{arch}'.format(version=versions.bazel_version, arch=arch)
     bazel_path = '{}/build-input/{}'.format(base_path, bazel_name)
 
-    resolved_cache_host = resolve_cache_host(cache_host)
+    resolved_cache_host = resolve_cache_host(cache_host_or_path)
+    resolved_cache_path = resolve_cache_path(cache_host_or_path, cache_dir)
 
     if not os.path.isfile(bazel_path):
         if resolved_cache_host is not None and versions.bazel_version_sha256 is not None:
@@ -77,6 +90,11 @@ def locate_bazel(base_path, cache_host):
                 test_sha256 = calculate_sha256(temp_output_file.name)
                 if test_sha256 == versions.bazel_version_sha256:
                     shutil.copyfile(temp_output_file.name, bazel_path)
+        elif resolved_cache_path is not None:
+            (cache_cas_id, cache_cas_name) = cache_cas_name(versions.bazel_version_sha256)
+            cached_path = '{}/cas/{}/{}'.format(resolved_cache_path, cache_cas_id, cache_cas_name)
+            if os.path.isfile(cached_path):
+                shutil.copyfile(cached_path, bazel_path)
 
 
     if os.path.isfile(bazel_path) and versions.bazel_version_sha256 is not None:
@@ -118,6 +136,11 @@ def locate_bazel(base_path, cache_host):
                     hash=versions.bazel_version_sha256
                 )
             ], check_result=False)
+        elif resolved_cache_path is not None:
+            (cache_cas_id, cache_cas_name) = cache_cas_name(versions.bazel_version_sha256)
+            cached_path = '{}/cas/{}/{}'.format(resolved_cache_path, cache_cas_id, cache_cas_name)
+            os.makedirs(os.path.dirname(cached_path), exist_ok=True)
+            shutil.copyfile(bazel_path, cached_path)
 
     if not os.access(bazel_path, os.X_OK):
         st = os.stat(bazel_path)
