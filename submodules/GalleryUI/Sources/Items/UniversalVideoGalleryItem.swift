@@ -262,7 +262,7 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
             if !state.messages.isEmpty {
                 self.adState = (state.startDelay, state.betweenDelay, state.messages)
                 
-                var startTime = Int32(CFAbsoluteTimeGetCurrent()) // + (state.startDelay ?? 0)
+                var startTime = Int32(CFAbsoluteTimeGetCurrent()) + (state.startDelay ?? 0)
                 var program: [(Int32, Message?)] = []
                 var maxDisplayDuration: Int32 = 30
                 for message in state.messages {
@@ -1161,7 +1161,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private let moreButtonStateDisposable = MetaDisposable()
     private let settingsButtonStateDisposable = MetaDisposable()
     private let mediaPlaybackStateDisposable = MetaDisposable()
-
+    
     private let fetchDisposable = MetaDisposable()
     private var fetchStatus: MediaResourceStatus?
     private var fetchControls: FetchControls?
@@ -1176,6 +1176,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private let controlsVisiblePromise = ValuePromise<Bool>(true, ignoreRepeated: true)
     private let isShowingContextMenuPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
     private let isShowingSettingsMenuPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
+    private let isShowingAdMenuPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
     private let hasExpandedCaptionPromise = Promise<Bool>()
     private var hideControlsDisposable: Disposable?
     private var automaticPictureInPictureDisposable: Disposable?
@@ -1369,9 +1370,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         self.titleContentView = GalleryTitleView(frame: CGRect())
         self._titleView.set(.single(self.titleContentView))
         
-        let shouldHideControlsSignal: Signal<Void, NoError> = combineLatest(self.isPlayingPromise.get(), self.isInteractingPromise.get(), self.controlsVisiblePromise.get(), self.isShowingContextMenuPromise.get(), self.isShowingSettingsMenuPromise.get(), self.hasExpandedCaptionPromise.get())
-        |> mapToSignal { isPlaying, isInteracting, controlsVisible, isShowingContextMenu, isShowingSettingsMenu, hasExpandedCaptionPromise -> Signal<Void, NoError> in
-            if isShowingContextMenu || isShowingSettingsMenu || hasExpandedCaptionPromise {
+        let shouldHideControlsSignal: Signal<Void, NoError> = combineLatest(self.isPlayingPromise.get(), self.isInteractingPromise.get(), self.controlsVisiblePromise.get(), self.isShowingContextMenuPromise.get(), self.isShowingSettingsMenuPromise.get(), self.isShowingAdMenuPromise.get(), self.hasExpandedCaptionPromise.get())
+        |> mapToSignal { isPlaying, isInteracting, controlsVisible, isShowingContextMenu, isShowingSettingsMenu, isShowingAdMenu, hasExpandedCaptionPromise -> Signal<Void, NoError> in
+            if isShowingContextMenu || isShowingSettingsMenu || isShowingAdMenu || hasExpandedCaptionPromise {
                 return .complete()
             }
             if isPlaying && !isInteracting && controlsVisible {
@@ -1822,7 +1823,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
                 self.settingsBarButton.setIsMenuOpen(isMenuOpen: isShowingSettingsMenu)
             }))
-
+            
             self.statusDisposable.set((combineLatest(queue: .mainQueue(), videoNode.status, mediaFileStatus)
             |> deliverOnMainQueue).start(next: { [weak self] value, fetchStatus in
                 if let strongSelf = self {
@@ -1887,7 +1888,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                     strongSelf.isPlayingPromise.set(false)
                                     strongSelf.isPlaying = false
                                     if strongSelf.isCentral == true {
-                                        if !item.isSecret {
+                                        if !item.isSecret && !strongSelf.playOnDismiss {
                                             strongSelf.updateControlsVisibility(true)
                                         }
                                     }
@@ -2089,7 +2090,15 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         self.footerContentNode.setup(origin: item.originData, caption: item.caption, isAd: isAd)
         
         if let contentInfo = item.contentInfo, case let .message(message, _) = contentInfo {
-            self.overlayContentNode.performAction = item.performAction
+            self.overlayContentNode.performAction = { [weak self] action in
+                guard let self , let item = self.item else {
+                    return
+                }
+                if case .url = action {
+                    self.pictureInPictureButtonPressed()
+                }
+                item.performAction(action)
+            }
             self.overlayContentNode.presentPremiumDemo = { [weak self] in
                 self?.presentPremiumDemo()
             }
@@ -3214,11 +3223,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         self.moreBarButton.contextAction?(self.moreBarButton.containerNode, nil)
     }
 
+    private var playOnDismiss = false
     private func openMoreMenu(sourceNode: ContextReferenceContentNode, gesture: ContextGesture?, adMessage: Message?, isSettings: Bool, actionsOnTop: Bool = false) {
         guard let controller = self.baseNavigationController()?.topViewController as? ViewController else {
             return
         }
-        
+                
         var dismissImpl: (() -> Void)?
         let items: Signal<(items: [ContextMenuItem], topItems: [ContextMenuItem]), NoError>
         if let adMessage {
@@ -3238,7 +3248,14 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 return ContextController.Items(id: AnyHashable(0), content: .list(items.items))
             }
         }, gesture: gesture)
-        if isSettings {
+        
+        if let _ = adMessage {
+            if self.isPlaying {
+                self.playOnDismiss = true
+                self.videoNode?.pause()
+            }
+            self.isShowingAdMenuPromise.set(true)
+        } else if isSettings {
             self.isShowingSettingsMenuPromise.set(true)
         } else {
             self.isShowingContextMenuPromise.set(true)
@@ -3249,10 +3266,19 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
         contextController.dismissed = { [weak self] in
             Queue.mainQueue().after(isSettings ? 0.0 : 0.1, {
-                if isSettings {
-                    self?.isShowingSettingsMenuPromise.set(false)
+                guard let self else {
+                    return
+                }
+                if let _ = adMessage {
+                    if self.playOnDismiss {
+                        self.playOnDismiss = false
+                        self.videoNode?.play()
+                    }
+                    self.isShowingAdMenuPromise.set(false)
+                } else if isSettings {
+                    self.isShowingSettingsMenuPromise.set(false)
                 } else {
-                    self?.isShowingContextMenuPromise.set(false)
+                    self.isShowingContextMenuPromise.set(false)
                 }
             })
         }

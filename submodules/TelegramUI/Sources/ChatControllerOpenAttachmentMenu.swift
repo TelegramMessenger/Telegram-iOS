@@ -111,12 +111,13 @@ extension ChatControllerImpl {
             availableButtons.append(.location)
             availableButtons.append(.contact)
         }
+                
         if canSendPolls {
             availableButtons.insert(.poll, at: max(0, availableButtons.count - 1))
         }
         
-        availableButtons.append(.todo)
-        
+        availableButtons.insert(.todo, at: max(0, availableButtons.count - 1))
+                
         let presentationData = self.presentationData
         
         var isScheduledMessages = false

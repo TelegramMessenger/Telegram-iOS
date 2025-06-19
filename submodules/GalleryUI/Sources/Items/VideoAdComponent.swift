@@ -143,7 +143,7 @@ final class VideoAdComponent: Component {
                 component: AnyComponent(
                     MultilineTextComponent(
                         text: .plain(NSAttributedString(string: component.message.text, font: Font.regular(14.0), textColor: .white)),
-                        maximumNumberOfLines: 2
+                        maximumNumberOfLines: 0
                     )
                 ),
                 environment: {},
