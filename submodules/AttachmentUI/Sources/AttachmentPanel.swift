@@ -1272,7 +1272,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
         }, openBoostToUnrestrict: {
         }, updateRecordingTrimRange: { _, _, _, _ in
         }, dismissAllTooltips: {  
-        }, editTodoMessage: { _, _ in
+        }, editTodoMessage: { _, _, _ in
         }, updateHistoryFilter: { _ in
         }, updateChatLocationThread: { _, _ in
         }, toggleChatSidebarMode: {

@@ -132,7 +132,7 @@ public final class TelegramMediaTodo: Media, Equatable {
         return true
     }
     
-    func withUpdated(items: [TelegramMediaTodo.Item]) -> TelegramMediaTodo {
+    public func withUpdated(items: [TelegramMediaTodo.Item]) -> TelegramMediaTodo {
         return TelegramMediaTodo(
             flags: self.flags,
             text: self.text,

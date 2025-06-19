@@ -1499,7 +1499,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.actionSheet.primaryTextColor)
             }, action: { c, f in
                 if let _ = activeTodo {
-                    interfaceInteraction.editTodoMessage(messages[0].id, false)
+                    interfaceInteraction.editTodoMessage(messages[0].id, nil, false)
                     f(.dismissWithoutContent)
                 } else {
                     interfaceInteraction.setupEditMessage(messages[0].id, { transition in
@@ -1535,7 +1535,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 actions.append(.action(ContextMenuActionItem(text: "Add a Task", icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddCircle"), color: theme.actionSheet.primaryTextColor)
                 }, action: { _, f in
-                    interfaceInteraction.editTodoMessage(messages[0].id, true)
+                    interfaceInteraction.editTodoMessage(messages[0].id, nil, true)
                     f(.dismissWithoutContent)
                 })))
             }

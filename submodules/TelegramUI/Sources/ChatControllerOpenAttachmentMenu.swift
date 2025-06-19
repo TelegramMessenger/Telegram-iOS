@@ -111,12 +111,13 @@ extension ChatControllerImpl {
             availableButtons.append(.location)
             availableButtons.append(.contact)
         }
+                
         if canSendPolls {
             availableButtons.insert(.poll, at: max(0, availableButtons.count - 1))
         }
         
-        availableButtons.append(.todo)
-        
+        availableButtons.insert(.todo, at: max(0, availableButtons.count - 1))
+                
         let presentationData = self.presentationData
         
         var isScheduledMessages = false
@@ -2094,7 +2095,7 @@ extension ChatControllerImpl {
         )
     }
     
-    func openTodoEditing(messageId: EngineMessage.Id, append: Bool) {
+    func openTodoEditing(messageId: EngineMessage.Id, itemId: Int32?, append: Bool) {
         guard let message = self.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId), let peer = self.presentationInterfaceState.renderedPeer?.peer else {
             return
         }
@@ -2109,6 +2110,7 @@ extension ChatControllerImpl {
             initialData: ComposeTodoScreen.initialData(
                 context: self.context,
                 existingTodo: existingTodo,
+                focusedId: itemId,
                 append: append,
                 canEdit: canEdit
             ),

@@ -328,6 +328,11 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
             
                 params.blockInteraction.set(.single(true))
             
+                var presentInCurrent = false
+                if let channel = params.message.peers[params.message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
+                    presentInCurrent = true
+                }
+            
                 let _ = (gallery
                 |> deliverOnMainQueue).startStandalone(next: { gallery in
                     params.blockInteraction.set(.single(false))
@@ -341,7 +346,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                             return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: params.addToTransitionSurface)
                         }
                         return nil
-                    }), params.message.adAttribute != nil ? .current : .window(.root))
+                    }), presentInCurrent ? .current : .window(.root))
                 })
                 return true
             case let .secretGallery(gallery):
