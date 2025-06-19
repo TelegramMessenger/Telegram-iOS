@@ -215,15 +215,26 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
                 if case .center = position, highlight {
                     scrolledToIndex = scrollSubject
                 }
-                if case .center = position, let quote = scrollSubject.quote {
-                    position = .center(.custom({ itemNode in
-                        if let itemNode = itemNode as? ChatMessageBubbleItemNode {
-                            if let quoteRect = itemNode.getQuoteRect(quote: quote.string, offset: quote.offset) {
-                                return quoteRect.midY
+                if case .center = position {
+                    if let quote = scrollSubject.quote {
+                        position = .center(.custom({ itemNode in
+                            if let itemNode = itemNode as? ChatMessageBubbleItemNode {
+                                if let quoteRect = itemNode.getQuoteRect(quote: quote.string, offset: quote.offset) {
+                                    return quoteRect.midY
+                                }
                             }
-                        }
-                        return 0.0
-                    }))
+                            return 0.0
+                        }))
+                    } else if let todoTaskId = scrollSubject.todoTaskId {
+                        position = .center(.custom({ itemNode in
+                            if let itemNode = itemNode as? ChatMessageBubbleItemNode {
+                                if let taskRect = itemNode.getTodoTaskRect(id: todoTaskId) {
+                                    return taskRect.midY
+                                }
+                            }
+                            return 0.0
+                        }))
+                    }
                 }
                 var index = toView.filteredEntries.count - 1
                 for entry in toView.filteredEntries {

@@ -2718,7 +2718,6 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                         })))
                     }
                     if price == nil {
-                        //TODO:localize
                         items.append(.action(ContextMenuActionItem(text: strings.Attachment_SendInHd, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/QualityHd"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, f in

@@ -861,6 +861,26 @@ public class PremiumLimitsListScreen: ViewController {
                         )
                     )
                 )
+                
+                availableItems[.todo] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.todo,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: context,
+                                    position: .top,
+                                    videoFile: videos["todo"],
+                                    decoration: .todo
+                                )),
+                                title: strings.Premium_Todo,
+                                text: strings.Premium_TodoInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                
                 availableItems[.business] = DemoPagerComponent.Item(
                     AnyComponentWithIdentity(
                         id: PremiumDemoScreen.Subject.business,

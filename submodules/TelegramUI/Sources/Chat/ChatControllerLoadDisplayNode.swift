@@ -4809,16 +4809,18 @@ extension ChatControllerImpl {
                         strongSelf.updateItemNodesHighlightedStates(animated: initial)
                         strongSelf.contentData?.scrolledToMessageIdValue = ScrolledToMessageId(id: mappedId, allowedReplacementDirection: [])
                         
-                        var hasQuote = false
+                        var extendHighlight = false
                         if let quote = toSubject.quote {
                             if message.text.contains(quote.string) {
-                                hasQuote = true
+                                extendHighlight = true
                             } else {
                                 strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(title: nil, text: strongSelf.presentationData.strings.Chat_ToastQuoteNotFound, timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return true }), in: .current)
                             }
+                        } else if let _ = toSubject.todoTaskId {
+                            extendHighlight = true
                         }
                         
-                        strongSelf.messageContextDisposable.set((Signal<Void, NoError>.complete() |> delay(hasQuote ? 1.5 : 0.7, queue: Queue.mainQueue())).startStrict(completed: {
+                        strongSelf.messageContextDisposable.set((Signal<Void, NoError>.complete() |> delay(extendHighlight ? 1.5 : 0.7, queue: Queue.mainQueue())).startStrict(completed: {
                             if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
                                 if controllerInteraction.highlightedState == highlightedState {
                                     controllerInteraction.highlightedState = nil

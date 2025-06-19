@@ -446,7 +446,7 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
                     strongSelf.previousOptionNode?.separatorNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.previousOptionNode?.separatorNode.alpha = 0.0
                     
-                    Queue.mainQueue().after(0.8) {
+                    Queue.mainQueue().after(0.5) {
                         if strongSelf.highlightedBackgroundNode.alpha == 1.0 {
                             strongSelf.ignoreNextTap = true
                             strongSelf.longTapped?()
@@ -986,20 +986,20 @@ public class ChatMessageTodoBubbleContentNode: ChatMessageBubbleContentNode {
                 let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: textInsets))
                 let typeText: String
                 
-                //TODO:localize
                 if let todo, todo.flags.contains(.othersCanComplete) {
-                    typeText = "Group To Do List"
+                    typeText = item.presentationData.strings.Chat_Todo_Message_TitleGroup
                 } else {
                     if let author = item.message.author, author.id != item.context.account.peerId {
-                        typeText = "\(EnginePeer(author).compactDisplayTitle)'s To Do List"
+                        typeText = item.presentationData.strings.Chat_Todo_Message_TitlePersonal(EnginePeer(author).compactDisplayTitle).string
                     } else {
-                        typeText = "To Do List"
+                        typeText = item.presentationData.strings.Chat_Todo_Message_Title
                     }
                 }
                 
                 let (typeLayout, typeApply) = makeTypeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: typeText, font: labelsFont, textColor: messageTheme.secondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
                 
+                //TODO:localize
                 var bottomText: String = ""
                 if let todo {
                     if let author = item.message.author, author.id != item.context.account.peerId && !todo.flags.contains(.othersCanComplete) {
@@ -1149,7 +1149,7 @@ public class ChatMessageTodoBubbleContentNode: ChatMessageBubbleContentNode {
                                         guard let strongSelf = self, let item = strongSelf.item, let todoItem, let optionNode, let contentNode = strongSelf.contextContentNodeForItem(itemNode: optionNode) else {
                                             return
                                         }
-                                        item.controllerInteraction.todoItemLongTap(todoItem.id, ChatControllerInteraction.LongTapParams(message: message, contentNode: contentNode, messageNode: strongSelf, progress: nil))
+                                        item.controllerInteraction.todoItemLongTap(todoItem.id, ChatControllerInteraction.LongTapParams(message: item.message, contentNode: contentNode, messageNode: strongSelf, progress: nil))
                                     }
                                     optionNode.frame = optionNodeFrame
                                 } else {
@@ -1306,6 +1306,28 @@ public class ChatMessageTodoBubbleContentNode: ChatMessageBubbleContentNode {
     override public func messageEffectTargetView() -> UIView? {
         if !self.statusNode.isHidden {
             return self.statusNode.messageEffectTargetView()
+        }
+        return nil
+    }
+    
+    public func getTaskRect(id: Int32?) -> CGRect? {
+        var rectsSet: [CGRect] = []
+        for node in self.optionNodes {
+            if node.option?.id == id {
+                rectsSet.append(node.frame.insetBy(dx: 3.0 - UIScreenPixel, dy: 2.0 - UIScreenPixel))
+            }
+        }
+        if !rectsSet.isEmpty {
+            var currentRect = CGRect()
+            for rect in rectsSet {
+                if currentRect.isEmpty {
+                    currentRect = rect
+                } else {
+                    currentRect = currentRect.union(rect)
+                }
+            }
+            
+            return currentRect.offsetBy(dx: self.textNode.textNode.frame.minX, dy: self.textNode.textNode.frame.minY)
         }
         return nil
     }

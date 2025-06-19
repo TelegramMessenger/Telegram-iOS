@@ -6618,6 +6618,17 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         return nil
     }
     
+    public func getTodoTaskRect(id: Int32) -> CGRect? {
+        for contentNode in self.contentNodes {
+            if let contentNode = contentNode as? ChatMessageTodoBubbleContentNode {
+                if let result = contentNode.getTaskRect(id: id) {
+                    return contentNode.view.convert(result, to: self.view)
+                }
+            }
+        }
+        return nil
+    }
+    
     public func hasExpandedAudioTranscription() -> Bool {
         for contentNode in self.contentNodes {
             if let contentNode = contentNode as? ChatMessageFileBubbleContentNode {

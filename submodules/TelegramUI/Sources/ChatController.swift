@@ -4955,11 +4955,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             self.dismissAllTooltips()
-            //TODO:localize
             if !self.context.isPremium {
                 let controller = UndoOverlayController(
                     presentationData: self.presentationData,
-                    content: .premiumPaywall(title: nil, text: "Only [Telegram Premium]() subscribers can mark tasks as done.", customUndoText: nil, timeout: nil, linkAction: nil),
+                    content: .premiumPaywall(title: nil, text: self.presentationData.strings.Chat_Todo_PremiumRequired, customUndoText: nil, timeout: nil, linkAction: nil),
                     action: { [weak self] action in
                         guard let self else {
                             return false
@@ -4979,7 +4978,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 let controller = UndoOverlayController(
                     presentationData: self.presentationData,
-                    content: .universalImage(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Stickers/Lock"), color: .white)!, size: nil, title: nil, text: "\(peerName) has restricted others from editing this to do list.", customUndoText: nil, timeout: nil),
+                    content: .universalImage(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Stickers/Lock"), color: .white)!, size: nil, title: nil, text: self.presentationData.strings.Chat_Todo_CompletionLimited(peerName).string, customUndoText: nil, timeout: nil),
                     action: { _ in
                         return false
                     }
