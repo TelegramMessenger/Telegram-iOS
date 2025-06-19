@@ -1747,7 +1747,7 @@ static void
 mdb_page_dirty(MDB_txn *txn, MDB_page *mp)
 {
 	MDB_ID2 mid;
-	int rc, (*insert)(MDB_ID2L, MDB_ID2 *);
+	__unused int rc, (*insert)(MDB_ID2L, MDB_ID2 *);
 
 	if (txn->mt_env->me_flags & MDB_WRITEMAP) {
 		insert = mdb_mid2l_append;
