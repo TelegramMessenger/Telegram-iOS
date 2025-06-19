@@ -243,7 +243,7 @@ const CGFloat TGGifConverterMaximumSide = 720.0f;
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
     
     CVPixelBufferRef pxBuffer = NULL;
-    CVReturn status = kCVReturnSuccess;
+    __unused CVReturn status = kCVReturnSuccess;
     
     if (pixelBufferPool)
         status = CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pixelBufferPool, &pxBuffer);
