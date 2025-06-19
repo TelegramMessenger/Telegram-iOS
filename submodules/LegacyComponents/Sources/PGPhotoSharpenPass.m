@@ -1,5 +1,8 @@
 #import "PGPhotoSharpenPass.h"
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 NSString *const kSharpenVertexShaderString = PGShaderString
 (
  attribute vec4 position;
@@ -142,3 +145,5 @@ NSString *const kSharpenFragmentShaderString = SHADER_STRING
 }
 
 @end
+
+#pragma clang diagnostic pop

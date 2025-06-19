@@ -1,4 +1,4 @@
-#import "TGMessageEntityBotCommand.h"
+#import <LegacyComponents/TGMessageEntityBotCommand.h>
 
 @implementation TGMessageEntityBotCommand
 

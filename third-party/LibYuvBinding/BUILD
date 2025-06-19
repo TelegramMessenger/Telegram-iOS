@@ -1,20 +1,21 @@
 
 objc_library(
-    name = "WatchCommon",
+    name = "LibYuvBinding",
     enable_modules = True,
-    module_name = "WatchCommon",
+    module_name = "LibYuvBinding",
     srcs = glob([
         "Sources/**/*.m",
+        "Sources/**/*.c",
         "Sources/**/*.h",
     ], allow_empty=True),
     hdrs = glob([
         "PublicHeaders/**/*.h",
     ]),
-    copts = [
-        "-I{}/PublicHeaders/WatchCommon".format(package_name()),
-    ],
     includes = [
         "PublicHeaders",
+    ],
+    deps = [
+        "//third-party/libyuv",
     ],
     sdk_frameworks = [
         "Foundation",

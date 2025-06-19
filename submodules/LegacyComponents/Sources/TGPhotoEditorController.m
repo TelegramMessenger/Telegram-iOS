@@ -1,4 +1,5 @@
-#import "TGPhotoEditorController.h"
+#import <LegacyComponents/LegacyComponents.h>
+#import <LegacyComponents/TGPhotoEditorController.h>
 
 #import "LegacyComponentsInternal.h"
 
@@ -7,13 +8,13 @@
 #import <Photos/Photos.h>
 
 #import <LegacyComponents/TGPhotoEditorAnimation.h>
-#import "TGPhotoEditorInterfaceAssets.h"
+#import <LegacyComponents/TGPhotoEditorInterfaceAssets.h>
 #import <LegacyComponents/TGPhotoEditorUtils.h>
 #import <LegacyComponents/TGPaintUtils.h>
 
 #import <LegacyComponents/UIImage+TG.h>
 
-#import "TGProgressWindow.h"
+#import <LegacyComponents/TGProgressWindow.h>
 
 #import "PGPhotoEditor.h"
 #import "PGPhotoEditorView.h"
@@ -25,7 +26,7 @@
 #import <LegacyComponents/TGPaintingData.h>
 #import <LegacyComponents/TGMediaVideoConverter.h>
 
-#import "TGPhotoToolbarView.h"
+#import <LegacyComponents/TGPhotoToolbarView.h>
 #import "TGPhotoEditorPreviewView.h"
 
 #import <LegacyComponents/TGMenuView.h>
@@ -39,16 +40,16 @@
 #import "TGPhotoQualityController.h"
 #import "TGPhotoAvatarPreviewController.h"
 
-#import "TGPhotoAvatarCropView.h"
+#import <LegacyComponents/TGPhotoAvatarCropView.h>
 
-#import "TGMessageImageViewOverlayView.h"
+#import <LegacyComponents/TGMessageImageViewOverlayView.h>
 #import "TGMediaPickerGalleryVideoScrubber.h"
 #import "TGMediaPickerGalleryVideoScrubberThumbnailView.h"
 
-#import "TGMenuSheetController.h"
+#import <LegacyComponents/TGMenuSheetController.h>
 
 #import <LegacyComponents/AVURLAsset+TGMediaItem.h>
-#import "TGCameraCapturedVideo.h"
+#import <LegacyComponents/TGCameraCapturedVideo.h>
 
 @interface TGPhotoEditorController () <TGViewControllerNavigationBarAppearance, TGMediaPickerGalleryVideoScrubberDataSource, TGMediaPickerGalleryVideoScrubberDelegate, UIDocumentInteractionControllerDelegate>
 {

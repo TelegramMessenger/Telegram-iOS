@@ -23,9 +23,7 @@ objc_library(
         "-I{}/lottiecpp/Sources".format(package_name()),
     ],
     cxxopts = [
-        "-Werror",
         "-std=c++17",
-        "-I{}/lottiecpp/Sources".format(package_name()),
     ],
     hdrs = glob([
         "lottiecpp/PublicHeaders/**/*.h",

@@ -1,8 +1,8 @@
 #import "TGSecretTimerValueControllerItemView.h"
 
 #import "LegacyComponentsInternal.h"
-#import "TGFont.h"
-#import "TGStringUtils.h"
+#import <LegacyComponents/TGFont.h>
+#import <LegacyComponents/TGStringUtils.h>
 
 @interface TGSecretTimerValueControllerItemView ()
 {

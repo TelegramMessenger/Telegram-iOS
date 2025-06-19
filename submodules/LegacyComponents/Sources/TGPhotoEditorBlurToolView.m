@@ -1,13 +1,13 @@
 #import "TGPhotoEditorBlurToolView.h"
 
 #import "LegacyComponentsInternal.h"
-#import "TGImageUtils.h"
-#import "TGFont.h"
+#import <LegacyComponents/TGImageUtils.h>
+#import <LegacyComponents/TGFont.h>
 
 #import "TGPhotoEditorBlurTypeButton.h"
-#import "TGPhotoEditorSliderView.h"
+#import <LegacyComponents/TGPhotoEditorSliderView.h>
 
-#import "TGPhotoEditorInterfaceAssets.h"
+#import <LegacyComponents/TGPhotoEditorInterfaceAssets.h>
 #import <LegacyComponents/UIControl+HitTestEdgeInsets.h>
 
 #import "PGBlurTool.h"

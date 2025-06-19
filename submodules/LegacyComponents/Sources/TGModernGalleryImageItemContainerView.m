@@ -1,4 +1,4 @@
-#import "TGModernGalleryImageItemContainerView.h"
+#import <LegacyComponents/TGModernGalleryImageItemContainerView.h>
 
 @interface TGModernGalleryImageItemContainerLayer : CALayer
 

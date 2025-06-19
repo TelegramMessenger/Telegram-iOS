@@ -1,4 +1,4 @@
-#import "TGImageUtils.h"
+#import <LegacyComponents/TGImageUtils.h>
 
 #import "LegacyComponentsInternal.h"
 
@@ -476,7 +476,9 @@ UIImage *TGTintedWithAlphaImage(UIImage *image, UIColor *color)
 }
 
 NSString *TGImageHash(NSData *data)
-{    
+{
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     CC_MD5_CTX md5;
     CC_MD5_Init(&md5);
     CC_MD5_Update(&md5, [data bytes], (CC_LONG)data.length);
@@ -484,6 +486,7 @@ NSString *TGImageHash(NSData *data)
     unsigned char md5Buffer[16];
     CC_MD5_Final(md5Buffer, &md5);
     NSString *hash = [[NSString alloc] initWithFormat:@"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x", md5Buffer[0], md5Buffer[1], md5Buffer[2], md5Buffer[3], md5Buffer[4], md5Buffer[5], md5Buffer[6], md5Buffer[7], md5Buffer[8], md5Buffer[9], md5Buffer[10], md5Buffer[11], md5Buffer[12], md5Buffer[13], md5Buffer[14], md5Buffer[15]];
+#pragma clang diagnostic pop
     
     return hash;
 }

@@ -1,4 +1,5 @@
-#import <LegacyComponents/LegacyComponents.h>
+#import <LegacyComponents/TGViewController.h>
+#import <LegacyComponents/LegacyComponentsContext.h>
 
 @class TGPresentation;
 @class TGPassportMRZ;

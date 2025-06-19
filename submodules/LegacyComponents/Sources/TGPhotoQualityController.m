@@ -1,10 +1,11 @@
+#import <LegacyComponents/LegacyComponents.h>
 #import "TGPhotoQualityController.h"
 
 #import "LegacyComponentsInternal.h"
 
 #import <LegacyComponents/TGPhotoEditorUtils.h>
 
-#import "TGPhotoEditorInterfaceAssets.h"
+#import <LegacyComponents/TGPhotoEditorInterfaceAssets.h>
 #import <LegacyComponents/TGPhotoEditorAnimation.h>
 
 #import <LegacyComponents/TGModernGalleryVideoView.h>
@@ -14,10 +15,10 @@
 #import <LegacyComponents/TGMediaAsset.h>
 #import <LegacyComponents/TGMediaAssetImageSignals.h>
 #import <LegacyComponents/TGMediaVideoConverter.h>
-#import "TGCameraCapturedVideo.h"
+#import <LegacyComponents/TGCameraCapturedVideo.h>
 
 #import "TGPaintingWrapperView.h"
-#import "TGMessageImageViewOverlayView.h"
+#import <LegacyComponents/TGMessageImageViewOverlayView.h>
 
 #import "PGPhotoEditor.h"
 

@@ -1,9 +1,9 @@
-#import "TGCameraZoomView.h"
-#import "TGCameraInterfaceAssets.h"
+#import <LegacyComponents/TGCameraZoomView.h>
+#import <LegacyComponents/TGCameraInterfaceAssets.h>
 
-#import "TGModernButton.h"
-#import "TGImageUtils.h"
-#import "TGPhotoEditorUtils.h"
+#import <LegacyComponents/TGModernButton.h>
+#import <LegacyComponents/TGImageUtils.h>
+#import <LegacyComponents/TGPhotoEditorUtils.h>
 
 #import "LegacyComponentsInternal.h"
 

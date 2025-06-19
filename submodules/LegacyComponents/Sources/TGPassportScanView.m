@@ -1,12 +1,12 @@
 #import "TGPassportScanView.h"
-#import "PGCamera.h"
-#import "TGCameraPreviewView.h"
+#import <LegacyComponents/PGCamera.h>
+#import <LegacyComponents/TGCameraPreviewView.h>
 
-#import "TGPassportOCR.h"
+#import <LegacyComponents/TGPassportOCR.h>
 
 #import "LegacyComponentsInternal.h"
 
-#import "TGTimerTarget.h"
+#import <LegacyComponents/TGTimerTarget.h>
 
 @interface TGPassportScanView ()
 {

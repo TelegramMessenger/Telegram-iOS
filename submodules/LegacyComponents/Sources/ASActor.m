@@ -1,6 +1,6 @@
-#import "ASActor.h"
+#import <LegacyComponents/ASActor.h>
 
-#import "ActionStage.h"
+#import <LegacyComponents/ActionStage.h>
 
 #import "LegacyComponentsInternal.h"
 

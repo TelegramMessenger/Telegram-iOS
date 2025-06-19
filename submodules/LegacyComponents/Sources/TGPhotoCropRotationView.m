@@ -1,7 +1,7 @@
 #import "TGPhotoCropRotationView.h"
 
 #import "LegacyComponentsInternal.h"
-#import "POPSpringAnimation.h"
+#import <LegacyComponents/POPSpringAnimation.h>
 
 #import <LegacyComponents/TGPhotoEditorUtils.h>
 

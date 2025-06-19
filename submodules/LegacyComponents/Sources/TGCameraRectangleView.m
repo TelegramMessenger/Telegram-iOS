@@ -1,9 +1,9 @@
 #import "TGCameraRectangleView.h"
-#import "TGCameraInterfaceAssets.h"
+#import <LegacyComponents/TGCameraInterfaceAssets.h>
 #import "LegacyComponentsInternal.h"
-#import "TGImageUtils.h"
+#import <LegacyComponents/TGImageUtils.h>
 
-#import "TGCameraPreviewView.h"
+#import <LegacyComponents/TGCameraPreviewView.h>
 #import "PGRectangleDetector.h"
 
 @interface TGCameraRectangleView ()

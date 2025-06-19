@@ -1,8 +1,8 @@
-#import "TGCameraFlashActiveView.h"
+#import <LegacyComponents/TGCameraFlashActiveView.h>
 
 #import "LegacyComponentsInternal.h"
 
-#import "TGCameraInterfaceAssets.h"
+#import <LegacyComponents/TGCameraInterfaceAssets.h>
 
 @interface TGCameraFlashActiveView ()
 {

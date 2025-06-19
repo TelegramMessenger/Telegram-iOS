@@ -1,3 +1,4 @@
+#import <LegacyComponents/LegacyComponents.h>
 #import "TGMediaAssetsPickerController.h"
 
 #import "LegacyComponentsInternal.h"
@@ -16,7 +17,7 @@
 #import <LegacyComponents/TGMediaAssetImageSignals.h>
 #import <LegacyComponents/TGMediaAssetFetchResultChange.h>
 
-#import "TGModernBarButton.h"
+#import <LegacyComponents/TGModernBarButton.h>
 
 #import <LegacyComponents/TGMediaAsset+TGMediaEditableItem.h>
 #import <LegacyComponents/TGPhotoEditorController.h>
@@ -553,12 +554,6 @@
     if (_intent == TGMediaAssetsControllerSetProfilePhotoIntent || _intent == TGMediaAssetsControllerSetSignupProfilePhotoIntent || _intent == TGMediaAssetsControllerSetCustomWallpaperIntent) {
         return;
     }
-    
-    if (iosMajorVersion() >= 9)
-    {
-        if (self.traitCollection.forceTouchCapability == UIForceTouchCapabilityAvailable)
-            [self registerForPreviewingWithDelegate:(id)self sourceView:self.view];
-    }
 }
 
 - (UIViewController *)previewingContext:(id<UIViewControllerPreviewing>)previewingContext viewControllerForLocation:(CGPoint)location
@@ -571,7 +566,10 @@
     [self _cancelSelectionGestureRecognizer];
     
     CGRect cellFrame = [_collectionView.collectionViewLayout layoutAttributesForItemAtIndexPath:indexPath].frame;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     previewingContext.sourceRect = [self.view convertRect:cellFrame fromView:_collectionView];
+#pragma clang diagnostic pop
     
     TGMediaAsset *asset = nil;
     _previewGalleryMixin = [self galleryMixinForIndexPath:indexPath previewMode:true outAsset:&asset];

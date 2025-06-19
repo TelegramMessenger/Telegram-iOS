@@ -1,14 +1,15 @@
-#import "TGPassportAttachMenu.h"
+#import <LegacyComponents/LegacyComponents.h>
+#import <LegacyComponents/TGPassportAttachMenu.h>
 
 #import "LegacyComponentsInternal.h"
-#import "TGImageUtils.h"
+#import <LegacyComponents/TGImageUtils.h>
 
 #import <LegacyComponents/TGViewController.h>
 #import <LegacyComponents/TGMenuSheetController.h>
 #import "TGOverlayFormsheetWindow.h"
 
 #import <LegacyComponents/TGAttachmentCarouselItemView.h>
-#import "TGAttachmentCameraView.h"
+#import <LegacyComponents/TGAttachmentCameraView.h>
 
 #import <LegacyComponents/TGCameraController.h>
 
@@ -154,7 +155,7 @@
         return;
     
     __weak TGViewController *weakParentController = parentController;
-    void (^presentBlock)(TGMediaAssetsController *) = nil;
+    __unused void (^presentBlock)(TGMediaAssetsController *) = nil;
     
     if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPhone)
     {
@@ -312,7 +313,7 @@
     else
         controllerWindow.frame = [context fullscreenBounds];
     
-    bool standalone = true;
+    __unused bool standalone = true;
     CGRect startFrame = CGRectMake(0, screenSize.height, screenSize.width, screenSize.height);
     if (cameraView != nil)
     {

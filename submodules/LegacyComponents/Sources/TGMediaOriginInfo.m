@@ -1,7 +1,7 @@
-#import "TGMediaOriginInfo.h"
+#import <LegacyComponents/TGMediaOriginInfo.h>
 
-#import "TGStringUtils.h"
-#import "TGDocumentMediaAttachment.h"
+#import <LegacyComponents/TGStringUtils.h>
+#import <LegacyComponents/TGDocumentMediaAttachment.h>
 
 @implementation TGMediaOriginInfo
 

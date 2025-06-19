@@ -1,11 +1,11 @@
-#import "TGAttachmentCameraView.h"
-#import "TGImageUtils.h"
+#import <LegacyComponents/TGAttachmentCameraView.h>
+#import <LegacyComponents/TGImageUtils.h>
 
 #import "LegacyComponentsInternal.h"
 
 #import <LegacyComponents/TGMenuSheetView.h>
 #import "TGAttachmentMenuCell.h"
-#import "TGCameraController.h"
+#import <LegacyComponents/TGCameraController.h>
 
 #import <LegacyComponents/PGCamera.h>
 #import <LegacyComponents/TGCameraPreviewView.h>
@@ -63,7 +63,10 @@
         
         [self setInterfaceOrientation:[[LegacyComponentsGlobals provider] applicationStatusBarOrientation] animated:false];
         
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleOrientationChange:) name:UIApplicationDidChangeStatusBarOrientationNotification object:nil];
+#pragma clang diagnostic pop
         
         _fadeView = [[UIView alloc] initWithFrame:self.bounds];
         _fadeView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
@@ -122,7 +125,10 @@
     if (previewView.superview == _wrapperView && _camera != nil)
         [self stopPreview];
     
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationDidChangeStatusBarOrientationNotification object:nil];
+#pragma clang diagnostic pop
 }
 
 - (void)removeCorners {

@@ -1,9 +1,9 @@
-#import "PGCameraVolumeButtonHandler.h"
+#import <LegacyComponents/PGCameraVolumeButtonHandler.h>
 
 #import "LegacyComponentsInternal.h"
 
-#import "TGStringUtils.h"
-#import "Freedom.h"
+#import <LegacyComponents/TGStringUtils.h>
+#import <LegacyComponents/Freedom.h>
 
 #import <AVKit/AVKit.h>
 

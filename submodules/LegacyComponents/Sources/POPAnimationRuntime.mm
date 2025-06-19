@@ -20,7 +20,7 @@
 #import "POPVector.h"
 #import "POPAnimationRuntime.h"
 #import "POPCGUtils.h"
-#import "POPGeometry.h"
+#import <LegacyComponents/POPGeometry.h>
 
 static Boolean pointerEqual(const void *ptr1, const void *ptr2) {
   return ptr1 == ptr2;

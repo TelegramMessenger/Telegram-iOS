@@ -1,10 +1,10 @@
-#import "ActionStage.h"
+#import <LegacyComponents/ActionStage.h>
 
 #import <SSignalKit/SSignalKit.h>
 
 #import "LegacyComponentsInternal.h"
 
-#import "ASActor.h"
+#import <LegacyComponents/ASActor.h>
 
 #import <os/lock.h>
 

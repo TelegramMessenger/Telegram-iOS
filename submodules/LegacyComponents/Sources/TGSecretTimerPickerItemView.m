@@ -4,7 +4,7 @@
 
 #import "TGSecretTimerValueControllerItemView.h"
 
-#import "TGMenuSheetController.h"
+#import <LegacyComponents/TGMenuSheetController.h>
 
 @interface TGSecretTimerPickerView : UIPickerView
 

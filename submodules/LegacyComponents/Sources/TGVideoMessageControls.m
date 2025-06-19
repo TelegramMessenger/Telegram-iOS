@@ -1,4 +1,4 @@
-#import "TGVideoMessageControls.h"
+#import <LegacyComponents/TGVideoMessageControls.h>
 
 #import <LegacyComponents/LegacyComponents.h>
 
@@ -9,8 +9,8 @@
 #import "LegacyComponentsInternal.h"
 #import "TGColor.h"
 
-#import "TGModernConversationInputMicButton.h"
-#import "TGVideoMessageCaptureController.h"
+#import <LegacyComponents/TGModernConversationInputMicButton.h>
+#import <LegacyComponents/TGVideoMessageCaptureController.h>
 
 static void setViewFrame(UIView *view, CGRect frame)
 {
@@ -231,11 +231,8 @@ static CGRect viewFrame(UIView *view)
         [self removeDotAnimation];
         NSTimeInterval durationFactor = MIN(0.4, MAX(1.0, velocity / 1000.0));
         
-        int options = 0;
-        
         if (ABS(CFAbsoluteTimeGetCurrent() - _recordingInterfaceShowTime) < 0.2)
         {
-            options = UIViewAnimationOptionBeginFromCurrentState;
         }
         
         int animationCurveOption = iosMajorVersion() >= 7 ? (7 << 16) : 0;

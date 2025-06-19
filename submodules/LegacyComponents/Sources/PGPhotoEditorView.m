@@ -7,6 +7,9 @@
 #import <QuartzCore/QuartzCore.h>
 #import <AVFoundation/AVFoundation.h>
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 @interface PGPhotoEditorView ()
 {
     GPUImageRotationMode inputRotation;
@@ -416,3 +419,5 @@
 }
 
 @end
+
+#pragma clang diagnostic pop

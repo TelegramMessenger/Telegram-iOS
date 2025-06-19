@@ -1,9 +1,9 @@
-#import "TGCameraMainPhoneView.h"
+#import <LegacyComponents/TGCameraMainPhoneView.h>
 
 #import <SSignalKit/SSignalKit.h>
 #import "LegacyComponentsInternal.h"
-#import "TGImageUtils.h"
-#import "TGFont.h"
+#import <LegacyComponents/TGImageUtils.h>
+#import <LegacyComponents/TGFont.h>
 
 #import <LegacyComponents/UIControl+HitTestEdgeInsets.h>
 
@@ -11,17 +11,17 @@
 #import <LegacyComponents/TGCameraInterfaceAssets.h>
 #import <LegacyComponents/TGTimerTarget.h>
 
-#import "TGModernButton.h"
-#import "TGCameraShutterButton.h"
-#import "TGCameraModeControl.h"
-#import "TGCameraFlashControl.h"
-#import "TGCameraFlashActiveView.h"
-#import "TGCameraFlipButton.h"
-#import "TGCameraTimeCodeView.h"
-#import "TGCameraZoomView.h"
+#import <LegacyComponents/TGModernButton.h>
+#import <LegacyComponents/TGCameraShutterButton.h>
+#import <LegacyComponents/TGCameraModeControl.h>
+#import <LegacyComponents/TGCameraFlashControl.h>
+#import <LegacyComponents/TGCameraFlashActiveView.h>
+#import <LegacyComponents/TGCameraFlipButton.h>
+#import <LegacyComponents/TGCameraTimeCodeView.h>
+#import <LegacyComponents/TGCameraZoomView.h>
 #import "TGCameraToastView.h"
 
-#import "TGMenuView.h"
+#import <LegacyComponents/TGMenuView.h>
 
 #import "TGMediaPickerPhotoCounterButton.h"
 #import "TGMediaPickerPhotoStripView.h"
@@ -382,7 +382,7 @@
             if (strongSelf == nil)
                 return;
             
-            bool change = true;
+            __unused bool change = true;
             if (strongSelf.cameraShouldLeaveMode != nil)
                 change = strongSelf.cameraShouldLeaveMode(previousMode);
             

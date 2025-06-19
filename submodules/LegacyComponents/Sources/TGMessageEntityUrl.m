@@ -1,4 +1,4 @@
-#import "TGMessageEntityUrl.h"
+#import <LegacyComponents/TGMessageEntityUrl.h>
 
 @implementation TGMessageEntityUrl
 

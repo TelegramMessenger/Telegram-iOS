@@ -1,8 +1,8 @@
-#import "TGMenuView.h"
+#import <LegacyComponents/TGMenuView.h>
 
 #import "LegacyComponentsInternal.h"
-#import "TGFont.h"
-#import "TGImageUtils.h"
+#import <LegacyComponents/TGFont.h>
+#import <LegacyComponents/TGImageUtils.h>
 
 #import <QuartzCore/QuartzCore.h>
 
@@ -419,9 +419,9 @@ static UIImage *pagerLeftButtonHighlightedImage() {
     if (self.buttonHighlightDisabled)
         return;
     
-    NSInteger highlightedIndex = -1;
+    __unused NSInteger highlightedIndex = -1;
     
-    bool arrowHighlighted = false;
+    __unused bool arrowHighlighted = false;
     
     NSInteger index = -1;
     for (TGMenuButtonView *buttonView in _buttonViews)

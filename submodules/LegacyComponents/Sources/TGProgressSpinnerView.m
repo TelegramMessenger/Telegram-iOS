@@ -1,4 +1,4 @@
-#import "TGProgressSpinnerView.h"
+#import <LegacyComponents/TGProgressSpinnerView.h>
 
 #import "LegacyComponentsInternal.h"
 

@@ -1,5 +1,5 @@
-#import "TGMediaAsset.h"
-#import "TGMediaAssetImageSignals.h"
+#import <LegacyComponents/TGMediaAsset.h>
+#import <LegacyComponents/TGMediaAssetImageSignals.h>
 
 #import "LegacyComponentsInternal.h"
 

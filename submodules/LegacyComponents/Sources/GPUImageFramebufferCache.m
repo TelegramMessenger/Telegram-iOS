@@ -168,7 +168,10 @@
         [framebufferCache removeAllObjects];
         [framebufferTypeCounts removeAllObjects];
 #if TARGET_IPHONE_SIMULATOR || TARGET_OS_IPHONE
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         CVOpenGLESTextureCacheFlush([[GPUImageContext sharedImageProcessingContext] coreVideoTextureCache], 0);
+#pragma clang diagnostic pop
 #else
 #endif
     });

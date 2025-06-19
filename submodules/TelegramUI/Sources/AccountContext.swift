@@ -155,8 +155,6 @@ public final class AccountContextImpl: AccountContext {
         return self._countriesConfiguration.get()
     }
     
-    public var watchManager: WatchManager?
-    
     private var storedPassword: (String, CFAbsoluteTime, SwiftSignalKit.Timer)?
     private var limitsConfigurationDisposable: Disposable?
     private var contentSettingsDisposable: Disposable?

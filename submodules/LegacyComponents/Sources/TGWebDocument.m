@@ -1,9 +1,9 @@
-#import "TGWebDocument.h"
+#import <LegacyComponents/TGWebDocument.h>
 
 #import "LegacyComponentsInternal.h"
 
-#import "PSKeyValueEncoder.h"
-#import "PSKeyValueDecoder.h"
+#import <LegacyComponents/PSKeyValueEncoder.h>
+#import <LegacyComponents/PSKeyValueDecoder.h>
 
 @implementation TGWebDocumentReference
 

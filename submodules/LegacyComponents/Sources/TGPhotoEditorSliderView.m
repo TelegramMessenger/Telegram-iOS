@@ -1,8 +1,8 @@
-#import "TGPhotoEditorSliderView.h"
+#import <LegacyComponents/TGPhotoEditorSliderView.h>
 
 #import "LegacyComponentsInternal.h"
 
-#import "TGPhotoEditorInterfaceAssets.h"
+#import <LegacyComponents/TGPhotoEditorInterfaceAssets.h>
 
 const CGFloat TGPhotoEditorSliderViewLineSize = 3.0f;
 const CGFloat TGPhotoEditorSliderViewMargin = 15.0f;

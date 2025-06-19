@@ -232,13 +232,13 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         let status: TelegramMediaActionType.SuggestedPostApprovalStatus
         if (flags & (1 << 0)) != 0 {
             let reason: TelegramMediaActionType.SuggestedPostApprovalStatus.RejectionReason
-            if (flags & (1 << 0)) != 1 {
+            if (flags & (1 << 1)) != 0 {
                 reason = .lowBalance(balanceNeeded: starsAmount ?? 0)
             } else {
                 reason = .generic
             }
             status = .rejected(reason: reason, comment: rejectComment)
-        } else if (flags & (1 << 0)) != 1 {
+        } else if (flags & (1 << 1)) != 0 {
             status = .rejected(reason: .lowBalance(balanceNeeded: starsAmount ?? 0), comment: nil)
         } else {
             status = .approved(timestamp: scheduleDate, amount: starsAmount ?? 0)

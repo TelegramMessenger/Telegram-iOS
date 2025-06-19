@@ -1,4 +1,4 @@
-#import "Freedom.h"
+#import <LegacyComponents/Freedom.h>
 
 #import <objc/runtime.h>
 #import <objc/message.h>

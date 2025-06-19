@@ -1,8 +1,8 @@
-#import "TGAuthorSignatureMediaAttachment.h"
+#import <LegacyComponents/TGAuthorSignatureMediaAttachment.h>
 
 #import "LegacyComponentsInternal.h"
 
-#import "NSInputStream+TL.h"
+#import <LegacyComponents/NSInputStream+TL.h>
 
 @implementation TGAuthorSignatureMediaAttachment
 
@@ -26,7 +26,7 @@
 
 - (void)serialize:(NSMutableData *)data
 {
-    NSData *serializedData = [NSKeyedArchiver archivedDataWithRootObject:self];
+    NSData *serializedData = [NSKeyedArchiver archivedDataWithRootObject:self requiringSecureCoding:false error:nil];
     int32_t length = (int32_t)serializedData.length;
     [data appendBytes:&length length:4];
     [data appendData:serializedData];
@@ -36,7 +36,7 @@
 {
     int32_t length = [is readInt32];
     NSData *data = [is readData:length];
-    return [NSKeyedUnarchiver unarchiveObjectWithData:data];
+    return [NSKeyedUnarchiver unarchivedObjectOfClass:[TGMediaAttachment class] fromData:data error:nil];
 }
 
 - (BOOL)isEqual:(id)object {

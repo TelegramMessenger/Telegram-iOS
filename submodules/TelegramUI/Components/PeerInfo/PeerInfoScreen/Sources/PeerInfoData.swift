@@ -864,7 +864,6 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
         combineLatest(notificationExceptions, notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get()),
         combineLatest(context.account.viewTracker.featuredStickerPacks(), archivedStickerPacks),
         hasPassport,
-        (context.watchManager?.watchAppInstalled ?? .single(false)),
         context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration]),
         context.engine.notices.getServerProvidedSuggestions(),
         context.engine.data.get(
@@ -882,7 +881,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
         peerInfoPersonalOrLinkedChannel(context: context, peerId: peerId, isSettings: true),
         starsState
     )
-    |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, hasWatchApp, accountPreferences, suggestions, limits, hasPassword, isPowerSavingEnabled, hasStories, bots, personalChannel, starsState -> PeerInfoScreenData in
+    |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, accountPreferences, suggestions, limits, hasPassword, isPowerSavingEnabled, hasStories, bots, personalChannel, starsState -> PeerInfoScreenData in
         let (notificationExceptions, notificationsAuthorizationStatus, notificationsWarningSuppressed) = notifications
         let (featuredStickerPacks, archivedStickerPacks) = stickerPacks
         
@@ -925,7 +924,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
             userLimits: peer?.isPremium == true ? limits.1 : limits.0,
             bots: bots,
             hasPassport: hasPassport,
-            hasWatchApp: hasWatchApp,
+            hasWatchApp: false,
             enableQRLogin: enableQRLogin
         )
         

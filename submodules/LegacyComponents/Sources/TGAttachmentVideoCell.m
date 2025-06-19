@@ -1,7 +1,7 @@
 #import "TGAttachmentVideoCell.h"
 
 #import "LegacyComponentsInternal.h"
-#import "TGFont.h"
+#import <LegacyComponents/TGFont.h>
 
 #import <LegacyComponents/TGModernGalleryTransitionView.h>
 

@@ -1,4 +1,5 @@
-#import "TGMediaPickerController.h"
+#import <LegacyComponents/LegacyComponents.h>
+#import <LegacyComponents/TGMediaPickerController.h>
 
 #import <LegacyComponents/TGMediaAssetsController.h>
 
@@ -8,10 +9,10 @@
 
 #import "TGMediaPickerSelectionGestureRecognizer.h"
 
-#import "TGMediaPickerLayoutMetrics.h"
-#import "TGMediaPickerCell.h"
+#import <LegacyComponents/TGMediaPickerLayoutMetrics.h>
+#import <LegacyComponents/TGMediaPickerCell.h>
 
-#import "TGMediaPickerToolbarView.h"
+#import <LegacyComponents/TGMediaPickerToolbarView.h>
 
 #import <LegacyComponents/TGPhotoEditorController.h>
 
@@ -275,7 +276,7 @@
     UIEdgeInsets contentInset = [self controllerInsetForInterfaceOrientation:self.interfaceOrientation];
 #pragma clang diagnostic pop
     
-    bool hasOnScreenNavigation = false;
+    __unused bool hasOnScreenNavigation = false;
     if (@available(iOS 11.0, *)) {
         hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || self.context.safeAreaInset.bottom > FLT_EPSILON;
     }

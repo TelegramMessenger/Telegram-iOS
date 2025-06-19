@@ -1,6 +1,6 @@
-#import "TGDocumentAttributeVideo.h"
+#import <LegacyComponents/TGDocumentAttributeVideo.h>
 
-#import "PSKeyValueCoder.h"
+#import <LegacyComponents/PSKeyValueCoder.h>
 
 @implementation TGDocumentAttributeVideo
 

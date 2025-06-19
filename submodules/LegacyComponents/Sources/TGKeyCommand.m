@@ -1,5 +1,5 @@
-#import "TGKeyCommand.h"
-#import "TGKeyCommandController.h"
+#import <LegacyComponents/TGKeyCommand.h>
+#import <LegacyComponents/TGKeyCommandController.h>
 #import "LegacyComponentsInternal.h"
 
 @implementation TGKeyCommand
@@ -57,7 +57,10 @@
         return nil;
     
     if (iosMajorVersion() >= 9 && _title != nil)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         return [UIKeyCommand keyCommandWithInput:_input modifierFlags:_modifierFlags action:@selector(processKeyCommand:) discoverabilityTitle:_title];
+#pragma clang diagnostic pop
     else
         return [UIKeyCommand keyCommandWithInput:_input modifierFlags:_modifierFlags action:@selector(processKeyCommand:)];
 }

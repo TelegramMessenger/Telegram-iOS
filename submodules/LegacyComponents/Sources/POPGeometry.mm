@@ -7,7 +7,7 @@
  of patent rights can be found in the PATENTS file in the same directory.
  */
 
-#import "POPGeometry.h"
+#import <LegacyComponents/POPGeometry.h>
 
 #if !TARGET_OS_IPHONE
 @implementation NSValue (POP)

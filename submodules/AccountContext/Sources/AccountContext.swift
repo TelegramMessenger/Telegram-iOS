@@ -1343,7 +1343,6 @@ public protocol AccountContext: AnyObject {
     var downloadedMediaStoreManager: DownloadedMediaStoreManager { get }
     var peerChannelMemberCategoriesContextsManager: PeerChannelMemberCategoriesContextsManager { get }
     var wallpaperUploadManager: WallpaperUploadManager? { get }
-    var watchManager: WatchManager? { get }
     var inAppPurchaseManager: InAppPurchaseManager? { get }
     var starsContext: StarsContext? { get }
     
