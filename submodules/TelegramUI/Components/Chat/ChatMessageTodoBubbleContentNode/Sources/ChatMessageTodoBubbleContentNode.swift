@@ -373,6 +373,12 @@ private func generatePercentageAnimationImages(presentationData: ChatPresentatio
 }
 
 private final class ChatMessageTodoItemNode: ASDisplayNode {
+    private var backgroundWallpaperNode: ChatMessageBubbleBackdrop?
+    private var backgroundNode: ChatMessageBackground?
+    private var snapshotView: UIView?
+    
+    fileprivate let contextSourceNode: ContextExtractedContentContainingNode
+    fileprivate let containerNode: ASDisplayNode
     fileprivate let highlightedBackgroundNode: ASDisplayNode
     private var avatarNode: AvatarNode?
     private(set) var radioNode: ChatMessageTaskOptionRadioNode?
@@ -381,13 +387,17 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
     fileprivate var nameNode: TextNode?
     private let buttonNode: HighlightTrackingButtonNode
     let separatorNode: ASDisplayNode
+    
+    var context: AccountContext?
+    var message: Message?
     var option: TelegramMediaTodo.Item?
+    
     var pressed: (() -> Void)?
     var selectionUpdated: (() -> Void)?
-    
     var longTapped: (() -> Void)?
     
-    private var theme: PresentationTheme?
+    private var presentationData: ChatPresentationData?
+    private var presentationContext: ChatPresentationContext?
     
     weak var previousOptionNode: ChatMessageTodoItemNode?
     
@@ -411,6 +421,9 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
     }
     
     override init() {
+        self.contextSourceNode = ContextExtractedContentContainingNode()
+        self.containerNode = ASDisplayNode()
+        
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.alpha = 0.0
         self.highlightedBackgroundNode.isUserInteractionEnabled = false
@@ -422,6 +435,9 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
         super.init()
                 
         self.addSubnode(self.highlightedBackgroundNode)
+        
+        self.addSubnode(self.contextSourceNode)
+        self.addSubnode(self.containerNode)
         self.addSubnode(self.separatorNode)
         self.addSubnode(self.buttonNode)
         
@@ -429,7 +445,7 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
         self.buttonNode.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
                 if highlighted {
-                    if let theme = strongSelf.theme, theme.overallDarkAppearance, let contentNode = strongSelf.supernode as? ChatMessageTodoBubbleContentNode, let backdropNode = contentNode.bubbleBackgroundNode?.backdropNode {
+                    if let theme = strongSelf.presentationData?.theme.theme, theme.overallDarkAppearance, let contentNode = strongSelf.supernode as? ChatMessageTodoBubbleContentNode, let backdropNode = contentNode.bubbleBackgroundNode?.backdropNode {
                         strongSelf.highlightedBackgroundNode.layer.compositingFilter = "overlayBlendMode"
                         strongSelf.highlightedBackgroundNode.frame = strongSelf.view.convert(strongSelf.highlightedBackgroundNode.frame, to: backdropNode.view)
                         backdropNode.addSubnode(strongSelf.highlightedBackgroundNode)
@@ -470,7 +486,115 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
                 }
             }
         }
+        
+        self.contextSourceNode.willUpdateIsExtractedToContextPreview = { [weak self] isExtractedToContextPreview, transition in
+            guard let self else {
+                return
+            }
+            if isExtractedToContextPreview {
+                self.buttonNode.highligthedChanged(false)
+                
+                var offset: CGFloat = 0.0
+                var inset: CGFloat = 0.0
+                var type: ChatMessageBackgroundType
+                
+                var incoming = false
+                if let context = self.context, let message = self.message {
+                    incoming = message.effectivelyIncoming(context.account.peerId)
+                }
+                
+                if incoming {
+                    type = .incoming(.Extracted)
+                    offset = -5.0
+                    inset = 5.0
+                } else {
+                    type = .outgoing(.Extracted)
+                    inset = 5.0
+                }
+                
+                if let _ = self.backgroundNode {
+                } else if let presentationData = self.presentationData, let presentationContext = self.presentationContext {
+                    let graphics = PresentationResourcesChat.principalGraphics(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
+                    
+                    let backgroundWallpaperNode = ChatMessageBubbleBackdrop()
+                    backgroundWallpaperNode.alpha = 0.0
+                    
+                    let backgroundNode = ChatMessageBackground()
+                    backgroundNode.alpha = 0.0
+                                        
+                    self.contextSourceNode.contentNode.insertSubnode(backgroundNode, at: 0)
+                    self.contextSourceNode.contentNode.insertSubnode(backgroundWallpaperNode, at: 0)
+                    
+                    self.backgroundWallpaperNode = backgroundWallpaperNode
+                    self.backgroundNode = backgroundNode
+                    
+                    transition.updateAlpha(node: backgroundNode, alpha: 1.0)
+                    transition.updateAlpha(node: backgroundWallpaperNode, alpha: 1.0)
+                    
+                    backgroundNode.setType(type: type, highlighted: false, graphics: graphics, maskMode: true, hasWallpaper: presentationData.theme.wallpaper.hasWallpaper, transition: .immediate, backgroundNode: presentationContext.backgroundNode)
+                    backgroundWallpaperNode.setType(type: type, theme: presentationData.theme, essentialGraphics: graphics, maskMode: true, backgroundNode: presentationContext.backgroundNode)
+                }
+                
+                let backgroundFrame = CGRect(x: offset, y: 0.0, width: self.bounds.width + inset, height: self.bounds.height)
+                self.backgroundNode?.updateLayout(size: backgroundFrame.size, transition: .immediate)
+                self.backgroundNode?.frame = backgroundFrame
+                self.backgroundWallpaperNode?.frame = backgroundFrame
+                
+//                if let (rect, containerSize) = self.absoluteRect {
+//                    let mappedRect = CGRect(origin: CGPoint(x: rect.minX + backgroundFrame.minX, y: rect.minY + backgroundFrame.minY), size: rect.size)
+//                    self.backgroundWallpaperNode?.update(rect: mappedRect, within: containerSize)
+//                }
+                
+                if let snapshotView = self.containerNode.view.snapshotContentTree() {
+                    self.snapshotView = snapshotView
+                    self.contextSourceNode.contentNode.view.addSubview(snapshotView)
+                }
+            } else {
+                if let backgroundNode = self.backgroundNode {
+                    self.backgroundNode = nil
+                    transition.updateAlpha(node: backgroundNode, alpha: 0.0, completion: { [weak backgroundNode] _ in
+                        self.snapshotView?.removeFromSuperview()
+                        self.snapshotView = nil
+                        
+                        backgroundNode?.removeFromSupernode()
+                    })
+                }
+                if let backgroundWallpaperNode = self.backgroundWallpaperNode {
+                    self.backgroundWallpaperNode = nil
+                    transition.updateAlpha(node: backgroundWallpaperNode, alpha: 0.0, completion: { [weak backgroundWallpaperNode] _ in
+                        backgroundWallpaperNode?.removeFromSupernode()
+                    })
+                }
+            }
+        }
     }
+    
+//    fileprivate var absoluteRect: (CGRect, CGSize)?
+//    fileprivate func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+//        self.absoluteRect = (rect, containerSize)
+//        guard let backgroundWallpaperNode = self.backgroundWallpaperNode else {
+//            return
+//        }
+//        guard !self.sourceNode.isExtractedToContextPreview else {
+//            return
+//        }
+//        let mappedRect = CGRect(origin: CGPoint(x: rect.minX + backgroundWallpaperNode.frame.minX, y: rect.minY + backgroundWallpaperNode.frame.minY), size: rect.size)
+//        backgroundWallpaperNode.update(rect: mappedRect, within: containerSize)
+//    }
+//    
+//    fileprivate func applyAbsoluteOffset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
+//        guard let backgroundWallpaperNode = self.backgroundWallpaperNode else {
+//            return
+//        }
+//        backgroundWallpaperNode.offset(value: value, animationCurve: animationCurve, duration: duration)
+//    }
+//    
+//    fileprivate func applyAbsoluteOffsetSpring(value: CGFloat, duration: Double, damping: CGFloat) {
+//        guard let backgroundWallpaperNode = self.backgroundWallpaperNode else {
+//            return
+//        }
+//        backgroundWallpaperNode.offsetSpring(value: value, duration: duration, damping: damping)
+//    }
     
     @objc private func buttonPressed() {
         guard !self.ignoreNextTap else {
@@ -485,11 +609,11 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
         }
     }
     
-    static func asyncLayout(_ maybeNode: ChatMessageTodoItemNode?) -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ todo: TelegramMediaTodo, _ option: TelegramMediaTodo.Item, _ completion: TelegramMediaTodo.Completion?, _ translation: TranslationMessageAttribute.Additional?, _ constrainedWidth: CGFloat) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, (Bool, Bool, Bool) -> ChatMessageTodoItemNode))) {
+    static func asyncLayout(_ maybeNode: ChatMessageTodoItemNode?) -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ presentationContext: ChatPresentationContext, _ message: Message, _ todo: TelegramMediaTodo, _ option: TelegramMediaTodo.Item, _ completion: TelegramMediaTodo.Completion?, _ translation: TranslationMessageAttribute.Additional?, _ constrainedWidth: CGFloat) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, (Bool, Bool, Bool) -> ChatMessageTodoItemNode))) {
         let makeTitleLayout = TextNodeWithEntities.asyncLayout(maybeNode?.titleNode)
         let makeNameLayout = TextNode.asyncLayout(maybeNode?.nameNode)
         
-        return { context, presentationData, message, todo, option, completion, translation, constrainedWidth in
+        return { context, presentationData, presentationContext, message, todo, option, completion, translation, constrainedWidth in
             var canMark = false
             if (todo.flags.contains(.othersCanComplete) || message.author?.id == context.account.peerId) {
                 canMark = true
@@ -550,10 +674,13 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
                         node = ChatMessageTodoItemNode()
                     }
                     
+                    node.option = option
+                    node.context = context
+                    node.presentationData = presentationData
+                    node.presentationContext = presentationContext
+                    
                     node.canMark = canMark
                     node.isPremium = context.isPremium
-                    node.option = option
-                    node.theme = presentationData.theme.theme
                     
                     node.highlightedBackgroundNode.backgroundColor = incoming ? presentationData.theme.theme.chat.message.incoming.polls.highlight : presentationData.theme.theme.chat.message.outgoing.polls.highlight
                     
@@ -597,7 +724,7 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
                     
                     if node.titleNode !== titleNode {
                         node.titleNode = titleNode
-                        node.addSubnode(titleNode.textNode)
+                        node.containerNode.addSubnode(titleNode.textNode)
                         titleNode.textNode.isUserInteractionEnabled = false
                         
                         if let visibilityRect = node.visibilityRect {
@@ -622,7 +749,7 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
                         let nameNode = nameApply()
                         if node.nameNode !== nameNode {
                             node.nameNode = nameNode
-                            node.addSubnode(nameNode)
+                            node.containerNode.addSubnode(nameNode)
                             nameNode.isUserInteractionEnabled = false
                             
                             if animated {
@@ -647,7 +774,7 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
                             avatarNode = current
                         } else {
                             avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 12.0))
-                            node.insertSubnode(avatarNode, at: 0)
+                            node.containerNode.insertSubnode(avatarNode, at: 0)
                             node.avatarNode = avatarNode
                             if animated {
                                 avatarNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
@@ -658,7 +785,6 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
                         avatarNode.frame = CGRect(origin: CGPoint(x: 24.0, y: 12.0), size: avatarSize)
                         if let peer = message.peers[completion.completedBy] {
                             avatarNode.setPeer(context: context, theme: presentationData.theme.theme, peer: EnginePeer(peer), displayDimensions: avatarSize, cutoutRect: CGRect(origin: CGPoint(x: -12.0, y: -1.0), size: CGSize(width: 24.0, height: 24.0)))
-                            //avatarNode.setPeerV2(context: context, theme: presentationData.theme.theme, peer: EnginePeer(peer), displayDimensions: avatarSize)
                         }
                     } else if let avatarNode = node.avatarNode {
                         node.avatarNode = nil
@@ -678,7 +804,7 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
                             radioNode = current
                         } else {
                             radioNode = ChatMessageTaskOptionRadioNode()
-                            node.addSubnode(radioNode)
+                            node.containerNode.addSubnode(radioNode)
                             node.radioNode = radioNode
                             if animated {
                                 radioNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
@@ -707,7 +833,7 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
                         } else {
                             iconNode = ASImageNode()
                             iconNode.displaysAsynchronously = false
-                            node.addSubnode(iconNode)
+                            node.containerNode.addSubnode(iconNode)
                             node.iconNode = iconNode
                             if animated {
                                 iconNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
@@ -741,6 +867,10 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
                     }
                     node.separatorNode.backgroundColor = incoming ? presentationData.theme.theme.chat.message.incoming.polls.separator : presentationData.theme.theme.chat.message.outgoing.polls.separator
                     node.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentHeight - UIScreenPixel), size: CGSize(width: width - leftInset, height: UIScreenPixel))
+                    
+                    node.containerNode.frame = CGRect(origin: .zero, size: CGSize(width: width, height: contentHeight))
+                    node.contextSourceNode.frame = CGRect(origin: .zero, size: CGSize(width: width, height: contentHeight))
+                    node.contextSourceNode.contentRect = CGRect(origin: .zero, size: CGSize(width: width, height: contentHeight))
                     
                     node.buttonNode.isAccessibilityElement = true
                     
@@ -829,7 +959,7 @@ public class ChatMessageTodoBubbleContentNode: ChatMessageBubbleContentNode {
         let makeViewResultsTextLayout = TextNode.asyncLayout(self.buttonViewResultsTextNode)
         let statusLayout = self.statusNode.asyncLayout()
                 
-        var previousOptionNodeLayouts: [Int32: (_ contet: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ poll: TelegramMediaTodo, _ option: TelegramMediaTodo.Item, _ completion: TelegramMediaTodo.Completion?, _ translation: TranslationMessageAttribute.Additional?, _ constrainedWidth: CGFloat) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, (Bool, Bool, Bool) -> ChatMessageTodoItemNode)))] = [:]
+        var previousOptionNodeLayouts: [Int32: (_ contet: AccountContext, _ presentationData: ChatPresentationData, _ presentationContext: ChatPresentationContext, _ message: Message, _ poll: TelegramMediaTodo, _ option: TelegramMediaTodo.Item, _ completion: TelegramMediaTodo.Completion?, _ translation: TranslationMessageAttribute.Additional?, _ constrainedWidth: CGFloat) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, (Bool, Bool, Bool) -> ChatMessageTodoItemNode)))] = [:]
         for optionNode in self.optionNodes {
             if let option = optionNode.option {
                 previousOptionNodeLayouts[option.id] = ChatMessageTodoItemNode.asyncLayout(optionNode)
@@ -1034,7 +1164,7 @@ public class ChatMessageTodoBubbleContentNode: ChatMessageBubbleContentNode {
                     for i in 0 ..< todo.items.count {
                         let todoItem = todo.items[i]
                         
-                        let makeLayout: (_ context: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ todo: TelegramMediaTodo, _ item: TelegramMediaTodo.Item, _ completion: TelegramMediaTodo.Completion?, _ translation: TranslationMessageAttribute.Additional?, _ constrainedWidth: CGFloat) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, (Bool, Bool, Bool) -> ChatMessageTodoItemNode)))
+                        let makeLayout: (_ context: AccountContext, _ presentationData: ChatPresentationData, _ presentationContext: ChatPresentationContext, _ message: Message, _ todo: TelegramMediaTodo, _ item: TelegramMediaTodo.Item, _ completion: TelegramMediaTodo.Completion?, _ translation: TranslationMessageAttribute.Additional?, _ constrainedWidth: CGFloat) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, (Bool, Bool, Bool) -> ChatMessageTodoItemNode)))
                         if let previous = previousOptionNodeLayouts[todoItem.id] {
                             makeLayout = previous
                         } else {
@@ -1048,7 +1178,7 @@ public class ChatMessageTodoBubbleContentNode: ChatMessageBubbleContentNode {
                         
                         let itemCompletion = todo.completions.first(where: { $0.id == todoItem.id })
                         
-                        let result = makeLayout(item.context, item.presentationData, item.message, todo, todoItem, itemCompletion, translation, constrainedSize.width - layoutConstants.bubble.borderInset * 2.0)
+                        let result = makeLayout(item.context, item.presentationData, item.controllerInteraction.presentationContext, item.message, todo, todoItem, itemCompletion, translation, constrainedSize.width - layoutConstants.bubble.borderInset * 2.0)
                         boundingSize.width = max(boundingSize.width, result.minimumWidth + layoutConstants.bubble.borderInset * 2.0)
                         pollOptionsFinalizeLayouts.append(result.1)
                     }
@@ -1146,10 +1276,10 @@ public class ChatMessageTodoBubbleContentNode: ChatMessageBubbleContentNode {
                                         item.controllerInteraction.displayTodoToggleUnavailable(item.message.id)
                                     }
                                     optionNode.longTapped = { [weak optionNode] in
-                                        guard let strongSelf = self, let item = strongSelf.item, let todoItem, let optionNode, let contentNode = strongSelf.contextContentNodeForItem(itemNode: optionNode) else {
+                                        guard let strongSelf = self, let item = strongSelf.item, let todoItem, let optionNode else {
                                             return
                                         }
-                                        item.controllerInteraction.todoItemLongTap(todoItem.id, ChatControllerInteraction.LongTapParams(message: item.message, contentNode: contentNode, messageNode: strongSelf, progress: nil))
+                                        item.controllerInteraction.todoItemLongTap(todoItem.id, ChatControllerInteraction.LongTapParams(message: item.message, contentNode: optionNode.contextSourceNode, messageNode: strongSelf, progress: nil))
                                     }
                                     optionNode.frame = optionNodeFrame
                                 } else {
@@ -1402,43 +1532,5 @@ public class ChatMessageTodoBubbleContentNode: ChatMessageBubbleContentNode {
             }
         }
         return nil
-    }
-    
-    private func contextContentNodeForItem(itemNode: ChatMessageTodoItemNode) -> ContextExtractedContentContainingNode? {
-        guard let item = self.item else {
-            return nil
-        }
-        let containingNode = ContextExtractedContentContainingNode()
-        
-        let incoming = item.content.effectivelyIncoming(item.context.account.peerId, associatedData: item.associatedData)
-                
-        itemNode.highlightedBackgroundNode.alpha = 0.0
-        guard let snapshotView = itemNode.view.snapshotContentTree() else {
-            return nil
-        }
-        
-        let backgroundNode = ASDisplayNode()
-        backgroundNode.backgroundColor = (incoming ? item.presentationData.theme.theme.chat.message.incoming.bubble.withoutWallpaper.fill : item.presentationData.theme.theme.chat.message.outgoing.bubble.withoutWallpaper.fill).first ?? .black
-        backgroundNode.clipsToBounds = true
-        backgroundNode.cornerRadius = 10.0
-        
-        let insets = UIEdgeInsets.zero
-        let backgroundSize = CGSize(width: snapshotView.frame.width + insets.left + insets.right, height: snapshotView.frame.height + insets.top + insets.bottom)
-        backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: backgroundSize)
-        snapshotView.frame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: snapshotView.frame.size)
-        backgroundNode.view.addSubview(snapshotView)
-        
-        let origin = CGPoint(x: 3.0, y: 1.0) //self.backgroundNode.frame.minX + 3.0, y: 1.0)
-        
-        containingNode.frame = CGRect(origin: origin, size: CGSize(width: backgroundSize.width, height: backgroundSize.height + 20.0))
-        containingNode.contentNode.frame = CGRect(origin: .zero, size: backgroundSize)
-        containingNode.contentRect = CGRect(origin: .zero, size: backgroundSize)
-        containingNode.contentNode.addSubnode(backgroundNode)
-        
-        containingNode.contentNode.alpha = 0.0
-        
-        self.addSubnode(containingNode)
-        
-        return containingNode
     }
 }

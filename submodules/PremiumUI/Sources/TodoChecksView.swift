@@ -2,18 +2,22 @@ import Foundation
 import UIKit
 import Display
 import SwiftSignalKit
+import CheckNode
 
 final class TodoChecksView: UIView, PhoneDemoDecorationView {
     private struct Particle {
+        var id: Int64
         var trackIndex: Int
         var position: CGPoint
         var scale: CGFloat
         var alpha: CGFloat
         var direction: CGPoint
         var velocity: CGFloat
-        var color: UIColor
+        var rotation: CGFloat
         var currentTime: CGFloat
         var lifeTime: CGFloat
+        var checkTime: CGFloat?
+        var didSetup: Bool = false
         
         init(
             trackIndex: Int,
@@ -22,19 +26,22 @@ final class TodoChecksView: UIView, PhoneDemoDecorationView {
             alpha: CGFloat,
             direction: CGPoint,
             velocity: CGFloat,
-            color: UIColor,
+            rotation: CGFloat,
             currentTime: CGFloat,
-            lifeTime: CGFloat
+            lifeTime: CGFloat,
+            checkTime: CGFloat?
         ) {
+            self.id = Int64.random(in: 0 ..< .max)
             self.trackIndex = trackIndex
             self.position = position
             self.scale = scale
             self.alpha = alpha
             self.direction = direction
             self.velocity = velocity
-            self.color = color
+            self.rotation = rotation
             self.currentTime = currentTime
             self.lifeTime = lifeTime
+            self.checkTime = checkTime
         }
         
         mutating func update(deltaTime: CGFloat) {
@@ -44,11 +51,15 @@ final class TodoChecksView: UIView, PhoneDemoDecorationView {
             self.position = position
             self.currentTime += deltaTime
         }
+        
+        mutating func setup() {
+            self.didSetup = true
+        }
     }
     
     private final class ParticleSet {
         private let size: CGSize
-        private(set) var particles: [Particle] = []
+        var particles: [Particle] = []
         
         init(size: CGSize, preAdvance: Bool) {
             self.size = size
@@ -82,59 +93,51 @@ final class TodoChecksView: UIView, PhoneDemoDecorationView {
                     
                     for takeIndex in availableTrackIndices {
                         let directionIndex = takeIndex
-                        var angle = (CGFloat(directionIndex % maxDirections) / CGFloat(maxDirections)) * CGFloat.pi * 2.0
-                        var lifeTimeMultiplier = 1.0
+                        let angle: CGFloat
+                       if directionIndex < 8 {
+                           angle = (CGFloat(directionIndex) / 5.0 - 0.5) * 2.0 * (CGFloat.pi / 4.0)
+                       } else {
+                           angle = CGFloat.pi + (CGFloat(directionIndex - 6) / 5.0 - 0.5) * 2.0 * (CGFloat.pi / 4.0)
+                       }
                         
-                        var isUpOrDownSemisphere = false
-                        if angle > CGFloat.pi / 7.0 && angle < CGFloat.pi - CGFloat.pi / 7.0 {
-                            isUpOrDownSemisphere = true
-                        } else if !"".isEmpty, angle > CGFloat.pi + CGFloat.pi / 7.0 && angle < 2.0 * CGFloat.pi - CGFloat.pi / 7.0 {
-                            isUpOrDownSemisphere = true
-                        }
+                        let lifeTimeMultiplier = 1.0
                         
-                        if isUpOrDownSemisphere {
-                            if CGFloat.random(in: 0.0 ... 1.0) < 0.2 {
-                                lifeTimeMultiplier = 0.3
-                            } else {
-                                angle += CGFloat.random(in: 0.0 ... 1.0) > 0.5 ? CGFloat.pi / 1.6 : -CGFloat.pi / 1.6
-                                angle += CGFloat.random(in: -0.2 ... 0.2)
-                                lifeTimeMultiplier = 0.5
-                            }
-                        }
-//                        if self.large {
-//                            angle += CGFloat.random(in: -0.5 ... 0.5)
-//                        }
-                        
-                        let direction = CGPoint(x: cos(angle), y: sin(angle))
-                        let velocity = CGFloat.random(in: 15.0 ..< 20.0)
                         let scale = 1.0
-                        let lifeTime = CGFloat.random(in: 2.0 ... 3.5)
+                                           
+                        let direction = CGPoint(x: cos(angle), y: sin(angle))
+                        let velocity = CGFloat.random(in: 18.0 ..< 22.0)
                         
-                        var position = CGPoint(x: self.size.width / 2.0, y: self.size.height / 2.0)
+                        let lifeTime = CGFloat.random(in: 3.2 ... 4.2)
+                        
+                        var position = CGPoint(x: self.size.width / 2.0, y: self.size.height / 2.0 + 40.0)
                         var initialOffset: CGFloat = 0.5
                         if preAdvance {
-                            initialOffset = CGFloat.random(in: 0.5 ... 1.0)
+                            initialOffset = CGFloat.random(in: 0.7 ... 0.7)
                         } else {
-                            let p = CGFloat.random(in: 0.0 ... 1.0)
-                            if p < 0.5 {
-                                initialOffset = CGFloat.random(in: 0.65 ... 1.0)
-                            } else {
-                                initialOffset = 0.5
-                            }
+                            initialOffset = CGFloat.random(in: 0.60 ... 0.72)
                         }
-                        position.x += direction.x * initialOffset * 225.0
-                        position.y += direction.y * initialOffset * 225.0
-                                           
+                        position.x += direction.x * initialOffset * 250.0
+                        position.y += direction.y * initialOffset * 330.0
+                        
+                        var checkTime: CGFloat?
+                        let p = CGFloat.random(in: 0.0 ... 1.0)
+                        if p < 0.2 {
+                            checkTime = 0.0
+                        } else if p < 0.6 {
+                            checkTime = 1.2 + CGFloat.random(in: 0.1 ... 0.6)
+                        }
+                        
                         let particle = Particle(
                             trackIndex: directionIndex,
                             position: position,
                             scale: scale,
-                            alpha: 1.0,
+                            alpha: 0.3,
                             direction: direction,
                             velocity: velocity,
-                            color: .white,
+                            rotation: CGFloat.random(in: -0.18 ... 0.2),
                             currentTime: 0.0,
-                            lifeTime: lifeTime * lifeTimeMultiplier
+                            lifeTime: lifeTime * lifeTimeMultiplier,
+                            checkTime: checkTime
                         )
                         self.particles.append(particle)
                     }
@@ -157,22 +160,16 @@ final class TodoChecksView: UIView, PhoneDemoDecorationView {
     private var displayLink: SharedDisplayLinkDriver.Link?
     
     private var particleSet: ParticleSet?
-    private let particleImage: UIImage
-    private var particleLayers: [SimpleLayer] = []
+    private var particleLayers: [CheckLayer] = []
+    private var particleMap: [Int64: CheckLayer] = [:]
     
     private var size: CGSize?
     private let large: Bool = false
         
     override init(frame: CGRect) {
-//        if large {
-//            self.particleImage = generateTintedImage(image: UIImage(bundleImageName: "Peer Info/PremiumIcon"), color: .white)!.withRenderingMode(.alwaysTemplate)
-//        } else {
-        self.particleImage = generateTintedImage(image: UIImage(bundleImageName: "Premium/Stars/Particle"), color: .white)!.withRenderingMode(.alwaysTemplate)
-//        }
-                
         super.init(frame: frame)
         
-        self.particleSet = ParticleSet(size: frame.size, preAdvance: true)
+        self.particleSet = ParticleSet(size: frame.size, preAdvance: false)
         
         self.displayLink = SharedDisplayLinkDriver.shared.add(framesPerSecond: .max, { [weak self] delta in
             self?.update(deltaTime: CGFloat(delta))
@@ -193,32 +190,54 @@ final class TodoChecksView: UIView, PhoneDemoDecorationView {
         }
         particleSet.update(deltaTime: deltaTime)
         
+        var validIds = Set<Int64>()
+        for i in 0 ..< particleSet.particles.count {
+            validIds.insert(particleSet.particles[i].id)
+        }
+        
+        for id in self.particleMap.keys {
+            if !validIds.contains(id) {
+                self.particleMap[id]?.isHidden = true
+                self.particleMap.removeValue(forKey: id)
+            }
+        }
+        
         for i in 0 ..< particleSet.particles.count {
             let particle = particleSet.particles[i]
             
-            let particleLayer: SimpleLayer
-            if i < self.particleLayers.count {
-                particleLayer = self.particleLayers[i]
-                particleLayer.isHidden = false
+            let particleLayer: CheckLayer
+            if let assignedLayer = self.particleMap[particle.id] {
+                particleLayer = assignedLayer
             } else {
-                particleLayer = SimpleLayer()
-                particleLayer.contents = self.particleImage.cgImage
-                particleLayer.bounds = CGRect(origin: CGPoint(), size: self.particleImage.size)
-                self.particleLayers.append(particleLayer)
-                self.layer.addSublayer(particleLayer)
+                if i < self.particleLayers.count, let availableLayer = self.particleLayers.first(where: { $0.isHidden }) {
+                    particleLayer = availableLayer
+                    particleLayer.isHidden = false
+                } else {
+                    particleLayer = CheckLayer()
+                    particleLayer.animateScale = false
+                    particleLayer.theme = CheckNodeTheme(backgroundColor: .white, strokeColor: .clear, borderColor: .white, overlayBorder: false, hasInset: false, hasShadow: false)
+                    particleLayer.bounds = CGRect(origin: CGPoint(), size: CGSize(width: 22.0, height: 22.0))
+                    self.particleLayers.append(particleLayer)
+                    self.layer.addSublayer(particleLayer)
+                }
+                self.particleMap[particle.id] = particleLayer
             }
             
-            particleLayer.layerTintColor = particle.color.cgColor
-            
+            if !particle.didSetup {
+                particleLayer.setSelected(false, animated: false)
+                particleSet.particles[i].setup()
+            }
+                        
             particleLayer.position = particle.position
             particleLayer.opacity = Float(particle.alpha)
             
             let particleScale = min(1.0, particle.currentTime / 0.3) * min(1.0, (particle.lifeTime - particle.currentTime) / 0.2) * particle.scale
-            particleLayer.transform = CATransform3DMakeScale(particleScale, particleScale, 1.0)
-        }
-        if particleSet.particles.count < self.particleLayers.count {
-            for i in particleSet.particles.count ..< self.particleLayers.count {
-                self.particleLayers[i].isHidden = true
+            var transform = CATransform3DMakeScale(particleScale, particleScale, 1.0)
+            transform = CATransform3DRotate(transform, particle.rotation, 0.0, 0.0, 1.0)
+            particleLayer.transform = transform
+            
+            if let checkTime = particle.checkTime, particle.currentTime >= checkTime, !particleLayer.selected {
+                particleLayer.setSelected(true, animated: true)
             }
         }
     }

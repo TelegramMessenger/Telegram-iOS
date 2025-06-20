@@ -62,6 +62,7 @@ extension ChatControllerImpl {
         var bannedSendFiles: (Int32, Bool)?
         
         var canSendPolls = true
+        var canSendTodos = true
         if let peer = self.presentationInterfaceState.renderedPeer?.peer {
             if let peer = peer as? TelegramUser {
                 if peer.botInfo == nil && peer.id != self.context.account.peerId {
@@ -70,6 +71,9 @@ extension ChatControllerImpl {
             } else if peer is TelegramSecretChat {
                 canSendPolls = false
             } else if let channel = peer as? TelegramChannel {
+                if case .broadcast = channel.info {
+                    canSendTodos = false
+                }
                 if let value = channel.hasBannedPermission(.banSendPhotos, ignoreDefault: canByPassRestrictions) {
                     bannedSendPhotos = value
                 }
@@ -116,8 +120,10 @@ extension ChatControllerImpl {
             availableButtons.insert(.poll, at: max(0, availableButtons.count - 1))
         }
         
-        availableButtons.insert(.todo, at: max(0, availableButtons.count - 1))
-                
+        if canSendTodos {
+            availableButtons.insert(.todo, at: max(0, availableButtons.count - 1))
+        }
+        
         let presentationData = self.presentationData
         
         var isScheduledMessages = false
