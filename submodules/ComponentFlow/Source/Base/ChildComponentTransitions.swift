@@ -80,15 +80,20 @@ public extension ComponentTransition.DisappearWithGuide {
 
 public extension ComponentTransition.Update {
     static let `default` = ComponentTransition.Update { component, view, transition in
-        let frame = component.size.centered(around: component._position ?? CGPoint())
+        let position = component._position ?? CGPoint()
+        let size = component.size
+        view.layer.anchorPoint = component._anchorPoint ?? CGPoint(x: 0.5, y: 0.5)
         if let scale = component._scale {
-            transition.setBounds(view: view, bounds: CGRect(origin: CGPoint(), size: frame.size))
-            transition.setPosition(view: view, position: frame.center)
+            transition.setBounds(view: view, bounds: CGRect(origin: CGPoint(), size: size))
+            transition.setPosition(view: view, position: position)
             transition.setScale(view: view, scale: scale)
         } else {
-            if view.frame != frame {
-                transition.setFrame(view: view, frame: frame)
+            if component._anchorPoint != nil {
+                view.bounds = CGRect(origin: CGPoint(), size: size)
+            } else {
+                transition.setBounds(view: view, bounds: CGRect(origin: CGPoint(), size: size))
             }
+            transition.setPosition(view: view, position: position)
         }
         let opacity = component._opacity ?? 1.0
         if view.alpha != opacity {

@@ -46,6 +46,7 @@ import AnimatedCountLabelNode
 import TelegramStringFormatting
 import TextNodeWithEntities
 import DeviceModel
+import PhotoResources
 
 private let accessoryButtonFont = Font.medium(14.0)
 private let counterFont = Font.with(size: 14.0, design: .regular, traits: [.monospacedNumbers])
@@ -565,7 +566,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
     let attachmentButton: HighlightableButtonNode
     let attachmentButtonDisabledNode: HighlightableButtonNode
     
-    
+    var attachmentImageNode: TransformImageNode?
     
     let searchLayoutClearButton: HighlightableButton
     private let searchLayoutClearImageNode: ASImageNode
@@ -1563,6 +1564,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         } else {
             attachmentButtonAlpha = 0.0
         }
+        
         transition.updateAlpha(layer: self.attachmentButton.layer, alpha: attachmentButtonAlpha)
         self.attachmentButton.isEnabled = isMediaEnabled && !isRecording
         self.attachmentButton.accessibilityTraits = (!isSlowmodeActive || isMediaEnabled) ? [.button] : [.button, .notEnabled]
@@ -2469,8 +2471,65 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         
         leftInset += leftMenuInset
         
-        transition.updateFrame(layer: self.attachmentButton.layer, frame: CGRect(origin: CGPoint(x: attachmentButtonX, y: hideOffset.y + panelHeight - minimalHeight), size: CGSize(width: 40.0, height: minimalHeight)))
+        let attachmentButtonFrame = CGRect(origin: CGPoint(x: attachmentButtonX, y: hideOffset.y + panelHeight - minimalHeight), size: CGSize(width: 40.0, height: minimalHeight))
+        
+        transition.updateFrame(layer: self.attachmentButton.layer, frame: attachmentButtonFrame)
         transition.updateFrame(node: self.attachmentButtonDisabledNode, frame: self.attachmentButton.frame)
+        
+        if let context = self.context, let interfaceState = self.presentationInterfaceState, let editMessageState = interfaceState.editMessageState, let updatedMediaReference = editMessageState.mediaReference {
+            let attachmentImageNode: TransformImageNode
+            if let current = self.attachmentImageNode {
+                attachmentImageNode = current
+            } else {
+                attachmentImageNode = TransformImageNode()
+                attachmentImageNode.isUserInteractionEnabled = false
+                self.attachmentImageNode = attachmentImageNode
+                self.addSubnode(attachmentImageNode)
+            }
+            
+            let attachmentImageSize = CGSize(width: 26.0, height: 26.0)
+            let attachmentImageFrame = CGRect(origin: CGPoint(x: attachmentButtonFrame.minX + floorToScreenPixels((40.0 - attachmentImageSize.width) * 0.5), y: attachmentButtonFrame.minY + floorToScreenPixels((attachmentButtonFrame.height - attachmentImageSize.height) * 0.5)), size: attachmentImageSize)
+            attachmentImageNode.frame = attachmentImageFrame
+            
+            let hasSpoiler: Bool = false
+            
+            var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
+            var imageDimensions: CGSize?
+            if let imageReference = updatedMediaReference.concrete(TelegramMediaImage.self) {
+                imageDimensions = imageReference.media.representations.last?.dimensions.cgSize
+                updateImageSignal = chatMessagePhotoThumbnail(account: context.account, userLocation: .other, photoReference: imageReference, blurred: hasSpoiler)
+            } else if let fileReference = updatedMediaReference.concrete(TelegramMediaFile.self) {
+                imageDimensions = fileReference.media.dimensions?.cgSize
+                if fileReference.media.isVideo {
+                    updateImageSignal = chatMessageVideoThumbnail(account: context.account, userLocation: .other, fileReference: fileReference, blurred: hasSpoiler)
+                } else if let iconImageRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
+                    updateImageSignal = chatWebpageSnippetFile(account: context.account, userLocation: .other, mediaReference: fileReference.abstract, representation: iconImageRepresentation)
+                }
+            }
+            //TODO:release catch updates
+            if let updateImageSignal {
+                attachmentImageNode.setSignal(updateImageSignal)
+            }
+            
+            let makeAttachmentImageNodeLayout = attachmentImageNode.asyncLayout()
+            let isRoundImage = !"".isEmpty
+            
+            if let imageDimensions {
+                let boundingSize = attachmentImageSize
+                var radius: CGFloat = 4.0
+                var imageSize = imageDimensions.aspectFilled(boundingSize)
+                if isRoundImage {
+                    radius = floor(boundingSize.width / 2.0)
+                    imageSize.width += 2.0
+                    imageSize.height += 2.0
+                }
+                let applyImage = makeAttachmentImageNodeLayout(TransformImageArguments(corners: ImageCorners(radius: radius), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets()))
+                applyImage()
+            }
+        } else if let attachmentImageNode = self.attachmentImageNode {
+            self.attachmentImageNode = nil
+            attachmentImageNode.removeFromSupernode()
+        }
         
         var composeButtonsOffset: CGFloat = 0.0
         if self.extendedSearchLayout {
@@ -4714,7 +4773,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                 case .gift:
                     self.interfaceInteraction?.openPremiumGift()
                 case .suggestPost:
-                    self.interfaceInteraction?.openSuggestPost()
+                    self.interfaceInteraction?.openSuggestPost(nil)
                 }
                 break
             }

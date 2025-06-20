@@ -2319,7 +2319,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             clickThroughMessage?(view, location)
         }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _, _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _, _, _ in return false }, sendEmoji: { _, _, _ in }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _, _ in
             return false
-        }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _, _ in }, openUrl: { _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
+        }, requestMessageActionCallback: { _, _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _, _ in }, openUrl: { _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
         }, presentController: { _, _ in
         }, presentControllerInCurrent: { _, _ in
         }, navigationController: {
@@ -3734,10 +3734,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mode = .accountWithdraw(completion: completion)
         case let .enterAmount(current, minValue, fractionAfterCommission, kind, completion):
             mode = .paidMessages(current: current.value, minValue: minValue.value, fractionAfterCommission: fractionAfterCommission, kind: kind, completion: completion)
-        case let .postSuggestion(channel, current, timestamp, completion):
-            mode = .suggestedPost(mode: .sender(channel: channel), price: current.value, timestamp: timestamp, completion: completion)
-        case let .postSuggestionModification(current, timestamp, completion):
-            mode = .suggestedPost(mode: .admin, price: current.value, timestamp: timestamp, completion: completion)
+        case let .postSuggestion(channel, currency, current, timestamp, completion):
+            mode = .suggestedPost(mode: .sender(channel: channel), currency: currency, price: current.value, timestamp: timestamp, completion: completion)
+        case let .postSuggestionModification(currency, current, timestamp, completion):
+            mode = .suggestedPost(mode: .admin, currency: currency, price: current.value, timestamp: timestamp, completion: completion)
         }
         return StarsWithdrawScreen(context: context, mode: mode)
     }

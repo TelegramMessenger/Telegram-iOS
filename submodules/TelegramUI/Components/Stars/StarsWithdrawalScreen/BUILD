@@ -38,6 +38,7 @@ swift_library(
         "//submodules/PasswordSetupUI",
         "//submodules/TelegramUI/Components/PeerManagement/OwnershipTransferController",
         "//submodules/TelegramUI/Components/ChatScheduleTimeController",
+        "//submodules/TelegramUI/Components/TabSelectorComponent",
     ],
     visibility = [
         "//visibility:public",

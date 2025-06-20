@@ -8,23 +8,27 @@ public final class SuggestedPostMessageAttribute: Equatable, MessageAttribute {
         case rejected = 1
     }
 
+    public let currency: TelegramCurrency
     public let amount: Int64
     public let timestamp: Int32?
     public let state: State?
     
-    public init(amount: Int64, timestamp: Int32?, state: State?) {
+    public init(currency: TelegramCurrency, amount: Int64, timestamp: Int32?, state: State?) {
+        self.currency = currency
         self.amount = amount
         self.timestamp = timestamp
         self.state = state
     }
     
     required public init(decoder: PostboxDecoder) {
+        self.currency = decoder.decodeCodable(TelegramCurrency.self, forKey: "cur") ?? .stars
         self.amount = decoder.decodeInt64ForKey("am", orElse: 0)
         self.timestamp = decoder.decodeOptionalInt32ForKey("ts")
         self.state = decoder.decodeOptionalInt32ForKey("st").flatMap(State.init(rawValue:))
     }
     
     public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeCodable(self.currency, forKey: "cur")
         encoder.encodeInt64(self.amount, forKey: "am")
         if let timestamp = self.timestamp {
             encoder.encodeInt32(timestamp, forKey: "ts")
@@ -39,6 +43,9 @@ public final class SuggestedPostMessageAttribute: Equatable, MessageAttribute {
     }
     
     public static func ==(lhs: SuggestedPostMessageAttribute, rhs: SuggestedPostMessageAttribute) -> Bool {
+        if lhs.currency != rhs.currency {
+            return false
+        }
         if lhs.amount != rhs.amount {
             return false
         }
@@ -62,7 +69,7 @@ extension SuggestedPostMessageAttribute {
             } else if (flags & (1 << 2)) != 0 {
                 state = .rejected
             }
-            self.init(amount: starsAmount, timestamp: scheduleDate, state: state)
+            self.init(currency: .stars, amount: starsAmount, timestamp: scheduleDate, state: state)
         }
     }
     

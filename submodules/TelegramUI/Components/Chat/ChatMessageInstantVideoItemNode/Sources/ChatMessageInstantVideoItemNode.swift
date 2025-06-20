@@ -890,9 +890,9 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, ASGestureReco
                             actionButtonsNode.frame = actionButtonsFrame
                             if actionButtonsNode !== strongSelf.actionButtonsNode {
                                 strongSelf.actionButtonsNode = actionButtonsNode
-                                actionButtonsNode.buttonPressed = { button in
+                                actionButtonsNode.buttonPressed = { button, progress in
                                     if let strongSelf = weakSelf.value {
-                                        strongSelf.performMessageButtonAction(button: button)
+                                        strongSelf.performMessageButtonAction(button: button, progress: progress)
                                     }
                                 }
                                 actionButtonsNode.buttonLongTapped = { button in

@@ -1244,8 +1244,21 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 }
             case let .paidMessagesRefunded(_, stars):
                 let starsString = strings.Notification_PaidMessageRefund_Stars(Int32(stars))
-                if message.author?.id == accountPeerId, let messagePeer = message.peers[message.id.peerId] {
-                    let peerName = EnginePeer(messagePeer).compactDisplayTitle
+                
+                var isOutgoing = false
+                var messagePeer: EnginePeer?
+                if message.author?.id == accountPeerId, let messagePeerValue = message.peers[message.id.peerId] {
+                    isOutgoing = true
+                    messagePeer = EnginePeer(messagePeerValue)
+                } else if message.id.peerId.namespace == Namespaces.Peer.CloudChannel, let peer = message.peers[message.id.peerId] as? TelegramChannel, peer.isMonoForum {
+                    if let author = message.author, let threadId = message.threadId, let threadPeer = message.peers[PeerId(threadId)], author.id != threadPeer.id {
+                        isOutgoing = true
+                        messagePeer = EnginePeer(threadPeer)
+                    }
+                }
+                
+                if isOutgoing, let messagePeer {
+                    let peerName = messagePeer.compactDisplayTitle
                     var attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(1, messagePeer.id)])
                     attributes[0] = boldAttributes
                     let resultString = strings.Notification_PaidMessageRefundYou(starsString, peerName)
