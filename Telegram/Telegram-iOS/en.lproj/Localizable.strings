@@ -14462,3 +14462,37 @@ Sorry for the inconvenience.";
 "SuggestPost.Time.SendToday" = "Post today at %@";
 "SuggestPost.Time.SendTomorrow" = "Post tomorrow at %@";
 "SuggestPost.Time.SendOn" = "Post on %@ at %@";
+
+"Attachment.Todo" = "To-Do List";
+
+"Premium.Todo" = "To-Do Lists";
+"Premium.TodoInfo" = "Plan, assign and complete tasks – seamlessly and efficiently.";
+
+"CreateTodo.Title" = "Title";
+"CreateTodo.TodoTitle" = "TO-DO LIST";
+"CreateTodo.TitlePlaceholder" = "Title";
+"CreateTodo.TaskPlaceholder" = "Task";
+"CreateTodo.AddTaskPlaceholder" = "Add a Task";
+"CreateTodo.TaskCountFooterFormat_1" = "You can add {count} more task.";
+"CreateTodo.TaskCountFooterFormat_any" = "You can add {count} more tasks.";
+"CreateTodo.TaskCountLimitReached" = "Maximum number of tasks reached.";
+
+"CreateTodo.AllowOthersToComplete" = "Allow Others to Mark as Done";
+"CreateTodo.AllowOthersToAppend" = "Allow Others to Add Tasks";
+
+"Chat.Todo.Message.Title" = "To-do List";
+"Chat.Todo.Message.TitleGroup" = "Group To-do List";
+"Chat.Todo.Message.TitlePersonal" = "%@'s To-do List";
+"Chat.Todo.Message.CompletedPersonal" = "%@'s To-do List";
+
+"Chat.Todo.ContextMenu.AddTask" = "Add a Task";
+"Chat.Todo.ContextMenu.EditTask" = "Edit Item";
+"Chat.Todo.ContextMenu.DeleteTask" = "Delete Item";
+"Chat.Todo.ContextMenu.CheckTask" = "Check";
+"Chat.Todo.ContextMenu.UncheckTask" = "Uncheck";
+"Chat.Todo.ContextMenu.SectionTask" = "Task";
+"Chat.Todo.ContextMenu.SectionList" = "List";
+"Chat.Todo.ContextMenu.SectionsInfo" = "You're viewing actions for one task.\nYou can switch to actions for the list.";
+
+"Chat.Todo.PremiumRequired" = "Only [Telegram Premium]() subscribers can mark tasks as done.";
+"Chat.Todo.CompletionLimited" = "%@ has restricted others from editing this to do list.";

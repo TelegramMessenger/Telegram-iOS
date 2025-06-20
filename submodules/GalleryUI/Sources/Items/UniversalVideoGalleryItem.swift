@@ -233,7 +233,7 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
     private var adState: (startDelay: Int32?, betweenDelay: Int32?, messages: [Message])?
     private let adDisposable = MetaDisposable()
     
-    private var program: [(Int32, Message?)] = []
+    private var adSchedule: [(Int32, Message?)] = []
 
     var performAction: ((GalleryControllerInteractionTapAction) -> Void)?
     var presentPremiumDemo: (() -> Void)?
@@ -263,26 +263,26 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
                 self.adState = (state.startDelay, state.betweenDelay, state.messages)
                 
                 var startTime = Int32(CFAbsoluteTimeGetCurrent()) + (state.startDelay ?? 0)
-                var program: [(Int32, Message?)] = []
+                var schedule: [(Int32, Message?)] = []
                 var maxDisplayDuration: Int32 = 30
                 for message in state.messages {
-                    if !program.isEmpty {
-                        program.append((startTime, nil))
+                    if !schedule.isEmpty {
+                        schedule.append((startTime, nil))
                         startTime += (state.betweenDelay ?? 0)
                     }
-                    program.append((startTime, message))
+                    schedule.append((startTime, message))
                     
                     if let adAttribute = message.adAttribute {
                         maxDisplayDuration = adAttribute.maxDisplayDuration ?? 30
                         startTime += maxDisplayDuration
                     }
                 }
-                program.append((startTime + maxDisplayDuration, nil))
-                self.program = program
+                schedule.append((startTime + maxDisplayDuration, nil))
+                self.adSchedule = schedule
             } else {
                 self.adState = nil
                 
-                self.program = []
+                self.adSchedule = []
             }
             
             if let validLayout = self.validLayout {
@@ -317,7 +317,7 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
         let currentTime = Int32(CFAbsoluteTimeGetCurrent())
         var currentAd: (Int32, Message?)?
         
-        for (time, maybeMessage) in program {
+        for (time, maybeMessage) in adSchedule {
             if currentTime > time {
                 currentAd = (time, maybeMessage)
             }

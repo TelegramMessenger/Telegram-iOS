@@ -685,8 +685,7 @@ public enum PremiumPerk: CaseIterable {
         case .paidMessages:
             return strings.Premium_PaidMessages
         case .todo:
-            //TODO:localize
-            return "To-Do Lists"
+            return strings.Premium_Todo
         case .businessLocation:
             return strings.Business_Location
         case .businessHours:
@@ -757,8 +756,7 @@ public enum PremiumPerk: CaseIterable {
         case .paidMessages:
             return strings.Premium_PaidMessagesInfo
         case .todo:
-            //TODO:localize
-            return "Plan, assign and complete tasks – seamlessly and efficiently."
+            return strings.Premium_TodoInfo
         case .businessLocation:
             return strings.Business_LocationInfo
         case .businessHours:

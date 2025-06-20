@@ -1118,7 +1118,6 @@ private final class DemoSheetContent: CombinedComponent {
                     )
                 )
                 
-                //TODO:localize
                 availableItems[.todo] = DemoPagerComponent.Item(
                     AnyComponentWithIdentity(
                         id: PremiumDemoScreen.Subject.todo,
@@ -1128,10 +1127,10 @@ private final class DemoSheetContent: CombinedComponent {
                                     context: component.context,
                                     position: .top,
                                     videoFile: configuration.videos["todo"],
-                                    decoration: .badgeStars
+                                    decoration: .todo
                                 )),
-                                title: "To-Do Lists",
-                                text: "Plan, assign and complete tasks – seamlessly and efficiently.",
+                                title: strings.Premium_Todo,
+                                text: strings.Premium_TodoInfo,
                                 textColor: textColor
                             )
                         )
@@ -1237,8 +1236,7 @@ private final class DemoSheetContent: CombinedComponent {
             case .paidMessages:
                 text = strings.Premium_PaidMessagesInfo
             case .todo:
-                //TODO:localize
-                text = "Plan, assign and complete tasks – seamlessly and efficiently."
+                text = strings.Premium_TodoInfo
             default:
                 text = ""
             }

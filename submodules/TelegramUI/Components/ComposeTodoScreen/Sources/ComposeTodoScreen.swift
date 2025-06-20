@@ -833,7 +833,7 @@ final class ComposeTodoScreenComponent: Component {
                 transition.setFrame(view: todoTextSectionView, frame: todoTextSectionFrame)
                 
                 if let itemView = todoTextSectionView.itemView(id: 0) as? ListComposePollOptionComponent.View {
-                    itemView.updateCustomPlaceholder(value: "Title", size: itemView.bounds.size, transition: .immediate)
+                    itemView.updateCustomPlaceholder(value: environment.strings.CreateTodo_TitlePlaceholder, size: itemView.bounds.size, transition: .immediate)
                 }
             }
             contentHeight += todoTextSectionSize.height
@@ -991,12 +991,12 @@ final class ComposeTodoScreenComponent: Component {
                 var activate = false
                 let placeholder: String
                 if i == todoItemsSectionReadyItems.count - 1 {
-                    placeholder = "Add a Task"
+                    placeholder = environment.strings.CreateTodo_AddTaskPlaceholder
                     if isFirstTime, component.initialData.append {
                         activate = true
                     }
                 } else {
-                    placeholder = "Task"
+                    placeholder = environment.strings.CreateTodo_TaskPlaceholder
                 }
                 
                 if let focusedIndex, i == focusedIndex {
@@ -1030,7 +1030,7 @@ final class ComposeTodoScreenComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
                     text: .plain(NSAttributedString(
-                        string: "TO DO LIST",
+                        string: environment.strings.CreateTodo_TodoTitle,
                         font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                         textColor: theme.list.freeTextColor
                     )),
@@ -1086,7 +1086,7 @@ final class ComposeTodoScreenComponent: Component {
                 let textColor = theme.list.freeTextColor
                 todoItemsComponent = AnyComponent(MultilineTextComponent(
                     text: .markdown(
-                        text: "Maximum number of tasks reached.",
+                        text: environment.strings.CreateTodo_TaskCountLimitReached,
                         attributes: MarkdownAttributes(
                             body: MarkdownAttributeSet(font: textFont, textColor: textColor),
                             bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor),
@@ -1120,7 +1120,7 @@ final class ComposeTodoScreenComponent: Component {
                 ))
             } else {
                 let remainingCount = component.initialData.maxTodoItemsCount - self.todoItems.count
-                let rawString = "You can add {count} more tasks." //environment.strings.CreatePoll_OptionCountFooterFormat(Int32(remainingCount))
+                let rawString = environment.strings.CreateTodo_TaskCountFooterFormat(Int32(remainingCount))
                 
                 var todoItemsFooterItems: [AnimatedTextComponent.Item] = []
                 if let range = rawString.range(of: "{count}") {
@@ -1186,7 +1186,7 @@ final class ComposeTodoScreenComponent: Component {
                     title: AnyComponent(VStack([
                         AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
-                                string: "Allow Others to Mark as Done",
+                                string: environment.strings.CreateTodo_AllowOthersToComplete,
                                 font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                 textColor: theme.list.itemPrimaryTextColor
                             )),
@@ -1209,7 +1209,7 @@ final class ComposeTodoScreenComponent: Component {
                         title: AnyComponent(VStack([
                             AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                                 text: .plain(NSAttributedString(
-                                    string: "Allow Others to Add Tasks",
+                                    string: environment.strings.CreateTodo_AllowOthersToAppend,
                                     font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                     textColor: theme.list.itemPrimaryTextColor
                                 )),

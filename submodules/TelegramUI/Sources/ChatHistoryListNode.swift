@@ -535,7 +535,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
     private var chatHistoryLocationValue: ChatHistoryLocationInput? {
         didSet {
             if let chatHistoryLocationValue = self.chatHistoryLocationValue, chatHistoryLocationValue != oldValue {
-                chatHistoryLocationPromise.set(chatHistoryLocationValue)
+                self.chatHistoryLocationPromise.set(chatHistoryLocationValue)
             }
         }
     }

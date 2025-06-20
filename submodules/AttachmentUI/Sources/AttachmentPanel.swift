@@ -196,7 +196,7 @@ private final class AttachButtonComponent: CombinedComponent {
                 name = strings.Attachment_Location
                 imageName = "Chat/Attach Menu/Location"
             case .todo:
-                name = "To Do List"
+                name = strings.Attachment_Todo
                 imageName = "Chat/Attach Menu/Todo"
             case .contact:
                 name = strings.Attachment_Contact
@@ -1497,8 +1497,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
             case .location:
                 accessibilityTitle = self.presentationData.strings.Attachment_Location
             case .todo:
-                //TODO:localize
-                accessibilityTitle = "To Do List"
+                accessibilityTitle = self.presentationData.strings.Attachment_Todo
             case .contact:
                 accessibilityTitle = self.presentationData.strings.Attachment_Contact
             case .poll:

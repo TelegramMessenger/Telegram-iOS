@@ -225,7 +225,7 @@ final class StarsParticlesView: UIView {
             } else {
                 particleLayer = SimpleLayer()
                 particleLayer.contents = self.particleImage.cgImage
-                particleLayer.bounds = CGRect(origin: CGPoint(), size: particleImage.size)
+                particleLayer.bounds = CGRect(origin: CGPoint(), size: self.particleImage.size)
                 self.particleLayers.append(particleLayer)
                 self.layer.addSublayer(particleLayer)
             }
