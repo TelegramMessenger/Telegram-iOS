@@ -8,6 +8,8 @@ import TelegramPresentationData
 import AccountContext
 import WallpaperBackgroundNode
 import UrlHandling
+import SwiftSignalKit
+import TextLoadingEffect
 
 private let titleFont = Font.medium(16.0)
 
@@ -72,15 +74,20 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
     private var backgroundContent: WallpaperBubbleBackgroundNode?
     private var backgroundColorNode: ASDisplayNode?
     
+    private var maskPath: CGPath?
+    private var loadingEffectView: TextLoadingEffectView?
+    
     private var absolutePosition: (CGRect, CGSize)?
     
     private var button: ReplyMarkupButton?
-    var pressed: ((ReplyMarkupButton) -> Void)?
+    var pressed: ((ReplyMarkupButton, Promise<Bool>) -> Void)?
     var longTapped: ((ReplyMarkupButton) -> Void)?
     
     var longTapRecognizer: UILongPressGestureRecognizer?
     
     private let accessibilityArea: AccessibilityAreaNode
+    
+    private var progressDisposable: Disposable?
     
     override init() {
         self.accessibilityArea = AccessibilityAreaNode()
@@ -94,6 +101,10 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
             self?.buttonPressed()
             return true
         }
+    }
+    
+    deinit {
+        self.progressDisposable?.dispose()
     }
     
     override func didLoad() {
@@ -140,7 +151,48 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
     
     @objc func buttonPressed() {
         if let button = self.button, let pressed = self.pressed {
-            pressed(button)
+            let progressPromise = Promise<Bool>()
+            pressed(button, progressPromise)
+            
+            self.progressDisposable?.dispose()
+            self.progressDisposable = (progressPromise.get()
+            |> deliverOnMainQueue).startStrict(next: { [weak self] isLoading in
+                guard let self else {
+                    return
+                }
+                self.updateIsLoading(isLoading: isLoading)
+            })
+        }
+    }
+    
+    private func updateIsLoading(isLoading: Bool) {
+        if isLoading {
+            if self.loadingEffectView == nil {
+                let loadingEffectView = TextLoadingEffectView(frame: CGRect())
+                self.loadingEffectView = loadingEffectView
+                
+                if let iconNode = self.iconNode, iconNode.view.superview != nil {
+                    self.view.insertSubview(loadingEffectView, belowSubview: iconNode.view)
+                } else if let titleNode = self.titleNode, titleNode.view.superview != nil {
+                    self.view.insertSubview(loadingEffectView, belowSubview: titleNode.view)
+                } else {
+                    self.view.addSubview(loadingEffectView)
+                }
+                
+                if let buttonView = self.buttonView, let maskPath = self.maskPath {
+                    let loadingFrame = buttonView.frame
+                    
+                    loadingEffectView.frame = loadingFrame
+                    loadingEffectView.update(color: UIColor(white: 1.0, alpha: 1.0), rect: CGRect(origin: CGPoint(), size: loadingFrame.size), path: maskPath)
+                }
+            }
+        } else {
+            if let loadingEffectView {
+                self.loadingEffectView = nil
+                loadingEffectView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak loadingEffectView] _ in
+                    loadingEffectView?.removeFromSuperview()
+                })
+            }
         }
     }
     
@@ -351,6 +403,7 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                     
                     let rect = CGRect(origin: CGPoint(), size: CGSize(width: max(0.0, width), height: 42.0))
                     let maskPath: CGPath?
+                    var needsMask = true
                     switch position {
                         case .bottomSingle:
                             maskPath = UIBezierPath(roundRect: rect, topLeftRadius: bubbleCorners.auxiliaryRadius, topRightRadius: bubbleCorners.auxiliaryRadius, bottomLeftRadius: bubbleCorners.mainRadius, bottomRightRadius: bubbleCorners.mainRadius).cgPath
@@ -359,14 +412,19 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                         case .bottomRight:
                             maskPath = UIBezierPath(roundRect: rect, topLeftRadius: bubbleCorners.auxiliaryRadius, topRightRadius: bubbleCorners.auxiliaryRadius, bottomLeftRadius: bubbleCorners.auxiliaryRadius, bottomRightRadius: bubbleCorners.mainRadius).cgPath
                         default:
-                            maskPath = nil
+                            needsMask = false
+                            maskPath = UIBezierPath(roundRect: rect, topLeftRadius: bubbleCorners.auxiliaryRadius, topRightRadius: bubbleCorners.auxiliaryRadius, bottomLeftRadius: bubbleCorners.auxiliaryRadius, bottomRightRadius: bubbleCorners.auxiliaryRadius).cgPath
                     }
                     
                     let currentMaskPath = (node.layer.mask as? CAShapeLayer)?.path
-                    if currentMaskPath != maskPath {
-                        if let maskPath = maskPath {
+                    node.maskPath = maskPath
+                    
+                    let effectiveMaskPath = needsMask ? maskPath : nil
+                    
+                    if currentMaskPath != effectiveMaskPath {
+                        if let effectiveMaskPath = effectiveMaskPath {
                             let shapeLayer = CAShapeLayer()
-                            shapeLayer.path = maskPath
+                            shapeLayer.path = effectiveMaskPath
                             node.layer.mask = shapeLayer
                         } else {
                             node.layer.mask = nil
@@ -437,9 +495,9 @@ public final class ChatMessageActionButtonsNode: ASDisplayNode {
     
     private var buttonNodes: [ChatMessageActionButtonNode] = []
     
-    private var buttonPressedWrapper: ((ReplyMarkupButton) -> Void)?
+    private var buttonPressedWrapper: ((ReplyMarkupButton, Promise<Bool>) -> Void)?
     private var buttonLongTappedWrapper: ((ReplyMarkupButton) -> Void)?
-    public var buttonPressed: ((ReplyMarkupButton) -> Void)?
+    public var buttonPressed: ((ReplyMarkupButton, Promise<Bool>) -> Void)?
     public var buttonLongTapped: ((ReplyMarkupButton) -> Void)?
     
     private var absolutePosition: (CGRect, CGSize)?
@@ -447,9 +505,9 @@ public final class ChatMessageActionButtonsNode: ASDisplayNode {
     override public init() {
         super.init()
         
-        self.buttonPressedWrapper = { [weak self] button in
+        self.buttonPressedWrapper = { [weak self] button, promise in
             if let buttonPressed = self?.buttonPressed {
-                buttonPressed(button)
+                buttonPressed(button, promise)
             }
         }
         

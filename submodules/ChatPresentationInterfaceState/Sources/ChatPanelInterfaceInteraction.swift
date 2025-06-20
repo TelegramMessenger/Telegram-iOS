@@ -168,7 +168,7 @@ public final class ChatPanelInterfaceInteraction {
     public let addDoNotTranslateLanguage: (String) -> Void
     public let hideTranslationPanel: () -> Void
     public let openPremiumGift: () -> Void
-    public let openSuggestPost: () -> Void
+    public let openSuggestPost: (Message?) -> Void
     public let openPremiumRequiredForMessaging: () -> Void
     public let openStarsPurchase: (Int64?) -> Void
     public let openMessagePayment: () -> Void
@@ -291,7 +291,7 @@ public final class ChatPanelInterfaceInteraction {
         addDoNotTranslateLanguage:  @escaping (String) -> Void,
         hideTranslationPanel:  @escaping () -> Void,
         openPremiumGift: @escaping () -> Void,
-        openSuggestPost: @escaping () -> Void,
+        openSuggestPost: @escaping (Message?) -> Void,
         openPremiumRequiredForMessaging: @escaping () -> Void,
         openStarsPurchase: @escaping (Int64?) -> Void,
         openMessagePayment: @escaping () -> Void,
@@ -544,7 +544,7 @@ public final class ChatPanelInterfaceInteraction {
         }, addDoNotTranslateLanguage: { _ in
         }, hideTranslationPanel: {
         }, openPremiumGift: {
-        }, openSuggestPost: {
+        }, openSuggestPost: { _ in
         }, openPremiumRequiredForMessaging: {
         }, openStarsPurchase: { _ in
         }, openMessagePayment: {

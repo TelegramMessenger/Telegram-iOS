@@ -23,6 +23,7 @@ import TelegramStringFormatting
 import UndoUI
 import ListActionItemComponent
 import ChatScheduleTimeController
+import TabSelectorComponent
 
 private let amountTag = GenericComponentViewTag()
 
@@ -54,6 +55,7 @@ private final class SheetContent: CombinedComponent {
         let closeButton = Child(Button.self)
         let balance = Child(BalanceComponent.self)
         let title = Child(Text.self)
+        let currencyToggle = Child(TabSelectorComponent.self)
         let amountSection = Child(ListSectionComponent.self)
         let amountAdditionalLabel = Child(MultilineTextComponent.self)
         let timestampSection = Child(ListSectionComponent.self)
@@ -80,7 +82,7 @@ private final class SheetContent: CombinedComponent {
             
             let constrainedTitleWidth = context.availableSize.width - 16.0 * 2.0
             
-            if case let .suggestedPost(mode, _, _, _) = component.mode {
+            if case let .suggestedPost(mode, _, _, _, _) = component.mode {
                 switch mode {
                 case .sender:
                     let balance = balance.update(
@@ -88,6 +90,7 @@ private final class SheetContent: CombinedComponent {
                             context: component.context,
                             theme: environment.theme,
                             strings: environment.strings,
+                            currency: state.currency,
                             balance: state.balance,
                             alignment: .right
                         ),
@@ -96,7 +99,8 @@ private final class SheetContent: CombinedComponent {
                     )
                     let balanceFrame = CGRect(origin: CGPoint(x: context.availableSize.width - balance.size.width - 15.0, y: floor((56.0 - balance.size.height) * 0.5)), size: balance.size)
                     context.add(balance
-                        .position(balanceFrame.center)
+                        .anchorPoint(CGPoint(x: 1.0, y: 0.0))
+                        .position(CGPoint(x: balanceFrame.maxX, y: balanceFrame.minY))
                     )
                 case .admin:
                     break
@@ -199,7 +203,7 @@ private final class SheetContent: CombinedComponent {
                 
                 minAmount = StarsAmount(value: minAmountValue, nanos: 0)
                 maxAmount = StarsAmount(value: resaleConfiguration.paidMessageMaxAmount, nanos: 0)
-            case let .suggestedPost(mode, _, _, _):
+            case let .suggestedPost(mode, _, _, _, _):
                 //TODO:localize
                 switch mode {
                 case .sender:
@@ -207,7 +211,12 @@ private final class SheetContent: CombinedComponent {
                 case .admin:
                     titleString = "Suggest Changes"
                 }
-                amountTitle = "ENTER A PRICE IN STARS"
+                switch state.currency {
+                case .stars:
+                    amountTitle = "ENTER A PRICE IN STARS"
+                case .ton:
+                    amountTitle = "ENTER A PRICE IN TON"
+                }
                 amountPlaceholder = "Price"
                 
                 minAmount = StarsAmount(value: 0, nanos: 0)
@@ -278,6 +287,65 @@ private final class SheetContent: CombinedComponent {
                 context.add(balanceValue
                     .position(CGPoint(x: 16.0 + environment.safeInsets.left + balanceIcon.size.width + 3.0 + balanceValue.size.width / 2.0, y: topBalanceOriginY + balanceTitle.size.height + balanceValue.size.height / 2.0 + 2.0 - UIScreenPixel))
                 )
+            }
+            
+            if case let .suggestedPost(mode, _, _, _, _) = component.mode {
+                //TODO:localize
+                let selectedId: AnyHashable = state.currency == .stars ? AnyHashable(0 as Int) : AnyHashable(1 as Int)
+                let starsTitle: String
+                let tonTitle: String
+                switch mode {
+                case .sender:
+                    starsTitle = "Offer Stars"
+                    tonTitle = "Offer TON"
+                case .admin:
+                    starsTitle = "Request Stars"
+                    tonTitle = "Request TON"
+                }
+                
+                let currencyToggle = currencyToggle.update(
+                    component: TabSelectorComponent(
+                        colors: TabSelectorComponent.Colors(
+                            foreground: theme.list.itemSecondaryTextColor,
+                            selection: theme.list.itemSecondaryTextColor.withMultipliedAlpha(0.15),
+                            simple: true
+                        ),
+                        customLayout: TabSelectorComponent.CustomLayout(
+                            font: Font.medium(14.0),
+                            spacing: 10.0
+                        ),
+                        items: [
+                            TabSelectorComponent.Item(
+                                id: AnyHashable(0),
+                                content: .component(AnyComponent(CurrencyTabItemComponent(icon: .stars, title: starsTitle, theme: theme)))
+                            ),
+                            TabSelectorComponent.Item(
+                                id: AnyHashable(1),
+                                content: .component(AnyComponent(CurrencyTabItemComponent(icon: .ton, title: tonTitle, theme: theme)))
+                            )
+                        ],
+                        selectedId: selectedId,
+                        setSelectedId: { [weak state] id in
+                            guard let state else {
+                                return
+                            }
+                            if id == AnyHashable(0) {
+                                state.currency = .stars
+                            } else {
+                                state.currency = .ton
+                            }
+                            state.updated(transition: .spring(duration: 0.4))
+                        }
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 100.0),
+                    transition: context.transition
+                )
+                contentSize.height -= 17.0
+                let currencyToggleFrame = CGRect(origin: CGPoint(x: floor((context.availableSize.width - currencyToggle.size.width) * 0.5), y: contentSize.height), size: currencyToggle.size)
+                context.add(currencyToggle
+                    .position(currencyToggle.size.centered(in: currencyToggleFrame).center))
+                
+                contentSize.height += currencyToggle.size.height + 29.0
             }
             
             let amountFont = Font.regular(13.0)
@@ -356,18 +424,32 @@ private final class SheetContent: CombinedComponent {
                     text: .plain(amountInfoString),
                     maximumNumberOfLines: 0
                 ))
-            case let .suggestedPost(mode, _, _, _):
+            case let .suggestedPost(mode, _, _, _, _):
                 switch mode {
                 case let .sender(channel):
                     //TODO:localize
-                    let amountInfoString = NSAttributedString(attributedString: parseMarkdownIntoAttributedString("Choose how many Stars you want to offer \(channel.compactDisplayTitle) to publish this message.", attributes: amountMarkdownAttributes, textAlignment: .natural))
+                    let string: String
+                    switch state.currency {
+                    case .stars:
+                        string = "Choose how many Stars you want to offer \(channel.compactDisplayTitle) to publish this message."
+                    case .ton:
+                        string = "Choose how many TON you want to offer \(channel.compactDisplayTitle) to publish this message."
+                    }
+                    let amountInfoString = NSAttributedString(attributedString: parseMarkdownIntoAttributedString(string, attributes: amountMarkdownAttributes, textAlignment: .natural))
                     amountFooter = AnyComponent(MultilineTextComponent(
                         text: .plain(amountInfoString),
                         maximumNumberOfLines: 0
                     ))
                 case .admin:
                     //TODO:localize
-                    let amountInfoString = NSAttributedString(attributedString: parseMarkdownIntoAttributedString("Choose how many Stars you charge for the message.", attributes: amountMarkdownAttributes, textAlignment: .natural))
+                    let string: String
+                    switch state.currency {
+                    case .stars:
+                        string = "Choose how many Stars you charge for the message."
+                    case .ton:
+                        string = "Choose how many TON you charge for the message."
+                    }
+                    let amountInfoString = NSAttributedString(attributedString: parseMarkdownIntoAttributedString(string, attributes: amountMarkdownAttributes, textAlignment: .natural))
                     amountFooter = AnyComponent(MultilineTextComponent(
                         text: .plain(amountInfoString),
                         maximumNumberOfLines: 0
@@ -396,11 +478,13 @@ private final class SheetContent: CombinedComponent {
                                     textColor: theme.list.itemPrimaryTextColor,
                                     secondaryColor: theme.list.itemSecondaryTextColor,
                                     placeholderColor: theme.list.itemPlaceholderTextColor,
+                                    accentColor: theme.list.itemAccentColor,
                                     value: state.amount?.value,
                                     minValue: minAmount?.value,
                                     maxValue: maxAmount?.value,
                                     placeholderText: amountPlaceholder,
                                     labelText: amountLabel,
+                                    currency: state.currency,
                                     amountUpdated: { [weak state] amount in
                                         state?.amount = amount.flatMap { StarsAmount(value: $0, nanos: 0) }
                                         state?.updated()
@@ -413,7 +497,7 @@ private final class SheetContent: CombinedComponent {
                 ),
                 environment: {},
                 availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: .greatestFiniteMagnitude),
-                transition: context.transition
+                transition: .immediate
             )
             context.add(amountSection
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + amountSection.size.height / 2.0))
@@ -431,7 +515,7 @@ private final class SheetContent: CombinedComponent {
                     .position(CGPoint(x: context.availableSize.width - amountAdditionalLabel.size.width / 2.0 - sideInset - 16.0, y: contentSize.height - amountAdditionalLabel.size.height / 2.0)))
             }
             
-            if case let .suggestedPost(mode, _, _, _) = component.mode {
+            if case let .suggestedPost(mode, _, _, _, _) = component.mode {
                 contentSize.height += 24.0
                 
                 //TODO:localize
@@ -542,12 +626,19 @@ private final class SheetContent: CombinedComponent {
                 }
             } else if case .paidMessages = component.mode {
                 buttonString = environment.strings.Stars_SendMessage_AdjustmentAction
-            } else if case let .suggestedPost(mode, _, _, _) = component.mode {
+            } else if case let .suggestedPost(mode, _, _, _, _) = component.mode {
                 //TODO:localize
                 switch mode {
                 case .sender:
                     if let amount = state.amount {
-                        buttonString = "Offer  # \(presentationStringsFormattedNumber(amount, environment.dateTimeFormat.groupingSeparator))"
+                        let currencySymbol: String
+                        switch state.currency {
+                        case .stars:
+                            currencySymbol = "#"
+                        case .ton:
+                            currencySymbol = "$"
+                        }
+                        buttonString = "Offer  \(currencySymbol) \(presentationStringsFormattedNumber(amount, environment.dateTimeFormat.groupingSeparator))"
                     } else {
                         buttonString = "Offer for Free"
                     }
@@ -563,10 +654,19 @@ private final class SheetContent: CombinedComponent {
             if state.cachedStarImage == nil || state.cachedStarImage?.1 !== theme {
                 state.cachedStarImage = (generateTintedImage(image: UIImage(bundleImageName: "Item List/PremiumIcon"), color: theme.list.itemCheckColors.foregroundColor)!, theme)
             }
+            if state.cachedTonImage == nil || state.cachedTonImage?.1 !== theme {
+                state.cachedTonImage = (generateTintedImage(image: UIImage(bundleImageName: "Ads/TonAbout"), color: theme.list.itemCheckColors.foregroundColor)!, theme)
+            }
             
             let buttonAttributedString = NSMutableAttributedString(string: buttonString, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
             if let range = buttonAttributedString.string.range(of: "#"), let starImage = state.cachedStarImage?.0 {
                 buttonAttributedString.addAttribute(.attachment, value: starImage, range: NSRange(range, in: buttonAttributedString.string))
+                buttonAttributedString.addAttribute(.foregroundColor, value: theme.list.itemCheckColors.foregroundColor, range: NSRange(range, in: buttonAttributedString.string))
+                buttonAttributedString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: buttonAttributedString.string))
+                buttonAttributedString.addAttribute(.kern, value: 2.0, range: NSRange(range, in: buttonAttributedString.string))
+            }
+            if let range = buttonAttributedString.string.range(of: "$"), let tonImage = state.cachedTonImage?.0 {
+                buttonAttributedString.addAttribute(.attachment, value: tonImage, range: NSRange(range, in: buttonAttributedString.string))
                 buttonAttributedString.addAttribute(.foregroundColor, value: theme.list.itemCheckColors.foregroundColor, range: NSRange(range, in: buttonAttributedString.string))
                 buttonAttributedString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: buttonAttributedString.string))
                 buttonAttributedString.addAttribute(.kern, value: 2.0, range: NSRange(range, in: buttonAttributedString.string))
@@ -618,8 +718,8 @@ private final class SheetContent: CombinedComponent {
                                     completion(amount.value)
                                 case let .paidMessages(_, _, _, _, completion):
                                     completion(amount.value)
-                                case let .suggestedPost(_, _, _, completion):
-                                    completion(amount.value, state.timestamp)
+                                case let .suggestedPost(_, _, _, _, completion):
+                                    completion(state.currency, amount.value, state.timestamp)
                                 }
                                 
                                 controller.dismissAnimated()
@@ -653,6 +753,7 @@ private final class SheetContent: CombinedComponent {
         fileprivate var component: SheetContent
         
         fileprivate var amount: StarsAmount?
+        fileprivate var currency: TelegramCurrency
         fileprivate var timestamp: Int32?
         
         fileprivate var balance: StarsAmount?
@@ -660,6 +761,7 @@ private final class SheetContent: CombinedComponent {
         
         var cachedCloseImage: (UIImage, PresentationTheme)?
         var cachedStarImage: (UIImage, PresentationTheme)?
+        var cachedTonImage: (UIImage, PresentationTheme)?
         var cachedChevronImage: (UIImage, PresentationTheme)?
         
         init(component: SheetContent) {
@@ -668,6 +770,7 @@ private final class SheetContent: CombinedComponent {
             self.component = component
             
             var amount: StarsAmount?
+            var currency: TelegramCurrency = .stars
             switch mode {
             case let .withdraw(stats, _):
                 amount = StarsAmount(value: stats.balances.availableBalance.value, nanos: 0)
@@ -681,13 +784,15 @@ private final class SheetContent: CombinedComponent {
                 amount = nil
             case let .paidMessages(initialValue, _, _, _, _):
                 amount = StarsAmount(value: initialValue, nanos: 0)
-            case let .suggestedPost(_, initialValue, initialTimestamp, _):
+            case let .suggestedPost(_, currencyValue, initialValue, initialTimestamp, _):
+                currency = currencyValue
                 if initialValue != 0 {
                     amount = StarsAmount(value: initialValue, nanos: 0)
                 }
                 self.timestamp = initialTimestamp
             }
             
+            self.currency = currency
             self.amount = amount
             
             super.init()
@@ -696,7 +801,7 @@ private final class SheetContent: CombinedComponent {
             switch self.mode {
             case .reaction:
                 needsBalance = true
-            case let .suggestedPost(mode, _, _, _):
+            case let .suggestedPost(mode, _, _, _, _):
                 switch mode {
                 case .sender:
                     needsBalance = true
@@ -854,7 +959,7 @@ public final class StarsWithdrawScreen: ViewControllerComponentContainer {
         case reaction(Int64?, completion: (Int64) -> Void)
         case starGiftResell(StarGift.UniqueGift, Bool, completion: (Int64) -> Void)
         case paidMessages(current: Int64, minValue: Int64, fractionAfterCommission: Int, kind: StarsWithdrawalScreenSubject.PaidMessageKind, completion: (Int64) -> Void)
-        case suggestedPost(mode: SuggestedPostMode, price: Int64, timestamp: Int32?, completion: (Int64, Int32?) -> Void)
+        case suggestedPost(mode: SuggestedPostMode, currency: TelegramCurrency, price: Int64, timestamp: Int32?, completion: (TelegramCurrency, Int64, Int32?) -> Void)
     }
     
     private let context: AccountContext
@@ -938,11 +1043,13 @@ private final class AmountFieldComponent: Component {
     let textColor: UIColor
     let secondaryColor: UIColor
     let placeholderColor: UIColor
+    let accentColor: UIColor
     let value: Int64?
     let minValue: Int64?
     let maxValue: Int64?
     let placeholderText: String
     let labelText: String?
+    let currency: TelegramCurrency
     let amountUpdated: (Int64?) -> Void
     let tag: AnyObject?
     
@@ -950,22 +1057,26 @@ private final class AmountFieldComponent: Component {
         textColor: UIColor,
         secondaryColor: UIColor,
         placeholderColor: UIColor,
+        accentColor: UIColor,
         value: Int64?,
         minValue: Int64?,
         maxValue: Int64?,
         placeholderText: String,
         labelText: String?,
+        currency: TelegramCurrency,
         amountUpdated: @escaping (Int64?) -> Void,
         tag: AnyObject? = nil
     ) {
         self.textColor = textColor
         self.secondaryColor = secondaryColor
         self.placeholderColor = placeholderColor
+        self.accentColor = accentColor
         self.value = value
         self.minValue = minValue
         self.maxValue = maxValue
         self.placeholderText = placeholderText
         self.labelText = labelText
+        self.currency = currency
         self.amountUpdated = amountUpdated
         self.tag = tag
     }
@@ -978,6 +1089,9 @@ private final class AmountFieldComponent: Component {
             return false
         }
         if lhs.placeholderColor != rhs.placeholderColor {
+            return false
+        }
+        if lhs.accentColor != rhs.accentColor {
             return false
         }
         if lhs.value != rhs.value {
@@ -995,6 +1109,9 @@ private final class AmountFieldComponent: Component {
         if lhs.labelText != rhs.labelText {
             return false
         }
+        if lhs.currency != rhs.currency {
+            return false
+        }
         return true
     }
     
@@ -1010,7 +1127,7 @@ private final class AmountFieldComponent: Component {
         }
         
         private let placeholderView: ComponentView<Empty>
-        private let iconView: UIImageView
+        private let icon = ComponentView<Empty>()
         private let textField: TextFieldNodeView
         private let labelView: ComponentView<Empty>
         
@@ -1021,8 +1138,6 @@ private final class AmountFieldComponent: Component {
             self.placeholderView = ComponentView<Empty>()
             self.textField = TextFieldNodeView(frame: .zero)
             self.labelView = ComponentView<Empty>()
-            
-            self.iconView = UIImageView(image: UIImage(bundleImageName: "Premium/Stars/StarLarge"))
 
             super.init(frame: frame)
 
@@ -1030,7 +1145,6 @@ private final class AmountFieldComponent: Component {
             self.textField.addTarget(self, action: #selector(self.textChanged(_:)), for: .editingChanged)
             
             self.addSubview(self.textField)
-            self.addSubview(self.iconView)
         }
         
         required init?(coder: NSCoder) {
@@ -1125,10 +1239,40 @@ private final class AmountFieldComponent: Component {
             
             let sideInset: CGFloat = 16.0
             var leftInset: CGFloat = 16.0
-            if let icon = self.iconView.image {
-                leftInset += icon.size.width + 6.0
-                self.iconView.frame = CGRect(origin: CGPoint(x: 15.0, y: floorToScreenPixels((size.height - icon.size.height) / 2.0)), size: icon.size)
+            
+            let iconName: String
+            var iconTintColor: UIColor?
+            let iconMaxSize: CGSize?
+            var iconOffset = CGPoint()
+            switch component.currency {
+            case .stars:
+                iconName = "Premium/Stars/StarLarge"
+                iconMaxSize = CGSize(width: 22.0, height: 22.0)
+            case .ton:
+                iconName = "Ads/TonBig"
+                iconTintColor = component.accentColor
+                iconMaxSize = CGSize(width: 18.0, height: 18.0)
+                iconOffset = CGPoint(x: 3.0, y: 1.0)
             }
+            let iconSize = self.icon.update(
+                transition: .immediate,
+                component: AnyComponent(BundleIconComponent(
+                    name: iconName,
+                    tintColor: iconTintColor,
+                    maxSize: iconMaxSize
+                )),
+                environment: {},
+                containerSize: CGSize(width: 100.0, height: 100.0)
+            )
+            
+            if let iconView = self.icon.view {
+                if iconView.superview == nil {
+                    self.addSubview(iconView)
+                }
+                iconView.frame = CGRect(origin: CGPoint(x: iconOffset.x + 15.0, y: iconOffset.y - 1.0 + floorToScreenPixels((size.height - iconSize.height) / 2.0)), size: iconSize)
+            }
+            
+            leftInset += 24.0 + 6.0
             
             let placeholderSize = self.placeholderView.update(
                 transition: .easeInOut(duration: 0.2),
@@ -1148,7 +1292,7 @@ private final class AmountFieldComponent: Component {
                     self.insertSubview(placeholderComponentView, at: 0)
                 }
                 
-                placeholderComponentView.frame = CGRect(origin: CGPoint(x: leftInset, y: floorToScreenPixels((size.height - placeholderSize.height) / 2.0) + 1.0 - UIScreenPixel), size: placeholderSize)
+                placeholderComponentView.frame = CGRect(origin: CGPoint(x: leftInset, y: -1.0 + floorToScreenPixels((size.height - placeholderSize.height) / 2.0) + 1.0 - UIScreenPixel), size: placeholderSize)
                 placeholderComponentView.isHidden = !(self.textField.text ?? "").isEmpty
             }
             
@@ -1255,6 +1399,7 @@ private final class BalanceComponent: CombinedComponent {
     let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
+    let currency: TelegramCurrency
     let balance: StarsAmount?
     let alignment: NSTextAlignment
     
@@ -1262,12 +1407,14 @@ private final class BalanceComponent: CombinedComponent {
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
+        currency: TelegramCurrency,
         balance: StarsAmount?,
         alignment: NSTextAlignment
     ) {
         self.context = context
         self.theme = theme
         self.strings = strings
+        self.currency = currency
         self.balance = balance
         self.alignment = alignment
     }
@@ -1280,6 +1427,9 @@ private final class BalanceComponent: CombinedComponent {
             return false
         }
         if lhs.strings !== rhs.strings {
+            return false
+        }
+        if lhs.currency != rhs.currency {
             return false
         }
         if lhs.balance != rhs.balance {
@@ -1324,11 +1474,25 @@ private final class BalanceComponent: CombinedComponent {
                 transition: .immediate
             )
             
-            let iconSize = CGSize(width: 18.0, height: 18.0)
+            let iconSize: CGSize
+            let iconName: String
+            var iconOffset = CGPoint()
+            var iconTintColor: UIColor?
+            switch context.component.currency {
+            case .stars:
+                iconSize = CGSize(width: 18.0, height: 18.0)
+                iconName = "Premium/Stars/StarLarge"
+            case .ton:
+                iconSize = CGSize(width: 13.0, height: 13.0)
+                iconName = "Ads/TonBig"
+                iconTintColor = context.component.theme.list.itemAccentColor
+                iconOffset = CGPoint(x: 0.0, y: 2.33)
+            }
+            
             let icon = icon.update(
                 component: BundleIconComponent(
-                    name: "Premium/Stars/StarLarge",
-                    tintColor: nil
+                    name: iconName,
+                    tintColor: iconTintColor
                 ),
                 availableSize: iconSize,
                 transition: context.transition
@@ -1355,7 +1519,7 @@ private final class BalanceComponent: CombinedComponent {
                 )
                 context.add(
                     icon.position(
-                        icon.size.centered(in: CGRect(origin: CGPoint(x: size.width - balance.size.width - icon.size.width - 1.0, y: title.size.height + titleSpacing), size: icon.size)).center
+                        icon.size.centered(in: CGRect(origin: CGPoint(x: iconOffset.x + size.width - balance.size.width - icon.size.width - 1.0, y: iconOffset.y + title.size.height + titleSpacing), size: icon.size)).center
                     )
                 )
             } else {
@@ -1378,5 +1542,105 @@ private final class BalanceComponent: CombinedComponent {
 
             return size
         }
+    }
+}
+
+private final class CurrencyTabItemComponent: Component {
+    typealias EnvironmentType = TabSelectorComponent.ItemEnvironment
+    
+    enum Icon {
+        case stars
+        case ton
+    }
+    
+    let icon: Icon
+    let title: String
+    let theme: PresentationTheme
+    
+    init(
+        icon: Icon,
+        title: String,
+        theme: PresentationTheme
+    ) {
+        self.icon = icon
+        self.title = title
+        self.theme = theme
+    }
+    
+    static func ==(lhs: CurrencyTabItemComponent, rhs: CurrencyTabItemComponent) -> Bool {
+        if lhs.icon != rhs.icon {
+            return false
+        }
+        if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        return true
+    }
+    
+    final class View: UIView {
+        private let title = ComponentView<Empty>()
+        private let icon = ComponentView<Empty>()
+        
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        func update(component: CurrencyTabItemComponent, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
+            let iconSpacing: CGFloat = 4.0
+            
+            let iconSize = self.icon.update(
+                transition: .immediate,
+                component: AnyComponent(BundleIconComponent(
+                    name: component.icon == .stars ? "Premium/Stars/StarLarge" : "Ads/TonAbout",
+                    tintColor: component.icon == .stars ? nil : component.theme.list.itemAccentColor
+                )),
+                environment: {},
+                containerSize: CGSize(width: 100.0, height: 100.0)
+            )
+            
+            let titleSize = self.title.update(
+                transition: .immediate,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: component.title, font: Font.medium(14.0), textColor: .white))
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width, height: 100.0)
+            )
+            
+            let titleFrame = CGRect(origin: CGPoint(x: iconSize.width + iconSpacing, y: 0.0), size: titleSize)
+            if let titleView = self.title.view {
+                if titleView.superview == nil {
+                    self.addSubview(titleView)
+                }
+                titleView.frame = titleFrame
+                
+                transition.setTintColor(layer: titleView.layer, color: component.theme.list.freeTextColor.mixedWith(component.theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.5), alpha: environment[TabSelectorComponent.ItemEnvironment.self].value.selectionFraction))
+            }
+            
+            let iconFrame = CGRect(origin: CGPoint(x: 0.0, y: floorToScreenPixels((titleSize.height - iconSize.height) * 0.5)), size: iconSize)
+            if let iconView = self.icon.view {
+                if iconView.superview == nil {
+                    self.addSubview(iconView)
+                }
+                iconView.frame = iconFrame
+            }
+            
+            return CGSize(width: iconSize.width + iconSpacing + titleSize.width, height: titleSize.height)
+        }
+    }
+    
+    func makeView() -> View {
+        return View(frame: CGRect())
+    }
+    
+    func update(view: View, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

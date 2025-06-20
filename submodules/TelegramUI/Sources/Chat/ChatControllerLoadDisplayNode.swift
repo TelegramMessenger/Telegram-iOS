@@ -4131,23 +4131,80 @@ extension ChatControllerImpl {
                 })
                 self.push(controller)
             }
-        }, openSuggestPost: { [weak self] in
+        }, openSuggestPost: { [weak self] message in
             guard let self else {
                 return
             }
-            self.updateChatPresentationInterfaceState(interactive: true, { state in
-                var state = state
-                state = state.updatedInterfaceState { interfaceState in
-                    var interfaceState = interfaceState
-                    interfaceState = interfaceState.withUpdatedPostSuggestionState(ChatInterfaceState.PostSuggestionState(
-                        editingOriginalMessageId: nil,
-                        price: 0,
-                        timestamp: nil
-                    ))
-                    return interfaceState
-                }
-                return state
-            })
+            
+            if let message {
+                let attribute = message.attributes.first(where: { $0 is SuggestedPostMessageAttribute }) as? SuggestedPostMessageAttribute
+                
+                self.updateChatPresentationInterfaceState(interactive: true, { state in
+                    var entities: [MessageTextEntity] = []
+                    for attribute in message.attributes {
+                        if let attribute = attribute as? TextEntitiesMessageAttribute {
+                            entities = attribute.entities
+                            break
+                        }
+                    }
+                    var inputTextMaxLength: Int32 = 4096
+                    var webpageUrl: String?
+                    for media in message.media {
+                        if media is TelegramMediaImage || media is TelegramMediaFile {
+                            inputTextMaxLength = self.context.userLimits.maxCaptionLength
+                        } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
+                            webpageUrl = content.url
+                        }
+                    }
+                    
+                    let inputText = chatInputStateStringWithAppliedEntities(message.text, entities: entities)
+                    var disableUrlPreviews: [String] = []
+                    if webpageUrl == nil {
+                        disableUrlPreviews = detectUrls(inputText)
+                    }
+                    
+                    var updated = state.updatedInterfaceState { interfaceState in
+                        return interfaceState.withUpdatedEditMessage(ChatEditMessageState(messageId: message.id, inputState: ChatTextInputState(inputText: inputText), disableUrlPreviews: disableUrlPreviews, inputTextMaxLength: inputTextMaxLength, mediaCaptionIsAbove: nil))
+                    }
+                    
+                    let (updatedState, updatedPreviewQueryState) = updatedChatEditInterfaceMessageState(context: self.context, state: updated, message: message)
+                    updated = updatedState
+                    self.editingUrlPreviewQueryState?.1.dispose()
+                    self.editingUrlPreviewQueryState = updatedPreviewQueryState
+                    
+                    updated = updated.updatedInputMode({ _ in
+                        return .text
+                    })
+                    updated = updated.updatedShowCommands(false)
+                    updated = updated.updatedInterfaceState { interfaceState in
+                        var interfaceState = interfaceState
+                        
+                        interfaceState = interfaceState.withUpdatedPostSuggestionState(ChatInterfaceState.PostSuggestionState(
+                            editingOriginalMessageId: message.id,
+                            currency: attribute?.currency ?? .stars,
+                            price: attribute?.amount ?? 0,
+                            timestamp: attribute?.timestamp
+                        ))
+                        return interfaceState
+                    }
+                    return updated
+                })
+            } else {
+                self.updateChatPresentationInterfaceState(interactive: true, { state in
+                    var state = state
+                    state = state.updatedInterfaceState { interfaceState in
+                        var interfaceState = interfaceState
+                        interfaceState = interfaceState.withUpdatedPostSuggestionState(ChatInterfaceState.PostSuggestionState(
+                            editingOriginalMessageId: nil,
+                            currency: .stars,
+                            price: 0,
+                            timestamp: nil
+                        ))
+                        return interfaceState
+                    }
+                    return state
+                })
+            }
             self.presentSuggestPostOptions()
         }, openPremiumRequiredForMessaging: { [weak self] in
             guard let self else {

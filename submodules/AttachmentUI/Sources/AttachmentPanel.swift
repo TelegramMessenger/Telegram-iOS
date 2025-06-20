@@ -1265,7 +1265,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
         }, addDoNotTranslateLanguage: { _ in
         }, hideTranslationPanel: {
         }, openPremiumGift: {
-        }, openSuggestPost: {
+        }, openSuggestPost: { _ in
         }, openPremiumRequiredForMessaging: {
         }, openStarsPurchase: { _ in
         }, openMessagePayment: {

@@ -986,13 +986,35 @@ extension ChatControllerImpl {
         guard let postSuggestionState = self.presentationInterfaceState.interfaceState.postSuggestionState else {
             return
         }
-        self.push(self.context.sharedContext.makeStarsWithdrawalScreen(
-            context: self.context,
-            subject: .postSuggestion(
+        
+        let subject: StarsWithdrawalScreenSubject
+        if postSuggestionState.editingOriginalMessageId != nil {
+            subject = .postSuggestionModification(currency: postSuggestionState.currency, current: StarsAmount(value: postSuggestionState.price, nanos: 0), timestamp: postSuggestionState.timestamp, completion: { [weak self] currency, price, timestamp in
+                guard let self else {
+                    return
+                }
+                self.updateChatPresentationInterfaceState(interactive: true, { state in
+                    var state = state
+                    state = state.updatedInterfaceState { interfaceState in
+                        var interfaceState = interfaceState
+                        interfaceState = interfaceState.withUpdatedPostSuggestionState(ChatInterfaceState.PostSuggestionState(
+                            editingOriginalMessageId: interfaceState.postSuggestionState?.editingOriginalMessageId,
+                            currency: currency,
+                            price: price,
+                            timestamp: timestamp
+                        ))
+                        return interfaceState
+                    }
+                    return state
+                })
+            })
+        } else {
+            subject = .postSuggestion(
                 channel: .channel(channel),
+                currency: postSuggestionState.currency,
                 current: StarsAmount(value: postSuggestionState.price, nanos: 0),
                 timestamp: postSuggestionState.timestamp,
-                completion: { [weak self] price, timestamp in
+                completion: { [weak self] currency, price, timestamp in
                     guard let self else {
                         return
                     }
@@ -1002,6 +1024,7 @@ extension ChatControllerImpl {
                             var interfaceState = interfaceState
                             interfaceState = interfaceState.withUpdatedPostSuggestionState(ChatInterfaceState.PostSuggestionState(
                                 editingOriginalMessageId: interfaceState.postSuggestionState?.editingOriginalMessageId,
+                                currency: currency,
                                 price: price,
                                 timestamp: timestamp
                             ))
@@ -1011,6 +1034,11 @@ extension ChatControllerImpl {
                     })
                 }
             )
+        }
+        
+        self.push(self.context.sharedContext.makeStarsWithdrawalScreen(
+            context: self.context,
+            subject: subject
         ))
     }
 }

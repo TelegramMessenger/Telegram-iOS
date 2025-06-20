@@ -70,7 +70,7 @@ public final class BrowserBookmarksScreen: ViewController {
                 return false
             }, sendBotContextResultAsGif: { _, _, _, _, _, _ in
                 return false
-            }, requestMessageActionCallback: { _, _, _, _ in
+            }, requestMessageActionCallback: { _, _, _, _, _ in
             }, requestMessageActionUrlAuth: { _, _ in
             }, activateSwitchInline: { _, _, _ in
             }, openUrl: { [weak controller] url in

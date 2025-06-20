@@ -4700,9 +4700,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             let actionButtonsFrame = CGRect(origin: CGPoint(x: backgroundFrame.minX + (incoming ? layoutConstants.bubble.contentInsets.left : layoutConstants.bubble.contentInsets.right), y: backgroundFrame.maxY), size: actionButtonsSizeAndApply.0)
             if actionButtonsNode !== strongSelf.actionButtonsNode {
                 strongSelf.actionButtonsNode = actionButtonsNode
-                actionButtonsNode.buttonPressed = { [weak strongSelf] button in
+                actionButtonsNode.buttonPressed = { [weak strongSelf] button, progress in
                     if let strongSelf = strongSelf {
-                        strongSelf.performMessageButtonAction(button: button)
+                        strongSelf.performMessageButtonAction(button: button, progress: progress)
                     }
                 }
                 actionButtonsNode.buttonLongTapped = { [weak strongSelf] button in

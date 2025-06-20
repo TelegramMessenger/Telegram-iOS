@@ -352,6 +352,38 @@ extension StarsAmount {
     }
 }
 
+public enum TelegramCurrency: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case discriminator = "_"
+    }
+    
+    case stars
+    case ton
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        switch try container.decode(Int32.self, forKey: .discriminator) {
+        case 0:
+            self = .stars
+        case 1:
+            self = .ton
+        default:
+            assertionFailure()
+            self = .stars
+        }
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .stars:
+            try container.encode(0 as Int32, forKey: .discriminator)
+        case .ton:
+            try container.encode(1 as Int32, forKey: .discriminator)
+        }
+    }
+}
+
 struct InternalStarsStatus {
     let balance: StarsAmount
     let subscriptionsMissingBalance: StarsAmount?

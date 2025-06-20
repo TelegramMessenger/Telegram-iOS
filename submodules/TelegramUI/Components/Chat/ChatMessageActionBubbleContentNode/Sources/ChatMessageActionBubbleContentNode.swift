@@ -261,17 +261,25 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                         let amountString = amount == 1 ? "\(amount) Star" : "\(amount) Stars"
                         
                         let rawString: String
-                        if timestamp != nil {
-                            if !item.message.effectivelyIncoming(item.context.account.peerId) {
-                                rawString = "📅 The post will be automatically published in **\(channelName)** **\(timeString)**.\n\n💰 The user have been charged \(amountString).\n\n⌛ **\(channelName)** will receive the Stars once the post has been live for 24 hours.\n\n🔄 If your remove the post before it has been live for 24 hours, the user's Stars will be refunded."
+                        if let timestamp {
+                            if Int32(Date().timeIntervalSince1970) >= timestamp {
+                                if !item.message.effectivelyIncoming(item.context.account.peerId) {
+                                    rawString = "📅 The post has been automatically published in **\(channelName)** **\(timeString)**.\n\n💰 The user have been charged \(amountString).\n\n⌛ **\(channelName)** will receive the Stars once the post has been live for 24 hours.\n\n🔄 If your remove the post before it has been live for 24 hours, the user's Stars will be refunded."
+                                } else {
+                                    rawString = "📅 Your post has been automatically published in **\(channelName)** **\(timeString)**.\n\n💰 You have been charged \(amountString).\n\n⌛ **\(channelName)** will receive your Stars once the post has been live for 24 hours.\n\n🔄 If **\(channelName)** removes the post before it has been live for 24 hours, your Stars will be refunded."
+                                }
                             } else {
-                                rawString = "📅 Your post will be automatically published in **\(channelName)** **\(timeString)**.\n\n💰 You have been charged \(amountString).\n\n⌛ **\(channelName)** will receive your Stars once the post has been live for 24 hours.\n\n🔄 If **\(channelName)** removes the post before it has been live for 24 hours, your Stars will be refunded."
+                                if !item.message.effectivelyIncoming(item.context.account.peerId) {
+                                    rawString = "📅 The post will be automatically published in **\(channelName)** **\(timeString)**.\n\n💰 The user have been charged \(amountString).\n\n⌛ **\(channelName)** will receive the Stars once the post has been live for 24 hours.\n\n🔄 If your remove the post before it has been live for 24 hours, the user's Stars will be refunded."
+                                } else {
+                                    rawString = "📅 Your post will be automatically published in **\(channelName)** **\(timeString)**.\n\n💰 You have been charged \(amountString).\n\n⌛ **\(channelName)** will receive your Stars once the post has been live for 24 hours.\n\n🔄 If **\(channelName)** removes the post before it has been live for 24 hours, your Stars will be refunded."
+                                }
                             }
                         } else {
                             if !item.message.effectivelyIncoming(item.context.account.peerId) {
-                                rawString = "📅 The post will be automatically published in **\(channelName)**.\n\n💰 The user have been charged \(amountString).\n\n⌛ **\(channelName)** will receive the Stars once the post has been live for 24 hours.\n\n🔄 If your remove the post before it has been live for 24 hours, the user's Stars will be refunded."
+                                rawString = "📅 The post has been automatically published in **\(channelName)**.\n\n💰 The user have been charged \(amountString).\n\n⌛ **\(channelName)** will receive the Stars once the post has been live for 24 hours.\n\n🔄 If your remove the post before it has been live for 24 hours, the user's Stars will be refunded."
                             } else {
-                                rawString = "📅 Your post will be automatically published in **\(channelName)**.\n\n💰 You have been charged \(amountString).\n\n⌛ **\(channelName)** will receive your Stars once the post has been live for 24 hours.\n\n🔄 If **\(channelName)** removes the post before it has been live for 24 hours, your Stars will be refunded."
+                                rawString = "📅 Your post has been automatically published in **\(channelName)**.\n\n💰 You have been charged \(amountString).\n\n⌛ **\(channelName)** will receive your Stars once the post has been live for 24 hours.\n\n🔄 If **\(channelName)** removes the post before it has been live for 24 hours, your Stars will be refunded."
                             }
                         }
                         updatedAttributedString = parseMarkdownIntoAttributedString(rawString, attributes: MarkdownAttributes(

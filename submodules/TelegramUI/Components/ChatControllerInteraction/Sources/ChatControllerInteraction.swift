@@ -193,7 +193,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let sendEmoji: (String, ChatTextInputTextCustomEmojiAttribute, Bool) -> Void
     public let sendGif: (FileMediaReference, UIView, CGRect, Bool, Bool) -> Bool
     public let sendBotContextResultAsGif: (ChatContextResultCollection, ChatContextResult, UIView, CGRect, Bool, Bool) -> Bool
-    public let requestMessageActionCallback: (Message, MemoryBuffer?, Bool, Bool) -> Void
+    public let requestMessageActionCallback: (Message, MemoryBuffer?, Bool, Bool, Promise<Bool>?) -> Void
     public let requestMessageActionUrlAuth: (String, MessageActionUrlSubject) -> Void
     public let activateSwitchInline: (PeerId?, String, ReplyMarkupButtonAction.PeerTypes?) -> Void
     public let openUrl: (OpenUrl) -> Void
@@ -360,7 +360,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         sendEmoji: @escaping (String, ChatTextInputTextCustomEmojiAttribute, Bool) -> Void,
         sendGif: @escaping (FileMediaReference, UIView, CGRect, Bool, Bool) -> Bool,
         sendBotContextResultAsGif: @escaping (ChatContextResultCollection, ChatContextResult, UIView, CGRect, Bool, Bool) -> Bool,
-        requestMessageActionCallback: @escaping (Message, MemoryBuffer?, Bool, Bool) -> Void,
+        requestMessageActionCallback: @escaping (Message, MemoryBuffer?, Bool, Bool, Promise<Bool>?) -> Void,
         requestMessageActionUrlAuth: @escaping (String, MessageActionUrlSubject) -> Void,
         activateSwitchInline: @escaping (PeerId?, String, ReplyMarkupButtonAction.PeerTypes?) -> Void,
         openUrl: @escaping (OpenUrl) -> Void,

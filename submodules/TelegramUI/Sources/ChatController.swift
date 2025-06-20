@@ -2305,7 +2305,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             strongSelf.enqueueChatContextResult(collection, result, hideVia: true, closeMediaInput: true, silentPosting: silentPosting, resetTextInputState: resetTextInputState)
             
             return true
-        }, requestMessageActionCallback: { [weak self] message, data, isGame, requiresPassword in
+        }, requestMessageActionCallback: { [weak self] message, data, isGame, requiresPassword, progress in
             guard let strongSelf = self else {
                 return
             }
@@ -2337,7 +2337,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 return
                             }
                             if let value {
-                                let _ = self.context.engine.messages.monoforumPerformSuggestedPostAction(id: message.id, action: .reject(comment: value.isEmpty ? nil : value)).startStandalone()
+                                progress?.set(.single(true))
+                                let _ = self.context.engine.messages.monoforumPerformSuggestedPostAction(id: message.id, action: .reject(comment: value.isEmpty ? nil : value)).startStandalone(completed: {
+                                    progress?.set(.single(false))
+                                })
                             }
                         })
                         strongSelf.present(promptController, in: .window(.root))
@@ -2348,7 +2351,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 guard let strongSelf else {
                                     return
                                 }
-                                let _ = strongSelf.context.engine.messages.monoforumPerformSuggestedPostAction(id: message.id, action: .approve(timestamp: time != 0 ? time : nil)).startStandalone()
+                                progress?.set(.single(true))
+                                let _ = strongSelf.context.engine.messages.monoforumPerformSuggestedPostAction(id: message.id, action: .approve(timestamp: time != 0 ? time : nil)).startStandalone(completed: {
+                                    progress?.set(.single(false))
+                                })
                             })
                             strongSelf.view.endEditing(true)
                             strongSelf.present(controller, in: .window(.root))
@@ -2358,55 +2364,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             let _ = strongSelf.context.engine.messages.monoforumPerformSuggestedPostAction(id: message.id, action: .approve(timestamp: timestamp)).startStandalone()
                         }
                     case 2:
-                        strongSelf.updateChatPresentationInterfaceState(interactive: true, { state in
-                            var entities: [MessageTextEntity] = []
-                            for attribute in message.attributes {
-                                if let attribute = attribute as? TextEntitiesMessageAttribute {
-                                    entities = attribute.entities
-                                    break
-                                }
-                            }
-                            var inputTextMaxLength: Int32 = 4096
-                            var webpageUrl: String?
-                            for media in message.media {
-                                if media is TelegramMediaImage || media is TelegramMediaFile {
-                                    inputTextMaxLength = strongSelf.context.userLimits.maxCaptionLength
-                                } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
-                                    webpageUrl = content.url
-                                }
-                            }
-                            
-                            let inputText = chatInputStateStringWithAppliedEntities(message.text, entities: entities)
-                            var disableUrlPreviews: [String] = []
-                            if webpageUrl == nil {
-                                disableUrlPreviews = detectUrls(inputText)
-                            }
-                            
-                            var updated = state.updatedInterfaceState { interfaceState in
-                                return interfaceState.withUpdatedEditMessage(ChatEditMessageState(messageId: messageId, inputState: ChatTextInputState(inputText: inputText), disableUrlPreviews: disableUrlPreviews, inputTextMaxLength: inputTextMaxLength, mediaCaptionIsAbove: nil))
-                            }
-                            
-                            let (updatedState, updatedPreviewQueryState) = updatedChatEditInterfaceMessageState(context: strongSelf.context, state: updated, message: message)
-                            updated = updatedState
-                            strongSelf.editingUrlPreviewQueryState?.1.dispose()
-                            strongSelf.editingUrlPreviewQueryState = updatedPreviewQueryState
-                            
-                            updated = updated.updatedInputMode({ _ in
-                                return .text
-                            })
-                            updated = updated.updatedShowCommands(false)
-                            updated = updated.updatedInterfaceState { interfaceState in
-                                var interfaceState = interfaceState
-                                
-                                interfaceState = interfaceState.withUpdatedPostSuggestionState(ChatInterfaceState.PostSuggestionState(
-                                    editingOriginalMessageId: message.id,
-                                    price: attribute.amount,
-                                    timestamp: attribute.timestamp
-                                ))
-                                return interfaceState
-                            }
-                            return updated
-                        })
+                        strongSelf.interfaceInteraction?.openSuggestPost(message)
                     default:
                         break
                     }
@@ -2555,8 +2513,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         strongSelf.present(controller, in: .window(.root))
                     }))
                 } else {
+                    progress?.set(.single(true))
                     strongSelf.messageActionCallbackDisposable.set(((context.engine.messages.requestMessageActionCallback(messageId: messageId, isGame: isGame, password: nil, data: data)
                     |> afterDisposed {
+                        progress?.set(.single(false))
                         updateProgress()
                     })
                     |> deliverOnMainQueue).startStrict(next: { result in
@@ -8040,6 +8000,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if let postSuggestionState = self.presentationInterfaceState.interfaceState.postSuggestionState {
                     if attributes.first(where: { $0 is SuggestedPostMessageAttribute }) == nil {
                         attributes.append(SuggestedPostMessageAttribute(
+                            currency: postSuggestionState.currency,
                             amount: postSuggestionState.price,
                             timestamp: postSuggestionState.timestamp,
                             state: nil

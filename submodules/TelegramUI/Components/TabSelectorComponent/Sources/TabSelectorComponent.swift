@@ -8,6 +8,21 @@ import TextFormat
 import AccountContext
 
 public final class TabSelectorComponent: Component {
+    public final class ItemEnvironment: Equatable {
+        public let selectionFraction: CGFloat
+        
+        init(selectionFraction: CGFloat) {
+            self.selectionFraction = selectionFraction
+        }
+        
+        public static func ==(lhs: ItemEnvironment, rhs: ItemEnvironment) -> Bool {
+            if lhs.selectionFraction != rhs.selectionFraction {
+                return false
+            }
+            return true
+        }
+    }
+    
     public struct Colors: Equatable {
         public var foreground: UIColor
         public var selection: UIColor
@@ -43,15 +58,27 @@ public final class TabSelectorComponent: Component {
     }
     
     public struct Item: Equatable {
+        public enum Content: Equatable {
+            case text(String)
+            case component(AnyComponent<ItemEnvironment>)
+        }
+        
         public var id: AnyHashable
-        public var title: String
+        public var content: Content
 
+        public init(
+            id: AnyHashable,
+            content: Content
+        ) {
+            self.id = id
+            self.content = content
+        }
+        
         public init(
             id: AnyHashable,
             title: String
         ) {
-            self.id = id
-            self.title = title
+            self.init(id: id, content: .text(title))
         }
     }
 
@@ -227,16 +254,21 @@ public final class TabSelectorComponent: Component {
                     selectionFraction = item.id == component.selectedId ? 1.0 : 0.0
                 }
                 
+                var useSelectionFraction = isLineSelection
+                if case .component = item.content {
+                    useSelectionFraction = true
+                }
+                
                 let itemSize = itemView.title.update(
                     transition: .immediate,
                     component: AnyComponent(PlainButtonComponent(
                         content: AnyComponent(ItemComponent(
                             context: component.context,
-                            text: item.title,
+                            content: item.content,
                             font: itemFont,
                             color: component.colors.foreground,
                             selectedColor: component.colors.selection,
-                            selectionFraction: isLineSelection ? selectionFraction : 0.0
+                            selectionFraction: useSelectionFraction ? selectionFraction : 0.0
                         )),
                         effectAlignment: .center,
                         minSize: nil,
@@ -379,7 +411,7 @@ extension CGRect {
 
 private final class ItemComponent: CombinedComponent {
     let context: AccountContext?
-    let text: String
+    let content: TabSelectorComponent.Item.Content
     let font: UIFont
     let color: UIColor
     let selectedColor: UIColor
@@ -387,14 +419,14 @@ private final class ItemComponent: CombinedComponent {
     
     init(
         context: AccountContext?,
-        text: String,
+        content: TabSelectorComponent.Item.Content,
         font: UIFont,
         color: UIColor,
         selectedColor: UIColor,
         selectionFraction: CGFloat
     ) {
         self.context = context
-        self.text = text
+        self.content = content
         self.font = font
         self.color = color
         self.selectedColor = selectedColor
@@ -405,7 +437,7 @@ private final class ItemComponent: CombinedComponent {
         if lhs.context !== rhs.context {
             return false
         }
-        if lhs.text != rhs.text {
+        if lhs.content != rhs.content {
             return false
         }
         if lhs.font != rhs.font {
@@ -426,55 +458,73 @@ private final class ItemComponent: CombinedComponent {
     static var body: Body {
         let title = Child(MultilineTextWithEntitiesComponent.self)
         let selectedTitle = Child(MultilineTextWithEntitiesComponent.self)
+        let contentComponent = Child(environment: TabSelectorComponent.ItemEnvironment.self)
         
         return { context in
             let component = context.component
             
-            let attributedTitle = NSMutableAttributedString(string: component.text, font: component.font, textColor: component.color)
-            var range = (attributedTitle.string as NSString).range(of: "⭐️")
-            if range.location != NSNotFound {
-                attributedTitle.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: range)
+            switch component.content {
+            case let .text(text):
+                let attributedTitle = NSMutableAttributedString(string: text, font: component.font, textColor: component.color)
+                var range = (attributedTitle.string as NSString).range(of: "⭐️")
+                if range.location != NSNotFound {
+                    attributedTitle.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: range)
+                }
+                
+                let title = title.update(
+                    component: MultilineTextWithEntitiesComponent(
+                        context: component.context,
+                        animationCache: component.context?.animationCache,
+                        animationRenderer: component.context?.animationRenderer,
+                        placeholderColor: .white,
+                        text: .plain(attributedTitle)
+                    ),
+                    availableSize: context.availableSize,
+                    transition: .immediate
+                )
+                context.add(title
+                    .position(CGPoint(x: title.size.width / 2.0, y: title.size.height / 2.0))
+                    .opacity(1.0 - component.selectionFraction)
+                )
+                
+                let selectedAttributedTitle = NSMutableAttributedString(string: text, font: component.font, textColor: component.selectedColor)
+                range = (selectedAttributedTitle.string as NSString).range(of: "⭐️")
+                if range.location != NSNotFound {
+                    selectedAttributedTitle.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: range)
+                }
+                
+                let selectedTitle = selectedTitle.update(
+                    component: MultilineTextWithEntitiesComponent(
+                        context: nil,
+                        animationCache: nil,
+                        animationRenderer: nil,
+                        placeholderColor: .white,
+                        text: .plain(selectedAttributedTitle)
+                    ),
+                    availableSize: context.availableSize,
+                    transition: .immediate
+                )
+                context.add(selectedTitle
+                    .position(CGPoint(x: selectedTitle.size.width / 2.0, y: selectedTitle.size.height / 2.0))
+                    .opacity(component.selectionFraction)
+                )
+                
+                return title.size
+            case let .component(contentComponentValue):
+                let content = contentComponent.update(
+                    contentComponentValue,
+                    environment: {
+                        TabSelectorComponent.ItemEnvironment(selectionFraction: component.selectionFraction)
+                    },
+                    availableSize: context.availableSize,
+                    transition: .immediate
+                )
+                context.add(content
+                    .position(CGPoint(x: content.size.width / 2.0, y: content.size.height / 2.0))
+                )
+                
+                return content.size
             }
-            
-            let title = title.update(
-                component: MultilineTextWithEntitiesComponent(
-                    context: component.context,
-                    animationCache: component.context?.animationCache,
-                    animationRenderer: component.context?.animationRenderer,
-                    placeholderColor: .white,
-                    text: .plain(attributedTitle)
-                ),
-                availableSize: context.availableSize,
-                transition: .immediate
-            )
-            context.add(title
-                .position(CGPoint(x: title.size.width / 2.0, y: title.size.height / 2.0))
-                .opacity(1.0 - component.selectionFraction)
-            )
-            
-            let selectedAttributedTitle = NSMutableAttributedString(string: component.text, font: component.font, textColor: component.selectedColor)
-            range = (selectedAttributedTitle.string as NSString).range(of: "⭐️")
-            if range.location != NSNotFound {
-                selectedAttributedTitle.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: range)
-            }
-            
-            let selectedTitle = selectedTitle.update(
-                component: MultilineTextWithEntitiesComponent(
-                    context: nil,
-                    animationCache: nil,
-                    animationRenderer: nil,
-                    placeholderColor: .white,
-                    text: .plain(selectedAttributedTitle)
-                ),
-                availableSize: context.availableSize,
-                transition: .immediate
-            )
-            context.add(selectedTitle
-                .position(CGPoint(x: selectedTitle.size.width / 2.0, y: selectedTitle.size.height / 2.0))
-                .opacity(component.selectionFraction)
-            )
-                        
-            return title.size
         }
     }
 }

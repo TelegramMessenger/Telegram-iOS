@@ -41,6 +41,7 @@ public final class SuggestPostAccessoryPanelNode: AccessoryPanelNode {
     private var validLayout: (size: CGSize, inset: CGFloat, interfaceState: ChatPresentationInterfaceState)?
     
     private var inlineTextStarImage: UIImage?
+    private var inlineTextTonImage: (UIImage, UIColor)?
     
     public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, animationCache: AnimationCache?, animationRenderer: MultiAnimationRenderer?) {
         self.context = context
@@ -203,6 +204,26 @@ public final class SuggestPostAccessoryPanelNode: AccessoryPanelNode {
             }
         }
         
+        var inlineTextTonImage: UIImage?
+        if let current = self.inlineTextTonImage, current.1 == self.theme.list.itemAccentColor {
+            inlineTextTonImage = current.0
+        } else {
+            if let image = UIImage(bundleImageName: "Ads/TonMedium") {
+                let tonInsets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0)
+                let inlineTextTonImageValue = generateTintedImage(image: generateImage(CGSize(width: tonInsets.left + image.size.width + tonInsets.right, height: image.size.height), rotatedContext: { size, context in
+                    context.clear(CGRect(origin: CGPoint(), size: size))
+                    UIGraphicsPushContext(context)
+                    defer {
+                        UIGraphicsPopContext()
+                    }
+                    
+                    image.draw(at: CGPoint(x: tonInsets.left, y: tonInsets.top))
+                }), color: self.theme.list.itemAccentColor)!.withRenderingMode(.alwaysOriginal)
+                inlineTextTonImage = inlineTextTonImageValue
+                self.inlineTextTonImage = (inlineTextTonImageValue, self.theme.list.itemAccentColor)
+            }
+        }
+        
         //TODO:localize
         var titleText: [CompositeTextNode.Component] = []
         if let postSuggestionState = interfaceState.interfaceState.postSuggestionState, postSuggestionState.editingOriginalMessageId != nil {
@@ -219,6 +240,13 @@ public final class SuggestPostAccessoryPanelNode: AccessoryPanelNode {
         
         let textString: NSAttributedString
         if let postSuggestionState = interfaceState.interfaceState.postSuggestionState, postSuggestionState.price != 0 {
+            let currencySymbol: String
+            switch postSuggestionState.currency {
+            case .stars:
+                currencySymbol = "#"
+            case .ton:
+                currencySymbol = "$"
+            }
             if let timestamp = postSuggestionState.timestamp {
                 let timeString = humanReadableStringForTimestamp(strings: interfaceState.strings, dateTimeFormat: interfaceState.dateTimeFormat, timestamp: timestamp, alwaysShowTime: true, allowYesterday: false, format: HumanReadableStringFormat(
                     dateFormatString: { value in
@@ -234,57 +262,70 @@ public final class SuggestPostAccessoryPanelNode: AccessoryPanelNode {
                         return PresentationStrings.FormattedString(string: interfaceState.strings.SuggestPost_SetTimeFormat_TodayAt(value).string, ranges: [])
                     }
                 )).string
-                textString = NSAttributedString(string: "#\(postSuggestionState.price)  📅 \(timeString)", font: textFont, textColor: self.theme.chat.inputPanel.primaryTextColor)
+                textString = NSAttributedString(string: "\(currencySymbol)\(postSuggestionState.price)  📅 \(timeString)", font: textFont, textColor: self.theme.chat.inputPanel.primaryTextColor)
             } else {
-                textString = NSAttributedString(string: "#\(postSuggestionState.price) for publishing anytime", font: textFont, textColor: self.theme.chat.inputPanel.primaryTextColor)
+                textString = NSAttributedString(string: "\(currencySymbol)\(postSuggestionState.price) for publishing anytime", font: textFont, textColor: self.theme.chat.inputPanel.primaryTextColor)
             }
         } else {
             textString = NSAttributedString(string: "Tap to offer a price for publishing", font: textFont, textColor: self.theme.chat.inputPanel.primaryTextColor)
         }
         
         let mutableTextString = NSMutableAttributedString(attributedString: textString)
-        if let range = mutableTextString.string.range(of: "#"), let starImage = inlineTextStarImage {
-            final class RunDelegateData {
-                let ascent: CGFloat
-                let descent: CGFloat
-                let width: CGFloat
-                
-                init(ascent: CGFloat, descent: CGFloat, width: CGFloat) {
-                    self.ascent = ascent
-                    self.descent = descent
-                    self.width = width
-                }
+        for currency in [.stars, .ton] as [TelegramCurrency] {
+            let currencySymbol: String
+            let currencyImage: UIImage?
+            switch currency {
+            case .stars:
+                currencySymbol = "#"
+                currencyImage = inlineTextStarImage
+            case .ton:
+                currencySymbol = "$"
+                currencyImage = inlineTextTonImage
             }
             
-            let runDelegateData = RunDelegateData(
-                ascent: Font.regular(15.0).ascender,
-                descent: Font.regular(15.0).descender,
-                width: starImage.size.width + 2.0
-            )
-            var callbacks = CTRunDelegateCallbacks(
-                version: kCTRunDelegateCurrentVersion,
-                dealloc: { dataRef in
-                    Unmanaged<RunDelegateData>.fromOpaque(dataRef).release()
-                },
-                getAscent: { dataRef in
-                    let data = Unmanaged<RunDelegateData>.fromOpaque(dataRef)
-                    return data.takeUnretainedValue().ascent
-                },
-                getDescent: { dataRef in
-                    let data = Unmanaged<RunDelegateData>.fromOpaque(dataRef)
-                    return data.takeUnretainedValue().descent
-                },
-                getWidth: { dataRef in
-                    let data = Unmanaged<RunDelegateData>.fromOpaque(dataRef)
-                    return data.takeUnretainedValue().width
+            if let range = mutableTextString.string.range(of: currencySymbol), let currencyImage {
+                final class RunDelegateData {
+                    let ascent: CGFloat
+                    let descent: CGFloat
+                    let width: CGFloat
+                    
+                    init(ascent: CGFloat, descent: CGFloat, width: CGFloat) {
+                        self.ascent = ascent
+                        self.descent = descent
+                        self.width = width
+                    }
                 }
-            )
-            if let runDelegate = CTRunDelegateCreate(&callbacks, Unmanaged.passRetained(runDelegateData).toOpaque()) {
-                mutableTextString.addAttribute(NSAttributedString.Key(kCTRunDelegateAttributeName as String), value: runDelegate, range: NSRange(range, in: mutableTextString.string))
+                
+                let runDelegateData = RunDelegateData(
+                    ascent: Font.regular(15.0).ascender,
+                    descent: Font.regular(15.0).descender,
+                    width: currencyImage.size.width + 2.0
+                )
+                var callbacks = CTRunDelegateCallbacks(
+                    version: kCTRunDelegateCurrentVersion,
+                    dealloc: { dataRef in
+                        Unmanaged<RunDelegateData>.fromOpaque(dataRef).release()
+                    },
+                    getAscent: { dataRef in
+                        let data = Unmanaged<RunDelegateData>.fromOpaque(dataRef)
+                        return data.takeUnretainedValue().ascent
+                    },
+                    getDescent: { dataRef in
+                        let data = Unmanaged<RunDelegateData>.fromOpaque(dataRef)
+                        return data.takeUnretainedValue().descent
+                    },
+                    getWidth: { dataRef in
+                        let data = Unmanaged<RunDelegateData>.fromOpaque(dataRef)
+                        return data.takeUnretainedValue().width
+                    }
+                )
+                if let runDelegate = CTRunDelegateCreate(&callbacks, Unmanaged.passRetained(runDelegateData).toOpaque()) {
+                    mutableTextString.addAttribute(NSAttributedString.Key(kCTRunDelegateAttributeName as String), value: runDelegate, range: NSRange(range, in: mutableTextString.string))
+                }
+                mutableTextString.addAttribute(.attachment, value: currencyImage, range: NSRange(range, in: mutableTextString.string))
+                mutableTextString.addAttribute(.foregroundColor, value: UIColor(rgb: 0xffffff), range: NSRange(range, in: mutableTextString.string))
+                mutableTextString.addAttribute(.baselineOffset, value: 1.0, range: NSRange(range, in: mutableTextString.string))
             }
-            mutableTextString.addAttribute(.attachment, value: starImage, range: NSRange(range, in: mutableTextString.string))
-            mutableTextString.addAttribute(.foregroundColor, value: UIColor(rgb: 0xffffff), range: NSRange(range, in: mutableTextString.string))
-            mutableTextString.addAttribute(.baselineOffset, value: 1.0, range: NSRange(range, in: mutableTextString.string))
         }
         
         self.textNode.attributedText = mutableTextString
