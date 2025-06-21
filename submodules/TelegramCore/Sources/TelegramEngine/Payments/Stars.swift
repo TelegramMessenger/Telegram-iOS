@@ -348,6 +348,8 @@ extension StarsAmount {
         switch apiAmount {
         case let .starsAmount(amount, nanos):
             self.init(value: amount, nanos: nanos)
+        case let .starsTonAmount(amount):
+            self.init(value: amount, nanos: 0)
         }
     }
 }
@@ -397,7 +399,7 @@ private enum RequestStarsStateError {
     case generic
 }
 
-private func _internal_requestStarsState(account: Account, peerId: EnginePeer.Id, mode: StarsTransactionsContext.Mode, subscriptionId: String?, offset: String?, limit: Int32) -> Signal<InternalStarsStatus, RequestStarsStateError> {
+private func _internal_requestStarsState(account: Account, peerId: EnginePeer.Id, ton: Bool, mode: StarsTransactionsContext.Mode, subscriptionId: String?, offset: String?, limit: Int32) -> Signal<InternalStarsStatus, RequestStarsStateError> {
     return account.postbox.transaction { transaction -> Peer? in
         return transaction.getPeer(peerId)
     } 
@@ -421,9 +423,16 @@ private func _internal_requestStarsState(account: Account, peerId: EnginePeer.Id
             if let _ = subscriptionId {
                 flags = 1 << 3
             }
+            if ton {
+                flags = 1 << 4
+            }
             signal = account.network.request(Api.functions.payments.getStarsTransactions(flags: flags, subscriptionId: subscriptionId, peer: inputPeer, offset: offset, limit: limit))
         } else {
-            signal = account.network.request(Api.functions.payments.getStarsStatus(peer: inputPeer))
+            var flags: Int32 = 0
+            if ton {
+                flags = 1 << 0
+            }
+            signal = account.network.request(Api.functions.payments.getStarsStatus(flags: flags, peer: inputPeer))
         }
         
         return signal
@@ -517,6 +526,7 @@ private func _internal_requestStarsSubscriptions(account: Account, peerId: Engin
 private final class StarsContextImpl {
     private let account: Account
     fileprivate let peerId: EnginePeer.Id
+    fileprivate let ton: Bool
     
     fileprivate var _state: StarsContext.State?
     private let _statePromise = Promise<StarsContext.State?>()
@@ -527,11 +537,12 @@ private final class StarsContextImpl {
     private let disposable = MetaDisposable()
     private var updateDisposable: Disposable?
     
-    init(account: Account) {
+    init(account: Account, ton: Bool) {
         assert(Queue.mainQueue().isCurrent())
         
         self.account = account
         self.peerId = account.peerId
+        self.ton = ton
         
         self._state = nil
         self._statePromise.set(.single(nil))
@@ -564,7 +575,7 @@ private final class StarsContextImpl {
         }
         self.previousLoadTimestamp = currentTimestamp
         
-        self.disposable.set((_internal_requestStarsState(account: self.account, peerId: self.peerId, mode: .all, subscriptionId: nil, offset: nil, limit: 5)
+        self.disposable.set((_internal_requestStarsState(account: self.account, peerId: self.peerId, ton: self.ton, mode: .all, subscriptionId: nil, offset: nil, limit: 5)
         |> deliverOnMainQueue).start(next: { [weak self] status in
             guard let self else {
                 return
@@ -1042,6 +1053,14 @@ public final class StarsContext {
         return peerId!
     }
     
+    var ton: Bool {
+        var ton = false
+        self.impl.syncWith { impl in
+            ton = impl.ton
+        }
+        return ton
+    }
+    
     public var currentState: StarsContext.State? {
         var state: StarsContext.State?
         self.impl.syncWith { impl in
@@ -1081,9 +1100,9 @@ public final class StarsContext {
         }
     }
     
-    init(account: Account) {
+    init(account: Account, ton: Bool) {
         self.impl = QueueLocalObject(queue: Queue.mainQueue(), generate: {
-            return StarsContextImpl(account: account)
+            return StarsContextImpl(account: account, ton: ton)
         })
     }
 }
@@ -1092,6 +1111,7 @@ private final class StarsTransactionsContextImpl {
     private let account: Account
     private weak var starsContext: StarsContext?
     fileprivate let peerId: EnginePeer.Id
+    fileprivate let ton: Bool
     private let mode: StarsTransactionsContext.Mode
     
     fileprivate var _state: StarsTransactionsContext.State
@@ -1107,20 +1127,22 @@ private final class StarsTransactionsContextImpl {
     init(account: Account, subject: StarsTransactionsContext.Subject, mode: StarsTransactionsContext.Mode) {
         assert(Queue.mainQueue().isCurrent())
         
-        
         let currentTransactions: [StarsContext.State.Transaction]
         
         self.account = account
         switch subject {
         case let .starsTransactionsContext(transactionsContext):
             self.peerId = transactionsContext.peerId
+            self.ton = transactionsContext.ton
             currentTransactions = transactionsContext.currentState?.transactions ?? []
         case let .starsContext(starsContext):
             self.starsContext = starsContext
             self.peerId = starsContext.peerId
+            self.ton = starsContext.ton
             currentTransactions = starsContext.currentState?.transactions ?? []
-        case let .peer(peerId):
+        case let .peer(peerId, ton):
             self.peerId = peerId
+            self.ton = ton
             currentTransactions = []
         }
         self.mode = mode
@@ -1224,7 +1246,7 @@ private final class StarsTransactionsContextImpl {
         updatedState.isLoading = true
         self.updateState(updatedState)
                 
-        self.disposable.set((_internal_requestStarsState(account: self.account, peerId: self.peerId, mode: self.mode, subscriptionId: nil, offset: nextOffset, limit: self.nextOffset == "" ? 25 : 50)
+        self.disposable.set((_internal_requestStarsState(account: self.account, peerId: self.peerId, ton: self.ton, mode: self.mode, subscriptionId: nil, offset: nextOffset, limit: self.nextOffset == "" ? 25 : 50)
         |> deliverOnMainQueue).start(next: { [weak self] status in
             guard let self else {
                 return
@@ -1269,7 +1291,7 @@ public final class StarsTransactionsContext {
     public enum Subject {
         case starsTransactionsContext(StarsTransactionsContext)
         case starsContext(StarsContext)
-        case peer(EnginePeer.Id)
+        case peer(peerId: EnginePeer.Id, ton: Bool)
     }
     
     public enum Mode {
@@ -1322,6 +1344,14 @@ public final class StarsTransactionsContext {
             peerId = impl.peerId
         }
         return peerId!
+    }
+    
+    var ton: Bool {
+        var ton = false
+        self.impl.syncWith { impl in
+            ton = impl.ton
+        }
+        return ton
     }
 }
 

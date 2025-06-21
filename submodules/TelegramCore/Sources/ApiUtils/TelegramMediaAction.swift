@@ -244,6 +244,8 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
             status = .approved(timestamp: scheduleDate, amount: starsAmount ?? 0)
         }
         return TelegramMediaAction(action: .suggestedPostApprovalStatus(status: status))
+    case let .messageActionGiftTon(_, currency, amount, cryptoCurrency, cryptoAmount, transactionId):
+        return TelegramMediaAction(action: .giftTon(currency: currency, amount: amount, cryptoCurrency: cryptoCurrency, cryptoAmount: cryptoAmount, transactionId: transactionId))
     }
 }
 

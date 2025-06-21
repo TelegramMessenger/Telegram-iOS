@@ -1443,6 +1443,28 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     }
                 }
                 attributedString = NSAttributedString(string: string, font: titleFont, textColor: primaryTextColor)
+            case let .giftTon(currency, amount, _, _, _):
+                let _ = currency
+                let _ = amount
+                attributedString = nil
+//                if !forAdditionalServiceMessage {
+//                    attributedString = NSAttributedString(string: strings.Notification_Gift, font: titleFont, textColor: primaryTextColor)
+//                } else {
+//                    let price = formatCurrencyAmount(amount, currency: currency)
+//                    if message.author?.id == accountPeerId {
+//                        attributedString = addAttributesToStringWithRanges(strings.Notification_StarsGift_SentYou(price)._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+//                    } else {
+//                        var authorName = compactAuthorName
+//                        var peerIds: [(Int, EnginePeer.Id?)] = [(0, message.author?.id)]
+//                        if message.id.peerId.namespace == Namespaces.Peer.CloudUser && message.id.peerId.id._internalGetInt64Value() == 777000 {
+//                            authorName = strings.Notification_StarsGift_UnknownUser
+//                            peerIds = []
+//                        }
+//                        var attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: peerIds)
+//                        attributes[1] = boldAttributes
+//                        attributedString = addAttributesToStringWithRanges(strings.Notification_StarsGift_Sent(authorName, price)._tuple, body: bodyAttributes, argumentAttributes: attributes)
+//                    }
+//                }
             case .unknown:
                 attributedString = nil
             }

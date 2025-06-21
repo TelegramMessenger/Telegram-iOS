@@ -128,6 +128,7 @@ public final class AccountContextImpl: AccountContext {
     private let themeUpdateManager: ThemeUpdateManager?
     public let inAppPurchaseManager: InAppPurchaseManager?
     public let starsContext: StarsContext?
+    public let tonContext: StarsContext?
     
     public let peerChannelMemberCategoriesContextsManager = PeerChannelMemberCategoriesContextsManager()
     
@@ -298,15 +299,18 @@ public final class AccountContextImpl: AccountContext {
             
             self.inAppPurchaseManager = InAppPurchaseManager(engine: .authorized(self.engine))
             self.starsContext = self.engine.payments.peerStarsContext()
+            self.tonContext = self.engine.payments.peerTonContext()
         } else {
             self.prefetchManager = nil
             self.wallpaperUploadManager = nil
             self.themeUpdateManager = nil
             self.inAppPurchaseManager = nil
             self.starsContext = nil
+            self.tonContext = nil
         }
         
         self.account.stateManager.starsContext = self.starsContext
+        self.account.stateManager.tonContext = self.starsContext
         
         self.peersNearbyManager = nil
         

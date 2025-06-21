@@ -225,6 +225,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case todoCompletions(completed: [Int32], incompleted: [Int32])
     case todoAppendTasks([TelegramMediaTodo.Item])
     case suggestedPostApprovalStatus(status: SuggestedPostApprovalStatus)
+    case giftTon(currency: String, amount: Int64, cryptoCurrency: String?, cryptoAmount: Int64?, transactionId: String?)
     
     public init(decoder: PostboxDecoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
@@ -372,6 +373,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
         case 51:
             let status: SuggestedPostApprovalStatus? = decoder.decodeObjectForKey("st", decoder: { SuggestedPostApprovalStatus(decoder: $0) }) as? SuggestedPostApprovalStatus
             self = .suggestedPostApprovalStatus(status: status ?? .rejected(reason: .generic, comment: nil))
+        case 52:
+            self = .giftTon(currency: decoder.decodeStringForKey("currency", orElse: ""), amount: decoder.decodeInt64ForKey("amount", orElse: 0), cryptoCurrency: decoder.decodeOptionalStringForKey("cryptoCurrency"), cryptoAmount: decoder.decodeOptionalInt64ForKey("cryptoAmount"), transactionId: decoder.decodeOptionalStringForKey("transactionId"))
         default:
             self = .unknown
         }
@@ -785,6 +788,22 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
         case let .suggestedPostApprovalStatus(status):
             encoder.encodeInt32(51, forKey: "_rawValue")
             encoder.encodeObject(status, forKey: "st")
+        case let .giftTon(currency, amount, cryptoCurrency, cryptoAmount, transactionId):
+            encoder.encodeInt32(52, forKey: "_rawValue")
+            encoder.encodeString(currency, forKey: "currency")
+            encoder.encodeInt64(amount, forKey: "amount")
+            if let cryptoCurrency = cryptoCurrency, let cryptoAmount = cryptoAmount {
+                encoder.encodeString(cryptoCurrency, forKey: "cryptoCurrency")
+                encoder.encodeInt64(cryptoAmount, forKey: "cryptoAmount")
+            } else {
+                encoder.encodeNil(forKey: "cryptoCurrency")
+                encoder.encodeNil(forKey: "cryptoAmount")
+            }
+            if let transactionId {
+                encoder.encodeString(transactionId, forKey: "transactionId")
+            } else {
+                encoder.encodeNil(forKey: "transactionId")
+            }
         }
     }
     
