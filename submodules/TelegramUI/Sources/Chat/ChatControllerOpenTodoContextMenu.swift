@@ -190,7 +190,9 @@ extension ChatControllerImpl {
                 ContextController.Source(
                     id: AnyHashable(OptionsId.item),
                     title: self.presentationData.strings.Chat_Todo_ContextMenu_SectionTask,
-                    source: .extracted(ChatMessageLinkContextExtractedContentSource(chatNode: self.chatDisplayNode, contentNode: contentNode)),
+                    footer: self.presentationData.strings.Chat_Todo_ContextMenu_SectionsInfo,
+                    //source: .extracted(ChatMessageLinkContextExtractedContentSource(chatNode: self.chatDisplayNode, contentNode: contentNode)),
+                    source: .extracted(ChatTodoItemContextExtractedContentSource(chatNode: self.chatDisplayNode, contentNode: contentNode)),
                     items: .single(ContextController.Items(content: .list(items)))
                 )
             )
@@ -199,7 +201,7 @@ extension ChatControllerImpl {
                 ContextController.Source(
                     id: AnyHashable(OptionsId.message),
                     title: self.presentationData.strings.Chat_Todo_ContextMenu_SectionList,
-                    source: .extracted(ChatMessageContextExtractedContentSource(chatController: self, chatNode: self.chatDisplayNode, engine: self.context.engine, message: message, selectAll: false, keepDefaultContentTouches: false)),
+                    source: .extracted(ChatMessageContextExtractedContentSource(chatController: self, chatNode: self.chatDisplayNode, engine: self.context.engine, message: message, selectAll: false, snapshot: true)),
                     items: .single(actions)
                 )
             )
@@ -217,5 +219,33 @@ extension ChatControllerImpl {
             
             self.window?.presentInGlobalOverlay(contextController)
         })
+    }
+}
+
+final class ChatTodoItemContextExtractedContentSource: ContextExtractedContentSource {
+    let keepInPlace: Bool = false
+    let ignoreContentTouches: Bool = false
+    let blurBackground: Bool = true
+    
+    private weak var chatNode: ChatControllerNode?
+    private let contentNode: ContextExtractedContentContainingNode
+    
+    init(chatNode: ChatControllerNode, contentNode: ContextExtractedContentContainingNode) {
+        self.chatNode = chatNode
+        self.contentNode = contentNode
+    }
+    
+    func takeView() -> ContextControllerTakeViewInfo? {
+        guard let chatNode = self.chatNode else {
+            return nil
+        }
+        return ContextControllerTakeViewInfo(containingItem: .node(self.contentNode), contentAreaInScreenSpace: chatNode.convert(chatNode.frameForVisibleArea(), to: nil))
+    }
+    
+    func putBack() -> ContextControllerPutBackViewInfo? {
+        guard let chatNode = self.chatNode else {
+            return nil
+        }
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: chatNode.convert(chatNode.frameForVisibleArea(), to: nil))
     }
 }

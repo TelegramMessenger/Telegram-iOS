@@ -14496,3 +14496,5 @@ Sorry for the inconvenience.";
 
 "Chat.Todo.PremiumRequired" = "Only [Telegram Premium]() subscribers can mark tasks as done.";
 "Chat.Todo.CompletionLimited" = "%@ has restricted others from editing this to do list.";
+
+"Forward.ErrorTodoDisabledInChannels" = "Sorry, to-do lists can’t be forwarded to channels.";
