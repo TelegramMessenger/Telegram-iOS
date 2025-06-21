@@ -79,7 +79,11 @@ public extension TelegramEngine {
         }
         
         public func peerStarsContext() -> StarsContext {
-            return StarsContext(account: self.account)
+            return StarsContext(account: self.account, ton: false)
+        }
+        
+        public func peerTonContext() -> StarsContext {
+            return StarsContext(account: self.account, ton: true)
         }
         
         public func peerStarsRevenueContext(peerId: EnginePeer.Id) -> StarsRevenueStatsContext {

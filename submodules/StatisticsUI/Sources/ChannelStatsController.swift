@@ -1896,7 +1896,7 @@ public func channelStatsController(
     starsState.set(.single(nil) |> then(starsContext.state |> map(Optional.init)))
     
     let revenueTransactions = RevenueStatsTransactionsContext(account: context.account, peerId: peerId)
-    let starsTransactions = context.engine.payments.peerStarsTransactionsContext(subject: .peer(peerId), mode: .all)
+    let starsTransactions = context.engine.payments.peerStarsTransactionsContext(subject: .peer(peerId: peerId, ton: false), mode: .all)
     starsTransactions.loadMore()
     
     var dismissAllTooltipsImpl: (() -> Void)?

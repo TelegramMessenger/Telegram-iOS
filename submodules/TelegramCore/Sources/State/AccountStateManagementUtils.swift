@@ -1839,7 +1839,9 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
             case let .updateBroadcastRevenueTransactions(peer, balances):
                 updatedState.updateRevenueBalances(peerId: peer.peerId, balances: RevenueStats.Balances(apiRevenueBalances: balances))
             case let .updateStarsBalance(balance):
-                updatedState.updateStarsBalance(peerId: accountPeerId, balance: balance)
+                updatedState.updateStarsBalance(peerId: accountPeerId, ton: false, balance: balance)
+            case let .updateStarsTonBalance(balance):
+                updatedState.updateStarsBalance(peerId: accountPeerId, ton: true, balance: balance)
             case let .updateStarsRevenueStatus(peer, status):
                 updatedState.updateStarsRevenueStatus(peerId: peer.peerId, status: StarsRevenueStats.Balances(apiStarsRevenueStatus: status))
             case let .updatePaidReactionPrivacy(privacy):
@@ -3717,6 +3719,7 @@ func replayFinalState(
     var updateConfig = false
     var updatedRevenueBalances: [PeerId: RevenueStats.Balances] = [:]
     var updatedStarsBalance: [PeerId: StarsAmount] = [:]
+    var updatedTonBalance: [PeerId: StarsAmount] = [:]
     var updatedStarsRevenueStatus: [PeerId: StarsRevenueStats.Balances] = [:]
     var updatedStarsReactionsDefaultPrivacy: TelegramPaidReactionPrivacy?
     var reportMessageDelivery = Set<MessageId>()
@@ -5169,8 +5172,12 @@ func replayFinalState(
                 }
             case let .UpdateRevenueBalances(peerId, balances):
                 updatedRevenueBalances[peerId] = balances
-            case let .UpdateStarsBalance(peerId, balance):
-                updatedStarsBalance[peerId] = StarsAmount(apiAmount: balance)
+            case let .UpdateStarsBalance(peerId, ton, balance):
+                if ton {
+                    updatedTonBalance[peerId] = StarsAmount(apiAmount: balance)
+                } else {
+                    updatedStarsBalance[peerId] = StarsAmount(apiAmount: balance)
+                }
             case let .UpdateStarsRevenueStatus(peerId, status):
                 updatedStarsRevenueStatus[peerId] = status
             case let .UpdateStarsReactionsDefaultPrivacy(value):
@@ -5697,6 +5704,7 @@ func replayFinalState(
         isPremiumUpdated: isPremiumUpdated,
         updatedRevenueBalances: updatedRevenueBalances,
         updatedStarsBalance: updatedStarsBalance,
+        updatedTonBalance: updatedTonBalance,
         updatedStarsRevenueStatus: updatedStarsRevenueStatus,
         sentScheduledMessageIds: finalState.state.sentScheduledMessageIds,
         reportMessageDelivery: reportMessageDelivery,

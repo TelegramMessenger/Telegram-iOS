@@ -710,7 +710,7 @@ final class StarsStatisticsScreenComponent: Component {
                 if let current = self.allTransactionsContext {
                     allTransactionsContext = current
                 } else {
-                    allTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(subject: .peer(component.peerId), mode: .all)
+                    allTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(subject: .peer(peerId: component.peerId, ton: false), mode: .all)
                     self.allTransactionsContext = allTransactionsContext
                 }
                 
