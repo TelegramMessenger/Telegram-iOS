@@ -322,11 +322,13 @@ const NSInteger PGCameraFrameRate = 30;
 
 - (void)switchToBestVideoFormatForDevice:(AVCaptureDevice *)device
 {
+    __unused bool preferZoomableFormat = [self hasTelephotoCamera] || [self hasUltrawideCamera];
     [self _reconfigureDevice:device withBlock:^(AVCaptureDevice *device)
     {
         NSArray *availableFormats = device.formats;
         AVCaptureDeviceFormat *preferredFormat = nil;
         NSMutableArray *maybeFormats = nil;
+        bool hasSecondaryZoomLevels = false;
         int32_t maxWidth = 0;
         int32_t maxHeight = 0;
         for (AVCaptureDeviceFormat *format in availableFormats)
@@ -338,6 +340,7 @@ const NSInteger PGCameraFrameRate = 30;
             if (dimensions.width >= maxWidth && dimensions.width <= 1920 && dimensions.height >= maxHeight && dimensions.height <= 1080)
             {
                 if (dimensions.width > maxWidth) {
+                    hasSecondaryZoomLevels = false;
                     maybeFormats = [[NSMutableArray alloc] init];
                 }
                 FourCharCode mediaSubType = CMFormatDescriptionGetMediaSubType(format.formatDescription);
@@ -359,12 +362,15 @@ const NSInteger PGCameraFrameRate = 30;
                     if (supportedRate) {
                         if (@available(iOS 16.0, *)) {
                             if (format.secondaryNativeResolutionZoomFactors.count > 0) {
+                                hasSecondaryZoomLevels = true;
                                 [maybeFormats addObject:format];
-                            } else {
+                            } else if (!hasSecondaryZoomLevels) {
                                 [maybeFormats addObject:format];
                             }
                         } else {
-                            [maybeFormats addObject:format];
+                            if (!hasSecondaryZoomLevels) {
+                                [maybeFormats addObject:format];
+                            }
                         }
                     }
                 }
