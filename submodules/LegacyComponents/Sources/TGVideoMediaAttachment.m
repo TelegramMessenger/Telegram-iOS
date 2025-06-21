@@ -295,7 +295,10 @@
             NSData *data = [[NSData alloc] initWithBytesNoCopy:originBytes length:originLength freeWhenDone:true];
             TGMediaOriginInfo *origin = nil;
             @try {
-                origin = [NSKeyedUnarchiver unarchivedObjectOfClass:[TGMediaOriginInfo class] fromData:data error:nil];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+                origin = [NSKeyedUnarchiver unarchiveObjectWithData:data];
+#pragma clang diagnostic pop
             } @catch (NSException *e) {
                 
             }

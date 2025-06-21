@@ -36,7 +36,11 @@
 {
     int32_t length = [is readInt32];
     NSData *data = [is readData:length];
-    return [NSKeyedUnarchiver unarchivedObjectOfClass:[TGMediaAttachment class] fromData:data error:nil];
+    
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    return [NSKeyedUnarchiver unarchiveObjectWithData:data];
+#pragma clang diagnostic pop
 }
 
 - (BOOL)isEqual:(id)object {
