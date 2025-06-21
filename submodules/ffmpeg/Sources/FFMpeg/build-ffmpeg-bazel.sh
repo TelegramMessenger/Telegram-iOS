@@ -49,7 +49,7 @@ CONFIGURE_FLAGS="--enable-cross-compile --disable-programs \
 				 --enable-libdav1d \
                  --enable-audiotoolbox \
                  --enable-bsf=aac_adtstoasc,vp9_superframe,h264_mp4toannexb \
-                 --enable-decoder=h264,libvpx_vp9,hevc,libopus,mp3,aac,flac,alac_at,pcm_s16le,pcm_s24le,pcm_f32le,gsm_ms_at,vorbis,libdav1d,av1 \
+                 --enable-decoder=h264,libvpx_vp9,hevc,libopus,flac,alac_at,pcm_s16le,pcm_s24le,pcm_f32le,gsm_ms_at,libdav1d,av1,mp3,aac_at \
                  --enable-encoder=libvpx_vp9,aac_at \
                  --enable-demuxer=aac,mov,m4v,mp3,ogg,libopus,flac,wav,aiff,matroska,mpegts, \
                  --enable-parser=aac,h264,mp3,libopus \
@@ -57,6 +57,8 @@ CONFIGURE_FLAGS="--enable-cross-compile --disable-programs \
                  --enable-muxer=mp4,matroska,ogg,mpegts \
                  --enable-hwaccel=h264_videotoolbox,hevc_videotoolbox,av1_videotoolbox \
                  "
+
+#vorbis
 
 EXTRA_CFLAGS="-DCONFIG_SAFE_BITSTREAM_READER=1"
 
@@ -123,11 +125,7 @@ then
 		LIBDAV1D_PATH="$SOURCE_DIR/libdav1d"
 
 		CFLAGS="$EXTRA_CFLAGS -arch $ARCH"
-		if [ "$RAW_ARCH" = "i386" -o "$RAW_ARCH" = "x86_64" ]
-		then
-		    PLATFORM="iPhoneSimulator"
-		    CFLAGS="$CFLAGS -mios-simulator-version-min=$DEPLOYMENT_TARGET"
-		elif [ "$RAW_ARCH" = "sim_arm64" ]; then
+		if [ "$RAW_ARCH" = "sim_arm64" ]; then
 			PLATFORM="iPhoneSimulator"
 		    CFLAGS="$CFLAGS -mios-simulator-version-min=$DEPLOYMENT_TARGET --target=arm64-apple-ios$DEPLOYMENT_TARGET-simulator"
 		else
