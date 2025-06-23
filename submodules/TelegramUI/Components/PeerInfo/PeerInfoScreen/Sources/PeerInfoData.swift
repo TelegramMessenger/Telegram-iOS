@@ -383,6 +383,7 @@ final class PeerInfoScreenData {
     let personalChannel: PeerInfoPersonalChannelData?
     let tonState: StarsContext.State?
     let starsState: StarsContext.State?
+    let tonState: StarsContext.State?
     let starsRevenueStatsState: StarsRevenueStats?
     let starsRevenueStatsContext: StarsRevenueStatsContext?
     let revenueStatsState: RevenueStats?
@@ -435,6 +436,7 @@ final class PeerInfoScreenData {
         personalChannel: PeerInfoPersonalChannelData?,
         tonState: StarsContext.State?,
         starsState: StarsContext.State?,
+        tonState: StarsContext.State?,
         starsRevenueStatsState: StarsRevenueStats?,
         starsRevenueStatsContext: StarsRevenueStatsContext?,
         revenueStatsState: RevenueStats?,
@@ -475,6 +477,7 @@ final class PeerInfoScreenData {
         self.personalChannel = personalChannel
         self.tonState = tonState
         self.starsState = starsState
+        self.tonState = tonState
         self.starsRevenueStatsState = starsRevenueStatsState
         self.starsRevenueStatsContext = starsRevenueStatsContext
         self.revenueStatsState = revenueStatsState
@@ -862,6 +865,12 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
     } else {
         starsState = .single(nil)
     }
+    let tonState: Signal<StarsContext.State?, NoError>
+    if let tonContext {
+        tonState = tonContext.state
+    } else {
+        tonState = .single(nil)
+    }
     
     let profileGiftsContext = ProfileGiftsContext(account: context.account, peerId: peerId)
     
@@ -972,6 +981,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
             personalChannel: personalChannel,
             tonState: tonState,
             starsState: starsState,
+            tonState: tonState,
             starsRevenueStatsState: nil,
             starsRevenueStatsContext: nil,
             revenueStatsState: nil,
@@ -1023,6 +1033,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 personalChannel: nil,
                 tonState: nil,
                 starsState: nil,
+                tonState: nil,
                 starsRevenueStatsState: nil,
                 starsRevenueStatsContext: nil,
                 revenueStatsState: nil,
@@ -1483,6 +1494,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     personalChannel: personalChannel,
                     tonState: nil,
                     starsState: nil,
+                    tonState: nil,
                     starsRevenueStatsState: starsRevenueContextAndState.1,
                     starsRevenueStatsContext: starsRevenueContextAndState.0,
                     revenueStatsState: revenueContextAndState.1,
@@ -1715,6 +1727,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     personalChannel: personalChannel,
                     tonState: nil,
                     starsState: nil,
+                    tonState: nil,
                     starsRevenueStatsState: starsRevenueContextAndState.1,
                     starsRevenueStatsContext: starsRevenueContextAndState.0,
                     revenueStatsState: revenueContextAndState.1,
@@ -2048,6 +2061,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     personalChannel: nil,
                     tonState: nil,
                     starsState: nil,
+                    tonState: nil,
                     starsRevenueStatsState: starsRevenueContextAndState.1,
                     starsRevenueStatsContext: starsRevenueContextAndState.0,
                     revenueStatsState: nil,

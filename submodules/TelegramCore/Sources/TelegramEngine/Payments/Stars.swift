@@ -1074,13 +1074,7 @@ public final class StarsContext {
         return peerId!
     }
     
-    var ton: Bool {
-        var ton = false
-        self.impl.syncWith { impl in
-            ton = impl.ton
-        }
-        return ton
-    }
+    let ton: Bool
     
     public var currentState: StarsContext.State? {
         var state: StarsContext.State?
@@ -1122,6 +1116,7 @@ public final class StarsContext {
     }
     
     init(account: Account, ton: Bool) {
+        self.ton = ton
         self.impl = QueueLocalObject(queue: Queue.mainQueue(), generate: {
             return StarsContextImpl(account: account, ton: ton)
         })
