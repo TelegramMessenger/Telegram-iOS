@@ -182,7 +182,6 @@ public extension Api {
         case updateSmsJob(jobId: String)
         case updateStarsBalance(balance: Api.StarsAmount)
         case updateStarsRevenueStatus(peer: Api.Peer, status: Api.StarsRevenueStatus)
-        case updateStarsTonBalance(balance: Api.StarsAmount)
         case updateStickerSets(flags: Int32)
         case updateStickerSetsOrder(flags: Int32, order: [Int64])
         case updateStoriesStealthMode(stealthMode: Api.StoriesStealthMode)
@@ -1355,12 +1354,6 @@ public extension Api {
                     peer.serialize(buffer, true)
                     status.serialize(buffer, true)
                     break
-                case .updateStarsTonBalance(let balance):
-                    if boxed {
-                        buffer.appendInt32(-1944619808)
-                    }
-                    balance.serialize(buffer, true)
-                    break
                 case .updateStickerSets(let flags):
                     if boxed {
                         buffer.appendInt32(834816008)
@@ -1740,8 +1733,6 @@ public extension Api {
                 return ("updateStarsBalance", [("balance", balance as Any)])
                 case .updateStarsRevenueStatus(let peer, let status):
                 return ("updateStarsRevenueStatus", [("peer", peer as Any), ("status", status as Any)])
-                case .updateStarsTonBalance(let balance):
-                return ("updateStarsTonBalance", [("balance", balance as Any)])
                 case .updateStickerSets(let flags):
                 return ("updateStickerSets", [("flags", flags as Any)])
                 case .updateStickerSetsOrder(let flags, let order):
@@ -4116,19 +4107,6 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.Update.updateStarsRevenueStatus(peer: _1!, status: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_updateStarsTonBalance(_ reader: BufferReader) -> Update? {
-            var _1: Api.StarsAmount?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.StarsAmount
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.Update.updateStarsTonBalance(balance: _1!)
             }
             else {
                 return nil

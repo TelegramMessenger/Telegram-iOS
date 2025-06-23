@@ -82,7 +82,7 @@ private final class SheetContent: CombinedComponent {
             
             let constrainedTitleWidth = context.availableSize.width - 16.0 * 2.0
             
-            if case let .suggestedPost(mode, _, _, _, _) = component.mode {
+            if case let .suggestedPost(mode, _, _, _) = component.mode {
                 switch mode {
                 case .sender:
                     let balance = balance.update(
@@ -203,7 +203,7 @@ private final class SheetContent: CombinedComponent {
                 
                 minAmount = StarsAmount(value: minAmountValue, nanos: 0)
                 maxAmount = StarsAmount(value: resaleConfiguration.paidMessageMaxAmount, nanos: 0)
-            case let .suggestedPost(mode, _, _, _, _):
+            case let .suggestedPost(mode, _, _, _):
                 //TODO:localize
                 switch mode {
                 case .sender:
@@ -289,7 +289,7 @@ private final class SheetContent: CombinedComponent {
                 )
             }
             
-            if case let .suggestedPost(mode, _, _, _, _) = component.mode {
+            if case let .suggestedPost(mode, _, _, _) = component.mode {
                 //TODO:localize
                 let selectedId: AnyHashable = state.currency == .stars ? AnyHashable(0 as Int) : AnyHashable(1 as Int)
                 let starsTitle: String
@@ -424,7 +424,7 @@ private final class SheetContent: CombinedComponent {
                     text: .plain(amountInfoString),
                     maximumNumberOfLines: 0
                 ))
-            case let .suggestedPost(mode, _, _, _, _):
+            case let .suggestedPost(mode, _, _, _):
                 switch mode {
                 case let .sender(channel):
                     //TODO:localize
@@ -515,7 +515,7 @@ private final class SheetContent: CombinedComponent {
                     .position(CGPoint(x: context.availableSize.width - amountAdditionalLabel.size.width / 2.0 - sideInset - 16.0, y: contentSize.height - amountAdditionalLabel.size.height / 2.0)))
             }
             
-            if case let .suggestedPost(mode, _, _, _, _) = component.mode {
+            if case let .suggestedPost(mode, _, _, _) = component.mode {
                 contentSize.height += 24.0
                 
                 //TODO:localize
@@ -626,7 +626,7 @@ private final class SheetContent: CombinedComponent {
                 }
             } else if case .paidMessages = component.mode {
                 buttonString = environment.strings.Stars_SendMessage_AdjustmentAction
-            } else if case let .suggestedPost(mode, _, _, _, _) = component.mode {
+            } else if case let .suggestedPost(mode, _, _, _) = component.mode {
                 //TODO:localize
                 switch mode {
                 case .sender:
@@ -718,8 +718,8 @@ private final class SheetContent: CombinedComponent {
                                     completion(amount.value)
                                 case let .paidMessages(_, _, _, _, completion):
                                     completion(amount.value)
-                                case let .suggestedPost(_, _, _, _, completion):
-                                    completion(state.currency, amount.value, state.timestamp)
+                                case let .suggestedPost(_, _, _, completion):
+                                    completion(CurrencyAmount(amount: amount, currency: state.currency), state.timestamp)
                                 }
                                 
                                 controller.dismissAnimated()
@@ -753,7 +753,7 @@ private final class SheetContent: CombinedComponent {
         fileprivate var component: SheetContent
         
         fileprivate var amount: StarsAmount?
-        fileprivate var currency: TelegramCurrency
+        fileprivate var currency: CurrencyAmount.Currency = .stars
         fileprivate var timestamp: Int32?
         
         fileprivate var balance: StarsAmount?
@@ -770,7 +770,7 @@ private final class SheetContent: CombinedComponent {
             self.component = component
             
             var amount: StarsAmount?
-            var currency: TelegramCurrency = .stars
+            var currency: CurrencyAmount.Currency = .stars
             switch mode {
             case let .withdraw(stats, _):
                 amount = StarsAmount(value: stats.balances.availableBalance.value, nanos: 0)
@@ -784,11 +784,9 @@ private final class SheetContent: CombinedComponent {
                 amount = nil
             case let .paidMessages(initialValue, _, _, _, _):
                 amount = StarsAmount(value: initialValue, nanos: 0)
-            case let .suggestedPost(_, currencyValue, initialValue, initialTimestamp, _):
-                currency = currencyValue
-                if initialValue != 0 {
-                    amount = StarsAmount(value: initialValue, nanos: 0)
-                }
+            case let .suggestedPost(_, initialValue, initialTimestamp, _):
+                currency = initialValue.currency
+                amount = initialValue.amount
                 self.timestamp = initialTimestamp
             }
             
@@ -801,7 +799,7 @@ private final class SheetContent: CombinedComponent {
             switch self.mode {
             case .reaction:
                 needsBalance = true
-            case let .suggestedPost(mode, _, _, _, _):
+            case let .suggestedPost(mode, _, _, _):
                 switch mode {
                 case .sender:
                     needsBalance = true
@@ -959,7 +957,7 @@ public final class StarsWithdrawScreen: ViewControllerComponentContainer {
         case reaction(Int64?, completion: (Int64) -> Void)
         case starGiftResell(StarGift.UniqueGift, Bool, completion: (Int64) -> Void)
         case paidMessages(current: Int64, minValue: Int64, fractionAfterCommission: Int, kind: StarsWithdrawalScreenSubject.PaidMessageKind, completion: (Int64) -> Void)
-        case suggestedPost(mode: SuggestedPostMode, currency: TelegramCurrency, price: Int64, timestamp: Int32?, completion: (TelegramCurrency, Int64, Int32?) -> Void)
+        case suggestedPost(mode: SuggestedPostMode, price: CurrencyAmount, timestamp: Int32?, completion: (CurrencyAmount, Int32?) -> Void)
     }
     
     private let context: AccountContext
@@ -1049,7 +1047,7 @@ private final class AmountFieldComponent: Component {
     let maxValue: Int64?
     let placeholderText: String
     let labelText: String?
-    let currency: TelegramCurrency
+    let currency: CurrencyAmount.Currency
     let amountUpdated: (Int64?) -> Void
     let tag: AnyObject?
     
@@ -1063,7 +1061,7 @@ private final class AmountFieldComponent: Component {
         maxValue: Int64?,
         placeholderText: String,
         labelText: String?,
-        currency: TelegramCurrency,
+        currency: CurrencyAmount.Currency,
         amountUpdated: @escaping (Int64?) -> Void,
         tag: AnyObject? = nil
     ) {
@@ -1399,7 +1397,7 @@ private final class BalanceComponent: CombinedComponent {
     let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
-    let currency: TelegramCurrency
+    let currency: CurrencyAmount.Currency
     let balance: StarsAmount?
     let alignment: NSTextAlignment
     
@@ -1407,7 +1405,7 @@ private final class BalanceComponent: CombinedComponent {
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
-        currency: TelegramCurrency,
+        currency: CurrencyAmount.Currency,
         balance: StarsAmount?,
         alignment: NSTextAlignment
     ) {

@@ -497,13 +497,11 @@ public final class ChatInterfaceState: Codable, Equatable {
     
     public struct PostSuggestionState: Codable, Equatable {
         public var editingOriginalMessageId: MessageId?
-        public var currency: TelegramCurrency
-        public var price: Int64
+        public var price: CurrencyAmount?
         public var timestamp: Int32?
         
-        public init(editingOriginalMessageId: MessageId?, currency: TelegramCurrency, price: Int64, timestamp: Int32?) {
+        public init(editingOriginalMessageId: MessageId?, price: CurrencyAmount?, timestamp: Int32?) {
             self.editingOriginalMessageId = editingOriginalMessageId
-            self.currency = currency
             self.price = price
             self.timestamp = timestamp
         }

@@ -233,15 +233,33 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         if (flags & (1 << 0)) != 0 {
             let reason: TelegramMediaActionType.SuggestedPostApprovalStatus.RejectionReason
             if (flags & (1 << 1)) != 0 {
-                reason = .lowBalance(balanceNeeded: starsAmount ?? 0)
+                let balanceNeeded: CurrencyAmount
+                switch starsAmount {
+                case .none:
+                    balanceNeeded = CurrencyAmount(amount: .zero, currency: .stars)
+                case let .starsAmount(amount, nanos):
+                    balanceNeeded = CurrencyAmount(amount: StarsAmount(value: amount, nanos: nanos), currency: .stars)
+                case let .starsTonAmount(amount):
+                    balanceNeeded = CurrencyAmount(amount: StarsAmount(value: amount, nanos: 0), currency: .ton)
+                }
+                reason = .lowBalance(balanceNeeded: balanceNeeded)
             } else {
                 reason = .generic
             }
             status = .rejected(reason: reason, comment: rejectComment)
         } else if (flags & (1 << 1)) != 0 {
-            status = .rejected(reason: .lowBalance(balanceNeeded: starsAmount ?? 0), comment: nil)
+            let amountValue: CurrencyAmount
+            switch starsAmount {
+            case .none:
+                amountValue = CurrencyAmount(amount: .zero, currency: .stars)
+            case let .starsAmount(amount, nanos):
+                amountValue = CurrencyAmount(amount: StarsAmount(value: amount, nanos: nanos), currency: .stars)
+            case let .starsTonAmount(amount):
+                amountValue = CurrencyAmount(amount: StarsAmount(value: amount, nanos: 0), currency: .ton)
+            }
+            status = .rejected(reason: .lowBalance(balanceNeeded: amountValue), comment: nil)
         } else {
-            status = .approved(timestamp: scheduleDate, amount: starsAmount ?? 0)
+            status = .approved(timestamp: scheduleDate, amount: starsAmount.flatMap(CurrencyAmount.init(apiAmount:)))
         }
         return TelegramMediaAction(action: .suggestedPostApprovalStatus(status: status))
     case let .messageActionGiftTon(_, currency, amount, cryptoCurrency, cryptoAmount, transactionId):

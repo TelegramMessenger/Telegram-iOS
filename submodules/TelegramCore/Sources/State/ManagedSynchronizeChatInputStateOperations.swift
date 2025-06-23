@@ -229,7 +229,7 @@ private func synchronizeChatInputState(transaction: Transaction, postbox: Postbo
             if suggestedPost.timestamp != nil {
                 flags |= 1 << 0
             }
-            return .suggestedPost(flags: flags, starsAmount: suggestedPost.price, scheduleDate: suggestedPost.timestamp)
+            return .suggestedPost(flags: flags, price: suggestedPost.price?.apiAmount ?? .starsAmount(amount: 0, nanos: 0), scheduleDate: suggestedPost.timestamp)
         }
         if suggestedPost != nil {
             flags |= 1 << 8

@@ -3,10 +3,10 @@ import Postbox
 
 public struct SynchronizeableChatInputState: Codable, Equatable {
     public struct SuggestedPost: Codable, Equatable {
-        public var price: Int64
+        public var price: CurrencyAmount?
         public var timestamp: Int32?
         
-        public init(price: Int64, timestamp: Int32?) {
+        public init(price: CurrencyAmount?, timestamp: Int32?) {
             self.price = price
             self.timestamp = timestamp
         }

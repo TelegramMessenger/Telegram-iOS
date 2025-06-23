@@ -258,7 +258,17 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                         )).string
                         
-                        let amountString = amount == 1 ? "\(amount) Star" : "\(amount) Stars"
+                        let amountString: String
+                        if let amount, amount.amount != .zero {
+                            switch amount.currency {
+                            case .stars:
+                                amountString = amount.amount.value == 1 ? "\(amount.amount) Star" : "\(amount.amount) Stars"
+                            case .ton:
+                                amountString = "\(amount.amount) TON"
+                            }
+                        } else {
+                            amountString = "0 Stars"
+                        }
                         
                         let rawString: String
                         if let timestamp {

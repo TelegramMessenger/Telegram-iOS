@@ -130,7 +130,7 @@ enum AccountStateMutationOperation {
     case UpdateNewAuthorization(isUnconfirmed: Bool, hash: Int64, date: Int32, device: String, location: String)
     case UpdateWallpaper(peerId: PeerId, wallpaper: TelegramWallpaper?)
     case UpdateRevenueBalances(peerId: PeerId, balances: RevenueStats.Balances)
-    case UpdateStarsBalance(peerId: PeerId, ton: Bool, balance: Api.StarsAmount)
+    case UpdateStarsBalance(peerId: PeerId, currency: CurrencyAmount.Currency, balance: StarsAmount)
     case UpdateStarsRevenueStatus(peerId: PeerId, status: StarsRevenueStats.Balances)
     case UpdateStarsReactionsDefaultPrivacy(privacy: TelegramPaidReactionPrivacy)
     case ReportMessageDelivery([MessageId])
@@ -696,8 +696,8 @@ struct AccountMutableState {
         self.addOperation(.UpdateRevenueBalances(peerId: peerId, balances: balances))
     }
     
-    mutating func updateStarsBalance(peerId: PeerId, ton: Bool, balance: Api.StarsAmount) {
-        self.addOperation(.UpdateStarsBalance(peerId: peerId, ton: ton, balance: balance))
+    mutating func updateStarsBalance(peerId: PeerId, currency: CurrencyAmount.Currency, balance: StarsAmount) {
+        self.addOperation(.UpdateStarsBalance(peerId: peerId, currency: currency, balance: balance))
     }
     
     mutating func updateStarsRevenueStatus(peerId: PeerId, status: StarsRevenueStats.Balances) {

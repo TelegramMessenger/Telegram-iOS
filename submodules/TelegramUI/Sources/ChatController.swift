@@ -8000,7 +8000,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if let postSuggestionState = self.presentationInterfaceState.interfaceState.postSuggestionState {
                     if attributes.first(where: { $0 is SuggestedPostMessageAttribute }) == nil {
                         attributes.append(SuggestedPostMessageAttribute(
-                            currency: postSuggestionState.currency,
                             amount: postSuggestionState.price,
                             timestamp: postSuggestionState.timestamp,
                             state: nil

@@ -239,9 +239,9 @@ public final class SuggestPostAccessoryPanelNode: AccessoryPanelNode {
         }
         
         let textString: NSAttributedString
-        if let postSuggestionState = interfaceState.interfaceState.postSuggestionState, postSuggestionState.price != 0 {
+        if let postSuggestionState = interfaceState.interfaceState.postSuggestionState, let price = postSuggestionState.price, price.amount != .zero {
             let currencySymbol: String
-            switch postSuggestionState.currency {
+            switch price.currency {
             case .stars:
                 currencySymbol = "#"
             case .ton:
@@ -262,16 +262,16 @@ public final class SuggestPostAccessoryPanelNode: AccessoryPanelNode {
                         return PresentationStrings.FormattedString(string: interfaceState.strings.SuggestPost_SetTimeFormat_TodayAt(value).string, ranges: [])
                     }
                 )).string
-                textString = NSAttributedString(string: "\(currencySymbol)\(postSuggestionState.price)  📅 \(timeString)", font: textFont, textColor: self.theme.chat.inputPanel.primaryTextColor)
+                textString = NSAttributedString(string: "\(currencySymbol)\(price.amount)  📅 \(timeString)", font: textFont, textColor: self.theme.chat.inputPanel.primaryTextColor)
             } else {
-                textString = NSAttributedString(string: "\(currencySymbol)\(postSuggestionState.price) for publishing anytime", font: textFont, textColor: self.theme.chat.inputPanel.primaryTextColor)
+                textString = NSAttributedString(string: "\(currencySymbol)\(price.amount) for publishing anytime", font: textFont, textColor: self.theme.chat.inputPanel.primaryTextColor)
             }
         } else {
             textString = NSAttributedString(string: "Tap to offer a price for publishing", font: textFont, textColor: self.theme.chat.inputPanel.primaryTextColor)
         }
         
         let mutableTextString = NSMutableAttributedString(attributedString: textString)
-        for currency in [.stars, .ton] as [TelegramCurrency] {
+        for currency in [.stars, .ton] as [CurrencyAmount.Currency] {
             let currencySymbol: String
             let currencyImage: UIImage?
             switch currency {

@@ -354,34 +354,55 @@ extension StarsAmount {
     }
 }
 
-public enum TelegramCurrency: Codable {
+public struct CurrencyAmount: Equatable, Hashable, Codable {
     private enum CodingKeys: String, CodingKey {
-        case discriminator = "_"
+        case amount = "a"
+        case currency = "c"
     }
     
-    case stars
-    case ton
+    public enum Currency: Int32 {
+        case stars = 0
+        case ton = 1
+    }
     
-    public init(from decoder: Decoder) throws {
+    public var amount: StarsAmount
+    public var currency: Currency
+    
+    public init(amount: StarsAmount, currency: Currency) {
+        self.amount = amount
+        self.currency = currency
+    }
+    
+    public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        switch try container.decode(Int32.self, forKey: .discriminator) {
-        case 0:
-            self = .stars
-        case 1:
-            self = .ton
-        default:
-            assertionFailure()
-            self = .stars
-        }
+        self.amount = try container.decode(StarsAmount.self, forKey: .amount)
+        self.currency = Currency(rawValue: try container.decode(Int32.self, forKey: .currency)) ?? .stars
     }
     
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        switch self {
+        try container.encode(self.amount, forKey: .amount)
+        try container.encode(Int32(self.currency.rawValue), forKey: .currency)
+    }
+}
+
+extension CurrencyAmount {
+    init(apiAmount: Api.StarsAmount) {
+        switch apiAmount {
+        case let .starsAmount(amount, nanos):
+            self.init(amount: StarsAmount(value: amount, nanos: nanos), currency: .stars)
+        case let .starsTonAmount(amount):
+            self.init(amount: StarsAmount(value: amount, nanos: 0), currency: .ton)
+        }
+    }
+    
+    var apiAmount: Api.StarsAmount {
+        switch self.currency {
         case .stars:
-            try container.encode(0 as Int32, forKey: .discriminator)
+            return .starsAmount(amount: self.amount.value, nanos: self.amount.nanos)
         case .ton:
-            try container.encode(1 as Int32, forKey: .discriminator)
+            assert(self.amount.nanos == 0)
+            return .starsTonAmount(amount: self.amount.value)
         }
     }
 }

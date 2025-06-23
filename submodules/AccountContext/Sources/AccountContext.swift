@@ -1033,8 +1033,8 @@ public enum StarsWithdrawalScreenSubject {
     
     case withdraw(completion: (Int64) -> Void)
     case enterAmount(current: StarsAmount, minValue: StarsAmount, fractionAfterCommission: Int, kind: PaidMessageKind, completion: (Int64) -> Void)
-    case postSuggestion(channel: EnginePeer, currency: TelegramCurrency, current: StarsAmount, timestamp: Int32?, completion: (TelegramCurrency, Int64, Int32?) -> Void)
-    case postSuggestionModification(currency: TelegramCurrency, current: StarsAmount, timestamp: Int32?, completion: (TelegramCurrency, Int64, Int32?) -> Void)
+    case postSuggestion(channel: EnginePeer, current: CurrencyAmount, timestamp: Int32?, completion: (CurrencyAmount, Int32?) -> Void)
+    case postSuggestionModification(current: CurrencyAmount, timestamp: Int32?, completion: (CurrencyAmount, Int32?) -> Void)
 }
 
 public protocol SharedAccountContext: AnyObject {

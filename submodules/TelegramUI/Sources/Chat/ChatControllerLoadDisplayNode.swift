@@ -4181,8 +4181,7 @@ extension ChatControllerImpl {
                         
                         interfaceState = interfaceState.withUpdatedPostSuggestionState(ChatInterfaceState.PostSuggestionState(
                             editingOriginalMessageId: message.id,
-                            currency: attribute?.currency ?? .stars,
-                            price: attribute?.amount ?? 0,
+                            price: attribute?.amount,
                             timestamp: attribute?.timestamp
                         ))
                         return interfaceState
@@ -4196,8 +4195,7 @@ extension ChatControllerImpl {
                         var interfaceState = interfaceState
                         interfaceState = interfaceState.withUpdatedPostSuggestionState(ChatInterfaceState.PostSuggestionState(
                             editingOriginalMessageId: nil,
-                            currency: .stars,
-                            price: 0,
+                            price: nil,
                             timestamp: nil
                         ))
                         return interfaceState

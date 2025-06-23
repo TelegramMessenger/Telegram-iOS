@@ -3734,10 +3734,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mode = .accountWithdraw(completion: completion)
         case let .enterAmount(current, minValue, fractionAfterCommission, kind, completion):
             mode = .paidMessages(current: current.value, minValue: minValue.value, fractionAfterCommission: fractionAfterCommission, kind: kind, completion: completion)
-        case let .postSuggestion(channel, currency, current, timestamp, completion):
-            mode = .suggestedPost(mode: .sender(channel: channel), currency: currency, price: current.value, timestamp: timestamp, completion: completion)
-        case let .postSuggestionModification(currency, current, timestamp, completion):
-            mode = .suggestedPost(mode: .admin, currency: currency, price: current.value, timestamp: timestamp, completion: completion)
+        case let .postSuggestion(channel, current, timestamp, completion):
+            mode = .suggestedPost(mode: .sender(channel: channel), price: current, timestamp: timestamp, completion: completion)
+        case let .postSuggestionModification(current, timestamp, completion):
+            mode = .suggestedPost(mode: .admin, price: current, timestamp: timestamp, completion: completion)
         }
         return StarsWithdrawScreen(context: context, mode: mode)
     }

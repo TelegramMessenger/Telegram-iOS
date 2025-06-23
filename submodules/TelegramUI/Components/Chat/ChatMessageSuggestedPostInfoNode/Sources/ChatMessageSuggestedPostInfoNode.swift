@@ -48,13 +48,11 @@ public final class ChatMessageSuggestedPostInfoNode: ASDisplayNode {
             let labelSpacing: CGFloat = 8.0
             let valuesVerticalSpacing: CGFloat = 2.0
             
-            var currency: TelegramCurrency = .stars
-            var amount: Int64 = 0
+            var amount: CurrencyAmount?
             var timestamp: Int32?
             
             for attribute in item.message.attributes {
                 if let attribute = attribute as? SuggestedPostMessageAttribute {
-                    currency = attribute.currency
                     amount = attribute.amount
                     timestamp = attribute.timestamp
                 }
@@ -62,23 +60,23 @@ public final class ChatMessageSuggestedPostInfoNode: ASDisplayNode {
             
             //TODO:localize
             let amountString: String
-            switch currency {
-            case .stars:
-                if amount == 0 {
-                    amountString = "Free"
-                } else if amount == 1 {
-                    amountString = "1 Star"
-                } else {
-                    amountString = "\(amount) Stars"
+            if let amount, amount.amount.value != 0, amount.amount.nanos != 0 {
+                switch amount.currency {
+                case .stars:
+                    if amount.amount.value == 1 {
+                        amountString = "1 Star"
+                    } else {
+                        amountString = "\(amount) Stars"
+                    }
+                case .ton:
+                    if amount.amount.value == 1 {
+                        amountString = "1 TON"
+                    } else {
+                        amountString = "\(amount) TON"
+                    }
                 }
-            case .ton:
-                if amount == 0 {
-                    amountString = "Free"
-                } else if amount == 1 {
-                    amountString = "1 TON"
-                } else {
-                    amountString = "\(amount) TON"
-                }
+            } else {
+                amountString = "Free"
             }
             
             var timestampString: String

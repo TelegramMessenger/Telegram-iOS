@@ -114,10 +114,10 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     public enum SuggestedPostApprovalStatus: PostboxCoding, Equatable {
         public enum RejectionReason: Equatable {
             case generic
-            case lowBalance(balanceNeeded: Int64)
+            case lowBalance(balanceNeeded: CurrencyAmount)
         }
         
-        case approved(timestamp: Int32?, amount: Int64)
+        case approved(timestamp: Int32?, amount: CurrencyAmount?)
         case rejected(reason: RejectionReason, comment: String?)
         
         public init(decoder: PostboxDecoder) {
@@ -125,7 +125,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             case 0:
                 self = .approved(
                     timestamp: decoder.decodeOptionalInt32ForKey("ts"),
-                    amount: decoder.decodeInt64ForKey("am", orElse: 0)
+                    amount: decoder.decodeCodable(CurrencyAmount.self, forKey: "amt")
                 )
             case 1:
                 let reason: RejectionReason
@@ -133,7 +133,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                 case 0:
                     reason = .generic
                 case 1:
-                    reason = .lowBalance(balanceNeeded: decoder.decodeInt64ForKey("lowbal.val", orElse: 0))
+                    reason = .lowBalance(balanceNeeded: decoder.decodeCodable(CurrencyAmount.self, forKey: "lowbal.val") ?? CurrencyAmount(amount: StarsAmount.zero, currency: .stars))
                 default:
                     assertionFailure()
                     reason = .generic
@@ -154,7 +154,11 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                 } else {
                     encoder.encodeNil(forKey: "ts")
                 }
-                encoder.encodeInt64(amount, forKey: "am")
+                if let amount {
+                    encoder.encodeCodable(amount, forKey: "amt")
+                } else {
+                    encoder.encodeNil(forKey: "amt")
+                }
             case let .rejected(reason, comment):
                 encoder.encodeInt32(1, forKey: "_t")
                 switch reason {
@@ -162,7 +166,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                     encoder.encodeInt32(0, forKey: "rs")
                 case let .lowBalance(balanceNeeded):
                     encoder.encodeInt32(1, forKey: "rs")
-                    encoder.encodeInt64(balanceNeeded, forKey: "lowbal.val")
+                    encoder.encodeCodable(balanceNeeded, forKey: "lowbal.val")
                 }
                 if let comment {
                     encoder.encodeString(comment, forKey: "com")

@@ -1589,7 +1589,7 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                         if let suggestedPost {
                             switch suggestedPost {
                             case let .suggestedPost(_, starsAmount, scheduleDate):
-                                parsedSuggestedPost = SynchronizeableChatInputState.SuggestedPost(price: starsAmount, timestamp: scheduleDate)
+                                parsedSuggestedPost = SynchronizeableChatInputState.SuggestedPost(price: starsAmount.flatMap(CurrencyAmount.init(apiAmount:)), timestamp: scheduleDate)
                             }
                         }
                         if let replyToMsgHeader {
@@ -1839,9 +1839,8 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
             case let .updateBroadcastRevenueTransactions(peer, balances):
                 updatedState.updateRevenueBalances(peerId: peer.peerId, balances: RevenueStats.Balances(apiRevenueBalances: balances))
             case let .updateStarsBalance(balance):
-                updatedState.updateStarsBalance(peerId: accountPeerId, ton: false, balance: balance)
-            case let .updateStarsTonBalance(balance):
-                updatedState.updateStarsBalance(peerId: accountPeerId, ton: true, balance: balance)
+                let amount = CurrencyAmount(apiAmount: balance)
+                updatedState.updateStarsBalance(peerId: accountPeerId, currency: amount.currency, balance: amount.amount)
             case let .updateStarsRevenueStatus(peer, status):
                 updatedState.updateStarsRevenueStatus(peerId: peer.peerId, status: StarsRevenueStats.Balances(apiStarsRevenueStatus: status))
             case let .updatePaidReactionPrivacy(privacy):
@@ -5172,11 +5171,12 @@ func replayFinalState(
                 }
             case let .UpdateRevenueBalances(peerId, balances):
                 updatedRevenueBalances[peerId] = balances
-            case let .UpdateStarsBalance(peerId, ton, balance):
-                if ton {
-                    updatedTonBalance[peerId] = StarsAmount(apiAmount: balance)
-                } else {
-                    updatedStarsBalance[peerId] = StarsAmount(apiAmount: balance)
+            case let .UpdateStarsBalance(peerId, currency, balance):
+                switch currency {
+                case .ton:
+                    updatedTonBalance[peerId] = balance
+                case .stars:
+                    updatedStarsBalance[peerId] = balance
                 }
             case let .UpdateStarsRevenueStatus(peerId, status):
                 updatedStarsRevenueStatus[peerId] = status
