@@ -376,7 +376,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                         titleText = gift.title
                         descriptionText = "\(strings.Gift_Unique_Collectible) #\(presentationStringsFormattedNumber(gift.number, dateTimeFormat.groupingSeparator))"
                     }
-                    count = transaction.count
+                    count = transaction.count.amount
                     transactionId = transaction.id
                     date = transaction.date
                     if case let .peer(peer) = transaction.peer {
@@ -395,7 +395,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 } else if let giveawayMessageIdValue = transaction.giveawayMessageId {
                     titleText = strings.Stars_Transaction_Giveaway_Title
                     descriptionText = ""
-                    count = transaction.count
+                    count = transaction.count.amount
                     transactionId = transaction.id
                     date = transaction.date
                     giveawayMessageId = giveawayMessageIdValue
@@ -406,7 +406,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 } else if let _ = transaction.subscriptionPeriod {
                     titleText = strings.Stars_Transaction_SubscriptionFee
                     descriptionText = ""
-                    count = transaction.count
+                    count = transaction.count.amount
                     transactionId = transaction.id
                     date = transaction.date
                     if case let .peer(peer) = transaction.peer {
@@ -417,7 +417,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 } else if transaction.flags.contains(.isGift) {
                     titleText = strings.Stars_Gift_Received_Title
                     descriptionText = strings.Stars_Gift_Received_Text
-                    count = transaction.count
+                    count = transaction.count.amount
                     countOnTop = true
                     transactionId = transaction.id
                     date = transaction.date
@@ -446,7 +446,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                         countOnTop = false
                         descriptionText = ""
                     }
-                    count = transaction.count
+                    count = transaction.count.amount
                     transactionId = transaction.id
                     date = transaction.date
                     transactionPeer = transaction.peer
@@ -457,7 +457,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     titleText = strings.Stars_Transaction_Reaction_Title
                     descriptionText = ""
                     messageId = transaction.paidMessageId
-                    count = transaction.count
+                    count = transaction.count.amount
                     transactionId = transaction.id
                     date = transaction.date
                     if case let .peer(peer) = transaction.peer {
@@ -490,7 +490,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                         via = strings.Stars_Transaction_PremiumBotTopUp_Subtitle
                     case .fragment:
                         if parentPeer.id == component.context.account.peerId {
-                            if (transaction.count.value < 0 && !transaction.flags.contains(.isRefund)) || (transaction.count.value > 0 && transaction.flags.contains(.isRefund)) {
+                            if (transaction.count.amount.value < 0 && !transaction.flags.contains(.isRefund)) || (transaction.count.amount.value > 0 && transaction.flags.contains(.isRefund)) {
                                 titleText = strings.Stars_Transaction_FragmentWithdrawal_Title
                                 via = strings.Stars_Transaction_FragmentWithdrawal_Subtitle
                             } else {
@@ -545,7 +545,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     
                     messageId = transaction.paidMessageId
                     
-                    count = transaction.count
+                    count = transaction.count.amount
                     transactionId = transaction.id
                     date = transaction.date
                     if case let .peer(peer) = transaction.peer {
@@ -1173,7 +1173,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 }
                 if let starrefCommissionPermille = transaction.starrefCommissionPermille, transaction.starrefPeerId != nil {
                     if transaction.flags.contains(.isPaidMessage) || transaction.flags.contains(.isStarGiftResale) {
-                        var totalStars = transaction.count
+                        var totalStars = transaction.count.amount
                         if let starrefCount = transaction.starrefAmount {
                             totalStars = totalStars + starrefCount
                         }

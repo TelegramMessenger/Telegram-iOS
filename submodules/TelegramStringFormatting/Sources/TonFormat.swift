@@ -93,6 +93,15 @@ public func formatStarsAmountText(_ amount: StarsAmount, dateTimeFormat: Present
     return balanceText
 }
 
+public func formatCurrencyAmountText(_ amount: CurrencyAmount, dateTimeFormat: PresentationDateTimeFormat, showPlus: Bool = false) -> String {
+    switch amount.currency {
+    case .stars:
+        return formatStarsAmountText(amount.amount, dateTimeFormat: dateTimeFormat, showPlus: showPlus)
+    case .ton:
+        return formatTonAmountText(amount.amount.value, dateTimeFormat: dateTimeFormat, showPlus: showPlus)
+    }
+}
+
 private let invalidAddressCharacters = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_=").inverted
 public func isValidTonAddress(_ address: String, exactLength: Bool = false) -> Bool {
     if address.count > walletAddressLength || address.rangeOfCharacter(from: invalidAddressCharacters) != nil {
