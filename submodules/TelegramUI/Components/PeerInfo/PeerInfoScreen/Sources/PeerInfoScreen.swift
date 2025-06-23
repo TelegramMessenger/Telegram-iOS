@@ -10670,11 +10670,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
         case .ton:
             if let tonContext = self.controller?.tonContext {
-<<<<<<< HEAD
                 push(self.context.sharedContext.makeTonTransactionsScreen(context: self.context, tonContext: tonContext))
-=======
-                push(self.context.sharedContext.makeStarsTransactionsScreen(context: self.context, starsContext: tonContext))
->>>>>>> 51a16c711078fab6940623bf1de0ec85516ba699
             }
         }
     }
@@ -12990,12 +12986,6 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
             }
         } else {
             self.starsContext = nil
-            self.tonContext = nil
-        }
-        if isSettings, let tonContext = context.tonContext {
-            self.tonContext = tonContext
-            tonContext.load(force: true)
-        } else {
             self.tonContext = nil
         }
         

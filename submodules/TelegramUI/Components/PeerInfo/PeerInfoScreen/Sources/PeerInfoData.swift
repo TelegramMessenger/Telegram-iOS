@@ -381,7 +381,6 @@ final class PeerInfoScreenData {
     let hasBotPreviewItems: Bool
     let isPremiumRequiredForStoryPosting: Bool
     let personalChannel: PeerInfoPersonalChannelData?
-    let tonState: StarsContext.State?
     let starsState: StarsContext.State?
     let tonState: StarsContext.State?
     let starsRevenueStatsState: StarsRevenueStats?
@@ -434,7 +433,6 @@ final class PeerInfoScreenData {
         hasBotPreviewItems: Bool,
         isPremiumRequiredForStoryPosting: Bool,
         personalChannel: PeerInfoPersonalChannelData?,
-        tonState: StarsContext.State?,
         starsState: StarsContext.State?,
         tonState: StarsContext.State?,
         starsRevenueStatsState: StarsRevenueStats?,
@@ -475,7 +473,6 @@ final class PeerInfoScreenData {
         self.hasBotPreviewItems = hasBotPreviewItems
         self.isPremiumRequiredForStoryPosting = isPremiumRequiredForStoryPosting
         self.personalChannel = personalChannel
-        self.tonState = tonState
         self.starsState = starsState
         self.tonState = tonState
         self.starsRevenueStatsState = starsRevenueStatsState
@@ -852,13 +849,6 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
         }
     }
 
-    let tonState: Signal<StarsContext.State?, NoError>
-    if let tonContext {
-        tonState = tonContext.state
-    } else {
-        tonState = .single(nil)
-    }
-    
     let starsState: Signal<StarsContext.State?, NoError>
     if let starsContext {
         starsState = starsContext.state
@@ -979,7 +969,6 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
             hasBotPreviewItems: false,
             isPremiumRequiredForStoryPosting: true,
             personalChannel: personalChannel,
-            tonState: tonState,
             starsState: starsState,
             tonState: tonState,
             starsRevenueStatsState: nil,
@@ -1031,7 +1020,6 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 hasBotPreviewItems: false,
                 isPremiumRequiredForStoryPosting: true,
                 personalChannel: nil,
-                tonState: nil,
                 starsState: nil,
                 tonState: nil,
                 starsRevenueStatsState: nil,
@@ -1492,7 +1480,6 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     hasBotPreviewItems: hasBotPreviewItems,
                     isPremiumRequiredForStoryPosting: false,
                     personalChannel: personalChannel,
-                    tonState: nil,
                     starsState: nil,
                     tonState: nil,
                     starsRevenueStatsState: starsRevenueContextAndState.1,
@@ -1725,7 +1712,6 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     hasBotPreviewItems: false,
                     isPremiumRequiredForStoryPosting: isPremiumRequiredForStoryPosting,
                     personalChannel: personalChannel,
-                    tonState: nil,
                     starsState: nil,
                     tonState: nil,
                     starsRevenueStatsState: starsRevenueContextAndState.1,
@@ -2059,7 +2045,6 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     hasBotPreviewItems: false,
                     isPremiumRequiredForStoryPosting: isPremiumRequiredForStoryPosting,
                     personalChannel: nil,
-                    tonState: nil,
                     starsState: nil,
                     tonState: nil,
                     starsRevenueStatsState: starsRevenueContextAndState.1,
