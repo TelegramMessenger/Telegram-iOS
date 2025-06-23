@@ -60,19 +60,19 @@ public final class ChatMessageSuggestedPostInfoNode: ASDisplayNode {
             
             //TODO:localize
             let amountString: String
-            if let amount, amount.amount.value != 0, amount.amount.nanos != 0 {
+            if let amount, amount.amount != .zero {
                 switch amount.currency {
                 case .stars:
                     if amount.amount.value == 1 {
                         amountString = "1 Star"
                     } else {
-                        amountString = "\(amount) Stars"
+                        amountString = "\(amount.amount) Stars"
                     }
                 case .ton:
                     if amount.amount.value == 1 {
                         amountString = "1 TON"
                     } else {
-                        amountString = "\(amount) TON"
+                        amountString = "\(formatTonAmountText(amount.amount.value, dateTimeFormat: item.presentationData.dateTimeFormat)) TON"
                     }
                 }
             } else {
@@ -81,7 +81,7 @@ public final class ChatMessageSuggestedPostInfoNode: ASDisplayNode {
             
             var timestampString: String
             if let timestamp {
-                timestampString = humanReadableStringForTimestamp(strings: item.presentationData.strings, dateTimeFormat: PresentationDateTimeFormat(), timestamp: timestamp, alwaysShowTime: true).string
+                timestampString = humanReadableStringForTimestamp(strings: item.presentationData.strings, dateTimeFormat: item.presentationData.dateTimeFormat, timestamp: timestamp, alwaysShowTime: true).string
                 if timestampString.count > 1 {
                     timestampString = String(timestampString[timestampString.startIndex]).capitalized + timestampString[timestampString.index(after: timestampString.startIndex)...]
                 }

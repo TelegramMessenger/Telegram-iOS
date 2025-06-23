@@ -481,7 +481,7 @@ private final class SheetContent: CombinedComponent {
                                     accentColor: theme.list.itemAccentColor,
                                     value: state.amount?.value,
                                     minValue: minAmount?.value,
-                                    maxValue: maxAmount?.value,
+                                    maxValue: state.currency == .ton ? nil : maxAmount?.value,
                                     placeholderText: amountPlaceholder,
                                     labelText: amountLabel,
                                     currency: state.currency,

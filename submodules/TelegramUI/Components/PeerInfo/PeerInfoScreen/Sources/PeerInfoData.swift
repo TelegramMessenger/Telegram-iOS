@@ -382,6 +382,7 @@ final class PeerInfoScreenData {
     let isPremiumRequiredForStoryPosting: Bool
     let personalChannel: PeerInfoPersonalChannelData?
     let starsState: StarsContext.State?
+    let tonState: StarsContext.State?
     let starsRevenueStatsState: StarsRevenueStats?
     let starsRevenueStatsContext: StarsRevenueStatsContext?
     let revenueStatsState: RevenueStats?
@@ -433,6 +434,7 @@ final class PeerInfoScreenData {
         isPremiumRequiredForStoryPosting: Bool,
         personalChannel: PeerInfoPersonalChannelData?,
         starsState: StarsContext.State?,
+        tonState: StarsContext.State?,
         starsRevenueStatsState: StarsRevenueStats?,
         starsRevenueStatsContext: StarsRevenueStatsContext?,
         revenueStatsState: RevenueStats?,
@@ -472,6 +474,7 @@ final class PeerInfoScreenData {
         self.isPremiumRequiredForStoryPosting = isPremiumRequiredForStoryPosting
         self.personalChannel = personalChannel
         self.starsState = starsState
+        self.tonState = tonState
         self.starsRevenueStatsState = starsRevenueStatsState
         self.starsRevenueStatsContext = starsRevenueStatsContext
         self.revenueStatsState = revenueStatsState
@@ -752,7 +755,7 @@ private func peerInfoPersonalOrLinkedChannel(context: AccountContext, peerId: En
     |> distinctUntilChanged
 }
 
-func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, accountsAndPeers: Signal<[(AccountContext, EnginePeer, Int32)], NoError>, activeSessionsContextAndCount: Signal<(ActiveSessionsContext, Int, WebSessionsContext)?, NoError>, notificationExceptions: Signal<NotificationExceptionsList?, NoError>, privacySettings: Signal<AccountPrivacySettings?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>, hasPassport: Signal<Bool, NoError>, starsContext: StarsContext?) -> Signal<PeerInfoScreenData, NoError> {
+func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, accountsAndPeers: Signal<[(AccountContext, EnginePeer, Int32)], NoError>, activeSessionsContextAndCount: Signal<(ActiveSessionsContext, Int, WebSessionsContext)?, NoError>, notificationExceptions: Signal<NotificationExceptionsList?, NoError>, privacySettings: Signal<AccountPrivacySettings?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>, hasPassport: Signal<Bool, NoError>, starsContext: StarsContext?, tonContext: StarsContext?) -> Signal<PeerInfoScreenData, NoError> {
     let preferences = context.sharedContext.accountManager.sharedData(keys: [
         SharedDataKeys.proxySettings,
         ApplicationSpecificSharedDataKeys.inAppNotificationSettings,
@@ -852,6 +855,12 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
     } else {
         starsState = .single(nil)
     }
+    let tonState: Signal<StarsContext.State?, NoError>
+    if let tonContext {
+        tonState = tonContext.state
+    } else {
+        tonState = .single(nil)
+    }
     
     let profileGiftsContext = ProfileGiftsContext(account: context.account, peerId: peerId)
     
@@ -879,9 +888,10 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
         hasStories,
         bots,
         peerInfoPersonalOrLinkedChannel(context: context, peerId: peerId, isSettings: true),
-        starsState
+        starsState,
+        tonState
     )
-    |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, accountPreferences, suggestions, limits, hasPassword, isPowerSavingEnabled, hasStories, bots, personalChannel, starsState -> PeerInfoScreenData in
+    |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, accountPreferences, suggestions, limits, hasPassword, isPowerSavingEnabled, hasStories, bots, personalChannel, starsState, tonState -> PeerInfoScreenData in
         let (notificationExceptions, notificationsAuthorizationStatus, notificationsWarningSuppressed) = notifications
         let (featuredStickerPacks, archivedStickerPacks) = stickerPacks
         
@@ -960,6 +970,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
             isPremiumRequiredForStoryPosting: true,
             personalChannel: personalChannel,
             starsState: starsState,
+            tonState: tonState,
             starsRevenueStatsState: nil,
             starsRevenueStatsContext: nil,
             revenueStatsState: nil,
@@ -1010,6 +1021,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 isPremiumRequiredForStoryPosting: true,
                 personalChannel: nil,
                 starsState: nil,
+                tonState: nil,
                 starsRevenueStatsState: nil,
                 starsRevenueStatsContext: nil,
                 revenueStatsState: nil,
@@ -1469,6 +1481,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     isPremiumRequiredForStoryPosting: false,
                     personalChannel: personalChannel,
                     starsState: nil,
+                    tonState: nil,
                     starsRevenueStatsState: starsRevenueContextAndState.1,
                     starsRevenueStatsContext: starsRevenueContextAndState.0,
                     revenueStatsState: revenueContextAndState.1,
@@ -1700,6 +1713,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     isPremiumRequiredForStoryPosting: isPremiumRequiredForStoryPosting,
                     personalChannel: personalChannel,
                     starsState: nil,
+                    tonState: nil,
                     starsRevenueStatsState: starsRevenueContextAndState.1,
                     starsRevenueStatsContext: starsRevenueContextAndState.0,
                     revenueStatsState: revenueContextAndState.1,
@@ -2032,6 +2046,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     isPremiumRequiredForStoryPosting: isPremiumRequiredForStoryPosting,
                     personalChannel: nil,
                     starsState: nil,
+                    tonState: nil,
                     starsRevenueStatsState: starsRevenueContextAndState.1,
                     starsRevenueStatsContext: starsRevenueContextAndState.0,
                     revenueStatsState: nil,

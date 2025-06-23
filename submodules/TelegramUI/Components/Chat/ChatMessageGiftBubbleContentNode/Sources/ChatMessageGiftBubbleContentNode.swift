@@ -413,6 +413,20 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                             title = item.presentationData.strings.Notification_StarsGift_Title(Int32(count))
                             text = incoming ? item.presentationData.strings.Notification_StarsGift_Subtitle : item.presentationData.strings.Notification_StarsGift_SubtitleYou(peerName).string
+                        case let .giftTon(currency, amount, cryptoCurrency, cryptoAmount, _):
+                            var peerName = ""
+                            if let peer = item.message.peers[item.message.id.peerId] {
+                                peerName = EnginePeer(peer).compactDisplayTitle
+                            }
+                            //TODO:localize
+                            let _ = currency
+                            let _ = amount
+                            let _ = cryptoCurrency
+                            
+                            let cryptoAmount = cryptoAmount ?? 0
+                            
+                            title = item.presentationData.strings.Notification_StarsGift_Title(Int32(cryptoAmount))
+                            text = incoming ? item.presentationData.strings.Notification_StarsGift_Subtitle : item.presentationData.strings.Notification_StarsGift_SubtitleYou(peerName).string
                         case let .prizeStars(count, _, channelId, _, _):
                             if count <= 1000 {
                                 months = 3

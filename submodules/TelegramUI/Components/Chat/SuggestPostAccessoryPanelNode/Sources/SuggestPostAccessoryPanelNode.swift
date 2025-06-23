@@ -35,6 +35,7 @@ public final class SuggestPostAccessoryPanelNode: AccessoryPanelNode {
     private let context: AccountContext
     public var theme: PresentationTheme
     public var strings: PresentationStrings
+    private let dateTimeFormat: PresentationDateTimeFormat
     
     private var textIsOptions: Bool = false
     
@@ -47,6 +48,7 @@ public final class SuggestPostAccessoryPanelNode: AccessoryPanelNode {
         self.context = context
         self.theme = theme
         self.strings = strings
+        self.dateTimeFormat = dateTimeFormat
         
         self.closeButton = HighlightableButtonNode()
         self.closeButton.accessibilityLabel = strings.VoiceOver_DiscardPreparedContent
@@ -241,11 +243,14 @@ public final class SuggestPostAccessoryPanelNode: AccessoryPanelNode {
         let textString: NSAttributedString
         if let postSuggestionState = interfaceState.interfaceState.postSuggestionState, let price = postSuggestionState.price, price.amount != .zero {
             let currencySymbol: String
+            let amountString: String
             switch price.currency {
             case .stars:
                 currencySymbol = "#"
+                amountString = "\(price.amount)"
             case .ton:
                 currencySymbol = "$"
+                amountString = formatTonAmountText(price.amount.value, dateTimeFormat: self.dateTimeFormat)
             }
             if let timestamp = postSuggestionState.timestamp {
                 let timeString = humanReadableStringForTimestamp(strings: interfaceState.strings, dateTimeFormat: interfaceState.dateTimeFormat, timestamp: timestamp, alwaysShowTime: true, allowYesterday: false, format: HumanReadableStringFormat(
@@ -262,9 +267,9 @@ public final class SuggestPostAccessoryPanelNode: AccessoryPanelNode {
                         return PresentationStrings.FormattedString(string: interfaceState.strings.SuggestPost_SetTimeFormat_TodayAt(value).string, ranges: [])
                     }
                 )).string
-                textString = NSAttributedString(string: "\(currencySymbol)\(price.amount)  📅 \(timeString)", font: textFont, textColor: self.theme.chat.inputPanel.primaryTextColor)
+                textString = NSAttributedString(string: "\(currencySymbol)\(amountString)  📅 \(timeString)", font: textFont, textColor: self.theme.chat.inputPanel.primaryTextColor)
             } else {
-                textString = NSAttributedString(string: "\(currencySymbol)\(price.amount) for publishing anytime", font: textFont, textColor: self.theme.chat.inputPanel.primaryTextColor)
+                textString = NSAttributedString(string: "\(currencySymbol)\(amountString) for publishing anytime", font: textFont, textColor: self.theme.chat.inputPanel.primaryTextColor)
             }
         } else {
             textString = NSAttributedString(string: "Tap to offer a price for publishing", font: textFont, textColor: self.theme.chat.inputPanel.primaryTextColor)
