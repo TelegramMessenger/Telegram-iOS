@@ -848,7 +848,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
             |> distinctUntilChanged
         }
     }
-    
+
     let starsState: Signal<StarsContext.State?, NoError>
     if let starsContext {
         starsState = starsContext.state

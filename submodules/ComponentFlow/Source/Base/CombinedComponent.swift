@@ -724,11 +724,15 @@ public extension CombinedComponent {
                             updatedChild.view.center = updatedChild._position ?? CGPoint()
                             updatedChild.view.transform = CGAffineTransform(scaleX: scale, y: scale)
                         } else {
-                            updatedChild.view.bounds = CGRect(origin: CGPoint(), size: updatedChild.size)
-                            if updatedChild.view.layer.anchorPoint != CGPoint(x: 0.5, y: 0.5) {
-                                updatedChild.view.layer.position = updatedChild._position ?? CGPoint()
+                            if updatedChild.view is UIScrollView {
+                                updatedChild.view.frame = updatedChild.size.centered(around: updatedChild._position ?? CGPoint())
                             } else {
-                                updatedChild.view.center = updatedChild._position ?? CGPoint()
+                                updatedChild.view.bounds = CGRect(origin: CGPoint(), size: updatedChild.size)
+                                if updatedChild.view.layer.anchorPoint != CGPoint(x: 0.5, y: 0.5) {
+                                    updatedChild.view.layer.position = updatedChild._position ?? CGPoint()
+                                } else {
+                                    updatedChild.view.center = updatedChild._position ?? CGPoint()
+                                }
                             }
                         }
                         

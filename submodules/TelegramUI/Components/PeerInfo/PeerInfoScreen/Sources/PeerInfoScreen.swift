@@ -1037,9 +1037,9 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         }
     }
     if let tonState = data.tonState {
-        if !isPremiumDisabled || tonState.balance != .zero {
+        if abs(tonState.balance.value) > 0 {
             let balanceText: NSAttributedString
-            if tonState.balance != .zero {
+            if abs(tonState.balance.value) > 0 {
                 let formattedLabel = formatTonAmountText(tonState.balance.value, dateTimeFormat: presentationData.dateTimeFormat)
                 let smallLabelFont = Font.regular(floor(presentationData.listsFontSize.itemListBaseFontSize / 17.0 * 13.0))
                 let labelFont = Font.regular(presentationData.listsFontSize.itemListBaseFontSize)
@@ -1049,19 +1049,19 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
                 balanceText = NSAttributedString()
             }
             //TODO:localize
-            items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 105, label: .attributedText(balanceText), text: "TON", icon: PresentationResourcesSettings.ton, action: {
+            items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 103, label: .attributedText(balanceText), text: "My TON", icon: PresentationResourcesSettings.ton, action: {
                 interaction.openSettings(.ton)
             }))
         }
     }
     if !isPremiumDisabled || context.isPremium {
-        items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 103, label: .text(""), additionalBadgeLabel: nil, text: presentationData.strings.Settings_Business, icon: PresentationResourcesSettings.business, action: {
+        items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 104, label: .text(""), additionalBadgeLabel: nil, text: presentationData.strings.Settings_Business, icon: PresentationResourcesSettings.business, action: {
             interaction.openSettings(.businessSetup)
         }))
     }
     if let starsState = data.starsState {
         if !isPremiumDisabled || starsState.balance > StarsAmount.zero {
-            items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 104, label: .text(""), text: presentationData.strings.Settings_SendGift, icon: PresentationResourcesSettings.premiumGift, action: {
+            items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 105, label: .text(""), text: presentationData.strings.Settings_SendGift, icon: PresentationResourcesSettings.premiumGift, action: {
                 interaction.openSettings(.premiumGift)
             }))
         }
@@ -10670,7 +10670,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
         case .ton:
             if let tonContext = self.controller?.tonContext {
-                push(self.context.sharedContext.makeStarsTransactionsScreen(context: self.context, starsContext: tonContext))
+                push(self.context.sharedContext.makeTonTransactionsScreen(context: self.context, tonContext: tonContext))
             }
         }
     }
@@ -12971,16 +12971,21 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
             self.chatLocation = .peer(id: peerId)
         }
         
-        if isSettings, let starsContext = context.starsContext {
-            self.starsContext = starsContext
-            starsContext.load(force: true)
+        if isSettings {
+            if let starsContext = context.starsContext {
+                self.starsContext = starsContext
+                starsContext.load(force: true)
+            } else {
+                self.starsContext = nil
+            }
+            if let tonContext = context.tonContext {
+                self.tonContext = tonContext
+                tonContext.load(force: true)
+            } else {
+                self.tonContext = nil
+            }
         } else {
             self.starsContext = nil
-        }
-        if isSettings, let tonContext = context.tonContext {
-            self.tonContext = tonContext
-            tonContext.load(force: true)
-        } else {
             self.tonContext = nil
         }
         

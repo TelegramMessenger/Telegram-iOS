@@ -280,9 +280,9 @@ final class StarsTransactionItemNode: ListViewItemNode, ItemListItemNode {
                     let itemLabel: NSAttributedString
                     let labelString: String
                     
-                    let absCount = StarsAmount(value: abs(item.transaction.count.value), nanos: abs(item.transaction.count.nanos))
+                    let absCount = StarsAmount(value: abs(item.transaction.count.amount.value), nanos: abs(item.transaction.count.amount.nanos))
                     let formattedLabel = presentationStringsFormattedNumber(absCount, item.presentationData.dateTimeFormat.groupingSeparator)
-                    if item.transaction.count < StarsAmount.zero {
+                    if item.transaction.count.amount < StarsAmount.zero {
                         labelString = "- \(formattedLabel)"
                     } else {
                         labelString = "+ \(formattedLabel)"

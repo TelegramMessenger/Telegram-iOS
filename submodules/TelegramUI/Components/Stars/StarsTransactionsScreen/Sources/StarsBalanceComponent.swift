@@ -16,8 +16,8 @@ final class StarsBalanceComponent: Component {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let dateTimeFormat: PresentationDateTimeFormat
-    let currency: CurrencyAmount.Currency
     let count: StarsAmount
+    let isTon: Bool
     let rate: Double?
     let actionTitle: String
     let actionAvailable: Bool
@@ -35,8 +35,8 @@ final class StarsBalanceComponent: Component {
         theme: PresentationTheme,
         strings: PresentationStrings,
         dateTimeFormat: PresentationDateTimeFormat,
-        currency: CurrencyAmount.Currency,
         count: StarsAmount,
+        isTon: Bool = false,
         rate: Double?,
         actionTitle: String,
         actionAvailable: Bool,
@@ -53,8 +53,8 @@ final class StarsBalanceComponent: Component {
         self.theme = theme
         self.strings = strings
         self.dateTimeFormat = dateTimeFormat
-        self.currency = currency
         self.count = count
+        self.isTon = isTon
         self.rate = rate
         self.actionTitle = actionTitle
         self.actionAvailable = actionAvailable
@@ -100,6 +100,9 @@ final class StarsBalanceComponent: Component {
         if lhs.count != rhs.count {
             return false
         }
+        if lhs.isTon != rhs.isTon {
+            return false
+        }
         if lhs.rate != rhs.rate {
             return false
         }
@@ -123,8 +126,6 @@ final class StarsBalanceComponent: Component {
         override init(frame: CGRect) {
             super.init(frame: frame)
             
-            self.icon.image = UIImage(bundleImageName: "Premium/Stars/BalanceStar")
-            
             self.addSubview(self.icon)
         }
         
@@ -133,6 +134,14 @@ final class StarsBalanceComponent: Component {
         }
         
         func update(component: StarsBalanceComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+            if self.component == nil {
+                if component.isTon {
+                    self.icon.image = generateTintedImage(image: UIImage(bundleImageName: "Ads/TonBig"), color: component.theme.list.itemAccentColor)
+                } else {
+                    self.icon.image = UIImage(bundleImageName: "Premium/Stars/BalanceStar")
+                }
+            }
+            
             self.component = component
             self.state = state
             
@@ -168,11 +177,10 @@ final class StarsBalanceComponent: Component {
             var contentHeight: CGFloat = sideInset
             
             let formattedLabel: String
-            switch component.currency {
-            case .stars:
-                formattedLabel = formatStarsAmountText(component.count, dateTimeFormat: component.dateTimeFormat)
-            case .ton:
+            if component.isTon {
                 formattedLabel = formatTonAmountText(component.count.value, dateTimeFormat: component.dateTimeFormat)
+            } else {
+                formattedLabel = formatStarsAmountText(component.count, dateTimeFormat: component.dateTimeFormat)
             }
             let labelFont: UIFont
             if formattedLabel.contains(component.dateTimeFormat.decimalSeparator) {
@@ -197,13 +205,13 @@ final class StarsBalanceComponent: Component {
                     self.addSubview(titleView)
                 }
                 if let icon = self.icon.image {
-                    let spacing: CGFloat = 3.0
+                    let spacing: CGFloat = 4.0
                     let totalWidth = titleSize.width + icon.size.width + spacing
                     let origin = floorToScreenPixels((availableSize.width - totalWidth) / 2.0)
                     let titleFrame = CGRect(origin: CGPoint(x: origin + icon.size.width + spacing, y: contentHeight - 3.0), size: titleSize)
                     titleView.frame = titleFrame
-                    
-                    self.icon.frame = CGRect(origin: CGPoint(x: origin, y: contentHeight), size: icon.size)
+                                        
+                    self.icon.frame = CGRect(origin: CGPoint(x: origin, y: floorToScreenPixels(titleFrame.midY - icon.size.height / 2.0)), size: icon.size)
                 }
             }
             contentHeight += titleSize.height

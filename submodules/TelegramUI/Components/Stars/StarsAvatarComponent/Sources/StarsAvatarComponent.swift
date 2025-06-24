@@ -372,40 +372,34 @@ public final class StarsAvatarComponent: Component {
 }
 
 public final class StarsLabelComponent: CombinedComponent {
-    let theme: PresentationTheme
-    let currency: CurrencyAmount.Currency
-    let textColor: UIColor
     let text: NSAttributedString
     let subtext: NSAttributedString?
+    let iconName: String
+    let iconColor: UIColor?
     
     public init(
-        theme: PresentationTheme,
-        currency: CurrencyAmount.Currency,
-        textColor: UIColor,
         text: NSAttributedString,
-        subtext: NSAttributedString? = nil
+        subtext: NSAttributedString? = nil,
+        iconName: String = "Premium/Stars/StarMedium",
+        iconColor: UIColor? = nil
     ) {
-        self.currency = currency
-        self.theme = theme
-        self.textColor = textColor
         self.text = text
         self.subtext = subtext
+        self.iconName = iconName
+        self.iconColor = iconColor
     }
     
     public static func ==(lhs: StarsLabelComponent, rhs: StarsLabelComponent) -> Bool {
-        if lhs.currency != rhs.currency {
-            return false
-        }
-        if lhs.theme !== rhs.theme {
-            return false
-        }
-        if lhs.textColor != rhs.textColor {
-            return false
-        }
         if lhs.text != rhs.text {
             return false
         }
         if lhs.subtext != rhs.subtext {
+            return false
+        }
+        if lhs.iconName != rhs.iconName {
+            return false
+        }
+        if lhs.iconColor != rhs.iconColor {
             return false
         }
         return true
@@ -424,6 +418,7 @@ public final class StarsLabelComponent: CombinedComponent {
                 availableSize: CGSize(width: 140.0, height: 40.0),
                 transition: context.transition
             )
+            
 
             var subtext: _UpdatedChildComponent? = nil
             if let sublabel = component.subtext {
@@ -434,12 +429,11 @@ public final class StarsLabelComponent: CombinedComponent {
                 )
             }
                         
-            let iconSize: CGSize = component.currency == .ton ? CGSize(width: 16.0, height: 16.0) : CGSize(width: 20.0, height: 20.0)
+            let iconSize = CGSize(width: 20.0, height: 20.0)
             let icon = icon.update(
                 component: BundleIconComponent(
-                    name: component.currency == .ton ? "Ads/TonBig" : "Premium/Stars/StarMedium",
-                    tintColor: component.currency == .ton ? component.textColor : nil,
-                    maxSize: iconSize
+                    name: component.iconName,
+                    tintColor: component.iconColor
                 ),
                 availableSize: iconSize,
                 transition: context.transition
