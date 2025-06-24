@@ -16,6 +16,7 @@ final class StarsBalanceComponent: Component {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let dateTimeFormat: PresentationDateTimeFormat
+    let currency: CurrencyAmount.Currency
     let count: StarsAmount
     let rate: Double?
     let actionTitle: String
@@ -34,6 +35,7 @@ final class StarsBalanceComponent: Component {
         theme: PresentationTheme,
         strings: PresentationStrings,
         dateTimeFormat: PresentationDateTimeFormat,
+        currency: CurrencyAmount.Currency,
         count: StarsAmount,
         rate: Double?,
         actionTitle: String,
@@ -51,6 +53,7 @@ final class StarsBalanceComponent: Component {
         self.theme = theme
         self.strings = strings
         self.dateTimeFormat = dateTimeFormat
+        self.currency = currency
         self.count = count
         self.rate = rate
         self.actionTitle = actionTitle
@@ -164,7 +167,13 @@ final class StarsBalanceComponent: Component {
             let sideInset: CGFloat = 16.0
             var contentHeight: CGFloat = sideInset
             
-            let formattedLabel = formatStarsAmountText(component.count, dateTimeFormat: component.dateTimeFormat)
+            let formattedLabel: String
+            switch component.currency {
+            case .stars:
+                formattedLabel = formatStarsAmountText(component.count, dateTimeFormat: component.dateTimeFormat)
+            case .ton:
+                formattedLabel = formatTonAmountText(component.count.value, dateTimeFormat: component.dateTimeFormat)
+            }
             let labelFont: UIFont
             if formattedLabel.contains(component.dateTimeFormat.decimalSeparator) {
                 labelFont = Font.with(size: 48.0, design: .round, weight: .semibold)

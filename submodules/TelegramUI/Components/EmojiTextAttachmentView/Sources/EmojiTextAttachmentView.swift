@@ -487,8 +487,11 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
                 if tinted {
                     self.updateTintColor()
                 }
-            case .ton:
-                self.updateTon()
+            case let .ton(tinted):
+                self.updateTon(tinted: tinted)
+                if tinted {
+                    self.updateTintColor()
+                }
             case let .animation(name):
                 self.updateLocalAnimation(name: name, attemptSynchronousLoad: attemptSynchronousLoad)
             case .verification:
@@ -581,7 +584,7 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
                 }
             } else if let emoji = self.arguments?.emoji, let custom = emoji.custom {
                 switch custom {
-                case .stars(true), .verification:
+                case .stars(true), .ton(true), .verification:
                     customColor = self.dynamicColor
                 default:
                     break
@@ -687,8 +690,8 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         self.contents = tinted ? tintedStarImage?.cgImage : starImage?.cgImage
     }
     
-    private func updateTon() {
-        self.contents = tonImage?.cgImage
+    private func updateTon(tinted: Bool) {
+        self.contents = tinted ? tintedTonImage?.cgImage : tonImage?.cgImage
     }
     
     private func updateVerification() {
@@ -1048,6 +1051,16 @@ private let tonImage: UIImage? = {
         context.clear(CGRect(origin: .zero, size: size))
         
         if let image = generateTintedImage(image: UIImage(bundleImageName: "Ads/TonBig"), color: UIColor(rgb: 0x007aff)), let cgImage = image.cgImage {
+            context.draw(cgImage, in: CGRect(origin: .zero, size: size).insetBy(dx: 4.0, dy: 4.0), byTiling: false)
+        }
+    })?.withRenderingMode(.alwaysTemplate)
+}()
+
+private let tintedTonImage: UIImage? = {
+    generateImage(CGSize(width: 32.0, height: 32.0), contextGenerator: { size, context in
+        context.clear(CGRect(origin: .zero, size: size))
+        
+        if let image = generateTintedImage(image: UIImage(bundleImageName: "Ads/TonBig"), color: .white), let cgImage = image.cgImage {
             context.draw(cgImage, in: CGRect(origin: .zero, size: size).insetBy(dx: 4.0, dy: 4.0), byTiling: false)
         }
     })?.withRenderingMode(.alwaysTemplate)

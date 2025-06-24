@@ -1016,8 +1016,8 @@ extension StoreMessage {
                     attributes.append(SuggestedPostMessageAttribute(apiSuggestedPost: suggestedPost))
                 }
             
-                if (flags2 & (1 << 8)) != 0 {
-                    attributes.append(PublishedSuggestedPostMessageAttribute())
+                if (flags2 & (1 << 8)) != 0 || (flags2 & (1 << 9)) != 0 {
+                    attributes.append(PublishedSuggestedPostMessageAttribute(currency: (flags2 & (1 << 8)) != 0 ? .stars : .ton))
                 }
                 
                 var storeFlags = StoreMessageFlags()

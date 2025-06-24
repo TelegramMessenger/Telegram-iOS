@@ -287,7 +287,8 @@ final class StarsTransactionItemNode: ListViewItemNode, ItemListItemNode {
                     } else {
                         labelString = "+ \(formattedLabel)"
                     }
-                    itemLabel = NSAttributedString(string: labelString, font: Font.medium(fontBaseDisplaySize), textColor: labelString.hasPrefix("-") ? item.presentationData.theme.list.itemDestructiveColor : item.presentationData.theme.list.itemDisclosureActions.constructive.fillColor)
+                    let itemLabelColor = labelString.hasPrefix("-") ? item.presentationData.theme.list.itemDestructiveColor : item.presentationData.theme.list.itemDisclosureActions.constructive.fillColor
+                    itemLabel = NSAttributedString(string: labelString, font: Font.medium(fontBaseDisplaySize), textColor: itemLabelColor)
                     
                     var itemDateColor = item.presentationData.theme.list.itemSecondaryTextColor
                     itemDate = stringForMediumCompactDate(timestamp: item.transaction.date, strings: item.presentationData.strings, dateTimeFormat: item.presentationData.dateTimeFormat)
@@ -341,7 +342,7 @@ final class StarsTransactionItemNode: ListViewItemNode, ItemListItemNode {
                             contentInsets: UIEdgeInsets(top: 9.0, left: 0.0, bottom: 8.0, right: 0.0),
                             leftIcon: .custom(AnyComponentWithIdentity(id: "avatar", component: AnyComponent(StarsAvatarComponent(context: item.context, theme: item.presentationData.theme, peer: item.transaction.peer, photo: nil, media: [], uniqueGift: nil, backgroundColor: item.presentationData.theme.list.itemBlocksBackgroundColor))), false),
                             icon: nil,
-                            accessory: .custom(ListActionItemComponent.CustomAccessory(component: AnyComponentWithIdentity(id: "label", component: AnyComponent(StarsLabelComponent(text: itemLabel))), insets: UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 16.0))),
+                            accessory: .custom(ListActionItemComponent.CustomAccessory(component: AnyComponentWithIdentity(id: "label", component: AnyComponent(StarsLabelComponent(theme: item.presentationData.theme, currency: item.transaction.currency, textColor: itemLabelColor, text: itemLabel))), insets: UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 16.0))),
                             action: { [weak self] _ in
                                 guard let self, let item = self.item else {
                                     return

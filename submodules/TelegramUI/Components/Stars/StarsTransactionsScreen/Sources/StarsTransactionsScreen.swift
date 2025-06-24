@@ -522,12 +522,23 @@ final class StarsTransactionsScreenComponent: Component {
                 }
                 starTransition.setBounds(view: starView, bounds: starFrame)
             }
+            
+            let titleString: String
+            let descriptionString: String
+            if component.starsContext.ton {
+                //TODO:localize
+                titleString = "TON"
+                descriptionString = "Use TON to unlock content and services on Telegram"
+            } else {
+                titleString = environment.strings.Stars_Intro_Title
+                descriptionString = environment.strings.Stars_Intro_Description
+            }
                        
             let titleSize = self.titleView.update(
                 transition: .immediate,
                 component: AnyComponent(
                     MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: environment.strings.Stars_Intro_Title, font: Font.bold(28.0), textColor: environment.theme.list.itemPrimaryTextColor)),
+                        text: .plain(NSAttributedString(string: titleString, font: Font.bold(28.0), textColor: environment.theme.list.itemPrimaryTextColor)),
                         horizontalAlignment: .center,
                         truncationType: .end,
                         maximumNumberOfLines: 1
@@ -557,7 +568,12 @@ final class StarsTransactionsScreenComponent: Component {
                 containerSize: CGSize(width: 120.0, height: 100.0)
             )
             
-            let formattedBalance = formatStarsAmountText(self.starsState?.balance ?? StarsAmount.zero, dateTimeFormat: environment.dateTimeFormat)
+            let formattedBalance: String
+            if component.starsContext.ton {
+                formattedBalance = formatTonAmountText(self.starsState?.balance.value ?? 0, dateTimeFormat: environment.dateTimeFormat)
+            } else {
+                formattedBalance = formatStarsAmountText(self.starsState?.balance ?? StarsAmount.zero, dateTimeFormat: environment.dateTimeFormat)
+            }
             let smallLabelFont = Font.regular(11.0)
             let labelFont = Font.semibold(14.0)
             let balanceText = tonAmountAttributedString(formattedBalance, integralFont: labelFont, fractionalFont: smallLabelFont, color: environment.theme.actionSheet.primaryTextColor, decimalSeparator: environment.dateTimeFormat.decimalSeparator)
@@ -573,7 +589,11 @@ final class StarsTransactionsScreenComponent: Component {
             )
             let topBalanceIconSize = self.topBalanceIconView.update(
                 transition: .immediate,
-                component: AnyComponent(BundleIconComponent(name: "Premium/Stars/StarSmall", tintColor: nil)),
+                component: AnyComponent(BundleIconComponent(
+                    name: component.starsContext.ton ? "Ads/TonBig" : "Premium/Stars/StarSmall",
+                    tintColor: component.starsContext.ton ? environment.theme.list.itemAccentColor : nil,
+                    maxSize: component.starsContext.ton ? CGSize(width: 12.0, height: 12.0) : nil
+                )),
                 environment: {},
                 containerSize: availableSize
             )
@@ -598,7 +618,10 @@ final class StarsTransactionsScreenComponent: Component {
                 starTransition.setFrame(view: topBalanceValueView, frame: topBalanceValueFrame)
             }
             
-            let topBalanceIconFrame = CGRect(origin: CGPoint(x: topBalanceValueFrame.minX - topBalanceIconSize.width - 2.0, y: floorToScreenPixels(topBalanceValueFrame.midY - topBalanceIconSize.height / 2.0) - UIScreenPixel), size: topBalanceIconSize)
+            var topBalanceIconFrame = CGRect(origin: CGPoint(x: topBalanceValueFrame.minX - topBalanceIconSize.width - 2.0, y: floorToScreenPixels(topBalanceValueFrame.midY - topBalanceIconSize.height / 2.0) - UIScreenPixel), size: topBalanceIconSize)
+            if component.starsContext.ton {
+                topBalanceIconFrame.origin.y += 1.0 - UIScreenPixel
+            }
             if let topBalanceIconView = self.topBalanceIconView.view {
                 if topBalanceIconView.superview == nil {
                     topBalanceIconView.alpha = 0.0
@@ -613,7 +636,7 @@ final class StarsTransactionsScreenComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(
                     BalancedTextComponent(
-                        text: .plain(NSAttributedString(string: environment.strings.Stars_Intro_Description, font: Font.regular(15.0), textColor: environment.theme.list.itemPrimaryTextColor)),
+                        text: .plain(NSAttributedString(string: descriptionString, font: Font.regular(15.0), textColor: environment.theme.list.itemPrimaryTextColor)),
                         horizontalAlignment: .center,
                         maximumNumberOfLines: 0,
                         lineSpacing: 0.2
@@ -648,6 +671,7 @@ final class StarsTransactionsScreenComponent: Component {
                             theme: environment.theme,
                             strings: environment.strings,
                             dateTimeFormat: environment.dateTimeFormat,
+                            currency: component.starsContext.ton ? .ton : .stars,
                             count: self.starsState?.balance ?? StarsAmount.zero,
                             rate: nil,
                             actionTitle: withdrawAvailable ? environment.strings.Stars_Intro_BuyShort : environment.strings.Stars_Intro_Buy,
@@ -705,7 +729,7 @@ final class StarsTransactionsScreenComponent: Component {
             contentHeight += 34.0
             
             var canJoinRefProgram = false
-            if let data = component.context.currentAppConfiguration.with({ $0 }).data, let value = data["starref_connect_allowed"] {
+            if !component.starsContext.ton, let data = component.context.currentAppConfiguration.with({ $0 }).data, let value = data["starref_connect_allowed"] {
                 if let value = value as? Double {
                     canJoinRefProgram = value != 0.0
                 } else if let value = value as? Bool {
@@ -835,10 +859,11 @@ final class StarsTransactionsScreenComponent: Component {
                             MultilineTextComponent(text: .plain(NSAttributedString(string: isExpired ? environment.strings.Stars_Intro_Subscriptions_ExpiredStatus : environment.strings.Stars_Intro_Subscriptions_Cancelled, font: Font.regular(floor(fontBaseDisplaySize * 13.0 / 17.0)), textColor: environment.theme.list.itemDestructiveColor)))
                         ))
                     } else {
-                        let itemLabel = NSAttributedString(string: "\(subscription.pricing.amount)", font: Font.medium(fontBaseDisplaySize), textColor: environment.theme.list.itemPrimaryTextColor)
+                        let itemLabelColor = environment.theme.list.itemPrimaryTextColor
+                        let itemLabel = NSAttributedString(string: "\(subscription.pricing.amount)", font: Font.medium(fontBaseDisplaySize), textColor: itemLabelColor)
                         let itemSublabel = NSAttributedString(string: environment.strings.Stars_Intro_Subscriptions_PerMonth, font: Font.regular(floor(fontBaseDisplaySize * 13.0 / 17.0)), textColor: environment.theme.list.itemSecondaryTextColor)
                         
-                        labelComponent = AnyComponentWithIdentity(id: "label", component: AnyComponent(StarsLabelComponent(text: itemLabel, subtext: itemSublabel)))
+                        labelComponent = AnyComponentWithIdentity(id: "label", component: AnyComponent(StarsLabelComponent(theme: environment.theme, currency: component.starsContext.ton ? .ton : .stars, textColor: itemLabelColor, text: itemLabel, subtext: itemSublabel)))
                     }
                     
                     subscriptionsItems.append(AnyComponentWithIdentity(

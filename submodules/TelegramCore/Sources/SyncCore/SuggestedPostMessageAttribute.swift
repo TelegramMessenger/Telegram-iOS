@@ -93,16 +93,24 @@ extension SuggestedPostMessageAttribute {
 }
 
 public final class PublishedSuggestedPostMessageAttribute: Equatable, MessageAttribute {
-    public init() {
+    public let currency: CurrencyAmount.Currency
+    
+    public init(currency: CurrencyAmount.Currency) {
+        self.currency = currency
     }
     
     public init(decoder: PostboxDecoder) {
+        self.currency = CurrencyAmount.Currency(rawValue: decoder.decodeInt32ForKey("c", orElse: 0)) ?? .stars
     }
     
     public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeInt32(self.currency.rawValue, forKey: "c")
     }
     
     public static func == (lhs: PublishedSuggestedPostMessageAttribute, rhs: PublishedSuggestedPostMessageAttribute) -> Bool {
+        if lhs.currency != rhs.currency {
+            return false
+        }
         return true
     }
 }

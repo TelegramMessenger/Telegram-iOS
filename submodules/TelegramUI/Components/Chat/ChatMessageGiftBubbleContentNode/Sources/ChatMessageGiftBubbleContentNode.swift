@@ -112,6 +112,8 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
     private var fetchDisposable: Disposable?
     private var setupTimestamp: Double?
     
+    private var cachedTonImage: (UIImage, UIColor)?
+    
     required public init() {
         self.labelNode = TextNode()
         self.labelNode.isUserInteractionEnabled = false
@@ -339,6 +341,8 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         
         let currentIsExpanded = self.isExpanded
         
+        let cachedTonImage = self.cachedTonImage
+        
         return { item, layoutConstants, _, _, _, _ in
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: true, headerSpacing: 0.0, hidesBackground: .always, forceFullCorners: false, forceAlignment: .center)
                         
@@ -425,8 +429,8 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             
                             let cryptoAmount = cryptoAmount ?? 0
                             
-                            title = item.presentationData.strings.Notification_StarsGift_Title(Int32(cryptoAmount))
-                            text = incoming ? item.presentationData.strings.Notification_StarsGift_Subtitle : item.presentationData.strings.Notification_StarsGift_SubtitleYou(peerName).string
+                            title = "$ \(formatTonAmountText(cryptoAmount, dateTimeFormat: item.presentationData.dateTimeFormat))"
+                            text = incoming ? "Use TON to unlock content and services on Telegram." : "With TON, \(peerName) will be able to unlock content and services on Telegram."
                         case let .prizeStars(count, _, channelId, _, _):
                             if count <= 1000 {
                                 months = 3
@@ -596,7 +600,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 } else {
                                     title = isStoryEntity ? uniqueGift.title : item.presentationData.strings.Notification_StarGift_Title(authorName).string
                                 }
-                                text =  isStoryEntity ? "**\(item.presentationData.strings.Notification_StarGift_Collectible) #\(presentationStringsFormattedNumber(uniqueGift.number, item.presentationData.dateTimeFormat.groupingSeparator))**" : "**\(uniqueGift.title) #\(presentationStringsFormattedNumber(uniqueGift.number, item.presentationData.dateTimeFormat.groupingSeparator))**"
+                                text = isStoryEntity ? "**\(item.presentationData.strings.Notification_StarGift_Collectible) #\(presentationStringsFormattedNumber(uniqueGift.number, item.presentationData.dateTimeFormat.groupingSeparator))**" : "**\(uniqueGift.title) #\(presentationStringsFormattedNumber(uniqueGift.number, item.presentationData.dateTimeFormat.groupingSeparator))**"
                                 ribbonTitle = isStoryEntity ? "" : item.presentationData.strings.Notification_StarGift_Gift
                                 buttonTitle = isStoryEntity ? "" : item.presentationData.strings.Notification_StarGift_View
                                 modelTitle = item.presentationData.strings.Notification_StarGift_Model
@@ -648,7 +652,32 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
                 
-                let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: Font.semibold(15.0), textColor: primaryTextColor, paragraphAlignment: .center), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: giftSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+                let titleAttributedString = NSMutableAttributedString(attributedString: NSAttributedString(string: title, font: Font.semibold(15.0), textColor: primaryTextColor, paragraphAlignment: .center))
+                var updatedCachedTonImage: (UIImage, UIColor)? = cachedTonImage
+                if let range = titleAttributedString.string.range(of: "$") {
+                    if updatedCachedTonImage == nil || updatedCachedTonImage?.1 != primaryTextColor {
+                        if let image = generateTintedImage(image: UIImage(bundleImageName: "Ads/TonAbout"), color: primaryTextColor) {
+                            let imageScale: CGFloat = 0.8
+                            let imageSize = CGSize(width: floor(image.size.width * imageScale), height: floor(image.size.height * imageScale))
+                            updatedCachedTonImage = (generateImage(CGSize(width: imageSize.width + 2.0, height: imageSize.height), opaque: false, scale: nil, rotatedContext: { size, context in
+                                context.clear(CGRect(origin: CGPoint(), size: size))
+                                UIGraphicsPushContext(context)
+                                defer {
+                                    UIGraphicsPopContext()
+                                }
+                                image.draw(in: CGRect(origin: CGPoint(x: 2.0, y: 0.0), size: imageSize))
+                            })!, primaryTextColor)
+                        }
+                    }
+                    if let tonImage = updatedCachedTonImage?.0 {
+                        titleAttributedString.addAttribute(.attachment, value: tonImage, range: NSRange(range, in: titleAttributedString.string))
+                        titleAttributedString.addAttribute(.foregroundColor, value: primaryTextColor, range: NSRange(range, in: titleAttributedString.string))
+                        titleAttributedString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: titleAttributedString.string))
+                        titleAttributedString.addAttribute(.kern, value: 2.0, range: NSRange(range, in: titleAttributedString.string))
+                    }
+                }
+                
+                let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: giftSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
                 
                 let (moreLayout, moreApply) = makeMoreTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Notification_PremiumGift_More, font: Font.semibold(13.0), textColor: primaryTextColor, paragraphAlignment: .center), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: giftSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
                 
@@ -852,6 +881,8 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             
                             strongSelf.animationNode.updateLayout(size: iconSize)
                             strongSelf.placeholderNode.frame = animationFrame
+                            
+                            strongSelf.cachedTonImage = updatedCachedTonImage
                             
                             let _ = labelApply()
                             let _ = titleApply()

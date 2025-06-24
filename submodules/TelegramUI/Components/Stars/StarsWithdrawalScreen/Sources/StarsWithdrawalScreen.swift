@@ -91,7 +91,7 @@ private final class SheetContent: CombinedComponent {
                             theme: environment.theme,
                             strings: environment.strings,
                             currency: state.currency,
-                            balance: state.balance,
+                            balance: state.currency == .stars ? state.starsBalance : state.tonBalance,
                             alignment: .right
                         ),
                         availableSize: CGSize(width: 200.0, height: 200.0),
@@ -169,7 +169,7 @@ private final class SheetContent: CombinedComponent {
                 amountPlaceholder = environment.strings.Stars_Withdraw_AmountPlaceholder
                 
                 minAmount = withdrawConfiguration.minWithdrawAmount.flatMap { StarsAmount(value: $0, nanos: 0) }
-                maxAmount = state.balance
+                maxAmount = state.starsBalance
             case .paidMedia:
                 titleString = environment.strings.Stars_PaidContent_Title
                 amountTitle = environment.strings.Stars_PaidContent_AmountTitle
@@ -237,9 +237,9 @@ private final class SheetContent: CombinedComponent {
             
             let balance: StarsAmount?
             if case .accountWithdraw = component.mode {
-                balance = state.balance
+                balance = state.starsBalance
             } else if case .reaction = component.mode {
-                balance = state.balance
+                balance = state.starsBalance
             } else if case let .withdraw(starsState, _) = component.mode {
                 balance = starsState.balances.availableBalance
             } else {
@@ -329,10 +329,16 @@ private final class SheetContent: CombinedComponent {
                             guard let state else {
                                 return
                             }
+                            
+                            let currency: CurrencyAmount.Currency
                             if id == AnyHashable(0) {
-                                state.currency = .stars
+                                currency = .stars
                             } else {
-                                state.currency = .ton
+                                currency = .ton
+                            }
+                            if state.currency != currency {
+                                state.currency = currency
+                                state.amount = nil
                             }
                             state.updated(transition: .spring(duration: 0.4))
                         }
@@ -485,6 +491,7 @@ private final class SheetContent: CombinedComponent {
                                     placeholderText: amountPlaceholder,
                                     labelText: amountLabel,
                                     currency: state.currency,
+                                    dateTimeFormat: presentationData.dateTimeFormat,
                                     amountUpdated: { [weak state] amount in
                                         state?.amount = amount.flatMap { StarsAmount(value: $0, nanos: 0) }
                                         state?.updated()
@@ -632,13 +639,16 @@ private final class SheetContent: CombinedComponent {
                 case .sender:
                     if let amount = state.amount {
                         let currencySymbol: String
+                        let currencyAmount: String
                         switch state.currency {
                         case .stars:
                             currencySymbol = "#"
+                            currencyAmount = presentationStringsFormattedNumber(amount, environment.dateTimeFormat.groupingSeparator)
                         case .ton:
                             currencySymbol = "$"
+                            currencyAmount = formatTonAmountText(amount.value, dateTimeFormat: environment.dateTimeFormat)
                         }
-                        buttonString = "Offer  \(currencySymbol) \(presentationStringsFormattedNumber(amount, environment.dateTimeFormat.groupingSeparator))"
+                        buttonString = "Offer  \(currencySymbol) \(currencyAmount)"
                     } else {
                         buttonString = "Offer for Free"
                     }
@@ -756,8 +766,10 @@ private final class SheetContent: CombinedComponent {
         fileprivate var currency: CurrencyAmount.Currency = .stars
         fileprivate var timestamp: Int32?
         
-        fileprivate var balance: StarsAmount?
-        private var stateDisposable: Disposable?
+        fileprivate var starsBalance: StarsAmount?
+        private var starsStateDisposable: Disposable?
+        fileprivate var tonBalance: StarsAmount?
+        private var tonStateDisposable: Disposable?
         
         var cachedCloseImage: (UIImage, PresentationTheme)?
         var cachedStarImage: (UIImage, PresentationTheme)?
@@ -809,14 +821,25 @@ private final class SheetContent: CombinedComponent {
             default:
                 break
             }
-            if needsBalance, let starsContext = component.context.starsContext {
-                self.stateDisposable = (starsContext.state
-                |> deliverOnMainQueue).startStrict(next: { [weak self] state in
-                    if let self, let balance = state?.balance {
-                        self.balance = balance
-                        self.updated()
-                    }
-                })
+            if needsBalance {
+                if let starsContext = component.context.starsContext {
+                    self.starsStateDisposable = (starsContext.state
+                    |> deliverOnMainQueue).startStrict(next: { [weak self] state in
+                        if let self, let balance = state?.balance {
+                            self.starsBalance = balance
+                            self.updated()
+                        }
+                    })
+                }
+                if let tonContext = component.context.tonContext {
+                    self.tonStateDisposable = (tonContext.state
+                    |> deliverOnMainQueue).startStrict(next: { [weak self] state in
+                        if let self, let balance = state?.balance {
+                            self.tonBalance = balance
+                            self.updated()
+                        }
+                    })
+                }
             }
             
             if case let .starGiftResell(giftToMatch, update, _) = self.mode {
@@ -851,7 +874,8 @@ private final class SheetContent: CombinedComponent {
         }
         
         deinit {
-            self.stateDisposable?.dispose()
+            self.starsStateDisposable?.dispose()
+            self.tonStateDisposable?.dispose()
         }
     }
     
@@ -1035,6 +1059,453 @@ public final class StarsWithdrawScreen: ViewControllerComponentContainer {
 
 private let invalidAmountCharacters = CharacterSet.decimalDigits.inverted
 
+private final class AmountFieldTonFormatter: NSObject, UITextFieldDelegate {
+    private struct Representation {
+        private let format: CurrencyFormat
+        private var caretIndex: Int = 0
+        private var wholePart: [Int] = []
+        private var decimalPart: [Int] = []
+
+        init(string: String, format: CurrencyFormat) {
+            self.format = format
+
+            var isDecimalPart = false
+            for c in string {
+                if c.isNumber {
+                    if let value = Int(String(c)) {
+                        if isDecimalPart {
+                            self.decimalPart.append(value)
+                        } else {
+                            self.wholePart.append(value)
+                        }
+                    }
+                } else if String(c) == format.decimalSeparator {
+                    isDecimalPart = true
+                }
+            }
+
+            while self.wholePart.count > 1 {
+                if self.wholePart[0] != 0 {
+                    break
+                } else {
+                    self.wholePart.removeFirst()
+                }
+            }
+            if self.wholePart.isEmpty {
+                self.wholePart = [0]
+            }
+
+            while self.decimalPart.count > 1 {
+                if self.decimalPart[self.decimalPart.count - 1] != 0 {
+                    break
+                } else {
+                    self.decimalPart.removeLast()
+                }
+            }
+            while self.decimalPart.count < format.decimalDigits {
+                self.decimalPart.append(0)
+            }
+
+            self.caretIndex = self.wholePart.count
+        }
+
+        var minCaretIndex: Int {
+            for i in 0 ..< self.wholePart.count {
+                if self.wholePart[i] != 0 {
+                    return i
+                }
+            }
+            return self.wholePart.count
+        }
+
+        mutating func moveCaret(offset: Int) {
+            self.caretIndex = max(self.minCaretIndex, min(self.caretIndex + offset, self.wholePart.count + self.decimalPart.count))
+        }
+
+        mutating func normalize() {
+            while self.wholePart.count > 1 {
+                if self.wholePart[0] != 0 {
+                    break
+                } else {
+                    self.wholePart.removeFirst()
+                    self.moveCaret(offset: -1)
+                }
+            }
+            if self.wholePart.isEmpty {
+                self.wholePart = [0]
+            }
+
+            while self.decimalPart.count < format.decimalDigits {
+                self.decimalPart.append(0)
+            }
+            while self.decimalPart.count > format.decimalDigits {
+                self.decimalPart.removeLast()
+            }
+
+            self.caretIndex = max(self.minCaretIndex, min(self.caretIndex, self.wholePart.count + self.decimalPart.count))
+        }
+
+        mutating func backspace() {
+            if self.caretIndex > self.wholePart.count {
+                let decimalIndex = self.caretIndex - self.wholePart.count
+                if decimalIndex > 0 {
+                    self.decimalPart.remove(at: decimalIndex - 1)
+
+                    self.moveCaret(offset: -1)
+                    self.normalize()
+                }
+            } else {
+                if self.caretIndex > 0 {
+                    self.wholePart.remove(at: self.caretIndex - 1)
+
+                    self.moveCaret(offset: -1)
+                    self.normalize()
+                }
+            }
+        }
+
+        mutating func insert(letter: String) {
+            if letter == "." || letter == "," {
+                if self.caretIndex == self.wholePart.count {
+                    return
+                } else if self.caretIndex < self.wholePart.count {
+                    for i in (self.caretIndex ..< self.wholePart.count).reversed() {
+                        self.decimalPart.insert(self.wholePart[i], at: 0)
+                        self.wholePart.remove(at: i)
+                    }
+                }
+
+                self.normalize()
+            } else if letter.count == 1 && letter[letter.startIndex].isNumber {
+                if let value = Int(letter) {
+                    if self.caretIndex <= self.wholePart.count {
+                        self.wholePart.insert(value, at: self.caretIndex)
+                    } else {
+                        let decimalIndex = self.caretIndex - self.wholePart.count
+                        self.decimalPart.insert(value, at: decimalIndex)
+                    }
+                    self.moveCaret(offset: 1)
+                    self.normalize()
+                }
+            }
+        }
+
+        var string: String {
+            var result = ""
+
+            for digit in self.wholePart {
+                result.append("\(digit)")
+            }
+            result.append(self.format.decimalSeparator)
+            for digit in self.decimalPart {
+                result.append("\(digit)")
+            }
+
+            return result
+        }
+
+        var stringCaretIndex: Int {
+            var logicalIndex = 0
+            var resolvedIndex = 0
+
+            if logicalIndex == self.caretIndex {
+                return resolvedIndex
+            }
+
+            for _ in self.wholePart {
+                logicalIndex += 1
+                resolvedIndex += 1
+
+                if logicalIndex == self.caretIndex {
+                    return resolvedIndex
+                }
+            }
+
+            resolvedIndex += 1
+
+            for _ in self.decimalPart {
+                logicalIndex += 1
+                resolvedIndex += 1
+
+                if logicalIndex == self.caretIndex {
+                    return resolvedIndex
+                }
+            }
+
+            return resolvedIndex
+        }
+
+        var numericalValue: Int64 {
+            var result: Int64 = 0
+
+            for digit in self.wholePart {
+                result *= 10
+                result += Int64(digit)
+            }
+            for digit in self.decimalPart {
+                result *= 10
+                result += Int64(digit)
+            }
+
+            return result
+        }
+    }
+
+    private let format: CurrencyFormat
+    private let currency: String
+    private let maxNumericalValue: Int64
+    private let updated: (Int64) -> Void
+    private let isEmptyUpdated: (Bool) -> Void
+    private let focusUpdated: (Bool) -> Void
+
+    private var representation: Representation
+
+    private var previousResolvedCaretIndex: Int = 0
+    private var ignoreTextSelection: Bool = false
+    private var enableTextSelectionProcessing: Bool = false
+
+    init?(textField: UITextField, currency: String, maxNumericalValue: Int64, initialValue: String, updated: @escaping (Int64) -> Void, isEmptyUpdated: @escaping (Bool) -> Void, focusUpdated: @escaping (Bool) -> Void) {
+        guard let format = CurrencyFormat(currency: currency) else {
+            return nil
+        }
+        self.format = format
+        self.currency = currency
+        self.maxNumericalValue = maxNumericalValue
+        self.updated = updated
+        self.isEmptyUpdated = isEmptyUpdated
+        self.focusUpdated = focusUpdated
+
+        self.representation = Representation(string: initialValue, format: format)
+
+        super.init()
+
+        textField.text = self.representation.string
+        self.previousResolvedCaretIndex = self.representation.stringCaretIndex
+        
+        self.isEmptyUpdated(false)
+    }
+
+    func reset(textField: UITextField, initialValue: String) {
+        self.representation = Representation(string: initialValue, format: self.format)
+        self.resetFromRepresentation(textField: textField, notifyUpdated: false)
+    }
+
+    private func resetFromRepresentation(textField: UITextField, notifyUpdated: Bool) {
+        self.ignoreTextSelection = true
+
+        if self.representation.numericalValue > self.maxNumericalValue {
+            self.representation = Representation(string: formatCurrencyAmountCustom(self.maxNumericalValue, currency: self.currency).0, format: self.format)
+        }
+
+        textField.text = self.representation.string
+        self.previousResolvedCaretIndex = self.representation.stringCaretIndex
+
+        if self.enableTextSelectionProcessing {
+            let stringCaretIndex = self.representation.stringCaretIndex
+            if let caretPosition = textField.position(from: textField.beginningOfDocument, offset: stringCaretIndex) {
+                textField.selectedTextRange = textField.textRange(from: caretPosition, to: caretPosition)
+            }
+        }
+        self.ignoreTextSelection = false
+
+        if notifyUpdated {
+            self.updated(self.representation.numericalValue)
+        }
+    }
+
+    @objc public func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+        if string.count == 1 {
+            self.representation.insert(letter: string)
+            self.resetFromRepresentation(textField: textField, notifyUpdated: true)
+        } else if string.count == 0 {
+            self.representation.backspace()
+            self.resetFromRepresentation(textField: textField, notifyUpdated: true)
+        }
+
+        return false
+    }
+
+    @objc public func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        return false
+    }
+
+    @objc public func textFieldDidBeginEditing(_ textField: UITextField) {
+        self.enableTextSelectionProcessing = true
+        self.focusUpdated(true)
+
+        let stringCaretIndex = self.representation.stringCaretIndex
+        self.previousResolvedCaretIndex = stringCaretIndex
+        if let caretPosition = textField.position(from: textField.beginningOfDocument, offset: stringCaretIndex) {
+            self.ignoreTextSelection = true
+            textField.selectedTextRange = textField.textRange(from: caretPosition, to: caretPosition)
+            DispatchQueue.main.async {
+                textField.selectedTextRange = textField.textRange(from: caretPosition, to: caretPosition)
+                self.ignoreTextSelection = false
+            }
+        }
+    }
+
+    @objc public func textFieldDidChangeSelection(_ textField: UITextField) {
+        if self.ignoreTextSelection {
+            return
+        }
+        if !self.enableTextSelectionProcessing {
+            return
+        }
+
+        if let selectedTextRange = textField.selectedTextRange {
+            let index = textField.offset(from: textField.beginningOfDocument, to: selectedTextRange.end)
+            if self.previousResolvedCaretIndex != index {
+                self.representation.moveCaret(offset: self.previousResolvedCaretIndex < index ? 1 : -1)
+
+                let stringCaretIndex = self.representation.stringCaretIndex
+                self.previousResolvedCaretIndex = stringCaretIndex
+                if let caretPosition = textField.position(from: textField.beginningOfDocument, offset: stringCaretIndex) {
+                        textField.selectedTextRange = textField.textRange(from: caretPosition, to: caretPosition)
+                }
+            }
+        }
+    }
+
+    @objc public func textFieldDidEndEditing(_ textField: UITextField) {
+        self.enableTextSelectionProcessing = false
+        self.focusUpdated(false)
+    }
+}
+
+private final class AmountFieldStarsFormatter: NSObject, UITextFieldDelegate {
+    private let currency: CurrencyAmount.Currency
+    private let dateTimeFormat: PresentationDateTimeFormat
+    
+    private let textField: UITextField
+    private let minValue: Int64
+    private let maxValue: Int64
+    private let updated: (Int64) -> Void
+    private let isEmptyUpdated: (Bool) -> Void
+    private let animateError: () -> Void
+    private let focusUpdated: (Bool) -> Void
+
+    init?(textField: UITextField, currency: CurrencyAmount.Currency, dateTimeFormat: PresentationDateTimeFormat, minValue: Int64, maxValue: Int64, updated: @escaping (Int64) -> Void, isEmptyUpdated: @escaping (Bool) -> Void, animateError: @escaping () -> Void, focusUpdated: @escaping (Bool) -> Void) {
+        self.textField = textField
+        self.currency = currency
+        self.dateTimeFormat = dateTimeFormat
+        self.minValue = minValue
+        self.maxValue = maxValue
+        self.updated = updated
+        self.isEmptyUpdated = isEmptyUpdated
+        self.animateError = animateError
+        self.focusUpdated = focusUpdated
+
+        super.init()
+    }
+    
+    func amountFrom(text: String) -> Int64 {
+        var amount: Int64?
+        if !text.isEmpty {
+            switch self.currency {
+            case .stars:
+                if let value = Int64(text) {
+                    amount = value
+                }
+            case .ton:
+                let scale: Int64 = 1_000_000_000  // 10⁹  (one “nano”)
+                if let dot = text.firstIndex(of: ".") {
+                    // Slices for the parts on each side of the dot
+                    var wholeSlice     = String(text[..<dot])
+                    if wholeSlice.isEmpty {
+                        wholeSlice = "0"
+                    }
+                    let fractionSlice  = text[text.index(after: dot)...]
+
+                    // Make the fractional string exactly 9 characters long
+                    var fractionStr = String(fractionSlice)
+                    if fractionStr.count > 9 {
+                        fractionStr = String(fractionStr.prefix(9))      // trim extra digits
+                    } else {
+                        fractionStr = fractionStr.padding(
+                            toLength: 9, withPad: "0", startingAt: 0)     // pad with zeros
+                    }
+
+                    // Convert and combine
+                    if let whole = Int64(wholeSlice),
+                       let frac  = Int64(fractionStr) {
+                        amount = whole * scale + frac
+                    }
+                } else if let whole = Int64(text) {   // string had no dot at all
+                    amount = whole * scale
+                }
+            }
+        }
+        return amount ?? 0
+    }
+
+    func onTextChanged(text: String) {
+        self.updated(self.amountFrom(text: text))
+        self.isEmptyUpdated(text.isEmpty)
+    }
+    
+    func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+        var acceptZero = false
+        if self.minValue <= 0 {
+            acceptZero = true
+        }
+        
+        var newText = ((textField.text ?? "") as NSString).replacingCharacters(in: range, with: string)
+        if newText.contains(where: { c in
+            switch c {
+            case "0", "1", "2", "3", "4", "5", "6", "7", "8", "9":
+                return false
+            default:
+                if case .ton = self.currency {
+                    if c == "." {
+                        return false
+                    }
+                }
+                return true
+            }
+        }) {
+            return false
+        }
+        if newText.count(where: { $0 == "." }) > 1 {
+            return false
+        }
+        
+        switch self.currency {
+        case .stars:
+            if (newText == "0" && !acceptZero) || (newText.count > 1 && newText.hasPrefix("0")) {
+                newText.removeFirst()
+                textField.text = newText
+                self.onTextChanged(text: newText)
+                return false
+            }
+        case .ton:
+            if (newText == "0" && !acceptZero) || (newText.count > 1 && newText.hasPrefix("0") && !newText.hasPrefix("0.")) {
+                newText.removeFirst()
+                textField.text = newText
+                self.onTextChanged(text: newText)
+                return false
+            }
+        }
+        
+        let amount: Int64 = self.amountFrom(text: newText)
+        if amount > self.maxValue {
+            switch self.currency {
+            case .stars:
+                textField.text = "\(self.maxValue)"
+            case .ton:
+                textField.text = "\(formatTonAmountText(self.maxValue, dateTimeFormat: self.dateTimeFormat))"
+            }
+            self.onTextChanged(text: self.textField.text ?? "")
+            self.animateError()
+            return false
+        }
+        
+        self.onTextChanged(text: newText)
+        
+        return true
+    }
+}
+
 private final class AmountFieldComponent: Component {
     typealias EnvironmentType = Empty
     
@@ -1048,6 +1519,7 @@ private final class AmountFieldComponent: Component {
     let placeholderText: String
     let labelText: String?
     let currency: CurrencyAmount.Currency
+    let dateTimeFormat: PresentationDateTimeFormat
     let amountUpdated: (Int64?) -> Void
     let tag: AnyObject?
     
@@ -1062,6 +1534,7 @@ private final class AmountFieldComponent: Component {
         placeholderText: String,
         labelText: String?,
         currency: CurrencyAmount.Currency,
+        dateTimeFormat: PresentationDateTimeFormat,
         amountUpdated: @escaping (Int64?) -> Void,
         tag: AnyObject? = nil
     ) {
@@ -1075,6 +1548,7 @@ private final class AmountFieldComponent: Component {
         self.placeholderText = placeholderText
         self.labelText = labelText
         self.currency = currency
+        self.dateTimeFormat = dateTimeFormat
         self.amountUpdated = amountUpdated
         self.tag = tag
     }
@@ -1127,10 +1601,13 @@ private final class AmountFieldComponent: Component {
         private let placeholderView: ComponentView<Empty>
         private let icon = ComponentView<Empty>()
         private let textField: TextFieldNodeView
+        private var starsFormatter: AmountFieldStarsFormatter?
+        private var tonFormatter: AmountFieldStarsFormatter?
         private let labelView: ComponentView<Empty>
         
         private var component: AmountFieldComponent?
         private weak var state: EmptyComponentState?
+        private var isUpdating: Bool = false
         
         override init(frame: CGRect) {
             self.placeholderView = ComponentView<Empty>()
@@ -1138,65 +1615,12 @@ private final class AmountFieldComponent: Component {
             self.labelView = ComponentView<Empty>()
 
             super.init(frame: frame)
-
-            self.textField.delegate = self
-            self.textField.addTarget(self, action: #selector(self.textChanged(_:)), for: .editingChanged)
             
             self.addSubview(self.textField)
         }
         
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
-        }
-
-        @objc func textChanged(_ sender: Any) {
-            let text = self.textField.text ?? ""
-            let amount: Int64?
-            if !text.isEmpty, let value = Int64(text) {
-                amount = value
-            } else {
-                amount = nil
-            }
-            self.component?.amountUpdated(amount)
-            self.placeholderView.view?.isHidden = !text.isEmpty
-        }
-        
-        func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
-            guard let component = self.component else {
-                return false
-            }
-            
-            if string.rangeOfCharacter(from: invalidAmountCharacters) != nil {
-                return false
-            }
-            
-            var acceptZero = false
-            if let minValue = component.minValue, minValue <= 0 {
-                acceptZero = true
-            }
-            
-            var newText = ((textField.text ?? "") as NSString).replacingCharacters(in: range, with: string)
-            if (newText == "0" && !acceptZero) || (newText.count > 1 && newText.hasPrefix("0")) {
-                newText.removeFirst()
-                textField.text = newText
-                self.textChanged(self.textField)
-                return false
-            }
-            
-            let amount: Int64?
-            if !newText.isEmpty, let value = Int64(normalizeArabicNumeralString(newText, type: .western)) {
-                amount = value
-            } else {
-                amount = nil
-            }
-            if let amount, let maxAmount = component.maxValue, amount > maxAmount {
-                textField.text = "\(maxAmount)"
-                self.textChanged(self.textField)
-                self.animateError()
-                return false
-            }
-            
-            return true
         }
         
         func activateInput() {
@@ -1217,18 +1641,109 @@ private final class AmountFieldComponent: Component {
         }
         
         func update(component: AmountFieldComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
+            self.isUpdating = true
+            defer {
+                self.isUpdating = false
+            }
+            
             self.textField.textColor = component.textColor
-            if let value = component.value {
-                self.textField.text = "\(value)"
-            } else {
-                self.textField.text = ""
+            if self.component?.currency != component.currency {
+                if let value = component.value {
+                    var text = ""
+                    switch component.currency {
+                    case .stars:
+                        text = "\(value)"
+                    case .ton:
+                        text = "\(formatTonAmountText(value, dateTimeFormat: component.dateTimeFormat))"
+                    }
+                    self.textField.text = text
+                } else {
+                    self.textField.text = ""
+                }
             }
             self.textField.font = Font.regular(17.0)
             
-            self.textField.keyboardType = .numberPad
             self.textField.returnKeyType = .done
             self.textField.autocorrectionType = .no
             self.textField.autocapitalizationType = .none
+            
+            if self.component?.currency != component.currency {
+                switch component.currency {
+                case .stars:
+                    self.textField.delegate = self
+                    self.textField.keyboardType = .numberPad
+                    if self.starsFormatter == nil {
+                        self.starsFormatter = AmountFieldStarsFormatter(
+                            textField: self.textField,
+                            currency: component.currency,
+                            dateTimeFormat: component.dateTimeFormat,
+                            minValue: component.minValue ?? 0,
+                            maxValue: component.maxValue ?? Int64.max,
+                            updated: { [weak self] value in
+                                guard let self, let component = self.component else {
+                                    return
+                                }
+                                if !self.isUpdating {
+                                    component.amountUpdated(value == 0 ? nil : value)
+                                }
+                            },
+                            isEmptyUpdated: { [weak self] isEmpty in
+                                guard let self else {
+                                    return
+                                }
+                                self.placeholderView.view?.isHidden = !isEmpty
+                            },
+                            animateError: { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                self.animateError()
+                            },
+                            focusUpdated: { _ in
+                            }
+                        )
+                    }
+                    self.tonFormatter = nil
+                    self.textField.delegate = self.starsFormatter
+                    self.textField.text = ""
+                case .ton:
+                    self.textField.keyboardType = .numbersAndPunctuation
+                    if self.tonFormatter == nil {
+                        self.tonFormatter = AmountFieldStarsFormatter(
+                            textField: self.textField,
+                            currency: component.currency,
+                            dateTimeFormat: component.dateTimeFormat,
+                            minValue: component.minValue ?? 0,
+                            maxValue: component.maxValue ?? Int64.max,
+                            updated: { [weak self] value in
+                                guard let self, let component = self.component else {
+                                    return
+                                }
+                                if !self.isUpdating {
+                                    component.amountUpdated(value == 0 ? nil : value)
+                                }
+                            },
+                            isEmptyUpdated: { [weak self] isEmpty in
+                                guard let self else {
+                                    return
+                                }
+                                self.placeholderView.view?.isHidden = !isEmpty
+                            },
+                            animateError: { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                self.animateError()
+                            },
+                            focusUpdated: { _ in
+                            }
+                        )
+                    }
+                    self.starsFormatter = nil
+                    self.textField.delegate = self.tonFormatter
+                }
+                self.textField.reloadInputViews()
+            }
                         
             self.component = component
             self.state = state
@@ -1460,7 +1975,13 @@ private final class BalanceComponent: CombinedComponent {
             
             let balanceText: String
             if let value = context.component.balance {
-                balanceText = "\(value.stringValue)"
+                switch context.component.currency {
+                case .stars:
+                    balanceText = "\(value.stringValue)"
+                case .ton:
+                    let dateTimeFormat = context.component.context.sharedContext.currentPresentationData.with({ $0 }).dateTimeFormat
+                    balanceText = "\(formatTonAmountText(value.value, dateTimeFormat: dateTimeFormat))"
+                }
             } else {
                 balanceText = "..."
             }

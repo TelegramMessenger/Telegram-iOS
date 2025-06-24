@@ -1817,16 +1817,26 @@ extension ChatControllerImpl {
                     return
                 }
                 
-                if actions.options.contains(.deleteGlobally) && messages.contains(where: { message in message.attributes.contains(where: { $0 is PublishedSuggestedPostMessageAttribute }) }) {
+                if actions.options.contains(.deleteGlobally), let message = messages.first(where: { message in message.attributes.contains(where: { $0 is PublishedSuggestedPostMessageAttribute }) }), let attribute = message.attributes.first(where: { $0 is PublishedSuggestedPostMessageAttribute }) as? PublishedSuggestedPostMessageAttribute {
                     let commit = { [weak self] in
                         guard let self else {
                             return
                         }
                         //TODO:localize
+                        let titleString: String
+                        let textString: String
+                        switch attribute.currency {
+                        case .stars:
+                            titleString = "Stars Will Be Lost"
+                            textString = "You won't receive **Stars** for this post if you delete it now. The post must remain visible for at least **24 hours** after publication."
+                        case .ton:
+                            titleString = "TON Will Be Lost"
+                            textString = "You won't receive **TON** for this post if you delete it now. The post must remain visible for at least **24 hours** after publication."
+                        }
                         self.present(standardTextAlertController(
                             theme: AlertControllerTheme(presentationData: self.presentationData),
-                            title: "Stars Will Be Lost",
-                            text: "You won't receive **Stars** for this post if you delete it now. The post must remain visible for at least **24 hours** after publication.",
+                            title: titleString,
+                            text: textString,
                             actions: [
                                 TextAlertAction(type: .destructiveAction, title: "Delete Anyway", action: { [weak self] in
                                     guard let self else {

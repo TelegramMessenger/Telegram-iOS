@@ -306,6 +306,7 @@ public final class StarsImageComponent: Component {
     
     public enum Icon {
         case star
+        case ton
     }
     
     public let context: AccountContext
@@ -865,7 +866,7 @@ public final class StarsImageComponent: Component {
                 animationNode.updateLayout(size: animationFrame.size)
             }
             
-            if let _ = component.icon {
+            if let icon = component.icon {
                 let smallIconView: UIImageView
                 let smallIconOutlineView: UIImageView
                 if let current = self.smallIconView, let currentOutline = self.smallIconOutlineView {
@@ -880,15 +881,27 @@ public final class StarsImageComponent: Component {
                     containerNode.view.addSubview(smallIconView)
                     self.smallIconView = smallIconView
                     
-                    smallIconOutlineView.image = UIImage(bundleImageName: "Premium/Stars/TransactionStarOutline")?.withRenderingMode(.alwaysTemplate)
-                    smallIconView.image = UIImage(bundleImageName: "Premium/Stars/TransactionStar")
+                    switch icon {
+                    case .star:
+                        smallIconOutlineView.image = UIImage(bundleImageName: "Premium/Stars/TransactionStarOutline")?.withRenderingMode(.alwaysTemplate)
+                        smallIconView.image = UIImage(bundleImageName: "Premium/Stars/TransactionStar")
+                    case .ton:
+                        smallIconOutlineView.image = UIImage(bundleImageName: "Ads/TonMedium")?.withRenderingMode(.alwaysTemplate)
+                        smallIconView.image = UIImage(bundleImageName: "Ads/TonMedium")?.withRenderingMode(.alwaysTemplate)
+                    }
                 }
                 
                 smallIconOutlineView.tintColor = component.backgroundColor
                 
-                if let icon = smallIconView.image {
-                    let smallIconFrame = CGRect(origin: CGPoint(x: imageFrame.maxX - icon.size.width, y: imageFrame.maxY - icon.size.height), size: icon.size)
+                if let iconImage = smallIconView.image {
+                    let smallIconFrame = CGRect(origin: CGPoint(x: imageFrame.maxX - iconImage.size.width, y: imageFrame.maxY - iconImage.size.height), size: iconImage.size)
                     smallIconView.frame = smallIconFrame
+                    switch icon {
+                    case .star:
+                        smallIconView.tintColor = nil
+                    case .ton:
+                        smallIconView.tintColor = component.theme.list.itemAccentColor
+                    }
                     smallIconOutlineView.frame = smallIconFrame
                 }
             } else if let smallIconView = self.smallIconView, let smallIconOutlineView = self.smallIconOutlineView {

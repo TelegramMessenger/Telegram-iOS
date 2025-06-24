@@ -409,7 +409,13 @@ final class StarsTransactionsListPanelComponent: Component {
                     }
                     
                     let itemLabel: NSAttributedString
-                    let formattedLabel = formatStarsAmountText(item.count, dateTimeFormat: environment.dateTimeFormat, showPlus: true)
+                    let formattedLabel: String
+                    switch item.currency {
+                    case .stars:
+                        formattedLabel = formatStarsAmountText(item.count, dateTimeFormat: environment.dateTimeFormat, showPlus: true)
+                    case .ton:
+                        formattedLabel = formatTonAmountText(item.count.value, dateTimeFormat: environment.dateTimeFormat, showPlus: true)
+                    }
                     
                     let smallLabelFont = Font.with(size: floor(fontBaseDisplaySize / 17.0 * 13.0))
                     let labelFont = Font.medium(fontBaseDisplaySize)
@@ -496,7 +502,7 @@ final class StarsTransactionsListPanelComponent: Component {
                             contentInsets: UIEdgeInsets(top: 9.0, left: environment.containerInsets.left, bottom: 8.0, right: environment.containerInsets.right),
                             leftIcon: .custom(AnyComponentWithIdentity(id: "avatar", component: AnyComponent(StarsAvatarComponent(context: component.context, theme: environment.theme, peer: itemPeer, photo: item.photo, media: item.media, uniqueGift: uniqueGift, backgroundColor: environment.theme.list.plainBackgroundColor))), false),
                             icon: nil,
-                            accessory: .custom(ListActionItemComponent.CustomAccessory(component: AnyComponentWithIdentity(id: "label", component: AnyComponent(StarsLabelComponent(text: itemLabel))), insets: UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 16.0))),
+                            accessory: .custom(ListActionItemComponent.CustomAccessory(component: AnyComponentWithIdentity(id: "label", component: AnyComponent(StarsLabelComponent(theme: environment.theme, currency: item.currency, textColor: labelColor, text: itemLabel))), insets: UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 16.0))),
                             action: { [weak self] _ in
                                 guard let self, let component = self.component else {
                                     return
