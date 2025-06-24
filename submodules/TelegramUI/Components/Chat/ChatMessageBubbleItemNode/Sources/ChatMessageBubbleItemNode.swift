@@ -3542,7 +3542,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             if suggestedPostInfoNode !== strongSelf.suggestedPostInfoNode {
                 strongSelf.suggestedPostInfoNode?.removeFromSupernode()
                 strongSelf.suggestedPostInfoNode = suggestedPostInfoNode
-                strongSelf.mainContextSourceNode.contentNode.addSubnode(suggestedPostInfoNode)
+                strongSelf.addSubnode(suggestedPostInfoNode)
             }
             let suggestedPostInfoFrame = CGRect(origin: CGPoint(x: floor((params.width - suggestedPostInfoSize.width) * 0.5), y: 4.0), size: suggestedPostInfoSize)
             suggestedPostInfoNode.frame = suggestedPostInfoFrame

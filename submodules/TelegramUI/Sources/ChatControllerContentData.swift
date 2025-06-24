@@ -820,12 +820,20 @@ extension ChatControllerImpl {
                                 if channel.isMonoForum {
                                     if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = peerView.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
                                     } else {
-                                        sendPaidMessageStars = channel.sendPaidMessageStars
+                                        sendPaidMessageStars = cachedData.sendPaidMessageStars
                                     }
                                 } else {
                                     if channel.flags.contains(.isCreator) || channel.adminRights != nil {
                                     } else {
-                                        sendPaidMessageStars = channel.sendPaidMessageStars
+                                        if let personalSendPaidMessageStars = cachedData.sendPaidMessageStars {
+                                            if personalSendPaidMessageStars == .zero {
+                                                sendPaidMessageStars = nil
+                                            } else {
+                                                sendPaidMessageStars = personalSendPaidMessageStars
+                                            }
+                                        } else {
+                                            sendPaidMessageStars = channel.sendPaidMessageStars
+                                        }
                                     }
                                 }
                             }
