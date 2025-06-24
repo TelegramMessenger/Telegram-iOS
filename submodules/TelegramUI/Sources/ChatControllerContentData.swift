@@ -819,8 +819,10 @@ extension ChatControllerImpl {
                             if let channel = peerView.peers[peerView.peerId] as? TelegramChannel {
                                 if channel.isMonoForum {
                                     if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = peerView.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
+                                    } else if let sendPaidMessageStarsValue = cachedData.sendPaidMessageStars, sendPaidMessageStarsValue == .zero {
+                                        sendPaidMessageStars = nil
                                     } else {
-                                        sendPaidMessageStars = cachedData.sendPaidMessageStars
+                                        sendPaidMessageStars = channel.sendPaidMessageStars
                                     }
                                 } else {
                                     if channel.flags.contains(.isCreator) || channel.adminRights != nil {

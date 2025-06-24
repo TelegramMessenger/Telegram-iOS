@@ -2374,7 +2374,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             ]), in: .window(.root))
                         }
                     case 2:
-                        strongSelf.interfaceInteraction?.openSuggestPost(message)
+                        strongSelf.interfaceInteraction?.openSuggestPost(message, .default)
                     default:
                         break
                     }

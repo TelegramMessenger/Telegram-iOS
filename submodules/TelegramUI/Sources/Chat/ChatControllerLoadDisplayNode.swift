@@ -4141,7 +4141,7 @@ extension ChatControllerImpl {
                 })
                 self.push(controller)
             }
-        }, openSuggestPost: { [weak self] message in
+        }, openSuggestPost: { [weak self] message, mode in
             guard let self else {
                 return
             }
@@ -4198,6 +4198,13 @@ extension ChatControllerImpl {
                     }
                     return updated
                 })
+                
+                switch mode {
+                case .default, .editMessage:
+                    break
+                case .editTime, .editPrice:
+                    self.presentSuggestPostOptions()
+                }
             } else {
                 self.updateChatPresentationInterfaceState(interactive: true, { state in
                     var state = state
@@ -4212,8 +4219,8 @@ extension ChatControllerImpl {
                     }
                     return state
                 })
+                self.presentSuggestPostOptions()
             }
-            self.presentSuggestPostOptions()
         }, openPremiumRequiredForMessaging: { [weak self] in
             guard let self else {
                 return
