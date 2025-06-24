@@ -826,8 +826,8 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             } else if case .ton = count.currency {
                 amountStarIconName = "Ads/TonBig"
                 amountStarTintColor = countColor
-                amountStarMaxSize = CGSize(width: 14.0, height: 14.0)
-                amountOffset.y += 3.0
+                amountStarMaxSize = CGSize(width: 13.0, height: 13.0)
+                amountOffset.y += 4.0 - UIScreenPixel
             } else {
                 amountStarIconName = "Premium/Stars/StarMedium"
             }
