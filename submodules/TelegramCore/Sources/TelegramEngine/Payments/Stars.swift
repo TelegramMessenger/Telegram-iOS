@@ -1074,7 +1074,7 @@ public final class StarsContext {
         return peerId!
     }
     
-    let ton: Bool
+    public let ton: Bool
     
     public var currentState: StarsContext.State? {
         var state: StarsContext.State?

@@ -671,8 +671,8 @@ final class StarsTransactionsScreenComponent: Component {
                             theme: environment.theme,
                             strings: environment.strings,
                             dateTimeFormat: environment.dateTimeFormat,
-                            currency: component.starsContext.ton ? .ton : .stars,
                             count: self.starsState?.balance ?? StarsAmount.zero,
+                            currency: component.starsContext.ton ? .ton : .stars,
                             rate: nil,
                             actionTitle: withdrawAvailable ? environment.strings.Stars_Intro_BuyShort : environment.strings.Stars_Intro_Buy,
                             actionAvailable: !premiumConfiguration.areStarsDisabled && !premiumConfiguration.isPremiumDisabled,
@@ -863,7 +863,7 @@ final class StarsTransactionsScreenComponent: Component {
                         let itemLabel = NSAttributedString(string: "\(subscription.pricing.amount)", font: Font.medium(fontBaseDisplaySize), textColor: itemLabelColor)
                         let itemSublabel = NSAttributedString(string: environment.strings.Stars_Intro_Subscriptions_PerMonth, font: Font.regular(floor(fontBaseDisplaySize * 13.0 / 17.0)), textColor: environment.theme.list.itemSecondaryTextColor)
                         
-                        labelComponent = AnyComponentWithIdentity(id: "label", component: AnyComponent(StarsLabelComponent(theme: environment.theme, currency: component.starsContext.ton ? .ton : .stars, textColor: itemLabelColor, text: itemLabel, subtext: itemSublabel)))
+                        labelComponent = AnyComponentWithIdentity(id: "label", component: AnyComponent(StarsLabelComponent(text: itemLabel, subtext: itemSublabel)))
                     }
                     
                     subscriptionsItems.append(AnyComponentWithIdentity(

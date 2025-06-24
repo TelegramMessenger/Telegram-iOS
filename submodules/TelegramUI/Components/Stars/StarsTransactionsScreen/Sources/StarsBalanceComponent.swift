@@ -17,7 +17,7 @@ final class StarsBalanceComponent: Component {
     let strings: PresentationStrings
     let dateTimeFormat: PresentationDateTimeFormat
     let count: StarsAmount
-    let isTon: Bool
+    let currency: CurrencyAmount.Currency
     let rate: Double?
     let actionTitle: String
     let actionAvailable: Bool
@@ -36,7 +36,7 @@ final class StarsBalanceComponent: Component {
         strings: PresentationStrings,
         dateTimeFormat: PresentationDateTimeFormat,
         count: StarsAmount,
-        isTon: Bool = false,
+        currency: CurrencyAmount.Currency,
         rate: Double?,
         actionTitle: String,
         actionAvailable: Bool,
@@ -54,7 +54,7 @@ final class StarsBalanceComponent: Component {
         self.strings = strings
         self.dateTimeFormat = dateTimeFormat
         self.count = count
-        self.isTon = isTon
+        self.currency = currency
         self.rate = rate
         self.actionTitle = actionTitle
         self.actionAvailable = actionAvailable
@@ -100,7 +100,7 @@ final class StarsBalanceComponent: Component {
         if lhs.count != rhs.count {
             return false
         }
-        if lhs.isTon != rhs.isTon {
+        if lhs.currency != rhs.currency {
             return false
         }
         if lhs.rate != rhs.rate {
@@ -135,9 +135,10 @@ final class StarsBalanceComponent: Component {
         
         func update(component: StarsBalanceComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             if self.component == nil {
-                if component.isTon {
+                switch component.currency {
+                case .ton:
                     self.icon.image = generateTintedImage(image: UIImage(bundleImageName: "Ads/TonBig"), color: component.theme.list.itemAccentColor)
-                } else {
+                case .stars:
                     self.icon.image = UIImage(bundleImageName: "Premium/Stars/BalanceStar")
                 }
             }
@@ -177,9 +178,10 @@ final class StarsBalanceComponent: Component {
             var contentHeight: CGFloat = sideInset
             
             let formattedLabel: String
-            if component.isTon {
+            switch component.currency {
+            case .ton:
                 formattedLabel = formatTonAmountText(component.count.value, dateTimeFormat: component.dateTimeFormat)
-            } else {
+            case .stars:
                 formattedLabel = formatStarsAmountText(component.count, dateTimeFormat: component.dateTimeFormat)
             }
             let labelFont: UIFont

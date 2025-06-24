@@ -585,7 +585,7 @@ final class TonTransactionsScreenComponent: Component {
                             strings: environment.strings,
                             dateTimeFormat: environment.dateTimeFormat,
                             count: self.starsState?.balance ?? StarsAmount.zero,
-                            isTon: true,
+                            currency: .ton,
                             rate: 2.99 * 1e-9,
                             actionTitle: "Withdraw via Fragment",
                             actionAvailable: withdrawAvailable,
