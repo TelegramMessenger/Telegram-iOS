@@ -88,12 +88,19 @@ public extension ComponentTransition.Update {
             transition.setPosition(view: view, position: position)
             transition.setScale(view: view, scale: scale)
         } else {
-            if component._anchorPoint != nil {
-                view.bounds = CGRect(origin: CGPoint(), size: size)
+            if view is UIScrollView {
+                let frame = component.size.centered(around: component._position ?? CGPoint())
+                if view.frame != frame {
+                    transition.setFrame(view: view, frame: frame)
+                }
             } else {
-                transition.setBounds(view: view, bounds: CGRect(origin: CGPoint(), size: size))
+                if component._anchorPoint != nil {
+                    view.bounds = CGRect(origin: CGPoint(), size: size)
+                } else {
+                    transition.setBounds(view: view, bounds: CGRect(origin: CGPoint(), size: size))
+                }
+                transition.setPosition(view: view, position: position)
             }
-            transition.setPosition(view: view, position: position)
         }
         let opacity = component._opacity ?? 1.0
         if view.alpha != opacity {
