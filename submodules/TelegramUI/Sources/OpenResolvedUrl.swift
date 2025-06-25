@@ -97,8 +97,20 @@ func openResolvedUrlImpl(
             present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.Conversation_ErrorInaccessibleMessage, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
         case let .botStart(peer, payload):
             openPeer(EnginePeer(peer), .withBotStartPayload(ChatControllerInitialBotStart(payload: payload, behavior: .interactive)))
-        case let .groupBotStart(botPeerId, payload, adminRights):
-            let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyGroupsAndChannels, .onlyManageable, .excludeDisabled, .excludeRecent, .doNotSearchMessages], hasContactSelector: false, title: presentationData.strings.Bot_AddToChat_Title, selectForumThreads: true))
+        case let .groupBotStart(botPeerId, payload, adminRights, peerType):
+            var filter: ChatListNodePeersFilter = [.onlyGroupsAndChannels, .onlyManageable, .excludeDisabled, .excludeRecent, .doNotSearchMessages]
+            var title: String = presentationData.strings.Bot_AddToChat_Title
+            switch peerType {
+            case .group:
+                filter.insert(.excludeChannels)
+                title = presentationData.strings.Bot_AddToGroup_Title
+            case .channel:
+                filter.insert(.excludeGroups)
+                title = presentationData.strings.Bot_AddToChannel_Title
+            default:
+                break
+            }
+            let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: filter, hasContactSelector: false, title: title, selectForumThreads: true))
             controller.peerSelected = { [weak controller] peer, _ in
                 let peerId = peer.id
                 
