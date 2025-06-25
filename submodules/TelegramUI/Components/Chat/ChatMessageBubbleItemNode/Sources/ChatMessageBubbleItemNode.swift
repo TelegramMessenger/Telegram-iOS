@@ -2805,7 +2805,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             actionButtonsFinalize = buttonsLayout
             
             lastNodeTopPosition = .None(.Both)
-        } else if incoming, /*let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = item.message.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect),*/ let attribute = item.message.attributes.first(where: { $0 is SuggestedPostMessageAttribute }) as? SuggestedPostMessageAttribute, attribute.state == nil {
+        } else if incoming, let attribute = item.message.attributes.first(where: { $0 is SuggestedPostMessageAttribute }) as? SuggestedPostMessageAttribute, attribute.state == nil {
             //TODO:localize
             var buttonDeclineValue: UInt8 = 0
             let buttonDecline = MemoryBuffer(data: Data(bytes: &buttonDeclineValue, count: 1))
@@ -2838,7 +2838,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     ],
                     flags: [],
                     placeholder: nil
-            ), customIcons, item.message, maximumNodeWidth)
+            ), customIcons, item.message, baseWidth)
             maxContentWidth = max(maxContentWidth, minWidth)
             actionButtonsFinalize = buttonsLayout
             
@@ -3542,7 +3542,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             if suggestedPostInfoNode !== strongSelf.suggestedPostInfoNode {
                 strongSelf.suggestedPostInfoNode?.removeFromSupernode()
                 strongSelf.suggestedPostInfoNode = suggestedPostInfoNode
-                strongSelf.mainContextSourceNode.contentNode.addSubnode(suggestedPostInfoNode)
+                strongSelf.addSubnode(suggestedPostInfoNode)
             }
             let suggestedPostInfoFrame = CGRect(origin: CGPoint(x: floor((params.width - suggestedPostInfoSize.width) * 0.5), y: 4.0), size: suggestedPostInfoSize)
             suggestedPostInfoNode.frame = suggestedPostInfoFrame

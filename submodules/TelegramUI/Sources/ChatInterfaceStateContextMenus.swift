@@ -1512,14 +1512,47 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         }
         
         if let message = messages.first, message.id.namespace == Namespaces.Message.Cloud, let channel = message.peers[message.id.peerId] as? TelegramChannel, channel.isMonoForum {
-            //TODO:localize
-            actions.append(.action(ContextMenuActionItem(text: "Suggest a Post", icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Customize"), color: theme.actionSheet.primaryTextColor)
-            }, action: { c, _ in
-                c?.dismiss(completion: {
-                    interfaceInteraction.openSuggestPost(message)
-                })
-            })))
+            var canSuggestPost = true
+            for media in message.media {
+                if media is TelegramMediaAction {
+                    canSuggestPost = false
+                }
+            }
+            
+            if canSuggestPost {
+                //TODO:localize
+                if message.attributes.contains(where: { $0 is SuggestedPostMessageAttribute }) {
+                    actions.append(.action(ContextMenuActionItem(text: "Edit Message", icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { c, _ in
+                        c?.dismiss(completion: {
+                            interfaceInteraction.openSuggestPost(message, .editMessage)
+                        })
+                    })))
+                    actions.append(.action(ContextMenuActionItem(text: "Edit Time", icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Calendar"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { c, _ in
+                        c?.dismiss(completion: {
+                            interfaceInteraction.openSuggestPost(message, .editTime)
+                        })
+                    })))
+                    actions.append(.action(ContextMenuActionItem(text: "Edit Price", icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/PriceTag"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { c, _ in
+                        c?.dismiss(completion: {
+                            interfaceInteraction.openSuggestPost(message, .editPrice)
+                        })
+                    })))
+                } else {
+                    actions.append(.action(ContextMenuActionItem(text: "Suggest a Post", icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Customize"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { c, _ in
+                        c?.dismiss(completion: {
+                            interfaceInteraction.openSuggestPost(message, .default)
+                        })
+                    })))
+                }
+            }
         }
     
         if let activePoll = activePoll, let voters = activePoll.results.voters {
@@ -1935,6 +1968,11 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         if let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum, let associatedPeerId = channel.associatedPeerId {
             if message.effectivelyIncoming(context.account.peerId), message.author?.id == associatedPeerId {
                 canViewAuthor = true
+                for media in message.media {
+                    if media is TelegramMediaAction {
+                        canViewAuthor = false
+                    }
+                }
             }
         } else if let messageReadStatsAreHidden = infoSummaryData.messageReadStatsAreHidden, !messageReadStatsAreHidden {
             canViewStats = canViewReadStats(message: message, participantCount: infoSummaryData.participantCount, isMessageRead: isMessageRead, isPremium: isPremium, appConfig: appConfig)

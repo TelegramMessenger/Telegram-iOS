@@ -4773,7 +4773,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                 case .gift:
                     self.interfaceInteraction?.openPremiumGift()
                 case .suggestPost:
-                    self.interfaceInteraction?.openSuggestPost(nil)
+                    self.interfaceInteraction?.openSuggestPost(nil, .default)
                 }
                 break
             }

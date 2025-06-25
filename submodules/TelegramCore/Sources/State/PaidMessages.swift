@@ -107,6 +107,7 @@ func _internal_reinstateNoPaidMessagesException(account: Account, scopePeerId: P
         }
         var flags: Int32 = 0
         flags |= (1 << 2)
+        flags |= (1 << 1)
         return account.network.request(Api.functions.account.toggleNoPaidMessagesException(flags: flags, parentPeer: scopeInputPeer, userId: inputUser))
         |> `catch` { _ -> Signal<Api.Bool, NoError> in
             return .single(.boolFalse)

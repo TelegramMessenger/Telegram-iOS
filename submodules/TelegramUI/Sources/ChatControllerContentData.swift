@@ -819,13 +819,23 @@ extension ChatControllerImpl {
                             if let channel = peerView.peers[peerView.peerId] as? TelegramChannel {
                                 if channel.isMonoForum {
                                     if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = peerView.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
+                                    } else if let sendPaidMessageStarsValue = cachedData.sendPaidMessageStars, sendPaidMessageStarsValue == .zero {
+                                        sendPaidMessageStars = nil
                                     } else {
                                         sendPaidMessageStars = channel.sendPaidMessageStars
                                     }
                                 } else {
                                     if channel.flags.contains(.isCreator) || channel.adminRights != nil {
                                     } else {
-                                        sendPaidMessageStars = channel.sendPaidMessageStars
+                                        if let personalSendPaidMessageStars = cachedData.sendPaidMessageStars {
+                                            if personalSendPaidMessageStars == .zero {
+                                                sendPaidMessageStars = nil
+                                            } else {
+                                                sendPaidMessageStars = personalSendPaidMessageStars
+                                            }
+                                        } else {
+                                            sendPaidMessageStars = channel.sendPaidMessageStars
+                                        }
                                     }
                                 }
                             }

@@ -2361,10 +2361,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             
                             timestamp = Int32(Date().timeIntervalSince1970) + 1 * 60 * 60
                         } else {
-                            let _ = strongSelf.context.engine.messages.monoforumPerformSuggestedPostAction(id: message.id, action: .approve(timestamp: timestamp)).startStandalone()
+                            //TODO:localize
+                            let textString = "Publish this message now?"
+                            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: textString, actions: [
+                                TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}),
+                                TextAlertAction(type: .defaultAction, title: "Publish", action: { [weak strongSelf] in
+                                    guard let strongSelf else {
+                                        return
+                                    }
+                                    let _ = strongSelf.context.engine.messages.monoforumPerformSuggestedPostAction(id: message.id, action: .approve(timestamp: timestamp)).startStandalone()
+                                })
+                            ]), in: .window(.root))
                         }
                     case 2:
-                        strongSelf.interfaceInteraction?.openSuggestPost(message)
+                        strongSelf.interfaceInteraction?.openSuggestPost(message, .default)
                     default:
                         break
                     }

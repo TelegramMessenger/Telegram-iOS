@@ -93,15 +93,82 @@ public final class ChatMessageSuggestedPostInfoNode: ASDisplayNode {
             
             //TODO:localize
             let titleText: String
-            if !item.message.effectivelyIncoming(item.context.account.peerId) {
-                if item.message.attributes.contains(where: { $0 is ReplyMessageAttribute }) {
-                    titleText = "You suggest a new price,\ntime and text for this message."
+            if let attribute = item.message.attributes.first(where: { $0 is ReplyMessageAttribute }) as? ReplyMessageAttribute {
+                var changedText = false
+                var changedMedia = false
+                var changedTime = false
+                var changedPrice = false
+                if let previousMessage = item.message.associatedMessages[attribute.messageId] {
+                    if previousMessage.text != item.message.text {
+                        changedText = true
+                    }
+                    let filteredMediaIds = item.message.media.compactMap { media -> EngineMedia.Id? in
+                        if media is TelegramMediaImage || media is TelegramMediaFile {
+                            return media.id
+                        } else {
+                            return nil
+                        }
+                    }
+                    let filteredPreviousMediaIds = previousMessage.media.compactMap { media -> EngineMedia.Id? in
+                        if media is TelegramMediaImage || media is TelegramMediaFile {
+                            return media.id
+                        } else {
+                            return nil
+                        }
+                    }
+                    if Set(filteredPreviousMediaIds) != Set(filteredMediaIds) {
+                        changedMedia = true
+                    }
+                    if let previousAttribute = previousMessage.attributes.first(where: { $0 is SuggestedPostMessageAttribute }) as? SuggestedPostMessageAttribute {
+                        if previousAttribute.amount != amount {
+                            changedPrice = true
+                        }
+                        if previousAttribute.timestamp != timestamp {
+                            changedTime = true
+                        }
+                    }
+                }
+                
+                if !item.message.effectivelyIncoming(item.context.account.peerId) {
+                    if changedText && changedMedia && changedPrice && changedTime {
+                        titleText = "You suggest a new price,\ntime and contents for this message."
+                    } else if changedText && changedPrice && changedTime {
+                        titleText = "You suggest a new price,\ntime and text for this message."
+                    } else if changedMedia && changedPrice && changedTime {
+                        titleText = "You suggest a new price,\ntime and attachments for this message."
+                    } else if changedPrice && changedTime {
+                        titleText = "You suggest a new price and time\nfor this message."
+                    } else if changedPrice {
+                        titleText = "You suggest a new price\nfor this message."
+                    } else if changedTime {
+                        titleText = "You suggest a new time\nfor this message."
+                    } else {
+                        titleText = "You suggest changes\nfor this message."
+                    }
                 } else {
-                    titleText = "You suggest to post\nthis message."
+                    var channelName = ""
+                    if item.message.author is TelegramChannel {
+                        channelName = item.message.author.flatMap(EnginePeer.init)?.compactDisplayTitle ?? " "
+                    }
+                    if changedText && changedMedia && changedPrice && changedTime {
+                        titleText = "**\(channelName)** suggests a new price,\ntime and contents for this message."
+                    } else if changedText && changedPrice && changedTime {
+                        titleText = "**\(channelName)** suggests a new price,\ntime and text for this message."
+                    } else if changedMedia && changedPrice && changedTime {
+                        titleText = "**\(channelName)** suggests a new price,\ntime and attachments for this message."
+                    } else if changedPrice && changedTime {
+                        titleText = "**\(channelName)** suggests a new price and time\nfor this message."
+                    } else if changedPrice {
+                        titleText = "**\(channelName)** suggests a new price\nfor this message."
+                    } else if changedTime {
+                        titleText = "**\(channelName)** suggests a new time\nfor this message."
+                    } else {
+                        titleText = "**\(channelName)** suggests changes\nfor this message."
+                    }
                 }
             } else {
-                if item.message.author is TelegramChannel {
-                    titleText = "**\(item.message.author.flatMap(EnginePeer.init)?.compactDisplayTitle ?? " ")** suggests a new price,\ntime, and text for your message."
+                if !item.message.effectivelyIncoming(item.context.account.peerId) {
+                    titleText = "You suggest to post\nthis message."
                 } else {
                     titleText = "**\(item.message.author.flatMap(EnginePeer.init)?.compactDisplayTitle ?? " ")** suggests to post\nthis message."
                 }
