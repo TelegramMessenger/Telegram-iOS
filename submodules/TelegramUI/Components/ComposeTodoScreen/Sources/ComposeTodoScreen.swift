@@ -921,6 +921,31 @@ final class ComposeTodoScreenComponent: Component {
                         self.todoItems.removeAll(where: { $0.id == optionId })
                         self.state?.updated(transition: .spring(duration: 0.4))
                     } : nil,
+                    paste: { [weak self] data in
+                        guard let self else {
+                            return
+                        }
+                        if case let .text(text) = data {
+                            let lines = text.string.components(separatedBy: "\n")
+                            if !lines.isEmpty {
+                                var i = 0
+                                for line in lines {
+                                    if i < self.todoItems.count {
+                                        self.todoItems[i].resetText = line
+                                    } else {
+                                        let todoItem = ComposeTodoScreenComponent.TodoItem(
+                                            id: self.nextTodoItemId
+                                        )
+                                        todoItem.resetText = line
+                                        self.todoItems.append(todoItem)
+                                        self.nextTodoItemId += 1
+                                    }
+                                    i += 1
+                                }
+                                self.state?.updated()
+                            }
+                        }
+                    },
                     tag: todoItem.textFieldTag
                 ))))
                 

@@ -87,6 +87,7 @@ public final class ListComposePollOptionComponent: Component {
     public let alwaysDisplayInputModeSelector: Bool
     public let toggleInputMode: (() -> Void)?
     public let deleteAction: (() -> Void)?
+    public let paste: ((TextFieldComponent.PasteData) -> Void)?
     public let tag: AnyObject?
     
     public init(
@@ -109,6 +110,7 @@ public final class ListComposePollOptionComponent: Component {
         alwaysDisplayInputModeSelector: Bool = false,
         toggleInputMode: (() -> Void)?,
         deleteAction: (() -> Void)? = nil,
+        paste: ((TextFieldComponent.PasteData) -> Void)? = nil,
         tag: AnyObject? = nil
     ) {
         self.externalState = externalState
@@ -130,6 +132,7 @@ public final class ListComposePollOptionComponent: Component {
         self.alwaysDisplayInputModeSelector = alwaysDisplayInputModeSelector
         self.toggleInputMode = toggleInputMode
         self.deleteAction = deleteAction
+        self.paste = paste
         self.tag = tag
     }
     
@@ -589,13 +592,20 @@ public final class ListComposePollOptionComponent: Component {
                     characterLimit: component.characterLimit,
                     enableInlineAnimations: component.enableInlineAnimations,
                     emptyLineHandling: component.emptyLineHandling,
+                    externalHandlingForMultilinePaste: true,
                     formatMenuAvailability: .none,
                     returnKeyType: .next,
                     lockedFormatAction: {
                     },
                     present: { _ in
                     },
-                    paste: { _ in
+                    paste: { [weak self] data in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        if let paste = component.paste, case .text = data {
+                            paste(data)
+                        }
                     },
                     returnKeyAction: { [weak self] in
                         guard let self, let component = self.component else {

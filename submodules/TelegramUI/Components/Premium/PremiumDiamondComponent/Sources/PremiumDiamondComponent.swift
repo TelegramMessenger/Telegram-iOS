@@ -45,12 +45,11 @@ public final class PremiumDiamondComponent: Component {
         public var ready: Signal<Bool, NoError> {
             return self._ready.get()
         }
-        
-        weak var animateFrom: UIView?
-        weak var containerView: UIView?
-        
-        private let sceneView: SCNView
                 
+        private let sceneView: SCNView
+        
+        private let diamondLayer: DiamondLayer
+        
         private var timer: SwiftSignalKit.Timer?
                 
         private var component: PremiumDiamondComponent?
@@ -63,13 +62,17 @@ public final class PremiumDiamondComponent: Component {
             self.sceneView.preferredFramesPerSecond = 60
             self.sceneView.isJitteringEnabled = true
             
+            self.diamondLayer = DiamondLayer()
+            
             super.init(frame: frame)
             
             self.addSubview(self.sceneView)
             
+            self.layer.addSublayer(self.diamondLayer)
+            
             self.setup()
             
-            let panGestureRecoginzer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
+            let panGestureRecoginzer = UIPanGestureRecognizer(target: self.diamondLayer, action: #selector(self.diamondLayer.handlePan(_:)))
             self.addGestureRecognizer(panGestureRecoginzer)
             
             self.disablesInteractiveModalDismiss = true
@@ -84,61 +87,6 @@ public final class PremiumDiamondComponent: Component {
             self.timer?.invalidate()
         }
                 
-        private var previousYaw: Float = 0.0
-        @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
-            guard let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "star", recursively: false) else {
-                return
-            }
-            
-            let keys = [
-                "rotate",
-                "tapRotate",
-                "continuousRotation"
-            ]
-
-            for key in keys {
-                node.removeAnimation(forKey: key)
-            }
-            
-            switch gesture.state {
-                case .began:
-                    self.previousYaw = 0.0
-                case .changed:
-                    let translation = gesture.translation(in: gesture.view)
-                    let yawPan = deg2rad(Float(translation.x))
-                
-                    func rubberBandingOffset(offset: CGFloat, bandingStart: CGFloat) -> CGFloat {
-                        let bandedOffset = offset - bandingStart
-                        let range: CGFloat = 60.0
-                        let coefficient: CGFloat = 0.4
-                        return bandingStart + (1.0 - (1.0 / ((bandedOffset * coefficient / range) + 1.0))) * range
-                    }
-                
-                    var pitchTranslation = rubberBandingOffset(offset: abs(translation.y), bandingStart: 0.0)
-                    if translation.y < 0.0 {
-                        pitchTranslation *= -1.0
-                    }
-                    let pitchPan = deg2rad(Float(pitchTranslation))
-                
-                    self.previousYaw = yawPan
-                    // Maintain the initial tilt while adding pan gestures
-                    let initialTiltX: Float = deg2rad(-15.0)
-                    let initialTiltZ: Float = deg2rad(5.0)
-                    node.eulerAngles = SCNVector3(initialTiltX + pitchPan, yawPan, initialTiltZ)
-                case .ended:
-                    let velocity = gesture.velocity(in: gesture.view)
-                    
-                    var smallAngle = false
-                    if (self.previousYaw < .pi / 2 && self.previousYaw > -.pi / 2) && abs(velocity.x) < 200 {
-                        smallAngle = true
-                    }
-                
-                    self.playAppearanceAnimation(velocity: velocity.x, smallAngle: smallAngle, explode: !smallAngle && abs(velocity.x) > 600)
-                default:
-                    break
-            }
-        }
-        
         private func setup() {
             guard let scene = loadCompressedScene(name: "diamond", version: sceneVersion) else {
                 return
@@ -163,7 +111,21 @@ public final class PremiumDiamondComponent: Component {
         }
         
         private func onReady() {
+            self.setupScaleAnimation()
+            
             self.playAppearanceAnimation(mirror: true, explode: true)
+        }
+        
+        private func setupScaleAnimation() {
+            let animation = CABasicAnimation(keyPath: "transform.scale")
+            animation.duration = 2.0
+            animation.fromValue = 0.9
+            animation.toValue = 1.0
+            animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            animation.autoreverses = true
+            animation.repeatCount = .infinity
+
+            self.diamondLayer.add(animation, forKey: "scale")
         }
         
         private func playAppearanceAnimation(velocity: CGFloat? = nil, smallAngle: Bool = false, mirror: Bool = false, explode: Bool = false) {
@@ -244,56 +206,19 @@ public final class PremiumDiamondComponent: Component {
                         rightParticleSystem.pop_add(rightAnimation, forKey: "speedFactor")
                     }
                 }
+                
+                self.diamondLayer.playAppearanceAnimation(velocity:nil, smallAngle: false, explode: true)
             }
-            
-//            var from = node.presentation.eulerAngles
-//            if abs(from.y - .pi * 2.0) < 0.001 {
-//                from.y = 0.0
-//            }
-//            node.removeAnimation(forKey: "tapRotate")
-//            
-//            var toValue: Float = smallAngle ? 0.0 : .pi * 2.0
-//            if let velocity = velocity, !smallAngle && abs(velocity) > 200 && velocity < 0.0 {
-//                toValue *= -1
-//            }
-//            if mirror {
-//                toValue *= -1
-//            }
-//            
-//            
-//            let to = SCNVector3(x: from.x, y: toValue, z: from.z)
-//            let distance = rad2deg(to.y - from.y)
-//            
-//            guard !distance.isZero else {
-//                Queue.mainQueue().after(0.1) { [weak self] in
-//                    self?.setupContinuousRotation()
-//                }
-//                return
-//            }
-//            
-//            let springAnimation = CASpringAnimation(keyPath: "eulerAngles")
-//            springAnimation.fromValue = NSValue(scnVector3: from)
-//            springAnimation.toValue = NSValue(scnVector3: to)
-//            springAnimation.mass = 1.0
-//            springAnimation.stiffness = 21.0
-//            springAnimation.damping = 5.8
-//            springAnimation.duration = springAnimation.settlingDuration * 0.75
-//            springAnimation.initialVelocity = velocity.flatMap { abs($0 / CGFloat(distance)) } ?? 1.7
-//            springAnimation.completion = { [weak self] finished in
-//                if finished {
-//                    self?.setupContinuousRotation()
-//                }
-//            }
-//            node.addAnimation(springAnimation, forKey: "rotate")
         }
         
         func update(component: PremiumDiamondComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             self.component = component
             
             self.sceneView.bounds = CGRect(origin: .zero, size: CGSize(width: availableSize.width * 2.0, height: availableSize.height * 2.0))
-            if self.sceneView.superview == self {
-                self.sceneView.center = CGPoint(x: availableSize.width / 2.0, y: availableSize.height / 2.0)
-            }
+            self.sceneView.center = CGPoint(x: availableSize.width / 2.0, y: availableSize.height / 2.0)
+        
+            self.diamondLayer.bounds = CGRect(origin: .zero, size: CGSize(width: availableSize.height, height: availableSize.height))
+            self.diamondLayer.position = CGPoint(x: availableSize.width / 2.0, y: availableSize.height / 2.0 - 8.0)
                         
             return availableSize
         }

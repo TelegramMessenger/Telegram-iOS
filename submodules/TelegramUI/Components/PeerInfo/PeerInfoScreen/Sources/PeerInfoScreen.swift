@@ -10670,7 +10670,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
         case .ton:
             if let tonContext = self.controller?.tonContext {
-                push(self.context.sharedContext.makeTonTransactionsScreen(context: self.context, tonContext: tonContext))
+                push(self.context.sharedContext.makeStarsTransactionsScreen(context: self.context, starsContext: tonContext))
             }
         }
     }

@@ -442,10 +442,10 @@ private func _internal_requestStarsState(account: Account, peerId: EnginePeer.Id
                 break
             }
             if let _ = subscriptionId {
-                flags = 1 << 3
+                flags |= 1 << 3
             }
             if ton {
-                flags = 1 << 4
+                flags |= 1 << 4
             }
             signal = account.network.request(Api.functions.payments.getStarsTransactions(flags: flags, subscriptionId: subscriptionId, peer: inputPeer, offset: offset, limit: limit))
         } else {
