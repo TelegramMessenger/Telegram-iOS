@@ -9897,8 +9897,6 @@ Sorry for the inconvenience.";
 "Story.ViewList.ViewerCount_any" = "%d Viewers";
 
 "AuthSessions.MessageApp" = "You allowed this bot to message you when you opened %@.";
-"Notification.BotWriteAllowedMenu" = "You allowed this bot to message you when you added it to your attachment menu.";
-"Notification.BotWriteAllowedRequest" = "You allowed this bot to message you in the app.";
 
 "Story.Privacy.PostStoryAs" = "Post Story As";
 "Story.Privacy.PostStoryAsHeader" = "POST STORY AS";

@@ -211,6 +211,7 @@ public final class TextFieldComponent: Component {
         self.characterLimit = characterLimit
         self.enableInlineAnimations = enableInlineAnimations
         self.emptyLineHandling = emptyLineHandling
+        self.externalHandlingForMultilinePaste = externalHandlingForMultilinePaste
         self.formatMenuAvailability = formatMenuAvailability
         self.returnKeyType = returnKeyType
         self.lockedFormatAction = lockedFormatAction
@@ -270,6 +271,9 @@ public final class TextFieldComponent: Component {
             return false
         }
         if lhs.emptyLineHandling != rhs.emptyLineHandling {
+            return false
+        }
+        if lhs.externalHandlingForMultilinePaste != rhs.externalHandlingForMultilinePaste {
             return false
         }
         if lhs.formatMenuAvailability != rhs.formatMenuAvailability {
