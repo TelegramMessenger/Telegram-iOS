@@ -392,6 +392,26 @@ NSData * _Nullable tdGenerateSelfAddBlock(TdKeyPair *keyPair, int64_t userId, NS
     std::string mappedPublicKey((uint8_t *)keyPair.publicKey.bytes, ((uint8_t *)keyPair.publicKey.bytes) + keyPair.publicKey.length);
     std::string mappedPreviousBlock((uint8_t *)previousBlock.bytes, ((uint8_t *)previousBlock.bytes) + previousBlock.length);
     
+    
+    #if DEBUG
+    auto describeResult = tde2e_api::call_describe_block(mappedPreviousBlock);
+    if (describeResult.is_ok()) {
+        NSString *utf8String = [[NSString alloc] initWithBytes:describeResult.value().data() length:describeResult.value().size() encoding:NSUTF8StringEncoding];
+        if (utf8String) {
+            NSLog(@"TdCall.selfAddBlock block: %@", utf8String);
+        } else {
+            NSString *lossyString = [[NSString alloc] initWithData:[NSData dataWithBytes:describeResult.value().data() length:describeResult.value().size()] encoding:NSASCIIStringEncoding];
+            if (lossyString) {
+                NSLog(@"TdCall.selfAddBlock block (lossy conversion): %@", lossyString);
+            } else {
+                NSLog(@"TdCall.selfAddBlock block: [binary data, length: %lu]", (unsigned long)describeResult.value().size());
+            }
+        }
+    } else {
+        NSLog(@"TdCall.selfAddBlock describe block failed");
+    }
+    #endif
+    
     auto publicKeyId = tde2e_api::key_from_public_key(mappedPublicKey);
     if (!publicKeyId.is_ok()) {
         return nil;
