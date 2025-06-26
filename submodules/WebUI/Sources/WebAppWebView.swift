@@ -4,6 +4,7 @@ import Display
 import WebKit
 import SwiftSignalKit
 import TelegramCore
+import Postbox
 
 private let findActiveElementY = """
 function getOffset(el) {
@@ -33,6 +34,111 @@ private class WeakGameScriptMessageHandler: NSObject, WKScriptMessageHandler {
 private class WebViewTouchGestureRecognizer: UITapGestureRecognizer {
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
         self.state = .began
+    }
+}
+
+private final class TonSchemeHandler: NSObject, WKURLSchemeHandler {
+    private final class PendingTask {
+        let sourceTask: any WKURLSchemeTask
+        var urlSessionTask: URLSessionTask?
+        let isCompleted = Atomic<Bool>(value: false)
+
+        init(proxyServerHost: String, sourceTask: any WKURLSchemeTask) {
+            self.sourceTask = sourceTask
+
+            final class BoxedSourceTask: @unchecked Sendable {
+                let value: any WKURLSchemeTask
+
+                init(value: any WKURLSchemeTask) {
+                    self.value = value
+                }
+            }
+            let sourceTaskReference = BoxedSourceTask(value: sourceTask)
+
+            let requestUrl = sourceTask.request.url
+
+            var mappedHost: String = ""
+            if let host = sourceTask.request.url?.host {
+                mappedHost = host
+                mappedHost = mappedHost.replacingOccurrences(of: "-", with: "-h")
+                mappedHost = mappedHost.replacingOccurrences(of: ".", with: "-d")
+            }
+
+            var mappedPath = ""
+            if let path = sourceTask.request.url?.path, !path.isEmpty {
+                mappedPath = path
+                if !path.hasPrefix("/") {
+                    mappedPath = "/\(mappedPath)"
+                }
+            }
+            let mappedUrl = "https://\(mappedHost).\(proxyServerHost)\(mappedPath)"
+            let isCompleted = self.isCompleted
+            self.urlSessionTask = URLSession.shared.dataTask(with: URLRequest(url: URL(string: mappedUrl)!), completionHandler: { data, response, error in
+                if isCompleted.swap(true) {
+                    return
+                }
+
+                if let error {
+                    sourceTaskReference.value.didFailWithError(error)
+                } else {
+                    if let response {
+                        if let response = response as? HTTPURLResponse, let requestUrl {
+                            if let updatedResponse = HTTPURLResponse(
+                                url: requestUrl,
+                                statusCode: response.statusCode,
+                                httpVersion: "HTTP/1.1",
+                                headerFields: response.allHeaderFields as? [String: String] ?? [:]
+                            ) {
+                                sourceTaskReference.value.didReceive(updatedResponse)
+                            } else {
+                                sourceTaskReference.value.didReceive(response)
+                            }
+                        } else {
+                            sourceTaskReference.value.didReceive(response)
+                        }
+                    }
+                    if let data {
+                        sourceTaskReference.value.didReceive(data)
+                    }
+                    sourceTaskReference.value.didFinish()
+                }
+            })
+            self.urlSessionTask?.resume()
+        }
+
+        func cancel() {
+            if let urlSessionTask = self.urlSessionTask {
+                self.urlSessionTask = nil
+                if !self.isCompleted.swap(true) {
+                    switch urlSessionTask.state {
+                    case .running, .suspended:
+                        urlSessionTask.cancel()
+                    default:
+                        break
+                    }
+                }
+            }
+        }
+    }
+
+    private let proxyServerHost: String
+
+    private var pendingTasks: [PendingTask] = []
+
+    init(proxyServerHost: String) {
+        self.proxyServerHost = proxyServerHost
+    }
+
+    func webView(_ webView: WKWebView, start urlSchemeTask: any WKURLSchemeTask) {
+        self.pendingTasks.append(PendingTask(proxyServerHost: self.proxyServerHost, sourceTask: urlSchemeTask))
+    }
+
+    func webView(_ webView: WKWebView, stop urlSchemeTask: any WKURLSchemeTask) {
+        if let index = self.pendingTasks.firstIndex(where: { $0.sourceTask === urlSchemeTask }) {
+            let task = self.pendingTasks[index]
+            self.pendingTasks.remove(at: index)
+            task.cancel()
+        }
     }
 }
 
@@ -130,6 +236,13 @@ final class WebAppWebView: WKWebView {
                 configuration.websiteDataStore = WKWebsiteDataStore(forIdentifier: uuid)
             }
         }
+
+        // Configure TonSchemeHandler for .ton domains
+        var proxyServerHost = "magic.org"
+        if let data = account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.appConfiguration]).values[ApplicationSpecificPreferencesKeys.appConfiguration]?.get(AppConfiguration.self)?.data, let hostValue = data["ton_proxy_address"] as? String {
+            proxyServerHost = hostValue
+        }
+        configuration.setURLSchemeHandler(TonSchemeHandler(proxyServerHost: proxyServerHost), forURLScheme: "tonsite")
         
         let contentController = WKUserContentController()
                            
