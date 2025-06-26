@@ -234,7 +234,7 @@ final class ComposePollScreenComponent: Component {
         private func item(at point: CGPoint) -> (AnyHashable, ComponentView<Empty>)? {
             let localPoint = self.pollOptionsSectionContainer.convert(point, from: self)
             for (id, itemView) in self.pollOptionsSectionContainer.itemViews {
-                if let view = itemView.contents.view as? ListComposePollOptionComponent.View, !view.isRevealed {
+                if let view = itemView.contents.view as? ListComposePollOptionComponent.View, !view.isRevealed && !view.currentText.isEmpty {
                     let viewFrame = view.convert(view.bounds, to: self.pollOptionsSectionContainer)
                     let iconFrame = CGRect(origin: CGPoint(x: viewFrame.maxX - viewFrame.height, y: viewFrame.minY), size: CGSize(width: viewFrame.height, height: viewFrame.height))
                     if iconFrame.contains(localPoint) {

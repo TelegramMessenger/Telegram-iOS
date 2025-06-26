@@ -3686,11 +3686,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     public func makeStarsTransactionsScreen(context: AccountContext, starsContext: StarsContext) -> ViewController {
         return StarsTransactionsScreen(context: context, starsContext: starsContext)
     }
-    
-    public func makeTonTransactionsScreen(context: AccountContext, tonContext: StarsContext) -> ViewController {
-        return TonTransactionsScreen(context: context, tonContext: tonContext)
-    }
-    
+        
     public func makeStarsPurchaseScreen(context: AccountContext, starsContext: StarsContext, options: [Any], purpose: StarsPurchasePurpose, completion: @escaping (Int64) -> Void) -> ViewController {
         return StarsPurchaseScreen(context: context, starsContext: starsContext, options: options, purpose: purpose, completion: completion)
     }

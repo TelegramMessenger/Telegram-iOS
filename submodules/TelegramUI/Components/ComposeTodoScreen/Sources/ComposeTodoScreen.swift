@@ -57,7 +57,7 @@ final class ComposeTodoScreenComponent: Component {
         let id: Int32
         let textInputState = TextFieldComponent.ExternalState()
         let textFieldTag = NSObject()
-        var resetText: String?
+        var resetText: NSAttributedString?
         
         init(id: Int32) {
             self.id = id
@@ -87,7 +87,7 @@ final class ComposeTodoScreenComponent: Component {
         
         private let todoTextInputState = TextFieldComponent.ExternalState()
         private let todoTextFieldTag = NSObject()
-        private var resetTodoText: String?
+        private var resetTodoText: NSAttributedString?
                 
         private var nextTodoItemId: Int32 = 1
         private var todoItems: [TodoItem] = []
@@ -182,7 +182,7 @@ final class ComposeTodoScreenComponent: Component {
         private func item(at point: CGPoint) -> (AnyHashable, ComponentView<Empty>)? {
             let localPoint = self.todoItemsSectionContainer.convert(point, from: self)
             for (id, itemView) in self.todoItemsSectionContainer.itemViews {
-                if let view = itemView.contents.view as? ListComposePollOptionComponent.View, !view.isRevealed {
+                if let view = itemView.contents.view as? ListComposePollOptionComponent.View, !view.isRevealed && !view.currentText.isEmpty {
                     let viewFrame = view.convert(view.bounds, to: self.todoItemsSectionContainer)
                     let iconFrame = CGRect(origin: CGPoint(x: viewFrame.maxX - viewFrame.height, y: viewFrame.minY), size: CGSize(width: viewFrame.height, height: viewFrame.height))
                     if iconFrame.contains(localPoint) {
@@ -591,13 +591,13 @@ final class ComposeTodoScreenComponent: Component {
             let isFirstTime = self.component == nil
             if self.component == nil {
                 if let existingTodo = component.initialData.existingTodo {
-                    self.resetTodoText = existingTodo.text
+                    self.resetTodoText = chatInputStateStringWithAppliedEntities(existingTodo.text, entities: existingTodo.textEntities)
                     
                     for item in existingTodo.items {
                         let todoItem = ComposeTodoScreenComponent.TodoItem(
                             id: item.id
                         )
-                        todoItem.resetText = item.text
+                        todoItem.resetText = chatInputStateStringWithAppliedEntities(item.text, entities: item.entities)
                         self.todoItems.append(todoItem)
                     }
                     self.nextTodoItemId = (existingTodo.items.max(by: { $0.id < $1.id })?.id ?? 0) + 1
@@ -777,7 +777,7 @@ final class ComposeTodoScreenComponent: Component {
                 strings: environment.strings,
                 isEnabled: canEdit,
                 resetText: self.resetTodoText.flatMap { resetText in
-                    return ListComposePollOptionComponent.ResetText(value: NSAttributedString(string: resetText))
+                    return ListComposePollOptionComponent.ResetText(value: resetText)
                 },
                 assumeIsEditing: self.inputMediaNodeTargetTag === self.todoTextFieldTag,
                 characterLimit: component.initialData.maxTodoTextLength,
@@ -860,7 +860,7 @@ final class ComposeTodoScreenComponent: Component {
                     strings: environment.strings,
                     isEnabled: isEnabled,
                     resetText: todoItem.resetText.flatMap { resetText in
-                        return ListComposePollOptionComponent.ResetText(value: NSAttributedString(string: resetText))
+                        return ListComposePollOptionComponent.ResetText(value: resetText)
                     },
                     assumeIsEditing: self.inputMediaNodeTargetTag === todoItem.textFieldTag,
                     characterLimit: component.initialData.maxTodoItemLength,
@@ -921,6 +921,31 @@ final class ComposeTodoScreenComponent: Component {
                         self.todoItems.removeAll(where: { $0.id == optionId })
                         self.state?.updated(transition: .spring(duration: 0.4))
                     } : nil,
+                    paste: { [weak self] data in
+                        guard let self else {
+                            return
+                        }
+                        if case let .text(text) = data {
+                            let lines = text.string.components(separatedBy: "\n")
+                            if !lines.isEmpty {
+                                var i = 0
+                                for line in lines {
+                                    if i < self.todoItems.count {
+                                        self.todoItems[i].resetText = NSAttributedString(string: line)
+                                    } else {
+                                        let todoItem = ComposeTodoScreenComponent.TodoItem(
+                                            id: self.nextTodoItemId
+                                        )
+                                        todoItem.resetText = NSAttributedString(string: line)
+                                        self.todoItems.append(todoItem)
+                                        self.nextTodoItemId += 1
+                                    }
+                                    i += 1
+                                }
+                                self.state?.updated()
+                            }
+                        }
+                    },
                     tag: todoItem.textFieldTag
                 ))))
                 
@@ -1616,14 +1641,14 @@ public class ComposeTodoScreen: ViewControllerComponentContainer, AttachmentCont
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         if !initialData.canEdit && initialData.existingTodo != nil {
-            self.title = "Add a Task"
+            self.title = presentationData.strings.CreateTodo_Title
         } else {
-            self.title = initialData.existingTodo != nil ? "Edit To Do List" : "New To Do List"
+            self.title = initialData.existingTodo != nil ? presentationData.strings.CreateTodo_EditTitle : presentationData.strings.CreateTodo_Title
         }
         
         self.navigationItem.setLeftBarButton(UIBarButtonItem(title: presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed)), animated: false)
         
-        let sendButtonItem = UIBarButtonItem(title: initialData.existingTodo != nil ? "Save" : presentationData.strings.CreatePoll_Create, style: .done, target: self, action: #selector(self.sendPressed))
+        let sendButtonItem = UIBarButtonItem(title: initialData.existingTodo != nil ? presentationData.strings.CreateTodo_Save : presentationData.strings.CreateTodo_Send, style: .done, target: self, action: #selector(self.sendPressed))
         self.sendButtonItem = sendButtonItem
         self.navigationItem.setRightBarButton(sendButtonItem, animated: false)
         sendButtonItem.isEnabled = false

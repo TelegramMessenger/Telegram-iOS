@@ -9897,8 +9897,6 @@ Sorry for the inconvenience.";
 "Story.ViewList.ViewerCount_any" = "%d Viewers";
 
 "AuthSessions.MessageApp" = "You allowed this bot to message you when you opened %@.";
-"Notification.BotWriteAllowedMenu" = "You allowed this bot to message you when you added it to your attachment menu.";
-"Notification.BotWriteAllowedRequest" = "You allowed this bot to message you in the app.";
 
 "Story.Privacy.PostStoryAs" = "Post Story As";
 "Story.Privacy.PostStoryAsHeader" = "POST STORY AS";
@@ -14463,27 +14461,31 @@ Sorry for the inconvenience.";
 "SuggestPost.Time.SendTomorrow" = "Post tomorrow at %@";
 "SuggestPost.Time.SendOn" = "Post on %@ at %@";
 
-"Attachment.Todo" = "To-Do List";
+"Attachment.Todo" = "Checklist";
 
-"Premium.Todo" = "To-Do Lists";
+"Premium.Todo" = "Checklists";
 "Premium.TodoInfo" = "Plan, assign and complete tasks – seamlessly and efficiently.";
 
-"CreateTodo.Title" = "Title";
-"CreateTodo.TodoTitle" = "TO-DO LIST";
+"CreateTodo.Title" = "New Checklist";
+"CreateTodo.AddTitle" = "Add a Task";
+"CreateTodo.EditTitle" = "Edit Checklist";
+"CreateTodo.TodoTitle" = "CHECKLIST";
 "CreateTodo.TitlePlaceholder" = "Title";
 "CreateTodo.TaskPlaceholder" = "Task";
 "CreateTodo.AddTaskPlaceholder" = "Add a Task";
 "CreateTodo.TaskCountFooterFormat_1" = "You can add {count} more task.";
 "CreateTodo.TaskCountFooterFormat_any" = "You can add {count} more tasks.";
 "CreateTodo.TaskCountLimitReached" = "Maximum number of tasks reached.";
+"CreateTodo.Save" = "Save";
+"CreateTodo.Send" = "Send";
 
 "CreateTodo.AllowOthersToComplete" = "Allow Others to Mark as Done";
 "CreateTodo.AllowOthersToAppend" = "Allow Others to Add Tasks";
 
-"Chat.Todo.Message.Title" = "To-do List";
-"Chat.Todo.Message.TitleGroup" = "Group To-do List";
-"Chat.Todo.Message.TitlePersonal" = "%@'s To-do List";
-"Chat.Todo.Message.CompletedPersonal" = "%@'s To-do List";
+"Chat.Todo.Message.Title" = "Checklist";
+"Chat.Todo.Message.TitleGroup" = "Group Checklist";
+"Chat.Todo.Message.TitlePersonal" = "%@'s Checklist";
+"Chat.Todo.Message.CompletedPersonal" = "%@'s Checklist";
 
 "Chat.Todo.ContextMenu.AddTask" = "Add a Task";
 "Chat.Todo.ContextMenu.EditTask" = "Edit Item";
@@ -14497,4 +14499,9 @@ Sorry for the inconvenience.";
 "Chat.Todo.PremiumRequired" = "Only [Telegram Premium]() subscribers can mark tasks as done.";
 "Chat.Todo.CompletionLimited" = "%@ has restricted others from editing this to do list.";
 
-"Forward.ErrorTodoDisabledInChannels" = "Sorry, to-do lists can’t be forwarded to channels.";
+"Forward.ErrorTodoDisabledInChannels" = "Sorry, checklists can’t be forwarded to channels.";
+
+"Bot.AddToGroup.Title" = "Add to Group";
+"Bot.AddToChannel.Title" = "Add to Channel";
+
+"ScheduledMessages.TodoUnavailable" = "Voting will become available after the message is published.";

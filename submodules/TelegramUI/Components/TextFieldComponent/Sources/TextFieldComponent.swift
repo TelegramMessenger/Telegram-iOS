@@ -87,7 +87,7 @@ public final class TextFieldComponent: Component {
         case images([UIImage])
         case video(Data)
         case gif(Data)
-        case text
+        case text(NSAttributedString)
     }
     
     
@@ -158,6 +158,7 @@ public final class TextFieldComponent: Component {
     public let characterLimit: Int?
     public let enableInlineAnimations: Bool
     public let emptyLineHandling: EmptyLineHandling
+    public let externalHandlingForMultilinePaste: Bool
     public let formatMenuAvailability: FormatMenuAvailability
     public let returnKeyType: UIReturnKeyType
     public let lockedFormatAction: () -> Void
@@ -184,6 +185,7 @@ public final class TextFieldComponent: Component {
         characterLimit: Int? = nil,
         enableInlineAnimations: Bool = true,
         emptyLineHandling: EmptyLineHandling = .allowed,
+        externalHandlingForMultilinePaste: Bool = false,
         formatMenuAvailability: FormatMenuAvailability,
         returnKeyType: UIReturnKeyType = .default,
         lockedFormatAction: @escaping () -> Void,
@@ -209,6 +211,7 @@ public final class TextFieldComponent: Component {
         self.characterLimit = characterLimit
         self.enableInlineAnimations = enableInlineAnimations
         self.emptyLineHandling = emptyLineHandling
+        self.externalHandlingForMultilinePaste = externalHandlingForMultilinePaste
         self.formatMenuAvailability = formatMenuAvailability
         self.returnKeyType = returnKeyType
         self.lockedFormatAction = lockedFormatAction
@@ -268,6 +271,9 @@ public final class TextFieldComponent: Component {
             return false
         }
         if lhs.emptyLineHandling != rhs.emptyLineHandling {
+            return false
+        }
+        if lhs.externalHandlingForMultilinePaste != rhs.externalHandlingForMultilinePaste {
             return false
         }
         if lhs.formatMenuAvailability != rhs.formatMenuAvailability {
@@ -471,6 +477,10 @@ public final class TextFieldComponent: Component {
             if let attributedString = attributedString {
                 let current = self.inputState
                 let range = NSMakeRange(current.selectionRange.lowerBound, current.selectionRange.count)
+                if component.externalHandlingForMultilinePaste, component.emptyLineHandling == .notAllowed, attributedString.string.contains("\n") {
+                    component.paste(.text(attributedString))
+                    return false
+                }
                 if !self.chatInputTextNode(shouldChangeTextIn: range, replacementText: attributedString.string) {
                     return false
                 }
@@ -487,7 +497,7 @@ public final class TextFieldComponent: Component {
                 if !self.isUpdating {
                     self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textChanged)))
                 }
-                component.paste(.text)
+                component.paste(.text(attributedString))
                 return false
             }
             
@@ -537,7 +547,7 @@ public final class TextFieldComponent: Component {
                 }
             }
             
-            component.paste(.text)
+            component.paste(.text(NSAttributedString()))
             return true
         }
         

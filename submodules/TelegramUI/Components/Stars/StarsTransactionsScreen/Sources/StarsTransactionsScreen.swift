@@ -24,6 +24,7 @@ import TelegramStringFormatting
 import ListItemComponentAdaptor
 import ItemListUI
 import StarsWithdrawalScreen
+import PremiumDiamondComponent
 
 private let initialSubscriptionsDisplayedLimit: Int32 = 3
 
@@ -33,7 +34,7 @@ final class StarsTransactionsScreenComponent: Component {
     let context: AccountContext
     let starsContext: StarsContext
     let starsRevenueStatsContext: StarsRevenueStatsContext
-    let subscriptionsContext: StarsSubscriptionsContext
+    let subscriptionsContext: StarsSubscriptionsContext?
     let openTransaction: (StarsContext.State.Transaction) -> Void
     let openSubscription: (StarsContext.State.Subscription) -> Void
     let buy: () -> Void
@@ -45,7 +46,7 @@ final class StarsTransactionsScreenComponent: Component {
         context: AccountContext,
         starsContext: StarsContext,
         starsRevenueStatsContext: StarsRevenueStatsContext,
-        subscriptionsContext: StarsSubscriptionsContext,
+        subscriptionsContext: StarsSubscriptionsContext?,
         openTransaction: @escaping (StarsContext.State.Transaction) -> Void,
         openSubscription: @escaping (StarsContext.State.Subscription) -> Void,
         buy: @escaping () -> Void,
@@ -399,22 +400,24 @@ final class StarsTransactionsScreenComponent: Component {
                     }
                 })
                 
-                self.subscriptionsStateDisposable = (component.subscriptionsContext.state
-                |> deliverOnMainQueue).start(next: { [weak self] state in
-                    guard let self else {
-                        return
-                    }
-                    let isFirstTime = self.subscriptionsState == nil
-                    if !state.subscriptions.isEmpty {
-                        self.subscriptionsState = state
-                    } else {
-                        self.subscriptionsState = nil
-                    }
-                    
-                    if !self.isUpdating {
-                        self.state?.updated(transition: isFirstTime ? .immediate : .spring(duration: 0.4))
-                    }
-                })
+                if let subscriptionsContext = component.subscriptionsContext {
+                    self.subscriptionsStateDisposable = (subscriptionsContext.state
+                    |> deliverOnMainQueue).start(next: { [weak self] state in
+                        guard let self else {
+                            return
+                        }
+                        let isFirstTime = self.subscriptionsState == nil
+                        if !state.subscriptions.isEmpty {
+                            self.subscriptionsState = state
+                        } else {
+                            self.subscriptionsState = nil
+                        }
+                        
+                        if !self.isUpdating {
+                            self.state?.updated(transition: isFirstTime ? .immediate : .spring(duration: 0.4))
+                        }
+                    })
+                }
             }
             
             var wasLockedAtPanels = false
@@ -495,10 +498,12 @@ final class StarsTransactionsScreenComponent: Component {
                 }
                 starTransition.setFrame(view: fadeView, frame: fadeFrame)
             }
-                    
-            let starSize = self.starView.update(
-                transition: .immediate,
-                component: AnyComponent(PremiumStarComponent(
+            
+            let headerComponent: AnyComponent<Empty>
+            if component.starsContext.ton {
+                headerComponent = AnyComponent(PremiumDiamondComponent())
+            } else {
+                headerComponent = AnyComponent(PremiumStarComponent(
                     theme: environment.theme,
                     isIntro: true,
                     isVisible: true,
@@ -511,7 +516,12 @@ final class StarsTransactionsScreenComponent: Component {
                     ],
                     particleColor: UIColor(rgb: 0xf9b004),
                     backgroundColor: environment.theme.list.blocksBackgroundColor
-                )),
+                ))
+            }
+                    
+            let starSize = self.starView.update(
+                transition: .immediate,
+                component: headerComponent,
                 environment: {},
                 containerSize: CGSize(width: min(414.0, availableSize.width), height: 220.0)
             )
@@ -528,7 +538,7 @@ final class StarsTransactionsScreenComponent: Component {
             if component.starsContext.ton {
                 //TODO:localize
                 titleString = "TON"
-                descriptionString = "Use TON to unlock content and services on Telegram"
+                descriptionString = "Use TON to submit post suggestions to channels on Telegram."
             } else {
                 titleString = environment.strings.Stars_Intro_Title
                 descriptionString = environment.strings.Stars_Intro_Description
@@ -657,8 +667,9 @@ final class StarsTransactionsScreenComponent: Component {
             contentHeight += descriptionSize.height
             contentHeight += 29.0
             
-            let withdrawAvailable = (self.revenueState?.balances.overallRevenue.value ?? 0) > 0
+            let withdrawAvailable = component.starsContext.ton ? (self.starsState?.balance.value ?? 0) > 0 : (self.revenueState?.balances.overallRevenue.value ?? 0) > 0
                    
+            //TODO:localize
             let premiumConfiguration = PremiumConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
             let balanceSize = self.balanceView.update(
                 transition: .immediate,
@@ -674,25 +685,29 @@ final class StarsTransactionsScreenComponent: Component {
                             count: self.starsState?.balance ?? StarsAmount.zero,
                             currency: component.starsContext.ton ? .ton : .stars,
                             rate: nil,
-                            actionTitle: withdrawAvailable ? environment.strings.Stars_Intro_BuyShort : environment.strings.Stars_Intro_Buy,
-                            actionAvailable: !premiumConfiguration.areStarsDisabled && !premiumConfiguration.isPremiumDisabled,
+                            actionTitle: component.starsContext.ton ? "Withdraw via Fragment" : (withdrawAvailable ? environment.strings.Stars_Intro_BuyShort : environment.strings.Stars_Intro_Buy),
+                            actionAvailable: (component.starsContext.ton && withdrawAvailable) || (!premiumConfiguration.areStarsDisabled && !premiumConfiguration.isPremiumDisabled),
                             actionIsEnabled: true,
-                            actionIcon: PresentationResourcesItemList.itemListRoundTopupIcon(environment.theme),
+                            actionIcon: component.starsContext.ton ? nil : PresentationResourcesItemList.itemListRoundTopupIcon(environment.theme),
                             action: { [weak self] in
                                 guard let self, let component = self.component else {
                                     return
                                 }
-                                component.buy()
+                                if component.starsContext.ton {
+                                    component.withdraw()
+                                } else {
+                                    component.buy()
+                                }
                             },
-                            secondaryActionTitle: withdrawAvailable ? environment.strings.Stars_Intro_Stats : nil,
-                            secondaryActionIcon: withdrawAvailable ? PresentationResourcesItemList.itemListStatsIcon(environment.theme) : nil,
-                            secondaryAction: withdrawAvailable ? { [weak self] in
+                            secondaryActionTitle: withdrawAvailable && !component.starsContext.ton ? environment.strings.Stars_Intro_Stats : nil,
+                            secondaryActionIcon: withdrawAvailable && !component.starsContext.ton ? PresentationResourcesItemList.itemListStatsIcon(environment.theme) : nil,
+                            secondaryAction: withdrawAvailable && !component.starsContext.ton ? { [weak self] in
                                 guard let self, let component = self.component else {
                                     return
                                 }
                                 component.withdraw()
                             } : nil,
-                            additionalAction: (premiumConfiguration.starsGiftsPurchaseAvailable && !premiumConfiguration.isPremiumDisabled) ? AnyComponent(
+                            additionalAction: (premiumConfiguration.starsGiftsPurchaseAvailable && !premiumConfiguration.isPremiumDisabled && !component.starsContext.ton) ? AnyComponent(
                                 Button(
                                     content: AnyComponent(
                                         HStack([
@@ -918,7 +933,7 @@ final class StarsTransactionsScreenComponent: Component {
                                         self.subscriptionsExpanded = true
                                     }
                                     self.state?.updated(transition: .spring(duration: 0.4))
-                                    component.subscriptionsContext.loadMore()
+                                    component.subscriptionsContext?.loadMore()
                                 },
                                 highlighting: .default,
                                 updateIsHighlighted: { view, _ in
@@ -1111,7 +1126,7 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
     private let context: AccountContext
     private let starsContext: StarsContext
     private let starsRevenueStatsContext: StarsRevenueStatsContext
-    private let subscriptionsContext: StarsSubscriptionsContext
+    private let subscriptionsContext: StarsSubscriptionsContext?
     
     private let options = Promise<[StarsTopUpOption]>()
     
@@ -1125,7 +1140,11 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
         self.starsContext = starsContext
         
         self.starsRevenueStatsContext = context.engine.payments.peerStarsRevenueContext(peerId: context.account.peerId)
-        self.subscriptionsContext = context.engine.payments.peerStarsSubscriptionsContext(starsContext: starsContext)
+        if !starsContext.ton {
+            self.subscriptionsContext = context.engine.payments.peerStarsSubscriptionsContext(starsContext: starsContext)
+        } else {
+            self.subscriptionsContext = nil
+        }
         
         var buyImpl: (() -> Void)?
         var withdrawImpl: (() -> Void)?
@@ -1196,9 +1215,9 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
                     }
                     if !updated {
                         if subscription.flags.contains(.isCancelled) {
-                            self.subscriptionsContext.updateSubscription(id: subscription.id, cancel: false)
+                            self.subscriptionsContext?.updateSubscription(id: subscription.id, cancel: false)
                         } else {
-                            self.subscriptionsContext.updateSubscription(id: subscription.id, cancel: true)
+                            self.subscriptionsContext?.updateSubscription(id: subscription.id, cancel: true)
                         }
                     }
                 } else {
@@ -1423,7 +1442,7 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
         }
         
         self.starsContext.load(force: false)
-        self.subscriptionsContext.loadMore()
+        self.subscriptionsContext?.loadMore()
         
         self.scrollToTop = { [weak self] in
             guard let self else {
@@ -1444,6 +1463,6 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
     }
     
     public func update() {
-        self.subscriptionsContext.loadMore()
+        self.subscriptionsContext?.loadMore()
     }
 }
