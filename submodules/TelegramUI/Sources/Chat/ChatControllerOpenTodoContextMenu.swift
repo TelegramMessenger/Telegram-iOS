@@ -73,6 +73,24 @@ extension ChatControllerImpl {
                             return
                         }
                         
+                        if !self.context.isPremium {
+                            let controller = UndoOverlayController(
+                                presentationData: self.presentationData,
+                                content: .premiumPaywall(title: nil, text: self.presentationData.strings.Chat_Todo_PremiumRequired, customUndoText: nil, timeout: nil, linkAction: nil),
+                                action: { [weak self] action in
+                                    guard let self else {
+                                        return false
+                                    }
+                                    if case .info = action {
+                                        let controller = self.context.sharedContext.makePremiumIntroController(context: context, source: .presence, forceDark: false, dismissed: nil)
+                                        self.push(controller)
+                                    }
+                                    return false
+                                }
+                            )
+                            self.present(controller, in: .current)
+                        }
+                        
                         let _ = self.context.engine.messages.requestUpdateTodoMessageItems(messageId: message.id, completedIds: [], incompletedIds: [todoItemId]).start()
                     })))
                 }
@@ -83,6 +101,24 @@ extension ChatControllerImpl {
                         
                         guard let self else {
                             return
+                        }
+                        
+                        if !self.context.isPremium {
+                            let controller = UndoOverlayController(
+                                presentationData: self.presentationData,
+                                content: .premiumPaywall(title: nil, text: self.presentationData.strings.Chat_Todo_PremiumRequired, customUndoText: nil, timeout: nil, linkAction: nil),
+                                action: { [weak self] action in
+                                    guard let self else {
+                                        return false
+                                    }
+                                    if case .info = action {
+                                        let controller = self.context.sharedContext.makePremiumIntroController(context: context, source: .presence, forceDark: false, dismissed: nil)
+                                        self.push(controller)
+                                    }
+                                    return false
+                                }
+                            )
+                            self.present(controller, in: .current)
                         }
                         
                         let _ = self.context.engine.messages.requestUpdateTodoMessageItems(messageId: message.id, completedIds: [todoItemId], incompletedIds: []).start()

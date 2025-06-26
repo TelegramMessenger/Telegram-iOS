@@ -1573,12 +1573,19 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         }
         
         if let activeTodo {
+            var maxTodoItemsCount: Int = 30
+            if let data = context.currentAppConfiguration.with({ $0 }).data {
+                if let value = data["todo_items_max"] as? Double {
+                    maxTodoItemsCount = Int(value)
+                }
+            }
+            
             var canAppend = false
-            if message.author?.id == context.account.peerId || activeTodo.flags.contains(.othersCanAppend) {
+            if activeTodo.items.count < maxTodoItemsCount && (activeTodo.flags.contains(.othersCanAppend) || message.author?.id == context.account.peerId) {
                 canAppend = true
             }
             if canAppend {
-                actions.append(.action(ContextMenuActionItem(text: "Add a Task", icon: { theme in
+                actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Chat_Todo_ContextMenu_AddTask, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddCircle"), color: theme.actionSheet.primaryTextColor)
                 }, action: { _, f in
                     interfaceInteraction.editTodoMessage(messages[0].id, nil, true)

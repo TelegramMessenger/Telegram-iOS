@@ -14466,7 +14466,9 @@ Sorry for the inconvenience.";
 "Premium.Todo" = "Checklists";
 "Premium.TodoInfo" = "Plan, assign and complete tasks – seamlessly and efficiently.";
 
-"CreateTodo.Title" = "Title";
+"CreateTodo.Title" = "New Checklist";
+"CreateTodo.AddTitle" = "Add a Task";
+"CreateTodo.EditTitle" = "Edit Checklist";
 "CreateTodo.TodoTitle" = "CHECKLIST";
 "CreateTodo.TitlePlaceholder" = "Title";
 "CreateTodo.TaskPlaceholder" = "Task";
@@ -14474,6 +14476,8 @@ Sorry for the inconvenience.";
 "CreateTodo.TaskCountFooterFormat_1" = "You can add {count} more task.";
 "CreateTodo.TaskCountFooterFormat_any" = "You can add {count} more tasks.";
 "CreateTodo.TaskCountLimitReached" = "Maximum number of tasks reached.";
+"CreateTodo.Save" = "Save";
+"CreateTodo.Send" = "Send";
 
 "CreateTodo.AllowOthersToComplete" = "Allow Others to Mark as Done";
 "CreateTodo.AllowOthersToAppend" = "Allow Others to Add Tasks";
@@ -14499,3 +14503,5 @@ Sorry for the inconvenience.";
 
 "Bot.AddToGroup.Title" = "Add to Group";
 "Bot.AddToChannel.Title" = "Add to Channel";
+
+"ScheduledMessages.TodoUnavailable" = "Voting will become available after the message is published.";

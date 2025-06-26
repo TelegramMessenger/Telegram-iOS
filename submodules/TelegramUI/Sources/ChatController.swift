@@ -4925,6 +4925,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             self.dismissAllTooltips()
+            
+            guard self.presentationInterfaceState.subject != .scheduledMessages else {
+                self.present(textAlertController(context: self.context, updatedPresentationData: self.updatedPresentationData, title: nil, text: self.presentationData.strings.ScheduledMessages_TodoUnavailable, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                return
+            }
             if !self.context.isPremium {
                 let controller = UndoOverlayController(
                     presentationData: self.presentationData,

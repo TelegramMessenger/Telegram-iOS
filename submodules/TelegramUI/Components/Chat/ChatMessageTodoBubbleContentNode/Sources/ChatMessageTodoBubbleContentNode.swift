@@ -569,39 +569,19 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
         }
     }
     
-//    fileprivate var absoluteRect: (CGRect, CGSize)?
-//    fileprivate func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
-//        self.absoluteRect = (rect, containerSize)
-//        guard let backgroundWallpaperNode = self.backgroundWallpaperNode else {
-//            return
-//        }
-//        guard !self.sourceNode.isExtractedToContextPreview else {
-//            return
-//        }
-//        let mappedRect = CGRect(origin: CGPoint(x: rect.minX + backgroundWallpaperNode.frame.minX, y: rect.minY + backgroundWallpaperNode.frame.minY), size: rect.size)
-//        backgroundWallpaperNode.update(rect: mappedRect, within: containerSize)
-//    }
-//    
-//    fileprivate func applyAbsoluteOffset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
-//        guard let backgroundWallpaperNode = self.backgroundWallpaperNode else {
-//            return
-//        }
-//        backgroundWallpaperNode.offset(value: value, animationCurve: animationCurve, duration: duration)
-//    }
-//    
-//    fileprivate func applyAbsoluteOffsetSpring(value: CGFloat, duration: Double, damping: CGFloat) {
-//        guard let backgroundWallpaperNode = self.backgroundWallpaperNode else {
-//            return
-//        }
-//        backgroundWallpaperNode.offsetSpring(value: value, duration: duration, damping: damping)
-//    }
-    
     @objc private func buttonPressed() {
         guard !self.ignoreNextTap else {
             self.ignoreNextTap = false
             return
         }
-        if let radioNode = self.radioNode, let isChecked = radioNode.isChecked, self.canMark, self.isPremium {
+
+        var isScheduledMessages = false
+        if let message = self.message, Namespaces.Message.allScheduled.contains(message.id.namespace) {
+            isScheduledMessages = true
+        }
+        let canUpdate = self.canMark && self.isPremium && !isScheduledMessages
+        
+        if let radioNode = self.radioNode, let isChecked = radioNode.isChecked, canUpdate {
             radioNode.updateIsChecked(!isChecked, animated: true)
             self.selectionUpdated?()
         } else {
@@ -616,7 +596,10 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
         return { context, presentationData, presentationContext, message, todo, option, completion, translation, constrainedWidth in
             var canMark = false
             if (todo.flags.contains(.othersCanComplete) || message.author?.id == context.account.peerId) {
-                canMark = true
+                if let forwardInfo = message.forwardInfo, let authorId = forwardInfo.author?.id, authorId != context.account.peerId {   
+                } else {
+                    canMark = true
+                }
             }
             
             let leftInset: CGFloat = canMark ? 57.0 : 29.0

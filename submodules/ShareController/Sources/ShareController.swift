@@ -204,6 +204,13 @@ private func collectExternalShareItems(strings: PresentationStrings, dateTimeFor
                 }
             }
             signals.append(.single(.done(.text(text))))
+        } else if let mediaReference = item.mediaReference, let todo = mediaReference.media as? TelegramMediaTodo {
+            var text = "☑️ \(todo.text)"
+            for item in todo.items {
+                let completed = todo.completions.contains(where: { $0.id == item.id })
+                text.append("\n\(completed ? "+" : "-") \(item.text)")
+            }
+            signals.append(.single(.done(.text(text))))
         } else if let mediaReference = item.mediaReference, let contact = mediaReference.media as? TelegramMediaContact {
             let contactData: DeviceContactExtendedData
             if let vCard = contact.vCardData, let vCardData = vCard.data(using: .utf8), let parsed = DeviceContactExtendedData(vcard: vCardData) {

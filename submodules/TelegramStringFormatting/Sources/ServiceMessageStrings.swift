@@ -1351,11 +1351,11 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     attributes[1] = boldAttributes
                     
                     let resultString: PresentationStrings.FormattedString
-                    if completed.count > 1 {
+                    if completed.count > 1 || (completed.count == 1 && taskTitle == nil) {
                         resultString = strings.Notification_TodoMultipleCompleted(peerName, strings.Notification_TodoTasks(Int32(completed.count)))
                     } else if let _ = completed.first {
                         resultString = strings.Notification_TodoCompleted(peerName, taskTitle ?? "")
-                    } else if incompleted.count > 1 {
+                    } else if incompleted.count > 1 || (incompleted.count == 1 && taskTitle == nil) {
                         resultString = strings.Notification_TodoMultipleIncompleted(peerName, strings.Notification_TodoTasks(Int32(incompleted.count)))
                     } else if let _ = incompleted.first {
                         resultString = strings.Notification_TodoIncompleted(peerName, taskTitle ?? "")
