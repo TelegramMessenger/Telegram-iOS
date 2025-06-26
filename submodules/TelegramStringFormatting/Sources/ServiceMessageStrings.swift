@@ -1450,6 +1450,12 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     }
                 }
                 attributedString = NSAttributedString(string: string, font: titleFont, textColor: primaryTextColor)
+            case .suggestedPostSuccess:
+                //TODO:localize
+                attributedString = NSAttributedString(string: "Suggested post was posted", font: titleFont, textColor: primaryTextColor)
+            case .suggestedPostRefund:
+                //TODO:localize
+                attributedString = NSAttributedString(string: "Suggested post was refunded", font: titleFont, textColor: primaryTextColor)
             case let .giftTon(currency, amount, _, _, _):
                 attributedString = nil
                 if !forAdditionalServiceMessage {

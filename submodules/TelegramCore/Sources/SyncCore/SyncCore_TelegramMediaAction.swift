@@ -177,6 +177,28 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
         }
     }
     
+    public struct SuggestedPostRefund: Codable, Equatable {
+        private enum CodingKeys: String, CodingKey {
+            case isUserInitiated = "iui"
+        }
+        
+        public var isUserInitiated: Bool
+        
+        public init(isUserInitiated: Bool) {
+            self.isUserInitiated = isUserInitiated
+        }
+        
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.isUserInitiated = try container.decode(Bool.self, forKey: .isUserInitiated)
+        }
+        
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(self.isUserInitiated, forKey: .isUserInitiated)
+        }
+    }
+    
     case unknown
     case groupCreated(title: String)
     case addedMembers(peerIds: [PeerId])
@@ -230,6 +252,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case todoAppendTasks([TelegramMediaTodo.Item])
     case suggestedPostApprovalStatus(status: SuggestedPostApprovalStatus)
     case giftTon(currency: String, amount: Int64, cryptoCurrency: String?, cryptoAmount: Int64?, transactionId: String?)
+    case suggestedPostSuccess(amount: CurrencyAmount)
+    case suggestedPostRefund(SuggestedPostRefund)
     
     public init(decoder: PostboxDecoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
@@ -379,6 +403,10 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             self = .suggestedPostApprovalStatus(status: status ?? .rejected(reason: .generic, comment: nil))
         case 52:
             self = .giftTon(currency: decoder.decodeStringForKey("currency", orElse: ""), amount: decoder.decodeInt64ForKey("amount", orElse: 0), cryptoCurrency: decoder.decodeOptionalStringForKey("cryptoCurrency"), cryptoAmount: decoder.decodeOptionalInt64ForKey("cryptoAmount"), transactionId: decoder.decodeOptionalStringForKey("transactionId"))
+        case 53:
+            self = .suggestedPostSuccess(amount: decoder.decodeCodable(CurrencyAmount.self, forKey: "amt") ?? CurrencyAmount(amount: .zero, currency: .stars))
+        case 54:
+            self = .suggestedPostRefund(decoder.decodeCodable(SuggestedPostRefund.self, forKey: "s") ?? SuggestedPostRefund(isUserInitiated: true))
         default:
             self = .unknown
         }
@@ -808,6 +836,12 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             } else {
                 encoder.encodeNil(forKey: "transactionId")
             }
+        case let .suggestedPostSuccess(amount):
+            encoder.encodeInt32(53, forKey: "_rawValue")
+            encoder.encodeCodable(amount, forKey: "amt")
+        case let .suggestedPostRefund(status):
+            encoder.encodeInt32(54, forKey: "_rawValue")
+            encoder.encodeCodable(status, forKey: "s")
         }
     }
     

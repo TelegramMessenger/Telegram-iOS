@@ -264,6 +264,10 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         return TelegramMediaAction(action: .suggestedPostApprovalStatus(status: status))
     case let .messageActionGiftTon(_, currency, amount, cryptoCurrency, cryptoAmount, transactionId):
         return TelegramMediaAction(action: .giftTon(currency: currency, amount: amount, cryptoCurrency: cryptoCurrency, cryptoAmount: cryptoAmount, transactionId: transactionId))
+    case let .messageActionSuggestedPostSuccess(price):
+        return TelegramMediaAction(action: .suggestedPostSuccess(amount: CurrencyAmount(apiAmount: price)))
+    case let .messageActionSuggestedPostRefund(flags):
+        return TelegramMediaAction(action: .suggestedPostRefund(TelegramMediaActionType.SuggestedPostRefund(isUserInitiated: (flags & (1 << 0)) != 0)))
     }
 }
 
