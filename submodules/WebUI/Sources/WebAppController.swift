@@ -430,7 +430,19 @@ public final class WebAppController: ViewController, AttachmentContainable {
             if let url = controller.url, controller.source != .menu {
                 self.queryId = controller.queryId
                 if let parsedUrl = URL(string: url) {
-                    self.webView?.load(URLRequest(url: parsedUrl))
+                    // Check if the URL has a .ton domain
+                    if let host = parsedUrl.host, host.lowercased().hasSuffix(".ton") {
+                        // Convert to tonsite scheme
+                        var urlComponents = URLComponents(string: url)
+                        urlComponents?.scheme = "tonsite"
+                        if let updatedUrl = urlComponents?.url {
+                            self.webView?.load(URLRequest(url: updatedUrl))
+                        } else {
+                            self.webView?.load(URLRequest(url: parsedUrl))
+                        }
+                    } else {
+                        self.webView?.load(URLRequest(url: parsedUrl))
+                    }
                 }
                 if let keepAliveSignal = controller.keepAliveSignal {
                     self.keepAliveDisposable = (keepAliveSignal
@@ -453,7 +465,19 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         }
                         if let parsedUrl = URL(string: result.url) {
                             strongSelf.queryId = result.queryId
-                            strongSelf.webView?.load(URLRequest(url: parsedUrl))
+                            // Check if the URL has a .ton domain
+                            if let host = parsedUrl.host, host.lowercased().hasSuffix(".ton") {
+                                // Convert to tonsite scheme
+                                var urlComponents = URLComponents(string: result.url)
+                                urlComponents?.scheme = "tonsite"
+                                if let updatedUrl = urlComponents?.url {
+                                    strongSelf.webView?.load(URLRequest(url: updatedUrl))
+                                } else {
+                                    strongSelf.webView?.load(URLRequest(url: parsedUrl))
+                                }
+                            } else {
+                                strongSelf.webView?.load(URLRequest(url: parsedUrl))
+                            }
                         }
                     })
                 } else {
@@ -473,7 +497,19 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                     return
                                 }
                                 self.controller?.titleView?.title = WebAppTitle(title: botApp.title, counter: self.presentationData.strings.WebApp_Miniapp, isVerified: controller.botVerified)
-                                self.webView?.load(URLRequest(url: parsedUrl))
+                                // Check if the URL has a .ton domain
+                                if let host = parsedUrl.host, host.lowercased().hasSuffix(".ton") {
+                                    // Convert to tonsite scheme
+                                    var urlComponents = URLComponents(string: result.url)
+                                    urlComponents?.scheme = "tonsite"
+                                    if let updatedUrl = urlComponents?.url {
+                                        self.webView?.load(URLRequest(url: updatedUrl))
+                                    } else {
+                                        self.webView?.load(URLRequest(url: parsedUrl))
+                                    }
+                                } else {
+                                    self.webView?.load(URLRequest(url: parsedUrl))
+                                }
                             })
                         })
                     } else {
@@ -483,8 +519,20 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                 return
                             }
                             strongSelf.queryId = result.queryId
-                            strongSelf.webView?.load(URLRequest(url: parsedUrl))
-                                                        
+                            // Check if the URL has a .ton domain
+                            if let host = parsedUrl.host, host.lowercased().hasSuffix(".ton") {
+                                // Convert to tonsite scheme
+                                var urlComponents = URLComponents(string: result.url)
+                                urlComponents?.scheme = "tonsite"
+                                if let updatedUrl = urlComponents?.url {
+                                    strongSelf.webView?.load(URLRequest(url: updatedUrl))
+                                } else {
+                                    strongSelf.webView?.load(URLRequest(url: parsedUrl))
+                                }
+                            } else {
+                                strongSelf.webView?.load(URLRequest(url: parsedUrl))
+                            }
+
                             if let keepAliveSignal = result.keepAliveSignal {
                                 strongSelf.keepAliveDisposable = (keepAliveSignal
                                 |> deliverOnMainQueue).start(error: { [weak self] _ in
