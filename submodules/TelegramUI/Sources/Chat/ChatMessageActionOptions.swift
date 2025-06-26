@@ -1011,8 +1011,15 @@ extension ChatControllerImpl {
                 })
             })
         } else {
+            var isFromAdmin = false
+            if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum {
+                if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = self.presentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
+                    isFromAdmin = true
+                }
+            }
             subject = .postSuggestion(
                 channel: .channel(channel),
+                isFromAdmin: isFromAdmin,
                 current: postSuggestionState.price ?? CurrencyAmount(amount: .zero, currency: .stars),
                 timestamp: postSuggestionState.timestamp,
                 completion: { [weak self] price, timestamp in

@@ -384,7 +384,7 @@ private func sendUploadedMessageContent(
                 } else if let attribute = attribute as? PaidStarsMessageAttribute {
                     allowPaidStars = attribute.stars.value
                 } else if let attribute = attribute as? SuggestedPostMessageAttribute {
-                    suggestedPost = attribute.apiSuggestedPost()
+                    suggestedPost = attribute.apiSuggestedPost(fixMinTime: Int32(Date().timeIntervalSince1970 + 10))
                 }
             }
             
@@ -656,7 +656,7 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
                 } else if let attribute = attribute as? PaidStarsMessageAttribute {
                     allowPaidStars = attribute.stars.value
                 } else if let attribute = attribute as? SuggestedPostMessageAttribute {
-                    suggestedPost = attribute.apiSuggestedPost()
+                    suggestedPost = attribute.apiSuggestedPost(fixMinTime: Int32(Date().timeIntervalSince1970 + 10))
                 }
             }
             

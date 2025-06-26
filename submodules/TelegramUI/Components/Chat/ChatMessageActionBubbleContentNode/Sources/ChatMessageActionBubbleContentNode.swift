@@ -217,6 +217,11 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 
+                var isUser = true
+                if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, peer.isMonoForum, let linkedMonoforumId = peer.linkedMonoforumId, let mainChannel = item.message.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
+                    isUser = false
+                }
+                
                 let imageSize = CGSize(width: 212.0, height: 212.0)
                 
                 var updatedAttributedString = attributedString
@@ -270,13 +275,13 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                             
                             switch amount.currency {
                             case .stars:
-                                if !item.message.effectivelyIncoming(item.context.account.peerId) {
+                                if !isUser {
                                     pricePart = "\n\n💰 The user have been charged \(amountString).\n\n⌛ **\(channelName)** will receive the Stars once the post has been live for 24 hours.\n\n🔄 If your remove the post before it has been live for 24 hours, the user's Stars will be refunded."
                                 } else {
                                     pricePart = "\n\n💰 You have been charged \(amountString).\n\n⌛ **\(channelName)** will receive your Stars once the post has been live for 24 hours.\n\n🔄 If **\(channelName)** removes the post before it has been live for 24 hours, your Stars will be refunded."
                                 }
                             case .ton:
-                                if !item.message.effectivelyIncoming(item.context.account.peerId) {
+                                if !isUser {
                                     pricePart = "\n\n💰 The user have been charged \(amountString).\n\n⌛ **\(channelName)** will receive TON once the post has been live for 24 hours.\n\n🔄 If your remove the post before it has been live for 24 hours, the user's TON will be refunded."
                                 } else {
                                     pricePart = "\n\n💰 You have been charged \(amountString).\n\n⌛ **\(channelName)** will receive your TON once the post has been live for 24 hours.\n\n🔄 If **\(channelName)** removes the post before it has been live for 24 hours, your TON will be refunded."
@@ -287,20 +292,20 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                         let rawString: String
                         if let timestamp {
                             if Int32(Date().timeIntervalSince1970) >= timestamp {
-                                if !item.message.effectivelyIncoming(item.context.account.peerId) {
+                                if !isUser {
                                     rawString = "📅 The post has been automatically published in **\(channelName)** **\(timeString)**." + pricePart
                                 } else {
                                     rawString = "📅 Your post has been automatically published in **\(channelName)** **\(timeString)**." + pricePart
                                 }
                             } else {
-                                if !item.message.effectivelyIncoming(item.context.account.peerId) {
+                                if !isUser {
                                     rawString = "📅 The post will be automatically published in **\(channelName)** **\(timeString)**." + pricePart
                                 } else {
                                     rawString = "📅 Your post will be automatically published in **\(channelName)** **\(timeString)**." + pricePart
                                 }
                             }
                         } else {
-                            if !item.message.effectivelyIncoming(item.context.account.peerId) {
+                            if !isUser {
                                 rawString = "📅 The post has been automatically published in **\(channelName)**." + pricePart
                             } else {
                                 rawString = "📅 Your post has been automatically published in **\(channelName)**." + pricePart

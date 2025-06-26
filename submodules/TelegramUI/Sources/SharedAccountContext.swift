@@ -3734,8 +3734,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mode = .accountWithdraw(completion: completion)
         case let .enterAmount(current, minValue, fractionAfterCommission, kind, completion):
             mode = .paidMessages(current: current.value, minValue: minValue.value, fractionAfterCommission: fractionAfterCommission, kind: kind, completion: completion)
-        case let .postSuggestion(channel, current, timestamp, completion):
-            mode = .suggestedPost(mode: .sender(channel: channel), price: current, timestamp: timestamp, completion: completion)
+        case let .postSuggestion(channel, isFromAdmin, current, timestamp, completion):
+            mode = .suggestedPost(mode: .sender(channel: channel, isFromAdmin: isFromAdmin), price: current, timestamp: timestamp, completion: completion)
         case let .postSuggestionModification(current, timestamp, completion):
             mode = .suggestedPost(mode: .admin, price: current, timestamp: timestamp, completion: completion)
         }
