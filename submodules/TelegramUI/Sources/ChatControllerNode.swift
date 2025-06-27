@@ -2477,11 +2477,11 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                     ChatSidePanelEnvironment(insets: UIEdgeInsets(
                         top: 0.0,
                         left: leftPanelLeftInset,
-                        bottom: 0.0,
+                        bottom: containerInsets.bottom + inputPanelsHeight,
                         right: 0.0
                     ))
                 },
-                containerSize: CGSize(width: leftPanelSize.width, height: leftPanelSize.height - sidePanelTopInset - (containerInsets.bottom + inputPanelsHeight))
+                containerSize: CGSize(width: leftPanelSize.width, height: leftPanelSize.height - sidePanelTopInset)
             )
             
             let leftPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: sidePanelTopInset), size: leftPanelSize)

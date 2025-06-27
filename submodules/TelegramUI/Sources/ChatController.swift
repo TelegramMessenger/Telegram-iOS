@@ -967,7 +967,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return false
                     }
                     switch action.action {
-                        case .pinnedMessageUpdated, .gameScore, .setSameChatWallpaper, .giveawayResults, .customText, .todoCompletions, .todoAppendTasks:
+                        case .pinnedMessageUpdated, .gameScore, .setSameChatWallpaper, .giveawayResults, .customText, .todoCompletions, .todoAppendTasks, .suggestedPostRefund, .suggestedPostSuccess, .suggestedPostApprovalStatus:
                             for attribute in message.attributes {
                                 if let attribute = attribute as? ReplyMessageAttribute {
                                     var todoTaskId: Int32?
@@ -1243,6 +1243,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         case .boostsApplied:
                             self.controllerInteraction?.openGroupBoostInfo(nil, 0)
+                            return true
+                        case .paidMessagesPriceEdited:
+                            self.interfaceInteraction?.openMonoforum()
                             return true
                         default:
                             break

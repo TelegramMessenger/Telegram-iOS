@@ -445,6 +445,12 @@ public struct PresentationResourcesChatList {
         })
     }
     
+    public static func generalTopicTemplateIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatListGeneralTopicTemplateIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/GeneralTopicIcon"), color: .white)?.withRenderingMode(.alwaysTemplate)
+        })
+    }
+    
     public static func statusAutoremoveIcon(_ theme: PresentationTheme, isActive: Bool) -> UIImage? {
         return theme.image(PresentationResourceParameterKey.statusAutoremoveIcon(isActive: isActive), { theme in
             return generateTintedImage(image: UIImage(bundleImageName: isActive ? "Chat List/StatusIconAutoremoveOn" : "Chat List/StatusIconAutoremoveOff"), color: isActive ? theme.list.itemAccentColor : theme.list.itemSecondaryTextColor)
