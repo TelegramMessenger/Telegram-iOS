@@ -1173,6 +1173,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             let controller = self.context.sharedContext.makeStarsGiftScreen(context: self.context, message: EngineMessage(message))
                             self.push(controller)
                             return true
+                        case let .giftTon(_, _, _, _, transactionId):
+                            Task { @MainActor [weak self] in
+                                guard let self, let transactionId, let peerId = self.chatLocation.peerId else {
+                                    return
+                                }
+                                let transactionData = await self.context.engine.payments.getStarsTransaction(reference: StarsTransactionReference(peerId: self.context.account.peerId, id: transactionId, isRefund: false)).get()
+                                let peer = await self.context.engine.data.get(
+                                    TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+                                ).get()
+                                if let transactionData, let peer {
+                                    self.push(self.context.sharedContext.makeStarsTransactionScreen(context: self.context, transaction: transactionData, peer: peer))
+                                }
+                            }
+                            let _ = transactionId
                         case let .giftCode(slug, _, _, _, _, _, _, _, _, _, _):
                             self.openResolved(result: .premiumGiftCode(slug: slug), sourceMessageId: message.id, progress: params.progress)
                             return true

@@ -1924,8 +1924,13 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     }
                 }), false))
             } else if !isUnremovableAction {
+                var iconName: String = isSending ? "Chat/Context Menu/Clear" : "Chat/Context Menu/Delete"
+                if message.attributes.contains(where: { $0 is PublishedSuggestedPostMessageAttribute }) {
+                    iconName = "Chat/Context Menu/DeletePaid"
+                }
+                
                 actions.append(.action(ContextMenuActionItem(text: title, textColor: .destructive, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: isSending ? "Chat/Context Menu/Clear" : "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
+                    return generateTintedImage(image: UIImage(bundleImageName: iconName), color: theme.actionSheet.destructiveActionTextColor)
                 }, action: { controller, f in
                     if isEditing {
                         context.account.pendingUpdateMessageManager.cancel(messageId: message.id)

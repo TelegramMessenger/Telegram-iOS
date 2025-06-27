@@ -220,14 +220,14 @@ private final class SheetContent: CombinedComponent {
                 switch state.currency {
                 case .stars:
                     amountTitle = "ENTER A PRICE IN STARS"
+                    maxAmount = StarsAmount(value: resaleConfiguration.channelMessageSuggestionMaxStarsAmount, nanos: 0)
                 case .ton:
                     amountTitle = "ENTER A PRICE IN TON"
+                    maxAmount = StarsAmount(value: resaleConfiguration.channelMessageSuggestionMaxTonAmount, nanos: 0)
                 }
                 amountPlaceholder = "Price"
                 
                 minAmount = StarsAmount(value: 0, nanos: 0)
-                //TODO:release
-                maxAmount = StarsAmount(value: resaleConfiguration.paidMessageMaxAmount, nanos: 0)
             }
             
             let title = title.update(

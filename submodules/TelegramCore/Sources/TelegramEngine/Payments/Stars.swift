@@ -1666,7 +1666,7 @@ public struct StarsTransactionReference: PostboxCoding, Hashable, Equatable {
     public let id: String
     public let isRefund: Bool
     
-    public init(peerId: EnginePeer.Id,  id: String, isRefund: Bool) {
+    public init(peerId: EnginePeer.Id, id: String, isRefund: Bool) {
         self.peerId = peerId
         self.id = id
         self.isRefund = isRefund

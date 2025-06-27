@@ -1959,7 +1959,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                     }))
                 }
                 
-                if let personalChannel = data.personalChannel {
+                if channel.hasPermission(.manageDirect), let personalChannel = data.personalChannel {
                     let peerId = personalChannel.peer.peerId
                     items[.channelMonoforum]?.append(PeerInfoScreenPersonalChannelItem(id: ItemPeerPersonalChannel, context: context, data: personalChannel, controller: { [weak interaction] in
                         guard let interaction else {
@@ -5998,18 +5998,32 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         switch key {
         case .message:
             if let navigationController = controller.navigationController as? NavigationController, let peer = self.data?.peer {
-                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(EnginePeer(peer)), keepStack: self.nearbyPeerDistance != nil ? .always : .default, peerNearbyData: self.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0) }), completion: { [weak self] _ in
-                    if let strongSelf = self, strongSelf.nearbyPeerDistance != nil {
-                        var viewControllers = navigationController.viewControllers
-                        viewControllers = viewControllers.filter { controller in
-                            if controller is PeerInfoScreen {
-                                return false
-                            }
-                            return true
+                if let channel = peer as? TelegramChannel, case let .broadcast(info) = channel.info, info.flags.contains(.hasMonoforum), let linkedMonoforumId = channel.linkedMonoforumId {
+                    Task { @MainActor [weak self] in
+                        guard let self else {
+                            return
                         }
-                        navigationController.setViewControllers(viewControllers, animated: false)
+                        
+                        guard let peer = await self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: linkedMonoforumId)).get() else {
+                            return
+                        }
+                        
+                        self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), keepStack: .default))
                     }
-                }))
+                } else {
+                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(EnginePeer(peer)), keepStack: self.nearbyPeerDistance != nil ? .always : .default, peerNearbyData: self.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0) }), completion: { [weak self] _ in
+                        if let strongSelf = self, strongSelf.nearbyPeerDistance != nil {
+                            var viewControllers = navigationController.viewControllers
+                            viewControllers = viewControllers.filter { controller in
+                                if controller is PeerInfoScreen {
+                                    return false
+                                }
+                                return true
+                            }
+                            navigationController.setViewControllers(viewControllers, animated: false)
+                        }
+                    }))
+                }
             }
         case .discussion:
             if let cachedData = self.data?.cachedData as? CachedChannelData, case let .known(maybeLinkedDiscussionPeerId) = cachedData.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId {

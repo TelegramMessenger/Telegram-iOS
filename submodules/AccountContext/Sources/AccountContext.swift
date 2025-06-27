@@ -1506,7 +1506,10 @@ public struct StarsSubscriptionConfiguration {
             paidMessagesAvailable: false,
             starGiftResaleMinAmount: 125,
             starGiftResaleMaxAmount: 3500,
-            starGiftCommissionPermille: 80
+            starGiftCommissionPermille: 80,
+            channelMessageSuggestionCommissionPermille: 850,
+            channelMessageSuggestionMaxStarsAmount: 10000,
+            channelMessageSuggestionMaxTonAmount: 10000000000000
         )
     }
         
@@ -1518,6 +1521,9 @@ public struct StarsSubscriptionConfiguration {
     public let starGiftResaleMinAmount: Int64
     public let starGiftResaleMaxAmount: Int64
     public let starGiftCommissionPermille: Int32
+    public let channelMessageSuggestionCommissionPermille: Int32
+    public let channelMessageSuggestionMaxStarsAmount: Int64
+    public let channelMessageSuggestionMaxTonAmount: Int64
     
     fileprivate init(
         maxFee: Int64,
@@ -1527,7 +1533,10 @@ public struct StarsSubscriptionConfiguration {
         paidMessagesAvailable: Bool,
         starGiftResaleMinAmount: Int64,
         starGiftResaleMaxAmount: Int64,
-        starGiftCommissionPermille: Int32
+        starGiftCommissionPermille: Int32,
+        channelMessageSuggestionCommissionPermille: Int32,
+        channelMessageSuggestionMaxStarsAmount: Int64,
+        channelMessageSuggestionMaxTonAmount: Int64
     ) {
         self.maxFee = maxFee
         self.usdWithdrawRate = usdWithdrawRate
@@ -1537,6 +1546,9 @@ public struct StarsSubscriptionConfiguration {
         self.starGiftResaleMinAmount = starGiftResaleMinAmount
         self.starGiftResaleMaxAmount = starGiftResaleMaxAmount
         self.starGiftCommissionPermille = starGiftCommissionPermille
+        self.channelMessageSuggestionCommissionPermille = channelMessageSuggestionCommissionPermille
+        self.channelMessageSuggestionMaxStarsAmount = channelMessageSuggestionMaxStarsAmount
+        self.channelMessageSuggestionMaxTonAmount = channelMessageSuggestionMaxTonAmount
     }
     
     public static func with(appConfiguration: AppConfiguration) -> StarsSubscriptionConfiguration {
@@ -1550,6 +1562,10 @@ public struct StarsSubscriptionConfiguration {
             let starGiftResaleMaxAmount = (data["stars_stargift_resale_amount_max"] as? Double).flatMap(Int64.init) ?? StarsSubscriptionConfiguration.defaultValue.starGiftResaleMaxAmount
             let starGiftCommissionPermille = (data["stars_stargift_resale_commission_permille"] as? Double).flatMap(Int32.init) ?? StarsSubscriptionConfiguration.defaultValue.starGiftCommissionPermille
             
+            let channelMessageSuggestionCommissionPermille = (data["stars_suggested_post_commission_permille"] as? Double).flatMap(Int32.init) ?? StarsSubscriptionConfiguration.defaultValue.channelMessageSuggestionCommissionPermille
+            let channelMessageSuggestionMaxStarsAmount = (data["stars_suggested_post_amount_max"] as? Double).flatMap(Int64.init) ?? StarsSubscriptionConfiguration.defaultValue.channelMessageSuggestionMaxStarsAmount
+            let channelMessageSuggestionMaxTonAmount = (data["ton_suggested_post_amount_max"] as? Double).flatMap(Int64.init) ?? StarsSubscriptionConfiguration.defaultValue.channelMessageSuggestionMaxTonAmount
+            
             return StarsSubscriptionConfiguration(
                 maxFee: maxFee,
                 usdWithdrawRate: usdWithdrawRate,
@@ -1558,7 +1574,10 @@ public struct StarsSubscriptionConfiguration {
                 paidMessagesAvailable: paidMessagesAvailable,
                 starGiftResaleMinAmount: starGiftResaleMinAmount,
                 starGiftResaleMaxAmount: starGiftResaleMaxAmount,
-                starGiftCommissionPermille: starGiftCommissionPermille
+                starGiftCommissionPermille: starGiftCommissionPermille,
+                channelMessageSuggestionCommissionPermille: channelMessageSuggestionCommissionPermille,
+                channelMessageSuggestionMaxStarsAmount: channelMessageSuggestionMaxStarsAmount,
+                channelMessageSuggestionMaxTonAmount: channelMessageSuggestionMaxTonAmount
             )
         } else {
             return .defaultValue
