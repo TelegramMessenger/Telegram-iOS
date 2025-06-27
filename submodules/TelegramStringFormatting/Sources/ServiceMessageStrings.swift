@@ -1259,8 +1259,24 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     messagePeer = EnginePeer(messagePeerValue)
                 } else if message.id.peerId.namespace == Namespaces.Peer.CloudChannel, let peer = message.peers[message.id.peerId] as? TelegramChannel, peer.isMonoForum {
                     if let author = message.author, let threadId = message.threadId, let threadPeer = message.peers[PeerId(threadId)], author.id != threadPeer.id {
-                        isOutgoing = true
-                        messagePeer = EnginePeer(threadPeer)
+                        if case .channel = author {
+                            var isUser = true
+                            if let peer = message.peers[message.id.peerId] as? TelegramChannel {
+                                if peer.isMonoForum, let linkedMonoforumId = peer.linkedMonoforumId, let mainChannel = message.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
+                                    isUser = false
+                                }
+                            }
+                            
+                            if isUser {
+                                messagePeer = author
+                            } else {
+                                messagePeer = EnginePeer(threadPeer)
+                                isOutgoing = true
+                            }
+                        } else {
+                            isOutgoing = true
+                            messagePeer = EnginePeer(threadPeer)
+                        }
                     }
                 }
                 
@@ -1450,12 +1466,51 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     }
                 }
                 attributedString = NSAttributedString(string: string, font: titleFont, textColor: primaryTextColor)
-            case .suggestedPostSuccess:
+            case let .suggestedPostSuccess(amount):
+                var isUser = true
+                var channelName: String = ""
+                if let peer = message.peers[message.id.peerId] as? TelegramChannel {
+                    channelName = peer.title
+                    if peer.isMonoForum, let linkedMonoforumId = peer.linkedMonoforumId, let mainChannel = message.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
+                        isUser = false
+                    }
+                }
+                let _ = isUser
+                
                 //TODO:localize
-                attributedString = NSAttributedString(string: "Suggested post was posted", font: titleFont, textColor: primaryTextColor)
-            case .suggestedPostRefund:
+                let amountString: String
+                switch amount.currency {
+                case .stars:
+                    if amount.amount.value == 1 {
+                        amountString = "1 Star"
+                    } else {
+                        amountString = "\(amount.amount.value) Stars"
+                    }
+                case .ton:
+                    amountString = "\(formatTonAmountText(amount.amount.value, dateTimeFormat: dateTimeFormat)) TON"
+                }
+                attributedString = parseMarkdownIntoAttributedString("**\(channelName)** received **\(amountString)** for publishing this post", attributes: MarkdownAttributes(body: bodyAttributes, bold: boldAttributes, link: bodyAttributes, linkAttribute: { _ in return nil }))
+            case let .suggestedPostRefund(info):
+                var isUser = true
+                var channelName: String = ""
+                if let peer = message.peers[message.id.peerId] as? TelegramChannel {
+                    channelName = peer.title
+                    if peer.isMonoForum, let linkedMonoforumId = peer.linkedMonoforumId, let mainChannel = message.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
+                        isUser = false
+                    }
+                }
+                let _ = channelName
+                
                 //TODO:localize
-                attributedString = NSAttributedString(string: "Suggested post was refunded", font: titleFont, textColor: primaryTextColor)
+                if info.isUserInitiated {
+                    if isUser {
+                        attributedString = NSAttributedString(string: "Suggested post was refunded because you didn't have enough funds", font: titleFont, textColor: primaryTextColor)
+                    } else {
+                        attributedString = NSAttributedString(string: "Suggested post was refunded because the user didn't have enough funds", font: titleFont, textColor: primaryTextColor)
+                    }
+                } else {
+                    attributedString = NSAttributedString(string: "Suggested post was refunded because the message was deleted", font: titleFont, textColor: primaryTextColor)
+                }
             case let .giftTon(currency, amount, _, _, _):
                 attributedString = nil
                 if !forAdditionalServiceMessage {

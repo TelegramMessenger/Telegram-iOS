@@ -1408,7 +1408,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             layoutSize.height += additionalTopHeight
             imageFrame.origin.y += additionalTopHeight
             
-            var headersOffset: CGFloat = 0.0
+            var headersOffset: CGFloat = additionalTopHeight
             if let (threadInfoSize, _) = threadInfoApply {
                 headersOffset += threadInfoSize.height + 10.0
             }
@@ -1625,7 +1625,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         }
                     }
                     
-                    var headersOffset: CGFloat = 0.0
+                    var headersOffset: CGFloat = additionalTopHeight
                     if let (threadInfoSize, threadInfoApply) = threadInfoApply {
                         let threadInfoNode = threadInfoApply(synchronousLoads)
                         if strongSelf.threadInfoNode == nil {

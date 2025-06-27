@@ -1523,6 +1523,13 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             if case let .media(value) = editMessageState.content {
                 isEditingMedia = !value.isEmpty
                 isMediaEnabled = !value.isEmpty
+                
+                if interfaceState.interfaceState.postSuggestionState != nil {
+                    if value.contains(.file) {
+                        isEditingMedia = false
+                        isMediaEnabled = false
+                    }
+                }
             } else {
                 isMediaEnabled = true
             }

@@ -299,69 +299,86 @@ private final class SheetContent: CombinedComponent {
             if let tonBalance = state.tonBalance {
                 tonBalanceValue = tonBalance
             }
-            if case let .suggestedPost(mode, _, _, _) = component.mode, (state.currency == .ton || tonBalanceValue > StarsAmount.zero) {
-                //TODO:localize
-                let selectedId: AnyHashable = state.currency == .stars ? AnyHashable(0 as Int) : AnyHashable(1 as Int)
-                let starsTitle: String
-                let tonTitle: String
+            
+            if case let .suggestedPost(mode, _, _, _) = component.mode {
+                var displayCurrencySelector = false
                 switch mode {
-                case .sender:
-                    starsTitle = "Offer Stars"
-                    tonTitle = "Offer TON"
+                case let .sender(_, isFromAdmin):
+                    if isFromAdmin {
+                        displayCurrencySelector = true
+                    } else {
+                        if state.currency == .ton || tonBalanceValue > StarsAmount.zero {
+                            displayCurrencySelector = true
+                        }
+                    }
                 case .admin:
-                    starsTitle = "Request Stars"
-                    tonTitle = "Request TON"
+                    displayCurrencySelector = true
                 }
                 
-                let currencyToggle = currencyToggle.update(
-                    component: TabSelectorComponent(
-                        colors: TabSelectorComponent.Colors(
-                            foreground: theme.list.itemSecondaryTextColor,
-                            selection: theme.list.itemSecondaryTextColor.withMultipliedAlpha(0.15),
-                            simple: true
-                        ),
-                        customLayout: TabSelectorComponent.CustomLayout(
-                            font: Font.medium(14.0),
-                            spacing: 10.0
-                        ),
-                        items: [
-                            TabSelectorComponent.Item(
-                                id: AnyHashable(0),
-                                content: .component(AnyComponent(CurrencyTabItemComponent(icon: .stars, title: starsTitle, theme: theme)))
+                if displayCurrencySelector {
+                    //TODO:localize
+                    let selectedId: AnyHashable = state.currency == .stars ? AnyHashable(0 as Int) : AnyHashable(1 as Int)
+                    let starsTitle: String
+                    let tonTitle: String
+                    switch mode {
+                    case .sender:
+                        starsTitle = "Offer Stars"
+                        tonTitle = "Offer TON"
+                    case .admin:
+                        starsTitle = "Request Stars"
+                        tonTitle = "Request TON"
+                    }
+                    
+                    let currencyToggle = currencyToggle.update(
+                        component: TabSelectorComponent(
+                            colors: TabSelectorComponent.Colors(
+                                foreground: theme.list.itemSecondaryTextColor,
+                                selection: theme.list.itemSecondaryTextColor.withMultipliedAlpha(0.15),
+                                simple: true
                             ),
-                            TabSelectorComponent.Item(
-                                id: AnyHashable(1),
-                                content: .component(AnyComponent(CurrencyTabItemComponent(icon: .ton, title: tonTitle, theme: theme)))
-                            )
-                        ],
-                        selectedId: selectedId,
-                        setSelectedId: { [weak state] id in
-                            guard let state else {
-                                return
+                            customLayout: TabSelectorComponent.CustomLayout(
+                                font: Font.medium(14.0),
+                                spacing: 10.0
+                            ),
+                            items: [
+                                TabSelectorComponent.Item(
+                                    id: AnyHashable(0),
+                                    content: .component(AnyComponent(CurrencyTabItemComponent(icon: .stars, title: starsTitle, theme: theme)))
+                                ),
+                                TabSelectorComponent.Item(
+                                    id: AnyHashable(1),
+                                    content: .component(AnyComponent(CurrencyTabItemComponent(icon: .ton, title: tonTitle, theme: theme)))
+                                )
+                            ],
+                            selectedId: selectedId,
+                            setSelectedId: { [weak state] id in
+                                guard let state else {
+                                    return
+                                }
+                                
+                                let currency: CurrencyAmount.Currency
+                                if id == AnyHashable(0) {
+                                    currency = .stars
+                                } else {
+                                    currency = .ton
+                                }
+                                if state.currency != currency {
+                                    state.currency = currency
+                                    state.amount = nil
+                                }
+                                state.updated(transition: .spring(duration: 0.4))
                             }
-                            
-                            let currency: CurrencyAmount.Currency
-                            if id == AnyHashable(0) {
-                                currency = .stars
-                            } else {
-                                currency = .ton
-                            }
-                            if state.currency != currency {
-                                state.currency = currency
-                                state.amount = nil
-                            }
-                            state.updated(transition: .spring(duration: 0.4))
-                        }
-                    ),
-                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 100.0),
-                    transition: context.transition
-                )
-                contentSize.height -= 17.0
-                let currencyToggleFrame = CGRect(origin: CGPoint(x: floor((context.availableSize.width - currencyToggle.size.width) * 0.5), y: contentSize.height), size: currencyToggle.size)
-                context.add(currencyToggle
-                    .position(currencyToggle.size.centered(in: currencyToggleFrame).center))
-                
-                contentSize.height += currencyToggle.size.height + 29.0
+                        ),
+                        availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 100.0),
+                        transition: context.transition
+                    )
+                    contentSize.height -= 17.0
+                    let currencyToggleFrame = CGRect(origin: CGPoint(x: floor((context.availableSize.width - currencyToggle.size.width) * 0.5), y: contentSize.height), size: currencyToggle.size)
+                    context.add(currencyToggle
+                        .position(currencyToggle.size.centered(in: currencyToggleFrame).center))
+                    
+                    contentSize.height += currencyToggle.size.height + 29.0
+                }
             }
             
             let amountFont = Font.regular(13.0)
@@ -506,7 +523,7 @@ private final class SheetContent: CombinedComponent {
                                     accentColor: theme.list.itemAccentColor,
                                     value: state.amount?.value,
                                     minValue: minAmount?.value,
-                                    maxValue: state.currency == .ton ? nil : maxAmount?.value,
+                                    maxValue: maxAmount?.value,
                                     placeholderText: amountPlaceholder,
                                     labelText: amountLabel,
                                     currency: state.currency,
@@ -658,7 +675,7 @@ private final class SheetContent: CombinedComponent {
                 //TODO:localize
                 switch mode {
                 case .sender:
-                    if let amount = state.amount {
+                    if let amount = state.amount, amount != .zero {
                         let currencySymbol: String
                         let currencyAmount: String
                         switch state.currency {
@@ -1164,9 +1181,14 @@ private final class AmountFieldStarsFormatter: NSObject, UITextFieldDelegate {
                     // Convert and combine
                     if let whole = Int64(wholeSlice),
                        let frac  = Int64(fractionStr) {
+                        
+                        let whole = min(whole, Int64.max / scale)
+                        
                         amount = whole * scale + frac
                     }
                 } else if let whole = Int64(text) {   // string had no dot at all
+                    let whole = min(whole, Int64.max / scale)
+                    
                     amount = whole * scale
                 }
             }
@@ -1241,7 +1263,7 @@ private final class AmountFieldStarsFormatter: NSObject, UITextFieldDelegate {
             case .stars:
                 textField.text = "\(self.maxValue)"
             case .ton:
-                textField.text = "\(formatTonAmountText(self.maxValue, dateTimeFormat: self.dateTimeFormat))"
+                textField.text = "\(formatTonAmountText(self.maxValue, dateTimeFormat: PresentationDateTimeFormat(timeFormat: self.dateTimeFormat.timeFormat, dateFormat: self.dateTimeFormat.dateFormat, dateSeparator: "", dateSuffix: "", requiresFullYear: false, decimalSeparator: ".", groupingSeparator: "")))"
             }
             self.onTextChanged(text: self.textField.text ?? "")
             self.animateError()
@@ -1396,13 +1418,13 @@ private final class AmountFieldComponent: Component {
             
             self.textField.textColor = component.textColor
             if self.component?.currency != component.currency {
-                if let value = component.value {
+                if let value = component.value, value != .zero {
                     var text = ""
                     switch component.currency {
                     case .stars:
                         text = "\(value)"
                     case .ton:
-                        text = "\(formatTonAmountText(value, dateTimeFormat: component.dateTimeFormat))"
+                        text = "\(formatTonAmountText(value, dateTimeFormat: PresentationDateTimeFormat(timeFormat: component.dateTimeFormat.timeFormat, dateFormat: component.dateTimeFormat.dateFormat, dateSeparator: "", dateSuffix: "", requiresFullYear: false, decimalSeparator: ".", groupingSeparator: "")))"
                     }
                     self.textField.text = text
                 } else {
@@ -1461,7 +1483,7 @@ private final class AmountFieldComponent: Component {
                             currency: component.currency,
                             dateTimeFormat: component.dateTimeFormat,
                             minValue: component.minValue ?? 0,
-                            maxValue: component.maxValue ?? Int64.max,
+                            maxValue: component.maxValue ?? 10000000,
                             updated: { [weak self] value in
                                 guard let self, let component = self.component else {
                                     return
