@@ -180,6 +180,10 @@ final class ComposeTodoScreenComponent: Component {
         }
         
         private func item(at point: CGPoint) -> (AnyHashable, ComponentView<Empty>)? {
+            if self.scrollView.isTracking || self.scrollView.isDecelerating {
+                return nil
+            }
+            
             let localPoint = self.todoItemsSectionContainer.convert(point, from: self)
             for (id, itemView) in self.todoItemsSectionContainer.itemViews {
                 if let view = itemView.contents.view as? ListComposePollOptionComponent.View, !view.isRevealed && !view.currentText.isEmpty {
@@ -369,6 +373,10 @@ final class ComposeTodoScreenComponent: Component {
             if !self.ignoreScrolling {
                 self.updateScrolling(transition: .immediate)
             }
+        }
+        
+        func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+            self.endEditing(true)
         }
         
         private func updateScrolling(transition: ComponentTransition) {
@@ -928,17 +936,24 @@ final class ComposeTodoScreenComponent: Component {
                         if case let .text(text) = data {
                             let lines = text.string.components(separatedBy: "\n")
                             if !lines.isEmpty {
+                                self.endEditing(true)
                                 var i = 0
                                 for line in lines {
+                                    if line.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                        continue
+                                    }
+                                    let line = String(line.prefix(component.initialData.maxTodoItemLength))
                                     if i < self.todoItems.count {
                                         self.todoItems[i].resetText = NSAttributedString(string: line)
                                     } else {
-                                        let todoItem = ComposeTodoScreenComponent.TodoItem(
-                                            id: self.nextTodoItemId
-                                        )
-                                        todoItem.resetText = NSAttributedString(string: line)
-                                        self.todoItems.append(todoItem)
-                                        self.nextTodoItemId += 1
+                                        if self.todoItems.count < component.initialData.maxTodoItemsCount {
+                                            let todoItem = ComposeTodoScreenComponent.TodoItem(
+                                                id: self.nextTodoItemId
+                                            )
+                                            todoItem.resetText = NSAttributedString(string: line)
+                                            self.todoItems.append(todoItem)
+                                            self.nextTodoItemId += 1
+                                        }
                                     }
                                     i += 1
                                 }
