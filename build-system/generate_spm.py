@@ -128,7 +128,11 @@ func parseTarget(target: [String: Any]) -> Target {
         var cSettingsValue: [CSetting] = []
         for cSetting in cSettingList {
             if cSetting["type"] as! String == "define" {
-                cSettingsValue.append(.define(cSetting["name"] as! String))
+                if let value = cSetting["value"] as? String {
+                    cSettingsValue.append(.define(cSetting["name"] as! String, to: value))
+                } else {
+                    cSettingsValue.append(.define(cSetting["name"] as! String))
+                }
             } else if cSetting["type"] as! String == "unsafeFlags" {
                 cSettingsValue.append(.unsafeFlags(cSetting["flags"] as! [String]))
             } else {
@@ -144,7 +148,11 @@ func parseTarget(target: [String: Any]) -> Target {
         var cxxSettingsValue: [CXXSetting] = []
         for cxxSetting in cxxSettingList {
             if cxxSetting["type"] as! String == "define" {
-                cxxSettingsValue.append(.define(cxxSetting["name"] as! String))
+                if let value = cxxSetting["value"] as? String {
+                    cxxSettingsValue.append(.define(cxxSetting["name"] as! String, to: value))
+                } else {
+                    cxxSettingsValue.append(.define(cxxSetting["name"] as! String))
+                }
             } else if cxxSetting["type"] as! String == "unsafeFlags" {
                 cxxSettingsValue.append(.unsafeFlags(cxxSetting["flags"] as! [String]))
             } else {
@@ -175,7 +183,7 @@ func parseTarget(target: [String: Any]) -> Target {
         name: name,
         dependencies: dependencies.map({ .target(name: $0) }),
         path: (target["path"] as? String)!,
-        exclude: [],
+        exclude: target["exclude"] as? [String] ?? [],
         sources: sourceFileMap[name]!,
         resources: nil,
         publicHeadersPath: target["publicHeadersPath"] as? String,
@@ -211,7 +219,7 @@ for name, module in sorted(modules.items()):
             "targets": [module["name"]],
         })
 
-combined_lines.append("    targets: [")
+combined_lines.append("    targets: targets,")
 
 for name, module in sorted(modules.items()):
     if parsed_modules[name]["is_empty"]:
@@ -221,8 +229,6 @@ for name, module in sorted(modules.items()):
     if module_type == "objc_library" or module_type == "cc_library" or module_type == "swift_library":
         spm_target = dict()
 
-        combined_lines.append("        .target(")
-        combined_lines.append("            name: \"%s\"," % name)
         spm_target["name"] = name
         
         relative_module_path = module["path"]
@@ -241,16 +247,11 @@ for name, module in sorted(modules.items()):
                         module_public_headers_prefix = include_directory
                         break
 
-        combined_lines.append("            dependencies: [")
         spm_target["dependencies"] = []
         for dep in module["deps"]:
             if not parsed_modules[dep]["is_empty"]:
-                combined_lines.append("                .target(name: \"%s\")," % dep)
                 spm_target["dependencies"].append(dep)
-        combined_lines.append("            ],")
-
-        # All modules now use the symlinked directory path
-        combined_lines.append("            path: \"%s\"," % relative_module_path)
+        
         spm_target["path"] = relative_module_path
 
         include_source_files = []
@@ -312,12 +313,6 @@ for name, module in sorted(modules.items()):
                 ignore_sub_folders.append(exclude_path)
         if len(ignore_sub_folders) != 0:
             spm_target["exclude"] = ignore_sub_folders
-            combined_lines.append("            exclude: [")
-            for sub_folder in ignore_sub_folders:
-                combined_lines.append(f"                \"{sub_folder}\",")
-            combined_lines.append("            ],")
-
-        combined_lines.append(f"            sources: sourceFileMap[\"{name}\"]!,")
         
         modulemap_path = os.path.join(os.path.join(os.path.join(module_directory), module_public_headers_prefix), "module.modulemap")
         if modulemap_path not in modulemaps:
@@ -329,10 +324,8 @@ for name, module in sorted(modules.items()):
                 
         if module_type == "objc_library" or module_type == "cc_library":
             if module_public_headers_prefix is not None and len(module_public_headers_prefix) != 0:
-                combined_lines.append(f"            publicHeadersPath: \"{module_public_headers_prefix}\",")
                 spm_target["publicHeadersPath"] = module_public_headers_prefix
             else:
-                combined_lines.append("            publicHeadersPath: \"\",")
                 spm_target["publicHeadersPath"] = ""
 
             if len(module["includes"]) > 1:
@@ -344,7 +337,6 @@ for name, module in sorted(modules.items()):
 
             if defines or copts or (module_public_headers_prefix is not None):
                 spm_target["cSettings"] = []
-                combined_lines.append("            cSettings: [")
 
                 if defines:
                     for define in defines:
@@ -352,58 +344,47 @@ for name, module in sorted(modules.items()):
                             print("{}: Defines with = are not yet supported: {}".format(name, define))
                             sys.exit(1)
                         else:
-                            combined_lines.append(f'                .define("{define}"),')
                             spm_target["cSettings"].append({
                                 "type": "define",
                                 "name": define
                             })
-                define_flags = []
                 if copts:
-                    combined_lines.append("                .unsafeFlags([")
                     unsafe_flags = []
                     for flag in copts:
                         if flag.startswith("-D"):
                             define_flag, define_value = parse_define_flag(flag)
-                            define_flags.append((define_flag, define_value))
-                            spm_target["cSettings"].append({
-                                "type": "define",
-                                "name": define_flag,
-                                "value": define_value
-                            })
+                            if define_value is None:
+                                spm_target["cSettings"].append({
+                                    "type": "define",
+                                    "name": define_flag
+                                })
+                            else:
+                                spm_target["cSettings"].append({
+                                    "type": "define",
+                                    "name": define_flag,
+                                    "value": define_value
+                                })
                         else:
                             escaped_flag = escape_swift_string_literal_component(flag)
-                            combined_lines.append(f'                    "{escaped_flag}",')
                             unsafe_flags.append(escaped_flag)
-                    combined_lines.append("                ]),")
                     spm_target["cSettings"].append({
                         "type": "unsafeFlags",
                         "flags": unsafe_flags
                     })
-                if len(define_flags) != 0:
-                    for (define_flag, define_value) in define_flags:
-                        if define_value is None:
-                            combined_lines.append(f'                .define("{define_flag}"),')
-                        else:
-                            combined_lines.append(f'                .define("{define_flag}", to: "{define_value}"),')
-                
-                combined_lines.append("            ],")
 
             if defines or cxxopts: # Check for defines OR cxxopts
                 spm_target["cxxSettings"] = []
-                combined_lines.append("            cxxSettings: [")
                 if defines: # Add defines again if present, for C++ context
                     for define in defines:
                         if "=" in define:
                             print("{}: Defines with = are not yet supported: {}".format(name, define))
                             sys.exit(1)
                         else:
-                            combined_lines.append(f'                .define("{define}"),')
                             spm_target["cxxSettings"].append({
                                 "type": "define",
                                 "name": define
                             })
                 if cxxopts:
-                    combined_lines.append("                .unsafeFlags([")
                     unsafe_flags = []
                     for flag in cxxopts:
                         if flag.startswith("-std=") and True:
@@ -413,26 +394,20 @@ for name, module in sorted(modules.items()):
                             else:
                                 continue
                         escaped_flag = escape_swift_string_literal_component(flag)
-                        combined_lines.append(f'                    "{escaped_flag}",')
                         unsafe_flags.append(escaped_flag)
-                    combined_lines.append("                ])")
                     spm_target["cxxSettings"].append({
                         "type": "unsafeFlags",
                         "flags": unsafe_flags
                     })
-                combined_lines.append("            ],")
 
             spm_target["linkerSettings"] = []
-            combined_lines.append("            linkerSettings: [")
             if module_type == "objc_library":
                 for framework in module["sdk_frameworks"]:
-                    combined_lines.append("                .linkedFramework(\"%s\")," % framework)
                     spm_target["linkerSettings"].append({
                         "type": "framework",
                         "name": framework
                     })
                 for dylib in module["sdk_dylibs"]:
-                    combined_lines.append("                .linkedLibrary(\"%s\")," % dylib)
                     spm_target["linkerSettings"].append({
                         "type": "library",
                         "name": dylib
@@ -441,7 +416,6 @@ for name, module in sorted(modules.items()):
                         "type": "library",
                         "name": dylib
                     })
-            combined_lines.append("            ]")
         
         elif module_type == "swift_library":
             defines = module.get("defines", [])
@@ -449,46 +423,34 @@ for name, module in sorted(modules.items()):
 
             # Handle cSettings for defines if they exist
             if defines:
-                combined_lines.append("            cSettings: [")
                 spm_target["cSettings"] = []
                 for define in defines:
-                    combined_lines.append(f'                .define("{define}"),')
                     spm_target["cSettings"].append({
                         "type": "define",
                         "name": define
                     })
-                combined_lines.append("            ],")
 
             spm_target["swiftSettings"] = []
             # Handle swiftSettings
-            combined_lines.append("            swiftSettings: [")
-            combined_lines.append("                .swiftLanguageMode(.v5),")
-            # Add defines to swiftSettings as simple .define("STRING") flags
             if defines:
                 for define in defines:
                     # For Swift settings, the define is passed as a single string, e.g., "KEY=VALUE" or "FLAG"
                     escaped_define = escape_swift_string_literal_component(define) # Escape the whole define string
-                    combined_lines.append(f'                .define("{escaped_define}"),')
                     spm_target["swiftSettings"].append({
                         "type": "define",
-                        "name": define
+                        "name": escaped_define
                     })
 
             # Add copts (swiftc flags) to unsafeFlags in swiftSettings
             if swift_copts:
-                combined_lines.append("                .unsafeFlags([")
                 unsafe_flags = []
                 for flag in swift_copts:
                     escaped_flag = escape_swift_string_literal_component(flag)
-                    combined_lines.append(f'                    "{escaped_flag}",')
                     unsafe_flags.append(escaped_flag)
-                combined_lines.append("                ])")
                 spm_target["swiftSettings"].append({
                     "type": "unsafeFlags",
                     "flags": unsafe_flags
                 })
-            combined_lines.append("            ]")
-        combined_lines.append("        ),")
 
         spm_targets.append(spm_target)
     elif module["type"] == "root":
@@ -497,7 +459,6 @@ for name, module in sorted(modules.items()):
         print("Unknown module type: {}".format(module["type"]))
         sys.exit(1)
 
-combined_lines.append("    ],")
 combined_lines.append("    cxxLanguageStandard: .cxx17")
 combined_lines.append(")")
 combined_lines.append("")
