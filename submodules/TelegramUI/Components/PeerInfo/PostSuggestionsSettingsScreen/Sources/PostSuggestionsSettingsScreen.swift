@@ -503,7 +503,7 @@ public final class PostSuggestionsSettingsScreen: ViewControllerComponentContain
         super.init(context: context, component: PostSuggestionsSettingsScreenComponent(
             context: context,
             usdWithdrawRate: configuration.usdWithdrawRate,
-            channelMessageSuggestionCommissionPermille: Int(configuration.channelMessageSuggestionCommissionPermille),
+            channelMessageSuggestionCommissionPermille: Int(configuration.paidMessageCommissionPermille),
             peer: peer,
             initialPrice: initialPrice,
             completion: completion

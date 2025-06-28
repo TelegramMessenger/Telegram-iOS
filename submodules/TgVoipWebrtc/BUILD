@@ -125,8 +125,6 @@ sources = glob([
     "tgcalls/tgcalls/v2/SignalingConnection.cpp",
     "tgcalls/tgcalls/v2/SignalingEncryption.cpp",
     "tgcalls/tgcalls/v2/SignalingSctpConnection.cpp",
-    "tgcalls/tgcalls/v2/SignalingKcpConnection.cpp",
-    "tgcalls/tgcalls/v2/ikcp.cpp",
 ]
 
 objc_library(
@@ -155,6 +153,7 @@ objc_library(
         "-DRTC_ENABLE_VP9",
         "-DTGVOIP_NAMESPACE=tgvoip_webrtc",
         "-std=c++17",
+        "-Werror",
     ] + optimization_flags,
     includes = [
         "PublicHeaders",

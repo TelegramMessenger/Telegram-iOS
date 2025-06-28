@@ -11,7 +11,7 @@ import TelegramPresentationData
 public enum ChatScheduleTimeControllerMode {
     case scheduledMessages(sendWhenOnlineAvailable: Bool)
     case reminders
-    case suggestPost(needsTime: Bool)
+    case suggestPost(needsTime: Bool, isAdmin: Bool, funds: (amount: CurrencyAmount, commissionPermille: Int)?)
 }
 
 public enum ChatScheduleTimeControllerStyle {

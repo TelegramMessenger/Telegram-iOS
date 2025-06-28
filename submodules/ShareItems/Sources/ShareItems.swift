@@ -10,6 +10,8 @@ import LocalMediaResources
 import AVFoundation
 import LegacyComponents
 import ShareItemsImpl
+import UIKit
+import SSignalKit
 
 public enum UnpreparedShareItemContent {
     case contact(DeviceContactExtendedData)
@@ -206,6 +208,13 @@ private func preparedShareItem(postbox: Postbox, network: Network, to peerId: Pe
                 }
             }
             if isGif {
+                #if DEBUG
+                let signal = SSignal(generator: { _ in
+                    return SBlockDisposable(block: {})
+                })
+                let _ = signal.start(next: nil, error: nil, completed: nil)
+                #endif
+                
                 let convertedData = Signal<(Data, CGSize, Double, Bool), NoError> { subscriber in
                     let disposable = MetaDisposable()
                     let signalDisposable = TGGifConverter.convertGif(toMp4: data).start(next: { next in

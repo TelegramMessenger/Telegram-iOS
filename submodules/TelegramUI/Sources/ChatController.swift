@@ -137,6 +137,7 @@ import TelegramCallsUI
 import QuickShareScreen
 import PostSuggestionsSettingsScreen
 import PromptUI
+import SuggestedPostApproveAlert
 
 public final class ChatControllerOverlayPresentationData {
     public let expandData: (ASDisplayNode?, () -> Void)
@@ -2362,8 +2363,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         strongSelf.present(promptController, in: .window(.root))
                     case 1:
                         var timestamp: Int32?
+                        var funds: (amount: CurrencyAmount, commissionPermille: Int)?
+                        if let amount = attribute.amount {
+                            let configuration = StarsSubscriptionConfiguration.with(appConfiguration: strongSelf.context.currentAppConfiguration.with { $0 })
+                            funds = (amount, amount.currency == .stars ? Int(configuration.channelMessageSuggestionStarsCommissionPermille) : Int(configuration.channelMessageSuggestionTonCommissionPermille))
+                        }
+                        
+                        var isAdmin = false
+                        if let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = strongSelf.presentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
+                            isAdmin = true
+                        }
+                        
                         if attribute.timestamp == nil {
-                            let controller = ChatScheduleTimeController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, mode: .suggestPost(needsTime: true), style: .default, currentTime: nil, minimalTime: nil, dismissByTapOutside: true, completion: { [weak strongSelf] time in
+                            let controller = ChatScheduleTimeController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, mode: .suggestPost(needsTime: true, isAdmin: isAdmin, funds: funds), style: .default, currentTime: nil, minimalTime: nil, dismissByTapOutside: true, completion: { [weak strongSelf] time in
                                 guard let strongSelf else {
                                     return
                                 }
@@ -2378,16 +2390,43 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             timestamp = Int32(Date().timeIntervalSince1970) + 1 * 60 * 60
                         } else {
                             //TODO:localize
-                            let textString = "Publish this message now?"
-                            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: textString, actions: [
-                                TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}),
+                            var textString: String
+                            if isAdmin {
+                                textString = "Do you really want to publish this post from **\((message.author.flatMap(EnginePeer.init))?.compactDisplayTitle ?? "")**?"
+                                
+                                if let funds {
+                                    var commissionValue: String
+                                    commissionValue = "\(Double(funds.commissionPermille) * 0.1)"
+                                    if commissionValue.hasSuffix(".0") {
+                                        commissionValue = String(commissionValue[commissionValue.startIndex ..< commissionValue.index(commissionValue.endIndex, offsetBy: -2)])
+                                    } else if commissionValue.hasSuffix(".00") {
+                                        commissionValue = String(commissionValue[commissionValue.startIndex ..< commissionValue.index(commissionValue.endIndex, offsetBy: -3)])
+                                    }
+                                    
+                                    textString += "\n\n"
+                                    
+                                    switch funds.amount.currency {
+                                    case .stars:
+                                        let displayAmount = funds.amount.amount.totalValue * Double(funds.commissionPermille) / 1000.0
+                                        textString += "You will receive \(displayAmount) Stars (\(commissionValue)%)\nfor publishing this post. It must remain visible for **24** hours after publication."
+                                    case .ton:
+                                        let displayAmount = Double(funds.amount.amount.value) / 1000000000.0 * Double(funds.commissionPermille) / 1000.0
+                                        textString += "You will receive \(displayAmount) TON (\(commissionValue)%)\nfor publishing this post. It must remain visible for **24** hours after publication."
+                                    }
+                                }
+                            } else {
+                                textString = "Do you really want to publish this post?"
+                            }
+                            
+                            strongSelf.present(SuggestedPostApproveAlert(presentationData: strongSelf.presentationData, title: "Accept Terms", text: textString, actions: [
                                 TextAlertAction(type: .defaultAction, title: "Publish", action: { [weak strongSelf] in
                                     guard let strongSelf else {
                                         return
                                     }
                                     let _ = strongSelf.context.engine.messages.monoforumPerformSuggestedPostAction(id: message.id, action: .approve(timestamp: timestamp)).startStandalone()
-                                })
-                            ]), in: .window(.root))
+                                }),
+                                TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {})
+                            ], actionLayout: .vertical, parseMarkdown: true, toastText: funds?.amount.currency == .ton ? "Transactions in **Stars** may be reversed by the payment provider within **21** days. Only accept Stars from people you trust." : nil), in: .window(.root))
                         }
                     case 2:
                         strongSelf.interfaceInteraction?.openSuggestPost(message, .default)

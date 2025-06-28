@@ -21,6 +21,12 @@ swift_library(
         "//submodules/SolidRoundedButtonNode",
         "//submodules/PresentationDataUtils",
         "//submodules/UIKitRuntimeUtils",
+        "//submodules/ComponentFlow",
+        "//submodules/TelegramUI/Components/ToastComponent",
+        "//submodules/Markdown",
+        "//submodules/TelegramUI/Components/LottieComponent",
+        "//submodules/Components/MultilineTextComponent",
+        "//submodules/Components/ComponentDisplayAdapters",
     ],
     visibility = [
         "//visibility:public",

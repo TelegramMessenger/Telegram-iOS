@@ -1782,10 +1782,16 @@ ios_application(
         #"//submodules/Display",
         #"//submodules/TelegramCore",
         #"//submodules/FFMpegBinding",
-        "//third-party/webrtc",
-        "//third-party/webrtc:webrtc_objc",
+        #"//third-party/webrtc",
+        #"//third-party/webrtc:webrtc_objc",
         #"//submodules/AsyncDisplayKit",
         #"//submodules/ObjCRuntimeUtils",
+        #"//submodules/OpusBinding",
+        #"//third-party/boringssl:ssl",
+        #"//third-party/boringssl:crypto",
+        #"//submodules/TelegramVoip",
+        #"//third-party/libprisma",
+        "//submodules/TelegramUI",
     ],
 )
 

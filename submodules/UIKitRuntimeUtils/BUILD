@@ -13,7 +13,7 @@ objc_library(
         "Source/UIKitRuntimeUtils/*.h",
     ]),
     includes = [
-      #"Source",
+      "Source",
     ],
     deps = [
       "//submodules/AsyncDisplayKit:AsyncDisplayKit",

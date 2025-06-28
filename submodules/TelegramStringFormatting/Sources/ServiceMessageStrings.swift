@@ -1487,7 +1487,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         amountString = "\(amount.amount.value) Stars"
                     }
                 case .ton:
-                    amountString = "\(formatTonAmountText(amount.amount.value, dateTimeFormat: dateTimeFormat)) TON"
+                    amountString = "\(formatTonAmountText(amount.amount.value, dateTimeFormat: dateTimeFormat, maxDecimalPositions: 3)) TON"
                 }
                 attributedString = parseMarkdownIntoAttributedString("**\(channelName)** received **\(amountString)** for publishing this post", attributes: MarkdownAttributes(body: bodyAttributes, bold: boldAttributes, link: bodyAttributes, linkAttribute: { _ in return nil }))
             case let .suggestedPostRefund(info):
