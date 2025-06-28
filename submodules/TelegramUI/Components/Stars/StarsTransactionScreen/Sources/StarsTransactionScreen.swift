@@ -416,8 +416,15 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     isSubscriptionFee = true
                 } else if transaction.flags.contains(.isGift) {
                     titleText = strings.Stars_Gift_Received_Title
-                    descriptionText = strings.Stars_Gift_Received_Text
                     count = transaction.count
+                    
+                    //TODO:localize
+                    if count.currency == .ton {
+                        descriptionText = "Use TON to submit post suggestions to channels on Telegram."
+                    } else {
+                        descriptionText = strings.Stars_Gift_Received_Text
+                    }
+                    
                     countOnTop = true
                     transactionId = transaction.id
                     date = transaction.date
@@ -552,7 +559,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                         toPeer = peer
                     }
                     transactionPeer = transaction.peer
-                    media = transaction.media.map { AnyMediaReference.starsTransaction(transaction: StarsTransactionReference(peerId: parentPeer.id, id: transaction.id, isRefund: transaction.flags.contains(.isRefund)), media: $0) }
+                    media = transaction.media.map { AnyMediaReference.starsTransaction(transaction: StarsTransactionReference(peerId: parentPeer.id, ton: false, id: transaction.id, isRefund: transaction.flags.contains(.isRefund)), media: $0) }
                     photo = transaction.photo
                     
                     if transaction.flags.contains(.isRefund) {
@@ -706,6 +713,10 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 transition: .immediate
             )
             
+            if count.currency == .ton {
+                premiumGiftMonths = 1000
+            }
+            
             let imageSubject: StarsImageComponent.Subject
             var imageIcon: StarsImageComponent.Icon?
             if let premiumGiftMonths {
@@ -732,9 +743,9 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 imageSubject = .none
             }
             if isSubscription || isSubscriber || isSubscriptionFee || giveawayMessageId != nil {
-                imageIcon = count.currency == .ton ? .ton : .star
+                imageIcon = count.currency == .ton ? nil : .star
             } else {
-                imageIcon = count.currency == .ton ? .ton : nil
+                imageIcon = nil
             }
             
             if isSubscription && "".isEmpty {

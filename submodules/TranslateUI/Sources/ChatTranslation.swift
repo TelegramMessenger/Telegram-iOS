@@ -180,7 +180,8 @@ public func translateMessageIds(context: AccountContext, messageIds: [EngineMess
                 }
             }
         }
-        return context.engine.messages.translateMessages(messageIds: messageIdsToTranslate, fromLang: fromLang, toLang: toLang, enableLocalIfPossible: context.sharedContext.immediateExperimentalUISettings.enableLocalTranslation)
+        
+        return context.engine.messages.translateMessages(messageIds: messageIdsToTranslate, fromLang: fromLang, toLang: toLang, enableLocalIfPossible: true) //context.sharedContext.immediateExperimentalUISettings.enableLocalTranslation)
         |> `catch` { _ -> Signal<Never, NoError> in
             return .complete()
         }

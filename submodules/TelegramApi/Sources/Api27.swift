@@ -73,7 +73,6 @@ public extension Api {
         case updateBotStopped(userId: Int64, date: Int32, stopped: Api.Bool, qts: Int32)
         case updateBotWebhookJSON(data: Api.DataJSON)
         case updateBotWebhookJSONQuery(queryId: Int64, data: Api.DataJSON, timeout: Int32)
-        case updateBroadcastRevenueTransactions(peer: Api.Peer, balances: Api.BroadcastRevenueBalances)
         case updateBusinessBotCallbackQuery(flags: Int32, queryId: Int64, userId: Int64, connectionId: String, message: Api.Message, replyToMessage: Api.Message?, chatInstance: Int64, data: Buffer?)
         case updateChannel(channelId: Int64)
         case updateChannelAvailableMessages(channelId: Int64, availableMinId: Int32)
@@ -412,13 +411,6 @@ public extension Api {
                     serializeInt64(queryId, buffer: buffer, boxed: false)
                     data.serialize(buffer, true)
                     serializeInt32(timeout, buffer: buffer, boxed: false)
-                    break
-                case .updateBroadcastRevenueTransactions(let peer, let balances):
-                    if boxed {
-                        buffer.appendInt32(-539401739)
-                    }
-                    peer.serialize(buffer, true)
-                    balances.serialize(buffer, true)
                     break
                 case .updateBusinessBotCallbackQuery(let flags, let queryId, let userId, let connectionId, let message, let replyToMessage, let chatInstance, let data):
                     if boxed {
@@ -1515,8 +1507,6 @@ public extension Api {
                 return ("updateBotWebhookJSON", [("data", data as Any)])
                 case .updateBotWebhookJSONQuery(let queryId, let data, let timeout):
                 return ("updateBotWebhookJSONQuery", [("queryId", queryId as Any), ("data", data as Any), ("timeout", timeout as Any)])
-                case .updateBroadcastRevenueTransactions(let peer, let balances):
-                return ("updateBroadcastRevenueTransactions", [("peer", peer as Any), ("balances", balances as Any)])
                 case .updateBusinessBotCallbackQuery(let flags, let queryId, let userId, let connectionId, let message, let replyToMessage, let chatInstance, let data):
                 return ("updateBusinessBotCallbackQuery", [("flags", flags as Any), ("queryId", queryId as Any), ("userId", userId as Any), ("connectionId", connectionId as Any), ("message", message as Any), ("replyToMessage", replyToMessage as Any), ("chatInstance", chatInstance as Any), ("data", data as Any)])
                 case .updateChannel(let channelId):
@@ -2237,24 +2227,6 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.Update.updateBotWebhookJSONQuery(queryId: _1!, data: _2!, timeout: _3!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_updateBroadcastRevenueTransactions(_ reader: BufferReader) -> Update? {
-            var _1: Api.Peer?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.Peer
-            }
-            var _2: Api.BroadcastRevenueBalances?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.BroadcastRevenueBalances
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.Update.updateBroadcastRevenueTransactions(peer: _1!, balances: _2!)
             }
             else {
                 return nil

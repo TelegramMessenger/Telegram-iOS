@@ -827,7 +827,7 @@ public enum PremiumPerk: CaseIterable {
         case .paidMessages:
             return "Premium/Perk/PaidMessages"
         case .todo:
-            return "Premium/Perk/PaidMessages"
+            return "Premium/Perk/Todo"
         case .businessLocation:
             return "Premium/BusinessPerk/Location"
         case .businessHours:
@@ -858,6 +858,7 @@ struct PremiumIntroConfiguration {
             .voiceToText,
             .fasterDownload,
             .translation,
+            .todo,
             .animatedEmoji,
             .emojiStatus,
             .messageEffects,
@@ -2172,6 +2173,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                 demoSubject = .messageEffects
                             case .paidMessages:
                                 demoSubject = .paidMessages
+                            case .todo:
+                                demoSubject = .todo
                             case .business:
                                 demoSubject = .business
                                 let _ = ApplicationSpecificNotice.setDismissedBusinessBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
@@ -3699,6 +3702,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 let buttonTitle: String
                 var buttonSubtitle: String?
                 if case let .auth(price) = context.component.source {
+                    //TODO:localize
                     buttonTitle = "Sign up for \(price)"
                     buttonSubtitle = "Get Telegram Premium for 1 week"
                 } else if isUnusedGift {

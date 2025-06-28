@@ -162,7 +162,7 @@ private final class SheetContent: CombinedComponent {
                 amountPlaceholder = environment.strings.Stars_Withdraw_AmountPlaceholder
                 
                 minAmount = withdrawConfiguration.minWithdrawAmount.flatMap { StarsAmount(value: $0, nanos: 0) }
-                maxAmount = status.balances.availableBalance
+                maxAmount = status.balances.availableBalance.amount
             case .accountWithdraw:
                 titleString = environment.strings.Stars_Withdraw_Title
                 amountTitle = environment.strings.Stars_Withdraw_AmountTitle
@@ -241,7 +241,7 @@ private final class SheetContent: CombinedComponent {
             } else if case .reaction = component.mode {
                 balance = state.starsBalance
             } else if case let .withdraw(starsState, _) = component.mode {
-                balance = starsState.balances.availableBalance
+                balance = starsState.balances.availableBalance.amount
             } else {
                 balance = nil
             }
@@ -785,7 +785,7 @@ private final class SheetContent: CombinedComponent {
             var currency: CurrencyAmount.Currency = .stars
             switch mode {
             case let .withdraw(stats, _):
-                amount = StarsAmount(value: stats.balances.availableBalance.value, nanos: 0)
+                amount = StarsAmount(value: stats.balances.availableBalance.amount.value, nanos: 0)
             case .accountWithdraw:
                 amount = context.starsContext?.currentState.flatMap { StarsAmount(value: $0.balance.value, nanos: 0) }
             case let .paidMedia(initialValue, _):

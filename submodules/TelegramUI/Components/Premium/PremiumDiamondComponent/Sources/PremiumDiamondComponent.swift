@@ -8,6 +8,7 @@ import GZip
 import AppBundle
 import LegacyComponents
 import PremiumStarComponent
+import TelegramPresentationData
 
 private let sceneVersion: Int = 5
 
@@ -20,11 +21,14 @@ private func rad2deg(_ number: Float) -> Float {
 }
 
 public final class PremiumDiamondComponent: Component {
-    public init() {
+    let theme: PresentationTheme
+    
+    public init(theme: PresentationTheme) {
+        self.theme = theme
     }
     
     public static func ==(lhs: PremiumDiamondComponent, rhs: PremiumDiamondComponent) -> Bool {
-        return true
+        return lhs.theme === rhs.theme
     }
     
     public final class View: UIView, SCNSceneRendererDelegate, ComponentTaggedView {
@@ -88,14 +92,47 @@ public final class PremiumDiamondComponent: Component {
         }
                 
         private func setup() {
-            guard let scene = loadCompressedScene(name: "diamond", version: sceneVersion) else {
+            guard let scene = loadCompressedScene(name: "gift2", version: sceneVersion) else {
                 return
             }
             
             self.sceneView.scene = scene
             self.sceneView.delegate = self
             
-            let _ = self.sceneView.snapshot()
+            let names: [String] = [
+                "particles_left",
+                "particles_right",
+                "particles_left_bottom",
+                "particles_right_bottom",
+                "particles_center"
+            ]
+            
+            let particleColor = UIColor(rgb: 0x428df4) //0x3b9bff)
+            for name in names {
+                if let node = scene.rootNode.childNode(withName: name, recursively: false), let particleSystem = node.particleSystems?.first {
+                    particleSystem.particleIntensity = min(1.0, 2.0 * particleSystem.particleIntensity)
+                    particleSystem.particleIntensityVariation = 0.05
+                    particleSystem.particleColor = particleColor
+                    particleSystem.particleColorVariation = SCNVector4Make(0.0, 0.0, 0.1, 0.0)
+                                      
+                    if let propertyControllers = particleSystem.propertyControllers, let sizeController = propertyControllers[.size], let colorController = propertyControllers[.color] {
+                        let animation = CAKeyframeAnimation()
+                        if let existing = colorController.animation as? CAKeyframeAnimation {
+                            animation.keyTimes = existing.keyTimes
+                            animation.values = existing.values?.compactMap { ($0 as? UIColor)?.alpha } ?? []
+                        } else {
+                            animation.values = [ 0.0, 1.0, 1.0, 0.0 ]
+                        }
+                        let opacityController = SCNParticlePropertyController(animation: animation)
+                        particleSystem.propertyControllers = [
+                            .size: sizeController,
+                            .opacity: opacityController
+                        ]
+                    }
+                }
+            }
+            
+            //let _ = self.sceneView.snapshot()
         }
         
         private var didSetReady = false
@@ -213,6 +250,8 @@ public final class PremiumDiamondComponent: Component {
         
         func update(component: PremiumDiamondComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             self.component = component
+            
+            self.sceneView.backgroundColor = component.theme.list.blocksBackgroundColor
             
             self.sceneView.bounds = CGRect(origin: .zero, size: CGSize(width: availableSize.width * 2.0, height: availableSize.height * 2.0))
             self.sceneView.center = CGPoint(x: availableSize.width / 2.0, y: availableSize.height / 2.0)

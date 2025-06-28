@@ -375,7 +375,10 @@ private func generatePercentageAnimationImages(presentationData: ChatPresentatio
 private final class ChatMessageTodoItemNode: ASDisplayNode {
     private var backgroundWallpaperNode: ChatMessageBubbleBackdrop?
     private var backgroundNode: ChatMessageBackground?
-    private var snapshotView: UIView?
+    private var extractedRadioView: UIView?
+    private var extractedAvatarView: UIView?
+    private var extractedTitleNode: TextNodeWithEntities?
+    private var extractedNameView: UIView?
     
     fileprivate let contextSourceNode: ContextExtractedContentContainingNode
     fileprivate let containerNode: ASDisplayNode
@@ -385,6 +388,7 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
     private var iconNode: ASImageNode?
     fileprivate var titleNode: TextNodeWithEntities?
     fileprivate var nameNode: TextNode?
+    
     private let buttonNode: HighlightTrackingButtonNode
     let separatorNode: ASDisplayNode
     
@@ -545,16 +549,48 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
 //                    self.backgroundWallpaperNode?.update(rect: mappedRect, within: containerSize)
 //                }
                 
-                if let snapshotView = self.containerNode.view.snapshotContentTree() {
-                    self.snapshotView = snapshotView
-                    self.contextSourceNode.contentNode.view.addSubview(snapshotView)
+                if let extractedRadioView = self.radioNode?.view.snapshotContentTree() {
+                    self.extractedRadioView = extractedRadioView
+                    self.contextSourceNode.contentNode.view.addSubview(extractedRadioView)
+                }
+                
+                if let extractedAvatarView = self.avatarNode?.view.snapshotContentTree() {
+                    self.extractedAvatarView = extractedAvatarView
+                    self.contextSourceNode.contentNode.view.addSubview(extractedAvatarView)
+                }
+                
+                if let titleNode = self.titleNode, let context = self.context, let presentationData = self.presentationData {
+                    let titleConstrainedWidth = titleNode.textNode.cachedLayout?.size.width ?? 1.0
+                    let makeTitleLayout = TextNodeWithEntities.asyncLayout(self.extractedTitleNode)
+                    let (_, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: self.titleNode?.textNode.cachedLayout?.attributedString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: titleConstrainedWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .left, cutout: nil, insets: UIEdgeInsets(top: 1.0, left: 0.0, bottom: 1.0, right: 0.0)))
+                    let extractedTitleNode = titleApply(TextNodeWithEntities.Arguments(
+                        context: context,
+                        cache: context.animationCache,
+                        renderer: context.animationRenderer,
+                        placeholderColor: incoming ? presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor,
+                        attemptSynchronous: true
+                    ))
+                    extractedTitleNode.textNode.frame = titleNode.textNode.frame
+                    self.contextSourceNode.contentNode.addSubnode(extractedTitleNode.textNode)
+                    self.extractedTitleNode = extractedTitleNode
+                }
+                
+                if let extractedNameView = self.nameNode?.view.snapshotContentTree() {
+                    self.extractedNameView = extractedNameView
+                    self.contextSourceNode.contentNode.view.addSubview(extractedNameView)
                 }
             } else {
                 if let backgroundNode = self.backgroundNode {
                     self.backgroundNode = nil
                     transition.updateAlpha(node: backgroundNode, alpha: 0.0, completion: { [weak backgroundNode] _ in
-                        self.snapshotView?.removeFromSuperview()
-                        self.snapshotView = nil
+                        self.extractedRadioView?.removeFromSuperview()
+                        self.extractedRadioView = nil
+                        self.extractedAvatarView?.removeFromSuperview()
+                        self.extractedAvatarView = nil
+                        self.extractedTitleNode?.textNode.removeFromSupernode()
+                        self.extractedTitleNode = nil
+                        self.extractedNameView?.removeFromSuperview()
+                        self.extractedNameView = nil
                         
                         backgroundNode?.removeFromSupernode()
                     })
@@ -596,7 +632,7 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
         return { context, presentationData, presentationContext, message, todo, option, completion, translation, constrainedWidth in
             var canMark = false
             if (todo.flags.contains(.othersCanComplete) || message.author?.id == context.account.peerId) {
-                if let forwardInfo = message.forwardInfo, let authorId = forwardInfo.author?.id, authorId != context.account.peerId {   
+                if let _ = message.forwardInfo {
                 } else {
                     canMark = true
                 }
@@ -725,9 +761,9 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
                     if let (nameLayout, nameApply) = nameLayoutAndApply {
                         var nameNodeFrame: CGRect
                         if titleLayout.hasRTL {
-                            nameNodeFrame = CGRect(origin: CGPoint(x: width - rightInset - nameLayout.size.width, y: 26.0), size: nameLayout.size)
+                            nameNodeFrame = CGRect(origin: CGPoint(x: width - rightInset - nameLayout.size.width, y: titleNodeFrame.maxY - 4.0), size: nameLayout.size)
                         } else {
-                            nameNodeFrame = CGRect(origin: CGPoint(x: leftInset, y: 26.0), size: nameLayout.size)
+                            nameNodeFrame = CGRect(origin: CGPoint(x: leftInset, y: titleNodeFrame.maxY - 4.0), size: nameLayout.size)
                         }
                         let nameNode = nameApply()
                         if node.nameNode !== nameNode {

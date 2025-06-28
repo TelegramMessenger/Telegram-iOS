@@ -418,6 +418,8 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             title = item.presentationData.strings.Notification_StarsGift_Title(Int32(count))
                             text = incoming ? item.presentationData.strings.Notification_StarsGift_Subtitle : item.presentationData.strings.Notification_StarsGift_SubtitleYou(peerName).string
                         case let .giftTon(currency, amount, cryptoCurrency, cryptoAmount, _):
+                            months = 1000
+                            
                             var peerName = ""
                             if let peer = item.message.peers[item.message.id.peerId] {
                                 peerName = EnginePeer(peer).compactDisplayTitle
@@ -431,6 +433,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             
                             title = "$ \(formatTonAmountText(cryptoAmount, dateTimeFormat: item.presentationData.dateTimeFormat))"
                             text = incoming ? "Use TON to submit post suggestions to channels." : "With TON, \(peerName) will be able to submit post suggestions to channels."
+                            buttonTitle = ""
                         case let .prizeStars(count, _, channelId, _, _):
                             if count <= 1000 {
                                 months = 3
@@ -640,6 +643,8 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 
                 switch months {
+                case 1000:
+                    animationName = "GiftDiamond"
                 case 12:
                     animationName = "Gift12"
                 case 6:

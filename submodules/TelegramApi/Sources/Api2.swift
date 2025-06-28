@@ -915,166 +915,6 @@ public extension Api {
     }
 }
 public extension Api {
-    enum BroadcastRevenueBalances: TypeConstructorDescription {
-        case broadcastRevenueBalances(flags: Int32, currentBalance: Int64, availableBalance: Int64, overallRevenue: Int64)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .broadcastRevenueBalances(let flags, let currentBalance, let availableBalance, let overallRevenue):
-                    if boxed {
-                        buffer.appendInt32(-1006669337)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt64(currentBalance, buffer: buffer, boxed: false)
-                    serializeInt64(availableBalance, buffer: buffer, boxed: false)
-                    serializeInt64(overallRevenue, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .broadcastRevenueBalances(let flags, let currentBalance, let availableBalance, let overallRevenue):
-                return ("broadcastRevenueBalances", [("flags", flags as Any), ("currentBalance", currentBalance as Any), ("availableBalance", availableBalance as Any), ("overallRevenue", overallRevenue as Any)])
-    }
-    }
-    
-        public static func parse_broadcastRevenueBalances(_ reader: BufferReader) -> BroadcastRevenueBalances? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: Int64?
-            _3 = reader.readInt64()
-            var _4: Int64?
-            _4 = reader.readInt64()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.BroadcastRevenueBalances.broadcastRevenueBalances(flags: _1!, currentBalance: _2!, availableBalance: _3!, overallRevenue: _4!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum BroadcastRevenueTransaction: TypeConstructorDescription {
-        case broadcastRevenueTransactionProceeds(amount: Int64, fromDate: Int32, toDate: Int32)
-        case broadcastRevenueTransactionRefund(amount: Int64, date: Int32, provider: String)
-        case broadcastRevenueTransactionWithdrawal(flags: Int32, amount: Int64, date: Int32, provider: String, transactionDate: Int32?, transactionUrl: String?)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .broadcastRevenueTransactionProceeds(let amount, let fromDate, let toDate):
-                    if boxed {
-                        buffer.appendInt32(1434332356)
-                    }
-                    serializeInt64(amount, buffer: buffer, boxed: false)
-                    serializeInt32(fromDate, buffer: buffer, boxed: false)
-                    serializeInt32(toDate, buffer: buffer, boxed: false)
-                    break
-                case .broadcastRevenueTransactionRefund(let amount, let date, let provider):
-                    if boxed {
-                        buffer.appendInt32(1121127726)
-                    }
-                    serializeInt64(amount, buffer: buffer, boxed: false)
-                    serializeInt32(date, buffer: buffer, boxed: false)
-                    serializeString(provider, buffer: buffer, boxed: false)
-                    break
-                case .broadcastRevenueTransactionWithdrawal(let flags, let amount, let date, let provider, let transactionDate, let transactionUrl):
-                    if boxed {
-                        buffer.appendInt32(1515784568)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt64(amount, buffer: buffer, boxed: false)
-                    serializeInt32(date, buffer: buffer, boxed: false)
-                    serializeString(provider, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(transactionDate!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 1) != 0 {serializeString(transactionUrl!, buffer: buffer, boxed: false)}
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .broadcastRevenueTransactionProceeds(let amount, let fromDate, let toDate):
-                return ("broadcastRevenueTransactionProceeds", [("amount", amount as Any), ("fromDate", fromDate as Any), ("toDate", toDate as Any)])
-                case .broadcastRevenueTransactionRefund(let amount, let date, let provider):
-                return ("broadcastRevenueTransactionRefund", [("amount", amount as Any), ("date", date as Any), ("provider", provider as Any)])
-                case .broadcastRevenueTransactionWithdrawal(let flags, let amount, let date, let provider, let transactionDate, let transactionUrl):
-                return ("broadcastRevenueTransactionWithdrawal", [("flags", flags as Any), ("amount", amount as Any), ("date", date as Any), ("provider", provider as Any), ("transactionDate", transactionDate as Any), ("transactionUrl", transactionUrl as Any)])
-    }
-    }
-    
-        public static func parse_broadcastRevenueTransactionProceeds(_ reader: BufferReader) -> BroadcastRevenueTransaction? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.BroadcastRevenueTransaction.broadcastRevenueTransactionProceeds(amount: _1!, fromDate: _2!, toDate: _3!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_broadcastRevenueTransactionRefund(_ reader: BufferReader) -> BroadcastRevenueTransaction? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: String?
-            _3 = parseString(reader)
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.BroadcastRevenueTransaction.broadcastRevenueTransactionRefund(amount: _1!, date: _2!, provider: _3!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_broadcastRevenueTransactionWithdrawal(_ reader: BufferReader) -> BroadcastRevenueTransaction? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            var _4: String?
-            _4 = parseString(reader)
-            var _5: Int32?
-            if Int(_1!) & Int(1 << 1) != 0 {_5 = reader.readInt32() }
-            var _6: String?
-            if Int(_1!) & Int(1 << 1) != 0 {_6 = parseString(reader) }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.BroadcastRevenueTransaction.broadcastRevenueTransactionWithdrawal(flags: _1!, amount: _2!, date: _3!, provider: _4!, transactionDate: _5, transactionUrl: _6)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
     enum BusinessAwayMessage: TypeConstructorDescription {
         case businessAwayMessage(flags: Int32, shortcutId: Int32, schedule: Api.BusinessAwayMessageSchedule, recipients: Api.BusinessRecipients)
     
@@ -1186,6 +1026,206 @@ public extension Api {
         }
         public static func parse_businessAwayMessageScheduleOutsideWorkHours(_ reader: BufferReader) -> BusinessAwayMessageSchedule? {
             return Api.BusinessAwayMessageSchedule.businessAwayMessageScheduleOutsideWorkHours
+        }
+    
+    }
+}
+public extension Api {
+    enum BusinessBotRecipients: TypeConstructorDescription {
+        case businessBotRecipients(flags: Int32, users: [Int64]?, excludeUsers: [Int64]?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .businessBotRecipients(let flags, let users, let excludeUsers):
+                    if boxed {
+                        buffer.appendInt32(-1198722189)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 4) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users!.count))
+                    for item in users! {
+                        serializeInt64(item, buffer: buffer, boxed: false)
+                    }}
+                    if Int(flags) & Int(1 << 6) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(excludeUsers!.count))
+                    for item in excludeUsers! {
+                        serializeInt64(item, buffer: buffer, boxed: false)
+                    }}
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .businessBotRecipients(let flags, let users, let excludeUsers):
+                return ("businessBotRecipients", [("flags", flags as Any), ("users", users as Any), ("excludeUsers", excludeUsers as Any)])
+    }
+    }
+    
+        public static func parse_businessBotRecipients(_ reader: BufferReader) -> BusinessBotRecipients? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Int64]?
+            if Int(_1!) & Int(1 << 4) != 0 {if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
+            } }
+            var _3: [Int64]?
+            if Int(_1!) & Int(1 << 6) != 0 {if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
+            } }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 4) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 6) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.BusinessBotRecipients.businessBotRecipients(flags: _1!, users: _2, excludeUsers: _3)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum BusinessBotRights: TypeConstructorDescription {
+        case businessBotRights(flags: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .businessBotRights(let flags):
+                    if boxed {
+                        buffer.appendInt32(-1604170505)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .businessBotRights(let flags):
+                return ("businessBotRights", [("flags", flags as Any)])
+    }
+    }
+    
+        public static func parse_businessBotRights(_ reader: BufferReader) -> BusinessBotRights? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.BusinessBotRights.businessBotRights(flags: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum BusinessChatLink: TypeConstructorDescription {
+        case businessChatLink(flags: Int32, link: String, message: String, entities: [Api.MessageEntity]?, title: String?, views: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .businessChatLink(let flags, let link, let message, let entities, let title, let views):
+                    if boxed {
+                        buffer.appendInt32(-1263638929)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(link, buffer: buffer, boxed: false)
+                    serializeString(message, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(entities!.count))
+                    for item in entities! {
+                        item.serialize(buffer, true)
+                    }}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
+                    serializeInt32(views, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .businessChatLink(let flags, let link, let message, let entities, let title, let views):
+                return ("businessChatLink", [("flags", flags as Any), ("link", link as Any), ("message", message as Any), ("entities", entities as Any), ("title", title as Any), ("views", views as Any)])
+    }
+    }
+    
+        public static func parse_businessChatLink(_ reader: BufferReader) -> BusinessChatLink? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: [Api.MessageEntity]?
+            if Int(_1!) & Int(1 << 0) != 0 {if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
+            } }
+            var _5: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_5 = parseString(reader) }
+            var _6: Int32?
+            _6 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.BusinessChatLink.businessChatLink(flags: _1!, link: _2!, message: _3!, entities: _4, title: _5, views: _6!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum BusinessGreetingMessage: TypeConstructorDescription {
+        case businessGreetingMessage(shortcutId: Int32, recipients: Api.BusinessRecipients, noActivityDays: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .businessGreetingMessage(let shortcutId, let recipients, let noActivityDays):
+                    if boxed {
+                        buffer.appendInt32(-451302485)
+                    }
+                    serializeInt32(shortcutId, buffer: buffer, boxed: false)
+                    recipients.serialize(buffer, true)
+                    serializeInt32(noActivityDays, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .businessGreetingMessage(let shortcutId, let recipients, let noActivityDays):
+                return ("businessGreetingMessage", [("shortcutId", shortcutId as Any), ("recipients", recipients as Any), ("noActivityDays", noActivityDays as Any)])
+    }
+    }
+    
+        public static func parse_businessGreetingMessage(_ reader: BufferReader) -> BusinessGreetingMessage? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.BusinessRecipients?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.BusinessRecipients
+            }
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.BusinessGreetingMessage.businessGreetingMessage(shortcutId: _1!, recipients: _2!, noActivityDays: _3!)
+            }
+            else {
+                return nil
+            }
         }
     
     }

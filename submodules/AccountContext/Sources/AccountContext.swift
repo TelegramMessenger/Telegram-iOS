@@ -1565,3 +1565,52 @@ public struct StarsSubscriptionConfiguration {
         }
     }
 }
+
+public struct TranslationConfiguration {
+    static var defaultValue: TranslationConfiguration {
+        return TranslationConfiguration(manual: .disabled, auto: .disabled)
+    }
+    
+    public enum TranslationAvailability {
+        case enabled
+        case system
+        case alternative
+        case disabled
+        
+        init(string: String) {
+            switch string {
+            case "enabled":
+                #if DEBUG
+                self = .system
+                #else
+                self = .enabled
+                #endif
+            case "system":
+                self = .system
+            case "alternative":
+                self = .alternative
+            default:
+                self = .disabled
+            }
+        }
+    }
+    
+    public let manual: TranslationAvailability
+    public let auto: TranslationAvailability
+    
+    fileprivate init(manual: TranslationAvailability, auto: TranslationAvailability) {
+        self.manual = manual
+        self.auto = auto
+    }
+    
+    public static func with(appConfiguration: AppConfiguration) -> TranslationConfiguration {
+        if let data = appConfiguration.data {
+            let manualValue = data["translations_manual_enabled"] as? String ?? "disabled"
+            let autoValue = data["translations_auto_enabled"] as? String ?? "disabled"
+            
+            return TranslationConfiguration(manual: TranslationAvailability(string: manualValue), auto: TranslationAvailability(string: autoValue))
+        } else {
+            return .defaultValue
+        }
+    }
+}

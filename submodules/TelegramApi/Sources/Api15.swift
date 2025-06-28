@@ -397,6 +397,8 @@ public extension Api {
         case messageActionStarGiftUnique(flags: Int32, gift: Api.StarGift, canExportAt: Int32?, transferStars: Int64?, fromId: Api.Peer?, peer: Api.Peer?, savedId: Int64?, resaleStars: Int64?, canTransferAt: Int32?, canResellAt: Int32?)
         case messageActionSuggestProfilePhoto(photo: Api.Photo)
         case messageActionSuggestedPostApproval(flags: Int32, rejectComment: String?, scheduleDate: Int32?, price: Api.StarsAmount?)
+        case messageActionSuggestedPostRefund(flags: Int32)
+        case messageActionSuggestedPostSuccess(price: Api.StarsAmount)
         case messageActionTodoAppendTasks(list: [Api.TodoItem])
         case messageActionTodoCompletions(completed: [Int32], incompleted: [Int32])
         case messageActionTopicCreate(flags: Int32, title: String, iconColor: Int32, iconEmojiId: Int64?)
@@ -825,6 +827,18 @@ public extension Api {
                     if Int(flags) & Int(1 << 3) != 0 {serializeInt32(scheduleDate!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 4) != 0 {price!.serialize(buffer, true)}
                     break
+                case .messageActionSuggestedPostRefund(let flags):
+                    if boxed {
+                        buffer.appendInt32(1777932024)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    break
+                case .messageActionSuggestedPostSuccess(let price):
+                    if boxed {
+                        buffer.appendInt32(-1780625559)
+                    }
+                    price.serialize(buffer, true)
+                    break
                 case .messageActionTodoAppendTasks(let list):
                     if boxed {
                         buffer.appendInt32(-940721021)
@@ -985,6 +999,10 @@ public extension Api {
                 return ("messageActionSuggestProfilePhoto", [("photo", photo as Any)])
                 case .messageActionSuggestedPostApproval(let flags, let rejectComment, let scheduleDate, let price):
                 return ("messageActionSuggestedPostApproval", [("flags", flags as Any), ("rejectComment", rejectComment as Any), ("scheduleDate", scheduleDate as Any), ("price", price as Any)])
+                case .messageActionSuggestedPostRefund(let flags):
+                return ("messageActionSuggestedPostRefund", [("flags", flags as Any)])
+                case .messageActionSuggestedPostSuccess(let price):
+                return ("messageActionSuggestedPostSuccess", [("price", price as Any)])
                 case .messageActionTodoAppendTasks(let list):
                 return ("messageActionTodoAppendTasks", [("list", list as Any)])
                 case .messageActionTodoCompletions(let completed, let incompleted):
@@ -1827,6 +1845,30 @@ public extension Api {
             let _c4 = (Int(_1!) & Int(1 << 4) == 0) || _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
                 return Api.MessageAction.messageActionSuggestedPostApproval(flags: _1!, rejectComment: _2, scheduleDate: _3, price: _4)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageActionSuggestedPostRefund(_ reader: BufferReader) -> MessageAction? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.MessageAction.messageActionSuggestedPostRefund(flags: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageActionSuggestedPostSuccess(_ reader: BufferReader) -> MessageAction? {
+            var _1: Api.StarsAmount?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.StarsAmount
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.MessageAction.messageActionSuggestedPostSuccess(price: _1!)
             }
             else {
                 return nil

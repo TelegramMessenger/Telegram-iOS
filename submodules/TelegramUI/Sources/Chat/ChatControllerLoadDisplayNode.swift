@@ -611,15 +611,9 @@ extension ChatControllerImpl {
         }
         
         if #available(iOS 18.0, *) {
-            if self.context.sharedContext.immediateExperimentalUISettings.enableLocalTranslation {
-                if engineExperimentalInternalTranslationService == nil, let hostView = self.context.sharedContext.mainWindow?.hostView {
-                    let translationService = ExperimentalInternalTranslationServiceImpl(view: hostView.containerView)
-                    engineExperimentalInternalTranslationService = translationService
-                }
-            } else {
-                if engineExperimentalInternalTranslationService != nil {
-                    engineExperimentalInternalTranslationService = nil
-                }
+            if engineExperimentalInternalTranslationService == nil, let hostView = self.context.sharedContext.mainWindow?.hostView {
+                let translationService = ExperimentalInternalTranslationServiceImpl(view: hostView.containerView)
+                engineExperimentalInternalTranslationService = translationService
             }
         }
         

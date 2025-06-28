@@ -110,10 +110,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[602479523] = { return Api.BotPreviewMedia.parse_botPreviewMedia($0) }
     dict[-113453988] = { return Api.BotVerification.parse_botVerification($0) }
     dict[-1328716265] = { return Api.BotVerifierSettings.parse_botVerifierSettings($0) }
-    dict[-1006669337] = { return Api.BroadcastRevenueBalances.parse_broadcastRevenueBalances($0) }
-    dict[1434332356] = { return Api.BroadcastRevenueTransaction.parse_broadcastRevenueTransactionProceeds($0) }
-    dict[1121127726] = { return Api.BroadcastRevenueTransaction.parse_broadcastRevenueTransactionRefund($0) }
-    dict[1515784568] = { return Api.BroadcastRevenueTransaction.parse_broadcastRevenueTransactionWithdrawal($0) }
     dict[-283809188] = { return Api.BusinessAwayMessage.parse_businessAwayMessage($0) }
     dict[-910564679] = { return Api.BusinessAwayMessageSchedule.parse_businessAwayMessageScheduleAlways($0) }
     dict[-867328308] = { return Api.BusinessAwayMessageSchedule.parse_businessAwayMessageScheduleCustom($0) }
@@ -609,6 +605,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[775611918] = { return Api.MessageAction.parse_messageActionStarGiftUnique($0) }
     dict[1474192222] = { return Api.MessageAction.parse_messageActionSuggestProfilePhoto($0) }
     dict[-293988970] = { return Api.MessageAction.parse_messageActionSuggestedPostApproval($0) }
+    dict[1777932024] = { return Api.MessageAction.parse_messageActionSuggestedPostRefund($0) }
+    dict[-1780625559] = { return Api.MessageAction.parse_messageActionSuggestedPostSuccess($0) }
     dict[-940721021] = { return Api.MessageAction.parse_messageActionTodoAppendTasks($0) }
     dict[-864265079] = { return Api.MessageAction.parse_messageActionTodoCompletions($0) }
     dict[228168278] = { return Api.MessageAction.parse_messageActionTopicCreate($0) }
@@ -964,7 +962,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[779004698] = { return Api.StarsSubscription.parse_starsSubscription($0) }
     dict[88173912] = { return Api.StarsSubscriptionPricing.parse_starsSubscriptionPricing($0) }
     dict[198776256] = { return Api.StarsTopupOption.parse_starsTopupOption($0) }
-    dict[-1549805238] = { return Api.StarsTransaction.parse_starsTransaction($0) }
+    dict[325426864] = { return Api.StarsTransaction.parse_starsTransaction($0) }
     dict[-670195363] = { return Api.StarsTransactionPeer.parse_starsTransactionPeer($0) }
     dict[-110658899] = { return Api.StarsTransactionPeer.parse_starsTransactionPeerAPI($0) }
     dict[1617438738] = { return Api.StarsTransactionPeer.parse_starsTransactionPeerAds($0) }
@@ -1042,7 +1040,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-997782967] = { return Api.Update.parse_updateBotStopped($0) }
     dict[-2095595325] = { return Api.Update.parse_updateBotWebhookJSON($0) }
     dict[-1684914010] = { return Api.Update.parse_updateBotWebhookJSONQuery($0) }
-    dict[-539401739] = { return Api.Update.parse_updateBroadcastRevenueTransactions($0) }
     dict[513998247] = { return Api.Update.parse_updateBusinessBotCallbackQuery($0) }
     dict[1666927625] = { return Api.Update.parse_updateChannel($0) }
     dict[-1304443240] = { return Api.Update.parse_updateChannelAvailableMessages($0) }
@@ -1436,7 +1433,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1877571094] = { return Api.payments.StarGifts.parse_starGifts($0) }
     dict[-1551326360] = { return Api.payments.StarGifts.parse_starGiftsNotModified($0) }
     dict[961445665] = { return Api.payments.StarsRevenueAdsAccountUrl.parse_starsRevenueAdsAccountUrl($0) }
-    dict[-919881925] = { return Api.payments.StarsRevenueStats.parse_starsRevenueStats($0) }
+    dict[1814066038] = { return Api.payments.StarsRevenueStats.parse_starsRevenueStats($0) }
     dict[497778871] = { return Api.payments.StarsRevenueWithdrawalUrl.parse_starsRevenueWithdrawalUrl($0) }
     dict[1822222573] = { return Api.payments.StarsStatus.parse_starsStatus($0) }
     dict[-1261053863] = { return Api.payments.SuggestedStarRefBots.parse_suggestedStarRefBots($0) }
@@ -1457,9 +1454,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1696454430] = { return Api.premium.MyBoosts.parse_myBoosts($0) }
     dict[-594852657] = { return Api.smsjobs.EligibilityToJoin.parse_eligibleToJoin($0) }
     dict[720277905] = { return Api.smsjobs.Status.parse_status($0) }
-    dict[1409802903] = { return Api.stats.BroadcastRevenueStats.parse_broadcastRevenueStats($0) }
-    dict[-2028632986] = { return Api.stats.BroadcastRevenueTransactions.parse_broadcastRevenueTransactions($0) }
-    dict[-328886473] = { return Api.stats.BroadcastRevenueWithdrawalUrl.parse_broadcastRevenueWithdrawalUrl($0) }
     dict[963421692] = { return Api.stats.BroadcastStats.parse_broadcastStats($0) }
     dict[-276825834] = { return Api.stats.MegagroupStats.parse_megagroupStats($0) }
     dict[2145983508] = { return Api.stats.MessageStats.parse_messageStats($0) }
@@ -1619,10 +1613,6 @@ public extension Api {
             case let _1 as Api.BotVerification:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.BotVerifierSettings:
-                _1.serialize(buffer, boxed)
-            case let _1 as Api.BroadcastRevenueBalances:
-                _1.serialize(buffer, boxed)
-            case let _1 as Api.BroadcastRevenueTransaction:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.BusinessAwayMessage:
                 _1.serialize(buffer, boxed)
@@ -2597,12 +2587,6 @@ public extension Api {
             case let _1 as Api.smsjobs.EligibilityToJoin:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.smsjobs.Status:
-                _1.serialize(buffer, boxed)
-            case let _1 as Api.stats.BroadcastRevenueStats:
-                _1.serialize(buffer, boxed)
-            case let _1 as Api.stats.BroadcastRevenueTransactions:
-                _1.serialize(buffer, boxed)
-            case let _1 as Api.stats.BroadcastRevenueWithdrawalUrl:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.stats.BroadcastStats:
                 _1.serialize(buffer, boxed)
