@@ -39,6 +39,7 @@ swift_library(
         "//submodules/TelegramUI/Components/PeerManagement/OwnershipTransferController",
         "//submodules/TelegramUI/Components/ChatScheduleTimeController",
         "//submodules/TelegramUI/Components/TabSelectorComponent",
+        "//submodules/TelegramUI/Components/Stars/BalanceNeededScreen",
     ],
     visibility = [
         "//visibility:public",

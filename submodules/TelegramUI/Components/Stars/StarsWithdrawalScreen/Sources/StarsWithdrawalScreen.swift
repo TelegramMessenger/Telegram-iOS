@@ -25,6 +25,7 @@ import ListActionItemComponent
 import ChatScheduleTimeController
 import TabSelectorComponent
 import PresentationDataUtils
+import BalanceNeededScreen
 
 private let amountTag = GenericComponentViewTag()
 
@@ -788,11 +789,9 @@ private final class SheetContent: CombinedComponent {
                                         }
                                     case .ton:
                                         if let balance = state.tonBalance, amount > balance {
-                                            //TODO:localize
-                                            let presentationData = state.context.sharedContext.currentPresentationData.with { $0 }
-                                            controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "Not enough TON", actions: [
-                                                TextAlertAction(type: .defaultAction, title: strings.Common_OK, action: {})
-                                            ]), in: .window(.root))
+                                            controller.push(BalanceNeededScreen(
+                                                context: state.context
+                                            ))
                                             return
                                         }
                                     }
