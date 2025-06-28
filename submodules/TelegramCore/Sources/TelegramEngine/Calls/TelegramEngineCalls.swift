@@ -2,6 +2,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramApi
 import MtProtoKit
+import Foundation
 
 public struct EngineCallStreamState {
     public struct Channel {

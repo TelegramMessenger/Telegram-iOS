@@ -278,6 +278,9 @@ def _collect_spm_modules_impl(target, ctx):
             if SPMModulesInfo in dep:
                 # Merge the modules dictionaries
                 for label, info in dep[SPMModulesInfo].modules.items():
+                    if label in all_modules:
+                        if all_modules[label]["path"] != info["path"]:
+                            fail("Duplicate module name: {}".format(label))
                     all_modules[label] = info
                 # Add transitive sources depset from dependency to the list
                 dep_transitive_sources_list.append(dep[SPMModulesInfo].transitive_sources)

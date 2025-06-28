@@ -2,6 +2,7 @@ import Postbox
 import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
+import Foundation
 
 public final class TelegramKeyPair: Equatable {
     public let id: Int64

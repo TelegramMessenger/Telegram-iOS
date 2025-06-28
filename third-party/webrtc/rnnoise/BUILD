@@ -1,6 +1,6 @@
 
 cc_library(
-    name = "rnnoise",
+    name = "webrtc_rnnoise",
     hdrs = [
         "third_party/rnnoise/src/rnn_vad_weights.h",
         "third_party/rnnoise/src/rnn_activations.h",

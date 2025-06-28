@@ -105,20 +105,21 @@ for name, module in sorted(modules.items()):
         combined_lines.append("        .target(")
         combined_lines.append("            name: \"%s\"," % name)
         
-        relative_module_path = module["path"] + "/Module_" + name
+        relative_module_path = module["path"]
         module_directory = spm_files_dir + "/" + relative_module_path
         os.makedirs(module_directory, exist_ok=True)
 
         module_public_headers_prefix = ""
-        if len(module["includes"]) > 1:
-            print("{}: Multiple includes are not yet supported: {}".format(name, module["includes"]))
-            sys.exit(1)
-        elif len(module["includes"]) == 1:
-            for include_directory in module["includes"]:
-                if include_directory != ".":
-                    #print("{}: Include directory: {}".format(name, include_directory))
-                    module_public_headers_prefix = include_directory
-                    break
+        if module_type == "objc_library" or module_type == "cc_library":
+            if len(module["includes"]) > 1:
+                print("{}: Multiple includes are not yet supported: {}".format(name, module["includes"]))
+                sys.exit(1)
+            elif len(module["includes"]) == 1:
+                for include_directory in module["includes"]:
+                    if include_directory != ".":
+                        #print("{}: Include directory: {}".format(name, include_directory))
+                        module_public_headers_prefix = include_directory
+                        break
 
         combined_lines.append("            dependencies: [")
         for dep in module["deps"]:
@@ -181,13 +182,18 @@ for name, module in sorted(modules.items()):
             sys.exit(1)
         module_to_source_files[name] = include_source_files
         
-        if True:
-            combined_lines.append(f"            sources: sourceFileMap[\"{name}\"]!,")
-        else:
-            combined_lines.append("            sources: [")
-            for include_source_file in include_source_files:
-                combined_lines.append("                \"%s\"," % (include_source_file))
+        ignore_sub_folders = []
+        for other_name, other_module in sorted(modules.items()):
+            if other_module["path"] != module["path"] and other_module["path"].startswith(module["path"] + "/"):
+                exclude_path = other_module["path"][len(module["path"]) + 1:]
+                ignore_sub_folders.append(exclude_path)
+        if len(ignore_sub_folders) != 0:
+            combined_lines.append("            exclude: [")
+            for sub_folder in ignore_sub_folders:
+                combined_lines.append(f"                \"{sub_folder}\",")
             combined_lines.append("            ],")
+
+        combined_lines.append(f"            sources: sourceFileMap[\"{name}\"]!,")
         
         modulemap_path = os.path.join(os.path.join(os.path.join(module_directory), module_public_headers_prefix), "module.modulemap")
         if modulemap_path not in modulemaps:
@@ -223,27 +229,18 @@ for name, module in sorted(modules.items()):
                     combined_lines.append("                .unsafeFlags([")
                     for flag in copts:
                         escaped_flag = escape_swift_string_literal_component(flag)
-                        if escaped_flag.startswith("-I"):
+                        if escaped_flag.startswith("-I") and False:
                             include_path = escaped_flag[2:]
                             #print("{}: Include path: {}".format(name, include_path))
                             found_reference = False
                             for another_module_name, another_module in sorted(modules.items()):
                                 another_module_path = another_module["path"]
                                 if include_path.startswith(another_module_path):
-                                    relative_module_include_path = include_path[len(another_module_path) + 1:]
-
-                                    #print("    {}: Matches module: {}".format(another_module_name, another_module_path))
-
-                                    matched_public_include = False                                    
-                                    if len(relative_module_include_path) == 0:
-                                        combined_lines.append(f'                    "-I{another_module_path}/Module_{another_module_name}",')
-                                    else:
-                                        combined_lines.append(f'                    "-I{another_module_path}/Module_{another_module_name}/{relative_module_include_path}",')
+                                    combined_lines.append(f'                    "-I{include_path}",')
                                     found_reference = True
                             if not found_reference:
                                 print(f"{name}: Unresolved include path: {include_path}")
                                 sys.exit(1)
-                                    
                         else:
                             combined_lines.append(f'                    "{escaped_flag}",')
                     combined_lines.append("                ]),")
