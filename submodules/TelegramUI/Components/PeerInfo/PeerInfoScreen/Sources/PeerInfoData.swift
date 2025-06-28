@@ -385,8 +385,8 @@ final class PeerInfoScreenData {
     let tonState: StarsContext.State?
     let starsRevenueStatsState: StarsRevenueStats?
     let starsRevenueStatsContext: StarsRevenueStatsContext?
-    let revenueStatsState: RevenueStats?
-    let revenueStatsContext: RevenueStatsContext?
+    let revenueStatsState: StarsRevenueStats?
+    let revenueStatsContext: StarsRevenueStatsContext?
     let profileGiftsContext: ProfileGiftsContext?
     let premiumGiftOptions: [PremiumGiftCodeOption]
     let webAppPermissions: WebAppPermissionsState?
@@ -437,8 +437,8 @@ final class PeerInfoScreenData {
         tonState: StarsContext.State?,
         starsRevenueStatsState: StarsRevenueStats?,
         starsRevenueStatsContext: StarsRevenueStatsContext?,
-        revenueStatsState: RevenueStats?,
-        revenueStatsContext: RevenueStatsContext?,
+        revenueStatsState: StarsRevenueStats?,
+        revenueStatsContext: StarsRevenueStatsContext?,
         profileGiftsContext: ProfileGiftsContext?,
         premiumGiftOptions: [PremiumGiftCodeOption],
         webAppPermissions: WebAppPermissionsState?
@@ -1300,7 +1300,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 guard canViewStarsRevenue else {
                     return .single((nil, nil))
                 }
-                let starsRevenueStatsContext = StarsRevenueStatsContext(account: context.account, peerId: peerId)
+                let starsRevenueStatsContext = StarsRevenueStatsContext(account: context.account, peerId: peerId, ton: false)
                 return starsRevenueStatsContext.state
                 |> map { state -> (StarsRevenueStatsContext?, StarsRevenueStats?) in
                     return (starsRevenueStatsContext, state.stats)
@@ -1313,7 +1313,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.CanViewRevenue(id: peerId))
                 |> distinctUntilChanged
             )
-            |> mapToSignal { peer, canViewRevenue -> Signal<(RevenueStatsContext?, RevenueStats?), NoError> in
+            |> mapToSignal { peer, canViewRevenue -> Signal<(StarsRevenueStatsContext?, StarsRevenueStats?), NoError> in
                 var canViewRevenue = canViewRevenue
                 if let peer, case let .user(user) = peer, let _ = user.botInfo, context.sharedContext.applicationBindings.appBuildType == .internal || context.sharedContext.immediateExperimentalUISettings.devRequests {
                     canViewRevenue = true
@@ -1324,9 +1324,9 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 guard canViewRevenue else {
                     return .single((nil, nil))
                 }
-                let revenueStatsContext = RevenueStatsContext(account: context.account, peerId: peerId)
+                let revenueStatsContext = StarsRevenueStatsContext(account: context.account, peerId: peerId, ton: true)
                 return revenueStatsContext.state
-                |> map { state -> (RevenueStatsContext?, RevenueStats?) in
+                |> map { state -> (StarsRevenueStatsContext?, StarsRevenueStats?) in
                     return (revenueStatsContext, state.stats)
                 }
             }
@@ -1572,7 +1572,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 guard canViewStarsRevenue else {
                     return .single((nil, nil))
                 }
-                let starsRevenueStatsContext = StarsRevenueStatsContext(account: context.account, peerId: peerId)
+                let starsRevenueStatsContext = StarsRevenueStatsContext(account: context.account, peerId: peerId, ton: false)
                 return starsRevenueStatsContext.state
                 |> map { state -> (StarsRevenueStatsContext?, StarsRevenueStats?) in
                     return (starsRevenueStatsContext, state.stats)
@@ -1583,13 +1583,13 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 TelegramEngine.EngineData.Item.Peer.CanViewRevenue(id: peerId)
             )
             |> distinctUntilChanged
-            |> mapToSignal { canViewRevenue -> Signal<(RevenueStatsContext?, RevenueStats?), NoError> in
+            |> mapToSignal { canViewRevenue -> Signal<(StarsRevenueStatsContext?, StarsRevenueStats?), NoError> in
                 guard canViewRevenue else {
                     return .single((nil, nil))
                 }
-                let revenueStatsContext = RevenueStatsContext(account: context.account, peerId: peerId)
+                let revenueStatsContext = StarsRevenueStatsContext(account: context.account, peerId: peerId, ton: true)
                 return revenueStatsContext.state
-                |> map { state -> (RevenueStatsContext?, RevenueStats?) in
+                |> map { state -> (StarsRevenueStatsContext?, StarsRevenueStats?) in
                     return (revenueStatsContext, state.stats)
                 }
             }
@@ -1911,7 +1911,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 guard canViewStarsRevenue else {
                     return .single((nil, nil))
                 }
-                let starsRevenueStatsContext = StarsRevenueStatsContext(account: context.account, peerId: peerId)
+                let starsRevenueStatsContext = StarsRevenueStatsContext(account: context.account, peerId: peerId, ton: false)
                 return starsRevenueStatsContext.state
                 |> map { state -> (StarsRevenueStatsContext?, StarsRevenueStats?) in
                     return (starsRevenueStatsContext, state.stats)

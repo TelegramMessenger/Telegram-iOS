@@ -851,7 +851,7 @@ public final class StarsImageComponent: Component {
                 if let current = self.animationNode {
                     animationNode = current
                 } else {
-                    let stickerName: String = "Gift\(count)"
+                    let stickerName: String = count == 1000 ? "GiftDiamond" : "Gift\(count)"
                     animationNode = DefaultAnimatedStickerNodeImpl()
                     animationNode.autoplay = true
                     animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: stickerName), width: 384, height: 384, playbackMode: .still(.end), mode: .direct(cachePathPrefix: nil))

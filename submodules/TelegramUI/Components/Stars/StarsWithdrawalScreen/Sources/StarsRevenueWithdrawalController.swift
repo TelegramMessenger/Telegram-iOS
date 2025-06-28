@@ -46,7 +46,7 @@ public func confirmStarsRevenueWithdrawalController(context: AccountContext, upd
         }
         contentNode.updateIsChecking(true)
         
-        let signal = context.engine.peers.requestStarsRevenueWithdrawalUrl(peerId: peerId, amount: amount, password: contentNode.password)
+        let signal = context.engine.peers.requestStarsRevenueWithdrawalUrl(peerId: peerId, ton: false, amount: amount, password: contentNode.password)
         disposable.set((signal |> deliverOnMainQueue).start(next: { url in
             dismissImpl?()
             completion(url)

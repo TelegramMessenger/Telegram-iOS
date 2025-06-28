@@ -889,21 +889,13 @@ public extension TelegramEngine {
         public func updatePeerStarGiftStatus(peerId: EnginePeer.Id, starGift: StarGift.UniqueGift, expirationDate: Int32?) -> Signal<Never, UpdatePeerEmojiStatusError> {
             return _internal_updatePeerStarGiftStatus(account: self.account, peerId: peerId, starGift: starGift, expirationDate: expirationDate)
         }
-        
-        public func checkChannelRevenueWithdrawalAvailability() -> Signal<Never, RequestRevenueWithdrawalError> {
-            return _internal_checkChannelRevenueWithdrawalAvailability(account: self.account)
-        }
-        
-        public func requestChannelRevenueWithdrawalUrl(peerId: EnginePeer.Id, password: String) -> Signal<String, RequestRevenueWithdrawalError> {
-            return _internal_requestChannelRevenueWithdrawalUrl(account: self.account, peerId: peerId, password: password)
-        }
-        
+                
         public func checkStarsRevenueWithdrawalAvailability() -> Signal<Never, RequestStarsRevenueWithdrawalError> {
             return _internal_checkStarsRevenueWithdrawalAvailability(account: self.account)
         }
         
-        public func requestStarsRevenueWithdrawalUrl(peerId: EnginePeer.Id, amount: Int64, password: String) -> Signal<String, RequestStarsRevenueWithdrawalError> {
-            return _internal_requestStarsRevenueWithdrawalUrl(account: self.account, peerId: peerId, amount: amount, password: password)
+        public func requestStarsRevenueWithdrawalUrl(peerId: EnginePeer.Id, ton: Bool, amount: Int64?, password: String) -> Signal<String, RequestStarsRevenueWithdrawalError> {
+            return _internal_requestStarsRevenueWithdrawalUrl(account: self.account, ton: ton, peerId: peerId, amount: amount, password: password)
         }
         
         public func requestStarsRevenueAdsAccountlUrl(peerId: EnginePeer.Id) -> Signal<String?, NoError> {

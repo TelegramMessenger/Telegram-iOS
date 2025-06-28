@@ -103,12 +103,12 @@ public final class StarsBalanceOverlayComponent: Component {
                         })
                     }
                 } else {
-                    let starsRevenueStatsContext = StarsRevenueStatsContext(account: component.context.account, peerId: component.peerId)
+                    let starsRevenueStatsContext = StarsRevenueStatsContext(account: component.context.account, peerId: component.peerId, ton: false)
                     self.starsRevenueStatsContext = starsRevenueStatsContext
                     
                     self.balanceDisposable = (starsRevenueStatsContext.state
                     |> map { state -> Int64 in
-                        return state.stats?.balances.currentBalance.value ?? 0
+                        return state.stats?.balances.currentBalance.amount.value ?? 0
                     }
                     |> distinctUntilChanged
                     |> deliverOnMainQueue).start(next: { [weak self] balance in

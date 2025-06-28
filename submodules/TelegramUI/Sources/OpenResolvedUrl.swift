@@ -98,6 +98,21 @@ func openResolvedUrlImpl(
         case let .botStart(peer, payload):
             openPeer(EnginePeer(peer), .withBotStartPayload(ChatControllerInitialBotStart(payload: payload, behavior: .interactive)))
         case let .groupBotStart(botPeerId, payload, adminRights, peerType):
+            let defaultAdminRights = Promise<(group: TelegramChatAdminRights?, channel: TelegramChatAdminRights?)?>(nil)
+            if adminRights == nil {
+                defaultAdminRights.set(
+                    context.engine.peers.fetchAndUpdateCachedPeerData(peerId: botPeerId)
+                    |> mapToSignal { _ in
+                        return context.engine.data.get(
+                            TelegramEngine.EngineData.Item.Peer.BotGroupAdminRights(id: botPeerId),
+                            TelegramEngine.EngineData.Item.Peer.BotChannelAdminRights(id: botPeerId)
+                        ) |> map { groupRights, channelRights in
+                            return (groupRights, channelRights)
+                        }
+                    }
+                )
+            }
+        
             var filter: ChatListNodePeersFilter = [.onlyGroupsAndChannels, .onlyManageable, .excludeDisabled, .excludeRecent, .doNotSearchMessages]
             var title: String = presentationData.strings.Bot_AddToChat_Title
             switch peerType {
@@ -179,11 +194,20 @@ func openResolvedUrlImpl(
                 }
                 
                 if case let .channel(peer) = peer {
+                    var isGroup = false
+                    if case .group = peer.info {
+                        isGroup = true
+                    }
                     if peer.flags.contains(.isCreator) || peer.adminRights?.rights.contains(.canAddAdmins) == true {
-                        let controller = channelAdminController(context: context, peerId: peerId, adminId: botPeerId, initialParticipant: nil, invite: true, initialAdminRights: adminRights?.chatAdminRights, updated: { _ in
-                            controller?.dismiss()
-                        }, upgradedToSupergroup: { _, _ in }, transferedOwnership: { _ in })
-                        navigationController?.pushViewController(controller)
+                        let _ = (defaultAdminRights.get()
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { defaultAdminRights in
+                            let initialAdminRights = adminRights?.chatAdminRights ?? (isGroup ? defaultAdminRights?.group?.rights : defaultAdminRights?.channel?.rights)
+                            let controller = channelAdminController(context: context, peerId: peerId, adminId: botPeerId, initialParticipant: nil, invite: true, initialAdminRights: initialAdminRights, updated: { _ in
+                                controller?.dismiss()
+                            }, upgradedToSupergroup: { _, _ in }, transferedOwnership: { _ in })
+                            navigationController?.pushViewController(controller)
+                        })
                     } else {
                         addMemberImpl()
                     }
@@ -191,10 +215,15 @@ func openResolvedUrlImpl(
                     if case .member = peer.role {
                         addMemberImpl()
                     } else {
-                        let controller = channelAdminController(context: context, peerId: peerId, adminId: botPeerId, initialParticipant: nil, invite: true, initialAdminRights: adminRights?.chatAdminRights, updated: { _ in
-                            controller?.dismiss()
-                        }, upgradedToSupergroup: { _, _ in }, transferedOwnership: { _ in })
-                        navigationController?.pushViewController(controller)
+                        let _ = (defaultAdminRights.get()
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { defaultAdminRights in
+                            let initialAdminRights = adminRights?.chatAdminRights ?? defaultAdminRights?.group?.rights
+                            let controller = channelAdminController(context: context, peerId: peerId, adminId: botPeerId, initialParticipant: nil, invite: true, initialAdminRights: initialAdminRights, updated: { _ in
+                                controller?.dismiss()
+                            }, upgradedToSupergroup: { _, _ in }, transferedOwnership: { _ in })
+                            navigationController?.pushViewController(controller)
+                        })
                     }
                 }
             }

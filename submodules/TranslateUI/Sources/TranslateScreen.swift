@@ -14,6 +14,7 @@ import MultilineTextComponent
 import MultilineTextWithEntitiesComponent
 import BundleIconComponent
 import UndoUI
+import SwiftUI
 
 private func generateExpandBackground(size: CGSize, color: UIColor) -> UIImage {
     return generateImage(size, rotatedContext: { size, context in
@@ -94,6 +95,8 @@ private final class TranslateScreenComponent: CombinedComponent {
         
         fileprivate var moreBackgroundImage: (CGSize, UIImage, UIColor)?
         
+        private let useAlternativeTranslation: Bool
+        
         init(context: AccountContext, fromLanguage: String?, text: String, toLanguage: String, expand: @escaping () -> Void) {
             self.context = context
             self.text = text
@@ -102,9 +105,19 @@ private final class TranslateScreenComponent: CombinedComponent {
             self.expand = expand
             self.availableSpeakLanguages = supportedSpeakLanguages()
             
+            let translationConfiguration = TranslationConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+            var useAlternativeTranslation = false
+            switch translationConfiguration.manual {
+            case .alternative:
+                useAlternativeTranslation = true
+            default:
+                break
+            }
+            self.useAlternativeTranslation = useAlternativeTranslation
+            
             super.init()
                         
-            self.translationDisposable.set((context.engine.messages.translate(text: text, toLang: toLanguage) |> deliverOnMainQueue).start(next: { [weak self] text in
+            self.translationDisposable.set((self.translate(text: text, fromLang: fromLanguage, toLang: toLanguage) |> deliverOnMainQueue).start(next: { [weak self] text in
                 guard let strongSelf = self else {
                     return
                 }
@@ -120,6 +133,14 @@ private final class TranslateScreenComponent: CombinedComponent {
             self.translationDisposable.dispose()
         }
         
+        func translate(text: String, fromLang: String?, toLang: String) -> Signal<(String, [MessageTextEntity])?, TranslationError> {
+            if self.useAlternativeTranslation {
+                return alternativeTranslateText(text: text, fromLang: fromLang, toLang: toLang)
+            } else {
+                return self.context.engine.messages.translate(text: text, toLang: toLang)
+            }
+        }
+        
         func changeLanguage(fromLanguage: String, toLanguage: String) {
             guard self.fromLanguage != fromLanguage || self.toLanguage != toLanguage else {
                 return
@@ -129,7 +150,7 @@ private final class TranslateScreenComponent: CombinedComponent {
             self.translatedText = nil
             self.updated(transition: .immediate)
             
-            self.translationDisposable.set((self.context.engine.messages.translate(text: text, toLang: toLanguage) |> deliverOnMainQueue).start(next: { [weak self] text in
+            self.translationDisposable.set((self.translate(text: text, fromLang: fromLanguage, toLang: toLanguage) |> deliverOnMainQueue).start(next: { [weak self] text in
                 guard let strongSelf = self else {
                     return
                 }
@@ -1161,5 +1182,87 @@ public class TranslateScreen: ViewController {
         let navigationHeight: CGFloat = 56.0
         
         self.node.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: ComponentTransition(transition))
+    }
+}
+
+public func presentTranslateScreen(
+    context: AccountContext,
+    text: String,
+    entities: [MessageTextEntity] = [],
+    canCopy: Bool,
+    fromLanguage: String?,
+    toLanguage: String? = nil,
+    isExpanded: Bool = false,
+    ignoredLanguages: [String]? = nil,
+    pushController: @escaping (ViewController) -> Void = { _ in },
+    presentController: @escaping (ViewController) -> Void = { _ in },
+    wasDismissed: (() -> Void)? = nil,
+    display: (ViewController) -> Void
+) {
+    let translationConfiguration = TranslationConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+    var useSystemTranslation = false
+    switch translationConfiguration.manual {
+    case .system:
+        if #available(iOS 18.0, *) {
+            useSystemTranslation = true
+        }
+    default:
+        break
+    }
+    
+    if useSystemTranslation {
+        presentSystemTranslateScreen(context: context, text: text)
+    } else {
+        let controller = TranslateScreen(context: context, text: text, canCopy: canCopy, fromLanguage: fromLanguage, toLanguage: toLanguage, isExpanded: isExpanded, ignoredLanguages: ignoredLanguages)
+        controller.pushController = pushController
+        controller.presentController = presentController
+        controller.wasDismissed = wasDismissed
+        display(controller)
+    }
+}
+
+private func presentSystemTranslateScreen(context: AccountContext, text: String) {
+    if #available(iOS 18.0, *), let rootViewController = context.sharedContext.mainWindow?.viewController?.view.window?.rootViewController {
+        var dismissImpl: (() -> Void)?
+        let pickerView = TranslateScreenHostingView(text: text, completionHandler: { [weak rootViewController] in
+            DispatchQueue.main.async(execute: {
+                guard let presentedController = rootViewController?.presentedViewController, presentedController.isBeingDismissed == false else { return }
+                dismissImpl?()
+            })
+        })
+        let hostingController = UIHostingController(rootView: pickerView)
+        hostingController.view.isHidden = true
+        hostingController.modalPresentationStyle = .overCurrentContext
+        rootViewController.present(hostingController, animated: true)
+        dismissImpl = { [weak hostingController] in
+            Queue.mainQueue().after(0.4, {
+                hostingController?.dismiss(animated: false)
+            })
+        }
+    }
+}
+
+@available(iOS 18.0, *)
+struct TranslateScreenHostingView: View {
+    @State var presented = true
+    var text: String
+    var handler: () -> Void
+    
+    init(text: String, completionHandler: @escaping () -> Void) {
+        self.text = text
+        self.handler = completionHandler
+    }
+    
+    var body: some View {
+        Spacer()
+            .translationPresentation(
+                isPresented: $presented,
+                text: text
+            )
+            .onChange(of: presented) { newValue in
+                if newValue == false {
+                    handler()
+                }
+            }
     }
 }

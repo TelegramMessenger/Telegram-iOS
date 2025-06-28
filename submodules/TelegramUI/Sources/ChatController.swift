@@ -1178,7 +1178,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 guard let self, let transactionId, let peerId = self.chatLocation.peerId else {
                                     return
                                 }
-                                let transactionData = await self.context.engine.payments.getStarsTransaction(reference: StarsTransactionReference(peerId: self.context.account.peerId, id: transactionId, isRefund: false)).get()
+                                let transactionData = await self.context.engine.payments.getStarsTransaction(reference: StarsTransactionReference(peerId: self.context.account.peerId, ton: true, id: transactionId, isRefund: false)).get()
                                 let peer = await self.context.engine.data.get(
                                     TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
                                 ).get()
@@ -1186,7 +1186,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     self.push(self.context.sharedContext.makeStarsTransactionScreen(context: self.context, transaction: transactionData, peer: peer))
                                 }
                             }
-                            let _ = transactionId
                         case let .giftCode(slug, _, _, _, _, _, _, _, _, _, _):
                             self.openResolved(result: .premiumGiftCode(slug: slug), sourceMessageId: message.id, progress: params.progress)
                             return true
@@ -3599,15 +3598,23 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         
                         let _ = ApplicationSpecificNotice.incrementTranslationSuggestion(accountManager: context.sharedContext.accountManager, timestamp: Int32(Date().timeIntervalSince1970)).startStandalone()
                         
-                        let controller = TranslateScreen(context: context, text: text.string, canCopy: canCopy, fromLanguage: language, ignoredLanguages: translationSettings.ignoredLanguages)
-                        controller.pushController = { [weak self] c in
-                            self?.effectiveNavigationController?._keepModalDismissProgress = true
-                            self?.push(c)
-                        }
-                        controller.presentController = { [weak self] c in
-                            self?.present(c, in: .window(.root))
-                        }
-                        strongSelf.present(controller, in: .window(.root))
+                        presentTranslateScreen(
+                            context: context,
+                            text: text.string,
+                            canCopy: canCopy,
+                            fromLanguage: language,
+                            ignoredLanguages: translationSettings.ignoredLanguages,
+                            pushController: { [weak self] c in
+                                self?.effectiveNavigationController?._keepModalDismissProgress = true
+                                self?.push(c)
+                            },
+                            presentController: { [weak self] c in
+                                self?.present(c, in: .window(.root))
+                            },
+                            display: { [weak self] c in
+                                self?.present(c, in: .window(.root))
+                            }
+                        )
                     })
                 }
                 if let currentContextController = strongSelf.currentContextController {

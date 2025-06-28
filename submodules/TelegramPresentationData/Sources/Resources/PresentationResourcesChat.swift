@@ -1433,6 +1433,24 @@ public struct PresentationResourcesChat {
         })
     }
     
+    public static func chatServiceMessageTodoCompletedIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatServiceMessageTodoCompletedIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/ServiceTodoCompleted"), color: .white)
+        })
+    }
+    
+    public static func chatServiceMessageTodoIncompletedIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatServiceMessageTodoIncompletedIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/ServiceTodoIncompleted"), color: .white)
+        })
+    }
+    
+    public static func chatServiceMessageTodoAppendedIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatServiceMessageTodoAppendedIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/ServiceTodoIncompleted"), color: .white)
+        })
+    }
+    
     public static func messageButtonsPostReject(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.messageButtonsPostReject.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/SuggestPostDecline"), color: .white)

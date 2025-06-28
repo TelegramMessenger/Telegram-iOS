@@ -62,6 +62,7 @@ swift_library(
         "//submodules/AppBundle",
         "//submodules/GZip",
         "//submodules/LegacyComponents",
+        "//submodules/TelegramPresentationData",
         "//submodules/Components/MultilineTextComponent:MultilineTextComponent",
         "//submodules/TelegramUI/Components/Premium/PremiumStarComponent",
         "//submodules/TelegramUI/Components/Utils/AnimatableProperty",

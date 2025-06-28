@@ -1597,11 +1597,11 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                     }))
                 }
                                 
-                let revenueBalance = data.revenueStatsState?.balances.currentBalance ?? 0
-                let overallRevenueBalance = data.revenueStatsState?.balances.overallRevenue ?? 0
+                let revenueBalance = data.revenueStatsState?.balances.currentBalance.amount.value ?? 0
+                let overallRevenueBalance = data.revenueStatsState?.balances.overallRevenue.amount.value ?? 0
                 
-                let starsBalance = data.starsRevenueStatsState?.balances.currentBalance ?? StarsAmount.zero
-                let overallStarsBalance = data.starsRevenueStatsState?.balances.overallRevenue ?? StarsAmount.zero
+                let starsBalance = data.starsRevenueStatsState?.balances.currentBalance.amount ?? StarsAmount.zero
+                let overallStarsBalance = data.starsRevenueStatsState?.balances.overallRevenue.amount ?? StarsAmount.zero
                 
                 if overallRevenueBalance > 0 || overallStarsBalance > StarsAmount.zero {
                     items[.balances]!.append(PeerInfoScreenHeaderItem(id: 20, text: presentationData.strings.PeerInfo_BotBalance_Title))
@@ -1907,11 +1907,11 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                         section = .peerMembers
                     }
                     if cachedData.flags.contains(.canViewRevenue) || cachedData.flags.contains(.canViewStarsRevenue) {
-                        let revenueBalance = data.revenueStatsState?.balances.currentBalance ?? 0
-                        let starsBalance = data.starsRevenueStatsState?.balances.currentBalance ?? StarsAmount.zero
+                        let revenueBalance = data.revenueStatsState?.balances.currentBalance.amount.value ?? 0
+                        let starsBalance = data.starsRevenueStatsState?.balances.currentBalance.amount ?? StarsAmount.zero
                         
-                        let overallRevenueBalance = data.revenueStatsState?.balances.overallRevenue ?? 0
-                        let overallStarsBalance = data.starsRevenueStatsState?.balances.overallRevenue ?? StarsAmount.zero
+                        let overallRevenueBalance = data.revenueStatsState?.balances.overallRevenue.amount.value ?? 0
+                        let overallStarsBalance = data.starsRevenueStatsState?.balances.overallRevenue.amount ?? StarsAmount.zero
                         
                         if overallRevenueBalance > 0 || overallStarsBalance > StarsAmount.zero {
                             let smallLabelFont = Font.regular(floor(presentationData.listsFontSize.itemListBaseFontSize / 17.0 * 13.0))

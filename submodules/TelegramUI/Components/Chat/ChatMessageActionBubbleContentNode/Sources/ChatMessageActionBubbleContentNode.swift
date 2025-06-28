@@ -200,8 +200,10 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                 let attributedString = attributedServiceMessageString(theme: item.presentationData.theme, strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, message: item.message, messageCount: messageCount, accountPeerId: item.context.account.peerId, forForumOverview: forForumOverview)
             
                 var image: TelegramMediaImage?
-                var story: TelegramMediaStory?
                 var suggestedPost: TelegramMediaActionType.SuggestedPostApprovalStatus?
+                
+                var leadingIcon: UIImage?
+                var isStory = false
                 for media in item.message.media {
                     if let action = media as? TelegramMediaAction {
                         switch action.action {
@@ -209,11 +211,20 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                             image = img
                         case let .suggestedPostApprovalStatus(status):
                             suggestedPost = status
+                        case let .todoCompletions(completed, _):
+                            if !completed.isEmpty {
+                                leadingIcon = PresentationResourcesChat.chatServiceMessageTodoCompletedIcon(item.presentationData.theme.theme)
+                            } else {
+                                leadingIcon = PresentationResourcesChat.chatServiceMessageTodoIncompletedIcon(item.presentationData.theme.theme)
+                            }
+                        case .todoAppendTasks:
+                            leadingIcon = PresentationResourcesChat.chatServiceMessageTodoAppendedIcon(item.presentationData.theme.theme)
                         default:
                             break
                         }
-                    } else if let media = media as? TelegramMediaStory {
-                        story = media
+                    } else if media is TelegramMediaStory {
+                        leadingIcon = PresentationResourcesChat.chatExpiredStoryIndicatorIcon(item.presentationData.theme.theme, type: .free)
+                        isStory = true
                     }
                 }
                 
@@ -225,9 +236,9 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                 let imageSize = CGSize(width: 212.0, height: 212.0)
                 
                 var updatedAttributedString = attributedString
-                if story != nil, let attributedString {
+                if leadingIcon != nil, let attributedString {
                     let mutableString = NSMutableAttributedString(attributedString: attributedString)
-                    mutableString.insert(NSAttributedString(string: "    ", font: Font.regular(13.0), textColor: .clear), at: 0)
+                    mutableString.insert(NSAttributedString(string: isStory ? "    " : "      ", font: Font.regular(13.0), textColor: .clear), at: 0)
                     updatedAttributedString = mutableString
                 }
                 
@@ -431,8 +442,8 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 for i in 0 ..< labelRects.count {
-                    labelRects[i] = labelRects[i].insetBy(dx: -6.0, dy: floor((labelRects[i].height - 20.0) / 2.0))
-                    labelRects[i].size.height = 20.0
+                    labelRects[i] = labelRects[i].insetBy(dx: -6.0, dy: floor((labelRects[i].height - 22.0) / 2.0))
+                    labelRects[i].size.height = 22.0
                     labelRects[i].origin.x = floor((labelLayout.size.width - labelRects[i].width) / 2.0)
                 }
 
@@ -682,7 +693,7 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                 }
                             }
                             
-                            if story != nil {
+                            if let leadingIcon {
                                 let leadingIconView: UIImageView
                                 if let current = strongSelf.leadingIconView {
                                     leadingIconView = current
@@ -692,11 +703,15 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                     strongSelf.view.addSubview(leadingIconView)
                                 }
                                 
-                                leadingIconView.image = PresentationResourcesChat.chatExpiredStoryIndicatorIcon(item.presentationData.theme.theme, type: .free)
+                                leadingIconView.image = leadingIcon
                                 
                                 if let lineRect = labelLayout.linesRects().first, let iconImage = leadingIconView.image {
                                     let iconSize = iconImage.size
-                                    leadingIconView.frame = CGRect(origin: CGPoint(x: lineRect.minX + labelFrame.minX - 1.0, y: labelFrame.minY), size: iconSize)
+                                    var iconFrame = CGRect(origin: CGPoint(x: lineRect.minX + labelFrame.minX - 1.0, y: labelFrame.minY), size: iconSize)
+                                    if !isStory {
+                                        iconFrame.origin.x += 3.0
+                                    }
+                                    leadingIconView.frame = iconFrame
                                 }
                             } else if let leadingIconView = strongSelf.leadingIconView {
                                 strongSelf.leadingIconView = nil

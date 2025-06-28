@@ -501,7 +501,7 @@ final class StarsTransactionsScreenComponent: Component {
             
             let headerComponent: AnyComponent<Empty>
             if component.starsContext.ton {
-                headerComponent = AnyComponent(PremiumDiamondComponent())
+                headerComponent = AnyComponent(PremiumDiamondComponent(theme: environment.theme))
             } else {
                 headerComponent = AnyComponent(PremiumStarComponent(
                     theme: environment.theme,
@@ -667,9 +667,8 @@ final class StarsTransactionsScreenComponent: Component {
             contentHeight += descriptionSize.height
             contentHeight += 29.0
             
-            let withdrawAvailable = component.starsContext.ton ? (self.starsState?.balance.value ?? 0) > 0 : (self.revenueState?.balances.overallRevenue.value ?? 0) > 0
+            let withdrawAvailable = (self.revenueState?.balances.overallRevenue.amount.value ?? 0) > 0
                    
-            //TODO:localize
             let premiumConfiguration = PremiumConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
             let balanceSize = self.balanceView.update(
                 transition: .immediate,
@@ -685,8 +684,8 @@ final class StarsTransactionsScreenComponent: Component {
                             count: self.starsState?.balance ?? StarsAmount.zero,
                             currency: component.starsContext.ton ? .ton : .stars,
                             rate: nil,
-                            actionTitle: component.starsContext.ton ? "Withdraw via Fragment" : (withdrawAvailable ? environment.strings.Stars_Intro_BuyShort : environment.strings.Stars_Intro_Buy),
-                            actionAvailable: (component.starsContext.ton && withdrawAvailable) || (!premiumConfiguration.areStarsDisabled && !premiumConfiguration.isPremiumDisabled),
+                            actionTitle: (withdrawAvailable ? environment.strings.Stars_Intro_BuyShort : environment.strings.Stars_Intro_Buy),
+                            actionAvailable: (!component.starsContext.ton && !premiumConfiguration.areStarsDisabled && !premiumConfiguration.isPremiumDisabled),
                             actionIsEnabled: true,
                             actionIcon: component.starsContext.ton ? nil : PresentationResourcesItemList.itemListRoundTopupIcon(environment.theme),
                             action: { [weak self] in
@@ -1139,7 +1138,7 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
         self.context = context
         self.starsContext = starsContext
         
-        self.starsRevenueStatsContext = context.engine.payments.peerStarsRevenueContext(peerId: context.account.peerId)
+        self.starsRevenueStatsContext = context.engine.payments.peerStarsRevenueContext(peerId: context.account.peerId, ton: false)
         if !starsContext.ton {
             self.subscriptionsContext = context.engine.payments.peerStarsSubscriptionsContext(starsContext: starsContext)
         } else {
