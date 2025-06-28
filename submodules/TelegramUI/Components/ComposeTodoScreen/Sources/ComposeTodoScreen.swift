@@ -180,7 +180,7 @@ final class ComposeTodoScreenComponent: Component {
         }
         
         private func item(at point: CGPoint) -> (AnyHashable, ComponentView<Empty>)? {
-            if self.scrollView.isTracking || self.scrollView.isDecelerating {
+            if self.scrollView.isDragging || self.scrollView.isDecelerating {
                 return nil
             }
             
@@ -188,7 +188,7 @@ final class ComposeTodoScreenComponent: Component {
             for (id, itemView) in self.todoItemsSectionContainer.itemViews {
                 if let view = itemView.contents.view as? ListComposePollOptionComponent.View, !view.isRevealed && !view.currentText.isEmpty {
                     let viewFrame = view.convert(view.bounds, to: self.todoItemsSectionContainer)
-                    let iconFrame = CGRect(origin: CGPoint(x: viewFrame.maxX - viewFrame.height, y: viewFrame.minY), size: CGSize(width: viewFrame.height, height: viewFrame.height))
+                    let iconFrame = CGRect(origin: CGPoint(x: viewFrame.maxX - 40.0, y: viewFrame.minY), size: CGSize(width: viewFrame.height, height: viewFrame.height))
                     if iconFrame.contains(localPoint) {
                         return (id, itemView.contents)
                     }
@@ -861,6 +861,11 @@ final class ComposeTodoScreenComponent: Component {
                     isEnabled = false
                 }
                 
+                var canDelete = isEnabled
+                if i == self.todoItems.count - 1 {
+                    canDelete = false
+                }
+                
                 todoItemsSectionItems.append(AnyComponentWithIdentity(id: todoItem.id, component: AnyComponent(ListComposePollOptionComponent(
                     externalState: todoItem.textInputState,
                     context: component.context,
@@ -922,7 +927,7 @@ final class ComposeTodoScreenComponent: Component {
                         }
                         self.state?.updated(transition: .spring(duration: 0.4))
                     },
-                    deleteAction: isEnabled ? { [weak self] in
+                    deleteAction: canDelete ? { [weak self] in
                         guard let self else {
                             return
                         }

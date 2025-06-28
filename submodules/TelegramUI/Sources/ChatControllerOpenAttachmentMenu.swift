@@ -75,6 +75,7 @@ extension ChatControllerImpl {
                 }
             } else if peer is TelegramSecretChat {
                 canSendPolls = false
+                canSendTodos = false
             } else if let channel = peer as? TelegramChannel {
                 if case .broadcast = channel.info {
                     canSendTodos = false

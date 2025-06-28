@@ -12,9 +12,10 @@ public struct StarsRevenueStats: Equatable, Codable {
         case usdRate
     }
     
-    static func key(peerId: PeerId) -> ValueBoxKey {
+    static func key(peerId: PeerId, ton: Bool) -> ValueBoxKey {
         let key = ValueBoxKey(length: 8 + 4)
         key.setInt64(0, value: peerId.toInt64())
+        key.setInt32(8, value: ton ? 1 : 0)
         return key
     }
     
@@ -227,7 +228,7 @@ private final class StarsRevenueStatsContextImpl {
         self.load()
         
         let _ = (account.postbox.transaction { transaction -> StarsRevenueStats? in
-            return transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStarsRevenueStats, key: StarsRevenueStats.key(peerId: peerId)))?.get(StarsRevenueStats.self)
+            return transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStarsRevenueStats, key: StarsRevenueStats.key(peerId: peerId, ton: ton)))?.get(StarsRevenueStats.self)
         }
         |> deliverOnMainQueue).start(next: { [weak self] cachedResult in
             guard let self, let cachedResult else {
@@ -259,6 +260,7 @@ private final class StarsRevenueStatsContextImpl {
         
         let account = self.account
         let peerId = self.peerId
+        let ton = self.ton
         let signal = requestStarsRevenueStats(postbox: self.account.postbox, network: self.account.network, peerId: self.peerId, ton: self.ton)
         |> mapToSignal { initial -> Signal<StarsRevenueStats?, NoError> in
             guard let initial else {
@@ -285,7 +287,7 @@ private final class StarsRevenueStatsContextImpl {
                 if let stats {
                     let _ = (self.account.postbox.transaction { transaction in
                         if let entry = CodableEntry(stats) {
-                            transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStarsRevenueStats, key: StarsRevenueStats.key(peerId: peerId)), entry: entry)
+                            transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStarsRevenueStats, key: StarsRevenueStats.key(peerId: peerId, ton: ton)), entry: entry)
                         }
                     }).start()
                 }

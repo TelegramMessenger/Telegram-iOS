@@ -459,9 +459,6 @@ public final class ListComposePollOptionComponent: Component {
                     return false
                 }
             }
-            if gestureRecognizer == self.recognizer, let externalState = self.component?.externalState, !externalState.hasText {
-                return false
-            }
             return true
         }
         
@@ -564,6 +561,10 @@ public final class ListComposePollOptionComponent: Component {
             
             if component.inputMode != nil {
                 rightInset += 34.0
+            }
+            
+            if component.canReorder {
+                rightInset += 16.0
             }
             
             let textFieldSize = self.textField.update(
