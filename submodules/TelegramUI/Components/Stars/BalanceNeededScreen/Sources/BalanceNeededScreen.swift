@@ -12,17 +12,25 @@ import BalancedTextComponent
 import Markdown
 import TelegramStringFormatting
 import BundleIconComponent
+import TelegramCore
+import TelegramPresentationData
 
 private final class BalanceNeededSheetContentComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
+    let context: AccountContext
+    let amount: StarsAmount
     let action: () -> Void
     let dismiss: () -> Void
     
     init(
+        context: AccountContext,
+        amount: StarsAmount,
         action: @escaping () -> Void,
         dismiss: @escaping () -> Void
     ) {
+        self.context = context
+        self.amount = amount
         self.action = action
         self.dismiss = dismiss
     }
@@ -37,10 +45,12 @@ private final class BalanceNeededSheetContentComponent: Component {
         private let text = ComponentView<Empty>()
         private let button = ComponentView<Empty>()
         
-        private var cancelButton: ComponentView<Empty>?
+        private let closeButton = ComponentView<Empty>()
         
         private var component: BalanceNeededSheetContentComponent?
         private weak var state: EmptyComponentState?
+        
+        private var cachedCloseImage: (UIImage, PresentationTheme)?
         
         override init(frame: CGRect) {
             super.init(frame: frame)
@@ -61,61 +71,64 @@ private final class BalanceNeededSheetContentComponent: Component {
             
             let sideInset: CGFloat = 16.0
             
-            let cancelButton: ComponentView<Empty>
-            if let current = self.cancelButton {
-                cancelButton = current
+            let closeImage: UIImage
+            if let (image, theme) = self.cachedCloseImage, theme === environment.theme {
+                closeImage = image
             } else {
-                cancelButton = ComponentView()
-                self.cancelButton = cancelButton
+                closeImage = generateCloseButtonImage(backgroundColor: UIColor(rgb: 0x808084, alpha: 0.1), foregroundColor: environment.theme.actionSheet.inputClearButtonColor)!
+                self.cachedCloseImage = (closeImage, environment.theme)
             }
-            let cancelButtonSize = cancelButton.update(
-                transition: transition,
+            let closeButtonSize = self.closeButton.update(
+                transition: .immediate,
                 component: AnyComponent(Button(
-                    content: AnyComponent(Text(text: environment.strings.Common_Cancel, font: Font.regular(17.0), color: environment.theme.list.itemAccentColor)),
+                    content: AnyComponent(Image(image: closeImage)),
                     action: { [weak self] in
                         guard let self, let component = self.component else {
                             return
                         }
                         component.dismiss()
                     }
-                ).minSize(CGSize(width: 8.0, height: 44.0))),
+                )),
                 environment: {},
-                containerSize: CGSize(width: 200.0, height: 100.0)
+                containerSize: CGSize(width: 30.0, height: 30.0)
             )
-            if let cancelButtonView = cancelButton.view {
-                if cancelButtonView.superview == nil {
-                    self.addSubview(cancelButtonView)
+            let closeButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - closeButtonSize.width - 16.0, y: 12.0), size: closeButtonSize)
+            if let closeButtonView = self.closeButton.view {
+                if closeButtonView.superview == nil {
+                    self.addSubview(closeButtonView)
                 }
-                transition.setFrame(view: cancelButtonView, frame: CGRect(origin: CGPoint(x: 16.0, y: 6.0), size: cancelButtonSize))
+                transition.setFrame(view: closeButtonView, frame: closeButtonFrame)
             }
             
             var contentHeight: CGFloat = 0.0
             contentHeight += 32.0
             
-            let iconSize = self.icon.update(
+            let iconSize = CGSize(width: 120.0, height: 120.0)
+            let _ = self.icon.update(
                 transition: transition,
                 component: AnyComponent(LottieComponent(
-                    content: LottieComponent.AppBundleContent(name: "StoryUpgradeSheet"),
+                    content: LottieComponent.AppBundleContent(name: "TonLogo"),
                     color: nil,
                     startingPosition: .begin,
-                    size: CGSize(width: 100.0, height: 100.0)
+                    size: iconSize,
+                    loop: true
                 )),
                 environment: {},
-                containerSize: CGSize(width: 100.0, height: 100.0)
+                containerSize: iconSize
             )
             if let iconView = self.icon.view {
                 if iconView.superview == nil {
                     self.addSubview(iconView)
                 }
-                transition.setFrame(view: iconView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: 42.0), size: iconSize))
+                transition.setFrame(view: iconView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: 16.0), size: iconSize))
             }
             
-            contentHeight += 138.0
+            contentHeight += 110.0
             
             let titleSize = self.title.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: environment.strings.Story_UpgradeQuality_Title, font: Font.semibold(20.0), textColor: environment.theme.list.itemPrimaryTextColor)),
+                    text: .plain(NSAttributedString(string: "\(formatTonAmountText(component.amount.value, dateTimeFormat: component.context.sharedContext.currentPresentationData.with({ $0 }).dateTimeFormat)) TON Needed", font: Font.bold(24.0), textColor: environment.theme.list.itemPrimaryTextColor)),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0
                 )),
@@ -131,10 +144,11 @@ private final class BalanceNeededSheetContentComponent: Component {
             contentHeight += titleSize.height
             contentHeight += 14.0
             
+            //TODO:localize
             let textSize = self.text.update(
                 transition: transition,
                 component: AnyComponent(BalancedTextComponent(
-                    text: .plain(NSAttributedString(string: environment.strings.Story_UpgradeQuality_Text, font: Font.regular(14.0), textColor: environment.theme.list.itemSecondaryTextColor)),
+                    text: .plain(NSAttributedString(string: "You can add funds to your balance via the third-party platform Fragment.", font: Font.regular(15.0), textColor: environment.theme.list.itemPrimaryTextColor)),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.18
@@ -149,10 +163,9 @@ private final class BalanceNeededSheetContentComponent: Component {
                 transition.setFrame(view: textView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - textSize.width) * 0.5), y: contentHeight), size: textSize))
             }
             contentHeight += textSize.height
-            contentHeight += 12.0
+            contentHeight += 24.0
             
-            contentHeight += 32.0
-            
+            //TODO:localize
             let buttonSize = self.button.update(
                 transition: transition,
                 component: AnyComponent(ButtonComponent(
@@ -162,7 +175,7 @@ private final class BalanceNeededSheetContentComponent: Component {
                         pressedColor: environment.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.8)
                     ),
                     content: AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: "Add Funds via Fragment"))
+                        text: .plain(NSAttributedString(string: "Add Funds via Fragment", font: Font.semibold(17.0), textColor: environment.theme.list.itemCheckColors.foregroundColor))
                     ))),
                     isEnabled: true,
                     allowActionWhenDisabled: true,
@@ -190,7 +203,7 @@ private final class BalanceNeededSheetContentComponent: Component {
             if environment.safeInsets.bottom.isZero {
                 contentHeight += 16.0
             } else {
-                contentHeight += environment.safeInsets.bottom + 14.0
+                contentHeight += environment.safeInsets.bottom + 8.0
             }
             
             return CGSize(width: availableSize.width, height: contentHeight)
@@ -210,13 +223,16 @@ private final class BalanceNeededScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let amount: StarsAmount
     let buttonAction: (() -> Void)?
     
     init(
         context: AccountContext,
+        amount: StarsAmount,
         buttonAction: (() -> Void)?
     ) {
         self.context = context
+        self.amount = amount
         self.buttonAction = buttonAction
     }
     
@@ -268,6 +284,8 @@ private final class BalanceNeededScreenComponent: Component {
                 transition: transition,
                 component: AnyComponent(SheetComponent(
                     content: AnyComponent(BalanceNeededSheetContentComponent(
+                        context: component.context,
+                        amount: component.amount,
                         action: { [weak self] in
                             guard let self else {
                                 return
@@ -291,7 +309,7 @@ private final class BalanceNeededScreenComponent: Component {
                             })
                         }
                     )),
-                    backgroundColor: .color(environment.theme.overallDarkAppearance ? environment.theme.list.itemBlocksBackgroundColor : environment.theme.list.blocksBackgroundColor),
+                    backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
                     animateOut: self.sheetAnimateOut
                 )),
                 environment: {
@@ -323,10 +341,12 @@ private final class BalanceNeededScreenComponent: Component {
 public class BalanceNeededScreen: ViewControllerComponentContainer {
     public init(
         context: AccountContext,
+        amount: StarsAmount,
         buttonAction: (() -> Void)? = nil
     ) {
         super.init(context: context, component: BalanceNeededScreenComponent(
             context: context,
+            amount: amount,
             buttonAction: buttonAction
         ), navigationBarAppearance: .none)
         
@@ -358,4 +378,25 @@ public class BalanceNeededScreen: ViewControllerComponentContainer {
         })
         self.wasDismissed?()
     }
+}
+
+func generateCloseButtonImage(backgroundColor: UIColor, foregroundColor: UIColor) -> UIImage? {
+    return generateImage(CGSize(width: 30.0, height: 30.0), contextGenerator: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        context.setFillColor(backgroundColor.cgColor)
+        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+        
+        context.setLineWidth(2.0)
+        context.setLineCap(.round)
+        context.setStrokeColor(foregroundColor.cgColor)
+        
+        context.move(to: CGPoint(x: 10.0, y: 10.0))
+        context.addLine(to: CGPoint(x: 20.0, y: 20.0))
+        context.strokePath()
+        
+        context.move(to: CGPoint(x: 20.0, y: 10.0))
+        context.addLine(to: CGPoint(x: 10.0, y: 20.0))
+        context.strokePath()
+    })
 }

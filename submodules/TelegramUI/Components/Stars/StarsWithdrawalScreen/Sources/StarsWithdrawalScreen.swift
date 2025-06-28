@@ -229,6 +229,17 @@ private final class SheetContent: CombinedComponent {
                 amountPlaceholder = "Price"
                 
                 minAmount = StarsAmount(value: 0, nanos: 0)
+                
+                if let usdWithdrawRate = withdrawConfiguration.usdWithdrawRate, let tonUsdRate = withdrawConfiguration.tonUsdRate, let amount = state.amount, amount > StarsAmount.zero {
+                    switch state.currency {
+                    case .stars:
+                        let usdRate = Double(usdWithdrawRate) / 1000.0 / 100.0
+                        amountLabel = "≈\(formatTonUsdValue(amount.value, divide: false, rate: usdRate, dateTimeFormat: environment.dateTimeFormat))"
+                    case .ton:
+                        let usdRate = Double(tonUsdRate) / 1000.0 / 1000000.0
+                        amountLabel = "≈\(formatTonUsdValue(amount.value, divide: false, rate: usdRate, dateTimeFormat: environment.dateTimeFormat))"
+                    }
+                }
             }
             
             let title = title.update(
@@ -634,7 +645,7 @@ private final class SheetContent: CombinedComponent {
                                     let theme = environment.theme
                                     
                                     let minimalTime: Int32 = Int32(Date().timeIntervalSince1970) + 5 * 60 + 10
-                                    let controller = ChatScheduleTimeController(context: state.context, updatedPresentationData: (state.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), state.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) }), mode: .suggestPost(needsTime: false), style: .default, currentTime: state.timestamp, minimalTime: minimalTime, dismissByTapOutside: true, completion: { [weak state] time in
+                                    let controller = ChatScheduleTimeController(context: state.context, updatedPresentationData: (state.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), state.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) }), mode: .suggestPost(needsTime: false, isAdmin: false, funds: nil), style: .default, currentTime: state.timestamp, minimalTime: minimalTime, dismissByTapOutside: true, completion: { [weak state] time in
                                         guard let state else {
                                             return
                                         }
@@ -789,8 +800,20 @@ private final class SheetContent: CombinedComponent {
                                         }
                                     case .ton:
                                         if let balance = state.tonBalance, amount > balance {
+                                            let needed = amount - balance
+                                            var fragmentUrl = "https://fragment.com/ads/topup"
+                                            if let data = state.context.currentAppConfiguration.with({ $0 }).data, let value = data["ton_topup_url"] as? String {
+                                                fragmentUrl = value
+                                            }
                                             controller.push(BalanceNeededScreen(
-                                                context: state.context
+                                                context: state.context,
+                                                amount: needed,
+                                                buttonAction: { [weak state] in
+                                                    guard let state else {
+                                                        return
+                                                    }
+                                                    state.context.sharedContext.applicationBindings.openUrl(fragmentUrl)
+                                                }
                                             ))
                                             return
                                         }
@@ -1641,17 +1664,19 @@ func generateCloseButtonImage(backgroundColor: UIColor, foregroundColor: UIColor
 
 private struct StarsWithdrawConfiguration {
     static var defaultValue: StarsWithdrawConfiguration {
-        return StarsWithdrawConfiguration(minWithdrawAmount: nil, maxPaidMediaAmount: nil, usdWithdrawRate: nil)
+        return StarsWithdrawConfiguration(minWithdrawAmount: nil, maxPaidMediaAmount: nil, usdWithdrawRate: nil, tonUsdRate: nil)
     }
     
     let minWithdrawAmount: Int64?
     let maxPaidMediaAmount: Int64?
     let usdWithdrawRate: Double?
+    let tonUsdRate: Double?
     
-    fileprivate init(minWithdrawAmount: Int64?, maxPaidMediaAmount: Int64?, usdWithdrawRate: Double?) {
+    fileprivate init(minWithdrawAmount: Int64?, maxPaidMediaAmount: Int64?, usdWithdrawRate: Double?, tonUsdRate: Double?) {
         self.minWithdrawAmount = minWithdrawAmount
         self.maxPaidMediaAmount = maxPaidMediaAmount
         self.usdWithdrawRate = usdWithdrawRate
+        self.tonUsdRate = tonUsdRate
     }
     
     static func with(appConfiguration: AppConfiguration) -> StarsWithdrawConfiguration {
@@ -1668,8 +1693,12 @@ private struct StarsWithdrawConfiguration {
             if let value = data["stars_usd_withdraw_rate_x1000"] as? Double {
                 usdWithdrawRate = value
             }
+            var tonUsdRate: Double?
+            if let value = data["ton_usd_rate"] as? Double {
+                tonUsdRate = value
+            }
             
-            return StarsWithdrawConfiguration(minWithdrawAmount: minWithdrawAmount, maxPaidMediaAmount: maxPaidMediaAmount, usdWithdrawRate: usdWithdrawRate)
+            return StarsWithdrawConfiguration(minWithdrawAmount: minWithdrawAmount, maxPaidMediaAmount: maxPaidMediaAmount, usdWithdrawRate: usdWithdrawRate, tonUsdRate: tonUsdRate)
         } else {
             return .defaultValue
         }
