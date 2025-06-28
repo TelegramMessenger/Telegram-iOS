@@ -60,16 +60,22 @@ for name, module in sorted(modules.items()):
         "is_empty": is_empty,
     }
 
+module_to_source_files = dict()
+modulemaps = dict()
+
 combined_lines = []
 combined_lines.append("// swift-tools-version: 6.0")
 combined_lines.append("// The swift-tools-version declares the minimum version of Swift required to build this package.")
 combined_lines.append("")
 combined_lines.append("import PackageDescription")
+combined_lines.append("import Foundation")
+combined_lines.append("")
+combined_lines.append("let sourceFileMap: [String: [String]] = try! JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: \"SourceFileMap.json\")), options: []) as! [String: [String]]")
 combined_lines.append("")
 combined_lines.append("let package = Package(")
 combined_lines.append("    name: \"Telegram\",")
 combined_lines.append("    platforms: [")
-combined_lines.append("        .iOS(.v12)")
+combined_lines.append("        .iOS(.v13)")
 combined_lines.append("    ],")
 combined_lines.append("    products: [")
 
@@ -82,6 +88,13 @@ for name, module in sorted(modules.items()):
 
 combined_lines.append("    ],")
 combined_lines.append("    targets: [")
+
+class ModulemapStore:
+    def __init__(self) -> None:
+        pass
+
+    def add(self, module_path, header_path):
+        pass
 
 for name, module in sorted(modules.items()):
     if parsed_modules[name]["is_empty"]:
@@ -96,15 +109,7 @@ for name, module in sorted(modules.items()):
         module_directory = spm_files_dir + "/" + relative_module_path
         os.makedirs(module_directory, exist_ok=True)
 
-        module_sources_directory = module_directory + "/Sources"
-        if not os.path.exists(module_sources_directory):
-            os.makedirs(module_sources_directory)
-        
-        module_public_includes_directory = module_directory + "/PublicIncludes"
-        if not os.path.exists(module_public_includes_directory):
-            os.makedirs(module_public_includes_directory)
-
-        module_public_headers_prefix = None
+        module_public_headers_prefix = ""
         if len(module["includes"]) > 1:
             print("{}: Multiple includes are not yet supported: {}".format(name, module["includes"]))
             sys.exit(1)
@@ -124,11 +129,10 @@ for name, module in sorted(modules.items()):
         # All modules now use the symlinked directory path
         combined_lines.append("            path: \"%s\"," % relative_module_path)
 
-        # Since we control the entire directory structure, we don't need exclude logic
-        combined_lines.append("            exclude: [")
-        combined_lines.append("            ],")
+        include_source_files = []
+        exclude_source_files = []
+        public_include_files = []
         
-        combined_lines.append("            sources: [")
         for source in module["sources"] + module.get("hdrs", []) + module.get("textual_hdrs", []):
             # Process all sources (both regular and generated) with symlinks
             if source.startswith("bazel-out/"):
@@ -146,15 +150,7 @@ for name, module in sorted(modules.items()):
                 source_file_name = source[len(module["path"]) + 1:]
 
             # Create symlink for this source file
-            is_public_include = False
-            if module_public_headers_prefix is not None:
-                if source_file_name.startswith(module_public_headers_prefix):
-                    symlink_location = os.path.join(module_public_includes_directory, source_file_name[len(module_public_headers_prefix) + 1:])
-                    #print("{}: Public include: {}".format(source_file_name, symlink_location))
-                    is_public_include = True
-
-            if not is_public_include:
-                symlink_location = os.path.join(module_sources_directory, source_file_name)
+            symlink_location = os.path.join(module_directory, source_file_name)
 
             # Create parent directory for symlink if it doesn't exist
             symlink_parent = os.path.dirname(symlink_location)
@@ -162,7 +158,7 @@ for name, module in sorted(modules.items()):
                 os.makedirs(symlink_parent)
             
             # Calculate relative path from symlink back to original file
-            # Count directory depth: spm-files/module_name/... -> workspace root
+            # Count directory depth: spm-files/module_name/... -> spm-files
             num_parent_dirs = symlink_location.count(os.path.sep)
             relative_prefix = "".join(["../"] * num_parent_dirs)
             symlink_target = relative_prefix + source
@@ -173,12 +169,39 @@ for name, module in sorted(modules.items()):
             os.symlink(symlink_target, symlink_location)
             
             # Add to sources list (exclude certain file types)
-            if not source.endswith(('.h', '.hpp', '.a', '.inc')):
-                combined_lines.append("                \"%s\"," % ("Sources/" + source_file_name))
+            if source.endswith(('.h', '.hpp', '.a', '.inc')):
+                if len(module_public_headers_prefix) != 0 and source_file_name.startswith(module_public_headers_prefix):
+                    public_include_files.append(source_file_name[len(module_public_headers_prefix) + 1:])
+                exclude_source_files.append(source_file_name)
+            else:
+                include_source_files.append(source_file_name)
+
+        if name in module_to_source_files:
+            print(f"{name}: duplicate module")
+            sys.exit(1)
+        module_to_source_files[name] = include_source_files
+        
+        if True:
+            combined_lines.append(f"            sources: sourceFileMap[\"{name}\"]!,")
+        else:
+            combined_lines.append("            sources: [")
+            for include_source_file in include_source_files:
+                combined_lines.append("                \"%s\"," % (include_source_file))
+            combined_lines.append("            ],")
+        
+        modulemap_path = os.path.join(os.path.join(os.path.join(module_directory), module_public_headers_prefix), "module.modulemap")
+        if modulemap_path not in modulemaps:
+            modulemaps[modulemap_path] = []
+        modulemaps[modulemap_path].append({
+            "name": name,
+            "public_include_files": public_include_files
+        })
                 
-        combined_lines.append("            ],")
         if module_type == "objc_library" or module_type == "cc_library":
-            combined_lines.append("            publicHeadersPath: \"PublicIncludes\",")
+            if module_public_headers_prefix is not None and len(module_public_headers_prefix) != 0:
+                combined_lines.append(f"            publicHeadersPath: \"{module_public_headers_prefix}\",")
+            else:
+                combined_lines.append("            publicHeadersPath: \"\",")
 
             if len(module["includes"]) > 1:
                 print("{}: Multiple includes are not yet supported: {}".format(name, module["includes"]))
@@ -200,33 +223,32 @@ for name, module in sorted(modules.items()):
                     combined_lines.append("                .unsafeFlags([")
                     for flag in copts:
                         escaped_flag = escape_swift_string_literal_component(flag)
-                        combined_lines.append(f'                    "{escaped_flag}",')
                         if escaped_flag.startswith("-I"):
                             include_path = escaped_flag[2:]
-                            print("{}: Include path: {}".format(name, include_path))
+                            #print("{}: Include path: {}".format(name, include_path))
+                            found_reference = False
                             for another_module_name, another_module in sorted(modules.items()):
                                 another_module_path = another_module["path"]
                                 if include_path.startswith(another_module_path):
                                     relative_module_include_path = include_path[len(another_module_path) + 1:]
+
                                     #print("    {}: Matches module: {}".format(another_module_name, another_module_path))
 
-                                    combined_lines.append(f'                    "-I{another_module_path}/Sources/{relative_module_include_path}",')
-
-                                another_module_public_headers_prefix = None
-                                if len(another_module["includes"]) == 1:
-                                    for include_directory in another_module["includes"]:
-                                        if include_directory != ".":
-                                            another_module_public_headers_prefix = another_module_path + "/" + include_directory
-                                            print("    {}: Another module public include: {}".format(another_module_name, another_module_public_headers_prefix))
-                                if another_module_public_headers_prefix is not None:
-                                    if include_path.startswith(another_module_public_headers_prefix):
-                                        relative_module_include_path = include_path[len(another_module_public_headers_prefix) + 1:]
-                                        print("    {}: Matches module public include: {}".format(another_module_name, another_module_public_headers_prefix))
-
-                                        combined_lines.append(f'                    -"-I{another_module_path}/PublicIncludes/{relative_module_include_path}",')
+                                    matched_public_include = False                                    
+                                    if len(relative_module_include_path) == 0:
+                                        combined_lines.append(f'                    "-I{another_module_path}/Module_{another_module_name}",')
+                                    else:
+                                        combined_lines.append(f'                    "-I{another_module_path}/Module_{another_module_name}/{relative_module_include_path}",')
+                                    found_reference = True
+                            if not found_reference:
+                                print(f"{name}: Unresolved include path: {include_path}")
+                                sys.exit(1)
+                                    
+                        else:
+                            combined_lines.append(f'                    "{escaped_flag}",')
                     combined_lines.append("                ]),")
-                if module_public_headers_prefix is not None:
-                    combined_lines.append(f"                .headerSearchPath(\"{module_public_headers_prefix}\"),")
+                #if module_public_headers_prefix is not None:
+                #    combined_lines.append(f"                .headerSearchPath(\"{module_public_headers_prefix}\"),")
                 combined_lines.append("            ],")
 
             if defines or cxxopts: # Check for defines OR cxxopts
@@ -303,3 +325,16 @@ combined_lines.append("")
 
 with open("spm-files/Package.swift", "w") as f:
     f.write("\n".join(combined_lines))
+
+with open("spm-files/SourceFileMap.json", "w") as f:
+    json.dump(module_to_source_files, f, indent=4)
+
+for modulemap_path, modulemap in modulemaps.items():
+    module_map_contents = ""
+    for module in modulemap:
+        module_map_contents += "module {} {{\n".format(module["name"])
+        for public_include_file in module["public_include_files"]:
+            module_map_contents += "    header \"{}\"\n".format(public_include_file)
+        module_map_contents += "}\n"
+    with open(modulemap_path, "w") as f:
+        f.write(module_map_contents)
