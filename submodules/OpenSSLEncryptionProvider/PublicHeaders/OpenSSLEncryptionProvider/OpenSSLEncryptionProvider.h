@@ -1,3 +1,4 @@
+#import <Foundation/Foundation.h>
 #import <EncryptionProvider/EncryptionProvider.h>
 
 NS_ASSUME_NONNULL_BEGIN

@@ -123,8 +123,6 @@ static NSString *const STPSDKVersion = @"9.1.0";
  */
 + (BOOL)canSubmitPaymentRequest:(PKPaymentRequest *)paymentRequest NS_AVAILABLE_IOS(8_0);
 
-+ (BOOL)deviceSupportsApplePay;
-
 /**
  *  A convenience method to return a `PKPaymentRequest` with sane default values. You will still need to configure the `paymentSummaryItems` property to indicate
  *what the user is purchasing, as well as the optional `requiredShippingAddressFields`, `requiredBillingAddressFields`, and `shippingMethods` properties to indicate
@@ -200,8 +198,6 @@ typedef void (^STPCompletionBlock)(STPToken * __nullable token, NSError * __null
 + (void)createTokenWithBankAccount:(STPBankAccount *)bankAccount
                     publishableKey:(NSString *)publishableKey
                         completion:(nullable STPCompletionBlock)handler __attribute__((deprecated));
-
-+ (BOOL)deviceSupportsApplePay;
 
 @end
 

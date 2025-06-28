@@ -3344,8 +3344,10 @@ static CTTelephonyNetworkInfo* _telephonyNetworkInfo;
 
 - (NSString *)countryCodeByCarrier
 {
-    
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     NSString *isoCode = [[self.telephonyNetworkInfo subscriberCellularProvider] isoCountryCode];
+#pragma clang diagnostic pop
     
     // The 2nd part of the if is working around an iOS 7 bug
     // If the SIM card is missing, iOS 7 returns an empty string instead of nil

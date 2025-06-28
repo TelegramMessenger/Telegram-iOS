@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import Display
+import SSignalKit
 import SwiftSignalKit
 import TelegramCore
 import LegacyComponents
@@ -8,6 +9,7 @@ import TelegramPresentationData
 import DeviceAccess
 import AccountContext
 import LocalMediaResources
+import Photos
 
 public func legacyWallpaperPicker(context: AccountContext, presentationData: PresentationData, subject: DeviceAccessMediaLibrarySubject = .wallpaper) -> Signal<(LegacyComponentsContext) -> TGMediaAssetsController, Void> {
     return Signal { subscriber in

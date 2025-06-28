@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import Display
+import SSignalKit
 import SwiftSignalKit
 import AccountContext
 import TelegramCore
@@ -12,6 +13,7 @@ import WebSearchUI
 import MapResourceToAvatarSizes
 import LegacyUI
 import LegacyMediaPickerUI
+import AVFoundation
 
 extension VideoChatScreenComponent.View {
     func openParticipantContextMenu(id: EnginePeer.Id, sourceView: ContextExtractedContentContainingView, gesture: ContextGesture?) {

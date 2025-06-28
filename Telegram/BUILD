@@ -1790,6 +1790,7 @@ ios_application(
         #"//third-party/boringssl:ssl",
         #"//third-party/boringssl:crypto",
         #"//submodules/TelegramVoip",
+        #"//third-party/libprisma",
         "//submodules/TelegramUI",
     ],
 )

@@ -51,7 +51,6 @@ NS_ASSUME_NONNULL_BEGIN
  *  An icon representing Visa.
  */
 + (UIImage *)visaCardImage;
-+ (UIImage *)otherCardImage;
 
 /**
  *  An icon to use when the type of the card is unknown.

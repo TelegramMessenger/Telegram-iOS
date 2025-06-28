@@ -38,6 +38,7 @@ import DeviceLocationManager
 import LegacyMediaPickerUI
 import GenerateStickerPlaceholderImage
 import PassKit
+import Photos
 
 private let durgerKingBotIds: [Int64] = [5104055776, 2200339955]
 

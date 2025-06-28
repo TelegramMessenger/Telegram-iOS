@@ -113,7 +113,7 @@ cc_library(
         "-DHAVE_NETINET_IN_H",
         "-DHAVE_SYS_TYPES_H",
         "-DHAVE_UNISTD_H",
-        "-DPACKAGE_STRING='\"\"'",
+        "-DPACKAGE_STRING=\\\"\\\"",
         "-DHAVE_SCTP",
         "-DWEBRTC_HAVE_DCSCTP",
         "-DWEBRTC_HAVE_SCTP",

@@ -103,6 +103,7 @@ swift_library(
         "//submodules/StickerResources",
         "//submodules/TelegramUI/Components/StorageUsageScreen",
         "//submodules/TelegramUI/Components/Stories/StoryContainerScreen",
+        "//submodules/SSignalKit/SSignalKit",
         "//submodules/SSignalKit/SwiftSignalKit",
         "//submodules/TelegramBaseController",
         "//submodules/TelegramCallsUI",

@@ -22,6 +22,7 @@ import Markdown
 import AlertUI
 import InAppPurchaseManager
 import ObjectiveC
+import AVFoundation
 
 private var ObjCKey_Delegate: Int?
 
