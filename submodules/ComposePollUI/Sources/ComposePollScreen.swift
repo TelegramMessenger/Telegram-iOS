@@ -232,6 +232,10 @@ final class ComposePollScreenComponent: Component {
         }
         
         private func item(at point: CGPoint) -> (AnyHashable, ComponentView<Empty>)? {
+            if self.scrollView.isTracking || self.scrollView.isDecelerating {
+                return nil
+            }
+            
             let localPoint = self.pollOptionsSectionContainer.convert(point, from: self)
             for (id, itemView) in self.pollOptionsSectionContainer.itemViews {
                 if let view = itemView.contents.view as? ListComposePollOptionComponent.View, !view.isRevealed && !view.currentText.isEmpty {
@@ -445,6 +449,10 @@ final class ComposePollScreenComponent: Component {
             let _ = component
             
             return true
+        }
+        
+        func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+            self.endEditing(true)
         }
         
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
