@@ -1295,6 +1295,11 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 maxContentWidth = max(maxContentWidth, minWidth)
                 actionButtonsFinalize = buttonsLayout
             } else if incoming, let attribute = item.message.attributes.first(where: { $0 is SuggestedPostMessageAttribute }) as? SuggestedPostMessageAttribute, attribute.state == nil {
+                var canApprove = true
+                if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, peer.isMonoForum, let linkedMonoforumId = peer.linkedMonoforumId, let mainChannel = item.message.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect), !mainChannel.hasPermission(.sendSomething) {
+                    canApprove = false
+                }
+                
                 //TODO:localize
                 var buttonDeclineValue: UInt8 = 0
                 let buttonDecline = MemoryBuffer(data: Data(bytes: &buttonDeclineValue, count: 1))
@@ -1303,10 +1308,19 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 var buttonSuggestChangesValue: UInt8 = 2
                 let buttonSuggestChanges = MemoryBuffer(data: Data(bytes: &buttonSuggestChangesValue, count: 1))
                 
-                let customIcons: [MemoryBuffer: ChatMessageActionButtonsNode.CustomIcon] = [
-                    buttonDecline: .suggestedPostReject,
-                    buttonApprove: .suggestedPostApprove,
-                    buttonSuggestChanges: .suggestedPostEdit
+                let customInfos: [MemoryBuffer: ChatMessageActionButtonsNode.CustomInfo] = [
+                    buttonDecline: ChatMessageActionButtonsNode.CustomInfo(
+                        isEnabled: true,
+                        icon: .suggestedPostReject
+                    ),
+                    buttonApprove: ChatMessageActionButtonsNode.CustomInfo(
+                        isEnabled: canApprove,
+                        icon: .suggestedPostApprove
+                    ),
+                    buttonSuggestChanges: ChatMessageActionButtonsNode.CustomInfo(
+                        isEnabled: canApprove,
+                        icon: .suggestedPostEdit
+                    )
                 ]
                 
                 let (minWidth, buttonsLayout) = actionButtonsLayout(
@@ -1327,7 +1341,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         ],
                         flags: [],
                         placeholder: nil
-                ), customIcons, item.message, baseWidth)
+                ), customInfos, item.message, baseWidth)
                 maxContentWidth = max(maxContentWidth, minWidth)
                 actionButtonsFinalize = buttonsLayout
             }
@@ -1394,7 +1408,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             layoutSize.height += additionalTopHeight
             imageFrame.origin.y += additionalTopHeight
             
-            var headersOffset: CGFloat = 0.0
+            var headersOffset: CGFloat = additionalTopHeight
             if let (threadInfoSize, _) = threadInfoApply {
                 headersOffset += threadInfoSize.height + 10.0
             }
@@ -1611,7 +1625,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         }
                     }
                     
-                    var headersOffset: CGFloat = 0.0
+                    var headersOffset: CGFloat = additionalTopHeight
                     if let (threadInfoSize, threadInfoApply) = threadInfoApply {
                         let threadInfoNode = threadInfoApply(synchronousLoads)
                         if strongSelf.threadInfoNode == nil {

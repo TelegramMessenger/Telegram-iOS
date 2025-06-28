@@ -61,6 +61,11 @@ extension ChatControllerImpl {
         var bannedSendVideos: (Int32, Bool)?
         var bannedSendFiles: (Int32, Bool)?
         
+        var enableMultiselection = true
+        if self.presentationInterfaceState.interfaceState.postSuggestionState != nil {
+            enableMultiselection = false
+        }
+        
         var canSendPolls = true
         var canSendTodos = true
         if let peer = self.presentationInterfaceState.renderedPeer?.peer {
@@ -336,7 +341,7 @@ extension ChatControllerImpl {
                         controller.prepareForReuse()
                         return
                     }
-                    strongSelf.presentMediaPicker(saveEditedPhotos: dataSettings.storeEditedPhotos, bannedSendPhotos: bannedSendPhotos, bannedSendVideos: bannedSendVideos, present: { controller, mediaPickerContext in
+                    strongSelf.presentMediaPicker(saveEditedPhotos: dataSettings.storeEditedPhotos, bannedSendPhotos: bannedSendPhotos, bannedSendVideos: bannedSendVideos, enableMultiselection: enableMultiselection, present: { controller, mediaPickerContext in
                         let _ = currentMediaController.swap(controller)
                         if !inputText.string.isEmpty {
                             mediaPickerContext?.setCaption(inputText)
@@ -1230,7 +1235,7 @@ extension ChatControllerImpl {
         self.present(actionSheet, in: .window(.root))
     }
     
-    func presentMediaPicker(subject: MediaPickerScreenImpl.Subject = .assets(nil, .default), saveEditedPhotos: Bool, bannedSendPhotos: (Int32, Bool)?, bannedSendVideos: (Int32, Bool)?, present: @escaping (MediaPickerScreenImpl, AttachmentMediaPickerContext?) -> Void, updateMediaPickerContext: @escaping (AttachmentMediaPickerContext?) -> Void, completion: @escaping (Bool, [Any], Bool, Int32?, ChatSendMessageActionSheetController.SendParameters?, @escaping (String) -> UIView?, @escaping () -> Void) -> Void) {
+    func presentMediaPicker(subject: MediaPickerScreenImpl.Subject = .assets(nil, .default), saveEditedPhotos: Bool, bannedSendPhotos: (Int32, Bool)?, bannedSendVideos: (Int32, Bool)?, enableMultiselection: Bool, present: @escaping (MediaPickerScreenImpl, AttachmentMediaPickerContext?) -> Void, updateMediaPickerContext: @escaping (AttachmentMediaPickerContext?) -> Void, completion: @escaping (Bool, [Any], Bool, Int32?, ChatSendMessageActionSheetController.SendParameters?, @escaping (String) -> UIView?, @escaping () -> Void) -> Void) {
         var isScheduledMessages = false
         if case .scheduledMessages = self.presentationInterfaceState.subject {
             isScheduledMessages = true
@@ -1248,6 +1253,7 @@ extension ChatControllerImpl {
             isScheduledMessages: isScheduledMessages, 
             bannedSendPhotos: bannedSendPhotos,
             bannedSendVideos: bannedSendVideos,
+            enableMultiselection: enableMultiselection,
             canBoostToUnrestrict: (self.presentationInterfaceState.boostsToUnrestrict ?? 0) > 0 && bannedSendPhotos?.1 != true && bannedSendVideos?.1 != true,
             paidMediaAllowed: paidMediaAllowed,
             subject: subject,

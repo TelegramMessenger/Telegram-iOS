@@ -3220,7 +3220,14 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 if displayAsMessage {
                     switch item.content {
                     case let .peer(peerData):
-                        if let peer = peerData.messages.last?.author {
+                        var iconPeer: EnginePeer?
+                        if case let .chat(itemPeer) = contentPeer, let peer = itemPeer.chatOrMonoforumMainPeer {
+                            iconPeer = peer
+                        } else {
+                            iconPeer = peerData.messages.last?.author
+                        }
+                        
+                        if let peer = iconPeer {
                             if case let .peer(peerData) = item.content, peerData.customMessageListData != nil {
                                 currentCredibilityIconContent = nil
                             } else if case .savedMessagesChats = item.chatListLocation, peer.id == item.context.account.peerId {

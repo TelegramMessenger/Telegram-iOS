@@ -199,10 +199,14 @@ public final class ChatMessageSuggestedPostInfoNode: ASDisplayNode {
             contentHeight += titleLayout.0.size.height
             contentHeight += titleSpacing
             
-            maxContentWidth = max(maxContentWidth, priceLabelLayout.0.size.width + labelSpacing + priceValueLayout.0.size.width)
-            contentHeight += priceLabelLayout.0.size.height + valuesVerticalSpacing
+            var tableContentWidth: CGFloat = 0.0
+            tableContentWidth = max(tableContentWidth, priceLabelLayout.0.size.width + labelSpacing + priceValueLayout.0.size.width)
+            tableContentWidth = max(tableContentWidth, timeLabelLayout.0.size.width + labelSpacing + timeValueLayout.0.size.width)
             
-            maxContentWidth = max(maxContentWidth, timeLabelLayout.0.size.width + labelSpacing + timeValueLayout.0.size.width)
+            let labelValueOffset = labelSpacing + max(priceLabelLayout.0.size.width, timeLabelLayout.0.size.width)
+            
+            maxContentWidth = max(maxContentWidth, tableContentWidth)
+            contentHeight += priceLabelLayout.0.size.height + valuesVerticalSpacing
             contentHeight += timeLabelLayout.0.size.height
             
             let size = CGSize(width: insets.left + insets.right + maxContentWidth, height: insets.top + insets.bottom + contentHeight)
@@ -252,13 +256,15 @@ public final class ChatMessageSuggestedPostInfoNode: ASDisplayNode {
                 let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleLayout.0.size.width) * 0.5), y: insets.top), size: titleLayout.0.size)
                 titleNode.frame = titleFrame
                 
-                let priceLabelFrame = CGRect(origin: CGPoint(x: insets.left, y: titleFrame.maxY + titleSpacing), size: priceLabelLayout.0.size)
+                let tableX: CGFloat = floor((size.width - tableContentWidth) * 0.5)
+                
+                let priceLabelFrame = CGRect(origin: CGPoint(x: tableX, y: titleFrame.maxY + titleSpacing), size: priceLabelLayout.0.size)
                 priceLabelNode.frame = priceLabelFrame
-                priceValueNode.frame = CGRect(origin: CGPoint(x: priceLabelFrame.maxX + labelSpacing, y: priceLabelFrame.minY), size: priceValueLayout.0.size)
+                priceValueNode.frame = CGRect(origin: CGPoint(x: tableX + labelValueOffset, y: priceLabelFrame.minY), size: priceValueLayout.0.size)
 
-                let timeLabelFrame = CGRect(origin: CGPoint(x: insets.left, y: priceLabelFrame.maxY + valuesVerticalSpacing), size: timeLabelLayout.0.size)
+                let timeLabelFrame = CGRect(origin: CGPoint(x: tableX, y: priceLabelFrame.maxY + valuesVerticalSpacing), size: timeLabelLayout.0.size)
                 timeLabelNode.frame = timeLabelFrame
-                timeValueNode.frame = CGRect(origin: CGPoint(x: timeLabelFrame.maxX + labelSpacing, y: timeLabelFrame.minY), size: timeValueLayout.0.size)
+                timeValueNode.frame = CGRect(origin: CGPoint(x: tableX + labelValueOffset, y: timeLabelFrame.minY), size: timeValueLayout.0.size)
 
                 return node
             })

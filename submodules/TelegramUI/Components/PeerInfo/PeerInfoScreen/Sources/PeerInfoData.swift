@@ -2290,8 +2290,12 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
             if hasVoiceChat || canStartVoiceChat {
                 result.append(.voiceChat)
             }
+            if case let .broadcast(info) = channel.info, info.flags.contains(.hasMonoforum), !channel.hasPermission(.manageDirect) {
+                result.append(.message)
+            }
             result.append(.mute)
-            if hasDiscussion {
+            if case let .broadcast(info) = channel.info, info.flags.contains(.hasMonoforum), !channel.hasPermission(.manageDirect) {
+            } else if hasDiscussion {
                 result.append(.discussion)
             }
             result.append(.search)

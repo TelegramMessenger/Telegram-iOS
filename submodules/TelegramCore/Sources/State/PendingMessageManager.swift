@@ -900,7 +900,7 @@ public final class PendingMessageManager {
                     } else if let attribute = attribute as? PaidStarsMessageAttribute {
                         allowPaidStars = attribute.stars.value * Int64(messages.count)
                     } else if let attribute = attribute as? SuggestedPostMessageAttribute {
-                        suggestedPost = attribute.apiSuggestedPost()
+                        suggestedPost = attribute.apiSuggestedPost(fixMinTime: Int32(Date().timeIntervalSince1970 + 10))
                     }
                 }
                                 
@@ -1412,7 +1412,7 @@ public final class PendingMessageManager {
                     } else if let attribute = attribute as? PaidStarsMessageAttribute {
                         allowPaidStars = attribute.stars.value
                     } else if let attribute = attribute as? SuggestedPostMessageAttribute {
-                        suggestedPost = attribute.apiSuggestedPost()
+                        suggestedPost = attribute.apiSuggestedPost(fixMinTime: Int32(Date().timeIntervalSince1970 + 10))
                     }
                 }
                 

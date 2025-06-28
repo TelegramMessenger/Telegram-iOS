@@ -172,24 +172,27 @@ final class ForumSettingsScreenComponent: Component {
                 if let controller = self.environment?.controller(), let navigationController = controller.navigationController as? NavigationController {
                     var viewControllers = navigationController.viewControllers
                     
-                    if self.isOn && self.mode == .list {
-                        for i in 0 ..< viewControllers.count {
-                            if let chatController = viewControllers[i] as? ChatController, chatController.chatLocation.peerId == component.peerId {
-                                let chatListController = component.context.sharedContext.makeChatListController(context: component.context, location: .forum(peerId: component.peerId), controlsHistoryPreload: false, hideNetworkActivityStatus: false, previewing: false, enableDebugActions: false)
-                                viewControllers[i] = chatListController
-                            }
-                        }
-                        navigationController.setViewControllers(viewControllers, animated: false)
+                    if case .legacyGroup = peer {
                     } else {
-                        for i in (0 ..< viewControllers.count).reversed() {
-                            if let chatListController = viewControllers[i] as? ChatListController, chatListController.location == .forum(peerId: component.peerId) {
-                                viewControllers.remove(at: i)
+                        if self.isOn && self.mode == .list {
+                            for i in 0 ..< viewControllers.count {
+                                if let chatController = viewControllers[i] as? ChatController, chatController.chatLocation.peerId == component.peerId {
+                                    let chatListController = component.context.sharedContext.makeChatListController(context: component.context, location: .forum(peerId: component.peerId), controlsHistoryPreload: false, hideNetworkActivityStatus: false, previewing: false, enableDebugActions: false)
+                                    viewControllers[i] = chatListController
+                                }
                             }
-                        }
-                        navigationController.setViewControllers(viewControllers, animated: false)
-                        
-                        if let baseController = navigationController as? TelegramRootControllerInterface, let chatListController = baseController.getChatsController() as? ChatListController {
-                            chatListController.resetForumStackIfOpen()
+                            navigationController.setViewControllers(viewControllers, animated: false)
+                        } else {
+                            for i in (0 ..< viewControllers.count).reversed() {
+                                if let chatListController = viewControllers[i] as? ChatListController, chatListController.location == .forum(peerId: component.peerId) {
+                                    viewControllers.remove(at: i)
+                                }
+                            }
+                            navigationController.setViewControllers(viewControllers, animated: false)
+                            
+                            if let baseController = navigationController as? TelegramRootControllerInterface, let chatListController = baseController.getChatsController() as? ChatListController {
+                                chatListController.resetForumStackIfOpen()
+                            }
                         }
                     }
                 }
@@ -232,6 +235,34 @@ final class ForumSettingsScreenComponent: Component {
                             }
                             if let resultPeerId {
                                 self.peerIdPromise.set(resultPeerId)
+                                
+                                let _ = component.context.engine.peers.setChannelForumMode(id: resultPeerId, isForum: true, displayForumAsTabs: self.mode == .tabs).startStandalone()
+                             
+                                if let controller = self.environment?.controller(), let navigationController = controller.navigationController as? NavigationController {
+                                    var viewControllers = navigationController.viewControllers
+                                    if self.mode == .list {
+                                        for i in 0 ..< viewControllers.count {
+                                            if let chatController = viewControllers[i] as? ChatController, chatController.chatLocation.peerId == component.peerId {
+                                                let chatListController = component.context.sharedContext.makeChatListController(context: component.context, location: .forum(peerId: resultPeerId), controlsHistoryPreload: false, hideNetworkActivityStatus: false, previewing: false, enableDebugActions: false)
+                                                viewControllers[i] = chatListController
+                                            }
+                                        }
+                                        navigationController.setViewControllers(viewControllers, animated: false)
+                                    } else {
+                                        for i in (0 ..< viewControllers.count).reversed() {
+                                            if let chatListController = viewControllers[i] as? ChatListController, chatListController.location == .forum(peerId: component.peerId) {
+                                                viewControllers.remove(at: i)
+                                            } else if let peerInfoScreen = viewControllers[i] as? PeerInfoScreen, peerInfoScreen.peerId == component.peerId {
+                                                viewControllers.remove(at: i)
+                                            }
+                                        }
+                                        navigationController.setViewControllers(viewControllers, animated: false)
+                                        
+                                        if let baseController = navigationController as? TelegramRootControllerInterface, let chatListController = baseController.getChatsController() as? ChatListController {
+                                            chatListController.resetForumStackIfOpen()
+                                        }
+                                    }
+                                }
                             } else {
                                 self.isOn = false
                                 self.state?.updated(transition: .easeInOut(duration: 0.2))

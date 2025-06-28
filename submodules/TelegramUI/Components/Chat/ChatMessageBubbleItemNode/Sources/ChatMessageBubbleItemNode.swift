@@ -1491,7 +1491,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         threadInfoLayout: (ChatMessageThreadInfoNode.Arguments) -> (CGSize, (Bool) -> ChatMessageThreadInfoNode),
         forwardInfoLayout: (AccountContext, ChatPresentationData, PresentationStrings, ChatMessageForwardInfoType, Peer?, String?, String?, ChatMessageForwardInfoNode.StoryData?, CGSize) -> (CGSize, (CGFloat) -> ChatMessageForwardInfoNode),
         replyInfoLayout: (ChatMessageReplyInfoNode.Arguments) -> (CGSize, (CGSize, Bool, ListViewItemUpdateAnimation) -> ChatMessageReplyInfoNode),
-        actionButtonsLayout: (AccountContext, ChatPresentationThemeData, PresentationChatBubbleCorners, PresentationStrings, WallpaperBackgroundNode?, ReplyMarkupMessageAttribute, [MemoryBuffer: ChatMessageActionButtonsNode.CustomIcon], Message, CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageActionButtonsNode)),
+        actionButtonsLayout: (AccountContext, ChatPresentationThemeData, PresentationChatBubbleCorners, PresentationStrings, WallpaperBackgroundNode?, ReplyMarkupMessageAttribute, [MemoryBuffer: ChatMessageActionButtonsNode.CustomInfo], Message, CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageActionButtonsNode)),
         reactionButtonsLayout: (ChatMessageReactionButtonsNode.Arguments) -> (minWidth: CGFloat, layout: (CGFloat) -> (size: CGSize, apply: (ListViewItemUpdateAnimation) -> ChatMessageReactionButtonsNode)),
         unlockButtonLayout: (ChatMessageUnlockMediaNode.Arguments) -> (CGSize, (Bool) -> ChatMessageUnlockMediaNode),
         mediaInfoLayout: (ChatMessageStarsMediaInfoNode.Arguments) -> (CGSize, (Bool) -> ChatMessageStarsMediaInfoNode),
@@ -2806,6 +2806,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             
             lastNodeTopPosition = .None(.Both)
         } else if incoming, let attribute = item.message.attributes.first(where: { $0 is SuggestedPostMessageAttribute }) as? SuggestedPostMessageAttribute, attribute.state == nil {
+            var canApprove = true
+            if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, peer.isMonoForum, let linkedMonoforumId = peer.linkedMonoforumId, let mainChannel = item.message.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect), !mainChannel.hasPermission(.sendSomething) {
+                canApprove = false
+            }
+            
             //TODO:localize
             var buttonDeclineValue: UInt8 = 0
             let buttonDecline = MemoryBuffer(data: Data(bytes: &buttonDeclineValue, count: 1))
@@ -2814,10 +2819,19 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             var buttonSuggestChangesValue: UInt8 = 2
             let buttonSuggestChanges = MemoryBuffer(data: Data(bytes: &buttonSuggestChangesValue, count: 1))
             
-            let customIcons: [MemoryBuffer: ChatMessageActionButtonsNode.CustomIcon] = [
-                buttonDecline: .suggestedPostReject,
-                buttonApprove: .suggestedPostApprove,
-                buttonSuggestChanges: .suggestedPostEdit
+            let customInfos: [MemoryBuffer: ChatMessageActionButtonsNode.CustomInfo] = [
+                buttonDecline: ChatMessageActionButtonsNode.CustomInfo(
+                    isEnabled: true,
+                    icon: .suggestedPostReject
+                ),
+                buttonApprove: ChatMessageActionButtonsNode.CustomInfo(
+                    isEnabled: canApprove,
+                    icon: .suggestedPostApprove
+                ),
+                buttonSuggestChanges: ChatMessageActionButtonsNode.CustomInfo(
+                    isEnabled: canApprove,
+                    icon: .suggestedPostEdit
+                )
             ]
             
             let (minWidth, buttonsLayout) = actionButtonsLayout(
@@ -2838,7 +2852,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     ],
                     flags: [],
                     placeholder: nil
-            ), customIcons, item.message, baseWidth)
+            ), customInfos, item.message, baseWidth)
             maxContentWidth = max(maxContentWidth, minWidth)
             actionButtonsFinalize = buttonsLayout
             

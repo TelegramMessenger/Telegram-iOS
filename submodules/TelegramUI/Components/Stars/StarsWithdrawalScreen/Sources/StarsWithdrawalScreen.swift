@@ -24,6 +24,7 @@ import UndoUI
 import ListActionItemComponent
 import ChatScheduleTimeController
 import TabSelectorComponent
+import PresentationDataUtils
 
 private let amountTag = GenericComponentViewTag()
 
@@ -83,8 +84,15 @@ private final class SheetContent: CombinedComponent {
             let constrainedTitleWidth = context.availableSize.width - 16.0 * 2.0
             
             if case let .suggestedPost(mode, _, _, _) = component.mode {
+                var displayBalance = false
                 switch mode {
-                case .sender:
+                case let .sender(_, isFromAdmin):
+                    displayBalance = !isFromAdmin
+                case .admin:
+                    break
+                }
+                
+                if displayBalance {
                     let balance = balance.update(
                         component: BalanceComponent(
                             context: component.context,
@@ -102,8 +110,6 @@ private final class SheetContent: CombinedComponent {
                         .anchorPoint(CGPoint(x: 1.0, y: 0.0))
                         .position(CGPoint(x: balanceFrame.maxX, y: balanceFrame.minY))
                     )
-                case .admin:
-                    break
                 }
                 
                 let closeButton = closeButton.update(
@@ -214,14 +220,14 @@ private final class SheetContent: CombinedComponent {
                 switch state.currency {
                 case .stars:
                     amountTitle = "ENTER A PRICE IN STARS"
+                    maxAmount = StarsAmount(value: resaleConfiguration.channelMessageSuggestionMaxStarsAmount, nanos: 0)
                 case .ton:
                     amountTitle = "ENTER A PRICE IN TON"
+                    maxAmount = StarsAmount(value: resaleConfiguration.channelMessageSuggestionMaxTonAmount, nanos: 0)
                 }
                 amountPlaceholder = "Price"
                 
                 minAmount = StarsAmount(value: 0, nanos: 0)
-                //TODO:release
-                maxAmount = StarsAmount(value: resaleConfiguration.paidMessageMaxAmount, nanos: 0)
             }
             
             let title = title.update(
@@ -289,69 +295,90 @@ private final class SheetContent: CombinedComponent {
                 )
             }
             
+            var tonBalanceValue: StarsAmount = .zero
+            if let tonBalance = state.tonBalance {
+                tonBalanceValue = tonBalance
+            }
+            
             if case let .suggestedPost(mode, _, _, _) = component.mode {
-                //TODO:localize
-                let selectedId: AnyHashable = state.currency == .stars ? AnyHashable(0 as Int) : AnyHashable(1 as Int)
-                let starsTitle: String
-                let tonTitle: String
+                var displayCurrencySelector = false
                 switch mode {
-                case .sender:
-                    starsTitle = "Offer Stars"
-                    tonTitle = "Offer TON"
+                case let .sender(_, isFromAdmin):
+                    if isFromAdmin {
+                        displayCurrencySelector = true
+                    } else {
+                        if state.currency == .ton || tonBalanceValue > StarsAmount.zero {
+                            displayCurrencySelector = true
+                        }
+                    }
                 case .admin:
-                    starsTitle = "Request Stars"
-                    tonTitle = "Request TON"
+                    displayCurrencySelector = true
                 }
                 
-                let currencyToggle = currencyToggle.update(
-                    component: TabSelectorComponent(
-                        colors: TabSelectorComponent.Colors(
-                            foreground: theme.list.itemSecondaryTextColor,
-                            selection: theme.list.itemSecondaryTextColor.withMultipliedAlpha(0.15),
-                            simple: true
-                        ),
-                        customLayout: TabSelectorComponent.CustomLayout(
-                            font: Font.medium(14.0),
-                            spacing: 10.0
-                        ),
-                        items: [
-                            TabSelectorComponent.Item(
-                                id: AnyHashable(0),
-                                content: .component(AnyComponent(CurrencyTabItemComponent(icon: .stars, title: starsTitle, theme: theme)))
+                if displayCurrencySelector {
+                    //TODO:localize
+                    let selectedId: AnyHashable = state.currency == .stars ? AnyHashable(0 as Int) : AnyHashable(1 as Int)
+                    let starsTitle: String
+                    let tonTitle: String
+                    switch mode {
+                    case .sender:
+                        starsTitle = "Offer Stars"
+                        tonTitle = "Offer TON"
+                    case .admin:
+                        starsTitle = "Request Stars"
+                        tonTitle = "Request TON"
+                    }
+                    
+                    let currencyToggle = currencyToggle.update(
+                        component: TabSelectorComponent(
+                            colors: TabSelectorComponent.Colors(
+                                foreground: theme.list.itemSecondaryTextColor,
+                                selection: theme.list.itemSecondaryTextColor.withMultipliedAlpha(0.15),
+                                simple: true
                             ),
-                            TabSelectorComponent.Item(
-                                id: AnyHashable(1),
-                                content: .component(AnyComponent(CurrencyTabItemComponent(icon: .ton, title: tonTitle, theme: theme)))
-                            )
-                        ],
-                        selectedId: selectedId,
-                        setSelectedId: { [weak state] id in
-                            guard let state else {
-                                return
+                            customLayout: TabSelectorComponent.CustomLayout(
+                                font: Font.medium(14.0),
+                                spacing: 10.0
+                            ),
+                            items: [
+                                TabSelectorComponent.Item(
+                                    id: AnyHashable(0),
+                                    content: .component(AnyComponent(CurrencyTabItemComponent(icon: .stars, title: starsTitle, theme: theme)))
+                                ),
+                                TabSelectorComponent.Item(
+                                    id: AnyHashable(1),
+                                    content: .component(AnyComponent(CurrencyTabItemComponent(icon: .ton, title: tonTitle, theme: theme)))
+                                )
+                            ],
+                            selectedId: selectedId,
+                            setSelectedId: { [weak state] id in
+                                guard let state else {
+                                    return
+                                }
+                                
+                                let currency: CurrencyAmount.Currency
+                                if id == AnyHashable(0) {
+                                    currency = .stars
+                                } else {
+                                    currency = .ton
+                                }
+                                if state.currency != currency {
+                                    state.currency = currency
+                                    state.amount = nil
+                                }
+                                state.updated(transition: .spring(duration: 0.4))
                             }
-                            
-                            let currency: CurrencyAmount.Currency
-                            if id == AnyHashable(0) {
-                                currency = .stars
-                            } else {
-                                currency = .ton
-                            }
-                            if state.currency != currency {
-                                state.currency = currency
-                                state.amount = nil
-                            }
-                            state.updated(transition: .spring(duration: 0.4))
-                        }
-                    ),
-                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 100.0),
-                    transition: context.transition
-                )
-                contentSize.height -= 17.0
-                let currencyToggleFrame = CGRect(origin: CGPoint(x: floor((context.availableSize.width - currencyToggle.size.width) * 0.5), y: contentSize.height), size: currencyToggle.size)
-                context.add(currencyToggle
-                    .position(currencyToggle.size.centered(in: currencyToggleFrame).center))
-                
-                contentSize.height += currencyToggle.size.height + 29.0
+                        ),
+                        availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 100.0),
+                        transition: context.transition
+                    )
+                    contentSize.height -= 17.0
+                    let currencyToggleFrame = CGRect(origin: CGPoint(x: floor((context.availableSize.width - currencyToggle.size.width) * 0.5), y: contentSize.height), size: currencyToggle.size)
+                    context.add(currencyToggle
+                        .position(currencyToggle.size.centered(in: currencyToggleFrame).center))
+                    
+                    contentSize.height += currencyToggle.size.height + 29.0
+                }
             }
             
             let amountFont = Font.regular(13.0)
@@ -432,14 +459,23 @@ private final class SheetContent: CombinedComponent {
                 ))
             case let .suggestedPost(mode, _, _, _):
                 switch mode {
-                case let .sender(channel):
+                case let .sender(channel, isFromAdmin):
                     //TODO:localize
                     let string: String
-                    switch state.currency {
-                    case .stars:
-                        string = "Choose how many Stars you want to offer \(channel.compactDisplayTitle) to publish this message."
-                    case .ton:
-                        string = "Choose how many TON you want to offer \(channel.compactDisplayTitle) to publish this message."
+                    if isFromAdmin {
+                        switch state.currency {
+                        case .stars:
+                            string = "Choose how many Stars you charge for the message."
+                        case .ton:
+                            string = "Choose how many TON you charge for the message."
+                        }
+                    } else {
+                        switch state.currency {
+                        case .stars:
+                            string = "Choose how many Stars you want to offer \(channel.compactDisplayTitle) to publish this message."
+                        case .ton:
+                            string = "Choose how many TON you want to offer \(channel.compactDisplayTitle) to publish this message."
+                        }
                     }
                     let amountInfoString = NSAttributedString(attributedString: parseMarkdownIntoAttributedString(string, attributes: amountMarkdownAttributes, textAlignment: .natural))
                     amountFooter = AnyComponent(MultilineTextComponent(
@@ -487,7 +523,7 @@ private final class SheetContent: CombinedComponent {
                                     accentColor: theme.list.itemAccentColor,
                                     value: state.amount?.value,
                                     minValue: minAmount?.value,
-                                    maxValue: state.currency == .ton ? nil : maxAmount?.value,
+                                    maxValue: maxAmount?.value,
                                     placeholderText: amountPlaceholder,
                                     labelText: amountLabel,
                                     currency: state.currency,
@@ -595,7 +631,9 @@ private final class SheetContent: CombinedComponent {
                                     let component = state.component
                                     
                                     let theme = environment.theme
-                                    let controller = ChatScheduleTimeController(context: state.context, updatedPresentationData: (state.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), state.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) }), mode: .suggestPost(needsTime: false), style: .default, currentTime: state.timestamp, minimalTime: nil, dismissByTapOutside: true, completion: { [weak state] time in
+                                    
+                                    let minimalTime: Int32 = Int32(Date().timeIntervalSince1970) + 5 * 60 + 10
+                                    let controller = ChatScheduleTimeController(context: state.context, updatedPresentationData: (state.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), state.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) }), mode: .suggestPost(needsTime: false), style: .default, currentTime: state.timestamp, minimalTime: minimalTime, dismissByTapOutside: true, completion: { [weak state] time in
                                         guard let state else {
                                             return
                                         }
@@ -637,7 +675,7 @@ private final class SheetContent: CombinedComponent {
                 //TODO:localize
                 switch mode {
                 case .sender:
-                    if let amount = state.amount {
+                    if let amount = state.amount, amount != .zero {
                         let currencySymbol: String
                         let currencyAmount: String
                         switch state.currency {
@@ -729,6 +767,36 @@ private final class SheetContent: CombinedComponent {
                                 case let .paidMessages(_, _, _, _, completion):
                                     completion(amount.value)
                                 case let .suggestedPost(_, _, _, completion):
+                                    switch state.currency {
+                                    case .stars:
+                                        if let balance = state.starsBalance, amount > balance {
+                                            guard let starsContext = state.context.starsContext else {
+                                                return
+                                            }
+                                            let _ = (state.context.engine.payments.starsTopUpOptions()
+                                            |> take(1)
+                                            |> deliverOnMainQueue).startStandalone(next: { [weak controller, weak state] options in
+                                                guard let controller, let state else {
+                                                    return
+                                                }
+                                                let purchaseController = state.context.sharedContext.makeStarsPurchaseScreen(context: state.context, starsContext: starsContext, options: options, purpose: .generic, completion: { _ in
+                                                })
+                                                controller.push(purchaseController)
+                                            })
+                                            
+                                            return
+                                        }
+                                    case .ton:
+                                        if let balance = state.tonBalance, amount > balance {
+                                            //TODO:localize
+                                            let presentationData = state.context.sharedContext.currentPresentationData.with { $0 }
+                                            controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "Not enough TON", actions: [
+                                                TextAlertAction(type: .defaultAction, title: strings.Common_OK, action: {})
+                                            ]), in: .window(.root))
+                                            return
+                                        }
+                                    }
+                                    
                                     completion(CurrencyAmount(amount: amount, currency: state.currency), state.timestamp)
                                 }
                                 
@@ -971,7 +1039,7 @@ private final class StarsWithdrawSheetComponent: CombinedComponent {
 public final class StarsWithdrawScreen: ViewControllerComponentContainer {
     public enum Mode {
         public enum SuggestedPostMode {
-            case sender(channel: EnginePeer)
+            case sender(channel: EnginePeer, isFromAdmin: Bool)
             case admin
         }
         
@@ -1057,322 +1125,6 @@ public final class StarsWithdrawScreen: ViewControllerComponentContainer {
     }
 }
 
-private let invalidAmountCharacters = CharacterSet.decimalDigits.inverted
-
-private final class AmountFieldTonFormatter: NSObject, UITextFieldDelegate {
-    private struct Representation {
-        private let format: CurrencyFormat
-        private var caretIndex: Int = 0
-        private var wholePart: [Int] = []
-        private var decimalPart: [Int] = []
-
-        init(string: String, format: CurrencyFormat) {
-            self.format = format
-
-            var isDecimalPart = false
-            for c in string {
-                if c.isNumber {
-                    if let value = Int(String(c)) {
-                        if isDecimalPart {
-                            self.decimalPart.append(value)
-                        } else {
-                            self.wholePart.append(value)
-                        }
-                    }
-                } else if String(c) == format.decimalSeparator {
-                    isDecimalPart = true
-                }
-            }
-
-            while self.wholePart.count > 1 {
-                if self.wholePart[0] != 0 {
-                    break
-                } else {
-                    self.wholePart.removeFirst()
-                }
-            }
-            if self.wholePart.isEmpty {
-                self.wholePart = [0]
-            }
-
-            while self.decimalPart.count > 1 {
-                if self.decimalPart[self.decimalPart.count - 1] != 0 {
-                    break
-                } else {
-                    self.decimalPart.removeLast()
-                }
-            }
-            while self.decimalPart.count < format.decimalDigits {
-                self.decimalPart.append(0)
-            }
-
-            self.caretIndex = self.wholePart.count
-        }
-
-        var minCaretIndex: Int {
-            for i in 0 ..< self.wholePart.count {
-                if self.wholePart[i] != 0 {
-                    return i
-                }
-            }
-            return self.wholePart.count
-        }
-
-        mutating func moveCaret(offset: Int) {
-            self.caretIndex = max(self.minCaretIndex, min(self.caretIndex + offset, self.wholePart.count + self.decimalPart.count))
-        }
-
-        mutating func normalize() {
-            while self.wholePart.count > 1 {
-                if self.wholePart[0] != 0 {
-                    break
-                } else {
-                    self.wholePart.removeFirst()
-                    self.moveCaret(offset: -1)
-                }
-            }
-            if self.wholePart.isEmpty {
-                self.wholePart = [0]
-            }
-
-            while self.decimalPart.count < format.decimalDigits {
-                self.decimalPart.append(0)
-            }
-            while self.decimalPart.count > format.decimalDigits {
-                self.decimalPart.removeLast()
-            }
-
-            self.caretIndex = max(self.minCaretIndex, min(self.caretIndex, self.wholePart.count + self.decimalPart.count))
-        }
-
-        mutating func backspace() {
-            if self.caretIndex > self.wholePart.count {
-                let decimalIndex = self.caretIndex - self.wholePart.count
-                if decimalIndex > 0 {
-                    self.decimalPart.remove(at: decimalIndex - 1)
-
-                    self.moveCaret(offset: -1)
-                    self.normalize()
-                }
-            } else {
-                if self.caretIndex > 0 {
-                    self.wholePart.remove(at: self.caretIndex - 1)
-
-                    self.moveCaret(offset: -1)
-                    self.normalize()
-                }
-            }
-        }
-
-        mutating func insert(letter: String) {
-            if letter == "." || letter == "," {
-                if self.caretIndex == self.wholePart.count {
-                    return
-                } else if self.caretIndex < self.wholePart.count {
-                    for i in (self.caretIndex ..< self.wholePart.count).reversed() {
-                        self.decimalPart.insert(self.wholePart[i], at: 0)
-                        self.wholePart.remove(at: i)
-                    }
-                }
-
-                self.normalize()
-            } else if letter.count == 1 && letter[letter.startIndex].isNumber {
-                if let value = Int(letter) {
-                    if self.caretIndex <= self.wholePart.count {
-                        self.wholePart.insert(value, at: self.caretIndex)
-                    } else {
-                        let decimalIndex = self.caretIndex - self.wholePart.count
-                        self.decimalPart.insert(value, at: decimalIndex)
-                    }
-                    self.moveCaret(offset: 1)
-                    self.normalize()
-                }
-            }
-        }
-
-        var string: String {
-            var result = ""
-
-            for digit in self.wholePart {
-                result.append("\(digit)")
-            }
-            result.append(self.format.decimalSeparator)
-            for digit in self.decimalPart {
-                result.append("\(digit)")
-            }
-
-            return result
-        }
-
-        var stringCaretIndex: Int {
-            var logicalIndex = 0
-            var resolvedIndex = 0
-
-            if logicalIndex == self.caretIndex {
-                return resolvedIndex
-            }
-
-            for _ in self.wholePart {
-                logicalIndex += 1
-                resolvedIndex += 1
-
-                if logicalIndex == self.caretIndex {
-                    return resolvedIndex
-                }
-            }
-
-            resolvedIndex += 1
-
-            for _ in self.decimalPart {
-                logicalIndex += 1
-                resolvedIndex += 1
-
-                if logicalIndex == self.caretIndex {
-                    return resolvedIndex
-                }
-            }
-
-            return resolvedIndex
-        }
-
-        var numericalValue: Int64 {
-            var result: Int64 = 0
-
-            for digit in self.wholePart {
-                result *= 10
-                result += Int64(digit)
-            }
-            for digit in self.decimalPart {
-                result *= 10
-                result += Int64(digit)
-            }
-
-            return result
-        }
-    }
-
-    private let format: CurrencyFormat
-    private let currency: String
-    private let maxNumericalValue: Int64
-    private let updated: (Int64) -> Void
-    private let isEmptyUpdated: (Bool) -> Void
-    private let focusUpdated: (Bool) -> Void
-
-    private var representation: Representation
-
-    private var previousResolvedCaretIndex: Int = 0
-    private var ignoreTextSelection: Bool = false
-    private var enableTextSelectionProcessing: Bool = false
-
-    init?(textField: UITextField, currency: String, maxNumericalValue: Int64, initialValue: String, updated: @escaping (Int64) -> Void, isEmptyUpdated: @escaping (Bool) -> Void, focusUpdated: @escaping (Bool) -> Void) {
-        guard let format = CurrencyFormat(currency: currency) else {
-            return nil
-        }
-        self.format = format
-        self.currency = currency
-        self.maxNumericalValue = maxNumericalValue
-        self.updated = updated
-        self.isEmptyUpdated = isEmptyUpdated
-        self.focusUpdated = focusUpdated
-
-        self.representation = Representation(string: initialValue, format: format)
-
-        super.init()
-
-        textField.text = self.representation.string
-        self.previousResolvedCaretIndex = self.representation.stringCaretIndex
-        
-        self.isEmptyUpdated(false)
-    }
-
-    func reset(textField: UITextField, initialValue: String) {
-        self.representation = Representation(string: initialValue, format: self.format)
-        self.resetFromRepresentation(textField: textField, notifyUpdated: false)
-    }
-
-    private func resetFromRepresentation(textField: UITextField, notifyUpdated: Bool) {
-        self.ignoreTextSelection = true
-
-        if self.representation.numericalValue > self.maxNumericalValue {
-            self.representation = Representation(string: formatCurrencyAmountCustom(self.maxNumericalValue, currency: self.currency).0, format: self.format)
-        }
-
-        textField.text = self.representation.string
-        self.previousResolvedCaretIndex = self.representation.stringCaretIndex
-
-        if self.enableTextSelectionProcessing {
-            let stringCaretIndex = self.representation.stringCaretIndex
-            if let caretPosition = textField.position(from: textField.beginningOfDocument, offset: stringCaretIndex) {
-                textField.selectedTextRange = textField.textRange(from: caretPosition, to: caretPosition)
-            }
-        }
-        self.ignoreTextSelection = false
-
-        if notifyUpdated {
-            self.updated(self.representation.numericalValue)
-        }
-    }
-
-    @objc public func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
-        if string.count == 1 {
-            self.representation.insert(letter: string)
-            self.resetFromRepresentation(textField: textField, notifyUpdated: true)
-        } else if string.count == 0 {
-            self.representation.backspace()
-            self.resetFromRepresentation(textField: textField, notifyUpdated: true)
-        }
-
-        return false
-    }
-
-    @objc public func textFieldShouldReturn(_ textField: UITextField) -> Bool {
-        return false
-    }
-
-    @objc public func textFieldDidBeginEditing(_ textField: UITextField) {
-        self.enableTextSelectionProcessing = true
-        self.focusUpdated(true)
-
-        let stringCaretIndex = self.representation.stringCaretIndex
-        self.previousResolvedCaretIndex = stringCaretIndex
-        if let caretPosition = textField.position(from: textField.beginningOfDocument, offset: stringCaretIndex) {
-            self.ignoreTextSelection = true
-            textField.selectedTextRange = textField.textRange(from: caretPosition, to: caretPosition)
-            DispatchQueue.main.async {
-                textField.selectedTextRange = textField.textRange(from: caretPosition, to: caretPosition)
-                self.ignoreTextSelection = false
-            }
-        }
-    }
-
-    @objc public func textFieldDidChangeSelection(_ textField: UITextField) {
-        if self.ignoreTextSelection {
-            return
-        }
-        if !self.enableTextSelectionProcessing {
-            return
-        }
-
-        if let selectedTextRange = textField.selectedTextRange {
-            let index = textField.offset(from: textField.beginningOfDocument, to: selectedTextRange.end)
-            if self.previousResolvedCaretIndex != index {
-                self.representation.moveCaret(offset: self.previousResolvedCaretIndex < index ? 1 : -1)
-
-                let stringCaretIndex = self.representation.stringCaretIndex
-                self.previousResolvedCaretIndex = stringCaretIndex
-                if let caretPosition = textField.position(from: textField.beginningOfDocument, offset: stringCaretIndex) {
-                        textField.selectedTextRange = textField.textRange(from: caretPosition, to: caretPosition)
-                }
-            }
-        }
-    }
-
-    @objc public func textFieldDidEndEditing(_ textField: UITextField) {
-        self.enableTextSelectionProcessing = false
-        self.focusUpdated(false)
-    }
-}
-
 private final class AmountFieldStarsFormatter: NSObject, UITextFieldDelegate {
     private let currency: CurrencyAmount.Currency
     private let dateTimeFormat: PresentationDateTimeFormat
@@ -1429,9 +1181,14 @@ private final class AmountFieldStarsFormatter: NSObject, UITextFieldDelegate {
                     // Convert and combine
                     if let whole = Int64(wholeSlice),
                        let frac  = Int64(fractionStr) {
+                        
+                        let whole = min(whole, Int64.max / scale)
+                        
                         amount = whole * scale + frac
                     }
                 } else if let whole = Int64(text) {   // string had no dot at all
+                    let whole = min(whole, Int64.max / scale)
+                    
                     amount = whole * scale
                 }
             }
@@ -1479,8 +1236,21 @@ private final class AmountFieldStarsFormatter: NSObject, UITextFieldDelegate {
                 return false
             }
         case .ton:
+            var fixedText = false
+            if let index = newText.firstIndex(of: ".") {
+                let fractionalString = newText[newText.index(after: index)...]
+                if fractionalString.count > 2 {
+                    newText = String(newText[newText.startIndex ..< newText.index(index, offsetBy: 3)])
+                    fixedText = true
+                }
+            }
+            
             if (newText == "0" && !acceptZero) || (newText.count > 1 && newText.hasPrefix("0") && !newText.hasPrefix("0.")) {
                 newText.removeFirst()
+                fixedText = true
+            }
+            
+            if fixedText {
                 textField.text = newText
                 self.onTextChanged(text: newText)
                 return false
@@ -1493,7 +1263,7 @@ private final class AmountFieldStarsFormatter: NSObject, UITextFieldDelegate {
             case .stars:
                 textField.text = "\(self.maxValue)"
             case .ton:
-                textField.text = "\(formatTonAmountText(self.maxValue, dateTimeFormat: self.dateTimeFormat))"
+                textField.text = "\(formatTonAmountText(self.maxValue, dateTimeFormat: PresentationDateTimeFormat(timeFormat: self.dateTimeFormat.timeFormat, dateFormat: self.dateTimeFormat.dateFormat, dateSeparator: "", dateSuffix: "", requiresFullYear: false, decimalSeparator: ".", groupingSeparator: "")))"
             }
             self.onTextChanged(text: self.textField.text ?? "")
             self.animateError()
@@ -1648,13 +1418,13 @@ private final class AmountFieldComponent: Component {
             
             self.textField.textColor = component.textColor
             if self.component?.currency != component.currency {
-                if let value = component.value {
+                if let value = component.value, value != .zero {
                     var text = ""
                     switch component.currency {
                     case .stars:
                         text = "\(value)"
                     case .ton:
-                        text = "\(formatTonAmountText(value, dateTimeFormat: component.dateTimeFormat))"
+                        text = "\(formatTonAmountText(value, dateTimeFormat: PresentationDateTimeFormat(timeFormat: component.dateTimeFormat.timeFormat, dateFormat: component.dateTimeFormat.dateFormat, dateSeparator: "", dateSuffix: "", requiresFullYear: false, decimalSeparator: ".", groupingSeparator: "")))"
                     }
                     self.textField.text = text
                 } else {
@@ -1705,7 +1475,6 @@ private final class AmountFieldComponent: Component {
                     }
                     self.tonFormatter = nil
                     self.textField.delegate = self.starsFormatter
-                    self.textField.text = ""
                 case .ton:
                     self.textField.keyboardType = .numbersAndPunctuation
                     if self.tonFormatter == nil {
@@ -1714,7 +1483,7 @@ private final class AmountFieldComponent: Component {
                             currency: component.currency,
                             dateTimeFormat: component.dateTimeFormat,
                             minValue: component.minValue ?? 0,
-                            maxValue: component.maxValue ?? Int64.max,
+                            maxValue: component.maxValue ?? 10000000,
                             updated: { [weak self] value in
                                 guard let self, let component = self.component else {
                                     return

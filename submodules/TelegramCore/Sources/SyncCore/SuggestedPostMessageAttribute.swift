@@ -70,7 +70,7 @@ extension SuggestedPostMessageAttribute {
         }
     }
     
-    func apiSuggestedPost() -> Api.SuggestedPost {
+    func apiSuggestedPost(fixMinTime: Int32?) -> Api.SuggestedPost {
         var flags: Int32 = 0
         if let state = self.state {
             switch state {
@@ -80,7 +80,14 @@ extension SuggestedPostMessageAttribute {
                 flags |= 1 << 2
             }
         }
-        if self.timestamp != nil {
+        var timestamp = self.timestamp
+        if let timestampValue = timestamp, let fixMinTime {
+            if timestampValue < fixMinTime {
+                timestamp = fixMinTime
+            }
+        }
+        
+        if timestamp != nil {
             flags |= 1 << 0
         }
         var price: Api.StarsAmount?
@@ -88,7 +95,7 @@ extension SuggestedPostMessageAttribute {
             flags |= 1 << 3
             price = amount.apiAmount
         }
-        return .suggestedPost(flags: flags, price: price, scheduleDate: self.timestamp)
+        return .suggestedPost(flags: flags, price: price, scheduleDate: timestamp)
     }
 }
 

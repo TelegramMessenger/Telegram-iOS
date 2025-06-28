@@ -360,6 +360,7 @@ public final class ChatSideTopicsPanel: Component {
             }
             
             func update(component: VerticalItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+                let previousComponent = self.component
                 self.component = component
                 
                 self.tapRecognizer?.isEnabled = component.action != nil
@@ -381,12 +382,12 @@ public final class ChatSideTopicsPanel: Component {
                 if case let .forum(topicId) = component.item.item.id {
                     if topicId != 1, let threadData = component.item.item.threadData {
                         if let fileId = threadData.info.icon, fileId != 0 {
-                            avatarIconContent = .animation(content: .customEmoji(fileId: fileId), size: iconSize, placeholderColor: component.theme.list.mediaPlaceholderColor, themeColor: component.theme.list.itemAccentColor, loopMode: .count(0))
+                            avatarIconContent = .animation(content: .customEmoji(fileId: fileId), size: iconSize, placeholderColor: component.theme.list.mediaPlaceholderColor, themeColor: component.isSelected ? component.theme.rootController.navigationBar.accentTextColor : component.theme.rootController.navigationBar.controlColor, loopMode: .count(0))
                         } else {
                             avatarIconContent = .topic(title: String(threadData.info.title.prefix(1)), color: threadData.info.iconColor, size: iconSize)
                         }
                     } else {
-                        avatarIconContent = .image(image: PresentationResourcesChatList.generalTopicIcon(component.theme), tintColor: component.theme.rootController.navigationBar.secondaryTextColor)
+                        avatarIconContent = .image(image: PresentationResourcesChatList.generalTopicTemplateIcon(component.theme), tintColor: component.isSelected ? component.theme.rootController.navigationBar.accentTextColor : component.theme.rootController.navigationBar.controlColor)
                     }
                 }
                 
@@ -406,8 +407,14 @@ public final class ChatSideTopicsPanel: Component {
                         icon = ComponentView()
                         self.icon = icon
                     }
+                    
+                    var iconTransition = transition
+                    if iconTransition.animation.isImmediate, let previousComponent, previousComponent.isSelected != component.isSelected {
+                        iconTransition = .easeInOut(duration: 0.2)
+                    }
+                    
                     let _ = icon.update(
-                        transition: .immediate,
+                        transition: iconTransition,
                         component: AnyComponent(avatarIconComponent),
                         environment: {},
                         containerSize: iconSize
@@ -813,12 +820,12 @@ public final class ChatSideTopicsPanel: Component {
                 if case let .forum(topicId) = component.item.item.id {
                     if topicId != 1, let threadData = component.item.item.threadData {
                         if let fileId = threadData.info.icon, fileId != 0 {
-                            avatarIconContent = .animation(content: .customEmoji(fileId: fileId), size: iconSize, placeholderColor: component.theme.list.mediaPlaceholderColor, themeColor: component.theme.list.itemAccentColor, loopMode: .count(0))
+                            avatarIconContent = .animation(content: .customEmoji(fileId: fileId), size: iconSize, placeholderColor: component.theme.list.mediaPlaceholderColor, themeColor: component.isSelected ? component.theme.rootController.navigationBar.accentTextColor : component.theme.rootController.navigationBar.controlColor, loopMode: .count(0))
                         } else {
                             avatarIconContent = .topic(title: String(threadData.info.title.prefix(1)), color: threadData.info.iconColor, size: iconSize)
                         }
                     } else {
-                        avatarIconContent = .image(image: PresentationResourcesChatList.generalTopicIcon(component.theme), tintColor: component.theme.rootController.navigationBar.secondaryTextColor)
+                        avatarIconContent = .image(image: PresentationResourcesChatList.generalTopicTemplateIcon(component.theme), tintColor: component.isSelected ? component.theme.rootController.navigationBar.accentTextColor : component.theme.rootController.navigationBar.controlColor)
                     }
                 }
                 
@@ -1845,7 +1852,7 @@ public final class ChatSideTopicsPanel: Component {
             case .side:
                 scrollSize = CGSize(width: availableSize.width, height: availableSize.height - directionContainerInset)
                 scrollFrame = CGRect(origin: CGPoint(x: 0.0, y: directionContainerInset), size: scrollSize)
-                listContentInsets = UIEdgeInsets(top: 8.0, left: 0.0, bottom: 8.0, right: 0.0)
+                listContentInsets = UIEdgeInsets(top: 8.0 + environment.insets.top, left: 0.0, bottom: 8.0 + environment.insets.bottom, right: 0.0)
             case .top:
                 scrollSize = CGSize(width: availableSize.width - directionContainerInset, height: availableSize.height)
                 scrollFrame = CGRect(origin: CGPoint(x: directionContainerInset, y: 0.0), size: scrollSize)
