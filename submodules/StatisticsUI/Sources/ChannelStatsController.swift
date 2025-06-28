@@ -1178,6 +1178,10 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else if transaction.flags.contains(.isRefund) {
                     title = NSAttributedString(string: presentationData.strings.Monetization_Transaction_Refund, font: font, textColor: theme.list.itemPrimaryTextColor)
                     detailText = stringForMediumCompactDate(timestamp: transaction.date, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
+                } else if case .peer = transaction.peer {
+                    return StarsTransactionItem(context: arguments.context, presentationData: presentationData, transaction: transaction, action: {
+                        arguments.openStarsTransaction(transaction)
+                    }, sectionId: self.section, style: .blocks)
                 } else {
                     title = NSAttributedString()
                     detailText = ""
