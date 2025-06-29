@@ -435,7 +435,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                         guard let strongSelf = self, let message = strongSelf.message else {
                             return
                         }
-                        strongSelf.footerContentNode.openActionOptions?(.url(url: payload, concealed: true), message)
+                        strongSelf.footerContentNode.openActionOptions?(.url(url: payload, concealed: true, dismiss: true), message)
                     }
                     recognizedContentNode.alpha = 0.0
                     recognizedContentNode.frame = CGRect(origin: CGPoint(), size: size)
