@@ -1511,7 +1511,8 @@ public struct StarsSubscriptionConfiguration {
             channelMessageSuggestionStarsCommissionPermille: 850,
             channelMessageSuggestionTonCommissionPermille: 850,
             channelMessageSuggestionMaxStarsAmount: 10000,
-            channelMessageSuggestionMaxTonAmount: 10000000000000
+            channelMessageSuggestionMaxTonAmount: 10000000000000,
+            channelMessageSuggestionMinStarsAmount: 5
         )
     }
         
@@ -1528,6 +1529,7 @@ public struct StarsSubscriptionConfiguration {
     public let channelMessageSuggestionTonCommissionPermille: Int32
     public let channelMessageSuggestionMaxStarsAmount: Int64
     public let channelMessageSuggestionMaxTonAmount: Int64
+    public let channelMessageSuggestionMinStarsAmount: Int64
     
     fileprivate init(
         maxFee: Int64,
@@ -1542,7 +1544,8 @@ public struct StarsSubscriptionConfiguration {
         channelMessageSuggestionStarsCommissionPermille: Int32,
         channelMessageSuggestionTonCommissionPermille: Int32,
         channelMessageSuggestionMaxStarsAmount: Int64,
-        channelMessageSuggestionMaxTonAmount: Int64
+        channelMessageSuggestionMaxTonAmount: Int64,
+        channelMessageSuggestionMinStarsAmount: Int64
     ) {
         self.maxFee = maxFee
         self.usdWithdrawRate = usdWithdrawRate
@@ -1557,6 +1560,7 @@ public struct StarsSubscriptionConfiguration {
         self.channelMessageSuggestionTonCommissionPermille = channelMessageSuggestionTonCommissionPermille
         self.channelMessageSuggestionMaxStarsAmount = channelMessageSuggestionMaxStarsAmount
         self.channelMessageSuggestionMaxTonAmount = channelMessageSuggestionMaxTonAmount
+        self.channelMessageSuggestionMinStarsAmount = channelMessageSuggestionMinStarsAmount
     }
     
     public static func with(appConfiguration: AppConfiguration) -> StarsSubscriptionConfiguration {
@@ -1576,6 +1580,8 @@ public struct StarsSubscriptionConfiguration {
             let channelMessageSuggestionMaxStarsAmount = (data["stars_suggested_post_amount_max"] as? Double).flatMap(Int64.init) ?? StarsSubscriptionConfiguration.defaultValue.channelMessageSuggestionMaxStarsAmount
             let channelMessageSuggestionMaxTonAmount = (data["ton_suggested_post_amount_max"] as? Double).flatMap(Int64.init) ?? StarsSubscriptionConfiguration.defaultValue.channelMessageSuggestionMaxTonAmount
             
+            let channelMessageSuggestionMinStarsAmount = (data["stars_suggested_post_amount_min"] as? Double).flatMap(Int64.init) ?? StarsSubscriptionConfiguration.defaultValue.channelMessageSuggestionMinStarsAmount
+            
             return StarsSubscriptionConfiguration(
                 maxFee: maxFee,
                 usdWithdrawRate: usdWithdrawRate,
@@ -1589,7 +1595,8 @@ public struct StarsSubscriptionConfiguration {
                 channelMessageSuggestionStarsCommissionPermille: channelMessageSuggestionStarsCommissionPermille,
                 channelMessageSuggestionTonCommissionPermille: channelMessageSuggestionTonCommissionPermille,
                 channelMessageSuggestionMaxStarsAmount: channelMessageSuggestionMaxStarsAmount,
-                channelMessageSuggestionMaxTonAmount: channelMessageSuggestionMaxTonAmount
+                channelMessageSuggestionMaxTonAmount: channelMessageSuggestionMaxTonAmount,
+                channelMessageSuggestionMinStarsAmount: channelMessageSuggestionMinStarsAmount
             )
         } else {
             return .defaultValue

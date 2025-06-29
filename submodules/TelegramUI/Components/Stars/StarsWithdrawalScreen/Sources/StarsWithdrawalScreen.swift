@@ -157,6 +157,7 @@ private final class SheetContent: CombinedComponent {
             var amountRightLabel: String?
             
             let minAmount: StarsAmount?
+            var allowZero = false
             let maxAmount: StarsAmount?
             
             let withdrawConfiguration = StarsWithdrawConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
@@ -222,13 +223,14 @@ private final class SheetContent: CombinedComponent {
                 case .stars:
                     amountTitle = "ENTER A PRICE IN STARS"
                     maxAmount = StarsAmount(value: resaleConfiguration.channelMessageSuggestionMaxStarsAmount, nanos: 0)
+                    minAmount = StarsAmount(value: resaleConfiguration.channelMessageSuggestionMinStarsAmount, nanos: 0)
                 case .ton:
                     amountTitle = "ENTER A PRICE IN TON"
                     maxAmount = StarsAmount(value: resaleConfiguration.channelMessageSuggestionMaxTonAmount, nanos: 0)
+                    minAmount = StarsAmount(value: 0, nanos: 0)
                 }
                 amountPlaceholder = "Price"
-                
-                minAmount = StarsAmount(value: 0, nanos: 0)
+                allowZero = true
                 
                 if let usdWithdrawRate = withdrawConfiguration.usdWithdrawRate, let tonUsdRate = withdrawConfiguration.tonUsdRate, let amount = state.amount, amount > StarsAmount.zero {
                     switch state.currency {
@@ -535,6 +537,7 @@ private final class SheetContent: CombinedComponent {
                                     accentColor: theme.list.itemAccentColor,
                                     value: state.amount?.value,
                                     minValue: minAmount?.value,
+                                    allowZero: allowZero,
                                     maxValue: maxAmount?.value,
                                     placeholderText: amountPlaceholder,
                                     labelText: amountLabel,
@@ -762,8 +765,8 @@ private final class SheetContent: CombinedComponent {
                         if let controller = controller() as? StarsWithdrawScreen, let state {
                             let amount = state.amount ?? StarsAmount.zero
                             
-                            if let minAmount, amount < minAmount {
-                                controller.presentMinAmountTooltip(minAmount.value)
+                            if let minAmount, amount < minAmount, (!allowZero || amount != .zero) {
+                                controller.presentMinAmountTooltip(minAmount.value, currency: state.currency)
                             } else {
                                 switch state.mode {
                                 case let .withdraw(_, completion):
@@ -1113,12 +1116,30 @@ public final class StarsWithdrawScreen: ViewControllerComponentContainer {
         }
     }
     
-    func presentMinAmountTooltip(_ minAmount: Int64) {
+    func presentMinAmountTooltip(_ minAmount: Int64, currency: CurrencyAmount.Currency) {
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         var text = presentationData.strings.Stars_Withdraw_Withdraw_ErrorMinimum(presentationData.strings.Stars_Withdraw_Withdraw_ErrorMinimum_Stars(Int32(minAmount))).string
         if case .starGiftResell = self.mode {
             //TODO:localize
             text = "You cannot sell gift for less than \(presentationData.strings.Stars_Withdraw_Withdraw_ErrorMinimum_Stars(Int32(minAmount)))."
+        } else if case let .suggestedPost(mode, _, _, _) = self.mode {
+            let resaleConfiguration = StarsSubscriptionConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
+            switch currency {
+            case .stars:
+                //TODO:localize
+                switch mode {
+                case .admin:
+                    text = "You cannot request less than \(resaleConfiguration.channelMessageSuggestionMinStarsAmount) Stars."
+                case let .sender(_, isFromAdmin):
+                    if isFromAdmin {
+                        text = "You cannot request less than \(resaleConfiguration.channelMessageSuggestionMinStarsAmount) Stars."
+                    } else {
+                        text = "You cannot offer less than \(resaleConfiguration.channelMessageSuggestionMinStarsAmount) Stars."
+                    }
+                }
+            case .ton:
+                break
+            }
         }
         
         let resultController = UndoOverlayController(
@@ -1153,17 +1174,19 @@ private final class AmountFieldStarsFormatter: NSObject, UITextFieldDelegate {
     
     private let textField: UITextField
     private let minValue: Int64
+    private let allowZero: Bool
     private let maxValue: Int64
     private let updated: (Int64) -> Void
     private let isEmptyUpdated: (Bool) -> Void
     private let animateError: () -> Void
     private let focusUpdated: (Bool) -> Void
 
-    init?(textField: UITextField, currency: CurrencyAmount.Currency, dateTimeFormat: PresentationDateTimeFormat, minValue: Int64, maxValue: Int64, updated: @escaping (Int64) -> Void, isEmptyUpdated: @escaping (Bool) -> Void, animateError: @escaping () -> Void, focusUpdated: @escaping (Bool) -> Void) {
+    init?(textField: UITextField, currency: CurrencyAmount.Currency, dateTimeFormat: PresentationDateTimeFormat, minValue: Int64, allowZero: Bool, maxValue: Int64, updated: @escaping (Int64) -> Void, isEmptyUpdated: @escaping (Bool) -> Void, animateError: @escaping () -> Void, focusUpdated: @escaping (Bool) -> Void) {
         self.textField = textField
         self.currency = currency
         self.dateTimeFormat = dateTimeFormat
         self.minValue = minValue
+        self.allowZero = allowZero
         self.maxValue = maxValue
         self.updated = updated
         self.isEmptyUpdated = isEmptyUpdated
@@ -1307,6 +1330,7 @@ private final class AmountFieldComponent: Component {
     let accentColor: UIColor
     let value: Int64?
     let minValue: Int64?
+    let allowZero: Bool
     let maxValue: Int64?
     let placeholderText: String
     let labelText: String?
@@ -1322,6 +1346,7 @@ private final class AmountFieldComponent: Component {
         accentColor: UIColor,
         value: Int64?,
         minValue: Int64?,
+        allowZero: Bool,
         maxValue: Int64?,
         placeholderText: String,
         labelText: String?,
@@ -1336,6 +1361,7 @@ private final class AmountFieldComponent: Component {
         self.accentColor = accentColor
         self.value = value
         self.minValue = minValue
+        self.allowZero = allowZero
         self.maxValue = maxValue
         self.placeholderText = placeholderText
         self.labelText = labelText
@@ -1362,6 +1388,9 @@ private final class AmountFieldComponent: Component {
             return false
         }
         if lhs.minValue != rhs.minValue {
+            return false
+        }
+        if lhs.allowZero != rhs.allowZero {
             return false
         }
         if lhs.maxValue != rhs.maxValue {
@@ -1470,6 +1499,7 @@ private final class AmountFieldComponent: Component {
                             currency: component.currency,
                             dateTimeFormat: component.dateTimeFormat,
                             minValue: component.minValue ?? 0,
+                            allowZero: component.allowZero,
                             maxValue: component.maxValue ?? Int64.max,
                             updated: { [weak self] value in
                                 guard let self, let component = self.component else {
@@ -1505,6 +1535,7 @@ private final class AmountFieldComponent: Component {
                             currency: component.currency,
                             dateTimeFormat: component.dateTimeFormat,
                             minValue: component.minValue ?? 0,
+                            allowZero: component.allowZero,
                             maxValue: component.maxValue ?? 10000000,
                             updated: { [weak self] value in
                                 guard let self, let component = self.component else {
