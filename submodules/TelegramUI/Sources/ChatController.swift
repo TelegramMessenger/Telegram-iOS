@@ -2394,7 +2394,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         } else {
                             var textString: String
                             if isAdmin {
-                                textString = strongSelf.presentationData.strings.Chat_PostSuggestion_Approve_AdminConfirmationText(message.author.flatMap(EnginePeer.init))?.compactDisplayTitle ?? "").string
+                                textString = strongSelf.presentationData.strings.Chat_PostSuggestion_Approve_AdminConfirmationText(message.author.flatMap(EnginePeer.init)?.compactDisplayTitle ?? "").string
                                 
                                 if let funds {
                                     var commissionValue: String
@@ -2410,10 +2410,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     switch funds.amount.currency {
                                     case .stars:
                                         let displayAmount = funds.amount.amount.totalValue * Double(funds.commissionPermille) / 1000.0
-                                        textString += strongSelf.presentationData.strings.Chat.PostSuggestion_Approve_AdminConfirmationPriceStars("\(displayAmount)", "\(commissionValue)")
+                                        textString += strongSelf.presentationData.strings.Chat_PostSuggestion_Approve_AdminConfirmationPriceStars("\(displayAmount)", "\(commissionValue)").string
                                     case .ton:
                                         let displayAmount = Double(funds.amount.amount.value) / 1000000000.0 * Double(funds.commissionPermille) / 1000.0
-                                        textString += strongSelf.presentationData.strings.Chat.PostSuggestion_Approve_AdminConfirmationPriceTon("\(displayAmount)", "\(commissionValue)")
+                                        textString += strongSelf.presentationData.strings.Chat_PostSuggestion_Approve_AdminConfirmationPriceTon("\(displayAmount)", "\(commissionValue)").string
                                     }
                                 }
                             } else {
