@@ -333,6 +333,11 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
                         
             let sideInset: CGFloat = 16.0
                                     
+            var maxWidth = min(size.width, size.height) - sideInset * 2.0
+            if case .regular = metrics.widthClass {
+                maxWidth = 414.0
+            }
+            
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let adSize = self.adView.update(
                 transition: .immediate,
@@ -374,7 +379,7 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
                     )
                 ),
                 environment: {},
-                containerSize: CGSize(width: size.width - sideInset * 2.0, height: 200.0)
+                containerSize: CGSize(width: maxWidth, height: 200.0)
             )
             if let adView = self.adView.view {
                 if adView.superview == nil {
