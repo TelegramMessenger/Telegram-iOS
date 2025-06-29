@@ -1447,7 +1447,7 @@ public struct PresentationResourcesChat {
     
     public static func chatServiceMessageTodoAppendedIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatServiceMessageTodoAppendedIcon.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/ServiceTodoIncompleted"), color: .white)
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/ServiceTodoAppended"), color: .white)
         })
     }
     

@@ -442,7 +442,7 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 for i in 0 ..< labelRects.count {
-                    labelRects[i] = labelRects[i].insetBy(dx: -6.0, dy: floor((labelRects[i].height - 22.0) / 2.0))
+                    labelRects[i] = labelRects[i].insetBy(dx: -7.0, dy: floor((labelRects[i].height - 22.0) / 2.0))
                     labelRects[i].size.height = 22.0
                     labelRects[i].origin.x = floor((labelLayout.size.width - labelRects[i].width) / 2.0)
                 }
@@ -458,7 +458,7 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                     if let (currentOffset, currentImage, currentRects) = cachedMaskBackgroundImage, currentRects == labelRects {
                         backgroundMaskImage = (currentOffset, currentImage)
                     } else {
-                        backgroundMaskImage = LinkHighlightingNode.generateImage(color: .white, inset: 0.0, innerRadius: 10.0, outerRadius: 10.0, rects: labelRects, useModernPathCalculation: false)
+                        backgroundMaskImage = LinkHighlightingNode.generateImage(color: .white, inset: 0.0, innerRadius: 11.0, outerRadius: 11.0, rects: labelRects, useModernPathCalculation: false)
                         backgroundMaskUpdated = true
                     }
                 }

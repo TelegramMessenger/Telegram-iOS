@@ -28,6 +28,7 @@ import TextFormat
 import TextFieldComponent
 import ListComposePollOptionComponent
 import Markdown
+import PresentationDataUtils
 
 final class ComposeTodoScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -1750,10 +1751,30 @@ public class ComposeTodoScreen: ViewControllerComponentContainer, AttachmentCont
     }
     
     public func requestDismiss(completion: @escaping () -> Void) {
-        completion()
+        guard let componentView = self.node.hostView.componentView as? ComposeTodoScreenComponent.View else {
+            return
+        }
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        if let input = componentView.validatedInput(), !input.text.isEmpty || !input.items.isEmpty {
+            let text = presentationData.strings.Attachment_DiscardTodoAlertText
+            let controller = textAlertController(context: self.context, title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Attachment_CancelSelectionAlertNo, action: {
+            }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Attachment_CancelSelectionAlertYes, action: {
+                completion()
+            })])
+            self.present(controller, in: .window(.root))
+        } else {
+            completion()
+        }
     }
     
     public func shouldDismissImmediately() -> Bool {
-        return true
+        guard let componentView = self.node.hostView.componentView as? ComposeTodoScreenComponent.View else {
+            return true
+        }
+        if let input = componentView.validatedInput(), !input.text.isEmpty || !input.items.isEmpty {
+            return false
+        } else {
+            return true
+        }
     }
 }

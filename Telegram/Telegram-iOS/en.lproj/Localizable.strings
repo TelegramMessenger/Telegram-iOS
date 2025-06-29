@@ -14504,4 +14504,6 @@ Sorry for the inconvenience.";
 "Bot.AddToGroup.Title" = "Add to Group";
 "Bot.AddToChannel.Title" = "Add to Channel";
 
-"ScheduledMessages.TodoUnavailable" = "Voting will become available after the message is published.";
+"ScheduledMessages.TodoUnavailable" = "Completing tasks will become available after the message is published.";
+
+"Attachment.DiscardTodoAlertText" = "Discard checklist items?";

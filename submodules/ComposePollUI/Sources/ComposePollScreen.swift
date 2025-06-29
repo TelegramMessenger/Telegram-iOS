@@ -1834,7 +1834,7 @@ public class ComposePollScreen: ViewControllerComponentContainer, AttachmentCont
     public func prepareForReuse() {
     }
     
-    public func requestDismiss(completion: @escaping () -> Void) {
+    public func requestDismiss(completion: @escaping () -> Void) {        
         completion()
     }
     

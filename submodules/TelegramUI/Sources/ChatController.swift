@@ -978,6 +978,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         } else if let incompletedTaskId = incompleted.first {
                                             todoTaskId = incompletedTaskId
                                         }
+                                    } else if case let .todoAppendTasks(tasks) = action.action {
+                                        if let task = tasks.first {
+                                            todoTaskId = task.id
+                                        }
                                     }
                                     self.navigateToMessage(from: message.id, to: .id(attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.isQuote ? attribute.quote.flatMap { quote in NavigateToMessageParams.Quote(string: quote.text, offset: quote.offset) } : nil, todoTaskId: todoTaskId)))
                                     break

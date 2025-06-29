@@ -2132,7 +2132,19 @@ extension ChatControllerImpl {
                 guard let self else {
                     return
                 }
-                if canEdit {
+                func areItemsOnlyAppended(existing: [TelegramMediaTodo.Item], updated: [TelegramMediaTodo.Item]) -> Bool {
+                    guard updated.count >= existing.count else {
+                        return false
+                    }
+                    for (index, existingItem) in existing.enumerated() {
+                        if index >= updated.count || updated[index] != existingItem {
+                            return false
+                        }
+                    }
+                    return true
+                }
+                
+                if canEdit && !areItemsOnlyAppended(existing: existingTodo.items, updated: todo.items) {
                     let _ = self.context.engine.messages.requestEditMessage(
                         messageId: messageId,
                         text: "",
