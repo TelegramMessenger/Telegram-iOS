@@ -222,14 +222,12 @@ extension ChatControllerImpl {
             
             self.canReadHistory.set(false)
             
-            //TODO:localize
             var sources: [ContextController.Source] = []
             sources.append(
                 ContextController.Source(
                     id: AnyHashable(OptionsId.item),
                     title: self.presentationData.strings.Chat_Todo_ContextMenu_SectionTask,
                     footer: self.presentationData.strings.Chat_Todo_ContextMenu_SectionsInfo,
-                    //source: .extracted(ChatMessageLinkContextExtractedContentSource(chatNode: self.chatDisplayNode, contentNode: contentNode)),
                     source: .extracted(ChatTodoItemContextExtractedContentSource(chatNode: self.chatDisplayNode, contentNode: contentNode)),
                     items: .single(ContextController.Items(content: .list(items)))
                 )

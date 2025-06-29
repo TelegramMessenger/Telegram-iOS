@@ -376,6 +376,7 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
     private var backgroundWallpaperNode: ChatMessageBubbleBackdrop?
     private var backgroundNode: ChatMessageBackground?
     private var extractedRadioView: UIView?
+    private var extractedIconView: UIView?
     private var extractedAvatarView: UIView?
     private var extractedTitleNode: TextNodeWithEntities?
     private var extractedNameView: UIView?
@@ -549,6 +550,11 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
 //                    self.backgroundWallpaperNode?.update(rect: mappedRect, within: containerSize)
 //                }
                 
+                if let extractedIconView = self.iconNode?.view.snapshotContentTree() {
+                    self.extractedIconView = extractedIconView
+                    self.contextSourceNode.contentNode.view.addSubview(extractedIconView)
+                }
+                
                 if let extractedRadioView = self.radioNode?.view.snapshotContentTree() {
                     self.extractedRadioView = extractedRadioView
                     self.contextSourceNode.contentNode.view.addSubview(extractedRadioView)
@@ -585,6 +591,8 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
                     transition.updateAlpha(node: backgroundNode, alpha: 0.0, completion: { [weak backgroundNode] _ in
                         self.extractedRadioView?.removeFromSuperview()
                         self.extractedRadioView = nil
+                        self.extractedIconView?.removeFromSuperview()
+                        self.extractedIconView = nil
                         self.extractedAvatarView?.removeFromSuperview()
                         self.extractedAvatarView = nil
                         self.extractedTitleNode?.textNode.removeFromSupernode()
@@ -737,7 +745,7 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
                     } else {
                         titleNodeFrame = CGRect(origin: CGPoint(x: leftInset, y: 12.0), size: titleLayout.size)
                     }
-                    if let _ = completion, canMark && todo.flags.contains(.othersCanComplete) {
+                    if let _ = completion, todo.flags.contains(.othersCanComplete) {
                         titleNodeFrame = titleNodeFrame.offsetBy(dx: 0.0, dy: -6.0)
                     }
                     

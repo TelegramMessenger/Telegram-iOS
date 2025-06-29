@@ -90,9 +90,11 @@ final class ChatMessageContextExtractedContentSource: ContextExtractedContentSou
             if item.content.contains(where: { $0.0.stableId == self.message.stableId }), let contentNode = itemNode.getMessageContextSourceNode(stableId: self.selectAll ? nil : self.message.stableId) {
                 result = ContextControllerTakeViewInfo(containingItem: .node(contentNode), contentAreaInScreenSpace: chatNode.convert(chatNode.frameForVisibleArea(), to: nil))
                 
-                if self.snapshot, let snapshotView = contentNode.contentNode.view.snapshotContentTree(unhide: false, keepPortals: true, keepTransform: true) {
-                    contentNode.view.superview?.addSubview(snapshotView)
-                    self.snapshotView = snapshotView
+                Queue.mainQueue().justDispatch {
+                    if self.snapshot, let snapshotView = contentNode.contentNode.view.snapshotContentTree(unhide: false, keepPortals: true, keepTransform: true) {
+                        contentNode.view.superview?.addSubview(snapshotView)
+                        self.snapshotView = snapshotView
+                    }
                 }
             }
         }
