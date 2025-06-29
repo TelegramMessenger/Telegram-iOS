@@ -952,7 +952,7 @@ public final class ChatSideTopicsPanel: Component {
                     if let current = self.avatarNode {
                         avatarNode = current
                     } else {
-                        avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 11.0))
+                        avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 8.0))
                         avatarNode.isUserInteractionEnabled = false
                         self.avatarNode = avatarNode
                         self.containerButton.addSubview(avatarNode.view)
