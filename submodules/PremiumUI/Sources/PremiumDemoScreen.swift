@@ -1098,26 +1098,7 @@ private final class DemoSheetContent: CombinedComponent {
                         )
                     )
                 )
-                
-                availableItems[.paidMessages] = DemoPagerComponent.Item(
-                    AnyComponentWithIdentity(
-                        id: PremiumDemoScreen.Subject.paidMessages,
-                        component: AnyComponent(
-                            PageComponent(
-                                content: AnyComponent(PhoneDemoComponent(
-                                    context: component.context,
-                                    position: .top,
-                                    videoFile: configuration.videos["paid_messages"],
-                                    decoration: .badgeStars
-                                )),
-                                title: strings.Premium_PaidMessages,
-                                text: strings.Premium_PaidMessagesInfo,
-                                textColor: textColor
-                            )
-                        )
-                    )
-                )
-                
+                                
                 availableItems[.todo] = DemoPagerComponent.Item(
                     AnyComponentWithIdentity(
                         id: PremiumDemoScreen.Subject.todo,
@@ -1234,8 +1215,6 @@ private final class DemoSheetContent: CombinedComponent {
                 text = strings.Premium_FolderTagsStandaloneInfo
             case .messageEffects:
                 text = strings.Premium_MessageEffectsInfo
-            case .paidMessages:
-                text = strings.Premium_PaidMessagesInfo
             case .todo:
                 text = strings.Premium_TodoInfo
             default:
@@ -1322,8 +1301,6 @@ private final class DemoSheetContent: CombinedComponent {
                         case .emojiStatus:
                             buttonText = strings.Premium_EmojiStatus_Proceed
                             buttonAnimationName = "premium_unlock"
-                        case .paidMessages:
-                            buttonText = strings.Premium_PaidMessages_Proceed
                         case .todo:
                             buttonText = strings.Premium_PaidMessages_Proceed
                         default:
@@ -1515,7 +1492,6 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
         case business
         case folderTags
         case messageEffects
-        case paidMessages
         case todo
         
         case businessLocation
@@ -1575,8 +1551,6 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
                 return .folderTags
             case .messageEffects:
                 return .messageEffects
-            case .paidMessages:
-                return .paidMessages
             case .todo:
                 return .todo
             case .businessLocation:

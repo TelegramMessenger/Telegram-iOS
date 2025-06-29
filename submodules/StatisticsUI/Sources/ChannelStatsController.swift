@@ -1165,15 +1165,20 @@ private enum StatsEntry: ItemListNodeEntry {
                         detailText = "\(fromDateString) – \(toDateString)"
                     }
                 } else if case .fragment = transaction.peer {
-                    title = NSAttributedString(string: presentationData.strings.Monetization_Transaction_Withdrawal("Fragment").string, font: font, textColor: theme.list.itemPrimaryTextColor)
-                    labelColor = theme.list.itemDestructiveColor
-                    if transaction.flags.contains(.isPending) {
-                        detailText = presentationData.strings.Monetization_Transaction_Pending
-                    } else if transaction.flags.contains(.isFailed) {
-                        detailText = stringForMediumCompactDate(timestamp: transaction.date, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, withTime: false) + " – \(presentationData.strings.Monetization_Transaction_Failed)"
-                        detailColor = .destructive
-                    } else {
+                    if transaction.flags.contains(.isRefund) {
+                        title = NSAttributedString(string: presentationData.strings.Monetization_Transaction_Refund, font: font, textColor: theme.list.itemPrimaryTextColor)
                         detailText = stringForMediumCompactDate(timestamp: transaction.date, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
+                    } else {
+                        title = NSAttributedString(string: presentationData.strings.Monetization_Transaction_Withdrawal("Fragment").string, font: font, textColor: theme.list.itemPrimaryTextColor)
+                        labelColor = theme.list.itemDestructiveColor
+                        if transaction.flags.contains(.isPending) {
+                            detailText = presentationData.strings.Monetization_Transaction_Pending
+                        } else if transaction.flags.contains(.isFailed) {
+                            detailText = stringForMediumCompactDate(timestamp: transaction.date, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, withTime: false) + " – \(presentationData.strings.Monetization_Transaction_Failed)"
+                            detailColor = .destructive
+                        } else {
+                            detailText = stringForMediumCompactDate(timestamp: transaction.date, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
+                        }
                     }
                 } else if transaction.flags.contains(.isRefund) {
                     title = NSAttributedString(string: presentationData.strings.Monetization_Transaction_Refund, font: font, textColor: theme.list.itemPrimaryTextColor)

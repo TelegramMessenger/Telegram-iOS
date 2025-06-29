@@ -145,20 +145,28 @@ private final class SheetContent: CombinedComponent {
                 explorerUrl = nil
                 showPeer = true
             } else if case .fragment = component.transaction.peer {
-                labelColor = theme.list.itemDestructiveColor
-                amountString = tonAmountAttributedString(formatTonAmountText(component.transaction.count.amount.value, dateTimeFormat: dateTimeFormat), integralFont: integralFont, fractionalFont: fractionalFont, color: labelColor, decimalSeparator: dateTimeFormat.decimalSeparator).mutableCopy() as! NSMutableAttributedString
-                dateString = stringForFullDate(timestamp: component.transaction.date, strings: strings, dateTimeFormat: dateTimeFormat)
-                
-                if component.transaction.flags.contains(.isPending) {
-                    titleString = strings.Monetization_TransactionInfo_Pending
+                if component.transaction.flags.contains(.isRefund) {
+                    labelColor = theme.list.itemDisclosureActions.constructive.fillColor
+                    titleString = strings.Monetization_TransactionInfo_Refund
+                    amountString = tonAmountAttributedString(formatTonAmountText(component.transaction.count.amount.value, dateTimeFormat: dateTimeFormat, showPlus: true), integralFont: integralFont, fractionalFont: fractionalFont, color: labelColor, decimalSeparator: dateTimeFormat.decimalSeparator).mutableCopy() as! NSMutableAttributedString
+                    dateString = stringForFullDate(timestamp: component.transaction.date, strings: strings, dateTimeFormat: dateTimeFormat)
                     buttonTitle = strings.Common_OK
-                } else if component.transaction.flags.contains(.isFailed) {
-                    titleString = strings.Monetization_TransactionInfo_Failed
-                    buttonTitle = strings.Common_OK
-                    titleColor = theme.list.itemDestructiveColor
                 } else {
-                    titleString = strings.Monetization_TransactionInfo_Withdrawal("Fragment").string
-                    buttonTitle = strings.Monetization_TransactionInfo_ViewInExplorer
+                    labelColor = theme.list.itemDestructiveColor
+                    amountString = tonAmountAttributedString(formatTonAmountText(component.transaction.count.amount.value, dateTimeFormat: dateTimeFormat), integralFont: integralFont, fractionalFont: fractionalFont, color: labelColor, decimalSeparator: dateTimeFormat.decimalSeparator).mutableCopy() as! NSMutableAttributedString
+                    dateString = stringForFullDate(timestamp: component.transaction.date, strings: strings, dateTimeFormat: dateTimeFormat)
+                    
+                    if component.transaction.flags.contains(.isPending) {
+                        titleString = strings.Monetization_TransactionInfo_Pending
+                        buttonTitle = strings.Common_OK
+                    } else if component.transaction.flags.contains(.isFailed) {
+                        titleString = strings.Monetization_TransactionInfo_Failed
+                        buttonTitle = strings.Common_OK
+                        titleColor = theme.list.itemDestructiveColor
+                    } else {
+                        titleString = strings.Monetization_TransactionInfo_Withdrawal("Fragment").string
+                        buttonTitle = strings.Monetization_TransactionInfo_ViewInExplorer
+                    }
                 }
                 explorerUrl = component.transaction.transactionUrl
             } else if component.transaction.flags.contains(.isRefund) {

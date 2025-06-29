@@ -2720,10 +2720,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSource = .messageEffects
         case .animatedEmoji:
             mappedSource = .animatedEmoji
-        case .paidMessages:
-            mappedSource = .paidMessages
         case .todo:
-            mappedSource = .paidMessages
+            mappedSource = .todo
         case let .auth(price):
             mappedSource = .auth(price)
         }
@@ -2800,8 +2798,6 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSubject = .folderTags
         case .messageEffects:
             mappedSubject = .messageEffects
-        case .paidMessages:
-            mappedSubject = .paidMessages
         case .todo:
             mappedSubject = .todo
         case .business:

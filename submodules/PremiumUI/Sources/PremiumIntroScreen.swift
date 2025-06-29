@@ -303,12 +303,6 @@ public enum PremiumSource: Equatable {
             } else {
                 return false
             }
-        case .paidMessages:
-            if case .messageEffects = rhs {
-                return true
-            } else {
-                return false
-            }
         case .todo:
             if case .todo = rhs {
                 return true
@@ -368,7 +362,6 @@ public enum PremiumSource: Equatable {
     case messageTags
     case folderTags
     case messageEffects
-    case paidMessages
     case todo
     case auth(String)
     
@@ -464,8 +457,6 @@ public enum PremiumSource: Equatable {
             return "folder_tags"
         case .messageEffects:
             return "effects"
-        case .paidMessages:
-            return "paid_messages"
         case .todo:
             return "todo"
         case .auth:
@@ -498,7 +489,6 @@ public enum PremiumPerk: CaseIterable {
     case business
     case folderTags
     case messageEffects
-    case paidMessages
     case todo
     
     case businessLocation
@@ -535,7 +525,7 @@ public enum PremiumPerk: CaseIterable {
             .folderTags,
             .business,
             .messageEffects,
-            .paidMessages
+            .todo
         ]
     }
     
@@ -609,8 +599,6 @@ public enum PremiumPerk: CaseIterable {
             return "folder_tags"
         case .messageEffects:
             return "effects"
-        case .paidMessages:
-            return "paid_messages"
         case .todo:
             return "todo"
         case .business:
@@ -682,8 +670,6 @@ public enum PremiumPerk: CaseIterable {
             return strings.Premium_Business
         case .messageEffects:
             return strings.Premium_MessageEffects
-        case .paidMessages:
-            return strings.Premium_PaidMessages
         case .todo:
             return strings.Premium_Todo
         case .businessLocation:
@@ -753,8 +739,6 @@ public enum PremiumPerk: CaseIterable {
             return strings.Premium_BusinessInfo
         case .messageEffects:
             return strings.Premium_MessageEffectsInfo
-        case .paidMessages:
-            return strings.Premium_PaidMessagesInfo
         case .todo:
             return strings.Premium_TodoInfo
         case .businessLocation:
@@ -824,8 +808,6 @@ public enum PremiumPerk: CaseIterable {
             return "Premium/Perk/Business"
         case .messageEffects:
             return "Premium/Perk/MessageEffects"
-        case .paidMessages:
-            return "Premium/Perk/PaidMessages"
         case .todo:
             return "Premium/Perk/Todo"
         case .businessLocation:
@@ -866,7 +848,6 @@ struct PremiumIntroConfiguration {
             .colors,
             .wallpapers,
             .profileBadge,
-            .paidMessages,
             .messagePrivacy,
             .advancedChatManagement,
             .noAds,
@@ -2171,8 +2152,6 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                 demoSubject = .messagePrivacy
                             case .messageEffects:
                                 demoSubject = .messageEffects
-                            case .paidMessages:
-                                demoSubject = .paidMessages
                             case .todo:
                                 demoSubject = .todo
                             case .business:
