@@ -14588,7 +14588,6 @@ Sorry for the inconvenience.";
 "BalanceNeeded.FragmentSubtitle" = "You can add funds to your balance via the third-party platform Fragment.";
 "BalanceNeeded.FragmentAction" = "Add Funds via Fragment";
 
-"Settings.MyTon" = "My TON";
 "Settings.Ton.Description" = "Use TON to submit post suggestions to channels on Telegram.";
 
 "Settings.TransactionsTon.Title" = "TON";
