@@ -258,7 +258,6 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                     
                     switch suggestedPost {
                     case let .approved(timestamp, amount):
-                        //TODO:localize
                         let timeString = humanReadableStringForTimestamp(strings: item.presentationData.strings, dateTimeFormat: item.presentationData.dateTimeFormat, timestamp: timestamp ?? 0, alwaysShowTime: true, allowYesterday: false, format: HumanReadableStringFormat(
                             dateFormatString: { value in
                                 return PresentationStrings.FormattedString(string: item.presentationData.strings.SuggestPost_SetTimeFormat_Date(value).string.lowercased(), ranges: [])
@@ -279,23 +278,23 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                             let amountString: String
                             switch amount.currency {
                             case .stars:
-                                amountString = amount.amount.value == 1 ? "\(amount.amount) Star" : "\(amount.amount) Stars"
+                                amountString = item.presentationData.strings.Chat_PostApproval_DetailStatus_StarsAmount(Int32((amount.amount.value == 1 && amount.amount.nanos == 0) ? 1 : 100)).replacingOccurrences(of: "#", with: "\(amount.amount)")
                             case .ton:
-                                amountString = "\(formatTonAmountText(amount.amount.value, dateTimeFormat: item.presentationData.dateTimeFormat)) TON"
+                                amountString = item.presentationData.strings.Chat_PostApproval_DetailStatus_TonAmount(Int32((amount.amount.value == 1 * 1_000_000_000) ? 1 : 100)).replacingOccurrences(of: "#", with: "\(formatTonAmountText(amount.amount.value, dateTimeFormat: item.presentationData.dateTimeFormat, maxDecimalPositions: 3))")
                             }
                             
                             switch amount.currency {
                             case .stars:
-                                if !isUser {
-                                    pricePart = "\n\n💰 The user have been charged \(amountString).\n\n⌛ **\(channelName)** will receive the Stars once the post has been live for 24 hours.\n\n🔄 If your remove the post before it has been live for 24 hours, the user's Stars will be refunded."
+                                if isUser {
+                                    pricePart = "\n\n" + item.presentationData.strings.Chat_PostApproval_Message_UserAgreementPriceStars(amountString, channelName).string
                                 } else {
-                                    pricePart = "\n\n💰 You have been charged \(amountString).\n\n⌛ **\(channelName)** will receive your Stars once the post has been live for 24 hours.\n\n🔄 If **\(channelName)** removes the post before it has been live for 24 hours, your Stars will be refunded."
+                                    pricePart = "\n\n" + item.presentationData.strings.Chat_PostApproval_Message_AdminAgreementPriceStars(amountString, channelName).string
                                 }
                             case .ton:
-                                if !isUser {
-                                    pricePart = "\n\n💰 The user have been charged \(amountString).\n\n⌛ **\(channelName)** will receive TON once the post has been live for 24 hours.\n\n🔄 If your remove the post before it has been live for 24 hours, the user's TON will be refunded."
+                                if isUser {
+                                    pricePart = "\n\n" + item.presentationData.strings.Chat_PostApproval_Message_UserAgreementPriceTon(amountString, channelName).string
                                 } else {
-                                    pricePart = "\n\n💰 You have been charged \(amountString).\n\n⌛ **\(channelName)** will receive your TON once the post has been live for 24 hours.\n\n🔄 If **\(channelName)** removes the post before it has been live for 24 hours, your TON will be refunded."
+                                    pricePart = "\n\n" + item.presentationData.strings.Chat_PostApproval_Message_AdminAgreementPriceTon(amountString, channelName).string
                                 }
                             }
                         }
@@ -303,23 +302,23 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                         let rawString: String
                         if let timestamp {
                             if Int32(Date().timeIntervalSince1970) >= timestamp {
-                                if !isUser {
-                                    rawString = "📅 The post has been automatically published in **\(channelName)** **\(timeString)**." + pricePart
+                                if isUser {
+                                    rawString = item.presentationData.strings.Chat_PostApproval_Message_UserAgreementPast(channelName, timeString).string + pricePart
                                 } else {
-                                    rawString = "📅 Your post has been automatically published in **\(channelName)** **\(timeString)**." + pricePart
+                                    rawString = item.presentationData.strings.Chat_PostApproval_Message_AdminAgreementPast(channelName, timeString).string + pricePart
                                 }
                             } else {
-                                if !isUser {
-                                    rawString = "📅 The post will be automatically published in **\(channelName)** **\(timeString)**." + pricePart
+                                if isUser {
+                                    rawString = item.presentationData.strings.Chat_PostApproval_Message_UserAgreementFuture(channelName, timeString).string + pricePart
                                 } else {
-                                    rawString = "📅 Your post will be automatically published in **\(channelName)** **\(timeString)**." + pricePart
+                                    rawString = item.presentationData.strings.Chat_PostApproval_Message_AdminAgreementFuture(channelName, timeString).string + pricePart
                                 }
                             }
                         } else {
-                            if !isUser {
-                                rawString = "📅 The post has been automatically published in **\(channelName)**." + pricePart
+                            if isUser {
+                                rawString = item.presentationData.strings.Chat_PostApproval_Message_UserAgreementNoTime(channelName).string + pricePart
                             } else {
-                                rawString = "📅 Your post has been automatically published in **\(channelName)**." + pricePart
+                                rawString = item.presentationData.strings.Chat_PostApproval_Message_AdminAgreementNoTime(channelName).string + pricePart
                             }
                         }
                         updatedAttributedString = parseMarkdownIntoAttributedString(rawString, attributes: MarkdownAttributes(
@@ -336,9 +335,9 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                             switch reason {
                             case .generic:
                                 if let comment {
-                                    rawString = "You declined the post with the following comment:\n\n" + comment
+                                    rawString = item.presentationData.strings.Chat_PostApproval_Message_AdminDeclinedComment(comment).string
                                 } else {
-                                    rawString = "You declined the post."
+                                    rawString = item.presentationData.strings.Chat_PostApproval_Message_AdminDeclined
                                 }
                             case .lowBalance:
                                 rawString = ""
@@ -367,7 +366,6 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 
-                //TODO:localize
                 var titleLayoutAndApply: (TextNodeLayout, () -> TextNode)?
                 if let suggestedPost {
                     let channelName: String
@@ -381,32 +379,32 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                     var smallFont = false
                     switch suggestedPost {
                     case .approved:
-                        rawString = "🤝 Agreement Reached!"
+                        rawString = item.presentationData.strings.Chat_PostApproval_Message_TitleApproved
                     case let .rejected(reason, comment):
                         if !item.message.effectivelyIncoming(item.context.account.peerId) {
                             switch reason {
                             case .generic:
                                 if comment != nil {
-                                    rawString = "❌ You rejected the message with the comment:"
+                                    rawString = item.presentationData.strings.Chat_PostApproval_Message_AdminTitleRejectedComment
                                 } else {
-                                    rawString = "❌ You rejected the message."
+                                    rawString = item.presentationData.strings.Chat_PostApproval_Message_AdminTitleRejected
                                     smallFont = true
                                 }
                             case .lowBalance:
-                                rawString = "⚠️ **Transaction failed** because the user didn't have enough Stars."
+                                rawString = item.presentationData.strings.Chat_PostApproval_Message_AdminTitleFailedFunds
                                 smallFont = true
                             }
                         } else {
                             switch reason {
                             case .generic:
                                 if comment != nil {
-                                    rawString = "❌ **\(channelName)** rejected your message with the comment:"
+                                    rawString = item.presentationData.strings.Chat_PostApproval_Message_UserTitleRejectedComment(channelName).string
                                 } else {
-                                    rawString = "❌ **\(channelName)** rejected your message."
+                                    rawString = item.presentationData.strings.Chat_PostApproval_Message_UserTitleRejected(channelName).string
                                     smallFont = true
                                 }
                             case .lowBalance:
-                                rawString = "⚠️ **Transaction failed** because you didn't have enough Stars."
+                                rawString = item.presentationData.strings.Chat_PostApproval_Message_UserTitleFailedFunds
                                 smallFont = true
                             }
                         }
@@ -499,9 +497,8 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                 var buyStarsTitleLayoutAndApply: (TextNodeLayout, () -> TextNode)?
                 var buyStarsButtonSize: CGSize?
                 if hasBuyStarsButton {
-                    //TODO:localize
                     let serviceColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
-                    let buyStarsTitleLayoutAndApplyValue = makeBuyStarsTitleLayout(TextNodeLayoutArguments(attributedString:  NSAttributedString(string: "Buy Stars", font: Font.semibold(15.0), textColor: serviceColor.primaryText), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: textAlignment, cutout: nil, insets: UIEdgeInsets()))
+                    let buyStarsTitleLayoutAndApplyValue = makeBuyStarsTitleLayout(TextNodeLayoutArguments(attributedString:  NSAttributedString(string: item.presentationData.strings.Chat_PostApproval_Message_BuyStars, font: Font.semibold(15.0), textColor: serviceColor.primaryText), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: textAlignment, cutout: nil, insets: UIEdgeInsets()))
                     buyStarsTitleLayoutAndApply = buyStarsTitleLayoutAndApplyValue
                     
                     let buyStarsButtonSizeValue = CGSize(width: buyStarsTitleLayoutAndApplyValue.0.size.width + 20.0 * 2.0, height: buyStarsTitleLayoutAndApplyValue.0.size.height + 8.0 * 2.0)

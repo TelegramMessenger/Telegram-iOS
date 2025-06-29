@@ -226,12 +226,11 @@ public final class SuggestPostAccessoryPanelNode: AccessoryPanelNode {
             }
         }
         
-        //TODO:localize
         var titleText: [CompositeTextNode.Component] = []
         if let postSuggestionState = interfaceState.interfaceState.postSuggestionState, postSuggestionState.editingOriginalMessageId != nil {
-            titleText.append(.text(NSAttributedString(string: "Suggest Changes", font: Font.medium(15.0), textColor: self.theme.chat.inputPanel.panelControlAccentColor)))
+            titleText.append(.text(NSAttributedString(string: self.strings.Chat_PostSuggestion_Suggest_InputEditTitle, font: Font.medium(15.0), textColor: self.theme.chat.inputPanel.panelControlAccentColor)))
         } else {
-            titleText.append(.text(NSAttributedString(string: "Suggest a post below", font: Font.medium(15.0), textColor: self.theme.chat.inputPanel.panelControlAccentColor)))
+            titleText.append(.text(NSAttributedString(string: self.strings.Chat_PostSuggestion_Suggest_InputTitle, font: Font.medium(15.0), textColor: self.theme.chat.inputPanel.panelControlAccentColor)))
         }
         self.titleNode.components = titleText
         
@@ -269,10 +268,10 @@ public final class SuggestPostAccessoryPanelNode: AccessoryPanelNode {
                 )).string
                 textString = NSAttributedString(string: "\(currencySymbol)\(amountString)  📅 \(timeString)", font: textFont, textColor: self.theme.chat.inputPanel.primaryTextColor)
             } else {
-                textString = NSAttributedString(string: "\(currencySymbol)\(amountString) for publishing anytime", font: textFont, textColor: self.theme.chat.inputPanel.primaryTextColor)
+                textString = NSAttributedString(string: self.strings.Chat_PostSuggestion_Suggest_InputSubtitleAnytime("\(currencySymbol)\(amountString)").string, font: textFont, textColor: self.theme.chat.inputPanel.primaryTextColor)
             }
         } else {
-            textString = NSAttributedString(string: "Tap to offer a price for publishing", font: textFont, textColor: self.theme.chat.inputPanel.primaryTextColor)
+            textString = NSAttributedString(string: self.strings.Chat_PostSuggestion_Suggest_InputSubtitleEmpty, font: textFont, textColor: self.theme.chat.inputPanel.primaryTextColor)
         }
         
         let mutableTextString = NSMutableAttributedString(attributedString: textString)

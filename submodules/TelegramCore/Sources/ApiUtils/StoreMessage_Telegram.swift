@@ -1081,6 +1081,26 @@ extension StoreMessage {
                 var threadId: Int64?
                 if let savedPeerId {
                     threadId = savedPeerId.peerId.toInt64()
+                    
+                    if chatPeerId.peerId.namespace == Namespaces.Peer.CloudChannel, let replyTo {
+                        switch replyTo {
+                        case let .messageReplyHeader(innerFlags, replyToMsgId, replyToPeerId, replyHeader, replyMedia, _, quoteText, quoteEntities, quoteOffset):
+                            var quote: EngineMessageReplyQuote?
+                            let isQuote = (innerFlags & (1 << 9)) != 0
+                            if quoteText != nil || replyMedia != nil {
+                                quote = EngineMessageReplyQuote(text: quoteText ?? "", offset: quoteOffset.flatMap(Int.init), entities: messageTextEntitiesFromApiEntities(quoteEntities ?? []), media: textMediaAndExpirationTimerFromApiMedia(replyMedia, peerId).media)
+                            }
+                            
+                            if let replyToMsgId = replyToMsgId {
+                                let replyPeerId = replyToPeerId?.peerId ?? peerId
+                                attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: nil, quote: quote, isQuote: isQuote))
+                            } else if let replyHeader = replyHeader {
+                                attributes.append(QuotedReplyMessageAttribute(apiHeader: replyHeader, quote: quote, isQuote: isQuote))
+                            }
+                        case let .messageReplyStoryHeader(peer, storyId):
+                            attributes.append(ReplyStoryAttribute(storyId: StoryId(peerId: peer.peerId, id: storyId)))
+                        }
+                    }
                 } else if let replyTo = replyTo {
                     var threadMessageId: MessageId?
                     switch replyTo {

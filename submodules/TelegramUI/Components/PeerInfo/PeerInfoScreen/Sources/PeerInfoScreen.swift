@@ -1048,8 +1048,7 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
             } else {
                 balanceText = NSAttributedString()
             }
-            //TODO:localize
-            items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 103, label: .attributedText(balanceText), text: "My TON", icon: PresentationResourcesSettings.ton, action: {
+            items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 103, label: .attributedText(balanceText), text: presentationData.strings.Settings_MyTon, icon: PresentationResourcesSettings.ton, action: {
                 interaction.openSettings(.ton)
             }))
         }

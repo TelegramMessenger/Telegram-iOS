@@ -1520,23 +1520,22 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
             
             if canSuggestPost {
-                //TODO:localize
                 if message.attributes.contains(where: { $0 is SuggestedPostMessageAttribute }) {
-                    actions.append(.action(ContextMenuActionItem(text: "Edit Message", icon: { theme in
+                    actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Chat_ContextMenu_SuggestedPost_EditMessage, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.actionSheet.primaryTextColor)
                     }, action: { c, _ in
                         c?.dismiss(completion: {
                             interfaceInteraction.openSuggestPost(message, .editMessage)
                         })
                     })))
-                    actions.append(.action(ContextMenuActionItem(text: "Edit Time", icon: { theme in
+                    actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Chat_ContextMenu_SuggestedPost_EditTime, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Calendar"), color: theme.actionSheet.primaryTextColor)
                     }, action: { c, _ in
                         c?.dismiss(completion: {
                             interfaceInteraction.openSuggestPost(message, .editTime)
                         })
                     })))
-                    actions.append(.action(ContextMenuActionItem(text: "Edit Price", icon: { theme in
+                    actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Chat_ContextMenu_SuggestedPost_EditPrice, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/PriceTag"), color: theme.actionSheet.primaryTextColor)
                     }, action: { c, _ in
                         c?.dismiss(completion: {
@@ -1544,7 +1543,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                         })
                     })))
                 } else {
-                    actions.append(.action(ContextMenuActionItem(text: "Suggest a Post", icon: { theme in
+                    actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Chat_ContextMenu_SuggestedPost_Create, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Customize"), color: theme.actionSheet.primaryTextColor)
                     }, action: { c, _ in
                         c?.dismiss(completion: {

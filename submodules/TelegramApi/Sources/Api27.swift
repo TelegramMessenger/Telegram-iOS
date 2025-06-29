@@ -129,6 +129,7 @@ public extension Api {
         case updateMessagePoll(flags: Int32, pollId: Int64, poll: Api.Poll?, results: Api.PollResults)
         case updateMessagePollVote(pollId: Int64, peer: Api.Peer, options: [Buffer], qts: Int32)
         case updateMessageReactions(flags: Int32, peer: Api.Peer, msgId: Int32, topMsgId: Int32?, savedPeerId: Api.Peer?, reactions: Api.MessageReactions)
+        case updateMonoForumNoPaidException(flags: Int32, channelId: Int64, savedPeerId: Api.Peer)
         case updateMoveStickerSetToTop(flags: Int32, stickerset: Int64)
         case updateNewAuthorization(flags: Int32, hash: Int64, date: Int32?, device: String?, location: String?)
         case updateNewChannelMessage(message: Api.Message, pts: Int32, ptsCount: Int32)
@@ -920,6 +921,14 @@ public extension Api {
                     if Int(flags) & Int(1 << 1) != 0 {savedPeerId!.serialize(buffer, true)}
                     reactions.serialize(buffer, true)
                     break
+                case .updateMonoForumNoPaidException(let flags, let channelId, let savedPeerId):
+                    if boxed {
+                        buffer.appendInt32(-1618924792)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(channelId, buffer: buffer, boxed: false)
+                    savedPeerId.serialize(buffer, true)
+                    break
                 case .updateMoveStickerSetToTop(let flags, let stickerset):
                     if boxed {
                         buffer.appendInt32(-2030252155)
@@ -1619,6 +1628,8 @@ public extension Api {
                 return ("updateMessagePollVote", [("pollId", pollId as Any), ("peer", peer as Any), ("options", options as Any), ("qts", qts as Any)])
                 case .updateMessageReactions(let flags, let peer, let msgId, let topMsgId, let savedPeerId, let reactions):
                 return ("updateMessageReactions", [("flags", flags as Any), ("peer", peer as Any), ("msgId", msgId as Any), ("topMsgId", topMsgId as Any), ("savedPeerId", savedPeerId as Any), ("reactions", reactions as Any)])
+                case .updateMonoForumNoPaidException(let flags, let channelId, let savedPeerId):
+                return ("updateMonoForumNoPaidException", [("flags", flags as Any), ("channelId", channelId as Any), ("savedPeerId", savedPeerId as Any)])
                 case .updateMoveStickerSetToTop(let flags, let stickerset):
                 return ("updateMoveStickerSetToTop", [("flags", flags as Any), ("stickerset", stickerset as Any)])
                 case .updateNewAuthorization(let flags, let hash, let date, let device, let location):
@@ -3267,6 +3278,25 @@ public extension Api {
             let _c6 = _6 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
                 return Api.Update.updateMessageReactions(flags: _1!, peer: _2!, msgId: _3!, topMsgId: _4, savedPeerId: _5, reactions: _6!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateMonoForumNoPaidException(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Api.Peer?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.Update.updateMonoForumNoPaidException(flags: _1!, channelId: _2!, savedPeerId: _3!)
             }
             else {
                 return nil

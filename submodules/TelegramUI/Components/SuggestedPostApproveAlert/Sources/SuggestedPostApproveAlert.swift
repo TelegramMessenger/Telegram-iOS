@@ -359,7 +359,6 @@ private final class SuggestedPostAlertImpl: AlertController {
             }
             let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
             let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
-            //TODO:localize
             let playOnce = ActionSlot<Void>()
             let toastSize = toast.update(
                 transition: ComponentTransition(transition),

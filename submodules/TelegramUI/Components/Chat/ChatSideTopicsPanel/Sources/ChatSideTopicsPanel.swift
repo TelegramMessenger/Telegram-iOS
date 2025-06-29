@@ -1968,8 +1968,7 @@ public final class ChatSideTopicsPanel: Component {
                             ).get()
                             
                             if let threadInfo, threadInfo.isMessageFeeRemoved {
-                                //TODO:localize
-                                items.append(.action(ContextMenuActionItem(text: "Charge Message Fee", textColor: .primary, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Rate"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+                                items.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_ReinstatePaidMessages, textColor: .primary, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Rate"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
                                     guard let self, let component = self.component else {
                                         return
                                     }

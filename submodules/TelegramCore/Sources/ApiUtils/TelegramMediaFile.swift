@@ -71,6 +71,8 @@ extension StickerPackReference {
             self = .iconChannelStatusEmoji
         case .inputStickerSetEmojiDefaultTopicIcons:
             self = .iconTopicEmoji
+        case .inputStickerSetTonGifts:
+            self = .tonGifts
         }
     }
 }

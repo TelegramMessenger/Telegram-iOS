@@ -58,25 +58,16 @@ public final class ChatMessageSuggestedPostInfoNode: ASDisplayNode {
                 }
             }
             
-            //TODO:localize
             let amountString: String
             if let amount, amount.amount != .zero {
                 switch amount.currency {
                 case .stars:
-                    if amount.amount.value == 1 {
-                        amountString = "1 Star"
-                    } else {
-                        amountString = "\(amount.amount) Stars"
-                    }
+                    amountString = item.presentationData.strings.Chat_PostApproval_DetailStatus_StarsAmount(Int32((amount.amount.value == 1 && amount.amount.nanos == 0) ? 1 : 100)).replacingOccurrences(of: "#", with: "\(amount.amount)")
                 case .ton:
-                    if amount.amount.value == 1 {
-                        amountString = "1 TON"
-                    } else {
-                        amountString = "\(formatTonAmountText(amount.amount.value, dateTimeFormat: item.presentationData.dateTimeFormat)) TON"
-                    }
+                    amountString = item.presentationData.strings.Chat_PostApproval_DetailStatus_TonAmount(Int32((amount.amount.value == 1 * 1_000_000_000) ? 1 : 100)).replacingOccurrences(of: "#", with: "\(formatTonAmountText(amount.amount.value, dateTimeFormat: item.presentationData.dateTimeFormat, maxDecimalPositions: 3))")
                 }
             } else {
-                amountString = "Free"
+                amountString = item.presentationData.strings.Chat_PostSuggestion_PriceFree
             }
             
             var timestampString: String
@@ -86,12 +77,11 @@ public final class ChatMessageSuggestedPostInfoNode: ASDisplayNode {
                     timestampString = String(timestampString[timestampString.startIndex]).capitalized + timestampString[timestampString.index(after: timestampString.startIndex)...]
                 }
             } else {
-                timestampString = "Anytime"
+                timestampString = item.presentationData.strings.Chat_PostSuggestion_TimeAny
             }
             
             let serviceColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
             
-            //TODO:localize
             let titleText: String
             if let attribute = item.message.attributes.first(where: { $0 is ReplyMessageAttribute }) as? ReplyMessageAttribute {
                 var changedText = false
@@ -131,19 +121,19 @@ public final class ChatMessageSuggestedPostInfoNode: ASDisplayNode {
                 
                 if !item.message.effectivelyIncoming(item.context.account.peerId) {
                     if changedText && changedMedia && changedPrice && changedTime {
-                        titleText = "You suggest a new price,\ntime and contents for this message."
+                        titleText = item.presentationData.strings.Chat_PostSuggestion_UserChangePTC
                     } else if changedText && changedPrice && changedTime {
-                        titleText = "You suggest a new price,\ntime and text for this message."
+                        titleText = item.presentationData.strings.Chat_PostSuggestion_UserChangePTT
                     } else if changedMedia && changedPrice && changedTime {
-                        titleText = "You suggest a new price,\ntime and attachments for this message."
+                        titleText = item.presentationData.strings.Chat_PostSuggestion_UserChangePTA
                     } else if changedPrice && changedTime {
-                        titleText = "You suggest a new price and time\nfor this message."
+                        titleText = item.presentationData.strings.Chat_PostSuggestion_UserChangePT
                     } else if changedPrice {
-                        titleText = "You suggest a new price\nfor this message."
+                        titleText = item.presentationData.strings.Chat_PostSuggestion_UserChangeP
                     } else if changedTime {
-                        titleText = "You suggest a new time\nfor this message."
+                        titleText = item.presentationData.strings.Chat_PostSuggestion_UserChangeT
                     } else {
-                        titleText = "You suggest changes\nfor this message."
+                        titleText = item.presentationData.strings.Chat_PostSuggestion_UserChange
                     }
                 } else {
                     var channelName = ""
@@ -151,26 +141,26 @@ public final class ChatMessageSuggestedPostInfoNode: ASDisplayNode {
                         channelName = item.message.author.flatMap(EnginePeer.init)?.compactDisplayTitle ?? " "
                     }
                     if changedText && changedMedia && changedPrice && changedTime {
-                        titleText = "**\(channelName)** suggests a new price,\ntime and contents for this message."
+                        titleText = item.presentationData.strings.Chat_PostSuggestion_ChannelChangePTC(channelName).string
                     } else if changedText && changedPrice && changedTime {
-                        titleText = "**\(channelName)** suggests a new price,\ntime and text for this message."
+                        titleText = item.presentationData.strings.Chat_PostSuggestion_ChannelChangePTT(channelName).string
                     } else if changedMedia && changedPrice && changedTime {
-                        titleText = "**\(channelName)** suggests a new price,\ntime and attachments for this message."
+                        titleText = item.presentationData.strings.Chat_PostSuggestion_ChannelChangePTA(channelName).string
                     } else if changedPrice && changedTime {
-                        titleText = "**\(channelName)** suggests a new price and time\nfor this message."
+                        titleText = item.presentationData.strings.Chat_PostSuggestion_ChannelChangePT(channelName).string
                     } else if changedPrice {
-                        titleText = "**\(channelName)** suggests a new price\nfor this message."
+                        titleText = item.presentationData.strings.Chat_PostSuggestion_ChannelChangeP(channelName).string
                     } else if changedTime {
-                        titleText = "**\(channelName)** suggests a new time\nfor this message."
+                        titleText = item.presentationData.strings.Chat_PostSuggestion_ChannelChangeT(channelName).string
                     } else {
-                        titleText = "**\(channelName)** suggests changes\nfor this message."
+                        titleText = item.presentationData.strings.Chat_PostSuggestion_ChannelChange(channelName).string
                     }
                 }
             } else {
                 if !item.message.effectivelyIncoming(item.context.account.peerId) {
-                    titleText = "You suggest to post\nthis message."
+                    titleText = item.presentationData.strings.Chat_PostSuggestion_UserPost
                 } else {
-                    titleText = "**\(item.message.author.flatMap(EnginePeer.init)?.compactDisplayTitle ?? " ")** suggests to post\nthis message."
+                    titleText = item.presentationData.strings.Chat_PostSuggestion_ChannelPost(item.message.author.flatMap(EnginePeer.init)?.compactDisplayTitle ?? " ").string
                 }
             }
             
@@ -185,8 +175,8 @@ public final class ChatMessageSuggestedPostInfoNode: ASDisplayNode {
             
             let titleLayout = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: maxWidth - insets.left - insets.right, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
-            let priceLabelLayout = makePriceLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "Price", font: Font.regular(13.0), textColor: serviceColor.primaryText.withMultipliedAlpha(0.5)), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: maxWidth - insets.left - insets.right, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-            let timeLabelLayout = makeTimeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "Time", font: Font.regular(13.0), textColor: serviceColor.primaryText.withMultipliedAlpha(0.5)), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: maxWidth - insets.left - insets.right, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let priceLabelLayout = makePriceLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Chat_PostSuggestion_TablePrice, font: Font.regular(13.0), textColor: serviceColor.primaryText.withMultipliedAlpha(0.5)), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: maxWidth - insets.left - insets.right, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let timeLabelLayout = makeTimeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Chat_PostSuggestion_TableTime, font: Font.regular(13.0), textColor: serviceColor.primaryText.withMultipliedAlpha(0.5)), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: maxWidth - insets.left - insets.right, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let priceValueLayout = makePriceValueLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: amountString, font: Font.semibold(13.0), textColor: serviceColor.primaryText), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: maxWidth - insets.left - insets.right, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let timeValueLayout = makeTimeValueLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: timestampString, font: Font.semibold(13.0), textColor: serviceColor.primaryText), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: maxWidth - insets.left - insets.right, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
