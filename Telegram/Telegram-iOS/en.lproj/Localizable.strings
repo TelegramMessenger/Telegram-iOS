@@ -14507,9 +14507,6 @@ Sorry for the inconvenience.";
 
 "Attachment.DiscardTodoAlertText" = "Discard checklist items?";
 
-"Auth.PremiumSignUp.ActionTitle" = "Sign up for %@";
-"Auth.PremiumSignUp.ActionSubtitle" = "Get Telegram Premium for 1 week";
-
 "Chat.PostApproval.Status.AdminApproved" = "The message was approved";
 "Chat.PostApproval.Status.AdminRejected" = "The message was rejected";
 "Chat.PostApproval.Status.UserApproved" = "Your message was approved";
@@ -14589,10 +14586,6 @@ Sorry for the inconvenience.";
 "BalanceNeeded.FragmentAction" = "Add Funds via Fragment";
 
 "Settings.MyTon" = "My TON";
-"Settings.Ton.Description" = "Use TON to submit post suggestions to channels on Telegram.";
-
-"Settings.TransactionsTon.Title" = "TON";
-"Settings.TransactionsTon.Subtitle" = "Use TON to submit post suggestions to channels on Telegram.";
 
 "Chat.DeletePaidMessageStars.Title" = "Stars Will Be Lost";
 "Chat.DeletePaidMessageStars.Text" = "You won't receive **Stars** for this post if you delete it now. The post must remain visible for at least **24 hours** after publication.";
@@ -14657,8 +14650,6 @@ Sorry for the inconvenience.";
 
 "Premium.Week.SignUp" = "Sign up for %@";
 "Premium.Week.SignUpInfo" = "Get Telegram Premium for 1 week";
-
-"Settings.MyTon" = "My TON";
 
 "Stars.Gift.Ton.Text" = "Use TON to submit post suggestions to channels on Telegram.";
 "Stars.Ton.Title" = "TON";
