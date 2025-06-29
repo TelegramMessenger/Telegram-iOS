@@ -6616,7 +6616,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         }
                     }
                     
-                    if let cachedData = data.cachedData as? CachedUserData, cachedData.flags.contains(.translationHidden) {
+                    if let cachedData = data.cachedData as? CachedUserData, canTranslateChats(context: strongSelf.context), cachedData.flags.contains(.translationHidden) {
                         items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ContextMenuTranslate, icon: { theme in
                             generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Translate"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, f in

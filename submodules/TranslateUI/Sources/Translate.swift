@@ -171,6 +171,23 @@ public func normalizeTranslationLanguage(_ code: String) -> String {
     return code
 }
 
+public func canTranslateChats(context: AccountContext) -> Bool {
+    let translationConfiguration = TranslationConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+    var chatTranslationAvailable = true
+    switch translationConfiguration.auto {
+    case .system:
+        if #available(iOS 18.0, *) {
+        } else {
+            chatTranslationAvailable = false
+        }
+    case .alternative, .disabled:
+        chatTranslationAvailable = false
+    default:
+        break
+    }
+    return chatTranslationAvailable
+}
+
 public func canTranslateText(context: AccountContext, text: String, showTranslate: Bool, showTranslateIfTopical: Bool = false, ignoredLanguages: [String]?) -> (canTranslate: Bool, language: String?) {
     guard showTranslate || showTranslateIfTopical, text.count > 0 else {
         return (false, nil)
@@ -298,7 +315,7 @@ private struct TranslationViewImpl: View {
                 var resultMap: [AnyHashable: String] = [:]
                 for response in responses {
                     if let clientIdentifier = response.clientIdentifier, let originalKey = clientIdentifierMap[clientIdentifier] {
-                        resultMap[originalKey] = "<L>\(response.targetText)"
+                        resultMap[originalKey] = "\(response.targetText)"
                     }
                 }
                 
@@ -494,11 +511,6 @@ func alternativeTranslateText(text: String, fromLang: String?, toLang: String) -
                         return
                     }
                     
-//                  var sourceLanguage: String? = nil
-//                  if jsonArray.count > 2, let lang = jsonArray[2] as? String {
-//                      sourceLanguage = lang.contains("-") ? String(lang.prefix(while: { $0 != "-" })) : lang
-//                  }
-                    
                     var result = ""
                     for element in translationArray {
                         if let translationBlock = element as? [Any],
@@ -530,8 +542,6 @@ func alternativeTranslateText(text: String, fromLang: String?, toLang: String) -
 
 func getRandomUserAgent() -> String {
     let userAgents = [
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15",
         "Mozilla/5.0 (iPhone; CPU iPhone OS 18_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Mobile/15E148 Safari/604.1"
     ]
     return userAgents.randomElement() ?? userAgents[0]

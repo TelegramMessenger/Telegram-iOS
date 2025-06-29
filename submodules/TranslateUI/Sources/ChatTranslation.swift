@@ -193,6 +193,24 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id,
         return .single(nil)
     }
     
+    let translationConfiguration = TranslationConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+    var chatTranslationAvailable = true
+    switch translationConfiguration.auto {
+    case .system:
+        if #available(iOS 18.0, *) {
+        } else {
+            chatTranslationAvailable = false
+        }
+    case .alternative, .disabled:
+        chatTranslationAvailable = false
+    default:
+        break
+    }
+    
+    guard canTranslateChats(context: context) else {
+        return .single(nil)
+    }
+    
     let loggingEnabled = context.sharedContext.immediateExperimentalUISettings.logLanguageRecognition
     
     if #available(iOS 12.0, *) {
