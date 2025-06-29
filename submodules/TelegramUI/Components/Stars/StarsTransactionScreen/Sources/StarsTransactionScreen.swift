@@ -418,9 +418,8 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     titleText = strings.Stars_Gift_Received_Title
                     count = transaction.count
                     
-                    //TODO:localize
                     if count.currency == .ton {
-                        descriptionText = "Use TON to submit post suggestions to channels on Telegram."
+                        descriptionText = strings.Stars_Gift_Ton_Text
                     } else {
                         descriptionText = strings.Stars_Gift_Received_Text
                     }

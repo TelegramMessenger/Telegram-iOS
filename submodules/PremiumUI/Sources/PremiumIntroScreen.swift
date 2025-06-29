@@ -3702,9 +3702,8 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 let buttonTitle: String
                 var buttonSubtitle: String?
                 if case let .auth(price) = context.component.source {
-                    //TODO:localize
-                    buttonTitle = "Sign up for \(price)"
-                    buttonSubtitle = "Get Telegram Premium for 1 week"
+                    buttonTitle = environment.strings.Premium_Week_SignUp(price).string
+                    buttonSubtitle = environment.strings.Premium_Week_SignUpInfo
                 } else if isUnusedGift {
                     buttonTitle = environment.strings.Premium_Gift_ApplyLink
                 } else if state.isPremium == true && state.canUpgrade {

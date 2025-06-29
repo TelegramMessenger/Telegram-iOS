@@ -14485,7 +14485,6 @@ Sorry for the inconvenience.";
 "Chat.Todo.Message.Title" = "Checklist";
 "Chat.Todo.Message.TitleGroup" = "Group Checklist";
 "Chat.Todo.Message.TitlePersonal" = "%@'s Checklist";
-"Chat.Todo.Message.CompletedPersonal" = "%@'s Checklist";
 
 "Chat.Todo.ContextMenu.AddTask" = "Add a Task";
 "Chat.Todo.ContextMenu.EditTask" = "Edit Item";
@@ -14507,3 +14506,20 @@ Sorry for the inconvenience.";
 "ScheduledMessages.TodoUnavailable" = "Completing tasks will become available after the message is published.";
 
 "Attachment.DiscardTodoAlertText" = "Discard checklist items?";
+
+"Premium.Week.SignUp" = "Sign up for %@";
+"Premium.Week.SignUpInfo" = "Get Telegram Premium for 1 week";
+
+"Settings.MyTon" = "My TON";
+
+"Stars.Gift.Ton.Text" = "Use TON to submit post suggestions to channels on Telegram.";
+"Stars.Ton.Title" = "TON";
+"Stars.Ton.Description" = "Use TON to submit post suggestions to channels on Telegram.";
+
+"Notification.Ton.Subtitle" = "Use TON to submit post suggestions to channels.";
+"Notification.Ton.SubtitleYou" = "With TON, %@ will be able to submit post suggestions to channels.";
+
+"Chat.Todo.Message.Completed_1" = "%@ of {count} completed";
+"Chat.Todo.Message.Completed_any" = "%@ of {count} completed";
+"Chat.Todo.Message.CompletedBy_1" = "%@ of {count} completed by {name}";
+"Chat.Todo.Message.CompletedBy_any" = "%@ of {count} completed by {name}";

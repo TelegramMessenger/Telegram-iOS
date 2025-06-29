@@ -536,9 +536,8 @@ final class StarsTransactionsScreenComponent: Component {
             let titleString: String
             let descriptionString: String
             if component.starsContext.ton {
-                //TODO:localize
-                titleString = "TON"
-                descriptionString = "Use TON to submit post suggestions to channels on Telegram."
+                titleString = environment.strings.Stars_Ton_Title
+                descriptionString = environment.strings.Stars_Ton_Description
             } else {
                 titleString = environment.strings.Stars_Intro_Title
                 descriptionString = environment.strings.Stars_Intro_Description

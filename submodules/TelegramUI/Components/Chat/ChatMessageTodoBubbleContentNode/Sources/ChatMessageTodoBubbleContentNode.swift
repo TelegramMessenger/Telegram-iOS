@@ -663,12 +663,11 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
                 optionEntities.append(MessageTextEntity(range: 0 ..< (optionText as NSString).length, type: .Strikethrough))
             }
             
-            let optionTextColor: UIColor = messageTheme.primaryTextColor
             let optionAttributedText = stringWithAppliedEntities(
                 optionText,
                 entities: optionEntities,
-                baseColor: optionTextColor,
-                linkColor: optionTextColor,
+                baseColor: messageTheme.primaryTextColor,
+                linkColor: messageTheme.linkTextColor,
                 baseFont: presentationData.messageFont,
                 linkFont: presentationData.messageFont,
                 boldFont: presentationData.messageFont,
@@ -1155,15 +1154,15 @@ public class ChatMessageTodoBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let (typeLayout, typeApply) = makeTypeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: typeText, font: labelsFont, textColor: messageTheme.secondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
-                
-                //TODO:localize
                 var bottomText: String = ""
                 if let todo {
+                    let format: String
                     if let author = item.message.author, author.id != item.context.account.peerId && !todo.flags.contains(.othersCanComplete) {
-                        bottomText = "\(todo.completions.count) of \(todo.items.count) completed by \(EnginePeer(author).compactDisplayTitle)"
+                        format = item.presentationData.strings.Chat_Todo_Message_CompletedBy(Int32(todo.completions.count)).replacingOccurrences(of: "{name}", with: EnginePeer(author).compactDisplayTitle)
                     } else {
-                        bottomText = "\(todo.completions.count) of \(todo.items.count) completed"
+                        format = item.presentationData.strings.Chat_Todo_Message_Completed(Int32(todo.completions.count))
                     }
+                    bottomText = format.replacingOccurrences(of: "{count}", with: "\(todo.items.count)")
                 }
                 
                 let (buttonViewResultsTextLayout, buttonViewResultsTextApply) = makeViewResultsTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: bottomText, font: labelsFont, textColor: messageTheme.secondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: textInsets))
