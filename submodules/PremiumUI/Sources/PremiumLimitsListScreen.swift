@@ -870,6 +870,7 @@ public class PremiumLimitsListScreen: ViewController {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: context,
                                     position: .top,
+                                    model: .island,
                                     videoFile: videos["todo"],
                                     decoration: .todo
                                 )),

@@ -14507,9 +14507,6 @@ Sorry for the inconvenience.";
 
 "Attachment.DiscardTodoAlertText" = "Discard checklist items?";
 
-"Auth.PremiumSignUp.ActionTitle" = "Sign up for %@";
-"Auth.PremiumSignUp.ActionSubtitle" = "Get Telegram Premium for 1 week";
-
 "Chat.PostApproval.Status.AdminApproved" = "The message was approved";
 "Chat.PostApproval.Status.AdminRejected" = "The message was rejected";
 "Chat.PostApproval.Status.UserApproved" = "Your message was approved";

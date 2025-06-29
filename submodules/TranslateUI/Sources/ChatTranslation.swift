@@ -193,6 +193,10 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id,
         return .single(nil)
     }
     
+    guard canTranslateChats(context: context) else {
+        return .single(nil)
+    }
+    
     let loggingEnabled = context.sharedContext.immediateExperimentalUISettings.logLanguageRecognition
     
     if #available(iOS 12.0, *) {

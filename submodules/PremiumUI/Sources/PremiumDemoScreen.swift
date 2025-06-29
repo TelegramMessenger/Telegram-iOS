@@ -1126,6 +1126,7 @@ private final class DemoSheetContent: CombinedComponent {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: component.context,
                                     position: .top,
+                                    model: .island,
                                     videoFile: configuration.videos["todo"],
                                     decoration: .todo
                                 )),

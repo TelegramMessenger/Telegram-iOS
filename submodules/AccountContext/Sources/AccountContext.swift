@@ -1644,8 +1644,10 @@ public struct TranslationConfiguration {
     public static func with(appConfiguration: AppConfiguration) -> TranslationConfiguration {
         if let data = appConfiguration.data {
             let manualValue = data["translations_manual_enabled"] as? String ?? "disabled"
-            let autoValue = data["translations_auto_enabled"] as? String ?? "disabled"
-            
+            var autoValue = data["translations_auto_enabled"] as? String ?? "disabled"
+            if autoValue == "alternative" {
+                autoValue = "disabled"
+            }
             return TranslationConfiguration(manual: TranslationAvailability(string: manualValue), auto: TranslationAvailability(string: autoValue))
         } else {
             return .defaultValue
