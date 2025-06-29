@@ -15,16 +15,72 @@ with open(modules_json_path, 'r') as f:
 
 # Clean spm-files
 spm_files_dir = "spm-files"
-if os.path.exists(spm_files_dir):
-    for item in os.listdir(spm_files_dir):
-        if item != ".build":
-            item_path = os.path.join(spm_files_dir, item)
-            if os.path.isfile(item_path):
-                os.unlink(item_path)
-            elif os.path.isdir(item_path):
-                shutil.rmtree(item_path)
+
+previous_spm_files = set()
+
+def scan_spm_files(path: str):
+    global previous_spm_files
+    if not os.path.exists(path):
+        return
+    for item in os.listdir(path):
+        if item == ".build":
+            continue
+        item_path = os.path.join(path, item)
+        if os.path.isfile(item_path) or os.path.islink(item_path):
+            previous_spm_files.add(item_path)
+        elif os.path.isdir(item_path):
+            previous_spm_files.add(item_path)
+            scan_spm_files(item_path)
+
+scan_spm_files(spm_files_dir)
+
+current_spm_files = set()
+
+def create_spm_file(path: str, contents: str):
+    global current_spm_files
+    current_spm_files.add(path)
+    
+    # Track all parent directories
+    parent_dir = os.path.dirname(path)
+    while parent_dir and parent_dir != path:
+        current_spm_files.add(parent_dir)
+        parent_dir = os.path.dirname(parent_dir)
+    
+    with open(path, "w") as f:
+        f.write(contents)
+
+def link_spm_file(source_path: str, target_path: str):
+    global current_spm_files
+    current_spm_files.add(target_path)
+    
+    # Track all parent directories
+    parent_dir = os.path.dirname(target_path)
+    while parent_dir and parent_dir != target_path:
+        current_spm_files.add(parent_dir)
+        parent_dir = os.path.dirname(parent_dir)
+    
+    # Remove existing file/symlink if it exists and is different
+    if os.path.islink(target_path):
+        if os.readlink(target_path) != source_path:
+            os.unlink(target_path)
+        else:
+            return  # Symlink already points to the correct target
+    elif os.path.exists(target_path):
+        os.unlink(target_path)
+    
+    os.symlink(source_path, target_path)
+
+def create_spm_directory(path: str):
+    global current_spm_files
+    current_spm_files.add(path)
+    if not os.path.exists(path):
+        os.makedirs(path)
+
 if not os.path.exists(spm_files_dir):
     os.makedirs(spm_files_dir)
+    
+# Track the root directory
+current_spm_files.add(spm_files_dir)
 
 def escape_swift_string_literal_component(text: str) -> str:
     # Handle -D defines that use shell-style quoting like -DPACKAGE_STRING='""'
@@ -103,97 +159,105 @@ func parseProduct(product: [String: Any]) -> Product {
 combined_lines.append("""
 func parseTarget(target: [String: Any]) -> Target {
     let name = target["name"] as! String
+    let type = target["type"] as! String
     let dependencies = target["dependencies"] as! [String]
-    
-    var swiftSettings: [SwiftSetting]?
-    if let swiftSettingList = target["swiftSettings"] as? [[String: Any]] {
-        var swiftSettingsValue: [SwiftSetting] = []
-        swiftSettingsValue.append(.swiftLanguageMode(.v5))
-        for swiftSetting in swiftSettingList {
-            if swiftSetting["type"] as! String == "define" {
-                swiftSettingsValue.append(.define(swiftSetting["name"] as! String))
-            } else if swiftSetting["type"] as! String == "unsafeFlags" {
-                swiftSettingsValue.append(.unsafeFlags(swiftSetting["flags"] as! [String]))
-            } else {
-                print("Unknown swift setting type: \\(swiftSetting["type"] as! String)")
-                preconditionFailure("Unknown swift setting type: \\(swiftSetting["type"] as! String)")
-            }
-        }
                       
-        swiftSettings = swiftSettingsValue
-    }
-                      
-    var cSettings: [CSetting]?
-    if let cSettingList = target["cSettings"] as? [[String: Any]] {
-        var cSettingsValue: [CSetting] = []
-        for cSetting in cSettingList {
-            if cSetting["type"] as! String == "define" {
-                if let value = cSetting["value"] as? String {
-                    cSettingsValue.append(.define(cSetting["name"] as! String, to: value))
+    if type == "library" {
+        var swiftSettings: [SwiftSetting]?
+        if let swiftSettingList = target["swiftSettings"] as? [[String: Any]] {
+            var swiftSettingsValue: [SwiftSetting] = []
+            swiftSettingsValue.append(.swiftLanguageMode(.v5))
+            for swiftSetting in swiftSettingList {
+                if swiftSetting["type"] as! String == "define" {
+                    swiftSettingsValue.append(.define(swiftSetting["name"] as! String))
+                } else if swiftSetting["type"] as! String == "unsafeFlags" {
+                    swiftSettingsValue.append(.unsafeFlags(swiftSetting["flags"] as! [String]))
                 } else {
-                    cSettingsValue.append(.define(cSetting["name"] as! String))
+                    print("Unknown swift setting type: \\(swiftSetting["type"] as! String)")
+                    preconditionFailure("Unknown swift setting type: \\(swiftSetting["type"] as! String)")
                 }
-            } else if cSetting["type"] as! String == "unsafeFlags" {
-                cSettingsValue.append(.unsafeFlags(cSetting["flags"] as! [String]))
-            } else {
-                print("Unknown c setting type: \\(cSetting["type"] as! String)")
-                preconditionFailure("Unknown c setting type: \\(cSetting["type"] as! String)")
             }
+                        
+            swiftSettings = swiftSettingsValue
         }
-        cSettings = cSettingsValue
-    }
-
-    var cxxSettings: [CXXSetting]?
-    if let cxxSettingList = target["cxxSettings"] as? [[String: Any]] {
-        var cxxSettingsValue: [CXXSetting] = []
-        for cxxSetting in cxxSettingList {
-            if cxxSetting["type"] as! String == "define" {
-                if let value = cxxSetting["value"] as? String {
-                    cxxSettingsValue.append(.define(cxxSetting["name"] as! String, to: value))
+                        
+        var cSettings: [CSetting]?
+        if let cSettingList = target["cSettings"] as? [[String: Any]] {
+            var cSettingsValue: [CSetting] = []
+            for cSetting in cSettingList {
+                if cSetting["type"] as! String == "define" {
+                    if let value = cSetting["value"] as? String {
+                        cSettingsValue.append(.define(cSetting["name"] as! String, to: value))
+                    } else {
+                        cSettingsValue.append(.define(cSetting["name"] as! String))
+                    }
+                } else if cSetting["type"] as! String == "unsafeFlags" {
+                    cSettingsValue.append(.unsafeFlags(cSetting["flags"] as! [String]))
                 } else {
-                    cxxSettingsValue.append(.define(cxxSetting["name"] as! String))
+                    print("Unknown c setting type: \\(cSetting["type"] as! String)")
+                    preconditionFailure("Unknown c setting type: \\(cSetting["type"] as! String)")
                 }
-            } else if cxxSetting["type"] as! String == "unsafeFlags" {
-                cxxSettingsValue.append(.unsafeFlags(cxxSetting["flags"] as! [String]))
-            } else {
-                print("Unknown cxx setting type: \\(cxxSetting["type"] as! String)")
-                preconditionFailure("Unknown cxx setting type: \\(cxxSetting["type"] as! String)")
             }
+            cSettings = cSettingsValue
         }
-        cxxSettings = cxxSettingsValue
-    }
-                      
-    var linkerSettings: [LinkerSetting]?
-    if let linkerSettingList = target["linkerSettings"] as? [[String: Any]] {
-        var linkerSettingsValue: [LinkerSetting] = []
-        for linkerSetting in linkerSettingList {
-            if linkerSetting["type"] as! String == "framework" {
-                linkerSettingsValue.append(.linkedFramework(linkerSetting["name"] as! String))
-            } else if linkerSetting["type"] as! String == "library" {
-                linkerSettingsValue.append(.linkedLibrary(linkerSetting["name"] as! String))
-            } else {
-                print("Unknown linker setting type: \\(linkerSetting["type"] as! String)")
-                preconditionFailure("Unknown linker setting type: \\(linkerSetting["type"] as! String)")
-            }
-        }
-        linkerSettings = linkerSettingsValue
-    }
 
-    return .target(
-        name: name,
-        dependencies: dependencies.map({ .target(name: $0) }),
-        path: (target["path"] as? String)!,
-        exclude: target["exclude"] as? [String] ?? [],
-        sources: sourceFileMap[name]!,
-        resources: nil,
-        publicHeadersPath: target["publicHeadersPath"] as? String,
-        packageAccess: true,
-        cSettings: cSettings,
-        cxxSettings: cxxSettings,
-        swiftSettings: swiftSettings,
-        linkerSettings: linkerSettings,
-        plugins: nil
-    )
+        var cxxSettings: [CXXSetting]?
+        if let cxxSettingList = target["cxxSettings"] as? [[String: Any]] {
+            var cxxSettingsValue: [CXXSetting] = []
+            for cxxSetting in cxxSettingList {
+                if cxxSetting["type"] as! String == "define" {
+                    if let value = cxxSetting["value"] as? String {
+                        cxxSettingsValue.append(.define(cxxSetting["name"] as! String, to: value))
+                    } else {
+                        cxxSettingsValue.append(.define(cxxSetting["name"] as! String))
+                    }
+                } else if cxxSetting["type"] as! String == "unsafeFlags" {
+                    cxxSettingsValue.append(.unsafeFlags(cxxSetting["flags"] as! [String]))
+                } else {
+                    print("Unknown cxx setting type: \\(cxxSetting["type"] as! String)")
+                    preconditionFailure("Unknown cxx setting type: \\(cxxSetting["type"] as! String)")
+                }
+            }
+            cxxSettings = cxxSettingsValue
+        }
+                        
+        var linkerSettings: [LinkerSetting]?
+        if let linkerSettingList = target["linkerSettings"] as? [[String: Any]] {
+            var linkerSettingsValue: [LinkerSetting] = []
+            for linkerSetting in linkerSettingList {
+                if linkerSetting["type"] as! String == "framework" {
+                    linkerSettingsValue.append(.linkedFramework(linkerSetting["name"] as! String))
+                } else if linkerSetting["type"] as! String == "library" {
+                    linkerSettingsValue.append(.linkedLibrary(linkerSetting["name"] as! String))
+                } else {
+                    print("Unknown linker setting type: \\(linkerSetting["type"] as! String)")
+                    preconditionFailure("Unknown linker setting type: \\(linkerSetting["type"] as! String)")
+                }
+            }
+            linkerSettings = linkerSettingsValue
+        }
+
+        return .target(
+            name: name,
+            dependencies: dependencies.map({ .target(name: $0) }),
+            path: (target["path"] as? String)!,
+            exclude: target["exclude"] as? [String] ?? [],
+            sources: sourceFileMap[name]!,
+            resources: nil,
+            publicHeadersPath: target["publicHeadersPath"] as? String,
+            packageAccess: true,
+            cSettings: cSettings,
+            cxxSettings: cxxSettings,
+            swiftSettings: swiftSettings,
+            linkerSettings: linkerSettings,
+            plugins: nil
+        )
+    } else if type == "xcframework" {
+        return .binaryTarget(name: name, path: (target["path"] as? String)! + "/" + (target["name"] as? String)! + ".xcframework")
+    } else {
+        print("Unknown target type: \\(type)")
+        preconditionFailure("Unknown target type: \\(type)")
+    }
 }
 """)
 combined_lines.append("")
@@ -226,14 +290,14 @@ for name, module in sorted(modules.items()):
         continue
 
     module_type = module["type"]
-    if module_type == "objc_library" or module_type == "cc_library" or module_type == "swift_library":
+    if module_type == "objc_library" or module_type == "cc_library" or module_type == "swift_library" or module_type == "apple_static_xcframework_import":
         spm_target = dict()
 
         spm_target["name"] = name
         
         relative_module_path = module["path"]
         module_directory = spm_files_dir + "/" + relative_module_path
-        os.makedirs(module_directory, exist_ok=True)
+        create_spm_directory(module_directory)
 
         module_public_headers_prefix = ""
         if module_type == "objc_library" or module_type == "cc_library":
@@ -248,7 +312,7 @@ for name, module in sorted(modules.items()):
                         break
 
         spm_target["dependencies"] = []
-        for dep in module["deps"]:
+        for dep in module.get("deps", []):
             if not parsed_modules[dep]["is_empty"]:
                 spm_target["dependencies"].append(dep)
         
@@ -279,8 +343,7 @@ for name, module in sorted(modules.items()):
 
             # Create parent directory for symlink if it doesn't exist
             symlink_parent = os.path.dirname(symlink_location)
-            if not os.path.exists(symlink_parent):
-                os.makedirs(symlink_parent)
+            create_spm_directory(symlink_parent)
             
             # Calculate relative path from symlink back to original file
             # Count directory depth: spm-files/module_name/... -> spm-files
@@ -289,9 +352,7 @@ for name, module in sorted(modules.items()):
             symlink_target = relative_prefix + source
             
             # Create the symlink
-            if os.path.lexists(symlink_location):
-                os.unlink(symlink_location)
-            os.symlink(symlink_target, symlink_location)
+            link_spm_file(symlink_target, symlink_location)
             
             # Add to sources list (exclude certain file types)
             if source.endswith(('.h', '.hpp', '.a', '.inc')):
@@ -314,13 +375,14 @@ for name, module in sorted(modules.items()):
         if len(ignore_sub_folders) != 0:
             spm_target["exclude"] = ignore_sub_folders
         
-        modulemap_path = os.path.join(os.path.join(os.path.join(module_directory), module_public_headers_prefix), "module.modulemap")
-        if modulemap_path not in modulemaps:
-            modulemaps[modulemap_path] = []
-        modulemaps[modulemap_path].append({
-            "name": name,
-            "public_include_files": public_include_files
-        })
+        if module_type == "objc_library" or module_type == "cc_library":
+            modulemap_path = os.path.join(os.path.join(os.path.join(module_directory), module_public_headers_prefix), "module.modulemap")
+            if modulemap_path not in modulemaps:
+                modulemaps[modulemap_path] = []
+            modulemaps[modulemap_path].append({
+                "name": name,
+                "public_include_files": public_include_files
+            })
                 
         if module_type == "objc_library" or module_type == "cc_library":
             if module_public_headers_prefix is not None and len(module_public_headers_prefix) != 0:
@@ -452,7 +514,14 @@ for name, module in sorted(modules.items()):
                     "flags": unsafe_flags
                 })
 
+        if module_type == "apple_static_xcframework_import":
+            spm_target["type"] = "xcframework"
+        else:
+            spm_target["type"] = "library"
+
         spm_targets.append(spm_target)
+    elif module["type"] == "apple_static_xcframework_import":
+        pass
     elif module["type"] == "root":
         pass
     else:
@@ -463,16 +532,14 @@ combined_lines.append("    cxxLanguageStandard: .cxx17")
 combined_lines.append(")")
 combined_lines.append("")
 
-with open("spm-files/Package.swift", "w") as f:
-    f.write("\n".join(combined_lines))
+create_spm_file("spm-files/Package.swift", "\n".join(combined_lines))
 
-with open("spm-files/PackageData.json", "w") as f:
-    package_data = {
-        "sourceFileMap": module_to_source_files,
-        "products": spm_products,
-        "targets": spm_targets
-    }
-    json.dump(package_data, f, indent=4)
+package_data = {
+    "sourceFileMap": module_to_source_files,
+    "products": spm_products,
+    "targets": spm_targets
+}
+create_spm_file("spm-files/PackageData.json", json.dumps(package_data, indent=4))
 
 for modulemap_path, modulemap in modulemaps.items():
     module_map_contents = ""
@@ -481,5 +548,30 @@ for modulemap_path, modulemap in modulemaps.items():
         for public_include_file in module["public_include_files"]:
             module_map_contents += "    header \"{}\"\n".format(public_include_file)
         module_map_contents += "}\n"
-    with open(modulemap_path, "w") as f:
-        f.write(module_map_contents)
+    create_spm_file(modulemap_path, module_map_contents)
+
+# Clean up files and directories that are no longer needed
+files_to_remove = previous_spm_files - current_spm_files
+
+# Sort by path depth (deeper paths first) to ensure we remove files before their parent directories
+sorted_files_to_remove = sorted(files_to_remove, key=lambda x: x.count(os.path.sep), reverse=True)
+
+for file_path in sorted_files_to_remove:
+    try:
+        if os.path.islink(file_path):
+            os.unlink(file_path)
+            #print(f"Removed symlink: {file_path}")
+        elif os.path.isfile(file_path):
+            os.unlink(file_path)
+            #print(f"Removed file: {file_path}")
+        elif os.path.isdir(file_path):
+            # Try to remove directory if empty, otherwise use rmtree
+            try:
+                os.rmdir(file_path)
+                #print(f"Removed empty directory: {file_path}")
+            except OSError:
+                shutil.rmtree(file_path)
+                #print(f"Removed directory tree: {file_path}")
+    except OSError as e:
+        print(f"Failed to remove {file_path}: {e}")
+
