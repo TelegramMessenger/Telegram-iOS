@@ -394,23 +394,22 @@ extension ChatControllerImpl {
                     guard let self else {
                         return
                     }
-                    //TODO:localize
                     let titleString: String
                     let textString: String
                     switch attribute.currency {
                     case .stars:
-                        titleString = "Stars Will Be Lost"
-                        textString = "You won't receive **Stars** for this post if you delete it now. The post must remain visible for at least **24 hours** after publication."
+                        titleString = self.presentationData.strings.Chat_DeletePaidMessageStars_Title
+                        textString = self.presentationData.strings.Chat_DeletePaidMessageStars_Text
                     case .ton:
-                        titleString = "TON Will Be Lost"
-                        textString = "You won't receive **TON** for this post if you delete it now. The post must remain visible for at least **24 hours** after publication."
+                        titleString = self.presentationData.strings.Chat_DeletePaidMessageTon_Title
+                        textString = self.presentationData.strings.Chat_DeletePaidMessageTon_Text
                     }
                     self.present(standardTextAlertController(
                         theme: AlertControllerTheme(presentationData: self.presentationData),
                         title: titleString,
                         text: textString,
                         actions: [
-                            TextAlertAction(type: .destructiveAction, title: "Delete Anyway", action: { [weak self] in
+                            TextAlertAction(type: .destructiveAction, title: self.presentationData.strings.Chat_DeletePaidMessage_Action, action: { [weak self] in
                                 guard let self else {
                                     return
                                 }

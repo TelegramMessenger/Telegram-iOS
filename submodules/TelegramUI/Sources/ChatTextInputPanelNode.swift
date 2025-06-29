@@ -159,8 +159,7 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
                     return (PresentationResourcesChat.chatInputTextFieldSilentPostOffImage(theme), nil, strings.VoiceOver_SilentPostOff, 1.0, UIEdgeInsets())
                 }
             case .suggestPost:
-                //TODO:localize
-                return (PresentationResourcesChat.chatInputTextFieldSuggestPostImage(theme), nil, "Suggest post", 1.0, UIEdgeInsets())
+                return (PresentationResourcesChat.chatInputTextFieldSuggestPostImage(theme), nil, strings.VoiceOver_SuggestPost, 1.0, UIEdgeInsets())
             case let .messageAutoremoveTimeout(timeout):
                 if let timeout = timeout {
                     return (nil, shortTimeIntervalString(strings: strings, value: timeout), strings.VoiceOver_SelfDestructTimerOn(timeIntervalString(strings: strings, value: timeout)).string, 1.0, UIEdgeInsets())

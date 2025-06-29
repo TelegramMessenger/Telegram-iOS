@@ -62,6 +62,7 @@ public struct Namespaces {
         public static let CloudIconStatusEmoji: Int32 = 10
         public static let CloudIconTopicEmoji: Int32 = 11
         public static let CloudIconChannelStatusEmoji: Int32 = 12
+        public static let CloudTonGifts: Int32 = 13
     }
     
     public struct OrderedItemList {

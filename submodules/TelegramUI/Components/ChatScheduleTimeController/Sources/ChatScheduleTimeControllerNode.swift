@@ -112,16 +112,13 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, ASScrollViewDel
             title = self.presentationData.strings.Conversation_SetReminder_Title
         case let .suggestPost(needsTime, isAdmin, funds):
             if needsTime {
-                //TODO:localize
-                title = "Accept Terms"
-                text = "Set the date and time you want\nthis message to be published."
+                title = self.presentationData.strings.Chat_PostSuggestion_ApproveTime_Title
+                text = self.presentationData.strings.Chat_PostSuggestion_ApproveTime_Text
             } else {
-                //TODO:localize
-                title = "Time"
-                text = "Set the date and time you want\nyour message to be published."
+                title = self.presentationData.strings.Chat_PostSuggestion_SetTime_Title
+                text = self.presentationData.strings.Chat_PostSuggestion_SetTime_Text
             }
             
-            //TODO:localize
             if let funds, isAdmin {
                 var commissionValue: String
                 commissionValue = "\(Double(funds.commissionPermille) * 0.1)"
@@ -134,10 +131,10 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, ASScrollViewDel
                 switch funds.amount.currency {
                 case .stars:
                     let displayAmount = funds.amount.amount.totalValue * Double(funds.commissionPermille) / 1000.0
-                    subtitle = "You will receive \(displayAmount) Stars (\(commissionValue)%)\nfor publishing this post"
+                    subtitle = self.presentationData.strings.Chat_PostSuggestion_ApproveTime_AdminConfirmationPriceStars("\(displayAmount)", "\(commissionValue)").string
                 case .ton:
                     let displayAmount = Double(funds.amount.amount.value) / 1000000000.0 * Double(funds.commissionPermille) / 1000.0
-                    subtitle = "You will receive \(displayAmount) TON (\(commissionValue)%)\nfor publishing this post"
+                    subtitle = self.presentationData.strings.Chat_PostSuggestion_ApproveTime_AdminConfirmationPriceTon("\(displayAmount)", "\(commissionValue)").string
                 }
             }
         }
@@ -183,11 +180,10 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, ASScrollViewDel
         self.onlineButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: buttonColor, foregroundColor: buttonTextColor), font: .regular, height: 52.0, cornerRadius: 11.0, gloss: false)
         switch mode {
         case let .suggestPost(needsTime, _, _):
-            //TODO:localize
             if needsTime {
-                self.onlineButton.title = "Post Now"
+                self.onlineButton.title = self.presentationData.strings.Chat_PostSuggestion_ApproveTime_NoTimeAction
             } else {
-                self.onlineButton.title = "Send Anytime"
+                self.onlineButton.title = self.presentationData.strings.Chat_PostSuggestion_SetTime_NoTimeAction
             }
         default:
             self.onlineButton.title = self.presentationData.strings.Conversation_ScheduleMessage_SendWhenOnline
@@ -589,7 +585,6 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, ASScrollViewDel
             }
             let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
             let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
-            //TODO:localize
             let playOnce = ActionSlot<Void>()
             let toastSize = toast.update(
                 transition: ComponentTransition(transition),
@@ -602,7 +597,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, ASScrollViewDel
                     )),
                     content: AnyComponent(VStack([
                         AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
-                            text: .markdown(text: "Transactions in **Stars** may be reversed by the payment provider within **21** days. Only accept Stars from people you trust.", attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil })),
+                            text: .markdown(text: self.presentationData.strings.Chat_PostSuggestion_StarsDisclaimer, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil })),
                             maximumNumberOfLines: 0
                         )))
                     ], alignment: .left, spacing: 6.0)),

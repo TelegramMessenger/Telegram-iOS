@@ -2352,8 +2352,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if message.effectivelyIncoming(strongSelf.context.account.peerId) {
                     switch buttonType {
                     case 0:
-                        //TODO:localize
-                        let promptController = promptController(sharedContext: strongSelf.context.sharedContext, updatedPresentationData: strongSelf.updatedPresentationData, text: "Comment", titleFont: .bold, value: "", placeholder: "Optional", characterLimit: 4096, apply: { value in
+                        let promptController = promptController(sharedContext: strongSelf.context.sharedContext, updatedPresentationData: strongSelf.updatedPresentationData, text: strongSelf.presentationData.strings.Chat_PostSuggestion_Reject_Title, titleFont: .bold, value: "", placeholder: strongSelf.presentationData.strings.Chat_PostSuggestion_Reject_Placeholder, characterLimit: 4096, apply: { value in
                             guard let self else {
                                 return
                             }
@@ -2393,10 +2392,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             
                             timestamp = Int32(Date().timeIntervalSince1970) + 1 * 60 * 60
                         } else {
-                            //TODO:localize
                             var textString: String
                             if isAdmin {
-                                textString = "Do you really want to publish this post from **\((message.author.flatMap(EnginePeer.init))?.compactDisplayTitle ?? "")**?"
+                                textString = strongSelf.presentationData.strings.Chat_PostSuggestion_Approve_AdminConfirmationText(message.author.flatMap(EnginePeer.init)?.compactDisplayTitle ?? "").string
                                 
                                 if let funds {
                                     var commissionValue: String
@@ -2412,25 +2410,25 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     switch funds.amount.currency {
                                     case .stars:
                                         let displayAmount = funds.amount.amount.totalValue * Double(funds.commissionPermille) / 1000.0
-                                        textString += "You will receive \(displayAmount) Stars (\(commissionValue)%)\nfor publishing this post. It must remain visible for **24** hours after publication."
+                                        textString += strongSelf.presentationData.strings.Chat_PostSuggestion_Approve_AdminConfirmationPriceStars("\(displayAmount)", "\(commissionValue)").string
                                     case .ton:
                                         let displayAmount = Double(funds.amount.amount.value) / 1000000000.0 * Double(funds.commissionPermille) / 1000.0
-                                        textString += "You will receive \(displayAmount) TON (\(commissionValue)%)\nfor publishing this post. It must remain visible for **24** hours after publication."
+                                        textString += strongSelf.presentationData.strings.Chat_PostSuggestion_Approve_AdminConfirmationPriceTon("\(displayAmount)", "\(commissionValue)").string
                                     }
                                 }
                             } else {
-                                textString = "Do you really want to publish this post?"
+                                textString = strongSelf.presentationData.strings.Chat_PostSuggestion_Approve_UserConfirmationText
                             }
                             
-                            strongSelf.present(SuggestedPostApproveAlert(presentationData: strongSelf.presentationData, title: "Accept Terms", text: textString, actions: [
-                                TextAlertAction(type: .defaultAction, title: "Publish", action: { [weak strongSelf] in
+                            strongSelf.present(SuggestedPostApproveAlert(presentationData: strongSelf.presentationData, title: strongSelf.presentationData.strings.Chat_PostSuggestion_Approve_Title, text: textString, actions: [
+                                TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Chat_PostSuggestion_Approve_Action, action: { [weak strongSelf] in
                                     guard let strongSelf else {
                                         return
                                     }
                                     let _ = strongSelf.context.engine.messages.monoforumPerformSuggestedPostAction(id: message.id, action: .approve(timestamp: timestamp)).startStandalone()
                                 }),
                                 TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {})
-                            ], actionLayout: .vertical, parseMarkdown: true, toastText: funds?.amount.currency == .ton ? "Transactions in **Stars** may be reversed by the payment provider within **21** days. Only accept Stars from people you trust." : nil), in: .window(.root))
+                            ], actionLayout: .vertical, parseMarkdown: true, toastText: funds?.amount.currency == .stars ? strongSelf.presentationData.strings.Chat_PostSuggestion_StarsDisclaimer : nil), in: .window(.root))
                         }
                     case 2:
                         strongSelf.interfaceInteraction?.openSuggestPost(message, .default)

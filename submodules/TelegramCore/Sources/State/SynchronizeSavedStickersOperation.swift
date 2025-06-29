@@ -62,7 +62,7 @@ public func addSavedSticker(postbox: Postbox, network: Network, file: TelegramMe
                         if !found {
                             fetchReference = packReference
                         }
-                    case .animatedEmoji, .animatedEmojiAnimations, .dice, .premiumGifts, .emojiGenericAnimations, .iconStatusEmoji, .iconChannelStatusEmoji, .iconTopicEmoji:
+                    case .animatedEmoji, .animatedEmojiAnimations, .dice, .premiumGifts, .emojiGenericAnimations, .iconStatusEmoji, .iconChannelStatusEmoji, .iconTopicEmoji, .tonGifts:
                         break
                     }
                     if let fetchReference = fetchReference {

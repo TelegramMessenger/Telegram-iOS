@@ -128,7 +128,7 @@ private final class BalanceNeededSheetContentComponent: Component {
             let titleSize = self.title.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "\(formatTonAmountText(component.amount.value, dateTimeFormat: component.context.sharedContext.currentPresentationData.with({ $0 }).dateTimeFormat)) TON Needed", font: Font.bold(24.0), textColor: environment.theme.list.itemPrimaryTextColor)),
+                    text: .plain(NSAttributedString(string: environment.strings.BalanceNeeded_FragmentTitle(formatTonAmountText(component.amount.value, dateTimeFormat: component.context.sharedContext.currentPresentationData.with({ $0 }).dateTimeFormat)).string, font: Font.bold(24.0), textColor: environment.theme.list.itemPrimaryTextColor)),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0
                 )),
@@ -144,11 +144,10 @@ private final class BalanceNeededSheetContentComponent: Component {
             contentHeight += titleSize.height
             contentHeight += 14.0
             
-            //TODO:localize
             let textSize = self.text.update(
                 transition: transition,
                 component: AnyComponent(BalancedTextComponent(
-                    text: .plain(NSAttributedString(string: "You can add funds to your balance via the third-party platform Fragment.", font: Font.regular(15.0), textColor: environment.theme.list.itemPrimaryTextColor)),
+                    text: .plain(NSAttributedString(string: environment.strings.BalanceNeeded_FragmentSubtitle, font: Font.regular(15.0), textColor: environment.theme.list.itemPrimaryTextColor)),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.18
@@ -165,7 +164,6 @@ private final class BalanceNeededSheetContentComponent: Component {
             contentHeight += textSize.height
             contentHeight += 24.0
             
-            //TODO:localize
             let buttonSize = self.button.update(
                 transition: transition,
                 component: AnyComponent(ButtonComponent(
@@ -175,7 +173,7 @@ private final class BalanceNeededSheetContentComponent: Component {
                         pressedColor: environment.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.8)
                     ),
                     content: AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: "Add Funds via Fragment", font: Font.semibold(17.0), textColor: environment.theme.list.itemCheckColors.foregroundColor))
+                        text: .plain(NSAttributedString(string: environment.strings.BalanceNeeded_FragmentAction, font: Font.semibold(17.0), textColor: environment.theme.list.itemCheckColors.foregroundColor))
                     ))),
                     isEnabled: true,
                     allowActionWhenDisabled: true,

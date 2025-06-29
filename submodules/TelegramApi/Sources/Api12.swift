@@ -755,6 +755,7 @@ public extension Api {
         case inputStickerSetID(id: Int64, accessHash: Int64)
         case inputStickerSetPremiumGifts
         case inputStickerSetShortName(shortName: String)
+        case inputStickerSetTonGifts
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -825,6 +826,12 @@ public extension Api {
                     }
                     serializeString(shortName, buffer: buffer, boxed: false)
                     break
+                case .inputStickerSetTonGifts:
+                    if boxed {
+                        buffer.appendInt32(485912992)
+                    }
+                    
+                    break
     }
     }
     
@@ -852,6 +859,8 @@ public extension Api {
                 return ("inputStickerSetPremiumGifts", [])
                 case .inputStickerSetShortName(let shortName):
                 return ("inputStickerSetShortName", [("shortName", shortName as Any)])
+                case .inputStickerSetTonGifts:
+                return ("inputStickerSetTonGifts", [])
     }
     }
     
@@ -914,6 +923,9 @@ public extension Api {
             else {
                 return nil
             }
+        }
+        public static func parse_inputStickerSetTonGifts(_ reader: BufferReader) -> InputStickerSet? {
+            return Api.InputStickerSet.inputStickerSetTonGifts
         }
     
     }

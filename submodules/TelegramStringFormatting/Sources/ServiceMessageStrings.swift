@@ -1425,7 +1425,6 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     attributedString = addAttributesToStringWithRanges(resultString._tuple, body: bodyAttributes, argumentAttributes: attributes)
                 }
             case let .suggestedPostApprovalStatus(status):
-                //TODO:localize
                 var messageText = ""
                 for attribute in message.attributes {
                     if let attribute = attribute as? ReplyMessageAttribute, let message = message.associatedMessages[attribute.messageId] {
@@ -1433,36 +1432,22 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     }
                 }
                 
+                let _ = messageText
+                
                 let string: String
                 if !message.flags.contains(.Incoming) {
                     switch status {
                     case .approved:
-                        if messageText.isEmpty {
-                            string = "The message was approved"
-                        } else {
-                            string = "The message \"\(messageText)\" was approved"
-                        }
+                        string = strings.Chat_PostApproval_Status_AdminApproved
                     case .rejected:
-                        if messageText.isEmpty {
-                            string = "The message was declined"
-                        } else {
-                            string = "The message \"\(messageText)\" was declined"
-                        }
+                        string = strings.Chat_PostApproval_Status_AdminRejected
                     }
                 } else {
                     switch status {
                     case .approved:
-                        if messageText.isEmpty {
-                            string = "Your message was approved"
-                        } else {
-                            string = "Your message \"\(messageText)\" was approved"
-                        }
+                        string = strings.Chat_PostApproval_Status_UserApproved
                     case .rejected:
-                        if messageText.isEmpty {
-                            string = "Your message was declined"
-                        } else {
-                            string = "Your message \"\(messageText)\" was declined"
-                        }
+                        string = strings.Chat_PostApproval_Status_UserRejected
                     }
                 }
                 attributedString = NSAttributedString(string: string, font: titleFont, textColor: primaryTextColor)
@@ -1477,19 +1462,14 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 }
                 let _ = isUser
                 
-                //TODO:localize
                 let amountString: String
                 switch amount.currency {
                 case .stars:
-                    if amount.amount.value == 1 {
-                        amountString = "1 Star"
-                    } else {
-                        amountString = "\(amount.amount.value) Stars"
-                    }
+                    amountString = strings.Chat_PostApproval_DetailStatus_StarsAmount(Int32((amount.amount.value == 1 && amount.amount.nanos == 0) ? 1 : 100)).replacingOccurrences(of: "#", with: "\(amount.amount)")
                 case .ton:
-                    amountString = "\(formatTonAmountText(amount.amount.value, dateTimeFormat: dateTimeFormat, maxDecimalPositions: 3)) TON"
+                    amountString = strings.Chat_PostApproval_DetailStatus_TonAmount(Int32((amount.amount.value == 1 * 1_000_000_000) ? 1 : 100)).replacingOccurrences(of: "#", with: "\(formatTonAmountText(amount.amount.value, dateTimeFormat: dateTimeFormat, maxDecimalPositions: 3))")
                 }
-                attributedString = parseMarkdownIntoAttributedString("**\(channelName)** received **\(amountString)** for publishing this post", attributes: MarkdownAttributes(body: bodyAttributes, bold: boldAttributes, link: bodyAttributes, linkAttribute: { _ in return nil }))
+                attributedString = parseMarkdownIntoAttributedString(strings.Chat_PostApproval_DetailStatus_PostedPaid("\(channelName)", amountString).string, attributes: MarkdownAttributes(body: bodyAttributes, bold: boldAttributes, link: bodyAttributes, linkAttribute: { _ in return nil }))
             case let .suggestedPostRefund(info):
                 var isUser = true
                 var channelName: String = ""
@@ -1501,15 +1481,14 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 }
                 let _ = channelName
                 
-                //TODO:localize
                 if info.isUserInitiated {
                     if isUser {
-                        attributedString = NSAttributedString(string: "Suggested post was refunded because you didn't have enough funds", font: titleFont, textColor: primaryTextColor)
+                        attributedString = NSAttributedString(string: strings.Chat_PostApproval_DetailStatus_UserFailedRefunded, font: titleFont, textColor: primaryTextColor)
                     } else {
-                        attributedString = NSAttributedString(string: "Suggested post was refunded because the user didn't have enough funds", font: titleFont, textColor: primaryTextColor)
+                        attributedString = NSAttributedString(string: strings.Chat_PostApproval_DetailStatus_AdminFailedRefunded, font: titleFont, textColor: primaryTextColor)
                     }
                 } else {
-                    attributedString = NSAttributedString(string: "Suggested post was refunded because the message was deleted", font: titleFont, textColor: primaryTextColor)
+                    attributedString = NSAttributedString(string: strings.Chat_PostApproval_DetailStatus_FailedDeleted, font: titleFont, textColor: primaryTextColor)
                 }
             case let .giftTon(currency, amount, _, _, _):
                 attributedString = nil

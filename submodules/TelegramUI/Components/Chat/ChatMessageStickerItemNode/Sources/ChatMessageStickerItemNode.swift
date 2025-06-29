@@ -861,7 +861,6 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                     canApprove = false
                 }
                 
-                //TODO:localize
                 var buttonDeclineValue: UInt8 = 0
                 let buttonDecline = MemoryBuffer(data: Data(bytes: &buttonDeclineValue, count: 1))
                 var buttonApproveValue: UInt8 = 1
@@ -893,11 +892,11 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                     ReplyMarkupMessageAttribute(
                         rows: [
                             ReplyMarkupRow(buttons: [
-                                ReplyMarkupButton(title: "Decline", titleWhenForwarded: nil, action: .callback(requiresPassword: false, data: buttonDecline)),
-                                ReplyMarkupButton(title: "Approve", titleWhenForwarded: nil, action: .callback(requiresPassword: false, data: buttonApprove))
+                                ReplyMarkupButton(title: item.presentationData.strings.Chat_PostApproval_Message_ActionReject, titleWhenForwarded: nil, action: .callback(requiresPassword: false, data: buttonDecline)),
+                                ReplyMarkupButton(title: item.presentationData.strings.Chat_PostApproval_Message_ActionApprove, titleWhenForwarded: nil, action: .callback(requiresPassword: false, data: buttonApprove))
                             ]),
                             ReplyMarkupRow(buttons: [
-                                ReplyMarkupButton(title: "Suggest Changes", titleWhenForwarded: nil, action: .callback(requiresPassword: false, data: buttonSuggestChanges))
+                                ReplyMarkupButton(title: item.presentationData.strings.Chat_PostApproval_Message_ActionSuggestChanges, titleWhenForwarded: nil, action: .callback(requiresPassword: false, data: buttonSuggestChanges))
                             ])
                         ],
                         flags: [],

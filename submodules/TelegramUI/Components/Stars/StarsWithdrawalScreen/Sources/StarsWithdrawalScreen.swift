@@ -212,24 +212,23 @@ private final class SheetContent: CombinedComponent {
                 minAmount = StarsAmount(value: minAmountValue, nanos: 0)
                 maxAmount = StarsAmount(value: resaleConfiguration.paidMessageMaxAmount, nanos: 0)
             case let .suggestedPost(mode, _, _, _):
-                //TODO:localize
                 switch mode {
                 case .sender:
-                    titleString = "Suggest Terms"
+                    titleString = environment.strings.Chat_PostSuggestion_Suggest_TitleCreate
                 case .admin:
-                    titleString = "Suggest Changes"
+                    titleString = environment.strings.Chat_PostSuggestion_Suggest_TitleEdit
                 }
                 switch state.currency {
                 case .stars:
-                    amountTitle = "ENTER A PRICE IN STARS"
+                    amountTitle = environment.strings.Chat_PostSuggestion_Suggest_PriceSectionStars
                     maxAmount = StarsAmount(value: resaleConfiguration.channelMessageSuggestionMaxStarsAmount, nanos: 0)
                     minAmount = StarsAmount(value: resaleConfiguration.channelMessageSuggestionMinStarsAmount, nanos: 0)
                 case .ton:
-                    amountTitle = "ENTER A PRICE IN TON"
+                    amountTitle = environment.strings.Chat_PostSuggestion_Suggest_PriceSectionTon
                     maxAmount = StarsAmount(value: resaleConfiguration.channelMessageSuggestionMaxTonAmount, nanos: 0)
                     minAmount = StarsAmount(value: 0, nanos: 0)
                 }
-                amountPlaceholder = "Price"
+                amountPlaceholder = environment.strings.Chat_PostSuggestion_Suggest_PricePlaceholder
                 allowZero = true
                 
                 if let usdWithdrawRate = withdrawConfiguration.usdWithdrawRate, let tonUsdRate = withdrawConfiguration.tonUsdRate, let amount = state.amount, amount > StarsAmount.zero {
@@ -330,17 +329,16 @@ private final class SheetContent: CombinedComponent {
                 }
                 
                 if displayCurrencySelector {
-                    //TODO:localize
                     let selectedId: AnyHashable = state.currency == .stars ? AnyHashable(0 as Int) : AnyHashable(1 as Int)
                     let starsTitle: String
                     let tonTitle: String
                     switch mode {
                     case .sender:
-                        starsTitle = "Offer Stars"
-                        tonTitle = "Offer TON"
+                        starsTitle = environment.strings.Chat_PostSuggestion_Suggest_OfferStars
+                        tonTitle = environment.strings.Chat_PostSuggestion_Suggest_OfferTon
                     case .admin:
-                        starsTitle = "Request Stars"
-                        tonTitle = "Request TON"
+                        starsTitle = environment.strings.Chat_PostSuggestion_Suggest_RequestStars
+                        tonTitle = environment.strings.Chat_PostSuggestion_Suggest_RequestTon
                     }
                     
                     let currencyToggle = currencyToggle.update(
@@ -474,21 +472,20 @@ private final class SheetContent: CombinedComponent {
             case let .suggestedPost(mode, _, _, _):
                 switch mode {
                 case let .sender(channel, isFromAdmin):
-                    //TODO:localize
                     let string: String
                     if isFromAdmin {
                         switch state.currency {
                         case .stars:
-                            string = "Choose how many Stars you charge for the message."
+                            string = environment.strings.Chat_PostSuggestion_Suggest_RequestDescriptionStars
                         case .ton:
-                            string = "Choose how many TON you charge for the message."
+                            string = environment.strings.Chat_PostSuggestion_Suggest_RequestDescriptionTon
                         }
                     } else {
                         switch state.currency {
                         case .stars:
-                            string = "Choose how many Stars you want to offer \(channel.compactDisplayTitle) to publish this message."
+                            string = environment.strings.Chat_PostSuggestion_Suggest_OfferDescriptionStars(channel.compactDisplayTitle).string
                         case .ton:
-                            string = "Choose how many TON you want to offer \(channel.compactDisplayTitle) to publish this message."
+                            string = environment.strings.Chat_PostSuggestion_Suggest_OfferDescriptionTon(channel.compactDisplayTitle).string
                         }
                     }
                     let amountInfoString = NSAttributedString(attributedString: parseMarkdownIntoAttributedString(string, attributes: amountMarkdownAttributes, textAlignment: .natural))
@@ -497,13 +494,12 @@ private final class SheetContent: CombinedComponent {
                         maximumNumberOfLines: 0
                     ))
                 case .admin:
-                    //TODO:localize
                     let string: String
                     switch state.currency {
                     case .stars:
-                        string = "Choose how many Stars you charge for the message."
+                        string = environment.strings.Chat_PostSuggestion_Suggest_RequestDescriptionStars
                     case .ton:
-                        string = "Choose how many TON you charge for the message."
+                        string = environment.strings.Chat_PostSuggestion_Suggest_RequestDescriptionTon
                     }
                     let amountInfoString = NSAttributedString(attributedString: parseMarkdownIntoAttributedString(string, attributes: amountMarkdownAttributes, textAlignment: .natural))
                     amountFooter = AnyComponent(MultilineTextComponent(
@@ -576,13 +572,12 @@ private final class SheetContent: CombinedComponent {
             if case let .suggestedPost(mode, _, _, _) = component.mode {
                 contentSize.height += 24.0
                 
-                //TODO:localize
                 let footerString: String
                 switch mode {
                 case .sender:
-                    footerString = "Select the date and time you want your message to be published."
+                    footerString = environment.strings.Chat_PostSuggestion_Suggest_OfferDateDescription
                 case .admin:
-                    footerString = "Select the date and time you want to publish the message."
+                    footerString = environment.strings.Chat_PostSuggestion_Suggest_EditDateDescription
                 }
                 
                 let timestampFooterString = NSAttributedString(attributedString: parseMarkdownIntoAttributedString(footerString, attributes: amountMarkdownAttributes, textAlignment: .natural))
@@ -687,7 +682,6 @@ private final class SheetContent: CombinedComponent {
             } else if case .paidMessages = component.mode {
                 buttonString = environment.strings.Stars_SendMessage_AdjustmentAction
             } else if case let .suggestedPost(mode, _, _, _) = component.mode {
-                //TODO:localize
                 switch mode {
                 case .sender:
                     if let amount = state.amount, amount != .zero {
@@ -701,12 +695,12 @@ private final class SheetContent: CombinedComponent {
                             currencySymbol = "$"
                             currencyAmount = formatTonAmountText(amount.value, dateTimeFormat: environment.dateTimeFormat)
                         }
-                        buttonString = "Offer  \(currencySymbol) \(currencyAmount)"
+                        buttonString = environment.strings.Chat_PostSuggestion_Suggest_OfferButtonPrice("\(currencySymbol) \(currencyAmount)").string
                     } else {
-                        buttonString = "Offer for Free"
+                        buttonString = environment.strings.Chat_PostSuggestion_Suggest_OfferButtonFree
                     }
                 case .admin:
-                    buttonString = "Update Terms"
+                    buttonString = environment.strings.Chat_PostSuggestion_Suggest_UpdateButton
                 }
             } else if let amount = state.amount {
                 buttonString = "\(environment.strings.Stars_Withdraw_Withdraw)  # \(presentationStringsFormattedNumber(amount, environment.dateTimeFormat.groupingSeparator))"
@@ -1120,21 +1114,19 @@ public final class StarsWithdrawScreen: ViewControllerComponentContainer {
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         var text = presentationData.strings.Stars_Withdraw_Withdraw_ErrorMinimum(presentationData.strings.Stars_Withdraw_Withdraw_ErrorMinimum_Stars(Int32(minAmount))).string
         if case .starGiftResell = self.mode {
-            //TODO:localize
-            text = "You cannot sell gift for less than \(presentationData.strings.Stars_Withdraw_Withdraw_ErrorMinimum_Stars(Int32(minAmount)))."
+            text = presentationData.strings.Stars_SellGiftMinAmountToast_Text("\(presentationData.strings.Stars_Withdraw_Withdraw_ErrorMinimum_Stars(Int32(minAmount)))").string
         } else if case let .suggestedPost(mode, _, _, _) = self.mode {
             let resaleConfiguration = StarsSubscriptionConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
             switch currency {
             case .stars:
-                //TODO:localize
                 switch mode {
                 case .admin:
-                    text = "You cannot request less than \(resaleConfiguration.channelMessageSuggestionMinStarsAmount) Stars."
+                    text = presentationData.strings.Chat_PostSuggestion_Suggest_AdminMinAmountStars_Text("\(resaleConfiguration.channelMessageSuggestionMinStarsAmount)").string
                 case let .sender(_, isFromAdmin):
                     if isFromAdmin {
-                        text = "You cannot request less than \(resaleConfiguration.channelMessageSuggestionMinStarsAmount) Stars."
+                        text = presentationData.strings.Chat_PostSuggestion_Suggest_AdminMinAmountStars_Text("\(resaleConfiguration.channelMessageSuggestionMinStarsAmount)").string
                     } else {
-                        text = "You cannot offer less than \(resaleConfiguration.channelMessageSuggestionMinStarsAmount) Stars."
+                        text = presentationData.strings.Chat_PostSuggestion_Suggest_UserMinAmountStars_Text("\(resaleConfiguration.channelMessageSuggestionMinStarsAmount)").string
                     }
                 }
             case .ton:
