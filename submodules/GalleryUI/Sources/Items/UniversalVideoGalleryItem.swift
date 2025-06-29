@@ -333,6 +333,11 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
                         
             let sideInset: CGFloat = 16.0
                                     
+            var maxWidth = min(size.width, size.height) - sideInset * 2.0
+            if case .regular = metrics.widthClass {
+                maxWidth = 414.0
+            }
+            
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let adSize = self.adView.update(
                 transition: .immediate,
@@ -358,8 +363,12 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
                         },
                         adAction: { [weak self] in
                             if let self, let ad = adMessage.adAttribute {
+                                self.hiddenMessages.insert(adMessage.id)
+                                if let validLayout = self.validLayout {
+                                    self.updateLayout(size: validLayout.size, metrics: validLayout.metrics, insets: validLayout.insets, isHidden: false, transition: .immediate)
+                                }
                                 context.engine.messages.markAdAction(opaqueId: ad.opaqueId, media: false, fullscreen: false)
-                                self.performAction?(.url(url: ad.url, concealed: false))
+                                self.performAction?(.url(url: ad.url, concealed: false, dismiss: false))
                             }
                         },
                         moreAction: { [weak self] sourceNode in
@@ -370,7 +379,7 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
                     )
                 ),
                 environment: {},
-                containerSize: CGSize(width: size.width - sideInset * 2.0, height: 200.0)
+                containerSize: CGSize(width: maxWidth, height: 200.0)
             )
             if let adView = self.adView.view {
                 if adView.superview == nil {
@@ -2091,13 +2100,17 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         
         if let contentInfo = item.contentInfo, case let .message(message, _) = contentInfo {
             self.overlayContentNode.performAction = { [weak self] action in
-                guard let self , let item = self.item else {
+                guard let self, let item = self.item else {
                     return
                 }
                 if case .url = action {
                     self.pictureInPictureButtonPressed()
+                    Queue.mainQueue().after(0.3) {
+                        item.performAction(action)
+                    }
+                } else {
+                    item.performAction(action)
                 }
-                item.performAction(action)
             }
             self.overlayContentNode.presentPremiumDemo = { [weak self] in
                 self?.presentPremiumDemo()
