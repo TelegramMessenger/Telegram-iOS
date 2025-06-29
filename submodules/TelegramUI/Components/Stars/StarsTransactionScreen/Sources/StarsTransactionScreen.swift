@@ -419,7 +419,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     count = transaction.count
                     
                     if count.currency == .ton {
-                        descriptionText = strings.Settings_Ton_Description
+                        descriptionText = strings.Stars_Gift_Ton_Text
                     } else {
                         descriptionText = strings.Stars_Gift_Received_Text
                     }

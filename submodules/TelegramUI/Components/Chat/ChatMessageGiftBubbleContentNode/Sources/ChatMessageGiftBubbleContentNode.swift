@@ -433,7 +433,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             let cryptoAmount = cryptoAmount ?? 0
                             
                             title = "$ \(formatTonAmountText(cryptoAmount, dateTimeFormat: item.presentationData.dateTimeFormat, maxDecimalPositions: 3))"
-                            text = incoming ? "Use TON to submit post suggestions to channels." : "With TON, \(peerName) will be able to submit post suggestions to channels."
+                            text = incoming ? item.presentationData.strings.Notification_Ton_Subtitle : item.presentationData.strings.Notification_Ton_SubtitleYou(peerName).string
                             buttonTitle = ""
                         case let .prizeStars(count, _, channelId, _, _):
                             if count <= 1000 {

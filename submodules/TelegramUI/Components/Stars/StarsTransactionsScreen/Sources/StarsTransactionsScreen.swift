@@ -536,8 +536,8 @@ final class StarsTransactionsScreenComponent: Component {
             let titleString: String
             let descriptionString: String
             if component.starsContext.ton {
-                titleString = environment.strings.Settings_TransactionsTon_Title
-                descriptionString = environment.strings.Settings_TransactionsTon_Subtitle
+                titleString = environment.strings.Stars_Ton_Title
+                descriptionString = environment.strings.Stars_Ton_Description
             } else {
                 titleString = environment.strings.Stars_Intro_Title
                 descriptionString = environment.strings.Stars_Intro_Description

@@ -3702,8 +3702,8 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 let buttonTitle: String
                 var buttonSubtitle: String?
                 if case let .auth(price) = context.component.source {
-                    buttonTitle = environment.strings.Auth_PremiumSignUp_ActionTitle("\(price)").string
-                    buttonSubtitle = environment.strings.Auth_PremiumSignUp_ActionSubtitle
+                    buttonTitle = environment.strings.Premium_Week_SignUp(price).string
+                    buttonSubtitle = environment.strings.Premium_Week_SignUpInfo
                 } else if isUnusedGift {
                     buttonTitle = environment.strings.Premium_Gift_ApplyLink
                 } else if state.isPremium == true && state.canUpgrade {
