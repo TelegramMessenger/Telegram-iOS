@@ -5,7 +5,7 @@ import os
 import sys
 import json
 import shutil
-import re
+import hashlib
 
 # Read the modules JSON file
 modules_json_path = "bazel-bin/Telegram/spm_build_root_modules.json"
@@ -118,6 +118,10 @@ def parse_define_flag(flag: str) -> tuple[str, str | None]:
         # Handle quoted values - remove surrounding quotes if present
         if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
             value = value[1:-1]  # Remove quotes
+        value = value.replace("\\\"", "\"")
+
+        #if key == "PACKAGE_VERSION":
+        #    print(f"PACKAGE_VERSION={value}")
         
         return (key, value)
     else:
@@ -253,7 +257,7 @@ func parseTarget(target: [String: Any]) -> Target {
             plugins: nil
         )
     } else if type == "xcframework" {
-        return .binaryTarget(name: name, path: (target["path"] as? String)! + "/" + (target["name"] as? String)! + ".xcframework")
+        return .binaryTarget(name: name, path: (target["path"] as? String)! + "/" + (target["name"] as? String)! + ".xcframework.zip")
     } else {
         print("Unknown target type: \\(type)")
         preconditionFailure("Unknown target type: \\(type)")
@@ -277,7 +281,7 @@ for name, module in sorted(modules.items()):
     if parsed_modules[name]["is_empty"]:
         continue
     
-    if module["type"] == "objc_library" or module["type"] == "swift_library" or module["type"] == "cc_library":
+    if module["type"] == "objc_library" or module["type"] == "swift_library" or module["type"] == "cc_library" or module["type"] == "apple_static_xcframework_import":
         spm_products.append({
             "name": module["name"],
             "targets": [module["name"]],
@@ -321,6 +325,10 @@ for name, module in sorted(modules.items()):
         include_source_files = []
         exclude_source_files = []
         public_include_files = []
+        
+        sources_zip_directory = None
+        if module["type"] == "apple_static_xcframework_import":
+            pass
         
         for source in module["sources"] + module.get("hdrs", []) + module.get("textual_hdrs", []):
             # Process all sources (both regular and generated) with symlinks
@@ -520,8 +528,6 @@ for name, module in sorted(modules.items()):
             spm_target["type"] = "library"
 
         spm_targets.append(spm_target)
-    elif module["type"] == "apple_static_xcframework_import":
-        pass
     elif module["type"] == "root":
         pass
     else:
@@ -532,14 +538,17 @@ combined_lines.append("    cxxLanguageStandard: .cxx17")
 combined_lines.append(")")
 combined_lines.append("")
 
-create_spm_file("spm-files/Package.swift", "\n".join(combined_lines))
-
 package_data = {
     "sourceFileMap": module_to_source_files,
     "products": spm_products,
     "targets": spm_targets
 }
-create_spm_file("spm-files/PackageData.json", json.dumps(package_data, indent=4))
+package_data_json = json.dumps(package_data, indent=4)
+external_data_hash = hashlib.sha256(package_data_json.encode()).hexdigest()
+combined_lines.append(f"// External data hash: {external_data_hash}")
+
+create_spm_file("spm-files/Package.swift", "\n".join(combined_lines))
+create_spm_file("spm-files/PackageData.json", package_data_json)
 
 for modulemap_path, modulemap in modulemaps.items():
     module_map_contents = ""

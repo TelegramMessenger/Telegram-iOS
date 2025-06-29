@@ -1786,12 +1786,12 @@ ios_application(
         #"//third-party/webrtc:webrtc_objc",
         #"//submodules/AsyncDisplayKit",
         #"//submodules/ObjCRuntimeUtils",
-        #"//submodules/OpusBinding",
+        "//submodules/OpusBinding",
         #"//third-party/boringssl:ssl",
         #"//third-party/boringssl:crypto",
         #"//submodules/TelegramVoip",
-        #"//third-party/libprisma",
-        "//submodules/TelegramUI",
+        "//third-party/recaptcha:RecaptchaEnterprise",
+        #"//submodules/TelegramUI",
     ],
 )
 
