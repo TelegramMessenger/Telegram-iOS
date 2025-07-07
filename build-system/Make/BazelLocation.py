@@ -91,8 +91,8 @@ def locate_bazel(base_path, cache_host_or_path, cache_dir):
                 if test_sha256 == versions.bazel_version_sha256:
                     shutil.copyfile(temp_output_file.name, bazel_path)
         elif resolved_cache_path is not None:
-            (cache_cas_id, cache_cas_name) = cache_cas_name(versions.bazel_version_sha256)
-            cached_path = '{}/cas/{}/{}'.format(resolved_cache_path, cache_cas_id, cache_cas_name)
+            (cache_cas_id, cache_cas_digest_name) = cache_cas_name(versions.bazel_version_sha256)
+            cached_path = '{}/cas/{}/{}'.format(resolved_cache_path, cache_cas_id, cache_cas_digest_name)
             if os.path.isfile(cached_path):
                 shutil.copyfile(cached_path, bazel_path)
 
@@ -137,8 +137,8 @@ def locate_bazel(base_path, cache_host_or_path, cache_dir):
                 )
             ], check_result=False)
         elif resolved_cache_path is not None:
-            (cache_cas_id, cache_cas_name) = cache_cas_name(versions.bazel_version_sha256)
-            cached_path = '{}/cas/{}/{}'.format(resolved_cache_path, cache_cas_id, cache_cas_name)
+            (cache_cas_id, cache_cas_digest_name) = cache_cas_name(versions.bazel_version_sha256)
+            cached_path = '{}/cas/{}/{}'.format(resolved_cache_path, cache_cas_id, cache_cas_digest_name)
             os.makedirs(os.path.dirname(cached_path), exist_ok=True)
             shutil.copyfile(bazel_path, cached_path)
 
