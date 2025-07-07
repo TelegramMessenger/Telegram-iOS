@@ -1524,6 +1524,7 @@ plist_fragment(
         <string>foursquare</string>
         <string>here-location</string>
         <string>yandexmaps</string>
+        <string>yandextaxi</string>
         <string>yandexnavi</string>
         <string>comgooglemaps</string>
         <string>youtube</string>
