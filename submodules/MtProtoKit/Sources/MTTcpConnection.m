@@ -1420,11 +1420,22 @@ struct ctr_state {
     req.Version = 5;
     req.Cmd = 1;
     req.Reserved = 0;
-    req.AddrType = 1;
     
     struct in_addr ip4;
-    inet_aton(_scheme.address.ip.UTF8String, &ip4);
-    req.DestAddr.IPv4 = ip4;
+    struct in6_addr ip6;
+
+    if (inet_aton(_scheme.address.ip.UTF8String, &ip4) == 1) {
+        req.DestAddr.IPv4 = ip4;
+        req.AddrType = 1;
+    } else if (inet_pton(AF_INET6, _scheme.address.ip.UTF8String, &ip6) == 1) {
+        req.DestAddr.IPv6 = ip6;
+        req.AddrType = 4;
+    } else {
+        [_scheme.address.ip getCString:req.DestAddr.Domain maxLength:sizeof(req.DestAddr.Domain) encoding:NSASCIIStringEncoding];
+        req.DestAddr.DomainLen = _scheme.address.ip.length;
+        req.AddrType = 3;
+    }
+    
     req.DestPort = _scheme.address.port;
     
     NSMutableData *reqData = [[NSMutableData alloc] init];
