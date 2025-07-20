@@ -20,6 +20,7 @@ public enum TelegramChannelPermission {
     case postStories
     case editStories
     case deleteStories
+    case manageDirect
 }
 
 public extension TelegramChannel {
@@ -224,6 +225,11 @@ public extension TelegramChannel {
                 }
             case .addAdmins:
                 if let adminRights = self.adminRights, adminRights.rights.contains(.canAddAdmins) {
+                    return true
+                }
+                return false
+            case .manageDirect:
+                if let adminRights = self.adminRights, adminRights.rights.contains(.canManageDirect) {
                     return true
                 }
                 return false

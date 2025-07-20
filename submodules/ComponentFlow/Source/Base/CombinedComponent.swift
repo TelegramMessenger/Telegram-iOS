@@ -175,6 +175,7 @@ public final class _UpdatedChildComponent {
     public let size: CGSize
 
     var _removed: Bool = false
+    var _anchorPoint: CGPoint?
     var _position: CGPoint?
     var _scale: CGFloat?
     var _opacity: CGFloat?
@@ -235,6 +236,11 @@ public final class _UpdatedChildComponent {
 
     @discardableResult public func removed(_ removed: Bool) -> _UpdatedChildComponent {
         self._removed = removed
+        return self
+    }
+    
+    @discardableResult public func anchorPoint(_ anchorPoint: CGPoint) -> _UpdatedChildComponent {
+        self._anchorPoint = anchorPoint
         return self
     }
 
@@ -326,6 +332,10 @@ public extension _EnvironmentChildComponent where EnvironmentType == Empty {
 public extension _EnvironmentChildComponent {
     func update<ComponentType: Component>(_ component: ComponentType, @EnvironmentBuilder environment: () -> Environment<EnvironmentType>, availableSize: CGSize, transition: ComponentTransition) -> _UpdatedChildComponent where ComponentType.EnvironmentType == EnvironmentType {
         return self.update(component: AnyComponent(component), environment: environment, availableSize: availableSize, transition: transition)
+    }
+    
+    func update(_ component: AnyComponent<EnvironmentType>, @EnvironmentBuilder environment: () -> Environment<EnvironmentType>, availableSize: CGSize, transition: ComponentTransition) -> _UpdatedChildComponent {
+        return self.update(component: component, environment: environment, availableSize: availableSize, transition: transition)
     }
 
     func update<ComponentType: Component>(_ component: ComponentType, @EnvironmentBuilder environment: () -> Environment<EnvironmentType>, availableSize: CGSize, transition: ComponentTransition) -> _UpdatedChildComponent where ComponentType.EnvironmentType == EnvironmentType, EnvironmentType == Empty {
@@ -707,12 +717,23 @@ public extension CombinedComponent {
 
                         view.insertSubview(updatedChild.view, at: index)
 
+                        updatedChild.view.layer.anchorPoint = updatedChild._anchorPoint ?? CGPoint(x: 0.5, y: 0.5)
+                        
                         if let scale = updatedChild._scale {
                             updatedChild.view.bounds = CGRect(origin: CGPoint(), size: updatedChild.size)
                             updatedChild.view.center = updatedChild._position ?? CGPoint()
                             updatedChild.view.transform = CGAffineTransform(scaleX: scale, y: scale)
                         } else {
-                            updatedChild.view.frame = updatedChild.size.centered(around: updatedChild._position ?? CGPoint())
+                            if updatedChild.view is UIScrollView {
+                                updatedChild.view.frame = updatedChild.size.centered(around: updatedChild._position ?? CGPoint())
+                            } else {
+                                updatedChild.view.bounds = CGRect(origin: CGPoint(), size: updatedChild.size)
+                                if updatedChild.view.layer.anchorPoint != CGPoint(x: 0.5, y: 0.5) {
+                                    updatedChild.view.layer.position = updatedChild._position ?? CGPoint()
+                                } else {
+                                    updatedChild.view.center = updatedChild._position ?? CGPoint()
+                                }
+                            }
                         }
                         
                         updatedChild.view.alpha = updatedChild._opacity ?? 1.0

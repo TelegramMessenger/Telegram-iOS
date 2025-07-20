@@ -3,15 +3,26 @@ import TelegramApi
 import Postbox
 import SwiftSignalKit
 
-func _internal_getPaidMessagesRevenue(account: Account, peerId: PeerId) -> Signal<StarsAmount?, NoError> {
-    return account.postbox.transaction { transaction -> Api.InputUser? in
-        return transaction.getPeer(peerId).flatMap(apiInputUser)
+func _internal_getPaidMessagesRevenue(account: Account, scopePeerId: PeerId, peerId: PeerId) -> Signal<StarsAmount?, NoError> {
+    return account.postbox.transaction { transaction -> (Api.InputPeer?, Api.InputUser?) in
+        return (transaction.getPeer(scopePeerId).flatMap(apiInputPeer), transaction.getPeer(peerId).flatMap(apiInputUser))
     }
-    |> mapToSignal { inputUser -> Signal<StarsAmount?, NoError> in
+    |> mapToSignal { scopeInputPeer, inputUser -> Signal<StarsAmount?, NoError> in
+        if scopePeerId != account.peerId {
+            if scopeInputPeer == nil {
+                return .never()
+            }
+        }
         guard let inputUser else {
             return .single(nil)
         }
-        return account.network.request(Api.functions.account.getPaidMessagesRevenue(userId: inputUser))
+        
+        var flags: Int32 = 0
+        if scopePeerId != account.peerId, scopeInputPeer != nil {
+            flags |= 1 << 0
+        }
+        
+        return account.network.request(Api.functions.account.getPaidMessagesRevenue(flags: flags, parentPeer: scopeInputPeer, userId: inputUser))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.account.PaidMessagesRevenue?, NoError> in
             return .single(nil)
@@ -28,11 +39,16 @@ func _internal_getPaidMessagesRevenue(account: Account, peerId: PeerId) -> Signa
     }
 }
 
-func _internal_addNoPaidMessagesException(account: Account, peerId: PeerId, refundCharged: Bool) -> Signal<Never, NoError> {
-    return account.postbox.transaction { transaction -> Api.InputUser? in
-        return transaction.getPeer(peerId).flatMap(apiInputUser)
+func _internal_addNoPaidMessagesException(account: Account, scopePeerId: PeerId, peerId: PeerId, refundCharged: Bool) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> (Api.InputPeer?, Api.InputUser?) in
+        return (transaction.getPeer(scopePeerId).flatMap(apiInputPeer), transaction.getPeer(peerId).flatMap(apiInputUser))
     }
-    |> mapToSignal { inputUser -> Signal<Never, NoError> in
+    |> mapToSignal { scopeInputPeer, inputUser -> Signal<Never, NoError> in
+        if scopePeerId != account.peerId {
+            if scopeInputPeer == nil {
+                return .never()
+            }
+        }
         guard let inputUser else {
             return .never()
         }
@@ -40,19 +56,73 @@ func _internal_addNoPaidMessagesException(account: Account, peerId: PeerId, refu
         if refundCharged {
             flags |= (1 << 0)
         }
-        return account.network.request(Api.functions.account.addNoPaidMessagesException(flags: flags, userId: inputUser))
+        if scopePeerId != account.peerId, scopeInputPeer != nil {
+            flags |= (1 << 1)
+        }
+        return account.network.request(Api.functions.account.toggleNoPaidMessagesException(flags: flags, parentPeer: scopeInputPeer, userId: inputUser))
         |> `catch` { _ -> Signal<Api.Bool, NoError> in
             return .single(.boolFalse)
         } |> mapToSignal { _ in
             return account.postbox.transaction { transaction -> Void in
-                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData in
-                    if let cachedData = cachedData as? CachedUserData {
-                        var settings = cachedData.peerStatusSettings ?? .init()
-                        settings.paidMessageStars = nil
-                        return cachedData.withUpdatedPeerStatusSettings(settings)
+                if scopePeerId != account.peerId, scopeInputPeer != nil {
+                    guard var data = transaction.getMessageHistoryThreadInfo(peerId: scopePeerId, threadId: peerId.toInt64())?.data.get(MessageHistoryThreadData.self) else {
+                        return
                     }
-                    return cachedData
-                })
+                    data.isMessageFeeRemoved = true
+                    
+                    if let entry = StoredMessageHistoryThreadInfo(data) {
+                        transaction.setMessageHistoryThreadInfo(peerId: scopePeerId, threadId: peerId.toInt64(), info: entry)
+                    }
+                } else {
+                    transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData in
+                        if let cachedData = cachedData as? CachedUserData {
+                            var settings = cachedData.peerStatusSettings ?? .init()
+                            settings.paidMessageStars = nil
+                            return cachedData.withUpdatedPeerStatusSettings(settings)
+                        }
+                        return cachedData
+                    })
+                }
+            }
+            |> ignoreValues
+        }
+        |> ignoreValues
+    }
+}
+
+func _internal_reinstateNoPaidMessagesException(account: Account, scopePeerId: PeerId, peerId: PeerId) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> (Api.InputPeer?, Api.InputUser?) in
+        return (transaction.getPeer(scopePeerId).flatMap(apiInputPeer), transaction.getPeer(peerId).flatMap(apiInputUser))
+    }
+    |> mapToSignal { scopeInputPeer, inputUser -> Signal<Never, NoError> in
+        if scopePeerId != account.peerId {
+            if scopeInputPeer == nil {
+                return .never()
+            }
+        } else {
+            return .never()
+        }
+        guard let inputUser else {
+            return .never()
+        }
+        var flags: Int32 = 0
+        flags |= (1 << 2)
+        flags |= (1 << 1)
+        return account.network.request(Api.functions.account.toggleNoPaidMessagesException(flags: flags, parentPeer: scopeInputPeer, userId: inputUser))
+        |> `catch` { _ -> Signal<Api.Bool, NoError> in
+            return .single(.boolFalse)
+        } |> mapToSignal { _ in
+            return account.postbox.transaction { transaction -> Void in
+                if scopePeerId != account.peerId {
+                    guard var data = transaction.getMessageHistoryThreadInfo(peerId: scopePeerId, threadId: peerId.toInt64())?.data.get(MessageHistoryThreadData.self) else {
+                        return
+                    }
+                    data.isMessageFeeRemoved = false
+                    
+                    if let entry = StoredMessageHistoryThreadInfo(data) {
+                        transaction.setMessageHistoryThreadInfo(peerId: scopePeerId, threadId: peerId.toInt64(), info: entry)
+                    }
+                }
             }
             |> ignoreValues
         }

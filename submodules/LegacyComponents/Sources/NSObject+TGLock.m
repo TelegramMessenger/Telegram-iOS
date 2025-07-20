@@ -1,4 +1,4 @@
-#import "NSObject+TGLock.h"
+#import <LegacyComponents/NSObject+TGLock.h>
 
 #import <objc/runtime.h>
 

@@ -129,8 +129,15 @@ public final class ScrollComponent<ChildEnvironment: Equatable>: Component {
                 self.contentSize = contentSize
                 self.ignoreDidScroll = false
             }
-            if self.scrollIndicatorInsets != component.contentInsets {
-                self.scrollIndicatorInsets = component.contentInsets
+            
+            let verticalScrollIndicatorInsets = UIEdgeInsets(top: component.contentInsets.top, left: 0.0, bottom: component.contentInsets.bottom, right: 0.0)
+            let horizontalScrollIndicatorInsets = UIEdgeInsets(top: 0.0, left: component.contentInsets.left, bottom: 0.0, right: component.contentInsets.right)
+            
+            if self.verticalScrollIndicatorInsets != verticalScrollIndicatorInsets {
+                self.verticalScrollIndicatorInsets = verticalScrollIndicatorInsets
+            }
+            if self.horizontalScrollIndicatorInsets != horizontalScrollIndicatorInsets {
+                self.horizontalScrollIndicatorInsets = horizontalScrollIndicatorInsets
             }
             component.externalState?.contentHeight = contentSize.height
             

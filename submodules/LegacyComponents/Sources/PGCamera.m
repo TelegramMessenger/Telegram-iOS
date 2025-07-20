@@ -1,14 +1,14 @@
-#import "PGCamera.h"
+#import <LegacyComponents/PGCamera.h>
 
 #import "LegacyComponentsInternal.h"
 
-#import "PGCameraCaptureSession.h"
-#import "PGCameraMovieWriter.h"
-#import "PGCameraDeviceAngleSampler.h"
+#import <LegacyComponents/PGCameraCaptureSession.h>
+#import <LegacyComponents/PGCameraMovieWriter.h>
+#import <LegacyComponents/PGCameraDeviceAngleSampler.h>
 
 #import <SSignalKit/SSignalKit.h>
 
-#import "TGCameraPreviewView.h"
+#import <LegacyComponents/TGCameraPreviewView.h>
 
 NSString *const PGCameraFlashActiveKey = @"flashActive";
 NSString *const PGCameraFlashAvailableKey = @"flashAvailable";
@@ -683,8 +683,11 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
 
 - (PGCameraPosition)togglePosition
 {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     if ([AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo].count < 2 || self.disabled)
         return self.captureSession.currentCameraPosition;
+#pragma clang diagnostic pop
     
     [self _unsubscribeFromCameraChanges];
     

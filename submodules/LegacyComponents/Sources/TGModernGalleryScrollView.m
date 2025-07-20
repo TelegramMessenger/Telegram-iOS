@@ -1,4 +1,4 @@
-#import "TGModernGalleryScrollView.h"
+#import <LegacyComponents/TGModernGalleryScrollView.h>
 
 @interface TGModernGalleryScrollView ()
 {

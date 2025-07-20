@@ -1,4 +1,4 @@
-#import "TGEmbedPIPButton.h"
+#import <LegacyComponents/TGEmbedPIPButton.h>
 
 const CGSize TGEmbedPIPButtonSize = { 42.0f, 42.0f };
 

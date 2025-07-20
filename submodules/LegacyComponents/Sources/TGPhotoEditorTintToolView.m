@@ -1,14 +1,14 @@
 #import "TGPhotoEditorTintToolView.h"
 
 #import "LegacyComponentsInternal.h"
-#import "TGImageUtils.h"
+#import <LegacyComponents/TGImageUtils.h>
 
 #import <LegacyComponents/TGModernButton.h>
 
 #import "TGPhotoEditorTintSwatchView.h"
-#import "TGPhotoEditorSliderView.h"
+#import <LegacyComponents/TGPhotoEditorSliderView.h>
 
-#import "TGPhotoEditorInterfaceAssets.h"
+#import <LegacyComponents/TGPhotoEditorInterfaceAssets.h>
 #import <LegacyComponents/UIControl+HitTestEdgeInsets.h>
 
 #import "PGTintTool.h"

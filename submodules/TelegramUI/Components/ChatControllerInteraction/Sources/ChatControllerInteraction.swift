@@ -3,6 +3,7 @@ import UIKit
 import Postbox
 import SwiftSignalKit
 import AsyncDisplayKit
+import Postbox
 import TelegramCore
 import Display
 import TelegramUIPreferences
@@ -31,10 +32,12 @@ public struct ChatInterfaceHighlightedState: Equatable {
     
     public let messageStableId: UInt32
     public let quote: Quote?
+    public let todoTaskId: Int32?
     
-    public init(messageStableId: UInt32, quote: Quote?) {
+    public init(messageStableId: UInt32, quote: Quote?, todoTaskId: Int32?) {
         self.messageStableId = messageStableId
         self.quote = quote
+        self.todoTaskId = todoTaskId
     }
 }
 
@@ -96,13 +99,15 @@ public struct NavigateToMessageParams {
     
     public var timestamp: Double?
     public var quote: Quote?
+    public var todoTaskId: Int32?
     public var progress: Promise<Bool>?
     public var forceNew: Bool
     public var setupReply: Bool
     
-    public init(timestamp: Double?, quote: Quote?, progress: Promise<Bool>? = nil, forceNew: Bool = false, setupReply: Bool = false) {
+    public init(timestamp: Double?, quote: Quote?, todoTaskId: Int32? = nil, progress: Promise<Bool>? = nil, forceNew: Bool = false, setupReply: Bool = false) {
         self.timestamp = timestamp
         self.quote = quote
+        self.todoTaskId = todoTaskId
         self.progress = progress
         self.forceNew = forceNew
         self.setupReply = setupReply
@@ -188,7 +193,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let sendEmoji: (String, ChatTextInputTextCustomEmojiAttribute, Bool) -> Void
     public let sendGif: (FileMediaReference, UIView, CGRect, Bool, Bool) -> Bool
     public let sendBotContextResultAsGif: (ChatContextResultCollection, ChatContextResult, UIView, CGRect, Bool, Bool) -> Bool
-    public let requestMessageActionCallback: (MessageId, MemoryBuffer?, Bool, Bool) -> Void
+    public let requestMessageActionCallback: (Message, MemoryBuffer?, Bool, Bool, Promise<Bool>?) -> Void
     public let requestMessageActionUrlAuth: (String, MessageActionUrlSubject) -> Void
     public let activateSwitchInline: (PeerId?, String, ReplyMarkupButtonAction.PeerTypes?) -> Void
     public let openUrl: (OpenUrl) -> Void
@@ -210,6 +215,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let callPeer: (PeerId, Bool) -> Void
     public let openConferenceCall: (Message) -> Void
     public let longTap: (ChatControllerInteractionLongTapAction, LongTapParams?) -> Void
+    public let todoItemLongTap: (Int32, LongTapParams?) -> Void
     public let openCheckoutOrReceipt: (MessageId, OpenMessageParams?) -> Void
     public let openSearch: () -> Void
     public let setupReply: (MessageId) -> Void
@@ -281,6 +287,9 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let playShakeAnimation:  () -> Void
     public let displayQuickShare: (MessageId, ASDisplayNode, ContextGesture) -> Void
     public let updateChatLocationThread: (Int64?, ChatControllerAnimateInnerChatSwitchDirection?) -> Void
+    public let requestToggleTodoMessageItem: (MessageId, Int32, Bool) -> Void
+    public let displayTodoToggleUnavailable: (MessageId) -> Void
+    public let openStarsPurchase: (Int64?) -> Void
     
     public var canPlayMedia: Bool = false
     public var hiddenMedia: [MessageId: [Media]] = [:]
@@ -351,7 +360,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         sendEmoji: @escaping (String, ChatTextInputTextCustomEmojiAttribute, Bool) -> Void,
         sendGif: @escaping (FileMediaReference, UIView, CGRect, Bool, Bool) -> Bool,
         sendBotContextResultAsGif: @escaping (ChatContextResultCollection, ChatContextResult, UIView, CGRect, Bool, Bool) -> Bool,
-        requestMessageActionCallback: @escaping (MessageId, MemoryBuffer?, Bool, Bool) -> Void,
+        requestMessageActionCallback: @escaping (Message, MemoryBuffer?, Bool, Bool, Promise<Bool>?) -> Void,
         requestMessageActionUrlAuth: @escaping (String, MessageActionUrlSubject) -> Void,
         activateSwitchInline: @escaping (PeerId?, String, ReplyMarkupButtonAction.PeerTypes?) -> Void,
         openUrl: @escaping (OpenUrl) -> Void,
@@ -373,6 +382,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         callPeer: @escaping (PeerId, Bool) -> Void,
         openConferenceCall: @escaping (Message) -> Void,
         longTap: @escaping (ChatControllerInteractionLongTapAction, LongTapParams?) -> Void,
+        todoItemLongTap: @escaping (Int32, LongTapParams?) -> Void,
         openCheckoutOrReceipt: @escaping (MessageId, OpenMessageParams?) -> Void,
         openSearch: @escaping () -> Void,
         setupReply: @escaping (MessageId) -> Void,
@@ -444,6 +454,9 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         playShakeAnimation: @escaping () -> Void,
         displayQuickShare: @escaping (MessageId, ASDisplayNode, ContextGesture) -> Void,
         updateChatLocationThread: @escaping (Int64?, ChatControllerAnimateInnerChatSwitchDirection?) -> Void,
+        requestToggleTodoMessageItem: @escaping (MessageId, Int32, Bool) -> Void,
+        displayTodoToggleUnavailable: @escaping (MessageId) -> Void,
+        openStarsPurchase: @escaping (Int64?) -> Void,
         automaticMediaDownloadSettings: MediaAutoDownloadSettings,
         pollActionState: ChatInterfacePollActionState,
         stickerSettings: ChatInterfaceStickerSettings,
@@ -491,6 +504,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         self.callPeer = callPeer
         self.openConferenceCall = openConferenceCall
         self.longTap = longTap
+        self.todoItemLongTap = todoItemLongTap
         self.openCheckoutOrReceipt = openCheckoutOrReceipt
         self.openSearch = openSearch
         self.setupReply = setupReply
@@ -563,6 +577,9 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         self.playShakeAnimation = playShakeAnimation
         self.displayQuickShare = displayQuickShare
         self.updateChatLocationThread = updateChatLocationThread
+        self.requestToggleTodoMessageItem = requestToggleTodoMessageItem
+        self.displayTodoToggleUnavailable = displayTodoToggleUnavailable
+        self.openStarsPurchase = openStarsPurchase
         
         self.automaticMediaDownloadSettings = automaticMediaDownloadSettings
         

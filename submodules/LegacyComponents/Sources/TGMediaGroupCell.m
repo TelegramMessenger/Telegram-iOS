@@ -1,8 +1,8 @@
 #import "TGMediaGroupCell.h"
 
 #import "LegacyComponentsInternal.h"
-#import "TGFont.h"
-#import "TGImageUtils.h"
+#import <LegacyComponents/TGFont.h>
+#import <LegacyComponents/TGImageUtils.h>
 #import "TGColor.h"
 
 #import <LegacyComponents/TGImageView.h>

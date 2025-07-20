@@ -2,6 +2,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramApi
 import MtProtoKit
+import Foundation
 
 public struct EngineCallStreamState {
     public struct Channel {
@@ -177,6 +178,22 @@ public extension TelegramEngine {
         
         public func getGroupCallStreamCredentials(peerId: EnginePeer.Id, revokePreviousCredentials: Bool) -> Signal<GroupCallStreamCredentials, GetGroupCallStreamCredentialsError> {
             return _internal_getGroupCallStreamCredentials(account: self.account, peerId: peerId, revokePreviousCredentials: revokePreviousCredentials)
+        }
+        
+        public func getGroupCallPersistentSettings(callId: Int64) -> Signal<CodableEntry?, NoError> {
+            return self.account.postbox.transaction { transaction -> CodableEntry? in
+                let key = ValueBoxKey(length: 8)
+                key.setInt64(0, value: callId)
+                return transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.groupCallPersistentSettings, key: key))
+            }
+        }
+        
+        public func setGroupCallPersistentSettings(callId: Int64, value: CodableEntry) {
+            let _ = self.account.postbox.transaction({ transaction -> Void in
+                let key = ValueBoxKey(length: 8)
+                key.setInt64(0, value: callId)
+                transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.groupCallPersistentSettings, key: key), entry: value)
+            }).startStandalone()
         }
     }
 }

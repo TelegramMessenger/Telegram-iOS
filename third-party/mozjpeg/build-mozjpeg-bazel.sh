@@ -10,7 +10,7 @@ BUILD_DIR=$(echo "$(cd "$(dirname "$3")"; pwd -P)/$(basename "$3")")
 if [ "$ARCH" = "armv7" ]; then
   IOS_PLATFORMDIR="$(xcode-select -p)/Platforms/iPhoneOS.platform"
   IOS_SYSROOT=($IOS_PLATFORMDIR/Developer/SDKs/iPhoneOS*.sdk)
-  export CFLAGS="-mfloat-abi=softfp -arch armv7 -miphoneos-version-min=9.0"
+  export CFLAGS="-mfloat-abi=softfp -arch armv7 -miphoneos-version-min=13.0"
   export ASMFLAGS="-no-integrated-as"
 
   cd "$BUILD_DIR"
@@ -27,7 +27,7 @@ if [ "$ARCH" = "armv7" ]; then
 elif [ "$ARCH" = "arm64" ]; then
   IOS_PLATFORMDIR="$(xcode-select -p)/Platforms/iPhoneOS.platform"
   IOS_SYSROOT=($IOS_PLATFORMDIR/Developer/SDKs/iPhoneOS*.sdk)
-  export CFLAGS="-Wall -arch arm64 -miphoneos-version-min=9.0 -funwind-tables"
+  export CFLAGS="-Wall -arch arm64 -miphoneos-version-min=13.0 -funwind-tables"
 
   cd "$BUILD_DIR"
   mkdir build
@@ -43,7 +43,7 @@ elif [ "$ARCH" = "arm64" ]; then
 elif [ "$ARCH" = "sim_arm64" ]; then
   IOS_PLATFORMDIR="$(xcode-select -p)/Platforms/iPhoneSimulator.platform"
   IOS_SYSROOT=($IOS_PLATFORMDIR/Developer/SDKs/iPhoneSimulator*.sdk)
-  export CFLAGS="-Wall -arch arm64 --target=arm64-apple-ios9.0-simulator -miphonesimulator-version-min=9.0 -funwind-tables"
+  export CFLAGS="-Wall -arch arm64 --target=arm64-apple-ios13.0-simulator -miphonesimulator-version-min=13.0 -funwind-tables"
 
   cd "$BUILD_DIR"
   mkdir build
@@ -59,7 +59,7 @@ elif [ "$ARCH" = "sim_arm64" ]; then
 elif [ "$ARCH" = "x86_64" ]; then
   IOS_PLATFORMDIR="$(xcode-select -p)/Platforms/iPhoneSimulator.platform"
   IOS_SYSROOT=($IOS_PLATFORMDIR/Developer/SDKs/iPhoneSimulator*.sdk)
-  export CFLAGS="-Wall -arch x86_64 -miphoneos-version-min=9.0 -funwind-tables"
+  export CFLAGS="-Wall -arch x86_64 -miphoneos-version-min=13.0 -funwind-tables"
 
   cd "$BUILD_DIR"
   mkdir build

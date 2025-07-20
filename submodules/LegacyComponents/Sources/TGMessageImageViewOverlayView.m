@@ -1,9 +1,9 @@
-#import "TGMessageImageViewOverlayView.h"
+#import <LegacyComponents/TGMessageImageViewOverlayView.h>
 
-#import "POPBasicAnimation.h"
+#import <LegacyComponents/POPBasicAnimation.h>
 
 #import "LegacyComponentsInternal.h"
-#import "TGImageUtils.h"
+#import <LegacyComponents/TGImageUtils.h>
 #import "TGColor.h"
 
 typedef enum {
@@ -665,9 +665,9 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
         case TGMessageImageViewOverlayViewTypePlay:
         {
             const CGFloat diameter = self.radius;
-            CGFloat offset = round(diameter * 0.06f);
-            CGFloat verticalOffset = 0.0f;
-            CGFloat alpha = 0.8f;
+            __unused CGFloat offset = round(diameter * 0.06f);
+            __unused CGFloat verticalOffset = 0.0f;
+            __unused CGFloat alpha = 0.8f;
             UIColor *iconColor = TGColorWithHexAndAlpha(0xffffffff, 1.0f);
             if (diameter <= 25.0f + FLT_EPSILON) {
                 offset = round(50.0f * 0.06f) - 1.0f;
@@ -995,7 +995,7 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
         {
             CGFloat diameter = _overlayStyle == TGMessageImageViewOverlayStyleList ? 30.0f : self.radius;
             CGFloat inset = 0.0f;
-            CGFloat crossSize = _overlayStyle == TGMessageImageViewOverlayStyleList ? 10.0f : 14.0f;
+            __unused CGFloat crossSize = _overlayStyle == TGMessageImageViewOverlayStyleList ? 10.0f : 14.0f;
             
             if (ABS(diameter - 37.0f) < 0.1) {
                 crossSize = 10.0f;
@@ -1027,7 +1027,7 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
             CGContextSetBlendMode(context, kCGBlendModeCopy);
             
             CGFloat pathLineWidth = 2.0f;
-            CGFloat pathDiameter = diameter - pathLineWidth;
+            __unused CGFloat pathDiameter = diameter - pathLineWidth;
 
             if (ABS(diameter - 37.0f) < 0.1) {
                 pathLineWidth = 2.5f;

@@ -1,3 +1,4 @@
+#import <LegacyComponents/LegacyComponents.h>
 #import "TGMediaAssetsPickerController.h"
 
 #import <Photos/Photos.h>
@@ -17,7 +18,7 @@
 #import <LegacyComponents/TGGifConverter.h>
 #import <CommonCrypto/CommonDigest.h>
 
-#import "TGModernBarButton.h"
+#import <LegacyComponents/TGModernBarButton.h>
 #import <LegacyComponents/TGMediaPickerToolbarView.h>
 
 #import <LegacyComponents/TGMediaAsset+TGMediaEditableItem.h>
@@ -28,7 +29,7 @@
 #import <LegacyComponents/TGVideoEditAdjustments.h>
 #import <LegacyComponents/TGPaintingData.h>
 
-#import "TGModernButton.h"
+#import <LegacyComponents/TGModernButton.h>
 #import "PGPhotoEditor.h"
 
 @interface TGMediaPickerAccessView: UIView

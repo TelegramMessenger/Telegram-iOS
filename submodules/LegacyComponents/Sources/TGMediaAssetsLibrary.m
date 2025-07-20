@@ -1,8 +1,8 @@
-#import "TGMediaAssetsLibrary.h"
+#import <LegacyComponents/TGMediaAssetsLibrary.h>
 
 #import "LegacyComponentsInternal.h"
 
-#import "TGMediaAssetsModernLibrary.h"
+#import <LegacyComponents/TGMediaAssetsModernLibrary.h>
 
 @implementation TGMediaAssetsLibrary
 

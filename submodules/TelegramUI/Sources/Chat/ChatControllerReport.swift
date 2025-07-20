@@ -111,7 +111,6 @@ import ChatMessageAnimatedStickerItemNode
 import ChatMessageBubbleItemNode
 import ChatNavigationButton
 import WebsiteType
-import ChatQrCodeScreen
 import PeerInfoScreen
 import MediaEditorScreen
 import WallpaperGalleryScreen

@@ -19,6 +19,7 @@ import AlertComponent
 import TelegramPresentationData
 import ComponentFlow
 import MultilineTextComponent
+import AVFoundation
 
 private func resolvedEmojiKey(data: Data) -> [String] {
     let resolvedKey = stringForEmojiHashOfData(data, 4) ?? []

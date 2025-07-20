@@ -55,6 +55,7 @@ public final class ChatSideTopicsPanel: Component {
     let controller: () -> ViewController?
     let togglePanel: () -> Void
     let updateTopicId: (Int64?, Bool) -> Void
+    let openDeletePeer: (Int64) -> Void
     
     public init(
         context: AccountContext,
@@ -66,7 +67,8 @@ public final class ChatSideTopicsPanel: Component {
         topicId: Int64?,
         controller: @escaping () -> ViewController?,
         togglePanel: @escaping () -> Void,
-        updateTopicId: @escaping (Int64?, Bool) -> Void
+        updateTopicId: @escaping (Int64?, Bool) -> Void,
+        openDeletePeer: @escaping (Int64) -> Void
     ) {
         self.context = context
         self.theme = theme
@@ -78,6 +80,7 @@ public final class ChatSideTopicsPanel: Component {
         self.controller = controller
         self.togglePanel = togglePanel
         self.updateTopicId = updateTopicId
+        self.openDeletePeer = openDeletePeer
     }
     
     public static func ==(lhs: ChatSideTopicsPanel, rhs: ChatSideTopicsPanel) -> Bool {
@@ -357,6 +360,7 @@ public final class ChatSideTopicsPanel: Component {
             }
             
             func update(component: VerticalItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+                let previousComponent = self.component
                 self.component = component
                 
                 self.tapRecognizer?.isEnabled = component.action != nil
@@ -378,12 +382,12 @@ public final class ChatSideTopicsPanel: Component {
                 if case let .forum(topicId) = component.item.item.id {
                     if topicId != 1, let threadData = component.item.item.threadData {
                         if let fileId = threadData.info.icon, fileId != 0 {
-                            avatarIconContent = .animation(content: .customEmoji(fileId: fileId), size: iconSize, placeholderColor: component.theme.list.mediaPlaceholderColor, themeColor: component.theme.list.itemAccentColor, loopMode: .count(0))
+                            avatarIconContent = .animation(content: .customEmoji(fileId: fileId), size: iconSize, placeholderColor: component.theme.list.mediaPlaceholderColor, themeColor: component.isSelected ? component.theme.rootController.navigationBar.accentTextColor : component.theme.rootController.navigationBar.controlColor, loopMode: .count(0))
                         } else {
                             avatarIconContent = .topic(title: String(threadData.info.title.prefix(1)), color: threadData.info.iconColor, size: iconSize)
                         }
                     } else {
-                        avatarIconContent = .image(image: PresentationResourcesChatList.generalTopicIcon(component.theme), tintColor: component.theme.rootController.navigationBar.secondaryTextColor)
+                        avatarIconContent = .image(image: PresentationResourcesChatList.generalTopicTemplateIcon(component.theme), tintColor: component.isSelected ? component.theme.rootController.navigationBar.accentTextColor : component.theme.rootController.navigationBar.controlColor)
                     }
                 }
                 
@@ -403,8 +407,14 @@ public final class ChatSideTopicsPanel: Component {
                         icon = ComponentView()
                         self.icon = icon
                     }
+                    
+                    var iconTransition = transition
+                    if iconTransition.animation.isImmediate, let previousComponent, previousComponent.isSelected != component.isSelected {
+                        iconTransition = .easeInOut(duration: 0.2)
+                    }
+                    
                     let _ = icon.update(
-                        transition: .immediate,
+                        transition: iconTransition,
                         component: AnyComponent(avatarIconComponent),
                         environment: {},
                         containerSize: iconSize
@@ -810,12 +820,12 @@ public final class ChatSideTopicsPanel: Component {
                 if case let .forum(topicId) = component.item.item.id {
                     if topicId != 1, let threadData = component.item.item.threadData {
                         if let fileId = threadData.info.icon, fileId != 0 {
-                            avatarIconContent = .animation(content: .customEmoji(fileId: fileId), size: iconSize, placeholderColor: component.theme.list.mediaPlaceholderColor, themeColor: component.theme.list.itemAccentColor, loopMode: .count(0))
+                            avatarIconContent = .animation(content: .customEmoji(fileId: fileId), size: iconSize, placeholderColor: component.theme.list.mediaPlaceholderColor, themeColor: component.isSelected ? component.theme.rootController.navigationBar.accentTextColor : component.theme.rootController.navigationBar.controlColor, loopMode: .count(0))
                         } else {
                             avatarIconContent = .topic(title: String(threadData.info.title.prefix(1)), color: threadData.info.iconColor, size: iconSize)
                         }
                     } else {
-                        avatarIconContent = .image(image: PresentationResourcesChatList.generalTopicIcon(component.theme), tintColor: component.theme.rootController.navigationBar.secondaryTextColor)
+                        avatarIconContent = .image(image: PresentationResourcesChatList.generalTopicTemplateIcon(component.theme), tintColor: component.isSelected ? component.theme.rootController.navigationBar.accentTextColor : component.theme.rootController.navigationBar.controlColor)
                     }
                 }
                 
@@ -942,7 +952,7 @@ public final class ChatSideTopicsPanel: Component {
                     if let current = self.avatarNode {
                         avatarNode = current
                     } else {
-                        avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 11.0))
+                        avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 8.0))
                         avatarNode.isUserInteractionEnabled = false
                         self.avatarNode = avatarNode
                         self.containerButton.addSubview(avatarNode.view)
@@ -1842,7 +1852,7 @@ public final class ChatSideTopicsPanel: Component {
             case .side:
                 scrollSize = CGSize(width: availableSize.width, height: availableSize.height - directionContainerInset)
                 scrollFrame = CGRect(origin: CGPoint(x: 0.0, y: directionContainerInset), size: scrollSize)
-                listContentInsets = UIEdgeInsets(top: 8.0, left: 0.0, bottom: 8.0, right: 0.0)
+                listContentInsets = UIEdgeInsets(top: 8.0 + environment.insets.top, left: 0.0, bottom: 8.0 + environment.insets.bottom, right: 0.0)
             case .top:
                 scrollSize = CGSize(width: availableSize.width - directionContainerInset, height: availableSize.height)
                 scrollFrame = CGRect(origin: CGPoint(x: directionContainerInset, y: 0.0), size: scrollSize)
@@ -1929,81 +1939,75 @@ public final class ChatSideTopicsPanel: Component {
                 var itemContextGesture: ((ContextGesture, ContextExtractedContentContainingNode) -> Void)?
                 if !self.isReordering && component.isMonoforum {
                     itemContextGesture = { [weak self] gesture, sourceNode in
-                        guard let self, let component = self.component else {
-                            return
-                        }
-                        guard let controller = component.controller() else {
-                            return
-                        }
-                        
-                        let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
-                        
-                        if let listView = self.list.view as? AsyncListComponent.View {
-                            listView.stopScrolling()
-                        }
-                        
-                        let topicId: Int64
-                        switch item.item.id {
-                        case let .chatList(peerId):
-                            topicId = peerId.toInt64()
-                        case let .forum(topicIdValue):
-                            topicId = topicIdValue
-                        }
-                        
-                        var items: [ContextMenuItem] = []
-                        
-                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.ChatList_Context_Delete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self] c, _ in
-                            guard let self else {
+                        Task { @MainActor in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            guard let controller = component.controller() else {
                                 return
                             }
                             
-                            c?.dismiss(completion: { [weak self] in
-                                guard let self, let component = self.component, let controller = component.controller() else {
-                                    return
-                                }
-                                
-                                let actionSheet = ActionSheetController(presentationData: presentationData)
-                                var items: [ActionSheetItem] = []
-                                
-                                items.append(ActionSheetTextItem(title: presentationData.strings.ChatList_DeleteTopicConfirmationText, parseMarkdown: true))
-                                items.append(ActionSheetButtonItem(title: presentationData.strings.ChatList_DeleteTopicConfirmationAction, color: .destructive, action: { [weak self, weak actionSheet] in
-                                    actionSheet?.dismissAnimated()
+                            let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
+                            
+                            if let listView = self.list.view as? AsyncListComponent.View {
+                                listView.stopScrolling()
+                            }
+                            
+                            let topicId: Int64
+                            switch item.item.id {
+                            case let .chatList(peerId):
+                                topicId = peerId.toInt64()
+                            case let .forum(topicIdValue):
+                                topicId = topicIdValue
+                            }
+                            
+                            var items: [ContextMenuItem] = []
+                            
+                            let threadInfo = await component.context.engine.data.get(
+                                TelegramEngine.EngineData.Item.Messages.ThreadInfo(peerId: component.peerId, threadId: topicId)
+                            ).get()
+                            
+                            if let threadInfo, threadInfo.isMessageFeeRemoved {
+                                items.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_ReinstatePaidMessages, textColor: .primary, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Rate"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
                                     guard let self, let component = self.component else {
                                         return
                                     }
                                     
-                                    if component.topicId == topicId {
-                                        component.updateTopicId(nil, false)
-                                    }
+                                    c?.dismiss(completion: {})
                                     
-                                    let _ = component.context.engine.peers.removeForumChannelThread(id: component.peerId, threadId: topicId).startStandalone(completed: {
-                                    })
-                                }))
+                                    let _ = component.context.engine.peers.reinstateNoPaidMessagesException(scopePeerId: component.peerId, peerId: EnginePeer.Id(topicId)).startStandalone()
+                                })))
+                            }
+                            
+                            if !items.isEmpty {
+                                items.append(.separator)
+                            }
+                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.ChatList_Context_Delete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self] c, _ in
+                                guard let self else {
+                                    return
+                                }
                                 
-                                actionSheet.setItemGroups([
-                                    ActionSheetItemGroup(items: items),
-                                    ActionSheetItemGroup(items: [
-                                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                                            actionSheet?.dismissAnimated()
-                                        })
-                                    ])
-                                ])
-                                controller.present(actionSheet, in: .window(.root))
-                            })
-                        })))
-                        
-                        let contextController = ContextController(
-                            presentationData: presentationData,
-                            source: .extracted(ItemExtractedContentSource(
-                                sourceNode: sourceNode,
-                                containerView: self,
-                                keepInPlace: false
-                            )),
-                            items: .single(ContextController.Items(content: .list(items))),
-                            recognizer: nil,
-                            gesture: gesture
-                        )
-                        controller.presentInGlobalOverlay(contextController)
+                                c?.dismiss(completion: { [weak self] in
+                                    guard let self, let component = self.component else {
+                                        return
+                                    }
+                                    component.openDeletePeer(topicId)
+                                })
+                            })))
+                            
+                            let contextController = ContextController(
+                                presentationData: presentationData,
+                                source: .extracted(ItemExtractedContentSource(
+                                    sourceNode: sourceNode,
+                                    containerView: self,
+                                    keepInPlace: false
+                                )),
+                                items: .single(ContextController.Items(content: .list(items))),
+                                recognizer: nil,
+                                gesture: gesture
+                            )
+                            controller.presentInGlobalOverlay(contextController)
+                        }
                     }
                 } else if !self.isReordering {
                     itemContextGesture = { [weak self] gesture, sourceNode in

@@ -1,4 +1,4 @@
-#import "TGTextCheckingResult.h"
+#import <LegacyComponents/TGTextCheckingResult.h>
 
 @implementation TGTextCheckingResult
 

@@ -1348,7 +1348,7 @@ public final class ChatEmptyNodePremiumRequiredChatContent: ASDisplayNode, ChatE
                     text: .plain(NSAttributedString(string: actionText, font: Font.semibold(15.0), textColor: serviceColor.primaryText))
                 )),
                 environment: {},
-                containerSize: CGSize(width: 200.0, height: 100.0)
+                containerSize: CGSize(width: 250.0, height: 100.0)
             )
         } else {
             self.buttonTitle.view?.removeFromSuperview()
@@ -1869,7 +1869,7 @@ public final class ChatEmptyNode: ASDisplayNode {
                         }
                     }
                 } else if let channel = peer as? TelegramChannel, channel.isMonoForum {
-                    if let mainChannel = interfaceState.renderedPeer?.chatOrMonoforumMainPeer as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
+                    if let mainChannel = interfaceState.renderedPeer?.chatOrMonoforumMainPeer as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
                         contentType = .regular
                     } else {
                         contentType = .starsRequired(interfaceState.sendPaidMessageStars?.value)

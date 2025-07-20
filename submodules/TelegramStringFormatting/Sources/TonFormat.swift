@@ -28,7 +28,7 @@ public func formatTonUsdValue(_ value: Int64, divide: Bool = true, rate: Double 
     return "$\(formattedValue)"
 }
 
-public func formatTonAmountText(_ value: Int64, dateTimeFormat: PresentationDateTimeFormat, showPlus: Bool = false) -> String {
+public func formatTonAmountText(_ value: Int64, dateTimeFormat: PresentationDateTimeFormat, showPlus: Bool = false, maxDecimalPositions: Int = 2) -> String {
     var balanceText = "\(abs(value))"
     while balanceText.count < 10 {
         balanceText.insert("0", at: balanceText.startIndex)
@@ -49,7 +49,7 @@ public func formatTonAmountText(_ value: Int64, dateTimeFormat: PresentationDate
     }
     
     if let dotIndex = balanceText.range(of: dateTimeFormat.decimalSeparator) {
-        if let endIndex = balanceText.index(dotIndex.upperBound, offsetBy: 2, limitedBy: balanceText.endIndex) {
+        if let endIndex = balanceText.index(dotIndex.upperBound, offsetBy: maxDecimalPositions, limitedBy: balanceText.endIndex) {
             balanceText = String(balanceText[balanceText.startIndex..<endIndex])
         } else {
             balanceText = String(balanceText[balanceText.startIndex..<balanceText.endIndex])
@@ -91,6 +91,15 @@ public func formatStarsAmountText(_ amount: StarsAmount, dateTimeFormat: Present
         balanceText.insert("+", at: balanceText.startIndex)
     }
     return balanceText
+}
+
+public func formatCurrencyAmountText(_ amount: CurrencyAmount, dateTimeFormat: PresentationDateTimeFormat, showPlus: Bool = false) -> String {
+    switch amount.currency {
+    case .stars:
+        return formatStarsAmountText(amount.amount, dateTimeFormat: dateTimeFormat, showPlus: showPlus)
+    case .ton:
+        return formatTonAmountText(amount.amount.value, dateTimeFormat: dateTimeFormat, showPlus: showPlus)
+    }
 }
 
 private let invalidAddressCharacters = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_=").inverted

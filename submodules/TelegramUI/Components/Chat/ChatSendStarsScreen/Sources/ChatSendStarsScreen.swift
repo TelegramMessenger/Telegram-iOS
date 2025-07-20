@@ -1015,8 +1015,6 @@ private final class ChatSendStarsScreenComponent: Component {
         private var channelsForPublicReaction: [EnginePeer] = []
         private var channelsForPublicReactionDisposable: Disposable?
         
-        private var currentSuggestPostTimestamp: Int32?
-        
         override init(frame: CGRect) {
             self.bottomOverscrollLimit = 200.0
             
@@ -1393,31 +1391,6 @@ private final class ChatSendStarsScreenComponent: Component {
             controller.presentInGlobalOverlay(contextController)
         }
         
-        private func displaySuggestTimeSelectionMenu(sourceView: UIView) {
-            guard let component = self.component else {
-                return
-            }
-            guard let environment = self.environment else {
-                return
-            }
-            guard case let .suggestPost(suggestPostData) = component.initialData.subjectInitialData else {
-                return
-            }
-            
-            let mode: ChatScheduleTimeControllerMode = .suggestPost
-            let theme = environment.theme
-            let controller = ChatScheduleTimeController(context: component.context, updatedPresentationData: (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) }), peerId: suggestPostData.peer.id, mode: mode, style: .default, currentTime: self.currentSuggestPostTimestamp, minimalTime: nil, dismissByTapOutside: true, completion: { [weak self] time in
-                guard let self else {
-                    return
-                }
-                self.currentSuggestPostTimestamp = time == 0 ? nil : time
-                if !self.isUpdating {
-                    self.state?.updated(transition: .immediate)
-                }
-            })
-            environment.controller()?.present(controller, in: .window(.root))
-        }
-        
         func update(component: ChatSendStarsScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
@@ -1443,6 +1416,7 @@ private final class ChatSendStarsScreenComponent: Component {
                 component: AnyComponent(
                     StarsBalanceOverlayComponent(
                         context: component.context,
+                        peerId: component.context.account.peerId,
                         theme: environment.theme,
                         action: { [weak self] in
                             guard let self, let starsContext = context.starsContext, let navigationController = self.environment?.controller()?.navigationController as? NavigationController else {
@@ -1520,9 +1494,6 @@ private final class ChatSendStarsScreenComponent: Component {
                             }
                         }
                     })
-                case let .suggestPost(suggestPostData):
-                    self.currentSuggestPostTimestamp = suggestPostData.initialTimestamp
-                    self.amount = Amount(realValue: 50, maxRealValue: 10000, maxSliderValue: 999, isLogarithmic: true)
                 }
                 
                 if let starsContext = component.context.starsContext {
@@ -1580,8 +1551,6 @@ private final class ChatSendStarsScreenComponent: Component {
                             switch component.initialData.subjectInitialData {
                             case let .react(reactData):
                                 maxAmount = reactData.maxAmount
-                            case let .suggestPost(suggestPostData):
-                                maxAmount = suggestPostData.maxAmount
                             }
                             
                             self.amount = self.amount.withSliderValue(value)
@@ -1661,8 +1630,6 @@ private final class ChatSendStarsScreenComponent: Component {
                 } else {
                     self.isPastTopCutoff = nil
                 }
-            case .suggestPost:
-                break
             }
             
             let _ = self.sliderBackground.update(
@@ -1786,8 +1753,6 @@ private final class ChatSendStarsScreenComponent: Component {
                     transition.setFrame(view: peerSelectorButtonView, frame: peerSelectorButtonFrame)
                     peerSelectorButtonView.isHidden = sendAsPeers.count <= 1
                 }
-            case .suggestPost:
-                break
             }
             
             if themeUpdated {
@@ -1839,8 +1804,6 @@ private final class ChatSendStarsScreenComponent: Component {
             case let .react(reactData):
                 let currentMyPeer = self.currentMyPeer ?? reactData.myPeer
                 subtitleText = environment.strings.SendStarReactions_SubtitleFrom(currentMyPeer.compactDisplayTitle).string
-            case .suggestPost:
-                subtitleText = nil
             }
             
             var subtitleSize: CGSize?
@@ -1859,9 +1822,6 @@ private final class ChatSendStarsScreenComponent: Component {
             switch component.initialData.subjectInitialData {
             case .react:
                 titleText = environment.strings.SendStarReactions_Title
-            case .suggestPost:
-                //TODO:localize
-                titleText = "Suggest a Message"
             }
             
             let titleSize = title.update(
@@ -1909,9 +1869,6 @@ private final class ChatSendStarsScreenComponent: Component {
                 } else {
                     text = environment.strings.SendStarReactions_TextGeneric(reactData.peer.debugDisplayTitle).string
                 }
-            case let .suggestPost(suggestPostData):
-                //TODO:localize
-                text = "Choose how many stars you want to offer **\(suggestPostData.peer.compactDisplayTitle)** to publish this message."
             }
             
             let body = MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.itemPrimaryTextColor)
@@ -1944,38 +1901,6 @@ private final class ChatSendStarsScreenComponent: Component {
             contentHeight += descriptionTextFrame.height
             contentHeight += 22.0
             contentHeight += 2.0
-            
-            if case .suggestPost = component.initialData.subjectInitialData {
-                contentHeight += 3.0
-                
-                let timeSelectorButtonSize = self.timeSelectorButton.update(
-                    transition: transition,
-                    component: AnyComponent(TimeSelectorBadgeComponent(
-                        context: component.context,
-                        theme: environment.theme,
-                        strings: environment.strings,
-                        timestamp: self.currentSuggestPostTimestamp,
-                        action: { [weak self] sourceView in
-                            guard let self else {
-                                return
-                            }
-                            self.displaySuggestTimeSelectionMenu(sourceView: sourceView)
-                        }
-                    )),
-                    environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
-                )
-                let timeSelectorButtonFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - timeSelectorButtonSize.width) * 0.5), y: contentHeight), size: timeSelectorButtonSize)
-                if let timeSelectorButtonView = self.timeSelectorButton.view {
-                    if timeSelectorButtonView.superview == nil {
-                        self.navigationBarContainer.addSubview(timeSelectorButtonView)
-                    }
-                    transition.setFrame(view: timeSelectorButtonView, frame: timeSelectorButtonFrame)
-                }
-                contentHeight += timeSelectorButtonSize.height
-                
-                contentHeight += 32.0
-            }
             
             switch component.initialData.subjectInitialData {
             case let .react(reactData):
@@ -2309,8 +2234,6 @@ private final class ChatSendStarsScreenComponent: Component {
                 }
                 
                 contentHeight += anonymousContentsSize.height + 27.0
-            case .suggestPost:
-                break
             }
             
             initialContentHeight = contentHeight
@@ -2323,8 +2246,6 @@ private final class ChatSendStarsScreenComponent: Component {
             switch component.initialData.subjectInitialData {
             case .react:
                 buttonString = environment.strings.SendStarReactions_SendButtonTitle("\(self.amount.realValue)").string
-            case .suggestPost:
-                buttonString = "Offer  # \(self.amount.realValue)"
             }
             let buttonAttributedString = NSMutableAttributedString(string: buttonString, font: Font.semibold(17.0), textColor: .white, paragraphAlignment: .center)
             if let range = buttonAttributedString.string.range(of: "#"), let starImage = self.cachedStarImage?.0 {
@@ -2371,9 +2292,6 @@ private final class ChatSendStarsScreenComponent: Component {
                                 switch component.initialData.subjectInitialData {
                                 case let .react(reactData):
                                     purchasePurpose = .reactions(peerId: reactData.peer.id, requiredStars: Int64(self.amount.realValue))
-                                case let .suggestPost(suggestPost):
-                                    //TODO:release
-                                    purchasePurpose = .reactions(peerId: suggestPost.peer.id, requiredStars: Int64(self.amount.realValue))
                                 }
                                 
                                 let purchaseScreen = component.context.sharedContext.makeStarsPurchaseScreen(context: component.context, starsContext: starsContext, options: options, purpose: purchasePurpose, completion: { result in
@@ -2417,8 +2335,6 @@ private final class ChatSendStarsScreenComponent: Component {
                                     sourceView: badgeView.badgeIcon
                                 )
                             )
-                        case let .suggestPost(suggestPostData):
-                            suggestPostData.completion(Int64(self.amount.realValue), self.currentSuggestPostTimestamp)
                         }
                         self.environment?.controller()?.dismiss()
                     }
@@ -2562,22 +2478,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
             }
         }
         
-        class SuggestPost {
-            let peer: EnginePeer
-            let initialTimestamp: Int32?
-            let maxAmount: Int
-            let completion: (Int64, Int32?) -> Void
-            
-            init(peer: EnginePeer, initialTimestamp: Int32?, maxAmount: Int, completion: @escaping (Int64, Int32?) -> Void) {
-                self.peer = peer
-                self.initialTimestamp = initialTimestamp
-                self.maxAmount = maxAmount
-                self.completion = completion
-            }
-        }
-        
         case react(React)
-        case suggestPost(SuggestPost)
     }
     
     public final class InitialData {
@@ -2822,46 +2723,6 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
                             count: Int(topPeer.count)
                         )
                     },
-                    maxAmount: maxAmount,
-                    completion: completion
-                )),
-                balance: balance
-            )
-        }
-    }
-    
-    public static func initialData(context: AccountContext, peerId: EnginePeer.Id, suggestMessageAmount: StarsAmount, completion: @escaping (Int64, Int32?) -> Void) -> Signal<InitialData?, NoError> {
-        let balance: Signal<StarsAmount?, NoError>
-        if let starsContext = context.starsContext {
-            balance = starsContext.state
-            |> map { state in
-                return state?.balance
-            }
-            |> take(1)
-        } else {
-            balance = .single(nil)
-        }
-        
-        var maxAmount = 2500
-        if let data = context.currentAppConfiguration.with({ $0 }).data, let value = data["stars_suggest_post_amount_max"] as? Double {
-            maxAmount = Int(value)
-        }
-        
-        return combineLatest(
-            context.engine.data.get(
-                TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
-            ),
-            balance
-        )
-        |> map { peer, balance -> InitialData? in
-            guard let peer else {
-                return nil
-            }
-            
-            return InitialData(
-                subjectInitialData: .suggestPost(SubjectInitialData.SuggestPost(
-                    peer: peer,
-                    initialTimestamp: nil,
                     maxAmount: maxAmount,
                     completion: completion
                 )),
@@ -3194,166 +3055,6 @@ private final class PeerSelectorBadgeComponent: Component {
             avatarNode.setPeer(context: component.context, theme: component.theme, peer: component.peer, synchronousLoad: true)
             
             let size = CGSize(width: avatarPadding + avatarDiameter + avatarTextSpacing + rightTextInset, height: height)
-            
-            if component.action != nil {
-                let selectorIcon: ComponentView<Empty>
-                if let current = self.selectorIcon {
-                    selectorIcon = current
-                } else {
-                    selectorIcon = ComponentView()
-                    self.selectorIcon = selectorIcon
-                }
-                let selectorIconSize = selectorIcon.update(
-                    transition: transition,
-                    component: AnyComponent(BundleIconComponent(
-                        name: "Item List/ExpandableSelectorArrows", tintColor: component.theme.list.itemInputField.primaryColor.withMultipliedAlpha(0.5))),
-                    environment: {},
-                    containerSize: CGSize(width: 100.0, height: 100.0)
-                )
-                let selectorIconFrame = CGRect(origin: CGPoint(x: size.width - 8.0 - selectorIconSize.width, y: floorToScreenPixels((size.height - selectorIconSize.height) * 0.5)), size: selectorIconSize)
-                if let selectorIconView = selectorIcon.view {
-                    if selectorIconView.superview == nil {
-                        selectorIconView.isUserInteractionEnabled = false
-                        self.addSubview(selectorIconView)
-                    }
-                    transition.setFrame(view: selectorIconView, frame: selectorIconFrame)
-                }
-            } else if let selectorIcon = self.selectorIcon {
-                self.selectorIcon = nil
-                selectorIcon.view?.removeFromSuperview()
-            }
-            
-            let _ = self.background.update(
-                transition: transition,
-                component: AnyComponent(FilledRoundedRectangleComponent(
-                    color: component.theme.list.itemInputField.backgroundColor,
-                    cornerRadius: .minEdge,
-                    smoothCorners: false
-                )),
-                environment: {},
-                containerSize: size
-            )
-            if let backgroundView = self.background.view {
-                if backgroundView.superview == nil {
-                    backgroundView.isUserInteractionEnabled = false
-                    self.insertSubview(backgroundView, at: 0)
-                }
-                transition.setFrame(view: backgroundView, frame: CGRect(origin: CGPoint(), size: size))
-            }
-            
-            return size
-        }
-    }
-    
-    func makeView() -> View {
-        return View(frame: CGRect())
-    }
-    
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
-        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
-    }
-}
-
-private final class TimeSelectorBadgeComponent: Component {
-    let context: AccountContext
-    let theme: PresentationTheme
-    let strings: PresentationStrings
-    let timestamp: Int32?
-    let action: ((UIView) -> Void)?
-    
-    init(
-        context: AccountContext,
-        theme: PresentationTheme,
-        strings: PresentationStrings,
-        timestamp: Int32?,
-        action: ((UIView) -> Void)?
-    ) {
-        self.context = context
-        self.theme = theme
-        self.strings = strings
-        self.timestamp = timestamp
-        self.action = action
-    }
-    
-    static func ==(lhs: TimeSelectorBadgeComponent, rhs: TimeSelectorBadgeComponent) -> Bool {
-        if lhs.context !== rhs.context {
-            return false
-        }
-        if lhs.theme !== rhs.theme {
-            return false
-        }
-        if lhs.strings !== rhs.strings {
-            return false
-        }
-        if lhs.timestamp != rhs.timestamp {
-            return false
-        }
-        if (lhs.action == nil) != (rhs.action == nil) {
-            return false
-        }
-        return true
-    }
-    
-    final class View: HighlightableButton {
-        private let background = ComponentView<Empty>()
-        private let title = ComponentView<Empty>()
-        private var selectorIcon: ComponentView<Empty>?
-        
-        private var component: TimeSelectorBadgeComponent?
-        
-        override init(frame: CGRect) {
-            super.init(frame: frame)
-            
-            self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
-        }
-        
-        required init?(coder: NSCoder) {
-            fatalError("init(coder:) has not been implemented")
-        }
-        
-        @objc private func pressed() {
-            guard let component = self.component else {
-                return
-            }
-            component.action?(self)
-        }
-        
-        func update(component: TimeSelectorBadgeComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
-            self.component = component
-            
-            self.isEnabled = component.action != nil
-            
-            let height: CGFloat = 32.0
-            let leftTextInset: CGFloat = 12.0
-            let rightTextInset: CGFloat = component.action != nil ? (leftTextInset + 14.0) : leftTextInset
-            
-            var titleString: String
-            //TODO:localize
-            if let timestamp = component.timestamp {
-                titleString = humanReadableStringForTimestamp(strings: component.strings, dateTimeFormat: PresentationDateTimeFormat(), timestamp: timestamp, alwaysShowTime: true).string
-                if titleString.count > 1 {
-                    titleString = String(titleString[titleString.startIndex]).capitalized + titleString[titleString.index(after: titleString.startIndex)...]
-                }
-            } else {
-                titleString = "Anytime"
-            }
-            let titleSize = self.title.update(
-                transition: .immediate,
-                component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: titleString, font: Font.medium(15.0), textColor: component.theme.list.itemPrimaryTextColor))
-                )),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width - leftTextInset - rightTextInset, height: 100.0)
-            )
-            if let titleView = self.title.view {
-                if titleView.superview == nil {
-                    titleView.isUserInteractionEnabled = false
-                    self.addSubview(titleView)
-                }
-                titleView.frame = CGRect(origin: CGPoint(x: leftTextInset, y: floorToScreenPixels((height - titleSize.height) * 0.5)), size: titleSize)
-            }
-            
-            let size = CGSize(width: leftTextInset + rightTextInset + titleSize.width, height: height)
             
             if component.action != nil {
                 let selectorIcon: ComponentView<Empty>

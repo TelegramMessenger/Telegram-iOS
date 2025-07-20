@@ -11,6 +11,7 @@ public enum ChatTextInputAccessoryItem: Equatable {
         case messageAutoremoveTimeout
         case scheduledMessages
         case gift
+        case suggestPost
     }
     
     public enum InputMode: Hashable {
@@ -27,6 +28,7 @@ public enum ChatTextInputAccessoryItem: Equatable {
     case messageAutoremoveTimeout(Int32?)
     case scheduledMessages
     case gift
+    case suggestPost
     
     public var key: Key {
         switch self {
@@ -44,6 +46,8 @@ public enum ChatTextInputAccessoryItem: Equatable {
             return .scheduledMessages
         case .gift:
             return .gift
+        case .suggestPost:
+            return .suggestPost
         }
     }
 }

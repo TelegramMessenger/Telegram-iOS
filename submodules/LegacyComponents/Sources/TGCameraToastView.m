@@ -1,6 +1,6 @@
 #import "TGCameraToastView.h"
-#import "TGCameraInterfaceAssets.h"
-#import "TGFont.h"
+#import <LegacyComponents/TGCameraInterfaceAssets.h>
+#import <LegacyComponents/TGFont.h>
 
 @implementation TGCameraToastView
 {

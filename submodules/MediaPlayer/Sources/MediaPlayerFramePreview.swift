@@ -683,3 +683,217 @@ public final class MediaPlayerFramePreviewHLS: FramePreview {
     }
 }
 
+public final class MediaPlayerFramePreviewHLSThumbnails: FramePreview {
+    private final class Impl {
+        let queue: Queue
+        let postbox: Postbox
+        let userLocation: MediaResourceUserLocation
+        let userContentType: MediaResourceUserContentType
+        let file: FileMediaReference
+        let fileMap: FileMediaReference
+        
+        private var fileDisposable: Disposable?
+        
+        let framePipe = ValuePipe<FramePreviewResult>()
+        private let nextRequestedFrame: Atomic<Double?>
+        
+        private var mapData: (image: UIImage, frames: [(Double, CGRect)])?
+        private var currentFrame: Double?
+        
+        init(
+            queue: Queue,
+            postbox: Postbox,
+            userLocation: MediaResourceUserLocation,
+            userContentType: MediaResourceUserContentType,
+            file: FileMediaReference,
+            fileMap: FileMediaReference,
+            nextRequestedFrame: Atomic<Double?>
+        ) {
+            self.queue = queue
+            self.postbox = postbox
+            self.userLocation = userLocation
+            self.userContentType = userContentType
+            self.file = file
+            self.fileMap = fileMap
+            self.nextRequestedFrame = nextRequestedFrame
+            
+            self.loadFiles()
+        }
+        
+        deinit {
+            self.fileDisposable?.dispose()
+        }
+        
+        func generateFrame() {
+            self.updateFrameRequest()
+        }
+        
+        func cancelPendingFrames() {
+        }
+        
+        private func loadFiles() {
+            if self.fileDisposable != nil {
+                return
+            }
+            
+            let fetchDisposables = DisposableSet()
+            self.fileDisposable = fetchDisposables
+            
+            fetchDisposables.add(fetchedMediaResource(
+                mediaBox: self.postbox.mediaBox,
+                userLocation: self.userLocation,
+                userContentType: self.userContentType,
+                reference: self.fileMap.resourceReference(self.fileMap.media.resource)
+            ).startStrict())
+            fetchDisposables.add(fetchedMediaResource(
+                mediaBox: self.postbox.mediaBox,
+                userLocation: self.userLocation,
+                userContentType: self.userContentType,
+                reference: self.file.resourceReference(self.file.media.resource)
+            ).startStrict())
+            
+            fetchDisposables.add((combineLatest(queue: .mainQueue(),
+                self.postbox.mediaBox.resourceData(self.fileMap.media.resource) |> filter { $0.complete } |> take(1),
+                self.postbox.mediaBox.resourceData(self.file.media.resource) |> filter { $0.complete } |> take(1)
+            )
+            |> deliverOn(self.queue)).startStrict(next: { [weak self] fileMap, file in
+                guard let self else {
+                    return
+                }
+                guard let fileMapData = try? Data(contentsOf: URL(fileURLWithPath: fileMap.path)) else {
+                    return
+                }
+                guard let fileMapString = String(data: fileMapData, encoding: .utf8) else {
+                    return
+                }
+                let mapLines = fileMapString.components(separatedBy: "\n")
+                
+                /*
+                 file=mtproto:5330572490471112705
+                 frame_width=80
+                 frame_height=144
+                 0,0,0
+                 5,80,0
+                 10,160,0
+                 15,240,0
+                 20,320,0
+                 */
+                var frameWidth: Int?
+                var frameHeight: Int?
+                var frames: [(Double, CGRect)] = []
+                for line in mapLines {
+                    if line.hasPrefix("file=") {
+                    } else if line.hasPrefix("frame_width=") {
+                        frameWidth = Int(line[line.index(line.startIndex, offsetBy: "frame_width=".count)...])
+                    } else if line.hasPrefix("frame_height=") {
+                        frameHeight = Int(line[line.index(line.startIndex, offsetBy: "frame_height=".count)...])
+                    } else {
+                        let components = line.components(separatedBy: ",")
+                        if components.count == 3 {
+                            let offset = Double(components[0])
+                            let x = Int(components[1])
+                            let y = Int(components[2])
+                            
+                            if let offset, let x, let y {
+                                if let frameWidth, let frameHeight {
+                                    let frameWidth = min(frameWidth, 1024)
+                                    let frameHeight = min(frameHeight, 1024)
+                                    
+                                    frames.append((offset, CGRect(origin: CGPoint(x: CGFloat(x), y: CGFloat(y)), size: CGSize(width: CGFloat(frameWidth), height: CGFloat(frameHeight)))))
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                if let image = UIImage(contentsOfFile: file.path) {
+                    self.mapData = (image, frames)
+                }
+                
+                self.updateFrameRequest()
+            }))
+        }
+        
+        private func updateFrameRequest() {
+            guard let mapData = self.mapData else {
+                return
+            }
+            if let timestamp = self.nextRequestedFrame.swap(nil) {
+                if self.currentFrame == timestamp {
+                    return
+                }
+                self.currentFrame = timestamp
+                
+                for (offset, rect) in mapData.frames {
+                    if offset >= timestamp {
+                        let renderer = UIGraphicsImageRenderer(bounds: CGRect(origin: CGPoint(), size: rect.size))
+                        let image = renderer.image { context in
+                            UIGraphicsPushContext(context.cgContext)
+                            context.cgContext.setFillColor(UIColor.black.cgColor)
+                            context.cgContext.fill(CGRect(origin: CGPoint(), size: rect.size))
+                            mapData.image.draw(in: CGRect(origin: CGPoint(x: -rect.minX, y: -rect.minY), size: mapData.image.size))
+                            UIGraphicsPopContext()
+                        }
+                        self.framePipe.putNext(FramePreviewResult.image(image))
+                        
+                        break
+                    }
+                }
+            }
+        }
+    }
+    
+    private let queue: Queue
+    private let impl: QueueLocalObject<Impl>
+    
+    public var generatedFrames: Signal<FramePreviewResult, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.framePipe.signal().start(next: { result in
+                    subscriber.putNext(result)
+                }))
+            }
+            return disposable
+        }
+    }
+    
+    private let nextRequestedFrame = Atomic<Double?>(value: nil)
+    
+    public init(
+        postbox: Postbox,
+        userLocation: MediaResourceUserLocation,
+        userContentType: MediaResourceUserContentType,
+        file: FileMediaReference,
+        fileMap: FileMediaReference
+    ) {
+        let queue = Queue()
+        self.queue = queue
+        let nextRequestedFrame = self.nextRequestedFrame
+        self.impl = QueueLocalObject(queue: queue, generate: {
+            return Impl(
+                queue: queue,
+                postbox: postbox,
+                userLocation: userLocation,
+                userContentType: userContentType,
+                file: file,
+                fileMap: fileMap,
+                nextRequestedFrame: nextRequestedFrame
+            )
+        })
+    }
+    
+    public func generateFrame(at timestamp: Double) {
+        let _ = self.nextRequestedFrame.swap(timestamp)
+        self.impl.with { impl in
+            impl.generateFrame()
+        }
+    }
+    
+    public func cancelPendingFrames() {
+        self.impl.with { impl in
+            impl.cancelPendingFrames()
+        }
+    }
+}
+

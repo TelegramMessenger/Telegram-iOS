@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
@@ -8,6 +9,7 @@ import ReactionSelectionNode
 import ComponentFlow
 import TabSelectorComponent
 import PlainButtonComponent
+import MultilineTextComponent
 import ComponentDisplayAdapters
 import AccountContext
 
@@ -17,6 +19,7 @@ final class ContextSourceContainer: ASDisplayNode {
         
         let id: AnyHashable
         let title: String
+        let footer: String?
         let context: AccountContext?
         let source: ContextContentSource
         let closeActionTitle: String?
@@ -44,6 +47,7 @@ final class ContextSourceContainer: ASDisplayNode {
             controller: ContextController,
             id: AnyHashable,
             title: String,
+            footer: String?,
             context: AccountContext?,
             source: ContextContentSource,
             items: Signal<ContextController.Items, NoError>,
@@ -53,6 +57,7 @@ final class ContextSourceContainer: ASDisplayNode {
             self.controller = controller
             self.id = id
             self.title = title
+            self.footer = footer
             self.context = context
             self.source = source
             self.closeActionTitle = closeActionTitle
@@ -362,6 +367,7 @@ final class ContextSourceContainer: ASDisplayNode {
     var activeIndex: Int = 0
     
     private var tabSelector: ComponentView<Empty>?
+    private var footer: ComponentView<Empty>?
     private var closeButton: ComponentView<Empty>?
     
     private var presentationData: PresentationData?
@@ -397,6 +403,7 @@ final class ContextSourceContainer: ASDisplayNode {
                 controller: controller,
                 id: source.id,
                 title: source.title,
+                footer: source.footer,
                 context: context,
                 source: source.source,
                 items: source.items,
@@ -476,8 +483,14 @@ final class ContextSourceContainer: ASDisplayNode {
     func animateIn() {
         self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         
-        if let activeSource = self.activeSource {
-            activeSource.animateIn()
+//        if let activeSource = self.activeSource {
+//            activeSource.animateIn()
+//        }
+        for source in self.sources {
+            source.animateIn()
+        }
+        if let footerView = self.footer?.view {
+            footerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         }
         if let tabSelectorView = self.tabSelector?.view {
             tabSelectorView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
@@ -500,11 +513,20 @@ final class ContextSourceContainer: ASDisplayNode {
             }
         })
         
+        if let footerView = self.footer?.view {
+            footerView.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, delay: delay, removeOnCompletion: false)
+        }
         if let tabSelectorView = self.tabSelector?.view {
             tabSelectorView.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, delay: delay, removeOnCompletion: false)
         }
         if let closeButtonView = self.closeButton?.view {
             closeButtonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, delay: delay, removeOnCompletion: false)
+        }
+        
+        for source in self.sources {
+            if source !== self.activeSource {
+                source.animateOut(result: result, completion: {})
+            }
         }
         
         if let activeSource = self.activeSource {
@@ -671,6 +693,49 @@ final class ContextSourceContainer: ASDisplayNode {
             )
             childLayout.intrinsicInsets.bottom += 30.0
             
+            if let footerText = self.activeSource?.footer {
+                var footerTransition = transition
+                let footer: ComponentView<Empty>
+                if let current = self.footer {
+                    footer = current
+                } else {
+                    footerTransition = .immediate
+                    footer = ComponentView()
+                    self.footer = footer
+                }
+                
+                let footerSize = footer.update(
+                    transition: ComponentTransition(footerTransition),
+                    component: AnyComponent(
+                        MultilineTextComponent(
+                            text: .plain(NSAttributedString(string: footerText, font: Font.regular(13.0), textColor: presentationData.theme.contextMenu.primaryColor.withMultipliedAlpha(0.4))),
+                            horizontalAlignment: .center,
+                            maximumNumberOfLines: 0,
+                            lineSpacing: 0.1
+                        )
+                    ),
+                    environment: {},
+                    containerSize: CGSize(width: layout.size.width, height: 144.0)
+                )
+                
+                let spacing: CGFloat = 20.0
+                childLayout.intrinsicInsets.bottom += footerSize.height + spacing
+                
+                if let footerView = footer.view {
+                    if footerView.superview == nil {
+                        self.view.addSubview(footerView)
+                        
+                        footerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                    }
+                    footerTransition.updateFrame(view: footerView, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - footerSize.width) * 0.5), y: layout.size.height - layout.intrinsicInsets.bottom - tabSelectorSize.height - footerSize.height - spacing), size: footerSize))
+                }
+            } else if let footer = self.footer {
+                self.footer = nil
+                footer.view?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
+                    footer.view?.removeFromSuperview()
+                })
+            }
+            
             if let tabSelectorView = tabSelector.view {
                 if tabSelectorView.superview == nil {
                     self.view.addSubview(tabSelectorView)
@@ -705,8 +770,9 @@ final class ContextSourceContainer: ASDisplayNode {
                         } else {
                             self.controller?.dismiss(result: .dismissWithoutContent, completion: nil)
                         }
-                    })
-                ),
+                    },
+                    animateAlpha: false
+                )),
                 environment: {},
                 containerSize: CGSize(width: layout.size.width, height: 44.0)
             )

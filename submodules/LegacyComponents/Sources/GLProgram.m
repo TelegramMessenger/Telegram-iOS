@@ -5,6 +5,10 @@
 #import "LegacyComponentsInternal.h"
 
 #import "GLProgram.h"
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 // START:typedefs
 #pragma mark Function Pointer Definitions
 typedef void (*GLInfoFunction)(GLuint program, 
@@ -272,3 +276,5 @@ typedef void (*GLLogFunction) (GLuint program,
 }
 // END:dealloc
 @end
+
+#pragma clang diagnostic pop

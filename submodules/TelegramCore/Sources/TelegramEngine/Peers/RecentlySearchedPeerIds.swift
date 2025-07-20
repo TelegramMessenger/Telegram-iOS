@@ -79,6 +79,13 @@ public func _internal_recentlySearchedPeers(postbox: Postbox) -> Signal<[Recentl
                 if let peerView = view.views[.peer(peerId: peerId, components: .all)] as? PeerView {
                     var presence: TelegramUserPresence?
                     var unreadCount = unreadCounts[peerId] ?? 0
+                    var subpeerSummary: RecentlySearchedPeerSubpeerSummary?
+                    
+                    if let cachedData = peerView.cachedData as? CachedChannelData {
+                        let count: Int32 = cachedData.participantsSummary.memberCount ?? 0
+                        subpeerSummary = RecentlySearchedPeerSubpeerSummary(count: Int(count))
+                    }
+                    
                     if let peer = peerView.peers[peerId] {
                         if peer is TelegramSecretChat, let associatedPeerId = peer.associatedPeerId {
                             presence = peerView.peerPresences[associatedPeerId] as? TelegramUserPresence
@@ -91,17 +98,20 @@ public func _internal_recentlySearchedPeers(postbox: Postbox) -> Signal<[Recentl
                             } else {
                                 unreadCount = 0
                             }
+                            
+                            if channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId {
+                                subpeerSummary = nil
+                                
+                                if let cachedData = peerView.associatedCachedData[linkedMonoforumId] as? CachedChannelData {
+                                    let count: Int32 = cachedData.participantsSummary.memberCount ?? 0
+                                    subpeerSummary = RecentlySearchedPeerSubpeerSummary(count: Int(count))
+                                }
+                            }
                         }
                         
                         if let group = peer as? TelegramGroup, let migrationReference = group.migrationReference {
                             migratedPeerIds = [group.id: migrationReference.peerId]
                         }
-                    }
-                    
-                    var subpeerSummary: RecentlySearchedPeerSubpeerSummary?
-                    if let cachedData = peerView.cachedData as? CachedChannelData {
-                        let count: Int32 = cachedData.participantsSummary.memberCount ?? 0
-                        subpeerSummary = RecentlySearchedPeerSubpeerSummary(count: Int(count))
                     }
                     
                     result.append(RecentlySearchedPeer(peer: RenderedPeer(peerId: peerId, peers: SimpleDictionary(peerView.peers), associatedMedia: peerView.media), presence: presence, notificationSettings: peerView.notificationSettings as? TelegramPeerNotificationSettings, unreadCount: unreadCount, subpeerSummary: subpeerSummary))

@@ -286,6 +286,8 @@ public class CheckLayer: CALayer {
             self.setNeedsDisplay()
         }
     }
+    
+    public var animateScale = true
 
     public var selected = false
     public func setSelected(_ selected: Bool, animated: Bool = false) {
@@ -314,26 +316,28 @@ public class CheckLayer: CALayer {
             animation.duration = selected ? 0.21 : 0.15
             self.pop_add(animation, forKey: "progress")
             
-            if selected {
-                self.animateScale(from: 1.0, to: 0.9, duration: 0.08, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, completion: { [weak self] _ in
-                    guard let self else {
-                        return
-                    }
-                    self.animateScale(from: 0.9, to: 1.1, duration: 0.13, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, completion: { [weak self] _ in
+            if self.animateScale {
+                if selected {
+                    self.animateScale(from: 1.0, to: 0.9, duration: 0.08, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, completion: { [weak self] _ in
                         guard let self else {
                             return
                         }
-                        
-                        self.animateScale(from: 1.1, to: 1.0, duration: 0.1, timingFunction: CAMediaTimingFunctionName.easeIn.rawValue)
+                        self.animateScale(from: 0.9, to: 1.1, duration: 0.13, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, completion: { [weak self] _ in
+                            guard let self else {
+                                return
+                            }
+                            
+                            self.animateScale(from: 1.1, to: 1.0, duration: 0.1, timingFunction: CAMediaTimingFunctionName.easeIn.rawValue)
+                        })
                     })
-                })
-            } else {
-                self.animateScale(from: 1.0, to: 0.9, duration: 0.08, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, completion: { [weak self] _ in
-                    guard let self else {
-                        return
-                    }
-                    self.animateScale(from: 0.9, to: 1.0, duration: 0.13, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
-                })
+                } else {
+                    self.animateScale(from: 1.0, to: 0.9, duration: 0.08, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, completion: { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        self.animateScale(from: 0.9, to: 1.0, duration: 0.13, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
+                    })
+                }
             }
         } else {
             self.pop_removeAllAnimations()

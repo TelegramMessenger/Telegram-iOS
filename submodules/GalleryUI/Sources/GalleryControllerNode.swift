@@ -276,6 +276,8 @@ open class GalleryControllerNode: ASDisplayNode, ASScrollViewDelegate, ASGesture
         if #available(iOSApplicationExtension 11.0, iOS 11.0, *), !self.isLayerBacked {
             self.view.accessibilityIgnoresInvertColors = true
         }
+        
+        self.view.disablesInteractiveTransitionGestureRecognizer = true
     }
     
     open func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {

@@ -1,8 +1,8 @@
-#import "TGProxyWindow.h"
+#import <LegacyComponents/TGProxyWindow.h>
 #import <LegacyComponents/TGFont.h>
 
 #import "LegacyComponentsInternal.h"
-#import "TGImageUtils.h"
+#import <LegacyComponents/TGImageUtils.h>
 
 static UIImage *generateShieldImage(UIColor *color) {
     NSString *code = @"M100,6.56393754 L6,48.2657557 L6,110.909091 C6,169.509174 46.3678836,223.966692 100,237.814087 C153.632116,223.966692 194,169.509174 194,110.909091 L194,48.2657557 L100,6.56393754 S";

@@ -1,11 +1,11 @@
-#import "TGSecretTimerMenu.h"
+#import <LegacyComponents/TGSecretTimerMenu.h>
 
 #import "LegacyComponentsInternal.h"
 
-#import "TGMenuSheetController.h"
+#import <LegacyComponents/TGMenuSheetController.h>
 
-#import "TGMenuSheetTitleItemView.h"
-#import "TGMenuSheetButtonItemView.h"
+#import <LegacyComponents/TGMenuSheetTitleItemView.h>
+#import <LegacyComponents/TGMenuSheetButtonItemView.h>
 #import "TGSecretTimerPickerItemView.h"
 
 @implementation TGSecretTimerMenu

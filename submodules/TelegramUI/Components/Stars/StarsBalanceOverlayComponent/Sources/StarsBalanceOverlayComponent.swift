@@ -13,15 +13,18 @@ import Markdown
 
 public final class StarsBalanceOverlayComponent: Component {
     private let context: AccountContext
+    private let peerId: EnginePeer.Id
     private let theme: PresentationTheme
     private let action: () -> Void
     
     public init(
         context: AccountContext,
+        peerId: EnginePeer.Id,
         theme: PresentationTheme,
         action: @escaping () -> Void
     ) {
         self.context = context
+        self.peerId = peerId
         self.theme = theme
         self.action = action
     }
@@ -43,6 +46,8 @@ public final class StarsBalanceOverlayComponent: Component {
         
         private var balance: Int64 = 0
         private var balanceDisposable: Disposable?
+        
+        private var starsRevenueStatsContext: StarsRevenueStatsContext?
         
         private var cachedChevronImage: (UIImage, PresentationTheme)?
         
@@ -77,29 +82,59 @@ public final class StarsBalanceOverlayComponent: Component {
                 self.isUpdating = false
             }
             self.component = component
+            self.state = state
             
-            if self.balanceDisposable == nil, let starsContext = component.context.starsContext {
-                self.balanceDisposable = (starsContext.state
-                |> map { state -> Int64 in
-                    return state?.balance.value ?? 0
+            if self.balanceDisposable == nil {
+                if component.peerId == component.context.account.peerId {
+                    if let starsContext = component.context.starsContext {
+                        self.balanceDisposable = (starsContext.state
+                        |> map { state -> Int64 in
+                            return state?.balance.value ?? 0
+                        }
+                        |> distinctUntilChanged
+                        |> deliverOnMainQueue).start(next: { [weak self] balance in
+                            guard let self else {
+                                return
+                            }
+                            self.balance = balance
+                            if !self.isUpdating {
+                                self.state?.updated()
+                            }
+                        })
+                    }
+                } else {
+                    let starsRevenueStatsContext = StarsRevenueStatsContext(account: component.context.account, peerId: component.peerId, ton: false)
+                    self.starsRevenueStatsContext = starsRevenueStatsContext
+                    
+                    self.balanceDisposable = (starsRevenueStatsContext.state
+                    |> map { state -> Int64 in
+                        return state.stats?.balances.currentBalance.amount.value ?? 0
+                    }
+                    |> distinctUntilChanged
+                    |> deliverOnMainQueue).start(next: { [weak self] balance in
+                        guard let self else {
+                            return
+                        }
+                        self.balance = balance
+                        if !self.isUpdating {
+                            self.state?.updated()
+                        }
+                    })
                 }
-                |> distinctUntilChanged
-                |> deliverOnMainQueue).start(next: { [weak self] balance in
-                    guard let self else {
-                        return
-                    }
-                    self.balance = balance
-                    if !self.isUpdating {
-                        self.state?.updated()
-                    }
-                })
             }
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             let balance = presentationStringsFormattedNumber(Int32(self.balance), presentationData.dateTimeFormat.groupingSeparator)
             
+            let rawString: String
+            if component.peerId == component.context.account.peerId {
+                rawString = presentationData.strings.StarsBalance_YourBalance("**⭐️\(balance)**").string
+            } else {
+                rawString = presentationData.strings.StarsBalance_ChannelBalance("**⭐️\(balance)**").string
+            }
+            
             let attributedText = parseMarkdownIntoAttributedString(
-                presentationData.strings.StarsBalance_YourBalance("**⭐️\(balance)**").string,
+                rawString,
                 attributes: MarkdownAttributes(
                     body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: component.theme.rootController.navigationBar.primaryTextColor),
                     bold: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: component.theme.rootController.navigationBar.primaryTextColor),
@@ -150,7 +185,12 @@ public final class StarsBalanceOverlayComponent: Component {
                 containerSize: availableSize
             )
             
-            let size = CGSize(width: max(textSize.width, actionSize.width) + 40.0, height: 54.0)
+            let size: CGSize
+            if component.peerId == component.context.account.peerId {
+                size = CGSize(width: max(textSize.width, actionSize.width) + 40.0, height: 54.0)
+            } else {
+                size = CGSize(width: textSize.width + 40.0, height: 35.0)
+            }
             
             if let textView = self.text.view {
                 if textView.superview == nil {
@@ -159,11 +199,13 @@ public final class StarsBalanceOverlayComponent: Component {
                 textView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: 10.0), size: textSize)
             }
             
-            if let actionView = self.action.view {
-                if actionView.superview == nil {
-                    self.backgroundView.addSubview(actionView)
+            if component.peerId == component.context.account.peerId {
+                if let actionView = self.action.view {
+                    if actionView.superview == nil {
+                        self.backgroundView.addSubview(actionView)
+                    }
+                    actionView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - actionSize.width) / 2.0), y: 29.0), size: actionSize)
                 }
-                actionView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - actionSize.width) / 2.0), y: 29.0), size: actionSize)
             }
 
             self.backgroundView.updateColor(color: component.theme.rootController.navigationBar.opaqueBackgroundColor, transition: .immediate)

@@ -25,13 +25,15 @@ final class SemanticStatusNodeProgressContext: SemanticStatusNodeStateContext {
         let value: CGFloat?
         let displayCancel: Bool
         let appearance: SemanticStatusNodeState.ProgressAppearance?
+        let animateRotation: Bool
         let timestamp: Double
         
-        init(transitionFraction: CGFloat, value: CGFloat?, displayCancel: Bool, appearance: SemanticStatusNodeState.ProgressAppearance?, timestamp: Double) {
+        init(transitionFraction: CGFloat, value: CGFloat?, displayCancel: Bool, appearance: SemanticStatusNodeState.ProgressAppearance?, animateRotation: Bool, timestamp: Double) {
             self.transitionFraction = transitionFraction
             self.value = value
             self.displayCancel = displayCancel
             self.appearance = appearance
+            self.animateRotation = animateRotation
             self.timestamp = timestamp
             
             super.init()
@@ -59,6 +61,10 @@ final class SemanticStatusNodeProgressContext: SemanticStatusNodeStateContext {
             var endAngle: CGFloat
             if let value = self.value {
                 progress = value
+                if !self.animateRotation {
+                    progress = 1.0 - progress
+                }
+                
                 startAngle = -CGFloat.pi / 2.0
                 endAngle = CGFloat(progress) * 2.0 * CGFloat.pi + startAngle
                 
@@ -98,14 +104,16 @@ final class SemanticStatusNodeProgressContext: SemanticStatusNodeStateContext {
                 pathDiameter = diameter - lineWidth - 2.5 * 2.0
             }
             
-            var angle = self.timestamp.truncatingRemainder(dividingBy: Double.pi * 2.0)
-            angle *= 4.0
+            if self.animateRotation {
+                var angle = self.timestamp.truncatingRemainder(dividingBy: Double.pi * 2.0)
+                angle *= 4.0
+                
+                context.translateBy(x: diameter / 2.0, y: diameter / 2.0)
+                context.rotate(by: CGFloat(angle.truncatingRemainder(dividingBy: Double.pi * 2.0)))
+                context.translateBy(x: -diameter / 2.0, y: -diameter / 2.0)
+            }
             
-            context.translateBy(x: diameter / 2.0, y: diameter / 2.0)
-            context.rotate(by: CGFloat(angle.truncatingRemainder(dividingBy: Double.pi * 2.0)))
-            context.translateBy(x: -diameter / 2.0, y: -diameter / 2.0)
-            
-            let path = UIBezierPath(arcCenter: CGPoint(x: diameter / 2.0, y: diameter / 2.0), radius: pathDiameter / 2.0, startAngle: startAngle, endAngle: endAngle, clockwise: true)
+            let path = UIBezierPath(arcCenter: CGPoint(x: diameter / 2.0, y: diameter / 2.0), radius: pathDiameter / 2.0, startAngle: startAngle, endAngle: endAngle, clockwise: self.animateRotation)
             path.lineWidth = lineWidth
             path.lineCapStyle = .round
             path.stroke()
@@ -147,6 +155,7 @@ final class SemanticStatusNodeProgressContext: SemanticStatusNodeStateContext {
     var value: CGFloat?
     let displayCancel: Bool
     let appearance: SemanticStatusNodeState.ProgressAppearance?
+    let animateRotation: Bool
     var transition: SemanticStatusNodeProgressTransition?
     
     var isAnimating: Bool {
@@ -155,10 +164,11 @@ final class SemanticStatusNodeProgressContext: SemanticStatusNodeStateContext {
     
     var requestUpdate: () -> Void = {}
     
-    init(value: CGFloat?, displayCancel: Bool, appearance: SemanticStatusNodeState.ProgressAppearance?) {
+    init(value: CGFloat?, displayCancel: Bool, appearance: SemanticStatusNodeState.ProgressAppearance?, animateRotation: Bool) {
         self.value = value
         self.displayCancel = displayCancel
         self.appearance = appearance
+        self.animateRotation = animateRotation
     }
     
     func drawingState(transitionFraction: CGFloat) -> SemanticStatusNodeStateDrawingState {
@@ -178,7 +188,7 @@ final class SemanticStatusNodeProgressContext: SemanticStatusNodeStateContext {
         } else {
             resolvedValue = nil
         }
-        return DrawingState(transitionFraction: transitionFraction, value: resolvedValue, displayCancel: self.displayCancel, appearance: self.appearance, timestamp: timestamp)
+        return DrawingState(transitionFraction: transitionFraction, value: resolvedValue, displayCancel: self.displayCancel, appearance: self.appearance, animateRotation: self.animateRotation, timestamp: timestamp)
     }
     
     func maskView() -> UIView? {

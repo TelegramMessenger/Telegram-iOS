@@ -34,6 +34,9 @@ table StickerPackReference_IconTopicEmoji {
 table StickerPackReference_IconChannelStatusEmoji {
 }
 
+table StickerPackReference_TonGifts {
+}
+
 union StickerPackReference_Value {
     StickerPackReference_Id,
     StickerPackReference_Name,
@@ -44,7 +47,8 @@ union StickerPackReference_Value {
     StickerPackReference_EmojiGenericAnimations,
     StickerPackReference_IconStatusEmoji,
     StickerPackReference_IconTopicEmoji,
-    StickerPackReference_IconChannelStatusEmoji
+    StickerPackReference_IconChannelStatusEmoji,
+    StickerPackReference_TonGifts
 }
 
 table StickerPackReference {

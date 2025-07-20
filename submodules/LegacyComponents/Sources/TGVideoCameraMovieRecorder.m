@@ -1,4 +1,4 @@
-#import "TGVideoCameraMovieRecorder.h"
+#import <LegacyComponents/TGVideoCameraMovieRecorder.h>
 #import <AVFoundation/AVFoundation.h>
 
 #import "TGVideoCameraPipeline.h"

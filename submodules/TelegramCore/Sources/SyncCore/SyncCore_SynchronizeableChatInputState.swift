@@ -2,20 +2,32 @@ import Foundation
 import Postbox
 
 public struct SynchronizeableChatInputState: Codable, Equatable {
+    public struct SuggestedPost: Codable, Equatable {
+        public var price: CurrencyAmount?
+        public var timestamp: Int32?
+        
+        public init(price: CurrencyAmount?, timestamp: Int32?) {
+            self.price = price
+            self.timestamp = timestamp
+        }
+    }
+    
     public let replySubject: EngineMessageReplySubject?
     public let text: String
     public let entities: [MessageTextEntity]
     public let timestamp: Int32
     public let textSelection: Range<Int>?
     public let messageEffectId: Int64?
+    public let suggestedPost: SuggestedPost?
     
-    public init(replySubject: EngineMessageReplySubject?, text: String, entities: [MessageTextEntity], timestamp: Int32, textSelection: Range<Int>?, messageEffectId: Int64?) {
+    public init(replySubject: EngineMessageReplySubject?, text: String, entities: [MessageTextEntity], timestamp: Int32, textSelection: Range<Int>?, messageEffectId: Int64?, suggestedPost: SuggestedPost?) {
         self.replySubject = replySubject
         self.text = text
         self.entities = entities
         self.timestamp = timestamp
         self.textSelection = textSelection
         self.messageEffectId = messageEffectId
+        self.suggestedPost = suggestedPost
     }
     
     public init(from decoder: Decoder) throws {
@@ -35,6 +47,7 @@ public struct SynchronizeableChatInputState: Codable, Equatable {
         }
         self.textSelection = nil
         self.messageEffectId = try container.decodeIfPresent(Int64.self, forKey: "messageEffectId")
+        self.suggestedPost = try container.decodeIfPresent(SuggestedPost.self, forKey: "suggestedPost")
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -45,6 +58,7 @@ public struct SynchronizeableChatInputState: Codable, Equatable {
         try container.encode(self.timestamp, forKey: "s")
         try container.encodeIfPresent(self.replySubject, forKey: "rep")
         try container.encodeIfPresent(self.messageEffectId, forKey: "messageEffectId")
+        try container.encodeIfPresent(self.suggestedPost, forKey: "suggestedPost")
     }
     
     public static func ==(lhs: SynchronizeableChatInputState, rhs: SynchronizeableChatInputState) -> Bool {
@@ -64,6 +78,9 @@ public struct SynchronizeableChatInputState: Codable, Equatable {
             return false
         }
         if lhs.messageEffectId != rhs.messageEffectId {
+            return false
+        }
+        if lhs.suggestedPost != rhs.suggestedPost {
             return false
         }
         return true

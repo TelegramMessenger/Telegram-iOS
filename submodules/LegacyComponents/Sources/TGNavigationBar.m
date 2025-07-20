@@ -1,14 +1,14 @@
-#import "TGNavigationBar.h"
+#import <LegacyComponents/TGNavigationBar.h>
 
 #import <LegacyComponents/LegacyComponents.h>
 
 #import "LegacyComponentsInternal.h"
 #import "TGColor.h"
 
-#import "TGViewController.h"
-#import "TGNavigationController.h"
+#import <LegacyComponents/TGViewController.h>
+#import <LegacyComponents/TGNavigationController.h>
 
-#import "TGHacks.h"
+#import <LegacyComponents/TGHacks.h>
 
 #import <QuartzCore/QuartzCore.h>
 #import <objc/runtime.h>
@@ -106,7 +106,10 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
     self = [super initWithFrame:frame];
     if (self)
     {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         [self commonInit:[self isKindOfClass:[TGBlackNavigationBar class]] ? UIBarStyleBlackTranslucent : UIBarStyleDefault];
+#pragma clang diagnostic pop
     }
     return self;
 }
@@ -148,7 +151,7 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
     
     if (iosMajorVersion() >= 7 && iosMajorVersion() < 10 && [TGViewController isWidescreen] && [CMMotionActivityManager isActivityAvailable])
     {
-        TGFixView *activityIndicator = [[TGFixView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleGray];
+        TGFixView *activityIndicator = [[TGFixView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleMedium];
         activityIndicator.alpha = 0.02f;
         [self addSubview:activityIndicator];
         [activityIndicator startAnimating];
@@ -260,12 +263,6 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
 
 - (void)setBarStyle:(UIBarStyle)__unused barStyle animated:(bool)__unused animated
 {
-    if (iosMajorVersion() < 7)
-    {
-        if (self.barStyle != UIBarStyleBlackTranslucent || barStyle != UIBarStyleBlackTranslucent)
-            barStyle = UIBarStyleBlackTranslucent;
-    }
-    
     [super setBarStyle:barStyle];
 }
 

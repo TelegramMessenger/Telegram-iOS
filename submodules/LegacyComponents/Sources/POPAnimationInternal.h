@@ -9,7 +9,7 @@
 
 #import <QuartzCore/CAMediaTimingFunction.h>
 
-#import "POPAnimation.h"
+#import <LegacyComponents/POPAnimation.h>
 #import "POPAnimationRuntime.h"
 #import "POPAnimationTracerInternal.h"
 #import "POPSpringSolver.h"

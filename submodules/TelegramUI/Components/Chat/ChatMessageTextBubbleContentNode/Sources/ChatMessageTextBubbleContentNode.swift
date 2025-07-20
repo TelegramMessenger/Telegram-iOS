@@ -412,6 +412,18 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 
+                
+                if item.associatedData.isSuspiciousPeer, let entities = messageEntities {
+                    messageEntities = entities.filter { entity in
+                        switch entity.type {
+                        case .Url, .TextUrl, .Mention, .TextMention, .Hashtag, .Email, .BankCard:
+                            return false
+                        default:
+                            return true
+                        }
+                    }
+                }
+                
                 var entities: [MessageTextEntity]?
                 var updatedCachedChatMessageText: CachedChatMessageText?
                 if let cached = currentCachedChatMessageText, cached.matches(text: rawText, inputEntities: messageEntities) {
@@ -1297,7 +1309,6 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     public func updateQuoteTextHighlightState(text: String?, offset: Int?, color: UIColor, animated: Bool) {
         var rectsSet: [CGRect] = []
         if let text = text, !text.isEmpty, let cachedLayout = self.textNode.textNode.cachedLayout, let string = cachedLayout.attributedString?.string {
-            
             let quoteRange = findQuoteRange(string: string, quoteText: text, offset: offset)
             if let quoteRange, let rects = cachedLayout.rangeRects(in: quoteRange)?.rects, !rects.isEmpty {
                 rectsSet = rects

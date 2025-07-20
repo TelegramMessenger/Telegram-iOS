@@ -242,9 +242,6 @@ static NSString *const stripeAPIVersion = @"2015-10-12";
 @implementation Stripe (ApplePay)
 
 + (BOOL)canSubmitPaymentRequest:(PKPaymentRequest *)paymentRequest {
-    if (![self deviceSupportsApplePay]) {
-        return NO;
-    }
     if (paymentRequest == nil) {
         return NO;
     }
@@ -256,14 +253,8 @@ static NSString *const stripeAPIVersion = @"2015-10-12";
 
 + (NSArray<NSString *> *)supportedPKPaymentNetworks {
     NSArray *supportedNetworks = @[PKPaymentNetworkAmex, PKPaymentNetworkMasterCard, PKPaymentNetworkVisa];
-    if ((&PKPaymentNetworkDiscover) != NULL) {
-        supportedNetworks = [supportedNetworks arrayByAddingObject:PKPaymentNetworkDiscover];
-    }
+    supportedNetworks = [supportedNetworks arrayByAddingObject:PKPaymentNetworkDiscover];
     return supportedNetworks;
-}
-
-+ (BOOL)deviceSupportsApplePay {
-    return [PKPaymentAuthorizationViewController class] && [PKPaymentAuthorizationViewController canMakePaymentsUsingNetworks:[self supportedPKPaymentNetworks]];
 }
 
 + (PKPaymentRequest *)paymentRequestWithMerchantIdentifier:(NSString *)merchantIdentifier {

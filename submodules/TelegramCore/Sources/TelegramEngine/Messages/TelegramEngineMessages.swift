@@ -204,6 +204,14 @@ public extension TelegramEngine {
             return PollResultsContext(account: self.account, messageId: messageId, poll: poll)
         }
 
+        public func requestUpdateTodoMessageItems(messageId: MessageId, completedIds: [Int32], incompletedIds: [Int32]) -> Signal<Never, RequestUpdateTodoMessageError> {
+            return _internal_requestUpdateTodoMessageItems(account: self.account, messageId: messageId, completedIds: completedIds, incompletedIds: incompletedIds)
+        }
+        
+        public func appendTodoMessageItems(messageId: MessageId, items: [TelegramMediaTodo.Item]) -> Signal<Never, AppendTodoMessageError> {
+            return _internal_appendTodoMessageItems(account: self.account, messageId: messageId, items: items)
+        }
+        
         public func earliestUnseenPersonalMentionMessage(peerId: PeerId, threadId: Int64?) -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> {
             let account = self.account
             return _internal_earliestUnseenPersonalMentionMessage(account: self.account, peerId: peerId, threadId: threadId)
@@ -407,8 +415,8 @@ public extension TelegramEngine {
             }
         }
 
-        public func adMessages(peerId: PeerId) -> AdMessagesHistoryContext {
-            return AdMessagesHistoryContext(account: self.account, peerId: peerId)
+        public func adMessages(peerId: PeerId, messageId: EngineMessage.Id? = nil) -> AdMessagesHistoryContext {
+            return AdMessagesHistoryContext(account: self.account, peerId: peerId, messageId: messageId)
         }
 
         public func messageReadStats(id: MessageId) -> Signal<MessageReadStats?, NoError> {
@@ -1578,6 +1586,58 @@ public extension TelegramEngine {
         
         public func requestMessageAuthor(id: EngineMessage.Id) -> Signal<EnginePeer?, NoError> {
             return _internal_requestMessageAuthor(account: self.account, id: id)
+        }
+        
+        public enum MonoforumSuggestedPostAction {
+            case approve(timestamp: Int32?)
+            case reject(comment: String?)
+        }
+        
+        public func monoforumPerformSuggestedPostAction(id: EngineMessage.Id, action: MonoforumSuggestedPostAction) -> Signal<Never, NoError> {
+            return _internal_monoforumPerformSuggestedPostAction(account: self.account, id: id, action: action)
+        }
+    }
+}
+
+func _internal_monoforumPerformSuggestedPostAction(account: Account, id: EngineMessage.Id, action: TelegramEngine.Messages.MonoforumSuggestedPostAction) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> Api.InputPeer? in
+        return transaction.getPeer(id.peerId).flatMap(apiInputPeer)
+    }
+    |> mapToSignal { inputPeer -> Signal<Never, NoError> in
+        guard let inputPeer else {
+            return .complete()
+        }
+        if id.namespace != Namespaces.Message.Cloud {
+            return .complete()
+        }
+        
+        var flags: Int32 = 0
+        var timestamp: Int32?
+        var rejectComment: String?
+        switch action {
+        case let .approve(timestampValue):
+            timestamp = timestampValue
+            if timestamp != nil {
+                flags |= 1 << 0
+            }
+        case let .reject(commentValue):
+            flags |= 1 << 1
+            rejectComment = commentValue
+            if rejectComment != nil {
+                flags |= 1 << 2
+            }
+        }
+        return account.network.request(Api.functions.messages.toggleSuggestedPostApproval(flags: flags, peer: inputPeer, msgId: id.id, scheduleDate: timestamp, rejectComment: rejectComment))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { updates -> Signal<Never, NoError> in
+            if let updates {
+                account.stateManager.addUpdates(updates)
+            }
+            
+            return .complete()
         }
     }
 }

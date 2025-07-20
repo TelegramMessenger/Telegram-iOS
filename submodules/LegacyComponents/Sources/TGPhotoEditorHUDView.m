@@ -1,9 +1,9 @@
 #import "TGPhotoEditorHUDView.h"
 
 #import "LegacyComponentsInternal.h"
-#import "TGFont.h"
+#import <LegacyComponents/TGFont.h>
 
-#import "TGPhotoEditorInterfaceAssets.h"
+#import <LegacyComponents/TGPhotoEditorInterfaceAssets.h>
 
 @interface TGPhotoEditorHUDView ()
 {

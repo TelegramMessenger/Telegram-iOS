@@ -319,6 +319,7 @@ func mediaContentToUpload(accountPeerId: PeerId, network: Network, postbox: Post
         if poll.deadlineTimeout != nil {
             pollFlags |= 1 << 4
         }
+        
         var mappedSolution: String?
         var mappedSolutionEntities: [Api.MessageEntity]?
         if let solution = poll.results.solution {
@@ -328,10 +329,20 @@ func mediaContentToUpload(accountPeerId: PeerId, network: Network, postbox: Post
         }
         let inputPoll = Api.InputMedia.inputMediaPoll(flags: pollMediaFlags, poll: Api.Poll.poll(id: 0, flags: pollFlags, question: .textWithEntities(text: poll.text, entities: apiEntitiesFromMessageTextEntities(poll.textEntities, associatedPeers: SimpleDictionary())), answers: poll.options.map({ $0.apiOption }), closePeriod: poll.deadlineTimeout, closeDate: nil), correctAnswers: correctAnswers, solution: mappedSolution, solutionEntities: mappedSolutionEntities)
         return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(inputPoll, text), reuploadInfo: nil, cacheReferenceKey: nil)))
-    } else if let media = media as? TelegramMediaDice {
-        let inputDice = Api.InputMedia.inputMediaDice(emoticon: media.emoji)
+    } else if let todo = media as? TelegramMediaTodo {
+        var flags: Int32 = 0
+        if todo.flags.contains(.othersCanAppend) {
+            flags |= 1 << 0
+        }
+        if todo.flags.contains(.othersCanComplete) {
+            flags |= 1 << 1
+        }
+        let inputTodo = Api.InputMedia.inputMediaTodo(todo: .todoList(flags: flags, title: .textWithEntities(text: todo.text, entities: apiEntitiesFromMessageTextEntities(todo.textEntities, associatedPeers: SimpleDictionary())), list: todo.items.map { $0.apiItem }))
+        return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(inputTodo, text), reuploadInfo: nil, cacheReferenceKey: nil)))
+    } else if let dice = media as? TelegramMediaDice {
+        let inputDice = Api.InputMedia.inputMediaDice(emoticon: dice.emoji)
         return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(inputDice, text), reuploadInfo: nil, cacheReferenceKey: nil)))
-    } else if let media = media as? TelegramMediaWebpage, case let .Loaded(content) = media.content {
+    } else if let webPage = media as? TelegramMediaWebpage, case let .Loaded(content) = webPage.content {
         var flags: Int32 = 0
         flags |= 1 << 2
         if let attribute = attributes.first(where: { $0 is WebpagePreviewMessageAttribute }) as? WebpagePreviewMessageAttribute {

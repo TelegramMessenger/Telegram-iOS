@@ -16,6 +16,9 @@ objc_library(
     sdk_frameworks = [
       "Foundation",
     ],
+    copts = [
+        "-Werror",
+    ],
     visibility = [
         "//visibility:public",
     ],

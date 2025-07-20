@@ -1,4 +1,4 @@
-#import "TGModernToolbarButton.h"
+#import <LegacyComponents/TGModernToolbarButton.h>
 
 #import <LegacyComponents/LegacyComponents.h>
 

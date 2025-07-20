@@ -1,4 +1,4 @@
-#import "TGLocationMediaAttachment.h"
+#import <LegacyComponents/TGLocationMediaAttachment.h>
 
 @implementation TGVenueAttachment
 
@@ -60,7 +60,7 @@
     
     NSData *venueData = nil;
     if (_venue != nil)
-        venueData = [NSKeyedArchiver archivedDataWithRootObject:_venue];
+        venueData = [NSKeyedArchiver archivedDataWithRootObject:_venue requiringSecureCoding:false error:nil];
     int32_t venueDataLength = (int32_t)venueData.length;
     [data appendBytes:&venueDataLength length:4];
     [data appendData:venueData];
@@ -96,7 +96,10 @@
             uint8_t *venueBytes = malloc(venueDataLength);
             [is read:venueBytes maxLength:venueDataLength];
             NSData *venueData = [[NSData alloc] initWithBytesNoCopy:venueBytes length:venueDataLength freeWhenDone:true];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
             locationAttachment.venue = [NSKeyedUnarchiver unarchiveObjectWithData:venueData];
+#pragma clang diagnostic pop
         }
         else if (dataLength == 8 + 8 + 4 + 4)
         {

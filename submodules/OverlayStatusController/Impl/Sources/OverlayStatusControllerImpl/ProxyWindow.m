@@ -117,8 +117,6 @@ static void drawSvgPath(CGContextRef context, NSString *path) {
     }
 }
 
-static bool ProxyWindowIsLight = true;
-
 @interface ProxySpinnerView : UIView
 
 @property (nonatomic, copy) void (^onSuccess)(void);

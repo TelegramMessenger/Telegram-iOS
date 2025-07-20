@@ -240,12 +240,12 @@ public final class ConferenceCallE2EContext {
                 var delayPoll = true
                 if let result {
                     if subChainId == 0 {
-                        if self.e2ePoll0Offset != result.nextOffset {
+                        if let e2ePoll0Offset = self.e2ePoll0Offset, e2ePoll0Offset < result.nextOffset {
                             self.e2ePoll0Offset = result.nextOffset
                             delayPoll = false
                         }
                     } else if subChainId == 1 {
-                        if self.e2ePoll1Offset != result.nextOffset {
+                        if let e2ePoll1Offset = self.e2ePoll1Offset, e2ePoll1Offset < result.nextOffset {
                             self.e2ePoll1Offset = result.nextOffset
                             delayPoll = false
                         }

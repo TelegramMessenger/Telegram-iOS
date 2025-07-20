@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 import Display
+import Postbox
 import TelegramCore
 import TelegramPresentationData
 import ActivityIndicator
@@ -108,7 +109,7 @@ public final class ChatLoadingPlaceholderMessageContainer {
         }
     }
         
-    public func update(size: CGSize, hasAvatar: Bool, rect: CGRect, transition: ContainedViewLayoutTransition) {
+    public func update(size: CGSize, isSidebarOpen: Bool, hasAvatar: Bool, rect: CGRect, transition: ContainedViewLayoutTransition) {
         var avatarOffset: CGFloat = 0.0
         
         if hasAvatar && self.avatarNode == nil {
@@ -126,12 +127,24 @@ public final class ChatLoadingPlaceholderMessageContainer {
         }
         
         if let avatarNode = self.avatarNode, let avatarBorderNode = self.avatarBorderNode {
-            let avatarFrame = CGRect(origin: CGPoint(x: rect.minX + 3.0, y: rect.maxY + 1.0 - avatarSize.height), size: avatarSize)
+            var avatarFrame = CGRect(origin: CGPoint(x: rect.minX + 3.0, y: rect.maxY + 1.0 - avatarSize.height), size: avatarSize)
+            if isSidebarOpen {
+                avatarFrame.origin.x -= avatarFrame.width * 0.5
+                avatarFrame.origin.y += avatarFrame.height * 0.5
+            }
 
-            transition.updateFrame(node: avatarNode, frame: avatarFrame)
-            transition.updateFrame(node: avatarBorderNode, frame: avatarFrame)
+            transition.updatePosition(node: avatarNode, position: avatarFrame.center)
+            transition.updateBounds(node: avatarNode, bounds: CGRect(origin: CGPoint(), size: avatarFrame.size))
+            transition.updateTransformScale(node: avatarNode, scale: isSidebarOpen ? 0.001 : 1.0)
+            transition.updateAlpha(node: avatarNode, alpha: isSidebarOpen ? 0.0 : 1.0)
+            transition.updatePosition(node: avatarBorderNode, position: avatarFrame.center)
+            transition.updateBounds(node: avatarBorderNode, bounds: CGRect(origin: CGPoint(), size: avatarFrame.size))
+            transition.updateTransformScale(node: avatarBorderNode, scale: isSidebarOpen ? 0.001 : 1.0)
+            transition.updateAlpha(node: avatarBorderNode, alpha: isSidebarOpen ? 0.0 : 1.0)
             
-            avatarOffset += avatarSize.width - 1.0
+            if !isSidebarOpen {
+                avatarOffset += avatarSize.width - 1.0
+            }
         }
         
         let bubbleFrame = CGRect(origin: CGPoint(x: rect.minX + 3.0 + avatarOffset, y: rect.origin.y), size: CGSize(width: rect.width, height: rect.height))
@@ -160,7 +173,7 @@ public final class ChatLoadingPlaceholderNode: ASDisplayNode {
     
     private var absolutePosition: (CGRect, CGSize)?
     
-    private var validLayout: (CGSize, UIEdgeInsets, LayoutMetrics)?
+    private var validLayout: (CGSize, Bool, UIEdgeInsets, LayoutMetrics)?
     
     public init(context: AccountContext, theme: PresentationTheme, chatWallpaper: TelegramWallpaper, bubbleCorners: PresentationChatBubbleCorners, backgroundNode: WallpaperBackgroundNode) {
         self.context = context
@@ -294,7 +307,7 @@ public final class ChatLoadingPlaceholderNode: ASDisplayNode {
         
     private var didAnimateOut = false
     public func animateOut(_ historyNode: ListView, completion: @escaping () -> Void = {}) {
-        guard let (size, _, _) = self.validLayout else {
+        guard let (size, isSidebarOpen, _, _) = self.validLayout else {
             return
         }
         let listNode = historyNode
@@ -375,7 +388,7 @@ public final class ChatLoadingPlaceholderNode: ASDisplayNode {
                 let messageContainer = self.messageContainers[k]
                 let messageSize = messageContainer.frame.size
                 
-                messageContainer.update(size: size, hasAvatar: self.chatType != .channel && self.chatType != .user, rect: CGRect(origin: CGPoint(x: 0.0, y: offset - messageSize.height), size: messageSize), transition: transition)
+                messageContainer.update(size: size, isSidebarOpen: isSidebarOpen, hasAvatar: self.chatType != .channel && self.chatType != .user, rect: CGRect(origin: CGPoint(x: 0.0, y: offset - messageSize.height), size: messageSize), transition: transition)
                 offset -= messageSize.height
             }
         }
@@ -408,32 +421,44 @@ public final class ChatLoadingPlaceholderNode: ASDisplayNode {
         case channel
     }
     private var chatType: ChatType = .channel
-    public func updatePresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState) {
+    public func updatePresentationInterfaceState(renderedPeer: RenderedPeer?, chatLocation: ChatLocation) {
         var chatType: ChatType = .channel
-        if let peer = chatPresentationInterfaceState.renderedPeer?.peer {
+        if let peer = renderedPeer?.peer {
             if peer is TelegramUser {
                 chatType = .user
             } else if peer is TelegramGroup {
                 chatType = .group
             } else if let channel = peer as? TelegramChannel {
-                if case .group = channel.info {
-                    chatType = .group
+                if channel.isMonoForum {
+                    if let mainChannel = renderedPeer?.chatOrMonoforumMainPeer as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
+                        if chatLocation.threadId == nil {
+                            chatType = .group
+                        } else {
+                            chatType = .user
+                        }
+                    } else {
+                        chatType = .user
+                    }
                 } else {
-                    chatType = .channel
+                    if case .group = channel.info {
+                        chatType = .group
+                    } else {
+                        chatType = .channel
+                    }
                 }
             }
         }
         
         if self.chatType != chatType {
             self.chatType = chatType
-            if let (size, insets, metrics) = self.validLayout {
-                self.updateLayout(size: size, insets: insets, metrics: metrics, transition: .immediate)
+            if let (size, isSidebarOpen, insets, metrics) = self.validLayout {
+                self.updateLayout(size: size, isSidebarOpen: isSidebarOpen, insets: insets, metrics: metrics, transition: .immediate)
             }
         }
     }
     
-    public func updateLayout(size: CGSize, insets: UIEdgeInsets, metrics: LayoutMetrics, transition: ContainedViewLayoutTransition) {
-        self.validLayout = (size, insets, metrics)
+    public func updateLayout(size: CGSize, isSidebarOpen: Bool, insets: UIEdgeInsets, metrics: LayoutMetrics, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, isSidebarOpen, insets, metrics)
         
         let bounds = CGRect(origin: .zero, size: size)
                 
@@ -487,7 +512,7 @@ public final class ChatLoadingPlaceholderNode: ASDisplayNode {
         
         for messageContainer in self.messageContainers {
             let messageSize = dimensions[index % 14]
-            messageContainer.update(size: bounds.size, hasAvatar: self.chatType != .channel && self.chatType != .user, rect: CGRect(origin: CGPoint(x: insets.left, y: bounds.size.height - insets.bottom - offset - messageSize.height), size: messageSize), transition: transition)
+            messageContainer.update(size: bounds.size, isSidebarOpen: isSidebarOpen, hasAvatar: self.chatType != .channel && self.chatType != .user, rect: CGRect(origin: CGPoint(x: insets.left, y: bounds.size.height - insets.bottom - offset - messageSize.height), size: messageSize), transition: transition)
             offset += messageSize.height
             index += 1
         }

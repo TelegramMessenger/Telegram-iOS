@@ -1,4 +1,4 @@
-#import "PGCameraMovieWriter.h"
+#import <LegacyComponents/PGCameraMovieWriter.h>
 
 #import "LegacyComponentsInternal.h"
 

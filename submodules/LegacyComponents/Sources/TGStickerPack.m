@@ -1,4 +1,4 @@
-#import "TGStickerPack.h"
+#import <LegacyComponents/TGStickerPack.h>
 
 #import <LegacyComponents/LegacyComponents.h>
 

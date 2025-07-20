@@ -1,4 +1,4 @@
-#import "AVURLAsset+TGMediaItem.h"
+#import <LegacyComponents/AVURLAsset+TGMediaItem.h>
 #import <LegacyComponents/TGMediaAssetImageSignals.h>
 
 #import <LegacyComponents/TGPhotoEditorUtils.h>

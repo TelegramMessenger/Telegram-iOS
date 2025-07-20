@@ -1,16 +1,16 @@
-#import "TGMediaPickerGalleryVideoItem.h"
+#import <LegacyComponents/TGMediaPickerGalleryVideoItem.h>
 
 #import "LegacyComponentsInternal.h"
 
-#import "TGMediaPickerGalleryPhotoItem.h"
+#import <LegacyComponents/TGMediaPickerGalleryPhotoItem.h>
 
 #import "TGMediaPickerGalleryPhotoItemView.h"
-#import "TGMediaPickerGalleryVideoItemView.h"
+#import <LegacyComponents/TGMediaPickerGalleryVideoItemView.h>
 
 #import <LegacyComponents/TGMediaAssetFetchResult.h>
 
-#import "TGMediaAsset+TGMediaEditableItem.h"
-#import "TGCameraCapturedVideo.h"
+#import <LegacyComponents/TGMediaAsset+TGMediaEditableItem.h>
+#import <LegacyComponents/TGCameraCapturedVideo.h>
 #import <LegacyComponents/AVURLAsset+TGMediaItem.h>
 
 @implementation TGMediaPickerGalleryVideoItem

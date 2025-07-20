@@ -70,7 +70,7 @@ public final class BrowserBookmarksScreen: ViewController {
                 return false
             }, sendBotContextResultAsGif: { _, _, _, _, _, _ in
                 return false
-            }, requestMessageActionCallback: { _, _, _, _ in
+            }, requestMessageActionCallback: { _, _, _, _, _ in
             }, requestMessageActionUrlAuth: { _, _ in
             }, activateSwitchInline: { _, _, _ in
             }, openUrl: { [weak controller] url in
@@ -101,6 +101,7 @@ public final class BrowserBookmarksScreen: ViewController {
             }, callPeer: { _, _ in
             }, openConferenceCall: { _ in                
             }, longTap: { _, _ in
+            }, todoItemLongTap: { _, _ in
             }, openCheckoutOrReceipt: { _, _ in
             }, openSearch: {
             }, setupReply: { _ in
@@ -176,6 +177,9 @@ public final class BrowserBookmarksScreen: ViewController {
             }, playShakeAnimation: {
             }, displayQuickShare: { _, _ ,_ in
             }, updateChatLocationThread: { _, _ in
+            }, requestToggleTodoMessageItem: { _, _, _ in
+            }, displayTodoToggleUnavailable: { _ in
+            }, openStarsPurchase: { _ in
             }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(), presentationContext: ChatPresentationContext(context: context, backgroundNode: nil))
             
             

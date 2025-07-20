@@ -1360,7 +1360,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                 switch fetchStatus {
                 case let .Fetching(_, progress):
                     if item.isDownloadList {
-                        iconStatusState = .progress(value: CGFloat(progress), cancelEnabled: true, appearance: nil)
+                        iconStatusState = .progress(value: CGFloat(progress), cancelEnabled: true, appearance: nil, animateRotation: true)
                     }
                 case .Local:
                     if isAudio || isInstantVideo {

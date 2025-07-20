@@ -14,6 +14,7 @@ from ProjectGeneration import generate
 from BazelLocation import locate_bazel
 from BuildConfiguration import CodesigningSource, GitCodesigningSource, DirectoryCodesigningSource, XcodeManagedCodesigningSource, BuildConfiguration, build_configuration_from_json
 import RemoteBuild
+import TartBuild
 import GenerateProfiles
 
 
@@ -33,6 +34,7 @@ class BazelCommandLine:
         )
         self.bazel = bazel
         self.bazel_user_root = bazel_user_root
+        self.lock = False
         self.remote_cache = None
         self.cache_dir = None
         self.additional_args = None
@@ -114,6 +116,9 @@ class BazelCommandLine:
             '--features=dead_strip',
             '--objc_enable_binary_stripping',
         ]
+
+    def set_lock(self, lock):
+        self.lock = lock
 
     def add_remote_cache(self, host):
         self.remote_cache = host
@@ -271,6 +276,9 @@ class BazelCommandLine:
         ]
         combined_arguments += self.get_startup_bazel_arguments()
         combined_arguments += ['build']
+
+        if self.lock:
+            combined_arguments += ['--lockfile_mode=error']
 
         if self.custom_target is not None:
             combined_arguments += [self.custom_target]
@@ -639,6 +647,9 @@ def build(bazel, arguments):
         bazel_user_root=arguments.bazelUserRoot
     )
 
+    if arguments.lock:
+        bazel_command_line.set_lock(True)
+
     if arguments.cacheDir is not None:
         bazel_command_line.add_cache_dir(arguments.cacheDir)
     elif arguments.cacheHost is not None:
@@ -671,10 +682,10 @@ def build(bazel, arguments):
         os.makedirs(artifacts_path, exist_ok=True)
         os.makedirs(artifacts_path + '/DSYMs', exist_ok=True)
 
-        built_ipa_path_prefix = 'bazel-out/ios_arm64-opt-ios-arm64-min12.0-applebin_ios-ST-*'
-        ipa_paths = glob.glob('{}/bin/Telegram/Telegram.ipa'.format(built_ipa_path_prefix))
+        built_ipa_path_prefix = 'bazel-bin/Telegram'
+        ipa_paths = glob.glob('{}/Telegram.ipa'.format(built_ipa_path_prefix))
         if len(ipa_paths) == 0:
-            print('Could not find the IPA at bazel-out/applebin_ios-ios_arm*-opt-ST-*/bin/Telegram/Telegram.ipa')
+            print(f'Could not find the IPA at {built_ipa_path_prefix}/Telegram.ipa')
             sys.exit(1)
         elif len(ipa_paths) > 1:
             print('Multiple matching IPA files found: {}'.format(ipa_paths))
@@ -1044,6 +1055,12 @@ if __name__ == '__main__':
         help='Store IPA and DSYM at the specified path after a successful build.',
         metavar='arguments'
     )
+    buildParser.add_argument(
+        '--lock',
+        action='store_true',
+        default=False,
+        help='Respect MODULE.bazel.lock.'
+    )
 
     remote_build_parser = subparsers.add_parser('remote-build', help='Build the app using a remote environment.')
     add_codesigning_common_arguments(remote_build_parser)
@@ -1062,17 +1079,29 @@ if __name__ == '__main__':
     remote_build_parser.add_argument(
         '--configuration',
         choices=[
-            'debug_universal',
-            'debug_arm64',
-            'debug_armv7',
             'release_arm64',
-            'release_armv7',
-            'release_universal'
         ],
         required=True,
         help='Build configuration'
     )
     remote_build_parser.add_argument(
+        '--cacheHost',
+        required=False,
+        type=str,
+        help='Bazel remote cache host address.'
+    )
+
+    vm_build_parser = subparsers.add_parser('vm-build', help='Build the app using a VM.')
+    add_codesigning_common_arguments(vm_build_parser)
+    vm_build_parser.add_argument(
+        '--configuration',
+        choices=[
+            'release_arm64',
+        ],
+        required=True,
+        help='Build configuration'
+    )
+    vm_build_parser.add_argument(
         '--cacheHost',
         required=False,
         type=str,
@@ -1253,7 +1282,7 @@ if __name__ == '__main__':
 
     bazel_path = None
     if args.bazel is None:
-        bazel_path = locate_bazel(base_path=os.getcwd(), cache_host=args.cacheHost)
+        bazel_path = locate_bazel(base_path=os.getcwd(), cache_host_or_path=args.cacheHost, cache_dir=args.cacheDir)
     else:
         bazel_path = args.bazel
 
@@ -1284,9 +1313,35 @@ if __name__ == '__main__':
             
             shutil.copyfile(args.configurationPath, remote_input_path + '/configuration.json')
 
-            RemoteBuild.remote_build(
+            RemoteBuild.remote_build_darwin_containers(
                 darwin_containers_path=args.darwinContainers,
                 darwin_containers_host=args.darwinContainersHost,
+                macos_version=versions.macos_version,
+                bazel_cache_host=args.cacheHost,
+                configuration=args.configuration,
+                build_input_data_path=remote_input_path
+            )
+        elif args.commandName == 'vm-build':
+            base_path = os.getcwd()
+            remote_input_path = '{}/build-input/remote-input'.format(base_path)
+            if os.path.exists(remote_input_path):
+                shutil.rmtree(remote_input_path)
+            os.makedirs(remote_input_path)
+            os.makedirs(remote_input_path + '/certs')
+            os.makedirs(remote_input_path + '/profiles')
+
+            versions = BuildEnvironmentVersions(base_path=os.getcwd())
+
+            resolve_configuration(
+                base_path=os.getcwd(),
+                bazel_command_line=None,
+                arguments=args,
+                additional_codesigning_output_path=remote_input_path
+            )
+            
+            shutil.copyfile(args.configurationPath, remote_input_path + '/configuration.json')
+
+            TartBuild.remote_build_tart(
                 macos_version=versions.macos_version,
                 bazel_cache_host=args.cacheHost,
                 configuration=args.configuration,

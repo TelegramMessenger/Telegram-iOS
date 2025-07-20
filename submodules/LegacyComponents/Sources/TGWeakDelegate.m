@@ -1,4 +1,4 @@
-#import "TGWeakDelegate.h"
+#import <LegacyComponents/TGWeakDelegate.h>
 
 @implementation TGWeakDelegate
 

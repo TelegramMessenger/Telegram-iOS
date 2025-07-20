@@ -3,6 +3,7 @@ import Postbox
 import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
+import EncryptionProvider
 
 private func reactionGeneratedEvent(_ previousReactions: ReactionsMessageAttribute?, _ updatedReactions: ReactionsMessageAttribute?, message: Message, transaction: Transaction) -> (reactionAuthor: Peer, reaction: MessageReaction.Reaction, message: Message, timestamp: Int32)? {
     if let updatedReactions = updatedReactions, !message.flags.contains(.Incoming), message.id.peerId.namespace == Namespaces.Peer.CloudUser {
@@ -1582,9 +1583,16 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 switch draft {
                     case .draftMessageEmpty:
                         inputState = nil
-                    case let .draftMessage(_, replyToMsgHeader, message, entities, media, date, messageEffectId):
+                    case let .draftMessage(_, replyToMsgHeader, message, entities, media, date, messageEffectId, suggestedPost):
                         let _ = media
                         var replySubject: EngineMessageReplySubject?
+                        var parsedSuggestedPost: SynchronizeableChatInputState.SuggestedPost?
+                        if let suggestedPost {
+                            switch suggestedPost {
+                            case let .suggestedPost(_, starsAmount, scheduleDate):
+                                parsedSuggestedPost = SynchronizeableChatInputState.SuggestedPost(price: starsAmount.flatMap(CurrencyAmount.init(apiAmount:)), timestamp: scheduleDate)
+                            }
+                        }
                         if let replyToMsgHeader {
                             switch replyToMsgHeader {
                             case let .inputReplyToMessage(_, replyToMsgId, topMsgId, replyToPeerId, quoteText, quoteEntities, quoteOffset, monoforumPeerId):
@@ -1631,7 +1639,7 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                                 break
                             }
                         }
-                        inputState = SynchronizeableChatInputState(replySubject: replySubject, text: message, entities: messageTextEntitiesFromApiEntities(entities ?? []), timestamp: date, textSelection: nil, messageEffectId: messageEffectId)
+                        inputState = SynchronizeableChatInputState(replySubject: replySubject, text: message, entities: messageTextEntitiesFromApiEntities(entities ?? []), timestamp: date, textSelection: nil, messageEffectId: messageEffectId, suggestedPost: parsedSuggestedPost)
                 }
                 var threadId: Int64?
                 if let savedPeerId {
@@ -1829,10 +1837,9 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 updatedState.updateNewAuthorization(isUnconfirmed: isUnconfirmed, hash: hash, date: date ?? 0, device: device ?? "", location: location ?? "")
             case let .updatePeerWallpaper(_, peer, wallpaper):
                 updatedState.updateWallpaper(peerId: peer.peerId, wallpaper: wallpaper.flatMap { TelegramWallpaper(apiWallpaper: $0) })
-            case let .updateBroadcastRevenueTransactions(peer, balances):
-                updatedState.updateRevenueBalances(peerId: peer.peerId, balances: RevenueStats.Balances(apiRevenueBalances: balances))
             case let .updateStarsBalance(balance):
-                updatedState.updateStarsBalance(peerId: accountPeerId, balance: balance)
+                let amount = CurrencyAmount(apiAmount: balance)
+                updatedState.updateStarsBalance(peerId: accountPeerId, currency: amount.currency, balance: amount.amount)
             case let .updateStarsRevenueStatus(peer, status):
                 updatedState.updateStarsRevenueStatus(peerId: peer.peerId, status: StarsRevenueStats.Balances(apiStarsRevenueStatus: status))
             case let .updatePaidReactionPrivacy(privacy):
@@ -1863,6 +1870,8 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                     mappedPrivacy = .peer(peerId)
                 }
                 updatedState.updateStarsReactionsDefaultPrivacy(privacy: mappedPrivacy)
+            case let .updateMonoForumNoPaidException(flags, channelId, savedPeerId):
+                updatedState.updateMonoForumNoPaidException(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId)), threadId: savedPeerId.peerId.toInt64(), isFree: (flags & (1 << 0)) != 0)
             default:
                 break
         }
@@ -2107,7 +2116,8 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                                                     maxOutgoingReadId: readOutboxMaxId,
                                                     isClosed: (flags & (1 << 2)) != 0,
                                                     isHidden: (flags & (1 << 6)) != 0,
-                                                    notificationSettings: TelegramPeerNotificationSettings(apiSettings: notifySettings)
+                                                    notificationSettings: TelegramPeerNotificationSettings(apiSettings: notifySettings),
+                                                    isMessageFeeRemoved: false
                                                 ),
                                                 topMessageId: topMessage,
                                                 unreadMentionCount: unreadMentionsCount,
@@ -2140,7 +2150,8 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                                                     maxOutgoingReadId: readOutboxMaxId,
                                                     isClosed: false,
                                                     isHidden: false,
-                                                    notificationSettings: TelegramPeerNotificationSettings.defaultSettings
+                                                    notificationSettings: TelegramPeerNotificationSettings.defaultSettings,
+                                                    isMessageFeeRemoved: (flags & (1 << 4)) != 0
                                                 ),
                                                 topMessageId: topMessage,
                                                 unreadMentionCount: 0,
@@ -2266,7 +2277,8 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                                                 maxOutgoingReadId: readOutboxMaxId,
                                                 isClosed: (flags & (1 << 2)) != 0,
                                                 isHidden: (flags & (1 << 6)) != 0,
-                                                notificationSettings: TelegramPeerNotificationSettings(apiSettings: notifySettings)
+                                                notificationSettings: TelegramPeerNotificationSettings(apiSettings: notifySettings),
+                                                isMessageFeeRemoved: false
                                             )
                                             if let entry = StoredMessageHistoryThreadInfo(data) {
                                                 transaction.setMessageHistoryThreadInfo(peerId: peerId, threadId: Int64(id), info: entry)
@@ -2296,7 +2308,8 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                                                 maxOutgoingReadId: readOutboxMaxId,
                                                 isClosed: false,
                                                 isHidden: false,
-                                                notificationSettings: TelegramPeerNotificationSettings.defaultSettings
+                                                notificationSettings: TelegramPeerNotificationSettings.defaultSettings,
+                                                isMessageFeeRemoved: (flags & (1 << 4)) != 0
                                             )
                                             if let entry = StoredMessageHistoryThreadInfo(data) {
                                                 transaction.setMessageHistoryThreadInfo(peerId: peerId, threadId: peer.peerId.toInt64(), info: entry)
@@ -2429,7 +2442,8 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                                                 maxOutgoingReadId: readOutboxMaxId,
                                                 isClosed: (flags & (1 << 2)) != 0,
                                                 isHidden: (flags & (1 << 6)) != 0,
-                                                notificationSettings: TelegramPeerNotificationSettings(apiSettings: notifySettings)
+                                                notificationSettings: TelegramPeerNotificationSettings(apiSettings: notifySettings),
+                                                isMessageFeeRemoved: false
                                             ),
                                             topMessageId: topMessage,
                                             unreadMentionCount: unreadMentionsCount,
@@ -2459,7 +2473,8 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
                                                 maxOutgoingReadId: readOutboxMaxId,
                                                 isClosed: false,
                                                 isHidden: false,
-                                                notificationSettings: TelegramPeerNotificationSettings.defaultSettings
+                                                notificationSettings: TelegramPeerNotificationSettings.defaultSettings,
+                                                isMessageFeeRemoved: (flags & (1 << 4)) != 0
                                             ),
                                             topMessageId: topMessage,
                                             unreadMentionCount: 0,
@@ -3567,7 +3582,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddQuickReplyMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .UpdatePinnedSavedItemIds, .UpdatePinnedTopic, .UpdatePinnedTopicOrder, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilter, .UpdateChatListFilterOrder, .UpdateReadThread, .UpdateMessagesPinned, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateGroupCallChainBlocks, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateExtendedMedia, .ResetForumTopic, .UpdateStory, .UpdateReadStories, .UpdateStoryStealthMode, .UpdateStorySentReaction, .UpdateNewAuthorization, .UpdateWallpaper, .UpdateRevenueBalances, .UpdateStarsBalance, .UpdateStarsRevenueStatus, .UpdateStarsReactionsDefaultPrivacy, .ReportMessageDelivery:
+            case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .UpdatePinnedSavedItemIds, .UpdatePinnedTopic, .UpdatePinnedTopicOrder, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilter, .UpdateChatListFilterOrder, .UpdateReadThread, .UpdateMessagesPinned, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateGroupCallChainBlocks, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateExtendedMedia, .ResetForumTopic, .UpdateStory, .UpdateReadStories, .UpdateStoryStealthMode, .UpdateStorySentReaction, .UpdateNewAuthorization, .UpdateWallpaper, .UpdateStarsBalance, .UpdateStarsRevenueStatus, .UpdateStarsReactionsDefaultPrivacy, .ReportMessageDelivery, .UpdateMonoForumNoPaidException:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -3702,8 +3717,8 @@ func replayFinalState(
     var deletedMessageIds: [DeletedMessageId] = []
     var syncAttachMenuBots = false
     var updateConfig = false
-    var updatedRevenueBalances: [PeerId: RevenueStats.Balances] = [:]
     var updatedStarsBalance: [PeerId: StarsAmount] = [:]
+    var updatedTonBalance: [PeerId: StarsAmount] = [:]
     var updatedStarsRevenueStatus: [PeerId: StarsRevenueStats.Balances] = [:]
     var updatedStarsReactionsDefaultPrivacy: TelegramPaidReactionPrivacy?
     var reportMessageDelivery = Set<MessageId>()
@@ -5154,16 +5169,27 @@ func replayFinalState(
                 } else {
                     transaction.removeOrderedItemListItem(collectionId: Namespaces.OrderedItemList.NewSessionReviews, itemId: id.rawValue)
                 }
-            case let .UpdateRevenueBalances(peerId, balances):
-                updatedRevenueBalances[peerId] = balances
-            case let .UpdateStarsBalance(peerId, balance):
-                updatedStarsBalance[peerId] = StarsAmount(apiAmount: balance)
+            case let .UpdateStarsBalance(peerId, currency, balance):
+                switch currency {
+                case .ton:
+                    updatedTonBalance[peerId] = balance
+                case .stars:
+                    updatedStarsBalance[peerId] = balance
+                }
             case let .UpdateStarsRevenueStatus(peerId, status):
                 updatedStarsRevenueStatus[peerId] = status
             case let .UpdateStarsReactionsDefaultPrivacy(value):
                 updatedStarsReactionsDefaultPrivacy = value
             case let .ReportMessageDelivery(messageIds):
                 reportMessageDelivery = Set(messageIds)
+            case let .UpdateMonoForumNoPaidException(peerId, threadId, isFree):
+                if var data = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
+                    data.isMessageFeeRemoved = isFree
+                    
+                    if let entry = StoredMessageHistoryThreadInfo(data) {
+                        transaction.setMessageHistoryThreadInfo(peerId: peerId, threadId: threadId, info: entry)
+                    }
+                }
         }
     }
     
@@ -5682,8 +5708,8 @@ func replayFinalState(
         updatedOutgoingThreadReadStates: updatedOutgoingThreadReadStates,
         updateConfig: updateConfig,
         isPremiumUpdated: isPremiumUpdated,
-        updatedRevenueBalances: updatedRevenueBalances,
         updatedStarsBalance: updatedStarsBalance,
+        updatedTonBalance: updatedTonBalance,
         updatedStarsRevenueStatus: updatedStarsRevenueStatus,
         sentScheduledMessageIds: finalState.state.sentScheduledMessageIds,
         reportMessageDelivery: reportMessageDelivery,

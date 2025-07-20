@@ -111,6 +111,94 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
         }
     }
     
+    public enum SuggestedPostApprovalStatus: PostboxCoding, Equatable {
+        public enum RejectionReason: Equatable {
+            case generic
+            case lowBalance(balanceNeeded: CurrencyAmount)
+        }
+        
+        case approved(timestamp: Int32?, amount: CurrencyAmount?)
+        case rejected(reason: RejectionReason, comment: String?)
+        
+        public init(decoder: PostboxDecoder) {
+            switch decoder.decodeInt32ForKey("_t", orElse: 0) {
+            case 0:
+                self = .approved(
+                    timestamp: decoder.decodeOptionalInt32ForKey("ts"),
+                    amount: decoder.decodeCodable(CurrencyAmount.self, forKey: "amt")
+                )
+            case 1:
+                let reason: RejectionReason
+                switch decoder.decodeInt32ForKey("rs", orElse: 0) {
+                case 0:
+                    reason = .generic
+                case 1:
+                    reason = .lowBalance(balanceNeeded: decoder.decodeCodable(CurrencyAmount.self, forKey: "lowbal.val") ?? CurrencyAmount(amount: StarsAmount.zero, currency: .stars))
+                default:
+                    assertionFailure()
+                    reason = .generic
+                }
+                self = .rejected(reason: reason, comment: decoder.decodeOptionalStringForKey("com"))
+            default:
+                assertionFailure()
+                self = .rejected(reason: .generic, comment: nil)
+            }
+        }
+        
+        public func encode(_ encoder: PostboxEncoder) {
+            switch self {
+            case let .approved(timestamp, amount):
+                encoder.encodeInt32(0, forKey: "_t")
+                if let timestamp {
+                    encoder.encodeInt32(timestamp, forKey: "ts")
+                } else {
+                    encoder.encodeNil(forKey: "ts")
+                }
+                if let amount {
+                    encoder.encodeCodable(amount, forKey: "amt")
+                } else {
+                    encoder.encodeNil(forKey: "amt")
+                }
+            case let .rejected(reason, comment):
+                encoder.encodeInt32(1, forKey: "_t")
+                switch reason {
+                case .generic:
+                    encoder.encodeInt32(0, forKey: "rs")
+                case let .lowBalance(balanceNeeded):
+                    encoder.encodeInt32(1, forKey: "rs")
+                    encoder.encodeCodable(balanceNeeded, forKey: "lowbal.val")
+                }
+                if let comment {
+                    encoder.encodeString(comment, forKey: "com")
+                } else {
+                    encoder.encodeNil(forKey: "com")
+                }
+            }
+        }
+    }
+    
+    public struct SuggestedPostRefund: Codable, Equatable {
+        private enum CodingKeys: String, CodingKey {
+            case isUserInitiated = "iui"
+        }
+        
+        public var isUserInitiated: Bool
+        
+        public init(isUserInitiated: Bool) {
+            self.isUserInitiated = isUserInitiated
+        }
+        
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.isUserInitiated = try container.decode(Bool.self, forKey: .isUserInitiated)
+        }
+        
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(self.isUserInitiated, forKey: .isUserInitiated)
+        }
+    }
+    
     case unknown
     case groupCreated(title: String)
     case addedMembers(peerIds: [PeerId])
@@ -160,6 +248,12 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case paidMessagesRefunded(count: Int32, stars: Int64)
     case paidMessagesPriceEdited(stars: Int64, broadcastMessagesAllowed: Bool)
     case conferenceCall(ConferenceCall)
+    case todoCompletions(completed: [Int32], incompleted: [Int32])
+    case todoAppendTasks([TelegramMediaTodo.Item])
+    case suggestedPostApprovalStatus(status: SuggestedPostApprovalStatus)
+    case giftTon(currency: String, amount: Int64, cryptoCurrency: String?, cryptoAmount: Int64?, transactionId: String?)
+    case suggestedPostSuccess(amount: CurrencyAmount)
+    case suggestedPostRefund(SuggestedPostRefund)
     
     public init(decoder: PostboxDecoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
@@ -295,6 +389,24 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                 flags: ConferenceCall.Flags(rawValue: decoder.decodeInt32ForKey("flags", orElse: 0)),
                 otherParticipants: decoder.decodeInt64ArrayForKey("part").map(PeerId.init)
             ))
+        case 49:
+            self = .todoCompletions(
+                completed: decoder.decodeInt32ArrayForKey("completed"),
+                incompleted: decoder.decodeInt32ArrayForKey("incompleted")
+            )
+        case 50:
+            self = .todoAppendTasks(
+                decoder.decodeObjectArrayWithDecoderForKey("tasks")
+            )
+        case 51:
+            let status: SuggestedPostApprovalStatus? = decoder.decodeObjectForKey("st", decoder: { SuggestedPostApprovalStatus(decoder: $0) }) as? SuggestedPostApprovalStatus
+            self = .suggestedPostApprovalStatus(status: status ?? .rejected(reason: .generic, comment: nil))
+        case 52:
+            self = .giftTon(currency: decoder.decodeStringForKey("currency", orElse: ""), amount: decoder.decodeInt64ForKey("amount", orElse: 0), cryptoCurrency: decoder.decodeOptionalStringForKey("cryptoCurrency"), cryptoAmount: decoder.decodeOptionalInt64ForKey("cryptoAmount"), transactionId: decoder.decodeOptionalStringForKey("transactionId"))
+        case 53:
+            self = .suggestedPostSuccess(amount: decoder.decodeCodable(CurrencyAmount.self, forKey: "amt") ?? CurrencyAmount(amount: .zero, currency: .stars))
+        case 54:
+            self = .suggestedPostRefund(decoder.decodeCodable(SuggestedPostRefund.self, forKey: "s") ?? SuggestedPostRefund(isUserInitiated: true))
         default:
             self = .unknown
         }
@@ -698,6 +810,38 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             }
             encoder.encodeInt32(conferenceCall.flags.rawValue, forKey: "flags")
             encoder.encodeInt64Array(conferenceCall.otherParticipants.map({ $0.toInt64() }), forKey: "part")
+        case let .todoCompletions(completed, incompleted):
+            encoder.encodeInt32(49, forKey: "_rawValue")
+            encoder.encodeInt32Array(completed, forKey: "completed")
+            encoder.encodeInt32Array(incompleted, forKey: "incompleted")
+        case let .todoAppendTasks(tasks):
+            encoder.encodeInt32(50, forKey: "_rawValue")
+            encoder.encodeObjectArray(tasks, forKey: "tasks")
+        case let .suggestedPostApprovalStatus(status):
+            encoder.encodeInt32(51, forKey: "_rawValue")
+            encoder.encodeObject(status, forKey: "st")
+        case let .giftTon(currency, amount, cryptoCurrency, cryptoAmount, transactionId):
+            encoder.encodeInt32(52, forKey: "_rawValue")
+            encoder.encodeString(currency, forKey: "currency")
+            encoder.encodeInt64(amount, forKey: "amount")
+            if let cryptoCurrency = cryptoCurrency, let cryptoAmount = cryptoAmount {
+                encoder.encodeString(cryptoCurrency, forKey: "cryptoCurrency")
+                encoder.encodeInt64(cryptoAmount, forKey: "cryptoAmount")
+            } else {
+                encoder.encodeNil(forKey: "cryptoCurrency")
+                encoder.encodeNil(forKey: "cryptoAmount")
+            }
+            if let transactionId {
+                encoder.encodeString(transactionId, forKey: "transactionId")
+            } else {
+                encoder.encodeNil(forKey: "transactionId")
+            }
+        case let .suggestedPostSuccess(amount):
+            encoder.encodeInt32(53, forKey: "_rawValue")
+            encoder.encodeCodable(amount, forKey: "amt")
+        case let .suggestedPostRefund(status):
+            encoder.encodeInt32(54, forKey: "_rawValue")
+            encoder.encodeCodable(status, forKey: "s")
         }
     }
     

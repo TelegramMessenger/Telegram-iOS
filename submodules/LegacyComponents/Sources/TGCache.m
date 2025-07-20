@@ -1,8 +1,8 @@
-#import "TGCache.h"
+#import <LegacyComponents/TGCache.h>
 
 #import "LegacyComponentsInternal.h"
 
-#import "TGImageUtils.h"
+#import <LegacyComponents/TGImageUtils.h>
 
 #import <objc/runtime.h>
 #import <CommonCrypto/CommonDigest.h>
@@ -29,7 +29,10 @@ static NSString *md5String(NSString *string)
     
     const char *ptr = [string UTF8String];
     unsigned char md5Buffer[16];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     CC_MD5(ptr, (CC_LONG)[string lengthOfBytesUsingEncoding:NSUTF8StringEncoding], md5Buffer);
+#pragma clang diagnostic pop
     NSString *output = [[NSString alloc] initWithFormat:@"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x", md5Buffer[0], md5Buffer[1], md5Buffer[2], md5Buffer[3], md5Buffer[4], md5Buffer[5], md5Buffer[6], md5Buffer[7], md5Buffer[8], md5Buffer[9], md5Buffer[10], md5Buffer[11], md5Buffer[12], md5Buffer[13], md5Buffer[14], md5Buffer[15]];
     //objc_setAssociatedObject(string, md5PropertyKey, output, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     return output;

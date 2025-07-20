@@ -1,4 +1,4 @@
-#import "TGMediaPickerGalleryItem.h"
+#import <LegacyComponents/TGMediaPickerGalleryItem.h>
 
 #import "LegacyComponentsInternal.h"
 

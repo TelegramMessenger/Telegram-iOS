@@ -3785,6 +3785,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                 component: AnyComponent(
                     StarsBalanceOverlayComponent(
                         context: context,
+                        peerId: context.account.peerId,
                         theme: context.sharedContext.currentPresentationData.with { $0 }.theme,
                         action: { [weak self] in
                             guard let self, let starsContext = context.starsContext, let navigationController = self.navigationController as? NavigationController else {

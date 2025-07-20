@@ -1,5 +1,5 @@
-#import <LegacyComponents/LegacyComponents.h>
-
+#import <LegacyComponents/TGViewController.h>
+#import <LegacyComponents/TGMediaEditingContext.h>
 #import <LegacyComponents/TGPhotoEditorController.h>
 
 @protocol TGMediaEditAdjustments;

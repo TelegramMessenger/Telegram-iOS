@@ -1,6 +1,7 @@
 #import <Foundation/Foundation.h>
 
-#import <LegacyComponents/LegacyComponents.h>
+#import <LegacyComponents/PSCoding.h>
+#import <LegacyComponents/TGStickerPackReference.h>
 
 @interface TGStickerPack : NSObject <NSCoding, PSCoding>
 

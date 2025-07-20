@@ -63,6 +63,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
     public let isStandalone: Bool
     public let isInline: Bool
     public let showSensitiveContent: Bool
+    public let isSuspiciousPeer: Bool
     
     public init(
         automaticDownloadPeerType: MediaAutoDownloadPeerType,
@@ -96,7 +97,8 @@ public final class ChatMessageItemAssociatedData: Equatable {
         deviceContactsNumbers: Set<String> = Set(),
         isStandalone: Bool = false,
         isInline: Bool = false,
-        showSensitiveContent: Bool = false
+        showSensitiveContent: Bool = false,
+        isSuspiciousPeer: Bool = false
     ) {
         self.automaticDownloadPeerType = automaticDownloadPeerType
         self.automaticDownloadPeerId = automaticDownloadPeerId
@@ -130,6 +132,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
         self.isStandalone = isStandalone
         self.isInline = isInline
         self.showSensitiveContent = showSensitiveContent
+        self.isSuspiciousPeer = isSuspiciousPeer
     }
     
     public static func == (lhs: ChatMessageItemAssociatedData, rhs: ChatMessageItemAssociatedData) -> Bool {
@@ -221,6 +224,9 @@ public final class ChatMessageItemAssociatedData: Equatable {
             return false
         }
         if lhs.showSensitiveContent != rhs.showSensitiveContent {
+            return false
+        }
+        if lhs.isSuspiciousPeer != rhs.isSuspiciousPeer {
             return false
         }
         return true
@@ -778,9 +784,11 @@ public enum ChatControllerSubject: Equatable {
         }
         
         public var quote: Quote?
+        public var todoTaskId: Int32?
         
-        public init(quote: Quote? = nil) {
+        public init(quote: Quote? = nil, todoTaskId: Int32? = nil) {
             self.quote = quote
+            self.todoTaskId = todoTaskId
         }
     }
     

@@ -59,6 +59,7 @@ public extension Api {
 public extension Api {
     enum StarsAmount: TypeConstructorDescription {
         case starsAmount(amount: Int64, nanos: Int32)
+        case starsTonAmount(amount: Int64)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -69,6 +70,12 @@ public extension Api {
                     serializeInt64(amount, buffer: buffer, boxed: false)
                     serializeInt32(nanos, buffer: buffer, boxed: false)
                     break
+                case .starsTonAmount(let amount):
+                    if boxed {
+                        buffer.appendInt32(1957618656)
+                    }
+                    serializeInt64(amount, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -76,6 +83,8 @@ public extension Api {
         switch self {
                 case .starsAmount(let amount, let nanos):
                 return ("starsAmount", [("amount", amount as Any), ("nanos", nanos as Any)])
+                case .starsTonAmount(let amount):
+                return ("starsTonAmount", [("amount", amount as Any)])
     }
     }
     
@@ -88,6 +97,17 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.StarsAmount.starsAmount(amount: _1!, nanos: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_starsTonAmount(_ reader: BufferReader) -> StarsAmount? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.StarsAmount.starsTonAmount(amount: _1!)
             }
             else {
                 return nil
@@ -484,17 +504,17 @@ public extension Api {
 }
 public extension Api {
     enum StarsTransaction: TypeConstructorDescription {
-        case starsTransaction(flags: Int32, id: String, stars: Api.StarsAmount, date: Int32, peer: Api.StarsTransactionPeer, title: String?, description: String?, photo: Api.WebDocument?, transactionDate: Int32?, transactionUrl: String?, botPayload: Buffer?, msgId: Int32?, extendedMedia: [Api.MessageMedia]?, subscriptionPeriod: Int32?, giveawayPostId: Int32?, stargift: Api.StarGift?, floodskipNumber: Int32?, starrefCommissionPermille: Int32?, starrefPeer: Api.Peer?, starrefAmount: Api.StarsAmount?, paidMessages: Int32?, premiumGiftMonths: Int32?)
+        case starsTransaction(flags: Int32, id: String, amount: Api.StarsAmount, date: Int32, peer: Api.StarsTransactionPeer, title: String?, description: String?, photo: Api.WebDocument?, transactionDate: Int32?, transactionUrl: String?, botPayload: Buffer?, msgId: Int32?, extendedMedia: [Api.MessageMedia]?, subscriptionPeriod: Int32?, giveawayPostId: Int32?, stargift: Api.StarGift?, floodskipNumber: Int32?, starrefCommissionPermille: Int32?, starrefPeer: Api.Peer?, starrefAmount: Api.StarsAmount?, paidMessages: Int32?, premiumGiftMonths: Int32?, adsProceedsFromDate: Int32?, adsProceedsToDate: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .starsTransaction(let flags, let id, let stars, let date, let peer, let title, let description, let photo, let transactionDate, let transactionUrl, let botPayload, let msgId, let extendedMedia, let subscriptionPeriod, let giveawayPostId, let stargift, let floodskipNumber, let starrefCommissionPermille, let starrefPeer, let starrefAmount, let paidMessages, let premiumGiftMonths):
+                case .starsTransaction(let flags, let id, let amount, let date, let peer, let title, let description, let photo, let transactionDate, let transactionUrl, let botPayload, let msgId, let extendedMedia, let subscriptionPeriod, let giveawayPostId, let stargift, let floodskipNumber, let starrefCommissionPermille, let starrefPeer, let starrefAmount, let paidMessages, let premiumGiftMonths, let adsProceedsFromDate, let adsProceedsToDate):
                     if boxed {
-                        buffer.appendInt32(-1549805238)
+                        buffer.appendInt32(325426864)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(id, buffer: buffer, boxed: false)
-                    stars.serialize(buffer, true)
+                    amount.serialize(buffer, true)
                     serializeInt32(date, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
                     if Int(flags) & Int(1 << 0) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
@@ -518,14 +538,16 @@ public extension Api {
                     if Int(flags) & Int(1 << 17) != 0 {starrefAmount!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 19) != 0 {serializeInt32(paidMessages!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 20) != 0 {serializeInt32(premiumGiftMonths!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 23) != 0 {serializeInt32(adsProceedsFromDate!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 23) != 0 {serializeInt32(adsProceedsToDate!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .starsTransaction(let flags, let id, let stars, let date, let peer, let title, let description, let photo, let transactionDate, let transactionUrl, let botPayload, let msgId, let extendedMedia, let subscriptionPeriod, let giveawayPostId, let stargift, let floodskipNumber, let starrefCommissionPermille, let starrefPeer, let starrefAmount, let paidMessages, let premiumGiftMonths):
-                return ("starsTransaction", [("flags", flags as Any), ("id", id as Any), ("stars", stars as Any), ("date", date as Any), ("peer", peer as Any), ("title", title as Any), ("description", description as Any), ("photo", photo as Any), ("transactionDate", transactionDate as Any), ("transactionUrl", transactionUrl as Any), ("botPayload", botPayload as Any), ("msgId", msgId as Any), ("extendedMedia", extendedMedia as Any), ("subscriptionPeriod", subscriptionPeriod as Any), ("giveawayPostId", giveawayPostId as Any), ("stargift", stargift as Any), ("floodskipNumber", floodskipNumber as Any), ("starrefCommissionPermille", starrefCommissionPermille as Any), ("starrefPeer", starrefPeer as Any), ("starrefAmount", starrefAmount as Any), ("paidMessages", paidMessages as Any), ("premiumGiftMonths", premiumGiftMonths as Any)])
+                case .starsTransaction(let flags, let id, let amount, let date, let peer, let title, let description, let photo, let transactionDate, let transactionUrl, let botPayload, let msgId, let extendedMedia, let subscriptionPeriod, let giveawayPostId, let stargift, let floodskipNumber, let starrefCommissionPermille, let starrefPeer, let starrefAmount, let paidMessages, let premiumGiftMonths, let adsProceedsFromDate, let adsProceedsToDate):
+                return ("starsTransaction", [("flags", flags as Any), ("id", id as Any), ("amount", amount as Any), ("date", date as Any), ("peer", peer as Any), ("title", title as Any), ("description", description as Any), ("photo", photo as Any), ("transactionDate", transactionDate as Any), ("transactionUrl", transactionUrl as Any), ("botPayload", botPayload as Any), ("msgId", msgId as Any), ("extendedMedia", extendedMedia as Any), ("subscriptionPeriod", subscriptionPeriod as Any), ("giveawayPostId", giveawayPostId as Any), ("stargift", stargift as Any), ("floodskipNumber", floodskipNumber as Any), ("starrefCommissionPermille", starrefCommissionPermille as Any), ("starrefPeer", starrefPeer as Any), ("starrefAmount", starrefAmount as Any), ("paidMessages", paidMessages as Any), ("premiumGiftMonths", premiumGiftMonths as Any), ("adsProceedsFromDate", adsProceedsFromDate as Any), ("adsProceedsToDate", adsProceedsToDate as Any)])
     }
     }
     
@@ -588,6 +610,10 @@ public extension Api {
             if Int(_1!) & Int(1 << 19) != 0 {_21 = reader.readInt32() }
             var _22: Int32?
             if Int(_1!) & Int(1 << 20) != 0 {_22 = reader.readInt32() }
+            var _23: Int32?
+            if Int(_1!) & Int(1 << 23) != 0 {_23 = reader.readInt32() }
+            var _24: Int32?
+            if Int(_1!) & Int(1 << 23) != 0 {_24 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -610,8 +636,10 @@ public extension Api {
             let _c20 = (Int(_1!) & Int(1 << 17) == 0) || _20 != nil
             let _c21 = (Int(_1!) & Int(1 << 19) == 0) || _21 != nil
             let _c22 = (Int(_1!) & Int(1 << 20) == 0) || _22 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 && _c22 {
-                return Api.StarsTransaction.starsTransaction(flags: _1!, id: _2!, stars: _3!, date: _4!, peer: _5!, title: _6, description: _7, photo: _8, transactionDate: _9, transactionUrl: _10, botPayload: _11, msgId: _12, extendedMedia: _13, subscriptionPeriod: _14, giveawayPostId: _15, stargift: _16, floodskipNumber: _17, starrefCommissionPermille: _18, starrefPeer: _19, starrefAmount: _20, paidMessages: _21, premiumGiftMonths: _22)
+            let _c23 = (Int(_1!) & Int(1 << 23) == 0) || _23 != nil
+            let _c24 = (Int(_1!) & Int(1 << 23) == 0) || _24 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 && _c22 && _c23 && _c24 {
+                return Api.StarsTransaction.starsTransaction(flags: _1!, id: _2!, amount: _3!, date: _4!, peer: _5!, title: _6, description: _7, photo: _8, transactionDate: _9, transactionUrl: _10, botPayload: _11, msgId: _12, extendedMedia: _13, subscriptionPeriod: _14, giveawayPostId: _15, stargift: _16, floodskipNumber: _17, starrefCommissionPermille: _18, starrefPeer: _19, starrefAmount: _20, paidMessages: _21, premiumGiftMonths: _22, adsProceedsFromDate: _23, adsProceedsToDate: _24)
             }
             else {
                 return nil
@@ -1286,156 +1314,6 @@ public extension Api {
             let _c12 = _12 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 {
                 return Api.StickerSet.stickerSet(flags: _1!, installedDate: _2, id: _3!, accessHash: _4!, title: _5!, shortName: _6!, thumbs: _7, thumbDcId: _8, thumbVersion: _9, thumbDocumentId: _10, count: _11!, hash: _12!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum StickerSetCovered: TypeConstructorDescription {
-        case stickerSetCovered(set: Api.StickerSet, cover: Api.Document)
-        case stickerSetFullCovered(set: Api.StickerSet, packs: [Api.StickerPack], keywords: [Api.StickerKeyword], documents: [Api.Document])
-        case stickerSetMultiCovered(set: Api.StickerSet, covers: [Api.Document])
-        case stickerSetNoCovered(set: Api.StickerSet)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .stickerSetCovered(let set, let cover):
-                    if boxed {
-                        buffer.appendInt32(1678812626)
-                    }
-                    set.serialize(buffer, true)
-                    cover.serialize(buffer, true)
-                    break
-                case .stickerSetFullCovered(let set, let packs, let keywords, let documents):
-                    if boxed {
-                        buffer.appendInt32(1087454222)
-                    }
-                    set.serialize(buffer, true)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(packs.count))
-                    for item in packs {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(keywords.count))
-                    for item in keywords {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(documents.count))
-                    for item in documents {
-                        item.serialize(buffer, true)
-                    }
-                    break
-                case .stickerSetMultiCovered(let set, let covers):
-                    if boxed {
-                        buffer.appendInt32(872932635)
-                    }
-                    set.serialize(buffer, true)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(covers.count))
-                    for item in covers {
-                        item.serialize(buffer, true)
-                    }
-                    break
-                case .stickerSetNoCovered(let set):
-                    if boxed {
-                        buffer.appendInt32(2008112412)
-                    }
-                    set.serialize(buffer, true)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .stickerSetCovered(let set, let cover):
-                return ("stickerSetCovered", [("set", set as Any), ("cover", cover as Any)])
-                case .stickerSetFullCovered(let set, let packs, let keywords, let documents):
-                return ("stickerSetFullCovered", [("set", set as Any), ("packs", packs as Any), ("keywords", keywords as Any), ("documents", documents as Any)])
-                case .stickerSetMultiCovered(let set, let covers):
-                return ("stickerSetMultiCovered", [("set", set as Any), ("covers", covers as Any)])
-                case .stickerSetNoCovered(let set):
-                return ("stickerSetNoCovered", [("set", set as Any)])
-    }
-    }
-    
-        public static func parse_stickerSetCovered(_ reader: BufferReader) -> StickerSetCovered? {
-            var _1: Api.StickerSet?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.StickerSet
-            }
-            var _2: Api.Document?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.Document
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.StickerSetCovered.stickerSetCovered(set: _1!, cover: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_stickerSetFullCovered(_ reader: BufferReader) -> StickerSetCovered? {
-            var _1: Api.StickerSet?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.StickerSet
-            }
-            var _2: [Api.StickerPack]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerPack.self)
-            }
-            var _3: [Api.StickerKeyword]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerKeyword.self)
-            }
-            var _4: [Api.Document]?
-            if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.StickerSetCovered.stickerSetFullCovered(set: _1!, packs: _2!, keywords: _3!, documents: _4!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_stickerSetMultiCovered(_ reader: BufferReader) -> StickerSetCovered? {
-            var _1: Api.StickerSet?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.StickerSet
-            }
-            var _2: [Api.Document]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.StickerSetCovered.stickerSetMultiCovered(set: _1!, covers: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_stickerSetNoCovered(_ reader: BufferReader) -> StickerSetCovered? {
-            var _1: Api.StickerSet?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.StickerSet
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.StickerSetCovered.stickerSetNoCovered(set: _1!)
             }
             else {
                 return nil

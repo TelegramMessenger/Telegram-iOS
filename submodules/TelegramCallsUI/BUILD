@@ -53,6 +53,7 @@ swift_library(
         ":TelegramCallsUIBundle",
     ],
     deps = [
+        "//submodules/SSignalKit/SSignalKit",
     	"//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/Display:Display",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
@@ -94,7 +95,7 @@ swift_library(
         "//submodules/TextFormat:TextFormat",
         "//submodules/Markdown:Markdown",
         "//submodules/ChatTitleActivityNode:ChatTitleActivityNode",
-        "//third-party/libyuv:LibYuvBinding",
+        "//third-party/LibYuvBinding",
         "//submodules/ComponentFlow:ComponentFlow",
         "//submodules/Components/LottieAnimationComponent:LottieAnimationComponent",
         "//submodules/Components/ActivityIndicatorComponent:ActivityIndicatorComponent",

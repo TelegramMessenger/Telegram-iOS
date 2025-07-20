@@ -2,6 +2,9 @@
 
 #import "PGPhotoProcessPass.h"
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 @interface PGPhotoGaussianBlurFilter ()
 {
     GPUImageFramebuffer *_secondOutputFramebuffer;
@@ -496,3 +499,5 @@
 }
 
 @end
+
+#pragma clang diagnostic pop

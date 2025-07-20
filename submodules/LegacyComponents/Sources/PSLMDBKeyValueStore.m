@@ -1,11 +1,11 @@
-#import "PSLMDBKeyValueStore.h"
+#import <LegacyComponents/PSLMDBKeyValueStore.h>
 
 #import "LegacyComponentsInternal.h"
 
-#import "lmdb.h"
+#import <LegacyComponents/lmdb.h>
 
-#import "PSLMDBTable.h"
-#import "PSLMDBKeyValueReaderWriter.h"
+#import <LegacyComponents/PSLMDBTable.h>
+#import <LegacyComponents/PSLMDBKeyValueReaderWriter.h>
 
 @interface PSLMDBKeyValueStore ()
 {

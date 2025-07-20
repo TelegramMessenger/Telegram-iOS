@@ -1,4 +1,4 @@
-#import "TGDocumentAttributeAnimated.h"
+#import <LegacyComponents/TGDocumentAttributeAnimated.h>
 
 @implementation TGDocumentAttributeAnimated
 

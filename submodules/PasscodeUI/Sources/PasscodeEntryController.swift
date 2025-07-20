@@ -59,9 +59,6 @@ public final class PasscodeEntryController: ViewController {
     private var inBackground: Bool = false
     private var inBackgroundDisposable: Disposable?
     
-    private var statusBarHost: StatusBarHost?
-    private var previousStatusBarStyle: UIStatusBarStyle?
-    
     public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager<TelegramAccountManagerTypes>, appLockContext: AppLockContext, presentationData: PresentationData, presentationDataSignal: Signal<PresentationData, NoError>, statusBarHost: StatusBarHost?, challengeData: PostboxAccessChallengeData, biometrics: PasscodeEntryControllerBiometricsMode, arguments: PasscodeEntryControllerPresentationArguments) {
         self.applicationBindings = applicationBindings
         self.accountManager = accountManager
@@ -72,19 +69,10 @@ public final class PasscodeEntryController: ViewController {
         self.biometrics = biometrics
         self.arguments = arguments
         
-        self.statusBarHost = statusBarHost
-        self.previousStatusBarStyle = statusBarHost?.statusBarStyle
         super.init(navigationBarPresentationData: nil)
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
-        self.statusBarHost?.setStatusBarStyle(.lightContent, animated: true)
-        self.statusBarHost?.shouldChangeStatusBarStyle = { [weak self] style in
-            if let strongSelf = self {
-                strongSelf.previousStatusBarStyle = style
-                return false
-            }
-            return true
-        }
+        self.statusBar.updateStatusBarStyle(.White, animated: false)
         
         self.presentationDataDisposable = (presentationDataSignal
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
@@ -284,10 +272,6 @@ public final class PasscodeEntryController: ViewController {
     }
     
     public override func dismiss(completion: (() -> Void)? = nil) {
-        self.statusBarHost?.shouldChangeStatusBarStyle = nil
-        if let statusBarHost = self.statusBarHost, let previousStatusBarStyle = self.previousStatusBarStyle {
-            statusBarHost.setStatusBarStyle(previousStatusBarStyle, animated: true)
-        }
         self.view.endEditing(true)
         self.controllerNode.animateOut { [weak self] in
             guard let strongSelf = self else {

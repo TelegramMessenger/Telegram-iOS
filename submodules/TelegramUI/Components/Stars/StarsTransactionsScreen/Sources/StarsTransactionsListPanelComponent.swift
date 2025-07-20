@@ -21,7 +21,7 @@ import TelegramStringFormatting
 
 private extension StarsContext.State.Transaction {
     var extendedId: String {
-        if self.count > StarsAmount.zero {
+        if self.count.amount > StarsAmount.zero {
             return "\(id)_in"
         } else {
             return "\(id)_out"
@@ -320,7 +320,7 @@ final class StarsTransactionsListPanelComponent: Component {
                                 switch starGift {
                                 case let .generic(gift):
                                     itemFile = gift.file
-                                    itemSubtitle = item.count > StarsAmount.zero ? environment.strings.Stars_Intro_Transaction_ConvertedGift : environment.strings.Stars_Intro_Transaction_Gift
+                                    itemSubtitle = item.count.amount > StarsAmount.zero ? environment.strings.Stars_Intro_Transaction_ConvertedGift : environment.strings.Stars_Intro_Transaction_Gift
                                 case let .unique(gift):
                                     for attribute in gift.attributes {
                                         if case let .model(_, file, _) = attribute {
@@ -328,7 +328,15 @@ final class StarsTransactionsListPanelComponent: Component {
                                             break
                                         }
                                     }
-                                    itemSubtitle = item.count > StarsAmount.zero ? environment.strings.Stars_Intro_Transaction_GiftSale : environment.strings.Stars_Intro_Transaction_GiftPurchase
+                                    if item.count.amount > StarsAmount.zero {
+                                        itemSubtitle = environment.strings.Stars_Intro_Transaction_GiftSale
+                                    } else {
+                                        if item.flags.contains(.isStarGiftResale) {
+                                            itemSubtitle = environment.strings.Stars_Intro_Transaction_GiftPurchase
+                                        } else {
+                                            itemSubtitle = environment.strings.Stars_Intro_Transaction_GiftTransfer
+                                        }
+                                    }
                                 }
                             }
                         } else if let _ = item.giveawayMessageId {
@@ -365,7 +373,7 @@ final class StarsTransactionsListPanelComponent: Component {
                                 itemSubtitle = environment.strings.Stars_Intro_Transaction_Gift_Title
                                 itemPeer = .fragment
                             } else {
-                                if (item.count.value < 0 && !item.flags.contains(.isRefund)) || (item.count.value > 0 && item.flags.contains(.isRefund)) {
+                                if (item.count.amount.value < 0 && !item.flags.contains(.isRefund)) || (item.count.amount.value > 0 && item.flags.contains(.isRefund)) {
                                     itemTitle = environment.strings.Stars_Intro_Transaction_FragmentWithdrawal_Title
                                     itemSubtitle = environment.strings.Stars_Intro_Transaction_FragmentWithdrawal_Subtitle
                                 } else {
@@ -374,7 +382,7 @@ final class StarsTransactionsListPanelComponent: Component {
                                 }
                             }
                         } else {
-                            if item.count > StarsAmount.zero && !item.flags.contains(.isRefund) {
+                            if item.count.amount > StarsAmount.zero && !item.flags.contains(.isRefund) {
                                 itemTitle = environment.strings.Stars_Intro_Transaction_FragmentTopUp_Title
                                 itemSubtitle = environment.strings.Stars_Intro_Transaction_FragmentTopUp_Subtitle
                             } else {
@@ -401,12 +409,23 @@ final class StarsTransactionsListPanelComponent: Component {
                     }
                     
                     let itemLabel: NSAttributedString
-                    let formattedLabel = formatStarsAmountText(item.count, dateTimeFormat: environment.dateTimeFormat, showPlus: true)
+                    let formattedLabel = formatCurrencyAmountText(item.count, dateTimeFormat: environment.dateTimeFormat, showPlus: true)
                     
                     let smallLabelFont = Font.with(size: floor(fontBaseDisplaySize / 17.0 * 13.0))
                     let labelFont = Font.medium(fontBaseDisplaySize)
                     let labelColor = formattedLabel.hasPrefix("-") ? environment.theme.list.itemDestructiveColor : environment.theme.list.itemDisclosureActions.constructive.fillColor
                     itemLabel = tonAmountAttributedString(formattedLabel, integralFont: labelFont, fractionalFont: smallLabelFont, color: labelColor, decimalSeparator: environment.dateTimeFormat.decimalSeparator)
+                    
+                    let itemIconName: String
+                    let itemIconColor: UIColor?
+                    switch item.count.currency {
+                    case .stars:
+                        itemIconName = "Premium/Stars/StarMedium"
+                        itemIconColor = nil
+                    case .ton:
+                        itemIconName = "Ads/TonAbout"
+                        itemIconColor = labelColor
+                    }
                     
                     var itemDateColor = environment.theme.list.itemSecondaryTextColor
                     itemDate = stringForMediumCompactDate(timestamp: item.date, strings: environment.strings, dateTimeFormat: environment.dateTimeFormat)
@@ -488,7 +507,7 @@ final class StarsTransactionsListPanelComponent: Component {
                             contentInsets: UIEdgeInsets(top: 9.0, left: environment.containerInsets.left, bottom: 8.0, right: environment.containerInsets.right),
                             leftIcon: .custom(AnyComponentWithIdentity(id: "avatar", component: AnyComponent(StarsAvatarComponent(context: component.context, theme: environment.theme, peer: itemPeer, photo: item.photo, media: item.media, uniqueGift: uniqueGift, backgroundColor: environment.theme.list.plainBackgroundColor))), false),
                             icon: nil,
-                            accessory: .custom(ListActionItemComponent.CustomAccessory(component: AnyComponentWithIdentity(id: "label", component: AnyComponent(StarsLabelComponent(text: itemLabel))), insets: UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 16.0))),
+                            accessory: .custom(ListActionItemComponent.CustomAccessory(component: AnyComponentWithIdentity(id: "label", component: AnyComponent(StarsLabelComponent(text: itemLabel, iconName: itemIconName, iconColor: itemIconColor))), insets: UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 16.0))),
                             action: { [weak self] _ in
                                 guard let self, let component = self.component else {
                                     return
@@ -667,7 +686,7 @@ final class StarsTransactionsListPanelComponent: Component {
             if self.scrollView.contentSize != contentSize {
                 self.scrollView.contentSize = contentSize
             }
-            self.scrollView.scrollIndicatorInsets = environment.containerInsets
+            self.scrollView.verticalScrollIndicatorInsets = environment.containerInsets
             if !transition.animation.isImmediate && self.scrollView.bounds.minY != contentOffset {
                 let deltaOffset = self.scrollView.bounds.minY - contentOffset
                 transition.animateBoundsOrigin(view: self.scrollView, from: CGPoint(x: 0.0, y: -deltaOffset), to: CGPoint(), additive: true)

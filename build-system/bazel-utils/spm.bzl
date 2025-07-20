@@ -183,6 +183,53 @@ _SWIFT_LIBRARY_REQUIRED_ATTRS = [
     "module_name",
 ]
 
+"""
+["alwayslink", "aspect_hints", "compatible_with", "data", "deprecation", "deps", "exec_compatible_with", "exec_properties", "expect_failure", "features", "generator_function", "generator_location", "generator_name", "has_swift", "includes", "library_identifiers", "linkopts", "name", "package_metadata", "restricted_to", "sdk_dylibs", "sdk_frameworks", "tags", "target_compatible_with", "testonly", "toolchains", "transitive_configs", "visibility", "weak_sdk_frameworks", "xcframework_imports"]
+"""
+
+_IGNORE_APPLE_STATIC_XCFRAMEWORK_IMPORT_ATTRS = [
+    "name",
+    "alwayslink",
+    "aspect_hints",
+    "compatible_with",
+    "data",
+    "deprecation",
+    "exec_compatible_with",
+    "exec_properties",
+    "expect_failure",
+    "features",
+    "generator_function",
+    "generator_location",
+    "generator_name",
+    "has_swift",
+    "includes",
+    "library_identifiers",
+    "linkopts",
+    "package_metadata",
+    "restricted_to",
+    "tags",
+    "target_compatible_with",
+    "testonly",
+    "toolchains",
+    "transitive_configs",
+    "visibility",
+    "weak_sdk_frameworks",
+]
+
+_IGNORE_APPLE_STATIC_XCFRAMEWORK_IMPORT_EMPTY_ATTRS = [
+    "deps",
+    "sdk_dylibs",
+    "sdk_frameworks",
+]
+
+_APPLE_STATIC_XCFRAMEWORK_IMPORT_ATTRS = [
+    "xcframework_imports",
+]
+
+_APPLE_STATIC_XCFRAMEWORK_IMPORT_REQUIRED_ATTRS = [
+    "xcframework_imports",
+]
+
 _LIBRARY_CONFIGS = {
     "cc_library": {
         "ignore_attrs": _IGNORE_CC_LIBRARY_ATTRS,
@@ -201,6 +248,12 @@ _LIBRARY_CONFIGS = {
         "ignore_empty_attrs": _IGNORE_SWIFT_LIBRARY_EMPTY_ATTRS,
         "handled_attrs": _SWIFT_LIBRARY_ATTRS,
         "required_attrs": _SWIFT_LIBRARY_REQUIRED_ATTRS,
+    },
+    "apple_static_xcframework_import": {
+        "ignore_attrs": _IGNORE_APPLE_STATIC_XCFRAMEWORK_IMPORT_ATTRS,
+        "ignore_empty_attrs": _IGNORE_APPLE_STATIC_XCFRAMEWORK_IMPORT_EMPTY_ATTRS,
+        "handled_attrs": _APPLE_STATIC_XCFRAMEWORK_IMPORT_ATTRS,
+        "required_attrs": _APPLE_STATIC_XCFRAMEWORK_IMPORT_REQUIRED_ATTRS,
     },
 }
 
@@ -225,6 +278,7 @@ def get_rule_atts(rule):
                     fail("Attribute {} is not empty: {}".format(attr_name, attr_value))
             if attr_name in handled_attrs:
                 continue
+            print("All attributes: {}".format(dir(rule.attr)))
             fail("Unknown attribute: {}".format(attr_name))
 
         result = dict()
@@ -278,19 +332,15 @@ def _collect_spm_modules_impl(target, ctx):
             if SPMModulesInfo in dep:
                 # Merge the modules dictionaries
                 for label, info in dep[SPMModulesInfo].modules.items():
+                    if label in all_modules:
+                        if all_modules[label]["path"] != info["path"]:
+                            fail("Duplicate module name: {}".format(label))
                     all_modules[label] = info
                 # Add transitive sources depset from dependency to the list
                 dep_transitive_sources_list.append(dep[SPMModulesInfo].transitive_sources)
     
     # Merge all transitive sources from dependencies
     transitive_sources_from_deps = depset(transitive = dep_transitive_sources_list)
-
-    # Keep this for debugging later
-    # if result_attrs["type"] == "swift_library":
-    #     print("Processing rule {}".format(ctx.label.name))
-    #     print("ctx.rule.kind = {}".format(ctx.rule.kind))
-    #     for attr_name in dir(ctx.rule.attr):
-    #         print("    attr1: {}".format(attr_name))
 
     result_attrs = get_rule_atts(ctx.rule)
 
@@ -317,12 +367,47 @@ def _collect_spm_modules_impl(target, ctx):
                 headers.append(hdr_file.path)
     current_target_headers = depset(current_target_hdr_files)
 
+    textual_hdrs = []
+    current_target_textual_hdr_files = []
+    if "textual_hdrs" in result_attrs:
+        for textual_hdr_target in result_attrs["textual_hdrs"]:
+            textual_hdr_files = textual_hdr_target.files.to_list()
+            for f in textual_hdr_files:
+                current_target_textual_hdr_files.append(f)
+            for hdr_file in textual_hdr_files:
+                textual_hdrs.append(hdr_file.path)
+    current_target_textual_headers = depset(current_target_textual_hdr_files)
+
+    current_target_xcframework_import_files = []
+    if "xcframework_imports" in result_attrs:
+        for src_target in result_attrs["xcframework_imports"]:
+            src_files = src_target.files.to_list()
+            for f in src_files:
+                if f != ".DS_Store":
+                    current_target_xcframework_import_files.append(f)
+            for src_file in src_files:
+                sources.append(src_file.path)
+    current_target_xcframework_imports = depset(current_target_xcframework_import_files)
+
     module_type = result_attrs["type"]
 
     if module_type == "root":
         pass
     elif module_type == "apple_static_xcframework_import":
-        pass
+        if not str(ctx.label).startswith("@@//"):
+            fail("Invalid label: {}".format(ctx.label))
+        module_path = str(ctx.label).split(":")[0].split("@@//")[1]
+
+        module_info = {
+            "name": result_attrs["name"],
+            "type": module_type,
+            "path": module_path,
+            "sources": sorted(sources),
+            "module_name": module_name,
+        }
+        if result_attrs["name"] in all_modules:
+            fail("Duplicate module name: {}".format(result_attrs["name"]))
+        all_modules[result_attrs["name"]] = module_info
     elif module_type == "objc_library" or module_type == "swift_library" or module_type == "cc_library":
         # Collect dependency labels
         dep_names = []
@@ -368,7 +453,7 @@ def _collect_spm_modules_impl(target, ctx):
                 "path": module_path,
                 "defines": result_attrs["defines"],
                 "deps": dep_names,
-                "sources": sorted(sources + headers),
+                "sources": sorted(sources + headers + textual_hdrs),
                 "module_name": module_name,
                 "copts": result_attrs["copts"],
                 "cxxopts": result_attrs["cxxopts"],
@@ -401,6 +486,8 @@ def _collect_spm_modules_impl(target, ctx):
         transitive_sources_from_deps, 
         current_target_sources, 
         current_target_headers,
+        current_target_textual_headers,
+        current_target_xcframework_imports,
     ])
     
     # Return both the SPM output files and the provider with modules data and sources

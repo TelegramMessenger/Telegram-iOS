@@ -1,6 +1,6 @@
-#import "TGVideoMediaAttachment.h"
+#import <LegacyComponents/TGVideoMediaAttachment.h>
 
-#import "TGMessage.h"
+#import <LegacyComponents/TGMessage.h>
 
 #import "LegacyComponentsInternal.h"
 
@@ -169,7 +169,7 @@
         int32_t zero = 0;
         [data appendBytes:&zero length:4];
     } else {
-        NSData *stickerData = [NSKeyedArchiver archivedDataWithRootObject:_embeddedStickerDocuments];
+        NSData *stickerData = [NSKeyedArchiver archivedDataWithRootObject:_embeddedStickerDocuments requiringSecureCoding:false error:nil];
         int32_t length = (int32_t)stickerData.length;
         [data appendBytes:&length length:4];
         [data appendData:stickerData];
@@ -180,7 +180,7 @@
     
     NSData *originData = nil;
     @try {
-        originData = [NSKeyedArchiver archivedDataWithRootObject:_originInfo];
+        originData = [NSKeyedArchiver archivedDataWithRootObject:_originInfo requiringSecureCoding:false error:nil];
     } @catch (NSException *e) {
         
     }
@@ -269,7 +269,11 @@
             uint8_t *stickerBytes = malloc(stickerDataLength);
             [is read:stickerBytes maxLength:stickerDataLength];
             NSData *stickerData = [[NSData alloc] initWithBytesNoCopy:stickerBytes length:stickerDataLength freeWhenDone:true];
+            
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
             videoAttachment.embeddedStickerDocuments = [NSKeyedUnarchiver unarchiveObjectWithData:stickerData];
+#pragma clang diagnostic pop
         }
     }
     
@@ -291,7 +295,10 @@
             NSData *data = [[NSData alloc] initWithBytesNoCopy:originBytes length:originLength freeWhenDone:true];
             TGMediaOriginInfo *origin = nil;
             @try {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
                 origin = [NSKeyedUnarchiver unarchiveObjectWithData:data];
+#pragma clang diagnostic pop
             } @catch (NSException *e) {
                 
             }

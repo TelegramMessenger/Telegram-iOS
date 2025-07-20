@@ -3,6 +3,9 @@
 
 #import "LegacyComponentsInternal.h"
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 // Hardcode the vertex shader for standard filters, but this can be overridden
 NSString *const kGPUImageVertexShaderString = SHADER_STRING
 (
@@ -782,3 +785,5 @@ NSString *const kGPUImagePassthroughFragmentShaderString = SHADER_STRING
 }
 
 @end
+
+#pragma clang diagnostic pop

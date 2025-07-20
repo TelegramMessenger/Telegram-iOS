@@ -39,6 +39,8 @@ public final class ToastContentComponent: Component {
     }
 
     public final class View: UIView {
+        private var component: ToastContentComponent?
+        
         private let backgroundView: BlurredBackgroundView
         private let icon = ComponentView<Empty>()
         private let content = ComponentView<Empty>()
@@ -63,8 +65,11 @@ public final class ToastContentComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
+        
         func update(component: ToastContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             var contentHeight: CGFloat = 0.0
+            
+            self.component = component
             
             let leftInset: CGFloat = component.insets.left
             let rightInset: CGFloat = component.insets.right

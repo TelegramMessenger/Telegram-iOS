@@ -420,8 +420,8 @@ final class ContextResultPanelComponent: Component {
             if self.scrollView.contentInset != scrollContentInsets {
                 self.scrollView.contentInset = scrollContentInsets
             }
-            if self.scrollView.scrollIndicatorInsets != scrollIndicatorInsets {
-                self.scrollView.scrollIndicatorInsets = scrollIndicatorInsets
+            if self.scrollView.verticalScrollIndicatorInsets != scrollIndicatorInsets {
+                self.scrollView.verticalScrollIndicatorInsets = scrollIndicatorInsets
             }
             if self.scrollView.contentSize != scrollContentSize {
                 self.scrollView.contentSize = scrollContentSize

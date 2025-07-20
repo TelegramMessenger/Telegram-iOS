@@ -1,4 +1,4 @@
-#import "RMPhoneFormat.h"
+#import <LegacyComponents/RMPhoneFormat.h>
 
 @interface PhoneRule : NSObject
 

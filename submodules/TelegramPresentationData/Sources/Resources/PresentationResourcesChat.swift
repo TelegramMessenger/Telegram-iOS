@@ -562,6 +562,12 @@ public struct PresentationResourcesChat {
         })
     }
     
+    public static func chatInputTextFieldSuggestPostImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatInputTextFieldSuggestPostImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/AccessoryIconSuggestPost"), color: theme.chat.inputPanel.inputControlColor)
+        })
+    }
+    
     public static func chatInputTextFieldKeyboardImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputTextFieldKeyboardImage.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/AccessoryIconKeyboard"), color: theme.chat.inputPanel.inputControlColor)
@@ -1400,6 +1406,66 @@ public struct PresentationResourcesChat {
                 })
             }
             return nil
+        })
+    }
+    
+    public static func chatBubbleTodoDotIncomingIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatBubbleTodoDotIncomingIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/TodoDot"), color: theme.chat.message.incoming.accentTextColor)
+        })
+    }
+    
+    public static func chatBubbleTodoDotOutgoingIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatBubbleTodoDotOutgoingIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/TodoDot"), color: theme.chat.message.outgoing.accentTextColor)
+        })
+    }
+    
+    public static func chatBubbleTodoCheckIncomingIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatBubbleTodoCheckIncomingIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/TodoCheck"), color: theme.chat.message.incoming.accentTextColor)
+        })
+    }
+    
+    public static func chatBubbleTodoCheckOutgoingIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatBubbleTodoCheckOutgoingIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/TodoCheck"), color: theme.chat.message.outgoing.accentTextColor)
+        })
+    }
+    
+    public static func chatServiceMessageTodoCompletedIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatServiceMessageTodoCompletedIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/ServiceTodoCompleted"), color: .white)
+        })
+    }
+    
+    public static func chatServiceMessageTodoIncompletedIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatServiceMessageTodoIncompletedIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/ServiceTodoIncompleted"), color: .white)
+        })
+    }
+    
+    public static func chatServiceMessageTodoAppendedIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatServiceMessageTodoAppendedIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/ServiceTodoAppended"), color: .white)
+        })
+    }
+    
+    public static func messageButtonsPostReject(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.messageButtonsPostReject.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/SuggestPostDecline"), color: .white)
+        })
+    }
+    
+    public static func messageButtonsPostApprove(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.messageButtonsPostApprove.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/SuggestPostApprove"), color: .white)
+        })
+    }
+    
+    public static func messageButtonsPostEdit(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.messageButtonsPostEdit.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/SuggestPostChange"), color: .white)
         })
     }
 }

@@ -278,16 +278,12 @@ final class StarsTransactionItemNode: ListViewItemNode, ItemListItemNode {
                     }
                     
                     let itemLabel: NSAttributedString
-                    let labelString: String
+                    let formattedLabel = formatCurrencyAmountText(item.transaction.count, dateTimeFormat: item.presentationData.dateTimeFormat, showPlus: true)
                     
-                    let absCount = StarsAmount(value: abs(item.transaction.count.value), nanos: abs(item.transaction.count.nanos))
-                    let formattedLabel = presentationStringsFormattedNumber(absCount, item.presentationData.dateTimeFormat.groupingSeparator)
-                    if item.transaction.count < StarsAmount.zero {
-                        labelString = "- \(formattedLabel)"
-                    } else {
-                        labelString = "+ \(formattedLabel)"
-                    }
-                    itemLabel = NSAttributedString(string: labelString, font: Font.medium(fontBaseDisplaySize), textColor: labelString.hasPrefix("-") ? item.presentationData.theme.list.itemDestructiveColor : item.presentationData.theme.list.itemDisclosureActions.constructive.fillColor)
+                    let smallLabelFont = Font.with(size: floor(fontBaseDisplaySize / 17.0 * 13.0))
+                    let labelFont = Font.medium(fontBaseDisplaySize)
+                    let labelColor = formattedLabel.hasPrefix("-") ? item.presentationData.theme.list.itemDestructiveColor : item.presentationData.theme.list.itemDisclosureActions.constructive.fillColor
+                    itemLabel = tonAmountAttributedString(formattedLabel, integralFont: labelFont, fractionalFont: smallLabelFont, color: labelColor, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator)
                     
                     var itemDateColor = item.presentationData.theme.list.itemSecondaryTextColor
                     itemDate = stringForMediumCompactDate(timestamp: item.transaction.date, strings: item.presentationData.strings, dateTimeFormat: item.presentationData.dateTimeFormat)
@@ -333,6 +329,18 @@ final class StarsTransactionItemNode: ListViewItemNode, ItemListItemNode {
                             maximumNumberOfLines: 1
                         )))
                     )
+                    
+                    let itemIconName: String
+                    let itemIconColor: UIColor?
+                    switch item.transaction.count.currency {
+                    case .stars:
+                        itemIconName = "Premium/Stars/StarMedium"
+                        itemIconColor = nil
+                    case .ton:
+                        itemIconName = "Ads/TonAbout"
+                        itemIconColor = labelColor
+                    }
+                    
                     let itemSize = strongSelf.componentView.update(
                         transition: .immediate,
                         component: AnyComponent(ListActionItemComponent(
@@ -341,7 +349,7 @@ final class StarsTransactionItemNode: ListViewItemNode, ItemListItemNode {
                             contentInsets: UIEdgeInsets(top: 9.0, left: 0.0, bottom: 8.0, right: 0.0),
                             leftIcon: .custom(AnyComponentWithIdentity(id: "avatar", component: AnyComponent(StarsAvatarComponent(context: item.context, theme: item.presentationData.theme, peer: item.transaction.peer, photo: nil, media: [], uniqueGift: nil, backgroundColor: item.presentationData.theme.list.itemBlocksBackgroundColor))), false),
                             icon: nil,
-                            accessory: .custom(ListActionItemComponent.CustomAccessory(component: AnyComponentWithIdentity(id: "label", component: AnyComponent(StarsLabelComponent(text: itemLabel))), insets: UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 16.0))),
+                            accessory: .custom(ListActionItemComponent.CustomAccessory(component: AnyComponentWithIdentity(id: "label", component: AnyComponent(StarsLabelComponent(text: itemLabel, iconName: itemIconName, iconColor: itemIconColor))), insets: UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 16.0))),
                             action: { [weak self] _ in
                                 guard let self, let item = self.item else {
                                     return

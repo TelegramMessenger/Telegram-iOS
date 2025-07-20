@@ -1,9 +1,9 @@
-#import "TGReplyMessageMediaAttachment.h"
+#import <LegacyComponents/TGReplyMessageMediaAttachment.h>
 
-#import "TGMessage.h"
+#import <LegacyComponents/TGMessage.h>
 
-#import "PSKeyValueDecoder.h"
-#import "PSKeyValueEncoder.h"
+#import <LegacyComponents/PSKeyValueDecoder.h>
+#import <LegacyComponents/PSKeyValueEncoder.h>
 
 @implementation TGReplyMessageMediaAttachment
 

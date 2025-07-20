@@ -28,14 +28,14 @@ public final class ChatMessageGameBubbleContentNode: ChatMessageBubbleContentNod
         self.addSubnode(self.contentNode)
         self.contentNode.openMedia = { [weak self] _ in
             if let strongSelf = self, let item = strongSelf.item {
-                item.controllerInteraction.requestMessageActionCallback(item.message.id, nil, true, false)
+                item.controllerInteraction.requestMessageActionCallback(item.message, nil, true, false, nil)
             }
         }
     }
     
     override public func accessibilityActivate() -> Bool {
         if let item = self.item {
-            item.controllerInteraction.requestMessageActionCallback(item.message.id, nil, true, false)
+            item.controllerInteraction.requestMessageActionCallback(item.message, nil, true, false, nil)
         }
         return true
     }

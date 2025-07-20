@@ -3,7 +3,7 @@ import Postbox
 import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
-
+import EncryptionProvider
 
 struct SecretChatRequestData {
     let g: Int32

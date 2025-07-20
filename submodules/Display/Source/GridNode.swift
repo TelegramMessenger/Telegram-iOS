@@ -906,9 +906,9 @@ open class GridNode: GridNodeScroller, ASScrollViewDelegate {
         let layoutInsets = presentationLayoutTransition.layout.layout.insets
         self.scrollView.contentInset = UIEdgeInsets(top: layoutInsets.top, left: 0.0, bottom: layoutInsets.bottom, right: 0.0)
         if let scrollIndicatorInsets = presentationLayoutTransition.layout.layout.scrollIndicatorInsets {
-            self.scrollView.scrollIndicatorInsets = scrollIndicatorInsets
+            self.scrollView.verticalScrollIndicatorInsets = scrollIndicatorInsets
         } else {
-            self.scrollView.scrollIndicatorInsets = presentationLayoutTransition.layout.layout.insets
+            self.scrollView.verticalScrollIndicatorInsets = presentationLayoutTransition.layout.layout.insets
         }
         var boundsOffset: CGFloat = 0.0
         var shouldAnimateBounds = false

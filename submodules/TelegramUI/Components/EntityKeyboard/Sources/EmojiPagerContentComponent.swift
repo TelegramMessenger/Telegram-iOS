@@ -177,27 +177,6 @@ public protocol EmojiCustomContentView: UIView {
 }
 
 public final class EmojiPagerContentComponent: Component {
-    public static let staticEmojiMapping: [(EmojiPagerContentComponent.StaticEmojiSegment, [String])] = {
-        guard let path = getAppBundle().path(forResource: "emoji1016", ofType: "txt") else {
-            return []
-        }
-        guard let string = try? String(contentsOf: URL(fileURLWithPath: path)) else {
-            return []
-        }
-        
-        var result: [(EmojiPagerContentComponent.StaticEmojiSegment, [String])] = []
-        
-        let orderedSegments = EmojiPagerContentComponent.StaticEmojiSegment.allCases
-        
-        let segments = string.components(separatedBy: "\n\n")
-        for i in 0 ..< min(segments.count, orderedSegments.count) {
-            let list = segments[i].components(separatedBy: " ")
-            result.append((orderedSegments[i], list))
-        }
-        
-        return result
-    }()
-    
     public typealias EnvironmentType = (EntityKeyboardChildEnvironment, PagerComponentChildEnvironment)
     
     public final class ContentAnimation {
@@ -4492,8 +4471,8 @@ public final class EmojiPagerContentComponent: Component {
             if self.warpView != nil {
                 scrollIndicatorInsets.bottom += 20.0
             }
-            if self.scrollView.scrollIndicatorInsets != scrollIndicatorInsets {
-                self.scrollView.scrollIndicatorInsets = scrollIndicatorInsets
+            if self.scrollView.verticalScrollIndicatorInsets != scrollIndicatorInsets {
+                self.scrollView.verticalScrollIndicatorInsets = scrollIndicatorInsets
             }
             self.previousScrollingOffset = ScrollingOffsetState(value: scrollView.contentOffset.y, isDraggingOrDecelerating: scrollView.isDragging || scrollView.isDecelerating)
             

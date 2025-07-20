@@ -1,6 +1,6 @@
-#import "TGPhoneUtils.h"
+#import <LegacyComponents/TGPhoneUtils.h>
 
-#import "RMPhoneFormat.h"
+#import <LegacyComponents/RMPhoneFormat.h>
 
 @implementation TGPhoneUtils
 

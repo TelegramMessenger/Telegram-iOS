@@ -5,7 +5,7 @@
 //  Created by Mike Renoir on 26.10.2023.
 //
 
-#import "Syntaxer.h"
+#import <libprisma/Syntaxer.h>
 #import "SyntaxHighlighter.h"
 #import "TokenList.h"
 

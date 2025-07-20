@@ -909,6 +909,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                     (.canInviteUsers, self.presentationData.strings.Channel_AdminLog_CanInviteUsersViaLink),
                                     (.canPinMessages, self.presentationData.strings.Channel_AdminLog_CanPinMessages),
                                     (.canAddAdmins, self.presentationData.strings.Channel_AdminLog_CanAddAdmins),
+                                    (.canManageDirect, self.presentationData.strings.Channel_AdminLog_CanManageDirect),
                                     (.canManageCalls, self.presentationData.strings.Channel_AdminLog_CanManageLiveStreams)
                                 ]
                                 prevFlags = prevFlags.intersection(TelegramChatAdminRightsFlags.peerSpecific(peer: EnginePeer(peer)))

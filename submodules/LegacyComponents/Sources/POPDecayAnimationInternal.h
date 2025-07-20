@@ -7,7 +7,7 @@
  of patent rights can be found in the PATENTS file in the same directory.
  */
 
-#import "POPDecayAnimation.h"
+#import <LegacyComponents/POPDecayAnimation.h>
 #import "POPPropertyAnimationInternal.h"
 
 // minimal velocity factor before decay animation is considered complete, in units / s

@@ -172,7 +172,10 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
 
 	_audioConnection = [_audioOutput connectionWithMediaType:AVMediaTypeAudio];
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     NSArray *devices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
+#pragma clang diagnostic pop
     AVCaptureDevice *videoDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
     for (AVCaptureDevice *device in devices)
     {
@@ -921,7 +924,10 @@ static CGFloat angleOffsetFromPortraitOrientationToOrientation(AVCaptureVideoOri
     {
         NSError *error;
         
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         NSArray *devices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
+#pragma clang diagnostic pop
         AVCaptureDevice *deviceForTargetPosition = nil;
         for (AVCaptureDevice *device in devices)
         {
@@ -1058,7 +1064,10 @@ static CGFloat angleOffsetFromPortraitOrientationToOrientation(AVCaptureVideoOri
 
 + (bool)cameraPositionChangeAvailable
 {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     return [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo].count > 1;
+#pragma clang diagnostic pop
 }
 
 + (SQueue *)cameraQueue

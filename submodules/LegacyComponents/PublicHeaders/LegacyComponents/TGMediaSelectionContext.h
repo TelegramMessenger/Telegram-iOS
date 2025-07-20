@@ -1,3 +1,4 @@
+#import <Foundation/Foundation.h>
 #import <SSignalKit/SSignalKit.h>
 
 @protocol TGMediaSelectableItem

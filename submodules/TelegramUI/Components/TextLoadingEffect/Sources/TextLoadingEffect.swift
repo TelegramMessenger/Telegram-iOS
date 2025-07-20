@@ -13,9 +13,11 @@ public final class TextLoadingEffectView: UIView {
     
     private let maskContentsView: UIView
     private let maskHighlightNode: LinkHighlightingNode
+    private var maskShapeLayer: SimpleShapeLayer?
     
     private let maskBorderContentsView: UIView
     private let maskBorderHighlightNode: LinkHighlightingNode
+    private var maskBorderShapeLayer: SimpleShapeLayer?
     
     private let backgroundView: UIImageView
     private let borderBackgroundView: UIImageView
@@ -192,6 +194,65 @@ public final class TextLoadingEffectView: UIView {
         self.maskBorderHighlightNode.updateRects(rectsSet)
         self.maskBorderHighlightNode.frame = CGRect(origin: CGPoint(x: -maskFrame.minX, y: -maskFrame.minY), size: CGSize())
         
+        if self.size != maskFrame.size {
+            self.size = maskFrame.size
+            
+            self.backgroundView.frame = CGRect(origin: CGPoint(x: -self.gradientWidth, y: 0.0), size: CGSize(width: self.gradientWidth, height: maskFrame.height))
+            self.borderBackgroundView.frame = CGRect(origin: CGPoint(x: -self.gradientWidth, y: 0.0), size: CGSize(width: self.gradientWidth, height: maskFrame.height))
+            
+            self.updateAnimations(size: maskFrame.size)
+        }
+    }
+    
+    public func update(color: UIColor, rect: CGRect, path: CGPath) {
+        let maskShapeLayer: SimpleShapeLayer
+        if let current = self.maskShapeLayer {
+            maskShapeLayer = current
+        } else {
+            maskShapeLayer = SimpleShapeLayer()
+            maskShapeLayer.fillColor = UIColor.white.cgColor
+            self.maskShapeLayer = maskShapeLayer
+        }
+        
+        let maskBorderShapeLayer: SimpleShapeLayer
+        if let current = self.maskBorderShapeLayer {
+            maskBorderShapeLayer = current
+        } else {
+            maskBorderShapeLayer = SimpleShapeLayer()
+            maskBorderShapeLayer.fillColor = nil
+            maskBorderShapeLayer.strokeColor = UIColor.white.cgColor
+            maskBorderShapeLayer.lineWidth = 4.0
+            self.maskBorderShapeLayer = maskBorderShapeLayer
+        }
+        
+        maskShapeLayer.path = path
+        maskBorderShapeLayer.path = path
+        
+        if self.maskContentsView.layer.mask !== maskShapeLayer {
+            self.maskContentsView.layer.mask = maskShapeLayer
+        }
+        if self.maskBorderContentsView.layer.mask !== maskBorderShapeLayer {
+            self.maskBorderContentsView.layer.mask = maskBorderShapeLayer
+        }
+        
+        let maskFrame = CGRect(origin: CGPoint(), size: rect.size)
+        
+        self.gradientWidth = 260.0
+        self.duration = 0.7
+        
+        self.maskContentsView.backgroundColor = .clear
+        
+        self.backgroundView.alpha = 0.25
+        self.backgroundView.tintColor = color
+        
+        self.borderBackgroundView.alpha = 0.5
+        self.borderBackgroundView.tintColor = color
+    
+        self.maskContentsView.frame = maskFrame
+        self.maskBorderContentsView.frame = maskFrame
+        
+        maskShapeLayer.frame = CGRect(origin: CGPoint(x: -maskFrame.minX, y: -maskFrame.minY), size: CGSize())
+                
         if self.size != maskFrame.size {
             self.size = maskFrame.size
             

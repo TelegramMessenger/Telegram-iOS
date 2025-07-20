@@ -1,8 +1,8 @@
-#import "TGDocumentAttributeAudio.h"
+#import <LegacyComponents/TGDocumentAttributeAudio.h>
 
 #import "LegacyComponentsInternal.h"
 
-#import "PSKeyValueCoder.h"
+#import <LegacyComponents/PSKeyValueCoder.h>
 
 @implementation TGDocumentAttributeAudio
 

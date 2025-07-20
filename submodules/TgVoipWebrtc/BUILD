@@ -13,8 +13,6 @@ optimization_flags = select({
     "//conditions:default": ["-DNDEBUG"],
 })
 
-enable_x264 = False
-
 sources = glob([
     "Sources/**/*.m",
     "Sources/**/*.mm",
@@ -127,8 +125,6 @@ sources = glob([
     "tgcalls/tgcalls/v2/SignalingConnection.cpp",
     "tgcalls/tgcalls/v2/SignalingEncryption.cpp",
     "tgcalls/tgcalls/v2/SignalingSctpConnection.cpp",
-    "tgcalls/tgcalls/v2/SignalingKcpConnection.cpp",
-    "tgcalls/tgcalls/v2/ikcp.cpp",
 ]
 
 objc_library(
@@ -143,27 +139,28 @@ objc_library(
         "-I{}/tgcalls/tgcalls".format(package_name()),
         "-Ithird-party/webrtc/webrtc",
         "-Ithird-party/webrtc/dependencies",
-        "-Ithird-party/webrtc/dependencies/third_party/abseil-cpp",
         "-Ithird-party/webrtc/webrtc/sdk/objc",
         "-Ithird-party/webrtc/webrtc/sdk/objc/base",
         "-Ithird-party/webrtc/webrtc/sdk/objc/components/renderer/metal",
         "-Ithird-party/webrtc/webrtc/sdk/objc/components/renderer/opengl",
         "-Ithird-party/webrtc/webrtc/sdk/objc/components/video_codec",
-        "-Ithird-party/libyuv/third_party/libyuv/include",
         "-Ithird-party/libyuv",
         "-Ithird-party/webrtc/webrtc/sdk/objc/api/video_codec",
+        "-Ithird-party/webrtc/absl",
         "-DWEBRTC_IOS",
         "-DWEBRTC_MAC",
         "-DWEBRTC_POSIX",
         "-DRTC_ENABLE_VP9",
         "-DTGVOIP_NAMESPACE=tgvoip_webrtc",
         "-std=c++17",
-    ] + optimization_flags + (["-DTGCALLS_ENABLE_X264"] if enable_x264 else []),
+        "-Werror",
+    ] + optimization_flags,
     includes = [
         "PublicHeaders",
     ],
     deps = [
-        "//third-party/webrtc:webrtc",
+        "//third-party/webrtc",
+        "//third-party/webrtc:webrtc_objc",
         "//submodules/MtProtoKit:MtProtoKit",
         "//third-party/boringssl:crypto",
         "//third-party/boringssl:ssl",
@@ -171,9 +168,9 @@ objc_library(
         "//third-party/opusfile:opusfile",
         "//submodules/ffmpeg:ffmpeg",
         "//third-party/rnnoise:rnnoise",
-        "//third-party/libyuv:libyuv",
+        "//third-party/libyuv",
         "//third-party/td:TdBinding",
-    ] + (["//third-party/libx264:libx264"] if enable_x264 else []),
+    ],
     sdk_frameworks = [
         "Foundation",
         "UIKit",
@@ -186,49 +183,6 @@ objc_library(
     ],
     sdk_dylibs = [
         "libz",
-    ],
-    visibility = [
-        "//visibility:public",
-    ],
-)
-
-objc_library(
-    name = "TgCallsTestsLib",
-    copts = [
-        "-I{}/tgcalls/tgcalls".format(package_name()),
-        "-Ithird-party/webrtc/webrtc",
-        "-Ithird-party/webrtc/dependencies",
-        "-Ithird-party/webrtc/dependencies/third_party/abseil-cpp",
-        "-Ithird-party/webrtc/webrtc/sdk/objc",
-        "-Ithird-party/webrtc/webrtc/sdk/objc/base",
-        "-Ithird-party/webrtc/webrtc/sdk/objc/components/renderer/metal",
-        "-Ithird-party/webrtc/webrtc/sdk/objc/components/renderer/opengl",
-        "-Ithird-party/webrtc/webrtc/sdk/objc/components/video_codec",
-        "-Ithird-party/libyuv/third_party/libyuv/include",
-        "-Ithird-party/libyuv",
-        "-Ithird-party/webrtc/webrtc/sdk/objc/api/video_codec",
-        "-DWEBRTC_IOS",
-        "-DWEBRTC_MAC",
-        "-DWEBRTC_POSIX",
-        "-DRTC_ENABLE_VP9",
-        "-DRTC_ENABLE_H265",
-        "-DTGVOIP_NAMESPACE=tgvoip_webrtc",
-        "-std=c++17",
-    ],
-    srcs = glob([
-        "tests/*.m",
-        "tests/*.mm",
-    ], allow_empty=True),
-    deps = [
-        ":TgVoipWebrtc"
-    ],
-)
-
-ios_unit_test(
-    name = "TgCallsTests",
-    minimum_os_version = "9.0",
-    deps = [
-        ":TgCallsTestsLib",
     ],
     visibility = [
         "//visibility:public",

@@ -5,7 +5,7 @@
 #import <SSignalKit/SSignalKit.h>
 
 #import <LegacyComponents/TGPhotoEditorAnimation.h>
-#import "TGPhotoEditorInterfaceAssets.h"
+#import <LegacyComponents/TGPhotoEditorInterfaceAssets.h>
 #import <LegacyComponents/UIControl+HitTestEdgeInsets.h>
 #import <LegacyComponents/TGPhotoEditorUtils.h>
 

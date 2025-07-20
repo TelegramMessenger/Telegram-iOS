@@ -1,4 +1,4 @@
-#import "TGVideoInfo.h"
+#import <LegacyComponents/TGVideoInfo.h>
 
 #include <vector>
 

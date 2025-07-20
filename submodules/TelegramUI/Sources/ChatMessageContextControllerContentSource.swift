@@ -40,6 +40,7 @@ final class ChatMessageContextExtractedContentSource: ContextExtractedContentSou
     private let engine: TelegramEngine
     private let message: Message
     private let selectAll: Bool
+    private let snapshot: Bool
     
     var shouldBeDismissed: Signal<Bool, NoError> {
         if self.message.adAttribute != nil {
@@ -60,7 +61,7 @@ final class ChatMessageContextExtractedContentSource: ContextExtractedContentSou
         |> distinctUntilChanged
     }
     
-    init(chatController: ChatControllerImpl, chatNode: ChatControllerNode, engine: TelegramEngine, message: Message, selectAll: Bool, centerVertically: Bool = false, keepDefaultContentTouches: Bool = false) {
+    init(chatController: ChatControllerImpl, chatNode: ChatControllerNode, engine: TelegramEngine, message: Message, selectAll: Bool, centerVertically: Bool = false, keepDefaultContentTouches: Bool = false, snapshot: Bool = false) {
         self.chatController = chatController
         self.chatNode = chatNode
         self.engine = engine
@@ -68,7 +69,10 @@ final class ChatMessageContextExtractedContentSource: ContextExtractedContentSou
         self.selectAll = selectAll
         self.centerVertically = centerVertically
         self.keepDefaultContentTouches = keepDefaultContentTouches
+        self.snapshot = snapshot
     }
+    
+    private var snapshotView: UIView?
     
     func takeView() -> ContextControllerTakeViewInfo? {
         guard let chatNode = self.chatNode else {
@@ -85,6 +89,13 @@ final class ChatMessageContextExtractedContentSource: ContextExtractedContentSou
             }
             if item.content.contains(where: { $0.0.stableId == self.message.stableId }), let contentNode = itemNode.getMessageContextSourceNode(stableId: self.selectAll ? nil : self.message.stableId) {
                 result = ContextControllerTakeViewInfo(containingItem: .node(contentNode), contentAreaInScreenSpace: chatNode.convert(chatNode.frameForVisibleArea(), to: nil))
+                
+                Queue.mainQueue().justDispatch {
+                    if self.snapshot, let snapshotView = contentNode.contentNode.view.snapshotContentTree(unhide: false, keepPortals: true, keepTransform: true) {
+                        contentNode.view.superview?.addSubview(snapshotView)
+                        self.snapshotView = snapshotView
+                    }
+                }
             }
         }
         return result
@@ -107,6 +118,13 @@ final class ChatMessageContextExtractedContentSource: ContextExtractedContentSou
                 result = ContextControllerPutBackViewInfo(contentAreaInScreenSpace: chatNode.convert(chatNode.frameForVisibleArea(), to: nil))
             }
         }
+        
+        if let snapshotView = self.snapshotView {
+            Queue.mainQueue().after(0.4) {
+                snapshotView.removeFromSuperview()
+            }
+        }
+        
         return result
     }
 }

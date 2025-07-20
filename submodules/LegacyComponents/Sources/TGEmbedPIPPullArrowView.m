@@ -1,4 +1,4 @@
-#import "TGEmbedPIPPullArrowView.h"
+#import <LegacyComponents/TGEmbedPIPPullArrowView.h>
 
 #import <LegacyComponents/LegacyComponents.h>
 

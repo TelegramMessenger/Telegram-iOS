@@ -1,7 +1,7 @@
 #import "TGOverlayFormsheetWindow.h"
 
 #import "LegacyComponentsInternal.h"
-#import "TGViewController.h"
+#import <LegacyComponents/TGViewController.h>
 
 #import "TGOverlayFormsheetController.h"
 

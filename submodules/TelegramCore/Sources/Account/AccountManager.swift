@@ -233,6 +233,11 @@ private var declaredEncodables: Void = {
     declareEncodable(TelegramMediaPaidContent.self, f: { TelegramMediaPaidContent(decoder: $0) })
     declareEncodable(ReportDeliveryMessageAttribute.self, f: { ReportDeliveryMessageAttribute(decoder: $0) })
     declareEncodable(PaidStarsMessageAttribute.self, f: { PaidStarsMessageAttribute(decoder: $0) })
+    declareEncodable(TelegramMediaTodo.self, f: { TelegramMediaTodo(decoder: $0) })
+    declareEncodable(TelegramMediaTodo.Item.self, f: { TelegramMediaTodo.Item(decoder: $0) })
+    declareEncodable(TelegramMediaTodo.Completion.self, f: { TelegramMediaTodo.Completion(decoder: $0) })
+    declareEncodable(SuggestedPostMessageAttribute.self, f: { SuggestedPostMessageAttribute(decoder: $0) })
+    declareEncodable(PublishedSuggestedPostMessageAttribute.self, f: { PublishedSuggestedPostMessageAttribute(decoder: $0) })
     return
 }()
 

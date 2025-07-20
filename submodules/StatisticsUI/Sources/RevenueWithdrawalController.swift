@@ -46,7 +46,7 @@ func confirmRevenueWithdrawalController(context: AccountContext, updatedPresenta
         }
         contentNode.updateIsChecking(true)
         
-        let signal = context.engine.peers.requestChannelRevenueWithdrawalUrl(peerId: peerId, password: contentNode.password)
+        let signal = context.engine.peers.requestStarsRevenueWithdrawalUrl(peerId: peerId, ton: false, amount: nil, password: contentNode.password)
         disposable.set((signal |> deliverOnMainQueue).start(next: { url in
             dismissImpl?()
             completion(url)
@@ -73,7 +73,7 @@ func confirmRevenueWithdrawalController(context: AccountContext, updatedPresenta
 }
 
 
-func revenueWithdrawalController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id, initialError: RequestRevenueWithdrawalError, present: @escaping (ViewController, Any?) -> Void, completion: @escaping (String) -> Void) -> ViewController {
+func revenueWithdrawalController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id, initialError: RequestStarsRevenueWithdrawalError, present: @escaping (ViewController, Any?) -> Void, completion: @escaping (String) -> Void) -> ViewController {
     let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
     let theme = AlertControllerTheme(presentationData: presentationData)
     

@@ -224,7 +224,18 @@ private func synchronizeChatInputState(transaction: Transaction, postbox: Postbo
             replyTo = .inputReplyToMonoForum(monoforumPeerId: monoforumPeerId)
         }
         
-        return network.request(Api.functions.messages.saveDraft(flags: flags, replyTo: replyTo, peer: inputPeer, message: inputState?.text ?? "", entities: apiEntitiesFromMessageTextEntities(inputState?.entities ?? [], associatedPeers: SimpleDictionary()), media: nil, effect: nil))
+        let suggestedPost = inputState?.suggestedPost.flatMap { suggestedPost -> Api.SuggestedPost in
+            var flags: Int32 = 0
+            if suggestedPost.timestamp != nil {
+                flags |= 1 << 0
+            }
+            return .suggestedPost(flags: flags, price: suggestedPost.price?.apiAmount ?? .starsAmount(amount: 0, nanos: 0), scheduleDate: suggestedPost.timestamp)
+        }
+        if suggestedPost != nil {
+            flags |= 1 << 8
+        }
+        
+        return network.request(Api.functions.messages.saveDraft(flags: flags, replyTo: replyTo, peer: inputPeer, message: inputState?.text ?? "", entities: apiEntitiesFromMessageTextEntities(inputState?.entities ?? [], associatedPeers: SimpleDictionary()), media: nil, effect: nil, suggestedPost: suggestedPost))
         |> delay(2.0, queue: Queue.concurrentDefaultQueue())
         |> `catch` { _ -> Signal<Api.Bool, NoError> in
             return .single(.boolFalse)

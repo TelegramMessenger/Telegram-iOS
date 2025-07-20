@@ -230,16 +230,30 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
             }
             
             if channel.flags.contains(.isMonoforum) {
-                if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = chatPresentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething), case .peer = chatPresentationInterfaceState.chatLocation {
-                    if chatPresentationInterfaceState.interfaceState.replyMessageSubject == nil {
+                if let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = chatPresentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect), case .peer = chatPresentationInterfaceState.chatLocation {
+                    if chatPresentationInterfaceState.interfaceState.editMessage != nil || chatPresentationInterfaceState.interfaceState.postSuggestionState != nil {
+                        displayInputTextPanel = true
+                    } else if chatPresentationInterfaceState.interfaceState.replyMessageSubject == nil {
                         displayInputTextPanel = false
-                        if let currentPanel = (currentPanel as? ChatRestrictedInputPanelNode) ?? (currentSecondaryPanel as? ChatRestrictedInputPanelNode) {
-                            return (currentPanel, nil)
+                        
+                        if !isMember {
+                            if let currentPanel = (currentPanel as? ChatChannelSubscriberInputPanelNode) ?? (currentSecondaryPanel as? ChatChannelSubscriberInputPanelNode) {
+                                return (currentPanel, nil)
+                            } else {
+                                let panel = ChatChannelSubscriberInputPanelNode()
+                                panel.interfaceInteraction = interfaceInteraction
+                                panel.context = context
+                                return (panel, nil)
+                            }
                         } else {
-                            let panel = ChatRestrictedInputPanelNode()
-                            panel.context = context
-                            panel.interfaceInteraction = interfaceInteraction
-                            return (panel, nil)
+                            if let currentPanel = (currentPanel as? ChatRestrictedInputPanelNode) ?? (currentSecondaryPanel as? ChatRestrictedInputPanelNode) {
+                                return (currentPanel, nil)
+                            } else {
+                                let panel = ChatRestrictedInputPanelNode()
+                                panel.context = context
+                                panel.interfaceInteraction = interfaceInteraction
+                                return (panel, nil)
+                            }
                         }
                     }
                 } else {

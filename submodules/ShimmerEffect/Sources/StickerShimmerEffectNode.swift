@@ -1,5 +1,6 @@
 import Foundation
 import AsyncDisplayKit
+import UIKit
 import Display
 import GenerateStickerPlaceholderImage
 

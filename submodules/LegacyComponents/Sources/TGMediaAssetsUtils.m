@@ -1,8 +1,8 @@
 #import <LegacyComponents/TGMediaAssetsUtils.h>
 
 #import "LegacyComponentsInternal.h"
-#import "TGStringUtils.h"
-#import "TGDateUtils.h"
+#import <LegacyComponents/TGStringUtils.h>
+#import <LegacyComponents/TGDateUtils.h>
 
 #import <LegacyComponents/UICollectionView+Utils.h>
 

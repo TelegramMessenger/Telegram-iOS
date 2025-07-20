@@ -51,6 +51,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatMessageFileBubbleContentNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageWebpageBubbleContentNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessagePollBubbleContentNode",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageTodoBubbleContentNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageItem",
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemView",
         "//submodules/TelegramUI/Components/Chat/ChatMessageSwipeToReplyNode",
@@ -90,6 +91,7 @@ swift_library(
         "//submodules/TelegramUI/Components/LottieMetal",
         "//submodules/TelegramStringFormatting",
         "//submodules/AvatarNode",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageSuggestedPostInfoNode",
     ],
     visibility = [
         "//visibility:public",

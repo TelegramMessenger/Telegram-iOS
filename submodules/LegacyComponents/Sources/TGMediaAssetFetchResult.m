@@ -1,8 +1,8 @@
-#import "TGMediaAssetFetchResult.h"
+#import <LegacyComponents/TGMediaAssetFetchResult.h>
 
 #import <Photos/Photos.h>
 
-#import "TGMediaAsset.h"
+#import <LegacyComponents/TGMediaAsset.h>
 
 @interface TGMediaAssetFetchResult ()
 {

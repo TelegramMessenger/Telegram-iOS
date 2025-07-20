@@ -230,14 +230,14 @@ public extension Api {
 }
 public extension Api {
     indirect enum DraftMessage: TypeConstructorDescription {
-        case draftMessage(flags: Int32, replyTo: Api.InputReplyTo?, message: String, entities: [Api.MessageEntity]?, media: Api.InputMedia?, date: Int32, effect: Int64?)
+        case draftMessage(flags: Int32, replyTo: Api.InputReplyTo?, message: String, entities: [Api.MessageEntity]?, media: Api.InputMedia?, date: Int32, effect: Int64?, suggestedPost: Api.SuggestedPost?)
         case draftMessageEmpty(flags: Int32, date: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .draftMessage(let flags, let replyTo, let message, let entities, let media, let date, let effect):
+                case .draftMessage(let flags, let replyTo, let message, let entities, let media, let date, let effect, let suggestedPost):
                     if boxed {
-                        buffer.appendInt32(761606687)
+                        buffer.appendInt32(-1763006997)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 4) != 0 {replyTo!.serialize(buffer, true)}
@@ -250,6 +250,7 @@ public extension Api {
                     if Int(flags) & Int(1 << 5) != 0 {media!.serialize(buffer, true)}
                     serializeInt32(date, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 7) != 0 {serializeInt64(effect!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 8) != 0 {suggestedPost!.serialize(buffer, true)}
                     break
                 case .draftMessageEmpty(let flags, let date):
                     if boxed {
@@ -263,8 +264,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .draftMessage(let flags, let replyTo, let message, let entities, let media, let date, let effect):
-                return ("draftMessage", [("flags", flags as Any), ("replyTo", replyTo as Any), ("message", message as Any), ("entities", entities as Any), ("media", media as Any), ("date", date as Any), ("effect", effect as Any)])
+                case .draftMessage(let flags, let replyTo, let message, let entities, let media, let date, let effect, let suggestedPost):
+                return ("draftMessage", [("flags", flags as Any), ("replyTo", replyTo as Any), ("message", message as Any), ("entities", entities as Any), ("media", media as Any), ("date", date as Any), ("effect", effect as Any), ("suggestedPost", suggestedPost as Any)])
                 case .draftMessageEmpty(let flags, let date):
                 return ("draftMessageEmpty", [("flags", flags as Any), ("date", date as Any)])
     }
@@ -291,6 +292,10 @@ public extension Api {
             _6 = reader.readInt32()
             var _7: Int64?
             if Int(_1!) & Int(1 << 7) != 0 {_7 = reader.readInt64() }
+            var _8: Api.SuggestedPost?
+            if Int(_1!) & Int(1 << 8) != 0 {if let signature = reader.readInt32() {
+                _8 = Api.parse(reader, signature: signature) as? Api.SuggestedPost
+            } }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 4) == 0) || _2 != nil
             let _c3 = _3 != nil
@@ -298,8 +303,9 @@ public extension Api {
             let _c5 = (Int(_1!) & Int(1 << 5) == 0) || _5 != nil
             let _c6 = _6 != nil
             let _c7 = (Int(_1!) & Int(1 << 7) == 0) || _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.DraftMessage.draftMessage(flags: _1!, replyTo: _2, message: _3!, entities: _4, media: _5, date: _6!, effect: _7)
+            let _c8 = (Int(_1!) & Int(1 << 8) == 0) || _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.DraftMessage.draftMessage(flags: _1!, replyTo: _2, message: _3!, entities: _4, media: _5, date: _6!, effect: _7, suggestedPost: _8)
             }
             else {
                 return nil

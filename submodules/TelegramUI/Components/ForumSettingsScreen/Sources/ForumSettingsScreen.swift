@@ -72,6 +72,7 @@ final class ForumSettingsScreenComponent: Component {
         
         private var isOn = false
         private var mode: ForumModeComponent.Mode = .tabs
+        private var initialOnMode: ForumModeComponent.Mode?
                 
         override init(frame: CGRect) {
             self.scrollView = ScrollView()
@@ -143,64 +144,145 @@ final class ForumSettingsScreenComponent: Component {
         }
         
         func toggleTopicsEnabled(_ enabled: Bool) {
-            guard let component = self.component, let peer = self.peer else {
-                return
-            }
             self.isOn = enabled
-            let displayForumAsTabs = self.mode == .tabs
-            
-            if self.isOn {
-                if case .legacyGroup = peer {
-                    let context = component.context
-                    let signal: Signal<EnginePeer.Id?, NoError> = context.engine.peers.convertGroupToSupergroup(peerId: peer.id, additionalProcessing: { upgradedPeerId -> Signal<Never, NoError> in
-                        return context.engine.peers.setChannelForumMode(id: upgradedPeerId, isForum: true, displayForumAsTabs: displayForumAsTabs)
-                    })
-                    |> map(Optional.init)
-                    |> `catch` { [weak self] error -> Signal<PeerId?, NoError> in
-                        guard let self, let controller = self.environment?.controller() else {
-                            return .single(nil)
-                        }
-                        switch error {
-                        case .tooManyChannels:
-                            Queue.mainQueue().async {
-                                let oldChannelsController = context.sharedContext.makeOldChannelsController(context: context, updatedPresentationData: nil, intent: .upgrade, completed: { result in
-                                    
-                                })
-                                controller.push(oldChannelsController)
-                            }
-                        default:
-                            break
-                        }
-                        return .single(nil)
-                    }
-                    |> mapToSignal { upgradedPeerId -> Signal<PeerId?, NoError> in
-                        guard let upgradedPeerId = upgradedPeerId else {
-                            return .single(nil)
-                        }
-                        return .single(upgradedPeerId)
-                    }
-                    |> deliverOnMainQueue
-                    
-                    let _ = signal.startStandalone(next: { [weak self] resultPeerId in
-                        guard let self else {
-                            return
-                        }
-                        if let resultPeerId {
-                            self.peerIdPromise.set(resultPeerId)
-                        } else {
-                            self.isOn = false
-                            self.state?.updated(transition: .easeInOut(duration: 0.2))
-                        }
-                    })
-                } else {
-                    let _ = component.context.engine.peers.setChannelForumMode(id: peer.id, isForum: true, displayForumAsTabs: displayForumAsTabs).startStandalone()
-                }
-            } else {
-                let _ = component.context.engine.peers.setChannelForumMode(id: peer.id, isForum: false, displayForumAsTabs: displayForumAsTabs).startStandalone()
-            }
             self.state?.updated(transition: .spring(duration: 0.4))
         }
+        
+        func attemptNavigation(complete: @escaping () -> Void) -> Bool {
+            guard let component = self.component, let peer = self.peer else {
+                return true
+            }
+            
+            var isUpdated = false
+            if self.isOn {
+                if let initialOnMode = self.initialOnMode {
+                    if initialOnMode != self.mode {
+                        isUpdated = true
+                    }
+                } else {
+                    isUpdated = true
+                }
+            } else {
+                if self.initialOnMode != nil {
+                    isUpdated = true
+                }
+            }
+            
+            if isUpdated {
+                if let controller = self.environment?.controller(), let navigationController = controller.navigationController as? NavigationController {
+                    var viewControllers = navigationController.viewControllers
+                    
+                    if case .legacyGroup = peer {
+                    } else {
+                        if self.isOn && self.mode == .list {
+                            for i in 0 ..< viewControllers.count {
+                                if let chatController = viewControllers[i] as? ChatController, chatController.chatLocation.peerId == component.peerId {
+                                    let chatListController = component.context.sharedContext.makeChatListController(context: component.context, location: .forum(peerId: component.peerId), controlsHistoryPreload: false, hideNetworkActivityStatus: false, previewing: false, enableDebugActions: false)
+                                    viewControllers[i] = chatListController
+                                }
+                            }
+                            navigationController.setViewControllers(viewControllers, animated: false)
+                        } else {
+                            for i in (0 ..< viewControllers.count).reversed() {
+                                if let chatListController = viewControllers[i] as? ChatListController, chatListController.location == .forum(peerId: component.peerId) {
+                                    viewControllers.remove(at: i)
+                                }
+                            }
+                            navigationController.setViewControllers(viewControllers, animated: false)
+                            
+                            if let baseController = navigationController as? TelegramRootControllerInterface, let chatListController = baseController.getChatsController() as? ChatListController {
+                                chatListController.resetForumStackIfOpen()
+                            }
+                        }
+                    }
+                }
                 
+                if self.isOn {
+                    if case .legacyGroup = peer {
+                        let context = component.context
+                        let mode = self.mode
+                        let signal: Signal<EnginePeer.Id?, NoError> = context.engine.peers.convertGroupToSupergroup(peerId: peer.id, additionalProcessing: { upgradedPeerId -> Signal<Never, NoError> in
+                            return context.engine.peers.setChannelForumMode(id: upgradedPeerId, isForum: true, displayForumAsTabs: mode == .tabs)
+                        })
+                        |> map(Optional.init)
+                        |> `catch` { [weak self] error -> Signal<PeerId?, NoError> in
+                            guard let self, let controller = self.environment?.controller() else {
+                                return .single(nil)
+                            }
+                            switch error {
+                            case .tooManyChannels:
+                                Queue.mainQueue().async {
+                                    let oldChannelsController = context.sharedContext.makeOldChannelsController(context: context, updatedPresentationData: nil, intent: .upgrade, completed: { result in
+                                    })
+                                    controller.push(oldChannelsController)
+                                }
+                            default:
+                                break
+                            }
+                            return .single(nil)
+                        }
+                        |> mapToSignal { upgradedPeerId -> Signal<PeerId?, NoError> in
+                            guard let upgradedPeerId = upgradedPeerId else {
+                                return .single(nil)
+                            }
+                            return .single(upgradedPeerId)
+                        }
+                        |> deliverOnMainQueue
+                        
+                        let _ = signal.startStandalone(next: { [weak self] resultPeerId in
+                            guard let self else {
+                                return
+                            }
+                            if let resultPeerId {
+                                self.peerIdPromise.set(resultPeerId)
+                                
+                                let _ = component.context.engine.peers.setChannelForumMode(id: resultPeerId, isForum: true, displayForumAsTabs: self.mode == .tabs).startStandalone()
+                             
+                                if let controller = self.environment?.controller(), let navigationController = controller.navigationController as? NavigationController {
+                                    var viewControllers = navigationController.viewControllers
+                                    if self.mode == .list {
+                                        for i in 0 ..< viewControllers.count {
+                                            if let chatController = viewControllers[i] as? ChatController, chatController.chatLocation.peerId == component.peerId {
+                                                let chatListController = component.context.sharedContext.makeChatListController(context: component.context, location: .forum(peerId: resultPeerId), controlsHistoryPreload: false, hideNetworkActivityStatus: false, previewing: false, enableDebugActions: false)
+                                                viewControllers[i] = chatListController
+                                            }
+                                        }
+                                        navigationController.setViewControllers(viewControllers, animated: false)
+                                    } else {
+                                        for i in (0 ..< viewControllers.count).reversed() {
+                                            if let chatListController = viewControllers[i] as? ChatListController, chatListController.location == .forum(peerId: component.peerId) {
+                                                viewControllers.remove(at: i)
+                                            } else if let peerInfoScreen = viewControllers[i] as? PeerInfoScreen, peerInfoScreen.peerId == component.peerId {
+                                                viewControllers.remove(at: i)
+                                            }
+                                        }
+                                        navigationController.setViewControllers(viewControllers, animated: false)
+                                        
+                                        if let baseController = navigationController as? TelegramRootControllerInterface, let chatListController = baseController.getChatsController() as? ChatListController {
+                                            chatListController.resetForumStackIfOpen()
+                                        }
+                                    }
+                                }
+                            } else {
+                                self.isOn = false
+                                self.state?.updated(transition: .easeInOut(duration: 0.2))
+                            }
+                            
+                            self.environment?.controller()?.dismiss()
+                        })
+                        
+                        return false
+                    } else {
+                        let _ = component.context.engine.peers.setChannelForumMode(id: component.peerId, isForum: true, displayForumAsTabs: self.mode == .tabs).startStandalone()
+                    }
+                } else {
+                    let _ = component.context.engine.peers.setChannelForumMode(id: component.peerId, isForum: false, displayForumAsTabs: false).startStandalone()
+                }
+            }
+            
+            return true
+        }
+        
         func update(component: ForumSettingsScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
@@ -212,7 +294,7 @@ final class ForumSettingsScreenComponent: Component {
                 
                 self.peerDisposable = (self.peerIdPromise.get()
                 |> mapToSignal { peerId in
-                    component.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                    component.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
                 }
                 |> deliverOnMainQueue).start(next: { [weak self] peer in
                     guard let self else {
@@ -223,6 +305,9 @@ final class ForumSettingsScreenComponent: Component {
                         self.isOn = channel.flags.contains(.isForum)
                         if self.isOn {
                             self.mode = channel.flags.contains(.displayForumAsTabs) ? .tabs : .list
+                            self.initialOnMode = self.mode
+                        } else {
+                            self.initialOnMode = nil
                         }
                     }
                     self.state?.updated()
@@ -421,8 +506,6 @@ final class ForumSettingsScreenComponent: Component {
                                             return
                                         }
                                         self.mode = mode
-                                        let displayForumAsTabs = self.mode == .tabs
-                                        let _ = component.context.engine.peers.setChannelForumMode(id: component.peerId, isForum: true, displayForumAsTabs: displayForumAsTabs).startStandalone()
                                         self.state?.updated(transition: .spring(duration: 0.4))
                                     }
                                 )
@@ -463,8 +546,8 @@ final class ForumSettingsScreenComponent: Component {
                 self.scrollView.contentSize = contentSize
             }
             let scrollInsets = UIEdgeInsets(top: environment.navigationHeight, left: 0.0, bottom: 0.0, right: 0.0)
-            if self.scrollView.scrollIndicatorInsets != scrollInsets {
-                self.scrollView.scrollIndicatorInsets = scrollInsets
+            if self.scrollView.verticalScrollIndicatorInsets != scrollInsets {
+                self.scrollView.verticalScrollIndicatorInsets = scrollInsets
             }
             self.ignoreScrolling = false
                         
@@ -513,6 +596,14 @@ public final class ForumSettingsScreen: ViewControllerComponentContainer {
                 return
             }
             componentView.scrollToTop()
+        }
+        
+        self.attemptNavigation = { [weak self] complete in
+            guard let self, let componentView = self.node.hostView.componentView as? ForumSettingsScreenComponent.View else {
+                return true
+            }
+            
+            return componentView.attemptNavigation(complete: complete)
         }
     }
     

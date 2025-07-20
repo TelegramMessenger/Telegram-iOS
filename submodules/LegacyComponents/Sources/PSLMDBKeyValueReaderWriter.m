@@ -1,9 +1,9 @@
-#import "PSLMDBKeyValueReaderWriter.h"
+#import <LegacyComponents/PSLMDBKeyValueReaderWriter.h>
 
 #import "LegacyComponentsInternal.h"
 
-#import "PSLMDBTable.h"
-#import "PSLMDBKeyValueCursor.h"
+#import <LegacyComponents/PSLMDBTable.h>
+#import <LegacyComponents/PSLMDBKeyValueCursor.h>
 
 @interface PSLMDBKeyValueReaderWriter ()
 {

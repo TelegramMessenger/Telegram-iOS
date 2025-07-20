@@ -14,6 +14,7 @@ swift_library(
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/Postbox:Postbox",
         "//submodules/Display:Display",
+        "//submodules/SSignalKit/SSignalKit",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/TextFormat:TextFormat",
         "//submodules/Markdown:Markdown",

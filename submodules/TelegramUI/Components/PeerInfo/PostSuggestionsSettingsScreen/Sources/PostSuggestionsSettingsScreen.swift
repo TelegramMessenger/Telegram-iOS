@@ -29,6 +29,7 @@ final class PostSuggestionsSettingsScreenComponent: Component {
     
     let context: AccountContext
     let usdWithdrawRate: Int64
+    let channelMessageSuggestionCommissionPermille: Int
     let peer: EnginePeer?
     let initialPrice: StarsAmount?
     let completion: () -> Void
@@ -36,12 +37,14 @@ final class PostSuggestionsSettingsScreenComponent: Component {
     init(
         context: AccountContext,
         usdWithdrawRate: Int64,
+        channelMessageSuggestionCommissionPermille: Int,
         peer: EnginePeer?,
         initialPrice: StarsAmount?,
         completion: @escaping () -> Void
     ) {
         self.context = context
         self.usdWithdrawRate = usdWithdrawRate
+        self.channelMessageSuggestionCommissionPermille = channelMessageSuggestionCommissionPermille
         self.peer = peer
         self.initialPrice = initialPrice
         self.completion = completion
@@ -176,6 +179,9 @@ final class PostSuggestionsSettingsScreenComponent: Component {
                     self.areSuggestionsEnabled = true
                 } else {
                     self.starCount = 20
+                    if let data = component.context.currentAppConfiguration.with({ $0 }).data, let value = data["stars_paid_messages_channel_amount_default"] as? Double {
+                        self.starCount = Int(value)
+                    }
                     self.areSuggestionsEnabled = false
                 }
             }
@@ -367,7 +373,7 @@ final class PostSuggestionsSettingsScreenComponent: Component {
                         }
                         
                         let currentAmount: StarsAmount = StarsAmount(value: Int64(self.starCount), nanos: 0)
-                        let starsScreen = component.context.sharedContext.makeStarsWithdrawalScreen(context: component.context, subject: .enterAmount(current: currentAmount, minValue: StarsAmount(value: 0, nanos: 0), fractionAfterCommission: 85, kind: .postSuggestion), completion: { [weak self] amount in
+                        let starsScreen = component.context.sharedContext.makeStarsWithdrawalScreen(context: component.context, subject: .enterAmount(current: currentAmount, minValue: StarsAmount(value: 0, nanos: 0), fractionAfterCommission: component.channelMessageSuggestionCommissionPermille / 10, kind: .postSuggestion, completion: { [weak self] amount in
                             guard let self else {
                                 return
                             }
@@ -376,7 +382,7 @@ final class PostSuggestionsSettingsScreenComponent: Component {
                             if !self.isUpdating {
                                 self.state?.updated(transition: .immediate)
                             }
-                        })
+                        }))
                         environment.controller()?.push(starsScreen)
                     },
                     openPremiumInfo: nil
@@ -398,9 +404,9 @@ final class PostSuggestionsSettingsScreenComponent: Component {
                     )),
                     footer: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: environment.strings.ChannelMessages_PriceSectionFooter,
+                            string: environment.strings.ChannelMessages_PriceSectionFooterValue("\(component.channelMessageSuggestionCommissionPermille / 10)").string,
                             font: Font.regular(13.0),
-                            textColor: environment.theme.list.freeTextColor
+                            textColor: self.starCount == 0 ? .clear : environment.theme.list.freeTextColor
                         )),
                         maximumNumberOfLines: 0
                     )),
@@ -436,8 +442,8 @@ final class PostSuggestionsSettingsScreenComponent: Component {
                 self.scrollView.contentSize = contentSize
             }
             let scrollInsets = UIEdgeInsets(top: environment.navigationHeight, left: 0.0, bottom: 0.0, right: 0.0)
-            if self.scrollView.scrollIndicatorInsets != scrollInsets {
-                self.scrollView.scrollIndicatorInsets = scrollInsets
+            if self.scrollView.verticalScrollIndicatorInsets != scrollInsets {
+                self.scrollView.verticalScrollIndicatorInsets = scrollInsets
             }
                         
             if !previousBounds.isEmpty, !transition.animation.isImmediate {
@@ -497,6 +503,7 @@ public final class PostSuggestionsSettingsScreen: ViewControllerComponentContain
         super.init(context: context, component: PostSuggestionsSettingsScreenComponent(
             context: context,
             usdWithdrawRate: configuration.usdWithdrawRate,
+            channelMessageSuggestionCommissionPermille: Int(configuration.paidMessageCommissionPermille),
             peer: peer,
             initialPrice: initialPrice,
             completion: completion

@@ -1,4 +1,4 @@
-#import "TGPhotoEditorTabController.h"
+#import <LegacyComponents/TGPhotoEditorTabController.h>
 
 #import <LegacyComponents/TGVideoEditAdjustments.h>
 

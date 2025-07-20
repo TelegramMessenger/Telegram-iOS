@@ -2731,6 +2731,7 @@ Unused sets are archived when you add more.";
 "Channel.AdminLog.CanEditMessages" = "Edit Messages";
 "Channel.AdminLog.CanManageCalls" = "Manage Voice Chats";
 "Channel.AdminLog.CanManageLiveStreams" = "Manage Live Streams";
+"Channel.AdminLog.CanManageDirect" = "Manage Direct Messages";
 
 "Channel.AdminLog.MessageToggleInvitesOn" = "%@ enabled group invites";
 "Channel.AdminLog.MessageToggleInvitesOff" = "%@ disabled group invites";
@@ -9896,8 +9897,6 @@ Sorry for the inconvenience.";
 "Story.ViewList.ViewerCount_any" = "%d Viewers";
 
 "AuthSessions.MessageApp" = "You allowed this bot to message you when you opened %@.";
-"Notification.BotWriteAllowedMenu" = "You allowed this bot to message you when you added it to your attachment menu.";
-"Notification.BotWriteAllowedRequest" = "You allowed this bot to message you in the app.";
 
 "Story.Privacy.PostStoryAs" = "Post Story As";
 "Story.Privacy.PostStoryAsHeader" = "POST STORY AS";
@@ -14381,7 +14380,7 @@ Sorry for the inconvenience.";
 "ChannelMessages.Info" = "Allow users to send messages to your channel, with the option to charge a fee for each message.";
 "ChannelMessages.SwitchTitle" = "Allow Channel Messages";
 "ChannelMessages.PriceSectionTitle" = "PRICE FOR EACH MESSAGE";
-"ChannelMessages.PriceSectionFooter" = "You will receive 85% of the selected fee for each incoming message.";
+"ChannelMessages.PriceSectionFooterValue" = "You will receive %1$@% of the selected fee for each incoming message.";
 
 "ChatList.MonoforumLabel" = "DIRECT";
 "ChatList.MonoforumEmptyText" = "No messages here yet...";
@@ -14408,7 +14407,263 @@ Sorry for the inconvenience.";
 "Stars.SendMessage.AdjustmentPlaceholder" = "Price for each Message";
 "Stars.SendMessage.AdjustmentSectionHeader" = "PRICE IN STARS";
 "Stars.SendMessage.AdjustmentSectionFooterValue" = "You will receive **%@ Stars**.";
-"Stars.SendMessage.AdjustmentSectionFooterEmpty" = "You will receive **80%**.";
+"Stars.SendMessage.AdjustmentSectionFooterEmptyValue" = "You will receive **%1$@%**.";
 "Stars.SendMessage.AdjustmentAction" = "OK";
 
 "Stars.SendMessage.PriceFree" = "Free";
+
+"Undo.DeletedMonoforum" = "Removed from your chat list.";
+
+"Monoforum.DeleteTopic.Title" = "Delete %@";
+"Channel.RemoveFeeAlert.Text" = "Are you sure you want to allow **%@** to message your channel for free?";
+"StarsBalance.ChannelBalance" = "Your channel balance is %@";
+
+"Chat.TitleJoinGroupCall" = "Join";
+"Invitation.JoinGroupCall.EnableMicrophone" = "Switch on the microphone";
+"Chat.PinnedGroupCallTitle" = "Pinned Group Call";
+
+"Notification.TodoTasks_1" = "%@ task";
+"Notification.TodoTasks_any" = "%@ tasks";
+
+"Notification.TodoCompleted" = "%1$@ marked \"%2$@\" as done.";
+"Notification.TodoIncompleted" = "%1$@ marked \"%2$@\" as undone.";
+"Notification.TodoMultipleCompleted" = "%1$@ marked %2$@ as done.";
+"Notification.TodoMultipleIncompleted" = "%1$@ marked %2$@ as undone.";
+"Notification.TodoCompletedYou" = "You marked \"%1$@\" as done.";
+"Notification.TodoIncompletedYou" = "You marked \"%1$@\" as not done.";
+"Notification.TodoMultipleCompletedYou" = "You marked %1$@ as done.";
+"Notification.TodoMultipleIncompletedYou" = "You marked %1$@ as not done.";
+
+"Notification.TodoAddedTasks_1" = "%@ task";
+"Notification.TodoAddedTasks_any" = "%@ tasks";
+
+"Notification.TodoAddedTask" = "%1$@ added a new task \"%2$@\" to \"%3$@\".";
+"Notification.TodoAddedMultipleTasks" = "%1$@ added %2$@ to \"%3$@\".";
+"Notification.TodoAddedTaskYou" = "You added a new task \"%1$@\" to \"%2$@\".";
+"Notification.TodoAddedMultipleTasksYou" = "You added %1$@ to \"%2$@\".";
+
+"Stars.Transaction.GiftTransfer" = "Gift Transfer";
+"Stars.Intro.Transaction.GiftTransfer" = "Gift Transfer";
+
+"SuggestPost.SetTimeFormat.Date" = "%@";
+"SuggestPost.SetTimeFormat.TodayAt" = "Today at %@";
+"SuggestPost.SetTimeFormat.TomorrowAt" = "Tomorrow at %@";
+
+"Chat.TodoItemCompletionTimestamp.Date" = "completed %@";
+"Chat.TodoItemCompletionTimestamp.TodayAt" = "completed today at %@";
+"Chat.TodoItemCompletionTimestamp.YesterdayAt" = "completed yesterday at %@";
+
+"SuggestPost.Time.ProposeToday" = "Post today at %@";
+"SuggestPost.Time.ProposeTomorrow" = "Post tomorrow at %@";
+"SuggestPost.Time.ProposeOn" = "Post on %@ at %@";
+
+"SuggestPost.Time.SendToday" = "Post today at %@";
+"SuggestPost.Time.SendTomorrow" = "Post tomorrow at %@";
+"SuggestPost.Time.SendOn" = "Post on %@ at %@";
+
+"Attachment.Todo" = "Checklist";
+
+"Premium.Todo" = "Checklists";
+"Premium.TodoInfo" = "Plan, assign and complete tasks – seamlessly and efficiently.";
+
+"CreateTodo.Title" = "New Checklist";
+"CreateTodo.AddTitle" = "Add a Task";
+"CreateTodo.EditTitle" = "Edit Checklist";
+"CreateTodo.TodoTitle" = "CHECKLIST";
+"CreateTodo.TitlePlaceholder" = "Title";
+"CreateTodo.TaskPlaceholder" = "Task";
+"CreateTodo.AddTaskPlaceholder" = "Add a Task";
+"CreateTodo.TaskCountFooterFormat_1" = "You can add {count} more task.";
+"CreateTodo.TaskCountFooterFormat_any" = "You can add {count} more tasks.";
+"CreateTodo.TaskCountLimitReached" = "Maximum number of tasks reached.";
+"CreateTodo.Save" = "Save";
+"CreateTodo.Send" = "Send";
+
+"CreateTodo.AllowOthersToComplete" = "Allow Others to Mark as Done";
+"CreateTodo.AllowOthersToAppend" = "Allow Others to Add Tasks";
+
+"Chat.Todo.Message.Title" = "Checklist";
+"Chat.Todo.Message.TitleGroup" = "Group Checklist";
+"Chat.Todo.Message.TitlePersonal" = "%@'s Checklist";
+
+"Chat.Todo.ContextMenu.AddTask" = "Add a Task";
+"Chat.Todo.ContextMenu.EditTask" = "Edit Item";
+"Chat.Todo.ContextMenu.DeleteTask" = "Delete Item";
+"Chat.Todo.ContextMenu.CheckTask" = "Check";
+"Chat.Todo.ContextMenu.UncheckTask" = "Uncheck";
+"Chat.Todo.ContextMenu.SectionTask" = "Task";
+"Chat.Todo.ContextMenu.SectionList" = "List";
+"Chat.Todo.ContextMenu.SectionsInfo" = "You're viewing actions for one task.\nYou can switch to actions for the list.";
+
+"Chat.Todo.PremiumRequired" = "Only [Telegram Premium]() subscribers can mark tasks as done.";
+"Chat.Todo.CompletionLimited" = "%@ has restricted others from editing this to do list.";
+
+"Forward.ErrorTodoDisabledInChannels" = "Sorry, checklists can’t be forwarded to channels.";
+
+"Bot.AddToGroup.Title" = "Add to Group";
+"Bot.AddToChannel.Title" = "Add to Channel";
+
+"ScheduledMessages.TodoUnavailable" = "Completing tasks will become available after the message is published.";
+
+"Attachment.DiscardTodoAlertText" = "Discard checklist items?";
+
+"Chat.PostApproval.Status.AdminApproved" = "The message was approved";
+"Chat.PostApproval.Status.AdminRejected" = "The message was rejected";
+"Chat.PostApproval.Status.UserApproved" = "Your message was approved";
+"Chat.PostApproval.Status.UserRejected" = "Your message was rejected";
+
+"Chat.PostApproval.DetailStatus.StarsAmount_1" = "# Star";
+"Chat.PostApproval.DetailStatus.StarsAmount_any" = "# Stars";
+"Chat.PostApproval.DetailStatus.TonAmount_1" = "# TON";
+"Chat.PostApproval.DetailStatus.TonAmount_any" = "# TON";
+
+"Chat.PostApproval.DetailStatus.PostedPaid" = "**%1$@** received **%2$@** for publishing this post";
+"Chat.PostApproval.DetailStatus.UserFailedRefunded" = "Suggested post was refunded because you didn't have enough funds";
+"Chat.PostApproval.DetailStatus.AdminFailedRefunded" = "Suggested post was refunded because the user didn't have enough funds";
+"Chat.PostApproval.DetailStatus.FailedDeleted" = "Suggested post was refunded because the message was deleted";
+
+"Chat.PostApproval.Message.UserAgreementPast" = "📅 The post has been automatically published in **%1$@** **%2$@**.";
+"Chat.PostApproval.Message.AdminAgreementPast" = "📅 Your post has been automatically published in **%1$@** **%2$@**.";
+"Chat.PostApproval.Message.UserAgreementFuture" = "📅 The post will be automatically published in **%1$@** **%2$@**.";
+"Chat.PostApproval.Message.AdminAgreementFuture" = "📅 Your post will be automatically published in **%1$@** **%2$@**.";
+"Chat.PostApproval.Message.UserAgreementNoTime" = "📅 The post has been automatically published in **%1$@**.";
+"Chat.PostApproval.Message.AdminAgreementNoTime" = "📅 Your post has been automatically published in **%1$@**.";
+
+"Chat.PostApproval.Message.TitleApproved" = "🤝 Agreement Reached!";
+"Chat.PostApproval.Message.AdminTitleRejected" = "❌ You rejected the message.";
+"Chat.PostApproval.Message.AdminTitleRejectedComment" = "❌ You rejected the message with the comment:";
+"Chat.PostApproval.Message.AdminTitleFailedFunds" = "⚠️ **Transaction failed** because the user didn't have enough Stars.";
+"Chat.PostApproval.Message.UserTitleRejected" = "❌ **%@** rejected your message.";
+"Chat.PostApproval.Message.UserTitleRejectedComment" = "❌ **%@** rejected your message with the comment:";
+"Chat.PostApproval.Message.UserTitleFailedFunds" = "⚠️ **Transaction failed** because you didn't have enough Stars.";
+"Chat.PostApproval.Message.BuyStars" = "Buy Stars";
+
+"Chat.PostApproval.Message.UserAgreementPriceStars" = "💰 You have been charged %1$@.\n\n⌛ **%2$@** will receive the Stars once the post has been live for 24 hours.\n\n🔄 If admins remove the post before it has been live for 24 hours, the your Stars will be refunded.";
+"Chat.PostApproval.Message.UserAgreementPriceTon" = "💰 You have been charged %1$@.\n\n⌛ **%2$@** will receive the TON once the post has been live for 24 hours.\n\n🔄 If admins the post before it has been live for 24 hours, your TON will be refunded.";
+"Chat.PostApproval.Message.AdminAgreementPriceStars" = "💰 The user have been charged %1$@.\n\n⌛ **%2$@** will receive the Stars once the post has been live for 24 hours.\n\n🔄 If you remove the post before it has been live for 24 hours, the user's Stars will be refunded.";
+"Chat.PostApproval.Message.AdminAgreementPriceTon" = "💰 The user have been charged %1$@.\n\n⌛ **%2$@** will receive the TON once the post has been live for 24 hours.\n\n🔄 If you remove the post before it has been live for 24 hours, the user's TON will be refunded.";
+"Chat.PostApproval.Message.AdminDeclined" = "You declined the post.";
+"Chat.PostApproval.Message.AdminDeclinedComment" = "You declined the post with the following comment:\n\n%@";
+
+"Chat.PostApproval.Message.ActionApprove" = "Approve";
+"Chat.PostApproval.Message.ActionReject" = "Decline";
+"Chat.PostApproval.Message.ActionSuggestChanges" = "Suggest Changes";
+
+"Chat.ReinstatePaidMessages" = "Charge Message Fee";
+
+"Chat.PostSuggestion.TablePrice" = "Price";
+"Chat.PostSuggestion.TableTime" = "Time";
+
+"Chat.PostSuggestion.PriceFree" = "Free";
+"Chat.PostSuggestion.TimeAny" = "Anytime";
+
+"Chat.PostSuggestion.UserChangePTC" = "You suggest a new price,\ntime and contents for this message.";
+"Chat.PostSuggestion.UserChangePTT" = "You suggest a new price,\ntime and text for this message.";
+"Chat.PostSuggestion.UserChangePTA" = "You suggest a new price,\ntime and attachments for this message.";
+"Chat.PostSuggestion.UserChangePT" = "You suggest a new price and time\nfor this message.";
+"Chat.PostSuggestion.UserChangeP" = "You suggest a new price\nfor this message.";
+"Chat.PostSuggestion.UserChangeT" = "You suggest a new time\nfor this message.";
+"Chat.PostSuggestion.UserChange" = "You suggest changes\nfor this message.";
+
+"Chat.PostSuggestion.ChannelChangePTC" = "**%@** suggests a new price,\ntime and contents for this message.";
+"Chat.PostSuggestion.ChannelChangePTT" = "**%@** suggests a new price,\ntime and text for this message.";
+"Chat.PostSuggestion.ChannelChangePTA" = "**%@** suggests a new price,\ntime and attachments for this message.";
+"Chat.PostSuggestion.ChannelChangePT" = "**%@** suggests a new price and time\nfor this message.";
+"Chat.PostSuggestion.ChannelChangeP" = "**%@** suggests a new price\nfor this message.";
+"Chat.PostSuggestion.ChannelChangeT" = "**%@** suggests a new time\nfor this message.";
+"Chat.PostSuggestion.ChannelChange" = "**%@** suggests changes\nfor this message.";
+
+"Chat.PostSuggestion.UserPost" = "You suggest to post\nthis message.";
+"Chat.PostSuggestion.ChannelPost" = "**%@** suggests to post\nthis message.";
+
+"Chat.PostSuggestion.Suggest.InputTitle" = "Suggest a post below";
+"Chat.PostSuggestion.Suggest.InputEditTitle" = "Suggest Changes";
+"Chat.PostSuggestion.Suggest.InputSubtitleEmpty" = "Tap to offer a price for publishing";
+"Chat.PostSuggestion.Suggest.InputSubtitleAnytime" = "%@ for publishing anytime";
+
+"BalanceNeeded.FragmentTitle" = "%@ TON Needed";
+"BalanceNeeded.FragmentSubtitle" = "You can add funds to your balance via the third-party platform Fragment.";
+"BalanceNeeded.FragmentAction" = "Add Funds via Fragment";
+
+"Settings.Ton.Description" = "Use TON to submit post suggestions to channels on Telegram.";
+
+"Settings.TransactionsTon.Title" = "TON";
+"Settings.TransactionsTon.Subtitle" = "Use TON to submit post suggestions to channels on Telegram.";
+
+"Chat.DeletePaidMessageStars.Title" = "Stars Will Be Lost";
+"Chat.DeletePaidMessageStars.Text" = "You won't receive **Stars** for this post if you delete it now. The post must remain visible for at least **24 hours** after publication.";
+"Chat.DeletePaidMessageTon.Title" = "TON Will Be Lost";
+"Chat.DeletePaidMessageTon.Text" = "You won't receive **TON** for this post if you delete it now. The post must remain visible for at least **24 hours** after publication.";
+"Chat.DeletePaidMessage.Action" = "Delete Anyway";
+
+"Chat.PostSuggestion.Reject.Title" = "Comment";
+"Chat.PostSuggestion.Reject.Placeholder" = "Optional";
+
+"Chat.PostSuggestion.Approve.AdminConfirmationText" = "Do you really want to publish this post from **%@**?";
+"Chat.PostSuggestion.Approve.AdminConfirmationPriceStars" = "You will receive %1$@ Stars (%2$@%)\nfor publishing this post. It must remain visible for **24** hours after publication.";
+"Chat.PostSuggestion.Approve.AdminConfirmationPriceTon" = "You will receive %1$@ TON (%2$@%)\nfor publishing this post. It must remain visible for **24** hours after publication.";
+
+"Chat.PostSuggestion.Approve.UserConfirmationText" = "Do you really want to publish this post?";
+
+"Chat.PostSuggestion.Approve.Title" = "Accept Terms";
+"Chat.PostSuggestion.Approve.Action" = "Publish";
+
+"Chat.PostSuggestion.ApproveTime.Title" = "Accept Terms";
+"Chat.PostSuggestion.ApproveTime.Text" = "Set the date and time you want\nthis message to be published.";
+"Chat.PostSuggestion.ApproveTime.NoTimeAction" = "Post Now";
+"Chat.PostSuggestion.SetTime.Title" = "Time";
+"Chat.PostSuggestion.SetTime.Text" = "Set the date and time you want\nyour message to be published.";
+"Chat.PostSuggestion.SetTime.NoTimeAction" = "Send Anytime";
+
+"Chat.PostSuggestion.ApproveTime.AdminConfirmationPriceStars" = "You will receive %1$@ Stars (%2$@%)\nfor publishing this post.";
+"Chat.PostSuggestion.ApproveTime.AdminConfirmationPriceTon" = "You will receive %1$@ TON (%2$@%)\nfor publishing this post.";
+
+"Chat.PostSuggestion.StarsDisclaimer" = "Transactions in **Stars** may be reversed by the payment provider within **21** days. Only accept Stars from people you trust.";
+
+"VoiceOver.SuggestPost" = "Suggest Post";
+
+"Chat.ContextMenu.SuggestedPost.EditMessage" = "Edit Message";
+"Chat.ContextMenu.SuggestedPost.EditPrice" = "Edit Prive";
+"Chat.ContextMenu.SuggestedPost.EditTime" = "Edit Time";
+"Chat.ContextMenu.SuggestedPost.Create" = "Suggest Post";
+
+"Chat.PostSuggestion.Suggest.TitleCreate" = "Suggest Terms";
+"Chat.PostSuggestion.Suggest.TitleEdit" = "Suggest Changes";
+"Chat.PostSuggestion.Suggest.PriceSectionStars" = "ENTER A PRICE IN STARS";
+"Chat.PostSuggestion.Suggest.PriceSectionTon" = "ENTER A PRICE IN TON";
+"Chat.PostSuggestion.Suggest.PricePlaceholder" = "Price";
+"Chat.PostSuggestion.Suggest.OfferStars" = "Offer Stars";
+"Chat.PostSuggestion.Suggest.OfferTon" = "Offer TON";
+"Chat.PostSuggestion.Suggest.RequestStars" = "Request Stars";
+"Chat.PostSuggestion.Suggest.RequestTon" = "Request TON";
+"Chat.PostSuggestion.Suggest.RequestDescriptionStars" = "Choose how many Stars you charge for the message.";
+"Chat.PostSuggestion.Suggest.RequestDescriptionTon" = "Choose how many TON you charge for the message.";
+"Chat.PostSuggestion.Suggest.OfferDescriptionStars" = "Choose how many Stars you want to offer %@ to publish this message.";
+"Chat.PostSuggestion.Suggest.OfferDescriptionTon" = "Choose how many TON you want to offer %@ to publish this message.";
+"Chat.PostSuggestion.Suggest.OfferDateDescription" = "Select the date and time you want your message to be published.";
+"Chat.PostSuggestion.Suggest.EditDateDescription" = "Select the date and time you want to publish the message.";
+"Chat.PostSuggestion.Suggest.OfferButtonPrice" = "Offer  %@";
+"Chat.PostSuggestion.Suggest.OfferButtonFree" = "Offer for Free";
+"Chat.PostSuggestion.Suggest.UpdateButton" = "Update Terms";
+
+"Chat.PostSuggestion.Suggest.AdminMinAmountStars.Text" = "You cannot request less than %@ Stars.";
+"Chat.PostSuggestion.Suggest.UserMinAmountStars.Text" = "You cannot offer less than %@ Stars.";
+
+"Stars.SellGiftMinAmountToast.Text" = "You cannot sell gift for less than %@";
+
+"Premium.Week.SignUp" = "Sign up for %@";
+"Premium.Week.SignUpInfo" = "Get Telegram Premium for 1 week";
+
+"Settings.MyTon" = "My TON";
+
+"Stars.Gift.Ton.Text" = "Use TON to submit post suggestions to channels on Telegram.";
+"Stars.Ton.Title" = "TON";
+"Stars.Ton.Description" = "Use TON to submit post suggestions to channels on Telegram.";
+
+"Notification.Ton.Subtitle" = "Use TON to submit post suggestions to channels.";
+"Notification.Ton.SubtitleYou" = "With TON, %@ will be able to submit post suggestions to channels.";
+
+"Chat.Todo.Message.Completed_1" = "%@ of {count} completed";
+"Chat.Todo.Message.Completed_any" = "%@ of {count} completed";
+"Chat.Todo.Message.CompletedBy_1" = "%@ of {count} completed by {name}";
+"Chat.Todo.Message.CompletedBy_any" = "%@ of {count} completed by {name}";

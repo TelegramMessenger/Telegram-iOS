@@ -1,4 +1,4 @@
-#import "TGMessageEntityBold.h"
+#import <LegacyComponents/TGMessageEntityBold.h>
 
 @implementation TGMessageEntityBold
 

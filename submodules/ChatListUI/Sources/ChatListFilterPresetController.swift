@@ -20,7 +20,7 @@ import AsyncDisplayKit
 import UndoUI
 import PeerNameColorItem
 import EntityKeyboard
-import ComposePollUI
+import ListComposePollOptionComponent
 import ChatEntityKeyboardInputNode
 import ComponentFlow
 import ChatPresentationInterfaceState

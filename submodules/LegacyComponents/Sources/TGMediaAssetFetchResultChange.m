@@ -1,4 +1,4 @@
-#import "TGMediaAssetFetchResultChange.h"
+#import <LegacyComponents/TGMediaAssetFetchResultChange.h>
 
 #import <Photos/Photos.h>
 

@@ -8,7 +8,7 @@
  */
 
 #import "POPAnimationInternal.h"
-#import "POPPropertyAnimation.h"
+#import <LegacyComponents/POPPropertyAnimation.h>
 
 static void clampValue(CGFloat &value, CGFloat fromValue, CGFloat toValue, NSUInteger clamp)
 {

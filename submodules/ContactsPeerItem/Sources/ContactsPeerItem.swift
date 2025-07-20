@@ -452,6 +452,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     private var avatarIconView: ComponentHostView<Empty>?
     private var avatarIconComponent: EmojiStatusComponent?
     public let titleNode: TextNode
+    private var titleBadge: (backgroundView: UIImageView, textNode: TextNode)?
     private var credibilityIconView: ComponentHostView<Empty>?
     private var credibilityIconComponent: EmojiStatusComponent?
     private var verifiedIconView: ComponentHostView<Empty>?
@@ -735,6 +736,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     
     public func asyncLayout() -> (_ item: ContactsPeerItem, _ params: ListViewItemLayoutParams, _ first: Bool, _ last: Bool, _ firstWithHeader: Bool, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> (Signal<Void, NoError>?, (Bool, Bool) -> Void)) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
+        let titleBadgeLayout = TextNode.asyncLayout(self.titleBadge?.textNode)
         let makeStatusLayout = TextNodeWithEntities.asyncLayout(self.statusNode)
         let currentSelectionNode = self.selectionNode
         
@@ -933,11 +935,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                     } else if case let .legacyGroup(group) = peer {
                         titleAttributedString = NSAttributedString(string: group.title, font: titleBoldFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
                     } else if case let .channel(channel) = peer {
-                        if case let .channel(mainChannel) = chatPeer, mainChannel.isMonoForum {
-                            titleAttributedString = NSAttributedString(string: item.presentationData.strings.Monoforum_NameFormat(channel.title).string, font: titleBoldFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
-                        } else {
-                            titleAttributedString = NSAttributedString(string: channel.title, font: titleBoldFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
-                        }
+                        titleAttributedString = NSAttributedString(string: channel.title, font: titleBoldFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
                     }
                     
                     switch item.status {
@@ -1120,7 +1118,21 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                 additionalTitleInset += rightLabelTextLayoutAndApply.0.size.width + 36.0
             }
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - rightInset - additionalTitleInset), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            var titleBadgeText: String?
+            if case let .peer(_, chatPeer) = item.peer, case let .channel(channel) = chatPeer, channel.isMonoForum {
+                titleBadgeText = item.presentationData.strings.ChatList_MonoforumLabel
+            }
+            
+            var maxTextWidth: CGFloat = params.width - leftInset - rightInset - additionalTitleInset
+            
+            var titleBadgeLayoutAndApply: (TextNodeLayout, () -> TextNode)?
+            if let titleBadgeText {
+                let titleBadgeLayoutAndApplyValue = titleBadgeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: titleBadgeText, font: Font.semibold(11.0), textColor: item.presentationData.theme.chatList.titleColor.withMultipliedAlpha(0.4)), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                titleBadgeLayoutAndApply = titleBadgeLayoutAndApplyValue
+                maxTextWidth = max(0.0, maxTextWidth - titleBadgeLayoutAndApplyValue.0.size.width - 8.0)
+            }
+            
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, maxTextWidth), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             var maxStatusWidth: CGFloat = params.width - leftInset - rightInset - badgeSize
             if let _ = statusIcon {
@@ -1564,6 +1576,37 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             } else if let credibilityIconView = strongSelf.credibilityIconView {
                                 strongSelf.credibilityIconView = nil
                                 credibilityIconView.removeFromSuperview()
+                            }
+                            
+                            if let (titleBadgeLayout, titleBadgeApply) = titleBadgeLayoutAndApply {
+                                let titleBadgeNode = titleBadgeApply()
+                                let backgroundView: UIImageView
+                                if let current = strongSelf.titleBadge {
+                                    backgroundView = current.backgroundView
+                                } else {
+                                    backgroundView = UIImageView(image: generateStretchableFilledCircleImage(radius: 4.0, color: .white)?.withRenderingMode(.alwaysTemplate))
+                                    strongSelf.titleBadge = (backgroundView, titleBadgeNode)
+                                    
+                                    strongSelf.offsetContainerNode.view.addSubview(backgroundView)
+                                    strongSelf.offsetContainerNode.addSubnode(titleBadgeNode)
+                                }
+                                nextIconX += 10.0
+                                let titleBadgeFrame = CGRect(origin: CGPoint(x: nextIconX, y: titleFrame.minY + floor((titleFrame.height - titleBadgeLayout.size.height) * 0.5)), size: titleBadgeLayout.size)
+                                nextIconX += titleBadgeLayout.size.width + 4.0
+                                titleBadgeNode.frame = titleBadgeFrame
+                                
+                                var titleBadgeBackgroundFrame = titleBadgeFrame.insetBy(dx: -4.0, dy: -2.0)
+                                titleBadgeBackgroundFrame.size.height -= 1.0
+                                backgroundView.frame = titleBadgeBackgroundFrame
+                                if item.presentationData.theme.overallDarkAppearance {
+                                    backgroundView.tintColor = item.presentationData.theme.chatList.titleColor.withMultipliedAlpha(0.1)
+                                } else {
+                                    backgroundView.tintColor = item.presentationData.theme.chatList.titleColor.withMultipliedAlpha(0.05)
+                                }
+                            } else if let titleBadge = strongSelf.titleBadge {
+                                strongSelf.titleBadge = nil
+                                titleBadge.backgroundView.removeFromSuperview()
+                                titleBadge.textNode.removeFromSupernode()
                             }
                               
                             var additionalRightInset: CGFloat = 0.0

@@ -97,8 +97,35 @@ func openResolvedUrlImpl(
             present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.Conversation_ErrorInaccessibleMessage, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
         case let .botStart(peer, payload):
             openPeer(EnginePeer(peer), .withBotStartPayload(ChatControllerInitialBotStart(payload: payload, behavior: .interactive)))
-        case let .groupBotStart(botPeerId, payload, adminRights):
-            let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyGroupsAndChannels, .onlyManageable, .excludeDisabled, .excludeRecent, .doNotSearchMessages], hasContactSelector: false, title: presentationData.strings.Bot_AddToChat_Title, selectForumThreads: true))
+        case let .groupBotStart(botPeerId, payload, adminRights, peerType):
+            let defaultAdminRights = Promise<(group: TelegramChatAdminRights?, channel: TelegramChatAdminRights?)?>(nil)
+            if adminRights == nil {
+                defaultAdminRights.set(
+                    context.engine.peers.fetchAndUpdateCachedPeerData(peerId: botPeerId)
+                    |> mapToSignal { _ in
+                        return context.engine.data.get(
+                            TelegramEngine.EngineData.Item.Peer.BotGroupAdminRights(id: botPeerId),
+                            TelegramEngine.EngineData.Item.Peer.BotChannelAdminRights(id: botPeerId)
+                        ) |> map { groupRights, channelRights in
+                            return (groupRights, channelRights)
+                        }
+                    }
+                )
+            }
+        
+            var filter: ChatListNodePeersFilter = [.onlyGroupsAndChannels, .onlyManageable, .excludeDisabled, .excludeRecent, .doNotSearchMessages]
+            var title: String = presentationData.strings.Bot_AddToChat_Title
+            switch peerType {
+            case .group:
+                filter.insert(.excludeChannels)
+                title = presentationData.strings.Bot_AddToGroup_Title
+            case .channel:
+                filter.insert(.excludeGroups)
+                title = presentationData.strings.Bot_AddToChannel_Title
+            default:
+                break
+            }
+            let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: filter, hasContactSelector: false, title: title, selectForumThreads: true))
             controller.peerSelected = { [weak controller] peer, _ in
                 let peerId = peer.id
                 
@@ -167,11 +194,20 @@ func openResolvedUrlImpl(
                 }
                 
                 if case let .channel(peer) = peer {
+                    var isGroup = false
+                    if case .group = peer.info {
+                        isGroup = true
+                    }
                     if peer.flags.contains(.isCreator) || peer.adminRights?.rights.contains(.canAddAdmins) == true {
-                        let controller = channelAdminController(context: context, peerId: peerId, adminId: botPeerId, initialParticipant: nil, invite: true, initialAdminRights: adminRights?.chatAdminRights, updated: { _ in
-                            controller?.dismiss()
-                        }, upgradedToSupergroup: { _, _ in }, transferedOwnership: { _ in })
-                        navigationController?.pushViewController(controller)
+                        let _ = (defaultAdminRights.get()
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { defaultAdminRights in
+                            let initialAdminRights = adminRights?.chatAdminRights ?? (isGroup ? defaultAdminRights?.group?.rights : defaultAdminRights?.channel?.rights)
+                            let controller = channelAdminController(context: context, peerId: peerId, adminId: botPeerId, initialParticipant: nil, invite: true, initialAdminRights: initialAdminRights, updated: { _ in
+                                controller?.dismiss()
+                            }, upgradedToSupergroup: { _, _ in }, transferedOwnership: { _ in })
+                            navigationController?.pushViewController(controller)
+                        })
                     } else {
                         addMemberImpl()
                     }
@@ -179,10 +215,15 @@ func openResolvedUrlImpl(
                     if case .member = peer.role {
                         addMemberImpl()
                     } else {
-                        let controller = channelAdminController(context: context, peerId: peerId, adminId: botPeerId, initialParticipant: nil, invite: true, initialAdminRights: adminRights?.chatAdminRights, updated: { _ in
-                            controller?.dismiss()
-                        }, upgradedToSupergroup: { _, _ in }, transferedOwnership: { _ in })
-                        navigationController?.pushViewController(controller)
+                        let _ = (defaultAdminRights.get()
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { defaultAdminRights in
+                            let initialAdminRights = adminRights?.chatAdminRights ?? defaultAdminRights?.group?.rights
+                            let controller = channelAdminController(context: context, peerId: peerId, adminId: botPeerId, initialParticipant: nil, invite: true, initialAdminRights: initialAdminRights, updated: { _ in
+                                controller?.dismiss()
+                            }, upgradedToSupergroup: { _, _ in }, transferedOwnership: { _ in })
+                            navigationController?.pushViewController(controller)
+                        })
                     }
                 }
             }
@@ -396,20 +437,26 @@ func openResolvedUrlImpl(
         
             let _ = (signal
             |> deliverOnMainQueue).startStandalone(next: { [weak navigationController] resolvedCallLink in
-                if let currentGroupCallController = context.sharedContext.currentGroupCallController as? VoiceChatController, case let .group(groupCall) = currentGroupCallController.call, let currentCallId = groupCall.callId, currentCallId == resolvedCallLink.id {
-                    context.sharedContext.navigateToCurrentCall()
-                    return
-                }
-                
-                navigationController?.pushViewController(context.sharedContext.makeJoinSubjectScreen(context: context, mode: JoinSubjectScreenMode.groupCall(JoinSubjectScreenMode.GroupCall(
-                    id: resolvedCallLink.id,
-                    accessHash: resolvedCallLink.accessHash,
-                    slug: link,
-                    inviter: resolvedCallLink.inviter,
-                    members: resolvedCallLink.members,
-                    totalMemberCount: resolvedCallLink.totalMemberCount,
-                    info: resolvedCallLink
-                ))))
+                let _ = (context.engine.calls.getGroupCallPersistentSettings(callId: resolvedCallLink.id)
+                |> deliverOnMainQueue).startStandalone(next: { value in
+                    let value: PresentationGroupCallPersistentSettings = value?.get(PresentationGroupCallPersistentSettings.self) ?? PresentationGroupCallPersistentSettings.default
+                    
+                    if let currentGroupCallController = context.sharedContext.currentGroupCallController as? VoiceChatController, case let .group(groupCall) = currentGroupCallController.call, let currentCallId = groupCall.callId, currentCallId == resolvedCallLink.id {
+                        context.sharedContext.navigateToCurrentCall()
+                        return
+                    }
+                    
+                    navigationController?.pushViewController(context.sharedContext.makeJoinSubjectScreen(context: context, mode: JoinSubjectScreenMode.groupCall(JoinSubjectScreenMode.GroupCall(
+                        id: resolvedCallLink.id,
+                        accessHash: resolvedCallLink.accessHash,
+                        slug: link,
+                        inviter: resolvedCallLink.inviter,
+                        members: resolvedCallLink.members,
+                        totalMemberCount: resolvedCallLink.totalMemberCount,
+                        info: resolvedCallLink,
+                        enableMicrophoneByDefault: value.isMicrophoneEnabledByDefault
+                    ))))
+                })
             }, error: { _ in
                 var elevatedLayout = true
                 if case .chat = urlContext {

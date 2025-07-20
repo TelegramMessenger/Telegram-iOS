@@ -722,6 +722,7 @@ public extension Api {
         case messageMediaPhoto(flags: Int32, photo: Api.Photo?, ttlSeconds: Int32?)
         case messageMediaPoll(poll: Api.Poll, results: Api.PollResults)
         case messageMediaStory(flags: Int32, peer: Api.Peer, id: Int32, story: Api.StoryItem?)
+        case messageMediaToDo(flags: Int32, todo: Api.TodoList, completions: [Api.TodoCompletion]?)
         case messageMediaUnsupported
         case messageMediaVenue(geo: Api.GeoPoint, title: String, address: String, provider: String, venueId: String, venueType: String)
         case messageMediaWebPage(flags: Int32, webpage: Api.WebPage)
@@ -878,6 +879,18 @@ public extension Api {
                     serializeInt32(id, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {story!.serialize(buffer, true)}
                     break
+                case .messageMediaToDo(let flags, let todo, let completions):
+                    if boxed {
+                        buffer.appendInt32(-1974226924)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    todo.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 0) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(completions!.count))
+                    for item in completions! {
+                        item.serialize(buffer, true)
+                    }}
+                    break
                 case .messageMediaUnsupported:
                     if boxed {
                         buffer.appendInt32(-1618676578)
@@ -935,6 +948,8 @@ public extension Api {
                 return ("messageMediaPoll", [("poll", poll as Any), ("results", results as Any)])
                 case .messageMediaStory(let flags, let peer, let id, let story):
                 return ("messageMediaStory", [("flags", flags as Any), ("peer", peer as Any), ("id", id as Any), ("story", story as Any)])
+                case .messageMediaToDo(let flags, let todo, let completions):
+                return ("messageMediaToDo", [("flags", flags as Any), ("todo", todo as Any), ("completions", completions as Any)])
                 case .messageMediaUnsupported:
                 return ("messageMediaUnsupported", [])
                 case .messageMediaVenue(let geo, let title, let address, let provider, let venueId, let venueType):
@@ -1257,6 +1272,27 @@ public extension Api {
             let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
                 return Api.MessageMedia.messageMediaStory(flags: _1!, peer: _2!, id: _3!, story: _4)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageMediaToDo(_ reader: BufferReader) -> MessageMedia? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.TodoList?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.TodoList
+            }
+            var _3: [Api.TodoCompletion]?
+            if Int(_1!) & Int(1 << 0) != 0 {if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.TodoCompletion.self)
+            } }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.MessageMedia.messageMediaToDo(flags: _1!, todo: _2!, completions: _3)
             }
             else {
                 return nil

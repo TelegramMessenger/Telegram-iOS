@@ -1,4 +1,4 @@
-#import "TGVideoMessageRingView.h"
+#import <LegacyComponents/TGVideoMessageRingView.h>
 
 #import "TGColor.h"
 

@@ -1,4 +1,4 @@
-#import "PSKeyValueEncoder.h"
+#import <LegacyComponents/PSKeyValueEncoder.h>
 
 #import <objc/runtime.h>
 

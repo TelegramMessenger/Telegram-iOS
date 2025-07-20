@@ -21,6 +21,10 @@ import InvisibleInkDustNode
 import TextNodeWithEntities
 import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
+import Markdown
+import ComponentFlow
+import ReactionSelectionNode
+import MultilineTextComponent
 
 private func attributedServiceMessageString(theme: ChatPresentationThemeData, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, message: Message, messageCount: Int? = nil, accountPeerId: PeerId, forForumOverview: Bool) -> NSAttributedString? {
     return universalServiceMessageString(presentationData: (theme.theme, theme.wallpaper), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: EngineMessage(message), messageCount: messageCount, accountPeerId: accountPeerId, forChatList: false, forForumOverview: forForumOverview)
@@ -29,12 +33,17 @@ private func attributedServiceMessageString(theme: ChatPresentationThemeData, st
 public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
     public var expandHighlightingNode: LinkHighlightingNode?
     
+    public var titleNode: TextNode?
     public let labelNode: TextNodeWithEntities
     private var dustNode: InvisibleInkDustNode?
     public var backgroundNode: WallpaperBubbleBackgroundNode?
     public var backgroundColorNode: ASDisplayNode
     public let backgroundMaskNode: ASImageNode
     public var linkHighlightingNode: LinkHighlightingNode?
+    
+    private var buyStarsTitle: TextNode?
+    private var buyStarsButton: HighlightTrackingButton?
+    private var buttonStarsNode: PremiumStarsNode?
     
     private let mediaBackgroundNode: ASImageNode
     fileprivate var imageNode: TransformImageNode?
@@ -154,8 +163,16 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         return mediaHidden
     }
     
+    @objc private func buyStarsPressed() {
+        if let item = self.item {
+            item.controllerInteraction.openStarsPurchase(nil)
+        }
+    }
+    
     override public func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, unboundSize: CGSize?, maxWidth: CGFloat, layout: (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
+        let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeLabelLayout = TextNodeWithEntities.asyncLayout(self.labelNode)
+        let makeBuyStarsTitleLayout = TextNode.asyncLayout(self.buyStarsTitle)
 
         let cachedMaskBackgroundImage = self.cachedMaskBackgroundImage
         
@@ -183,30 +200,229 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                 let attributedString = attributedServiceMessageString(theme: item.presentationData.theme, strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, message: item.message, messageCount: messageCount, accountPeerId: item.context.account.peerId, forForumOverview: forForumOverview)
             
                 var image: TelegramMediaImage?
-                var story: TelegramMediaStory?
+                var suggestedPost: TelegramMediaActionType.SuggestedPostApprovalStatus?
+                
+                var leadingIcon: UIImage?
+                var isStory = false
                 for media in item.message.media {
                     if let action = media as? TelegramMediaAction {
                         switch action.action {
                         case let .photoUpdated(img):
                             image = img
+                        case let .suggestedPostApprovalStatus(status):
+                            suggestedPost = status
+                        case let .todoCompletions(completed, _):
+                            if !completed.isEmpty {
+                                leadingIcon = PresentationResourcesChat.chatServiceMessageTodoCompletedIcon(item.presentationData.theme.theme)
+                            } else {
+                                leadingIcon = PresentationResourcesChat.chatServiceMessageTodoIncompletedIcon(item.presentationData.theme.theme)
+                            }
+                        case .todoAppendTasks:
+                            leadingIcon = PresentationResourcesChat.chatServiceMessageTodoAppendedIcon(item.presentationData.theme.theme)
                         default:
                             break
                         }
-                    } else if let media = media as? TelegramMediaStory {
-                        story = media
+                    } else if media is TelegramMediaStory {
+                        leadingIcon = PresentationResourcesChat.chatExpiredStoryIndicatorIcon(item.presentationData.theme.theme, type: .free)
+                        isStory = true
                     }
+                }
+                
+                var isUser = true
+                if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, peer.isMonoForum, let linkedMonoforumId = peer.linkedMonoforumId, let mainChannel = item.message.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
+                    isUser = false
                 }
                 
                 let imageSize = CGSize(width: 212.0, height: 212.0)
                 
                 var updatedAttributedString = attributedString
-                if story != nil, let attributedString {
+                if leadingIcon != nil, let attributedString {
                     let mutableString = NSMutableAttributedString(attributedString: attributedString)
-                    mutableString.insert(NSAttributedString(string: "    ", font: Font.regular(13.0), textColor: .clear), at: 0)
+                    mutableString.insert(NSAttributedString(string: isStory ? "    " : "      ", font: Font.regular(13.0), textColor: .clear), at: 0)
                     updatedAttributedString = mutableString
                 }
                 
-                let (labelLayout, apply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: updatedAttributedString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+                var textAlignment: NSTextAlignment = .center
+                
+                let primaryTextColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper).primaryText
+                
+                if let suggestedPost {
+                    textAlignment = .left
+                    
+                    let channelName: String
+                    if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, peer.isMonoForum, let linkedMonoforumId = peer.linkedMonoforumId, let mainChannel = item.message.peers[linkedMonoforumId] as? TelegramChannel {
+                        channelName = EnginePeer(mainChannel).compactDisplayTitle
+                    } else {
+                        channelName = " "
+                    }
+                    
+                    switch suggestedPost {
+                    case let .approved(timestamp, amount):
+                        let timeString = humanReadableStringForTimestamp(strings: item.presentationData.strings, dateTimeFormat: item.presentationData.dateTimeFormat, timestamp: timestamp ?? 0, alwaysShowTime: true, allowYesterday: false, format: HumanReadableStringFormat(
+                            dateFormatString: { value in
+                                return PresentationStrings.FormattedString(string: item.presentationData.strings.SuggestPost_SetTimeFormat_Date(value).string.lowercased(), ranges: [])
+                            },
+                            tomorrowFormatString: { value in
+                                return PresentationStrings.FormattedString(string: item.presentationData.strings.SuggestPost_SetTimeFormat_TomorrowAt(value).string.lowercased(), ranges: [])
+                            },
+                            todayFormatString: { value in
+                                return PresentationStrings.FormattedString(string: item.presentationData.strings.SuggestPost_SetTimeFormat_TodayAt(value).string.lowercased(), ranges: [])
+                            },
+                            yesterdayFormatString: { value in
+                                return PresentationStrings.FormattedString(string: item.presentationData.strings.SuggestPost_SetTimeFormat_TodayAt(value).string.lowercased(), ranges: [])
+                            }
+                        )).string
+                        
+                        var pricePart = ""
+                        if let amount, amount.amount != .zero {
+                            let amountString: String
+                            switch amount.currency {
+                            case .stars:
+                                amountString = item.presentationData.strings.Chat_PostApproval_DetailStatus_StarsAmount(Int32((amount.amount.value == 1 && amount.amount.nanos == 0) ? 1 : 100)).replacingOccurrences(of: "#", with: "\(amount.amount)")
+                            case .ton:
+                                amountString = item.presentationData.strings.Chat_PostApproval_DetailStatus_TonAmount(Int32((amount.amount.value == 1 * 1_000_000_000) ? 1 : 100)).replacingOccurrences(of: "#", with: "\(formatTonAmountText(amount.amount.value, dateTimeFormat: item.presentationData.dateTimeFormat, maxDecimalPositions: 3))")
+                            }
+                            
+                            switch amount.currency {
+                            case .stars:
+                                if isUser {
+                                    pricePart = "\n\n" + item.presentationData.strings.Chat_PostApproval_Message_UserAgreementPriceStars(amountString, channelName).string
+                                } else {
+                                    pricePart = "\n\n" + item.presentationData.strings.Chat_PostApproval_Message_AdminAgreementPriceStars(amountString, channelName).string
+                                }
+                            case .ton:
+                                if isUser {
+                                    pricePart = "\n\n" + item.presentationData.strings.Chat_PostApproval_Message_UserAgreementPriceTon(amountString, channelName).string
+                                } else {
+                                    pricePart = "\n\n" + item.presentationData.strings.Chat_PostApproval_Message_AdminAgreementPriceTon(amountString, channelName).string
+                                }
+                            }
+                        }
+                        
+                        let rawString: String
+                        if let timestamp {
+                            if Int32(Date().timeIntervalSince1970) >= timestamp {
+                                if isUser {
+                                    rawString = item.presentationData.strings.Chat_PostApproval_Message_UserAgreementPast(channelName, timeString).string + pricePart
+                                } else {
+                                    rawString = item.presentationData.strings.Chat_PostApproval_Message_AdminAgreementPast(channelName, timeString).string + pricePart
+                                }
+                            } else {
+                                if isUser {
+                                    rawString = item.presentationData.strings.Chat_PostApproval_Message_UserAgreementFuture(channelName, timeString).string + pricePart
+                                } else {
+                                    rawString = item.presentationData.strings.Chat_PostApproval_Message_AdminAgreementFuture(channelName, timeString).string + pricePart
+                                }
+                            }
+                        } else {
+                            if isUser {
+                                rawString = item.presentationData.strings.Chat_PostApproval_Message_UserAgreementNoTime(channelName).string + pricePart
+                            } else {
+                                rawString = item.presentationData.strings.Chat_PostApproval_Message_AdminAgreementNoTime(channelName).string + pricePart
+                            }
+                        }
+                        updatedAttributedString = parseMarkdownIntoAttributedString(rawString, attributes: MarkdownAttributes(
+                            body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: primaryTextColor),
+                            bold: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: primaryTextColor),
+                            link: MarkdownAttributeSet(font: Font.regular(13.0), textColor: primaryTextColor),
+                            linkAttribute: { url in
+                                return ("URL", url)
+                            }
+                        ))
+                    case let .rejected(reason, comment):
+                        let rawString: String
+                        if !item.message.effectivelyIncoming(item.context.account.peerId) {
+                            switch reason {
+                            case .generic:
+                                if let comment {
+                                    rawString = item.presentationData.strings.Chat_PostApproval_Message_AdminDeclinedComment(comment).string
+                                } else {
+                                    rawString = item.presentationData.strings.Chat_PostApproval_Message_AdminDeclined
+                                }
+                            case .lowBalance:
+                                rawString = ""
+                            }
+                        } else {
+                            switch reason {
+                            case .generic:
+                                if let comment {
+                                    rawString = "\"\(comment)\""
+                                } else {
+                                    rawString = ""
+                                }
+                            case .lowBalance:
+                                rawString = ""
+                            }
+                        }
+                        textAlignment = .center
+                        updatedAttributedString = parseMarkdownIntoAttributedString(rawString, attributes: MarkdownAttributes(
+                            body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: primaryTextColor),
+                            bold: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: primaryTextColor),
+                            link: MarkdownAttributeSet(font: Font.regular(13.0), textColor: primaryTextColor),
+                            linkAttribute: { url in
+                                return ("URL", url)
+                            }
+                        ))
+                    }
+                }
+                
+                var titleLayoutAndApply: (TextNodeLayout, () -> TextNode)?
+                if let suggestedPost {
+                    let channelName: String
+                    if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, peer.isMonoForum, let linkedMonoforumId = peer.linkedMonoforumId, let mainChannel = item.message.peers[linkedMonoforumId] as? TelegramChannel {
+                        channelName = EnginePeer(mainChannel).compactDisplayTitle
+                    } else {
+                        channelName = " "
+                    }
+                    
+                    let rawString: String
+                    var smallFont = false
+                    switch suggestedPost {
+                    case .approved:
+                        rawString = item.presentationData.strings.Chat_PostApproval_Message_TitleApproved
+                    case let .rejected(reason, comment):
+                        if !item.message.effectivelyIncoming(item.context.account.peerId) {
+                            switch reason {
+                            case .generic:
+                                if comment != nil {
+                                    rawString = item.presentationData.strings.Chat_PostApproval_Message_AdminTitleRejectedComment
+                                } else {
+                                    rawString = item.presentationData.strings.Chat_PostApproval_Message_AdminTitleRejected
+                                    smallFont = true
+                                }
+                            case .lowBalance:
+                                rawString = item.presentationData.strings.Chat_PostApproval_Message_AdminTitleFailedFunds
+                                smallFont = true
+                            }
+                        } else {
+                            switch reason {
+                            case .generic:
+                                if comment != nil {
+                                    rawString = item.presentationData.strings.Chat_PostApproval_Message_UserTitleRejectedComment(channelName).string
+                                } else {
+                                    rawString = item.presentationData.strings.Chat_PostApproval_Message_UserTitleRejected(channelName).string
+                                    smallFont = true
+                                }
+                            case .lowBalance:
+                                rawString = item.presentationData.strings.Chat_PostApproval_Message_UserTitleFailedFunds
+                                smallFont = true
+                            }
+                        }
+                    }
+                    let baseFontSize: CGFloat = smallFont ? 13.0 : 15.0
+                    let titleString = parseMarkdownIntoAttributedString(rawString, attributes: MarkdownAttributes(
+                        body: MarkdownAttributeSet(font: Font.regular(baseFontSize), textColor: primaryTextColor),
+                        bold: MarkdownAttributeSet(font: Font.bold(baseFontSize), textColor: primaryTextColor),
+                        link: MarkdownAttributeSet(font: Font.semibold(baseFontSize), textColor: primaryTextColor),
+                        linkAttribute: { url in
+                            return ("URL", url)
+                        }
+                    ))
+                    
+                    titleLayoutAndApply = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+                }
+                
+                let (labelLayout, apply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: updatedAttributedString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: textAlignment, cutout: nil, insets: UIEdgeInsets()))
             
                 var labelRects = labelLayout.linesRects()
                 if labelRects.count > 1 {
@@ -224,27 +440,76 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 for i in 0 ..< labelRects.count {
-                    labelRects[i] = labelRects[i].insetBy(dx: -6.0, dy: floor((labelRects[i].height - 20.0) / 2.0))
-                    labelRects[i].size.height = 20.0
+                    labelRects[i] = labelRects[i].insetBy(dx: -7.0, dy: floor((labelRects[i].height - 22.0) / 2.0))
+                    labelRects[i].size.height = 22.0
                     labelRects[i].origin.x = floor((labelLayout.size.width - labelRects[i].width) / 2.0)
                 }
 
                 let backgroundMaskImage: (CGPoint, UIImage)?
                 var backgroundMaskUpdated = false
-                if let (currentOffset, currentImage, currentRects) = cachedMaskBackgroundImage, currentRects == labelRects {
-                    backgroundMaskImage = (currentOffset, currentImage)
+                if suggestedPost != nil {
+                    backgroundMaskImage = nil
+                    if cachedMaskBackgroundImage != nil {
+                        backgroundMaskUpdated = true
+                    }
                 } else {
-                    backgroundMaskImage = LinkHighlightingNode.generateImage(color: .white, inset: 0.0, innerRadius: 10.0, outerRadius: 10.0, rects: labelRects, useModernPathCalculation: false)
-                    backgroundMaskUpdated = true
+                    if let (currentOffset, currentImage, currentRects) = cachedMaskBackgroundImage, currentRects == labelRects {
+                        backgroundMaskImage = (currentOffset, currentImage)
+                    } else {
+                        backgroundMaskImage = LinkHighlightingNode.generateImage(color: .white, inset: 0.0, innerRadius: 11.0, outerRadius: 11.0, rects: labelRects, useModernPathCalculation: false)
+                        backgroundMaskUpdated = true
+                    }
                 }
             
-                var backgroundSize = CGSize(width: labelLayout.size.width + 8.0 + 8.0, height: labelLayout.size.height + 4.0)
+                var backgroundSize = CGSize(width: labelLayout.size.width, height: labelLayout.size.height)
                 if let _ = image {
                     backgroundSize.width = imageSize.width + 2.0
                     backgroundSize.height += imageSize.height + 10.0
                 }
+                
+                let titleSpacing: CGFloat = 14.0
+                
+                var contentInsets = UIEdgeInsets()
+                var contentOuterInsets = UIEdgeInsets()
+                
+                if let titleLayoutAndApply {
+                    backgroundSize.width = max(backgroundSize.width, titleLayoutAndApply.0.size.width)
+                    if labelLayout.size.width != 0.0 {
+                        backgroundSize.height += titleSpacing
+                    }
+                    backgroundSize.height += titleLayoutAndApply.0.size.height
+                    
+                    contentInsets = UIEdgeInsets(top: 12.0, left: 16.0, bottom: 12.0, right: 16.0)
+                    contentOuterInsets = UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0, right: 0.0)
+                    
+                    backgroundSize.width += contentInsets.left + contentInsets.right
+                    backgroundSize.height += contentInsets.top + contentInsets.bottom
+                } else {
+                    backgroundSize.width += 8.0 + 8.0
+                    backgroundSize.height += 4.0
+                }
+                
+                var hasBuyStarsButton = false
+                if item.message.effectivelyIncoming(item.context.account.peerId), let suggestedPost, case let .rejected(reason, _) = suggestedPost, case .lowBalance = reason {
+                    hasBuyStarsButton = true
+                }
+                
+                var buyStarsTitleLayoutAndApply: (TextNodeLayout, () -> TextNode)?
+                var buyStarsButtonSize: CGSize?
+                if hasBuyStarsButton {
+                    let serviceColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+                    let buyStarsTitleLayoutAndApplyValue = makeBuyStarsTitleLayout(TextNodeLayoutArguments(attributedString:  NSAttributedString(string: item.presentationData.strings.Chat_PostApproval_Message_BuyStars, font: Font.semibold(15.0), textColor: serviceColor.primaryText), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: textAlignment, cutout: nil, insets: UIEdgeInsets()))
+                    buyStarsTitleLayoutAndApply = buyStarsTitleLayoutAndApplyValue
+                    
+                    let buyStarsButtonSizeValue = CGSize(width: buyStarsTitleLayoutAndApplyValue.0.size.width + 20.0 * 2.0, height: buyStarsTitleLayoutAndApplyValue.0.size.height + 8.0 * 2.0)
+                    buyStarsButtonSize = buyStarsButtonSizeValue
+                    
+                    backgroundSize.width = max(backgroundSize.width, buyStarsButtonSizeValue.width + 8.0 * 2.0)
+                    backgroundSize.height += 15.0 + buyStarsButtonSizeValue.height
+                }
+                
                 return (backgroundSize.width, { boundingWidth in
-                    return (CGSize(width: boundingWidth, height: backgroundSize.height), { [weak self] animation, synchronousLoads, _ in
+                    return (CGSize(width: boundingWidth, height: backgroundSize.height + contentOuterInsets.top + contentOuterInsets.bottom), { [weak self] animation, synchronousLoads, _ in
                         if let strongSelf = self {
                             strongSelf.item = item
                             
@@ -330,9 +595,102 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                 attemptSynchronous: synchronousLoads
                             ))
                             
-                            let labelFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((boundingWidth - labelLayout.size.width) / 2.0) - 1.0, y: image != nil ? 2.0 : floorToScreenPixels((backgroundSize.height - labelLayout.size.height) / 2.0) - 1.0), size: labelLayout.size)
+                            var labelFrame: CGRect
+                            let contentFrame: CGRect
                             
-                            if story != nil {
+                            if let (titleLayout, titleApply) = titleLayoutAndApply {
+                                contentFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((boundingWidth - backgroundSize.width) * 0.5), y: contentOuterInsets.top), size: backgroundSize)
+                                
+                                let titleFrame = CGRect(origin: CGPoint(x: contentFrame.minX + floor((contentFrame.width - titleLayout.size.width) * 0.5), y: contentFrame.minY + contentInsets.top), size: titleLayout.size)
+                                labelFrame = CGRect(origin: CGPoint(x: contentFrame.minX + contentInsets.left, y: titleFrame.maxY + titleSpacing), size: labelLayout.size)
+                                if textAlignment == .center {
+                                    labelFrame.origin.x = contentFrame.minX + floor((contentFrame.width - labelFrame.width) * 0.5)
+                                }
+                            
+                                let titleNode = titleApply()
+                                if strongSelf.titleNode !== titleNode {
+                                    strongSelf.titleNode?.removeFromSupernode()
+                                    strongSelf.titleNode = titleNode
+                                    strongSelf.addSubnode(titleNode)
+                                    titleNode.anchorPoint = CGPoint()
+                                    
+                                    titleNode.frame = titleFrame
+                                } else {
+                                    animation.animator.updatePosition(layer: titleNode.layer, position: titleFrame.origin, completion: nil)
+                                    titleNode.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
+                                }
+                            } else {
+                                labelFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((boundingWidth - labelLayout.size.width) / 2.0) - 1.0, y: image != nil ? 2.0 : floorToScreenPixels((backgroundSize.height - labelLayout.size.height) / 2.0) - 1.0), size: labelLayout.size)
+                                contentFrame = labelFrame
+                            }
+                            
+                            if hasBuyStarsButton, let (buyStarsTitleLayout, buyStarsTitleApply) = buyStarsTitleLayoutAndApply, let buyStarsButtonSize {
+                                let buyStarsButton: HighlightTrackingButton
+                                if let current = strongSelf.buyStarsButton {
+                                    buyStarsButton = current
+                                } else {
+                                    buyStarsButton = HighlightTrackingButton()
+                                    buyStarsButton.clipsToBounds = true
+                                    strongSelf.buyStarsButton = buyStarsButton
+                                    strongSelf.view.addSubview(buyStarsButton)
+                                    buyStarsButton.highligthedChanged = { [weak buyStarsButton] highlighted in
+                                        guard let buyStarsButton else {
+                                            return
+                                        }
+                                        if highlighted {
+                                            buyStarsButton.layer.removeAnimation(forKey: "opacity")
+                                            buyStarsButton.alpha = 0.6
+                                        } else {
+                                            buyStarsButton.alpha = 1.0
+                                            buyStarsButton.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                                        }
+                                    }
+                                    buyStarsButton.addTarget(strongSelf, action: #selector(strongSelf.buyStarsPressed), for: .touchUpInside)
+                                }
+                                
+                                let buttonStarsNode: PremiumStarsNode
+                                if let current = strongSelf.buttonStarsNode {
+                                    buttonStarsNode = current
+                                } else {
+                                    buttonStarsNode = PremiumStarsNode()
+                                    buttonStarsNode.isUserInteractionEnabled = false
+                                    strongSelf.buttonStarsNode = buttonStarsNode
+                                    buyStarsButton.addSubview(buttonStarsNode.view)
+                                }
+                                
+                                let buyStarsTitle = buyStarsTitleApply()
+                                if buyStarsTitle !== strongSelf.buyStarsTitle {
+                                    buyStarsTitle.isUserInteractionEnabled = false
+                                    strongSelf.buyStarsTitle?.view.removeFromSuperview()
+                                }
+                                strongSelf.buyStarsTitle = buyStarsTitle
+                                buyStarsButton.addSubview(buyStarsTitle.view)
+                                
+                                let buttonTitleSize = buyStarsTitleLayout.size
+                                
+                                let buttonFrame = CGRect(origin: CGPoint(x: contentFrame.minX + floor((contentFrame.width - buyStarsButtonSize.width) * 0.5), y: labelFrame.minY - 2.0), size: buyStarsButtonSize)
+                                buyStarsButton.frame = buttonFrame
+                                buyStarsButton.layer.cornerRadius = buttonFrame.height * 0.5
+                                buyStarsTitle.frame = CGRect(origin: CGPoint(x: floor((buyStarsButtonSize.width - buttonTitleSize.width) * 0.5), y: floor((buyStarsButtonSize.height - buttonTitleSize.height) * 0.5)), size: buttonTitleSize)
+                                
+                                buyStarsButton.backgroundColor = item.presentationData.theme.theme.overallDarkAppearance ? UIColor(rgb: 0xffffff, alpha: 0.12) : UIColor(rgb: 0x000000, alpha: 0.12)
+                                buttonStarsNode.frame = CGRect(origin: CGPoint(), size: buyStarsButtonSize)
+                            } else {
+                                if let buyStarsTitle = strongSelf.buyStarsTitle {
+                                    strongSelf.buyStarsTitle = nil
+                                    buyStarsTitle.view.removeFromSuperview()
+                                }
+                                if let buyStarsButton = strongSelf.buyStarsButton {
+                                    strongSelf.buyStarsButton = nil
+                                    buyStarsButton.removeFromSuperview()
+                                }
+                                if let buttonStarsNode = strongSelf.buttonStarsNode {
+                                    strongSelf.buttonStarsNode = nil
+                                    buttonStarsNode.view.removeFromSuperview()
+                                }
+                            }
+                            
+                            if let leadingIcon {
                                 let leadingIconView: UIImageView
                                 if let current = strongSelf.leadingIconView {
                                     leadingIconView = current
@@ -342,11 +700,15 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                     strongSelf.view.addSubview(leadingIconView)
                                 }
                                 
-                                leadingIconView.image = PresentationResourcesChat.chatExpiredStoryIndicatorIcon(item.presentationData.theme.theme, type: .free)
+                                leadingIconView.image = leadingIcon
                                 
                                 if let lineRect = labelLayout.linesRects().first, let iconImage = leadingIconView.image {
                                     let iconSize = iconImage.size
-                                    leadingIconView.frame = CGRect(origin: CGPoint(x: lineRect.minX + labelFrame.minX - 1.0, y: labelFrame.minY), size: iconSize)
+                                    var iconFrame = CGRect(origin: CGPoint(x: lineRect.minX + labelFrame.minX - 1.0, y: labelFrame.minY), size: iconSize)
+                                    if !isStory {
+                                        iconFrame.origin.x += 3.0
+                                    }
+                                    leadingIconView.frame = iconFrame
                                 }
                             } else if let leadingIconView = strongSelf.leadingIconView {
                                 strongSelf.leadingIconView = nil
@@ -395,7 +757,59 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                 strongSelf.expandHighlightingNode = nil
                             }
                             
-                            if let (offset, image) = backgroundMaskImage {
+                            if suggestedPost != nil {
+                                let backgroundFrame = contentFrame
+                                
+                                if item.context.sharedContext.energyUsageSettings.fullTranslucency {
+                                    if strongSelf.backgroundNode == nil {
+                                        if let backgroundNode = item.controllerInteraction.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {
+                                            strongSelf.backgroundNode = backgroundNode
+                                            backgroundNode.addSubnode(strongSelf.backgroundColorNode)
+                                            strongSelf.insertSubnode(backgroundNode, at: 0)
+                                        }
+                                    }
+                                    strongSelf.backgroundColorNode.isHidden = true
+                                } else {
+                                    if strongSelf.backgroundMaskNode.supernode == nil {
+                                        strongSelf.insertSubnode(strongSelf.backgroundMaskNode, at: 0)
+                                    }
+                                }
+                                
+                                if let backgroundNode = strongSelf.backgroundNode {
+                                    backgroundNode.clipsToBounds = true
+                                    backgroundNode.cornerRadius = min(backgroundFrame.height * 0.5, 22.0)
+                                    backgroundNode.view.mask = nil
+                                    
+                                    animation.animator.updateFrame(layer: backgroundNode.layer, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY), size: backgroundFrame.size), completion: nil)
+                                    
+                                    if let (rect, size) = strongSelf.absoluteRect {
+                                        strongSelf.updateAbsoluteRect(rect, within: size)
+                                    }
+                                    strongSelf.backgroundMaskNode.frame = CGRect(origin: CGPoint(), size: backgroundFrame.size)
+                                    strongSelf.backgroundMaskNode.layer.layerTintColor = nil
+                                } else {
+                                    animation.animator.updateFrame(layer: strongSelf.backgroundMaskNode.layer, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY), size: backgroundFrame.size), completion: nil)
+                                    strongSelf.backgroundMaskNode.layer.layerTintColor = selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper).cgColor
+                                }
+                                
+                                strongSelf.backgroundMaskNode.image = nil
+
+                                animation.animator.updateFrame(layer: strongSelf.backgroundColorNode.layer, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size), completion: nil)
+
+                                strongSelf.cachedMaskBackgroundImage = nil
+                                
+                                switch strongSelf.visibility {
+                                case .none:
+                                    strongSelf.labelNode.visibilityRect = nil
+                                    //strongSelf.spoilerTextNode?.visibilityRect = nil
+                                case let .visible(_, subRect):
+                                    var subRect = subRect
+                                    subRect.origin.x = 0.0
+                                    subRect.size.width = 10000.0
+                                    strongSelf.labelNode.visibilityRect = subRect
+                                    //strongSelf.spoilerTextNode?.visibilityRect = subRect
+                                }
+                            } else if let (offset, image) = backgroundMaskImage {
                                 if item.context.sharedContext.energyUsageSettings.fullTranslucency {
                                     if strongSelf.backgroundNode == nil {
                                         if let backgroundNode = item.controllerInteraction.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {
@@ -415,7 +829,7 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                     if let backgroundNode = strongSelf.backgroundNode {
                                         if labelRects.count == 1 {
                                             backgroundNode.clipsToBounds = true
-                                            backgroundNode.cornerRadius = labelRects[0].height / 2.0
+                                            backgroundNode.cornerRadius = min(32.0, labelRects[0].height / 2.0)
                                             backgroundNode.view.mask = nil
                                         } else {
                                             backgroundNode.clipsToBounds = false
@@ -566,8 +980,11 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                 return ChatMessageBubbleContentTapAction(content: .hashtag(hashtag.peerName, hashtag.hashtag))
             }
         }
-        if let imageNode = imageNode, imageNode.frame.contains(point) {
+        if let imageNode = self.imageNode, imageNode.frame.contains(point) {
             return ChatMessageBubbleContentTapAction(content: .openMessage)
+        }
+        if let buyStarsButton = self.buyStarsButton, buyStarsButton.frame.contains(point) {
+            return ChatMessageBubbleContentTapAction(content: .ignore)
         }
         
         if let backgroundNode = self.backgroundNode, backgroundNode.frame.contains(point) {

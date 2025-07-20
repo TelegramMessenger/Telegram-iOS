@@ -1,16 +1,16 @@
-#import "TGNavigationController.h"
+#import <LegacyComponents/TGNavigationController.h>
 
 #import <UIKit/UIGestureRecognizerSubclass.h>
 
 #import "LegacyComponentsInternal.h"
-#import "TGImageUtils.h"
-#import "TGStringUtils.h"
-#import "Freedom.h"
+#import <LegacyComponents/TGImageUtils.h>
+#import <LegacyComponents/TGStringUtils.h>
+#import <LegacyComponents/Freedom.h>
 
-#import "TGNavigationBar.h"
-#import "TGViewController.h"
+#import <LegacyComponents/TGNavigationBar.h>
+#import <LegacyComponents/TGViewController.h>
 
-#import "TGHacks.h"
+#import <LegacyComponents/TGHacks.h>
 
 #import <QuickLook/QuickLook.h>
 #import <QuartzCore/QuartzCore.h>
@@ -491,7 +491,7 @@
 
 - (void)setupNavigationBarForController:(UIViewController *)viewController animated:(bool)animated
 {
-    UIBarStyle barStyle = UIBarStyleDefault;
+
     bool navigationBarShouldBeHidden = false;
     UIStatusBarStyle statusBarStyle = UIStatusBarStyleLightContent;
     bool statusBarShouldBeHidden = false;
@@ -500,7 +500,6 @@
     {
         id<TGViewControllerNavigationBarAppearance> appearance = (id<TGViewControllerNavigationBarAppearance>)viewController;
         
-        barStyle = [appearance requiredNavigationBarStyle];
         navigationBarShouldBeHidden = [appearance navigationBarShouldBeHidden];
         if ([appearance respondsToSelector:@selector(preferredStatusBarStyle)])
             statusBarStyle = [appearance preferredStatusBarStyle];

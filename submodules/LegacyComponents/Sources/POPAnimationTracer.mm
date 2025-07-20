@@ -7,13 +7,13 @@
  of patent rights can be found in the PATENTS file in the same directory.
  */
 
-#import "POPAnimationTracer.h"
+#import <LegacyComponents/POPAnimationTracer.h>
 
 #import <QuartzCore/QuartzCore.h>
 
 #import "POPAnimationEventInternal.h"
 #import "POPAnimationInternal.h"
-#import "POPSpringAnimation.h"
+#import <LegacyComponents/POPSpringAnimation.h>
 
 @implementation POPAnimationTracer
 {

@@ -1,4 +1,4 @@
-#import "TGImageLuminanceMap.h"
+#import <LegacyComponents/TGImageLuminanceMap.h>
 
 @interface TGImageLuminanceMap ()
 {

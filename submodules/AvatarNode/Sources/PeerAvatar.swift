@@ -333,7 +333,8 @@ public func peerAvatarImage(postbox: Postbox, network: Network, peerReference: P
                     if let cutoutRect {
                         context.setBlendMode(.copy)
                         context.setFillColor(UIColor.clear.cgColor)
-                        context.fillEllipse(in: cutoutRect.offsetBy(dx: 0.0, dy: size.height - cutoutRect.maxY - cutoutRect.height))
+                        //TODO:fix
+                        context.fillEllipse(in: cutoutRect)
                     }
                 })
                 let unroundedImage: UIImage?

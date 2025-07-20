@@ -1,4 +1,4 @@
-#import "TGPhotoEditorToolView.h"
+#import <LegacyComponents/TGPhotoEditorToolView.h>
 #import "PGPhotoEditorItem.h"
 #import "PGCurvesTool.h"
 

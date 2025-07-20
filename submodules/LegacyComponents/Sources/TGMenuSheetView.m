@@ -1,9 +1,9 @@
-#import "TGMenuSheetView.h"
-#import "TGMenuSheetItemView.h"
-#import "TGMenuSheetController.h"
+#import <LegacyComponents/TGMenuSheetView.h>
+#import <LegacyComponents/TGMenuSheetItemView.h>
+#import <LegacyComponents/TGMenuSheetController.h>
 
 #import "LegacyComponentsInternal.h"
-#import "TGImageUtils.h"
+#import <LegacyComponents/TGImageUtils.h>
 #import "TGColor.h"
 
 NSString *const TGMenuDividerTop = @"top";

@@ -1,5 +1,5 @@
 #import "TGPhotoEditorTintSwatchView.h"
-#import "TGPhotoEditorInterfaceAssets.h"
+#import <LegacyComponents/TGPhotoEditorInterfaceAssets.h>
 
 const CGFloat TGPhotoEditorTintSwatchRadius = 9.0f;
 const CGFloat TGPhotoEditorTintSwatchSelectedRadius = 9.0f;

@@ -752,7 +752,7 @@ func _internal_fetchChannelReplyThreadMessage(account: Account, messageId: Messa
                     channelMessageId: nil,
                     isChannelPost: false,
                     isForumPost: true,
-                    isMonoforumPost: false,
+                    isMonoforumPost: peer.isMonoForum,
                     maxMessage: MessageId(peerId: messageId.peerId, namespace: messageId.namespace, id: threadData.maxKnownMessageId),
                     maxReadIncomingMessageId: MessageId(peerId: messageId.peerId, namespace: messageId.namespace, id: threadData.maxIncomingReadId),
                     maxReadOutgoingMessageId: MessageId(peerId: messageId.peerId, namespace: messageId.namespace, id: threadData.maxOutgoingReadId),

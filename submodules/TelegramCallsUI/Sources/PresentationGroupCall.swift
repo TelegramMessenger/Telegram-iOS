@@ -839,7 +839,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         conferenceSourceId: CallSessionInternalId?,
         isConference: Bool,
         beginWithVideo: Bool,
-        sharedAudioContext: SharedCallAudioContext?
+        sharedAudioContext: SharedCallAudioContext?,
+        unmuteByDefault: Bool? = nil
     ) {
         self.account = accountContext.account
         self.accountContext = accountContext
@@ -873,10 +874,18 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.beginWithVideo = beginWithVideo
         self.keyPair = keyPair
         
-        if self.isConference && conferenceSourceId == nil {
-            self.isMutedValue = .unmuted
-            self.isMutedPromise.set(self.isMutedValue)
-            self.stateValue.muteState = nil
+        if let unmuteByDefault {
+            if unmuteByDefault {
+                self.isMutedValue = .unmuted
+                self.isMutedPromise.set(self.isMutedValue)
+                self.stateValue.muteState = nil
+            }
+        } else {
+            if self.isConference && conferenceSourceId == nil {
+                self.isMutedValue = .unmuted
+                self.isMutedPromise.set(self.isMutedValue)
+                self.stateValue.muteState = nil
+            }
         }
 
         if let keyPair, let initialCall {
@@ -2958,6 +2967,18 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             let _ = self.updateMuteState(peerId: self.joinAsPeerId, isMuted: false)
         }
         self.genericCallContext?.setIsMuted(isEffectivelyMuted)
+        
+        if let callId = self.callId {
+            let context = self.accountContext
+            let _ = (context.engine.calls.getGroupCallPersistentSettings(callId: callId)
+            |> deliverOnMainQueue).startStandalone(next: { value in
+                var value: PresentationGroupCallPersistentSettings = value?.get(PresentationGroupCallPersistentSettings.self) ?? PresentationGroupCallPersistentSettings.default
+                value.isMicrophoneEnabledByDefault = !isVisuallyMuted
+                if let entry = CodableEntry(value) {
+                    context.engine.calls.setGroupCallPersistentSettings(callId: callId, value: entry)
+                }
+            })
+        }
         
         if isVisuallyMuted {
             self.stateValue.muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false)

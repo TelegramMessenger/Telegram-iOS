@@ -133,7 +133,16 @@ public struct PresentationResourcesItemList {
     
     public static func itemListReorderIndicatorIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListReorderIndicatorIcon.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Item List/Reorder"), color: theme.list.controlSecondaryColor)
+            return generateImage(CGSize(width: 17.0, height: 14.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.setFillColor(theme.list.itemBlocksSeparatorColor.cgColor)
+
+                let lineHeight = 1.0 + UIScreenPixel
+                context.addPath(CGPath(roundedRect: CGRect(x: 0.0, y: UIScreenPixel, width: 17.0, height: lineHeight), cornerWidth: lineHeight / 2.0, cornerHeight: lineHeight / 2.0, transform: nil))
+                context.addPath(CGPath(roundedRect: CGRect(x: 0.0, y: UIScreenPixel + 6.0, width: 17.0, height: lineHeight), cornerWidth: lineHeight / 2.0, cornerHeight: lineHeight / 2.0, transform: nil))
+                context.addPath(CGPath(roundedRect: CGRect(x: 0.0, y: UIScreenPixel + 12.0, width: 17.0, height: lineHeight), cornerWidth: lineHeight / 2.0, cornerHeight: lineHeight / 2.0, transform: nil))
+                context.fillPath()
+            })
         })
     }
     

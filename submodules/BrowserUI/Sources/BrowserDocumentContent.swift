@@ -279,7 +279,7 @@ final class BrowserDocumentContent: UIView, BrowserContent, WKNavigationDelegate
             self.webView.reloadInputViews()
         }
         
-        self.webView.scrollView.scrollIndicatorInsets = UIEdgeInsets(top: 0.0, left: -insets.left, bottom: 0.0, right: -insets.right)
+        self.webView.scrollView.verticalScrollIndicatorInsets = UIEdgeInsets(top: 0.0, left: -insets.left, bottom: 0.0, right: -insets.right)
         self.webView.scrollView.horizontalScrollIndicatorInsets = UIEdgeInsets(top: 0.0, left: -insets.left, bottom: 0.0, right: -insets.right)
     }
     

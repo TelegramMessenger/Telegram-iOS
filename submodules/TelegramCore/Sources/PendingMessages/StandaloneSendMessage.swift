@@ -343,6 +343,7 @@ private func sendUploadedMessageContent(
             var sendAsPeerId: PeerId?
             var bubbleUpEmojiOrStickersets = false
             var allowPaidStars: Int64?
+            var suggestedPost: Api.SuggestedPost?
             
             var flags: Int32 = 0
 
@@ -382,6 +383,8 @@ private func sendUploadedMessageContent(
                     videoTimestamp = attribute.timestamp
                 } else if let attribute = attribute as? PaidStarsMessageAttribute {
                     allowPaidStars = attribute.stars.value
+                } else if let attribute = attribute as? SuggestedPostMessageAttribute {
+                    suggestedPost = attribute.apiSuggestedPost(fixMinTime: Int32(Date().timeIntervalSince1970 + 10))
                 }
             }
             
@@ -442,7 +445,11 @@ private func sendUploadedMessageContent(
                         replyTo = .inputReplyToMonoForum(monoforumPeerId: monoforumPeerId)
                     }
                 
-                    sendMessageRequest = network.requestWithAdditionalInfo(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil, allowPaidStars: allowPaidStars), info: .acknowledgement, tag: dependencyTag)
+                    if suggestedPost != nil {
+                        flags |= 1 << 22
+                    }
+                
+                    sendMessageRequest = network.requestWithAdditionalInfo(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil, allowPaidStars: allowPaidStars, suggestedPost: suggestedPost), info: .acknowledgement, tag: dependencyTag)
                 case let .media(inputMedia, text):
                     if bubbleUpEmojiOrStickersets {
                         flags |= Int32(1 << 15)
@@ -466,8 +473,12 @@ private func sendUploadedMessageContent(
                             replyTo = .inputReplyToStory(peer: inputPeer, storyId: replyToStoryId.id)
                         }
                     }
+                
+                    if suggestedPost != nil {
+                        flags |= 1 << 22
+                    }
                     
-                sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil, allowPaidStars: allowPaidStars), tag: dependencyTag)
+                    sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil, allowPaidStars: allowPaidStars, suggestedPost: suggestedPost), tag: dependencyTag)
                     |> map(NetworkRequestResult.result)
                 case let .forward(sourceInfo):
                     if topMsgId != nil {
@@ -475,7 +486,7 @@ private func sendUploadedMessageContent(
                     }
                 
                     if let forwardSourceInfoAttribute = forwardSourceInfoAttribute, let sourcePeer = transaction.getPeer(forwardSourceInfoAttribute.messageId.peerId), let sourceInputPeer = apiInputPeer(sourcePeer) {
-                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer, topMsgId: topMsgId, replyTo: nil, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil, videoTimestamp: videoTimestamp, allowPaidStars: allowPaidStars), tag: dependencyTag)
+                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer, topMsgId: topMsgId, replyTo: nil, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil, videoTimestamp: videoTimestamp, allowPaidStars: allowPaidStars, suggestedPost: nil), tag: dependencyTag)
                         |> map(NetworkRequestResult.result)
                     } else {
                         sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "internal"))
@@ -617,6 +628,7 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
             var scheduleTime: Int32?
             var sendAsPeerId: PeerId?
             var allowPaidStars: Int64?
+            var suggestedPost: Api.SuggestedPost?
             
             var flags: Int32 = 0
             flags |= (1 << 7)
@@ -643,6 +655,8 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
                     sendAsPeerId = attribute.peerId
                 } else if let attribute = attribute as? PaidStarsMessageAttribute {
                     allowPaidStars = attribute.stars.value
+                } else if let attribute = attribute as? SuggestedPostMessageAttribute {
+                    suggestedPost = attribute.apiSuggestedPost(fixMinTime: Int32(Date().timeIntervalSince1970 + 10))
                 }
             }
             
@@ -679,7 +693,7 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
                         replyTo = .inputReplyToMessage(flags: flags, replyToMsgId: threadId, topMsgId: threadId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: nil)
                     }
                 
-                sendMessageRequest = account.network.request(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil, allowPaidStars: allowPaidStars))
+                sendMessageRequest = account.network.request(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil, allowPaidStars: allowPaidStars, suggestedPost: nil))
                     |> `catch` { _ -> Signal<Api.Updates, NoError> in
                         return .complete()
                     }
@@ -700,7 +714,11 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
                         replyTo = .inputReplyToMessage(flags: flags, replyToMsgId: threadId, topMsgId: threadId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: nil)
                     }
                 
-                    sendMessageRequest = account.network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil, allowPaidStars: allowPaidStars))
+                    if suggestedPost != nil {
+                        flags |= 1 << 22
+                    }
+                
+                    sendMessageRequest = account.network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil, allowPaidStars: allowPaidStars, suggestedPost: suggestedPost))
                     |> `catch` { _ -> Signal<Api.Updates, NoError> in
                         return .complete()
                     }

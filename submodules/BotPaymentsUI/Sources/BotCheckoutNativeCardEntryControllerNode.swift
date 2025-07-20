@@ -502,8 +502,8 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
         if self.scrollNode.view.contentInset != insets {
             self.scrollNode.view.contentInset = insets
         }
-        if self.scrollNode.view.scrollIndicatorInsets != insets {
-            self.scrollNode.view.scrollIndicatorInsets = insets
+        if self.scrollNode.view.verticalScrollIndicatorInsets != insets {
+            self.scrollNode.view.verticalScrollIndicatorInsets = insets
         }
         self.scrollNode.view.ignoreUpdateBounds = false
         

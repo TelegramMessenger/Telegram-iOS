@@ -1,4 +1,4 @@
-#import "TGModernGalleryTransitionView.h"
+#import <LegacyComponents/TGModernGalleryTransitionView.h>
 
 @implementation TGModernGalleryComplexTransitionDescription
 

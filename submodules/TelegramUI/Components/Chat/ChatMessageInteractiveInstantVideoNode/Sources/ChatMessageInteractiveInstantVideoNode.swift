@@ -1323,13 +1323,13 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     case let .Fetching(_, progress):
                         if let isBuffering = isBuffering {
                             if isBuffering {
-                                state = .progress(value: nil, cancelEnabled: true, appearance: nil)
+                                state = .progress(value: nil, cancelEnabled: true, appearance: nil, animateRotation: true)
                             } else {
                                 state = .none
                             }
                         } else {
                             let adjustedProgress = max(progress, 0.027)
-                            state = .progress(value: CGFloat(adjustedProgress), cancelEnabled: true, appearance: nil)
+                            state = .progress(value: CGFloat(adjustedProgress), cancelEnabled: true, appearance: nil, animateRotation: true)
                         }
                     case .Local:
                         if isViewOnceMessage {
@@ -1355,7 +1355,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     isLocal = true
                 }
                 if (isBuffering ?? false) && !isLocal {
-                    state = .progress(value: nil, cancelEnabled: true, appearance: nil)
+                    state = .progress(value: nil, cancelEnabled: true, appearance: nil, animateRotation: true)
                 } else {
                     state = .none
                 }

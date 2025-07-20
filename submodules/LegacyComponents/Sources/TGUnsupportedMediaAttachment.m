@@ -1,4 +1,4 @@
-#import "TGUnsupportedMediaAttachment.h"
+#import <LegacyComponents/TGUnsupportedMediaAttachment.h>
 
 @implementation TGUnsupportedMediaAttachment
 

@@ -1,8 +1,8 @@
-#import "TGTooltipView.h"
+#import <LegacyComponents/TGTooltipView.h>
 
 #import "LegacyComponentsInternal.h"
-#import "TGFont.h"
-#import "TGImageUtils.h"
+#import <LegacyComponents/TGFont.h>
+#import <LegacyComponents/TGImageUtils.h>
 
 #import <QuartzCore/QuartzCore.h>
 

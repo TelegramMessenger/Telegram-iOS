@@ -442,13 +442,13 @@ public extension Api {
 }
 public extension Api {
     indirect enum SponsoredMessage: TypeConstructorDescription {
-        case sponsoredMessage(flags: Int32, randomId: Buffer, url: String, title: String, message: String, entities: [Api.MessageEntity]?, photo: Api.Photo?, media: Api.MessageMedia?, color: Api.PeerColor?, buttonText: String, sponsorInfo: String?, additionalInfo: String?)
+        case sponsoredMessage(flags: Int32, randomId: Buffer, url: String, title: String, message: String, entities: [Api.MessageEntity]?, photo: Api.Photo?, media: Api.MessageMedia?, color: Api.PeerColor?, buttonText: String, sponsorInfo: String?, additionalInfo: String?, minDisplayDuration: Int32?, maxDisplayDuration: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .sponsoredMessage(let flags, let randomId, let url, let title, let message, let entities, let photo, let media, let color, let buttonText, let sponsorInfo, let additionalInfo):
+                case .sponsoredMessage(let flags, let randomId, let url, let title, let message, let entities, let photo, let media, let color, let buttonText, let sponsorInfo, let additionalInfo, let minDisplayDuration, let maxDisplayDuration):
                     if boxed {
-                        buffer.appendInt32(1301522832)
+                        buffer.appendInt32(2109703795)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeBytes(randomId, buffer: buffer, boxed: false)
@@ -466,14 +466,16 @@ public extension Api {
                     serializeString(buttonText, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 7) != 0 {serializeString(sponsorInfo!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 8) != 0 {serializeString(additionalInfo!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 15) != 0 {serializeInt32(minDisplayDuration!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 15) != 0 {serializeInt32(maxDisplayDuration!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .sponsoredMessage(let flags, let randomId, let url, let title, let message, let entities, let photo, let media, let color, let buttonText, let sponsorInfo, let additionalInfo):
-                return ("sponsoredMessage", [("flags", flags as Any), ("randomId", randomId as Any), ("url", url as Any), ("title", title as Any), ("message", message as Any), ("entities", entities as Any), ("photo", photo as Any), ("media", media as Any), ("color", color as Any), ("buttonText", buttonText as Any), ("sponsorInfo", sponsorInfo as Any), ("additionalInfo", additionalInfo as Any)])
+                case .sponsoredMessage(let flags, let randomId, let url, let title, let message, let entities, let photo, let media, let color, let buttonText, let sponsorInfo, let additionalInfo, let minDisplayDuration, let maxDisplayDuration):
+                return ("sponsoredMessage", [("flags", flags as Any), ("randomId", randomId as Any), ("url", url as Any), ("title", title as Any), ("message", message as Any), ("entities", entities as Any), ("photo", photo as Any), ("media", media as Any), ("color", color as Any), ("buttonText", buttonText as Any), ("sponsorInfo", sponsorInfo as Any), ("additionalInfo", additionalInfo as Any), ("minDisplayDuration", minDisplayDuration as Any), ("maxDisplayDuration", maxDisplayDuration as Any)])
     }
     }
     
@@ -510,6 +512,10 @@ public extension Api {
             if Int(_1!) & Int(1 << 7) != 0 {_11 = parseString(reader) }
             var _12: String?
             if Int(_1!) & Int(1 << 8) != 0 {_12 = parseString(reader) }
+            var _13: Int32?
+            if Int(_1!) & Int(1 << 15) != 0 {_13 = reader.readInt32() }
+            var _14: Int32?
+            if Int(_1!) & Int(1 << 15) != 0 {_14 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -522,8 +528,10 @@ public extension Api {
             let _c10 = _10 != nil
             let _c11 = (Int(_1!) & Int(1 << 7) == 0) || _11 != nil
             let _c12 = (Int(_1!) & Int(1 << 8) == 0) || _12 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 {
-                return Api.SponsoredMessage.sponsoredMessage(flags: _1!, randomId: _2!, url: _3!, title: _4!, message: _5!, entities: _6, photo: _7, media: _8, color: _9, buttonText: _10!, sponsorInfo: _11, additionalInfo: _12)
+            let _c13 = (Int(_1!) & Int(1 << 15) == 0) || _13 != nil
+            let _c14 = (Int(_1!) & Int(1 << 15) == 0) || _14 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 {
+                return Api.SponsoredMessage.sponsoredMessage(flags: _1!, randomId: _2!, url: _3!, title: _4!, message: _5!, entities: _6, photo: _7, media: _8, color: _9, buttonText: _10!, sponsorInfo: _11, additionalInfo: _12, minDisplayDuration: _13, maxDisplayDuration: _14)
             }
             else {
                 return nil

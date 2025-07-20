@@ -363,7 +363,7 @@ public func incomingMessagePrivacyScreen(context: AccountContext, value: GlobalP
         openPremiumInfo: {
             var replaceImpl: ((ViewController) -> Void)?
             let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .messagePrivacy, forceDark: false, action: {
-                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .paidMessages, forceDark: false, dismissed: nil)
+                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .messageEffects, forceDark: false, dismissed: nil)
                 replaceImpl?(controller)
             }, dismissed: nil)
             replaceImpl = { [weak controller] c in
@@ -376,13 +376,18 @@ public func incomingMessagePrivacyScreen(context: AccountContext, value: GlobalP
             if case let .paidMessages(value) = stateValue.with({ $0 }).updatedValue {
                 currentAmount = value
             }
-            let starsScreen = context.sharedContext.makeStarsWithdrawalScreen(context: context, subject: .enterAmount(current: currentAmount, minValue: StarsAmount(value: 1, nanos: 0), fractionAfterCommission: 80, kind: .privacy), completion: { amount in
-                updateState { state in
-                    var state = state
-                    state.updatedValue = .paidMessages(StarsAmount(value: amount, nanos: 0))
-                    return state
+            let starsScreen = context.sharedContext.makeStarsWithdrawalScreen(context: context, subject: .enterAmount(
+                current: currentAmount,
+                minValue: StarsAmount(value: 1, nanos: 0),
+                fractionAfterCommission: 80, kind: .privacy,
+                completion: { amount in
+                    updateState { state in
+                        var state = state
+                        state.updatedValue = .paidMessages(StarsAmount(value: amount, nanos: 0))
+                        return state
+                    }
                 }
-            })
+            ))
             pushControllerImpl?(starsScreen)
         }
     )

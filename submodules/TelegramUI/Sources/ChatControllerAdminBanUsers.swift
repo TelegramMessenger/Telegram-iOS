@@ -21,7 +21,7 @@ fileprivate struct InitialBannedRights {
 }
 
 extension ChatControllerImpl {
-    fileprivate func applyAdminUserActionsResult(messageIds: Set<MessageId>, result: AdminUserActionsSheet.Result, initialUserBannedRights: [EnginePeer.Id: InitialBannedRights]) {
+    fileprivate func applyAdminUserActionsResult(messageIds: Set<MessageId>, result: AdminUserActionsSheet.ChatResult, initialUserBannedRights: [EnginePeer.Id: InitialBannedRights]) {
         guard let messagesPeerId = self.chatLocation.peerId else {
             return
         }
@@ -223,14 +223,16 @@ extension ChatControllerImpl {
                     context: self.context,
                     chatPeer: chatPeer,
                     peers: renderedParticipants,
-                    messageCount: messageIds.count,
-                    deleteAllMessageCount: deleteAllMessageCount,
-                    completion: { [weak self] result in
-                        guard let self else {
-                            return
+                    mode: .chat(
+                        messageCount: messageIds.count,
+                        deleteAllMessageCount: deleteAllMessageCount,
+                        completion: { [weak self] result in
+                            guard let self else {
+                                return
+                            }
+                            self.applyAdminUserActionsResult(messageIds: messageIds, result: result, initialUserBannedRights: initialUserBannedRights)
                         }
-                        self.applyAdminUserActionsResult(messageIds: messageIds, result: result, initialUserBannedRights: initialUserBannedRights)
-                    }
+                    )
                 ))
             })
         }))
@@ -330,14 +332,16 @@ extension ChatControllerImpl {
                         participant: participant,
                         peer: authorPeer._asPeer()
                     )],
-                    messageCount: messageIds.count,
-                    deleteAllMessageCount: deleteAllMessageCount,
-                    completion: { [weak self] result in
-                        guard let self else {
-                            return
+                    mode: .chat(
+                        messageCount: messageIds.count,
+                        deleteAllMessageCount: deleteAllMessageCount,
+                        completion: { [weak self] result in
+                            guard let self else {
+                                return
+                            }
+                            self.applyAdminUserActionsResult(messageIds: messageIds, result: result, initialUserBannedRights: initialUserBannedRights)
                         }
-                        self.applyAdminUserActionsResult(messageIds: messageIds, result: result, initialUserBannedRights: initialUserBannedRights)
-                    }
+                    )
                 ))
             })
         }))
@@ -382,6 +386,46 @@ extension ChatControllerImpl {
         )
         |> deliverOnMainQueue).start(next: { [weak self] messages in
             guard let self else {
+                return
+            }
+            
+            if let message = messages.values.compactMap({ $0 }).first(where: { message in message.attributes.contains(where: { $0 is PublishedSuggestedPostMessageAttribute }) }), let attribute = message.attributes.first(where: { $0 is PublishedSuggestedPostMessageAttribute }) as? PublishedSuggestedPostMessageAttribute {
+                let commit = { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    let titleString: String
+                    let textString: String
+                    switch attribute.currency {
+                    case .stars:
+                        titleString = self.presentationData.strings.Chat_DeletePaidMessageStars_Title
+                        textString = self.presentationData.strings.Chat_DeletePaidMessageStars_Text
+                    case .ton:
+                        titleString = self.presentationData.strings.Chat_DeletePaidMessageTon_Title
+                        textString = self.presentationData.strings.Chat_DeletePaidMessageTon_Text
+                    }
+                    self.present(standardTextAlertController(
+                        theme: AlertControllerTheme(presentationData: self.presentationData),
+                        title: titleString,
+                        text: textString,
+                        actions: [
+                            TextAlertAction(type: .destructiveAction, title: self.presentationData.strings.Chat_DeletePaidMessage_Action, action: { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                self.beginDeleteMessagesWithUndo(messageIds: messageIds, type: .forEveryone)
+                            }),
+                            TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_Cancel, action: {})
+                        ],
+                        actionLayout: .vertical,
+                        parseMarkdown: true
+                    ), in: .window(.root))
+                }
+                if let contextController {
+                    contextController.dismiss(completion: commit)
+                } else {
+                    commit()
+                }
                 return
             }
             
@@ -586,5 +630,60 @@ extension ChatControllerImpl {
         ])])
         self.chatDisplayNode.dismissInput()
         self.presentInGlobalOverlay(actionSheet)
+    }
+    
+    func openDeleteMonoforumPeer(peerId: EnginePeer.Id) {
+        guard let chatPeerId = self.chatLocation.peerId else {
+            return
+        }
+        guard let mainChannel = self.presentationInterfaceState.renderedPeer?.chatOrMonoforumMainPeer as? TelegramChannel else {
+            return
+        }
+        let _ = (self.context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: chatPeerId),
+            TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+        )
+        |> deliverOnMainQueue).startStandalone(next: { [weak self] chatPeer, authorPeer in
+            guard let self, let chatPeer, let authorPeer else {
+                return
+            }
+            var initialUserBannedRights: [EnginePeer.Id: InitialBannedRights] = [:]
+                initialUserBannedRights[authorPeer.id] = InitialBannedRights(value: nil)
+            let participant: ChannelParticipant = .member(id: authorPeer.id, invitedAt: 0, adminInfo: nil, banInfo: ChannelParticipantBannedInfo(
+                rights: TelegramChatBannedRights(flags: [], untilDate: 0),
+                restrictedBy: self.context.account.peerId,
+                timestamp: 0,
+                isMember: false
+            ), rank: nil, subscriptionUntilDate: nil)
+            self.push(AdminUserActionsSheet(
+                context: self.context,
+                chatPeer: chatPeer,
+                peers: [RenderedChannelParticipant(
+                    participant: participant,
+                    peer: authorPeer._asPeer()
+                )],
+                mode: .monoforum(completion: { [weak self] result in
+                    guard let self else {
+                        return
+                    }
+                    
+                    if self.chatLocation.threadId == peerId.toInt64() {
+                        self.updateChatLocationThread(threadId: nil)
+                    }
+                    
+                    let _ = self.context.engine.peers.removeForumChannelThread(id: chatPeerId, threadId: peerId.toInt64()).startStandalone(completed: {
+                    })
+                    if result.ban {
+                        let _ = self.context.engine.peers.updateChannelMemberBannedRights(peerId: mainChannel.id,
+                            memberId: peerId,
+                            rights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: Int32.max)
+                        ).startStandalone()
+                    }
+                    if result.reportSpam {
+                        let _ = self.context.engine.peers.reportPeer(peerId: peerId, reason: .spam, message: "").startStandalone()
+                    }
+                })
+            ))
+        })
     }
 }

@@ -1,4 +1,4 @@
-#import "TGCameraInterfaceAssets.h"
+#import <LegacyComponents/TGCameraInterfaceAssets.h>
 #import <CoreText/CoreText.h>
 
 #import "LegacyComponentsInternal.h"

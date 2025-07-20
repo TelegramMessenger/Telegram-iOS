@@ -193,42 +193,21 @@ private final class AdminUserActionsSheetComponent: Component {
     let context: AccountContext
     let chatPeer: EnginePeer
     let peers: [RenderedChannelParticipant]
-    let messageCount: Int
-    let deleteAllMessageCount: Int?
-    let completion: (AdminUserActionsSheet.Result) -> Void
+    let mode: AdminUserActionsSheet.Mode
     
     init(
         context: AccountContext,
         chatPeer: EnginePeer,
         peers: [RenderedChannelParticipant],
-        messageCount: Int,
-        deleteAllMessageCount: Int?,
-        completion: @escaping (AdminUserActionsSheet.Result) -> Void
+        mode: AdminUserActionsSheet.Mode
     ) {
         self.context = context
         self.chatPeer = chatPeer
         self.peers = peers
-        self.messageCount = messageCount
-        self.deleteAllMessageCount = deleteAllMessageCount
-        self.completion = completion
+        self.mode = mode
     }
     
     static func ==(lhs: AdminUserActionsSheetComponent, rhs: AdminUserActionsSheetComponent) -> Bool {
-        if lhs.context !== rhs.context {
-            return false
-        }
-        if lhs.chatPeer != rhs.chatPeer {
-            return false
-        }
-        if lhs.peers != rhs.peers {
-            return false
-        }
-        if lhs.messageCount != rhs.messageCount {
-            return false
-        }
-        if lhs.deleteAllMessageCount != rhs.deleteAllMessageCount {
-            return false
-        }
         return true
     }
     
@@ -406,7 +385,14 @@ private final class AdminUserActionsSheetComponent: Component {
             }
         }
         
-        private func calculateResult() -> AdminUserActionsSheet.Result {
+        private func calculateMonoforumResult() -> AdminUserActionsSheet.MonoforumResult {
+            return AdminUserActionsSheet.MonoforumResult(
+                ban: !self.optionBanSelectedPeers.isEmpty,
+                reportSpam: !self.optionReportSelectedPeers.isEmpty
+            )
+        }
+        
+        private func calculateChatResult() -> AdminUserActionsSheet.ChatResult {
             var reportSpamPeers: [EnginePeer.Id] = []
             var deleteAllFromPeers: [EnginePeer.Id] = []
             var banPeers: [EnginePeer.Id] = []
@@ -433,7 +419,7 @@ private final class AdminUserActionsSheetComponent: Component {
                 }
             }
             
-            return AdminUserActionsSheet.Result(
+            return AdminUserActionsSheet.ChatResult(
                 reportSpamPeers: reportSpamPeers,
                 deleteAllFromPeers: deleteAllFromPeers,
                 banPeers: banPeers,
@@ -640,35 +626,40 @@ private final class AdminUserActionsSheetComponent: Component {
             var availableOptions: [OptionsSection] = []
             availableOptions.append(.report)
             
-            if case let .channel(channel) = component.chatPeer {
-                if channel.hasPermission(.deleteAllMessages) {
-                    availableOptions.append(.deleteAll)
-                    
-                    if channel.hasPermission(.banMembers) {
-                        var canBanEveryone = true
-                        for peer in component.peers {
-                            if peer.peer.id == component.context.account.peerId {
-                                canBanEveryone = false
-                                continue
-                            }
-                            
-                            switch peer.participant {
-                            case .creator:
-                                canBanEveryone = false
-                            case let .member(_, _, adminInfo, banInfo, _, _):
-                                let _ = banInfo
-                                if let adminInfo {
-                                    if channel.flags.contains(.isCreator) {
-                                    } else if adminInfo.promotedBy == component.context.account.peerId {
-                                    } else {
-                                        canBanEveryone = false
+            switch component.mode {
+            case .monoforum:
+                availableOptions.append(.ban)
+            case .chat:
+                if case let .channel(channel) = component.chatPeer {
+                    if channel.hasPermission(.deleteAllMessages) {
+                        availableOptions.append(.deleteAll)
+                        
+                        if channel.hasPermission(.banMembers) {
+                            var canBanEveryone = true
+                            for peer in component.peers {
+                                if peer.peer.id == component.context.account.peerId {
+                                    canBanEveryone = false
+                                    continue
+                                }
+                                
+                                switch peer.participant {
+                                case .creator:
+                                    canBanEveryone = false
+                                case let .member(_, _, adminInfo, banInfo, _, _):
+                                    let _ = banInfo
+                                    if let adminInfo {
+                                        if channel.flags.contains(.isCreator) {
+                                        } else if adminInfo.promotedBy == component.context.account.peerId {
+                                        } else {
+                                            canBanEveryone = false
+                                        }
                                     }
                                 }
                             }
-                        }
-                        
-                        if canBanEveryone {
-                            availableOptions.append(.ban)
+                            
+                            if canBanEveryone {
+                                availableOptions.append(.ban)
+                            }
                         }
                     }
                 }
@@ -906,11 +897,20 @@ private final class AdminUserActionsSheetComponent: Component {
                 )))
             }
             
-            var titleString: String = environment.strings.Chat_AdminActionSheet_DeleteTitle(Int32(component.messageCount))
-            
-            if let deleteAllMessageCount = component.deleteAllMessageCount {
-                if self.optionDeleteAllSelectedPeers == Set(component.peers.map(\.peer.id)) {
-                    titleString = environment.strings.Chat_AdminActionSheet_DeleteTitle(Int32(deleteAllMessageCount))
+            var titleString: String
+            switch component.mode {
+            case .monoforum:
+                if let peer = component.peers.first {
+                    titleString = environment.strings.Monoforum_DeleteTopic_Title(EnginePeer(peer.peer).compactDisplayTitle).string
+                } else {
+                    titleString = environment.strings.Common_Delete
+                }
+            case let .chat(messageCount, deleteAllMessageCount, _):
+                titleString = environment.strings.Chat_AdminActionSheet_DeleteTitle(Int32(messageCount))
+                if let deleteAllMessageCount {
+                    if self.optionDeleteAllSelectedPeers == Set(component.peers.map(\.peer.id)) {
+                        titleString = environment.strings.Chat_AdminActionSheet_DeleteTitle(Int32(deleteAllMessageCount))
+                    }
                 }
             }
             
@@ -1383,7 +1383,13 @@ private final class AdminUserActionsSheetComponent: Component {
                             return
                         }
                         self.environment?.controller()?.dismiss()
-                        component.completion(self.calculateResult())
+                        
+                        switch component.mode {
+                        case let .monoforum(completion):
+                            completion(self.calculateMonoforumResult())
+                        case let .chat(_, _, completion):
+                            completion(self.calculateChatResult())
+                        }
                     }
                 )),
                 environment: {},
@@ -1454,7 +1460,12 @@ private final class AdminUserActionsSheetComponent: Component {
 }
 
 public class AdminUserActionsSheet: ViewControllerComponentContainer {
-    public final class Result {
+    public enum Mode {
+        case chat(messageCount: Int, deleteAllMessageCount: Int?, completion: (ChatResult) -> Void)
+        case monoforum(completion: (MonoforumResult) -> Void)
+    }
+    
+    public final class ChatResult {
         public let reportSpamPeers: [EnginePeer.Id]
         public let deleteAllFromPeers: [EnginePeer.Id]
         public let banPeers: [EnginePeer.Id]
@@ -1468,14 +1479,23 @@ public class AdminUserActionsSheet: ViewControllerComponentContainer {
         }
     }
     
+    public final class MonoforumResult {
+        public let ban: Bool
+        public let reportSpam: Bool
+        
+        init(ban: Bool, reportSpam: Bool) {
+            self.ban = ban
+            self.reportSpam = reportSpam
+        }
+    }
+    
     private let context: AccountContext
     
     private var isDismissed: Bool = false
     
-    public init(context: AccountContext, chatPeer: EnginePeer, peers: [RenderedChannelParticipant], messageCount: Int, deleteAllMessageCount: Int?, completion: @escaping (Result) -> Void) {
+    public init(context: AccountContext, chatPeer: EnginePeer, peers: [RenderedChannelParticipant], mode: Mode) {
         self.context = context
-        
-        super.init(context: context, component: AdminUserActionsSheetComponent(context: context, chatPeer: chatPeer, peers: peers, messageCount: messageCount, deleteAllMessageCount: deleteAllMessageCount, completion: completion), navigationBarAppearance: .none)
+        super.init(context: context, component: AdminUserActionsSheetComponent(context: context, chatPeer: chatPeer, peers: peers, mode: mode), navigationBarAppearance: .none)
         
         self.statusBar.statusBarStyle = .Ignore
         self.navigationPresentation = .flatModal

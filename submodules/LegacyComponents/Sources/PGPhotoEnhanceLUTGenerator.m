@@ -4,6 +4,9 @@
 
 #import "PGPhotoProcessPass.h"
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 const NSUInteger PGPhotoEnhanceHistogramBins = 256;
 const NSUInteger PGPhotoEnhanceSegments = 4;
 
@@ -332,3 +335,5 @@ const NSUInteger PGPhotoEnhanceSegments = 4;
 }
 
 @end
+
+#pragma clang diagnostic pop

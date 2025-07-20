@@ -112,7 +112,6 @@ import ChatMessageAnimatedStickerItemNode
 import ChatMessageBubbleItemNode
 import ChatNavigationButton
 import WebsiteType
-import ChatQrCodeScreen
 import PeerInfoScreen
 import MediaEditorScreen
 import WallpaperGalleryScreen
@@ -203,8 +202,13 @@ extension ChatControllerImpl {
                             .withUpdatedReplyToMessageId(replyMessageSubject?.subjectModel)
                             .withUpdatedCorrelationId(correlationId)
                         
+                        var shouldAnimateMessageTransition = self.chatDisplayNode.shouldAnimateMessageTransition
+                        if self.chatLocation.threadId == nil, let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = self.presentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
+                            shouldAnimateMessageTransition = false
+                        }
+                        
                         var usedCorrelationId = false
-                        if scheduleTime == nil, self.chatDisplayNode.shouldAnimateMessageTransition, let extractedView = videoController.extractVideoSnapshot() {
+                        if scheduleTime == nil, shouldAnimateMessageTransition, let extractedView = videoController.extractVideoSnapshot() {
                             usedCorrelationId = true
                             self.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source:  .videoMessage(ChatMessageTransitionNodeImpl.Source.VideoMessage(view: extractedView)), initiated: { [weak videoController, weak self] in
                                 videoController?.hideVideoSnapshot()
@@ -222,7 +226,7 @@ extension ChatControllerImpl {
                                 self.chatDisplayNode.collapseInput()
                                 
                                 self.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                                    $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withUpdatedMediaDraftState(nil) }
+                                    $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withUpdatedMediaDraftState(nil).withUpdatedPostSuggestionState(nil) }
                                 })
                             }
                         }, usedCorrelationId ? correlationId : nil)
@@ -367,7 +371,7 @@ extension ChatControllerImpl {
                             var usedCorrelationId = false
                             
                             var shouldAnimateMessageTransition = strongSelf.chatDisplayNode.shouldAnimateMessageTransition
-                            if strongSelf.chatLocation.threadId == nil, let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = strongSelf.presentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.sendSomething) {
+                            if strongSelf.chatLocation.threadId == nil, let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = strongSelf.presentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
                                 shouldAnimateMessageTransition = false
                             }
                             
@@ -388,7 +392,7 @@ extension ChatControllerImpl {
                                     strongSelf.chatDisplayNode.collapseInput()
                                     
                                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                                        $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil) }
+                                        $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withUpdatedPostSuggestionState(nil) }
                                     })
                                 }
                             }, usedCorrelationId ? correlationId : nil)
@@ -595,7 +599,16 @@ extension ChatControllerImpl {
         self.dismissAllTooltips()
         
         let insets = layout.insets(options: [.input])
-        let location = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.right - 42.0 - UIScreenPixel, y: layout.size.height - insets.bottom - 122.0), size: CGSize())
+        var screenWidth = layout.size.width
+        if layout.metrics.isTablet {
+            if layout.size.height == layout.deviceMetrics.screenSize.width {
+                screenWidth = layout.deviceMetrics.screenSize.height
+            } else {
+                screenWidth = layout.deviceMetrics.screenSize.width
+            }
+        }
+        
+        let location = CGRect(origin: CGPoint(x: screenWidth - layout.safeInsets.right - 42.0 - UIScreenPixel, y: layout.size.height - insets.bottom - 122.0), size: CGSize())
         
         let tooltipController = TooltipScreen(
             account: self.context.account,
@@ -704,7 +717,7 @@ extension ChatControllerImpl {
                     strongSelf.chatDisplayNode.collapseInput()
                     
                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                        $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedMediaDraftState(nil).withUpdatedSendMessageEffect(nil) }
+                        $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedMediaDraftState(nil).withUpdatedSendMessageEffect(nil).withUpdatedPostSuggestionState(nil) }
                     })
 
                     strongSelf.updateDownButtonVisibility()

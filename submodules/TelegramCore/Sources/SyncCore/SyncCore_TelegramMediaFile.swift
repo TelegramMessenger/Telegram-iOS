@@ -26,6 +26,7 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable, Codable {
     case iconStatusEmoji
     case iconTopicEmoji
     case iconChannelStatusEmoji
+    case tonGifts
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("r", orElse: 0) {
@@ -43,6 +44,8 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable, Codable {
             self = .premiumGifts
         case 6:
             self = .iconChannelStatusEmoji
+        case 7:
+            self = .tonGifts
         default:
             self = .name("")
             assertionFailure()
@@ -68,6 +71,8 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable, Codable {
             self = .premiumGifts
         case 6:
             self = .iconChannelStatusEmoji
+        case 7:
+            self = .tonGifts
         default:
             self = .name("")
             assertionFailure()
@@ -92,6 +97,8 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable, Codable {
             encoder.encodeInt32(4, forKey: "r")
         case .premiumGifts:
             encoder.encodeInt32(5, forKey: "r")
+        case .tonGifts:
+            encoder.encodeInt32(6, forKey: "r")
         case .emojiGenericAnimations, .iconStatusEmoji, .iconTopicEmoji, .iconChannelStatusEmoji:
             preconditionFailure()
         }
@@ -117,7 +124,7 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable, Codable {
             try container.encode(4 as Int32, forKey: "r")
         case .premiumGifts:
             try container.encode(5 as Int32, forKey: "r")
-        case .emojiGenericAnimations, .iconStatusEmoji, .iconTopicEmoji, .iconChannelStatusEmoji:
+        case .emojiGenericAnimations, .iconStatusEmoji, .iconTopicEmoji, .iconChannelStatusEmoji, .tonGifts:
             preconditionFailure()
         }
     }
@@ -153,6 +160,8 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable, Codable {
             self = .iconTopicEmoji
         case .stickerpackreferenceIconchannelstatusemoji:
             self = .iconChannelStatusEmoji
+        case .stickerpackreferenceTongifts:
+            self = .tonGifts
         case .none_:
             throw FlatBuffersError.missingRequiredField()
         }
@@ -208,6 +217,10 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable, Codable {
             valueType = .stickerpackreferenceIconchannelstatusemoji
             let start = TelegramCore_StickerPackReference_IconChannelStatusEmoji.startStickerPackReference_IconChannelStatusEmoji(&builder)
             offset = TelegramCore_StickerPackReference_IconChannelStatusEmoji.endStickerPackReference_IconChannelStatusEmoji(&builder, start: start)
+        case .tonGifts:
+            valueType = .stickerpackreferenceTongifts
+            let start = TelegramCore_StickerPackReference_TonGifts.startStickerPackReference_TonGifts(&builder)
+            offset = TelegramCore_StickerPackReference_TonGifts.endStickerPackReference_TonGifts(&builder, start: start)
         }
         return TelegramCore_StickerPackReference.createStickerPackReference(&builder, valueType: valueType, valueOffset: offset)
     }
@@ -246,6 +259,12 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable, Codable {
             }
         case .premiumGifts:
             if case .premiumGifts = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .tonGifts:
+            if case .tonGifts = rhs {
                 return true
             } else {
                 return false

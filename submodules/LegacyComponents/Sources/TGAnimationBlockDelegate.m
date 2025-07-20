@@ -1,4 +1,4 @@
-#import "TGAnimationBlockDelegate.h"
+#import <LegacyComponents/TGAnimationBlockDelegate.h>
 
 @implementation TGAnimationBlockDelegate
 

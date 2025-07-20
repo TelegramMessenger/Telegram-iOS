@@ -92,18 +92,21 @@ public enum ChatTitleContent: Equatable {
         case replies
     }
     
-    case peer(peerView: PeerData, customTitle: String?, onlineMemberCount: (total: Int32?, recent: Int32?), isScheduledMessages: Bool, isMuted: Bool?, customMessageCount: Int?, isEnabled: Bool)
+    case peer(peerView: PeerData, customTitle: String?, customSubtitle: String?, onlineMemberCount: (total: Int32?, recent: Int32?), isScheduledMessages: Bool, isMuted: Bool?, customMessageCount: Int?, isEnabled: Bool)
     case replyThread(type: ReplyThreadType, count: Int)
     case custom(String, String?, Bool)
     
     public static func ==(lhs: ChatTitleContent, rhs: ChatTitleContent) -> Bool {
         switch lhs {
-        case let .peer(peerView, customTitle, onlineMemberCount, isScheduledMessages, isMuted, customMessageCount, isEnabled):
-            if case let .peer(rhsPeerView, rhsCustomTitle, rhsOnlineMemberCount, rhsIsScheduledMessages, rhsIsMuted, rhsCustomMessageCount, rhsIsEnabled) = rhs {
+        case let .peer(peerView, customTitle, customSubtitle, onlineMemberCount, isScheduledMessages, isMuted, customMessageCount, isEnabled):
+            if case let .peer(rhsPeerView, rhsCustomTitle, rhsCustomSubtitle, rhsOnlineMemberCount, rhsIsScheduledMessages, rhsIsMuted, rhsCustomMessageCount, rhsIsEnabled) = rhs {
                 if peerView != rhsPeerView {
                     return false
                 }
                 if customTitle != rhsCustomTitle {
+                    return false
+                }
+                if customSubtitle != rhsCustomSubtitle {
                     return false
                 }
                 if onlineMemberCount.0 != rhsOnlineMemberCount.0 || onlineMemberCount.1 != rhsOnlineMemberCount.1 {
@@ -246,7 +249,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                 var titleStatusIcon: ChatTitleCredibilityIcon = .none
                 var isEnabled = true
                 switch titleContent {
-                    case let .peer(peerView, customTitle, _, isScheduledMessages, isMuted, _, isEnabledValue):
+                    case let .peer(peerView, customTitle, _, _, isScheduledMessages, isMuted, _, isEnabledValue):
                         if peerView.peerId.isReplies {
                             let typeText: String = self.strings.DialogList_Replies
                             segments = [.text(0, NSAttributedString(string: typeText, font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
@@ -260,7 +263,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                             isEnabled = false
                         } else {
                             if let peer = peerView.peer {
-                                if let customTitle = customTitle {
+                                if let customTitle {
                                     segments = [.text(0, NSAttributedString(string: customTitle, font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
                                 } else if peerView.peerId == self.context.account.peerId {
                                     if peerView.isSavedMessages {
@@ -283,7 +286,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                                         titleCredibilityIcon = .fake
                                     } else if peer.isScam {
                                         titleCredibilityIcon = .scam
-                                    } else if let emojiStatus = peer.emojiStatus, !premiumConfiguration.isPremiumDisabled {
+                                    } else if let emojiStatus = peer.emojiStatus {
                                         titleStatusIcon = .emojiStatus(emojiStatus)
                                     } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
                                         titleCredibilityIcon = .premium
@@ -444,8 +447,8 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                 
                 var enableAnimation = false
                 switch titleContent {
-                case let .peer(_, customTitle, _, _, _, _, _):
-                    if case let .peer(_, previousCustomTitle, _, _, _, _, _) = oldValue {
+                case let .peer(_, customTitle, _, _, _, _, _, _):
+                    if case let .peer(_, previousCustomTitle, _, _, _, _, _, _) = oldValue {
                         if customTitle != previousCustomTitle {
                             enableAnimation = false
                         }
@@ -471,7 +474,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
         var inputActivitiesAllowed = true
         if let titleContent = self.titleContent {
             switch titleContent {
-            case let .peer(peerView, _, _, isScheduledMessages, _, _, _):
+            case let .peer(peerView, _, _, _, isScheduledMessages, _, _, _):
                 if let peer = peerView.peer {
                     if peer.id == self.context.account.peerId || isScheduledMessages || peer.id.isRepliesOrVerificationCodes {
                         inputActivitiesAllowed = false
@@ -572,8 +575,11 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
             } else {
                 if let titleContent = self.titleContent {
                     switch titleContent {
-                        case let .peer(peerView, customTitle, onlineMemberCount, isScheduledMessages, _, customMessageCount, _):
-                            if let customMessageCount = customMessageCount, customMessageCount != 0 {
+                        case let .peer(peerView, customTitle, customSubtitle, onlineMemberCount, isScheduledMessages, _, customMessageCount, _):
+                            if let customSubtitle {
+                                let string = NSAttributedString(string: customSubtitle, font: subtitleFont, textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
+                                state = .info(string, .generic)
+                            } else if let customMessageCount = customMessageCount, customMessageCount != 0 {
                                 let string = NSAttributedString(string: self.strings.Conversation_Messages(Int32(customMessageCount)), font: subtitleFont, textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
                                 state = .info(string, .generic)
                             } else if let peer = peerView.peer {

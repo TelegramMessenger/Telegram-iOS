@@ -1,4 +1,4 @@
-#import "UIImage+TGMediaEditableItem.h"
+#import <LegacyComponents/UIImage+TGMediaEditableItem.h>
 
 #import <LegacyComponents/LegacyComponents.h>
 

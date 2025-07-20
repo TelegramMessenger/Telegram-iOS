@@ -149,6 +149,13 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                     canMatchThread = true
                     switchToThread = true
                 }
+                if case .replyThread = params.chatLocation {
+                    if case let .replyThread(replyThread) = params.chatLocation, (replyThread.isForumPost || replyThread.isMonoforumPost) {
+                    } else {
+                        canMatchThread = false
+                        switchToThread = false
+                    }
+                }
                 
                 if controller.chatLocation.peerId == params.chatLocation.asChatLocation.peerId && canMatchThread && (controller.subject != .scheduledMessages || controller.subject == params.subject) {
                     if let updateTextInputState = params.updateTextInputState {
@@ -191,7 +198,10 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                     
                     controller.purposefulAction = params.purposefulAction
                     if let activateInput = params.activateInput {
-                        controller.activateInput(type: activateInput)
+                        if case let .replyThread(replyThread) = params.chatLocation, (replyThread.isForumPost || replyThread.isMonoforumPost) {
+                        } else {
+                            controller.activateInput(type: activateInput)
+                        }
                     }
                     if params.changeColors {
                         controller.presentThemeSelection()

@@ -49,7 +49,7 @@ swift_library(
     copts = [
         "-warnings-as-errors",
     ],
-        data = [
+    data = [
         ":StoryPeerListBundle",
     ],
     deps = [

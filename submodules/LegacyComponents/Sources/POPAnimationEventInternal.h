@@ -9,7 +9,7 @@
 
 #import <Foundation/Foundation.h>
 
-#import "POPAnimationEvent.h"
+#import <LegacyComponents/POPAnimationEvent.h>
 
 @interface POPAnimationEvent ()
 

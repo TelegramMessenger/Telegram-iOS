@@ -321,16 +321,18 @@ public class ChatMessagePaymentAlertController: AlertController {
     private let context: AccountContext?
     private let presentationData: PresentationData
     private weak var parentNavigationController: NavigationController?
+    private let chatPeerId: EnginePeer.Id
     private let showBalance: Bool
    
     private let balance = ComponentView<Empty>()
     
     private var didAppear = false
     
-    public init(context: AccountContext?, presentationData: PresentationData, contentNode: AlertContentNode, navigationController: NavigationController?, showBalance: Bool = true) {
+    public init(context: AccountContext?, presentationData: PresentationData, contentNode: AlertContentNode, navigationController: NavigationController?, chatPeerId: EnginePeer.Id, showBalance: Bool = true) {
         self.context = context
         self.presentationData = presentationData
         self.parentNavigationController = navigationController
+        self.chatPeerId = chatPeerId
         self.showBalance = showBalance
         
         super.init(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode)
@@ -379,6 +381,7 @@ public class ChatMessagePaymentAlertController: AlertController {
                 component: AnyComponent(
                     StarsBalanceOverlayComponent(
                         context: context,
+                        peerId: self.chatPeerId.namespace == Namespaces.Peer.CloudChannel ? self.chatPeerId : context.account.peerId,
                         theme: self.presentationData.theme,
                         action: { [weak self] in
                             guard let self, let starsContext = context.starsContext, let navigationController = self.parentNavigationController else {
@@ -475,7 +478,7 @@ public func chatMessagePaymentAlertController(
         completion(contentNode.dontAskAgain)
     }
     
-    let controller = ChatMessagePaymentAlertController(context: context, presentationData: presentationData, contentNode: contentNode, navigationController: navigationController)
+    let controller = ChatMessagePaymentAlertController(context: context, presentationData: presentationData, contentNode: contentNode, navigationController: navigationController, chatPeerId: context?.account.peerId ?? peers[0].peerId)
     dismissImpl = { [weak controller]  in
         controller?.dismissAnimated()
     }
@@ -487,6 +490,7 @@ public func chatMessageRemovePaymentAlertController(
     presentationData: PresentationData,
     updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?,
     peer: EnginePeer,
+    chatPeer: EnginePeer,
     amount: StarsAmount?,
     navigationController: NavigationController?,
     completion: @escaping (Bool) -> Void
@@ -509,7 +513,14 @@ public func chatMessageRemovePaymentAlertController(
     ]
     
     let title = strings.Chat_PaidMessage_RemoveFee_Title
-    let text = strings.Chat_PaidMessage_RemoveFee_Text(peer.compactDisplayTitle).string
+    
+    let text: String
+    if let context, chatPeer.id != context.account.peerId {
+        text = strings.Channel_RemoveFeeAlert_Text(peer.compactDisplayTitle).string
+    } else {
+        text = strings.Chat_PaidMessage_RemoveFee_Text(peer.compactDisplayTitle).string
+    }
+    
     let optionText = amount.flatMap { strings.Chat_PaidMessage_RemoveFee_Refund(strings.Chat_PaidMessage_RemoveFee_Refund_Stars(Int32($0.value))).string }
     
     let contentNode = ChatMessagePaymentAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: theme, strings: strings, title: title, text: text, optionText: optionText, actions: actions, alignment: .horizontal)
@@ -521,7 +532,7 @@ public func chatMessageRemovePaymentAlertController(
         completion(contentNode.dontAskAgain)
     }
     
-    let controller = ChatMessagePaymentAlertController(context: context, presentationData: presentationData, contentNode: contentNode, navigationController: navigationController)
+    let controller = ChatMessagePaymentAlertController(context: context, presentationData: presentationData, contentNode: contentNode, navigationController: navigationController, chatPeerId: chatPeer.id)
     dismissImpl = { [weak controller]  in
         controller?.dismissAnimated()
     }

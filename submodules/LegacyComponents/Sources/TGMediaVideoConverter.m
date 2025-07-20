@@ -1,4 +1,4 @@
-#import "TGMediaVideoConverter.h"
+#import <LegacyComponents/TGMediaVideoConverter.h>
 
 #import <CommonCrypto/CommonDigest.h>
 #import <sys/stat.h>
@@ -8,15 +8,15 @@
 
 #import "LegacyComponentsInternal.h"
 
-#import "TGImageUtils.h"
-#import "TGPhotoEditorUtils.h"
+#import <LegacyComponents/TGImageUtils.h>
+#import <LegacyComponents/TGPhotoEditorUtils.h>
 #import "PGPhotoEditor.h"
-#import "TGPaintUtils.h"
-#import "TGPhotoPaintEntity.h"
+#import <LegacyComponents/TGPaintUtils.h>
+#import <LegacyComponents/TGPhotoPaintEntity.h>
 
-#import "TGVideoEditAdjustments.h"
-#import "TGPaintingData.h"
-#import "TGPhotoPaintStickersContext.h"
+#import <LegacyComponents/TGVideoEditAdjustments.h>
+#import <LegacyComponents/TGPaintingData.h>
+#import <LegacyComponents/TGPhotoPaintStickersContext.h>
 
 @interface TGMediaVideoConversionPresetSettings ()
 
@@ -402,7 +402,10 @@
         if (adjustments.toolsApplied) {
             editor = [[PGPhotoEditor alloc] initWithOriginalSize:adjustments.originalSize adjustments:adjustments forVideo:true enableStickers:true];
             editor.standalone = true;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
             ciContext = [CIContext contextWithEAGLContext:[[GPUImageContext sharedImageProcessingContext] context]];
+#pragma clang diagnostic pop
         }
         
         CIImage *backgroundCIImage = nil;
@@ -835,6 +838,9 @@
 
 + (NSString *)_hashForVideoWithFileData:(NSData *)fileData timingData:(NSData *)timingData preset:(TGMediaVideoConversionPreset)preset
 {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    
     const NSUInteger bufSize = 1024;
     NSUInteger numberOfBuffersToRead = MIN(32, floor(fileData.length / bufSize));
     uint8_t buf[bufSize];
@@ -870,6 +876,8 @@
     unsigned char md5Buffer[16];
     CC_MD5_Final(md5Buffer, &md5);
     NSString *hash = [[NSString alloc] initWithFormat:@"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x", md5Buffer[0], md5Buffer[1], md5Buffer[2], md5Buffer[3], md5Buffer[4], md5Buffer[5], md5Buffer[6], md5Buffer[7], md5Buffer[8], md5Buffer[9], md5Buffer[10], md5Buffer[11], md5Buffer[12], md5Buffer[13], md5Buffer[14], md5Buffer[15]];
+    
+#pragma clang diagnostic pop
     
     return hash;
 }

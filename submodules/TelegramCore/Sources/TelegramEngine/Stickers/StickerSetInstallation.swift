@@ -58,6 +58,9 @@ func _internal_requestStickerSet(postbox: Postbox, network: Network, reference: 
     case .iconTopicEmoji:
         collectionId = nil
         input = .inputStickerSetEmojiDefaultTopicIcons
+    case .tonGifts:
+        collectionId = nil
+        input = .inputStickerSetTonGifts
     }
     
     let localSignal: (ItemCollectionId) -> Signal<(ItemCollectionInfo, [ItemCollectionItem])?, NoError> = { collectionId in

@@ -315,7 +315,7 @@ public func giftTransferAlertController(
     
     contentNode = GiftTransferAlertContentNode(context: context, theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: strings, gift: gift, peer: peer, title: title, text: text, actions: actions)
     
-    let controller = ChatMessagePaymentAlertController(context: context, presentationData: presentationData, contentNode: contentNode!, navigationController: navigationController, showBalance: transferStars > 0)
+    let controller = ChatMessagePaymentAlertController(context: context, presentationData: presentationData, contentNode: contentNode!, navigationController: navigationController, chatPeerId: context.account.peerId, showBalance: transferStars > 0)
     dismissImpl = { [weak controller] animated in
         if animated {
             controller?.dismissAnimated()

@@ -104,11 +104,11 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
         var updatedTimestamp: Int32?
         if let apiMessage = apiMessage {
             switch apiMessage {
-                case let .message(_, _, _, _, _, _, _, _, _, _, _, date, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+                case let .message(_, _, _, _, _, _, _, _, _, _, _, date, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
                     updatedTimestamp = date
                 case .messageEmpty:
                     break
-                case let .messageService(_, _, _, _, _, date, _, _, _):
+                case let .messageService(_, _, _, _, _, _, date, _, _, _):
                     updatedTimestamp = date
             }
         } else {
@@ -400,7 +400,7 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
         } else if let message = messages.first, let apiMessage = result.messages.first {
             if message.scheduleTime != nil && message.scheduleTime == apiMessage.timestamp {
                 namespace = Namespaces.Message.ScheduledCloud
-            } else if let apiMessage = result.messages.first, case let .message(_, flags2, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _) = apiMessage, (flags2 & (1 << 4)) != 0 {
+            } else if let apiMessage = result.messages.first, case let .message(_, flags2, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _) = apiMessage, (flags2 & (1 << 4)) != 0 {
                 namespace = Namespaces.Message.ScheduledCloud
             }
         }

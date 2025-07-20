@@ -1,9 +1,9 @@
-#import "TGPhotoEditorButton.h"
+#import <LegacyComponents/TGPhotoEditorButton.h>
 
 #import <LegacyComponents/UIControl+HitTestEdgeInsets.h>
 
 #import <LegacyComponents/TGModernButton.h>
-#import "TGPhotoEditorInterfaceAssets.h"
+#import <LegacyComponents/TGPhotoEditorInterfaceAssets.h>
 
 @interface TGPhotoEditorButton ()
 {

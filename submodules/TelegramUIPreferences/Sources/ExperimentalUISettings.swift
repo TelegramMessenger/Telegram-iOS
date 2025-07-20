@@ -27,6 +27,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
     
     public var keepChatNavigationStack: Bool
     public var skipReadHistory: Bool
+    public var alwaysDisplayTyping: Bool
     public var crashOnLongQueries: Bool
     public var chatListPhotos: Bool
     public var knockoutWallpaper: Bool
@@ -72,6 +73,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         return ExperimentalUISettings(
             keepChatNavigationStack: false,
             skipReadHistory: false,
+            alwaysDisplayTyping: false,
             crashOnLongQueries: false,
             chatListPhotos: false,
             knockoutWallpaper: false,
@@ -118,6 +120,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public init(
         keepChatNavigationStack: Bool,
         skipReadHistory: Bool,
+        alwaysDisplayTyping: Bool,
         crashOnLongQueries: Bool,
         chatListPhotos: Bool,
         knockoutWallpaper: Bool,
@@ -161,6 +164,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
     ) {
         self.keepChatNavigationStack = keepChatNavigationStack
         self.skipReadHistory = skipReadHistory
+        self.alwaysDisplayTyping = alwaysDisplayTyping
         self.crashOnLongQueries = crashOnLongQueries
         self.chatListPhotos = chatListPhotos
         self.knockoutWallpaper = knockoutWallpaper
@@ -208,6 +212,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
 
         self.keepChatNavigationStack = (try container.decodeIfPresent(Int32.self, forKey: "keepChatNavigationStack") ?? 0) != 0
         self.skipReadHistory = (try container.decodeIfPresent(Int32.self, forKey: "skipReadHistory") ?? 0) != 0
+        self.alwaysDisplayTyping = (try container.decodeIfPresent(Int32.self, forKey: "alwaysDisplayTyping") ?? 0) != 0
         self.crashOnLongQueries = (try container.decodeIfPresent(Int32.self, forKey: "crashOnLongQueries") ?? 0) != 0
         self.chatListPhotos = (try container.decodeIfPresent(Int32.self, forKey: "chatListPhotos") ?? 0) != 0
         self.knockoutWallpaper = (try container.decodeIfPresent(Int32.self, forKey: "knockoutWallpaper") ?? 0) != 0
@@ -255,6 +260,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
 
         try container.encode((self.keepChatNavigationStack ? 1 : 0) as Int32, forKey: "keepChatNavigationStack")
         try container.encode((self.skipReadHistory ? 1 : 0) as Int32, forKey: "skipReadHistory")
+        try container.encode((self.alwaysDisplayTyping ? 1 : 0) as Int32, forKey: "alwaysDisplayTyping")
         try container.encode((self.crashOnLongQueries ? 1 : 0) as Int32, forKey: "crashOnLongQueries")
         try container.encode((self.chatListPhotos ? 1 : 0) as Int32, forKey: "chatListPhotos")
         try container.encode((self.knockoutWallpaper ? 1 : 0) as Int32, forKey: "knockoutWallpaper")

@@ -13,9 +13,6 @@ objc_library(
     includes = [
         "include",
     ],
-    copts = [
-        "-Ithird-party/opusfile/include/opusfile",
-    ],
     deps = [
         "//third-party/ogg:ogg",
         "//third-party/opus:opus",

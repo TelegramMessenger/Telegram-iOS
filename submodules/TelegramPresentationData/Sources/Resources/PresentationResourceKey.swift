@@ -127,6 +127,7 @@ public enum PresentationResourceKey: Int32 {
     case chatListLocationIcon
     
     case chatListGeneralTopicIcon
+    case chatListGeneralTopicTemplateIcon
     case chatListGeneralTopicSmallIcon
     
     case searchAdIcon
@@ -167,6 +168,15 @@ public enum PresentationResourceKey: Int32 {
     case chatBubbleFileCloudFetchOutgoingIcon
     case chatBubbleFileCloudFetchedIncomingIcon
     case chatBubbleFileCloudFetchedOutgoingIcon
+    
+    case chatBubbleTodoDotIncomingIcon
+    case chatBubbleTodoDotOutgoingIcon
+    case chatBubbleTodoCheckIncomingIcon
+    case chatBubbleTodoCheckOutgoingIcon
+    
+    case chatServiceMessageTodoCompletedIcon
+    case chatServiceMessageTodoIncompletedIcon
+    case chatServiceMessageTodoAppendedIcon
     
     case chatBubbleReplyThumbnailPlayImage
     
@@ -219,6 +229,7 @@ public enum PresentationResourceKey: Int32 {
     case chatInputTextFieldTimerImage
     case chatInputTextFieldScheduleImage
     case chatInputTextFieldGiftImage
+    case chatInputTextFieldSuggestPostImage
     
     case chatInputSearchPanelUpImage
     case chatInputSearchPanelUpDisabledImage
@@ -340,6 +351,10 @@ public enum PresentationResourceKey: Int32 {
     case callListCallIcon
     
     case chatFreeNavigateToThreadButtonIcon
+    
+    case messageButtonsPostReject
+    case messageButtonsPostApprove
+    case messageButtonsPostEdit
 }
 
 public enum ChatExpiredStoryIndicatorType: Hashable {

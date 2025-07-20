@@ -1,4 +1,4 @@
-#import "TGDoubleTapGestureRecognizer.h"
+#import <LegacyComponents/TGDoubleTapGestureRecognizer.h>
 
 #import <UIKit/UIGestureRecognizerSubclass.h>
 

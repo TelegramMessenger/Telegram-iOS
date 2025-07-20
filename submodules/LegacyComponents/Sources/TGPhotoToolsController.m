@@ -1,14 +1,16 @@
+#import <LegacyComponents/LegacyComponents.h>
+
 #import "TGPhotoToolsController.h"
 
 #import "LegacyComponentsInternal.h"
 
 #import <LegacyComponents/TGPhotoEditorAnimation.h>
-#import "TGPhotoEditorInterfaceAssets.h"
+#import <LegacyComponents/TGPhotoEditorInterfaceAssets.h>
 #import "TGPhotoEditorCollectionView.h"
 #import "TGPhotoToolCell.h"
 
 #import <LegacyComponents/TGPhotoEditorUtils.h>
-#import "UICollectionView+Utils.h"
+#import <LegacyComponents/UICollectionView+Utils.h>
 #import <LegacyComponents/TGPaintUtils.h>
 
 #import "PGPhotoEditor.h"
@@ -18,10 +20,10 @@
 #import "PGTintTool.h"
 #import <LegacyComponents/TGPaintingData.h>
 
-#import "TGPhotoEditorController.h"
+#import <LegacyComponents/TGPhotoEditorController.h>
 #import "TGPhotoEditorPreviewView.h"
 #import "TGPhotoEditorHUDView.h"
-#import "TGPhotoEditorSparseView.h"
+#import <LegacyComponents/TGPhotoEditorSparseView.h>
 
 #import "TGPhotoDrawingController.h"
 

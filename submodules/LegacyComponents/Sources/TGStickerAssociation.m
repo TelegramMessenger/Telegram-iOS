@@ -1,7 +1,7 @@
-#import "TGStickerAssociation.h"
+#import <LegacyComponents/TGStickerAssociation.h>
 
 #import "LegacyComponentsInternal.h"
-#import "PSKeyValueCoder.h"
+#import <LegacyComponents/PSKeyValueCoder.h>
 
 @implementation TGStickerAssociation
 

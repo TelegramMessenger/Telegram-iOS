@@ -49,7 +49,7 @@
 
 - (NSUInteger)hash
 {
-    NSData *selfObject = [NSKeyedArchiver archivedDataWithRootObject:self];
+    NSData *selfObject = [NSKeyedArchiver archivedDataWithRootObject:self requiringSecureCoding:false error:nil];
     return [selfObject hash];
 }
 

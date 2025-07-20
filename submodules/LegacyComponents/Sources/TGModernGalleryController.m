@@ -1,8 +1,9 @@
-#import "TGModernGalleryController.h"
+#import <LegacyComponents/LegacyComponents.h>
+#import <LegacyComponents/TGModernGalleryController.h>
 
 #import "LegacyComponentsInternal.h"
-#import "TGHacks.h"
-#import "TGImageUtils.h"
+#import <LegacyComponents/TGHacks.h>
+#import <LegacyComponents/TGImageUtils.h>
 
 #import <LegacyComponents/TGModernGalleryView.h>
 

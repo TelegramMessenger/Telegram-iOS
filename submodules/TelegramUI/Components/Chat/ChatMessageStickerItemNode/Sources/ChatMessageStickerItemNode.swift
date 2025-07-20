@@ -28,6 +28,7 @@ import ChatMessageThreadInfoNode
 import ChatMessageActionButtonsNode
 import ChatMessageReactionsFooterContentNode
 import ChatSwipeToReplyRecognizer
+import ChatMessageSuggestedPostInfoNode
 
 private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
@@ -50,6 +51,8 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
 
     public var telegramFile: TelegramMediaFile?
     private let fetchDisposable = MetaDisposable()
+    
+    private var suggestedPostInfoNode: ChatMessageSuggestedPostInfoNode?
     
     private var viaBotNode: TextNode?
     private let dateAndStatusNode: ChatMessageDateAndStatusNode
@@ -435,6 +438,8 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
         let currentShareButtonNode = self.shareButtonNode
         let currentForwardInfo = self.appliedForwardInfo
         
+        let makeSuggestedPostInfoNodeLayout: ChatMessageSuggestedPostInfoNode.AsyncLayout = ChatMessageSuggestedPostInfoNode.asyncLayout(self.suggestedPostInfoNode)
+        
         func continueAsyncLayout(_ weakSelf: Weak<ChatMessageStickerItemNode>, _ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: ChatMessageHeaderSpec) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
             let accessibilityData = ChatMessageAccessibilityData(item: item, isSelected: nil)
             
@@ -591,7 +596,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
             
             let innerImageInset: CGFloat = 10.0
             let innerImageSize = CGSize(width: imageSize.width + innerImageInset * 2.0, height: imageSize.height + innerImageInset * 2.0)
-            let imageFrame = CGRect(origin: CGPoint(x: 0.0 + (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - innerImageSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - deliveryFailedInset)), y: -innerImageInset), size: innerImageSize)
+            var imageFrame = CGRect(origin: CGPoint(x: 0.0 + (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - innerImageSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - deliveryFailedInset)), y: -innerImageInset), size: innerImageSize)
             
             let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(top: innerImageInset, left: innerImageInset, bottom: innerImageInset, right: innerImageInset))
             
@@ -842,10 +847,61 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                 needsForwardBackground = true
             }
             
+            let baseWidth = params.width - params.leftInset - params.rightInset
+            
             var maxContentWidth = imageSize.width
             var actionButtonsFinalize: ((CGFloat) -> (CGSize, (_ animation: ListViewItemUpdateAnimation) -> ChatMessageActionButtonsNode))?
             if let replyMarkup = replyMarkup {
-                let (minWidth, buttonsLayout) = actionButtonsLayout(item.context, item.presentationData.theme, item.presentationData.chatBubbleCorners, item.presentationData.strings, item.controllerInteraction.presentationContext.backgroundNode, replyMarkup, item.message, maxContentWidth)
+                let (minWidth, buttonsLayout) = actionButtonsLayout(item.context, item.presentationData.theme, item.presentationData.chatBubbleCorners, item.presentationData.strings, item.controllerInteraction.presentationContext.backgroundNode, replyMarkup, [:], item.message, baseWidth)
+                maxContentWidth = max(maxContentWidth, minWidth)
+                actionButtonsFinalize = buttonsLayout
+            } else if incoming, let attribute = item.message.attributes.first(where: { $0 is SuggestedPostMessageAttribute }) as? SuggestedPostMessageAttribute, attribute.state == nil {
+                var canApprove = true
+                if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, peer.isMonoForum, let linkedMonoforumId = peer.linkedMonoforumId, let mainChannel = item.message.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect), !mainChannel.hasPermission(.sendSomething) {
+                    canApprove = false
+                }
+                
+                var buttonDeclineValue: UInt8 = 0
+                let buttonDecline = MemoryBuffer(data: Data(bytes: &buttonDeclineValue, count: 1))
+                var buttonApproveValue: UInt8 = 1
+                let buttonApprove = MemoryBuffer(data: Data(bytes: &buttonApproveValue, count: 1))
+                var buttonSuggestChangesValue: UInt8 = 2
+                let buttonSuggestChanges = MemoryBuffer(data: Data(bytes: &buttonSuggestChangesValue, count: 1))
+                
+                let customInfos: [MemoryBuffer: ChatMessageActionButtonsNode.CustomInfo] = [
+                    buttonDecline: ChatMessageActionButtonsNode.CustomInfo(
+                        isEnabled: true,
+                        icon: .suggestedPostReject
+                    ),
+                    buttonApprove: ChatMessageActionButtonsNode.CustomInfo(
+                        isEnabled: canApprove,
+                        icon: .suggestedPostApprove
+                    ),
+                    buttonSuggestChanges: ChatMessageActionButtonsNode.CustomInfo(
+                        isEnabled: canApprove,
+                        icon: .suggestedPostEdit
+                    )
+                ]
+                
+                let (minWidth, buttonsLayout) = actionButtonsLayout(
+                    item.context,
+                    item.presentationData.theme,
+                    item.presentationData.chatBubbleCorners,
+                    item.presentationData.strings,
+                    item.controllerInteraction.presentationContext.backgroundNode,
+                    ReplyMarkupMessageAttribute(
+                        rows: [
+                            ReplyMarkupRow(buttons: [
+                                ReplyMarkupButton(title: item.presentationData.strings.Chat_PostApproval_Message_ActionReject, titleWhenForwarded: nil, action: .callback(requiresPassword: false, data: buttonDecline)),
+                                ReplyMarkupButton(title: item.presentationData.strings.Chat_PostApproval_Message_ActionApprove, titleWhenForwarded: nil, action: .callback(requiresPassword: false, data: buttonApprove))
+                            ]),
+                            ReplyMarkupRow(buttons: [
+                                ReplyMarkupButton(title: item.presentationData.strings.Chat_PostApproval_Message_ActionSuggestChanges, titleWhenForwarded: nil, action: .callback(requiresPassword: false, data: buttonSuggestChanges))
+                            ])
+                        ],
+                        flags: [],
+                        placeholder: nil
+                ), customInfos, item.message, baseWidth)
                 maxContentWidth = max(maxContentWidth, minWidth)
                 actionButtonsFinalize = buttonsLayout
             }
@@ -901,6 +957,21 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                 layoutSize.height += actionButtonsSizeAndApply.0.height
             }
             
+            var suggestedPostInfoNodeLayout: (CGSize, () -> ChatMessageSuggestedPostInfoNode)?
+            for attribute in item.message.attributes {
+                if let _ = attribute as? SuggestedPostMessageAttribute {
+                    let suggestedPostInfoNodeLayoutValue = makeSuggestedPostInfoNodeLayout(item, baseWidth)
+                    suggestedPostInfoNodeLayout = suggestedPostInfoNodeLayoutValue
+                }
+            }
+            
+            var additionalTopHeight: CGFloat = 0.0
+            if let suggestedPostInfoNodeLayout {
+                additionalTopHeight += 4.0 + suggestedPostInfoNodeLayout.0.height + 8.0
+            }
+            layoutSize.height += additionalTopHeight
+            imageFrame.origin.y += additionalTopHeight
+            
             var updatedImageFrame = imageFrame.offsetBy(dx: 0.0, dy: floor((contentHeight - imageSize.height) / 2.0))
             
             var dateOffset = CGPoint(x: dateAndStatusSize.width + 4.0, y: dateAndStatusSize.height + 16.0)
@@ -919,7 +990,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                 baseShareButtonFrame.origin.x = dateAndStatusFrame.maxX + 8.0
             }
             
-            var headersOffset: CGFloat = 0.0
+            var headersOffset: CGFloat = additionalTopHeight
             if let (threadInfoSize, _) = threadInfoApply {
                 headersOffset += threadInfoSize.height + 10.0
             }
@@ -1002,6 +1073,20 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                         animation.animator.updateFrame(layer: strongSelf.placeholderNode.layer, frame: placeholderFrame, completion: nil)
                     }
                     
+                    if let (suggestedPostInfoSize, suggestedPostInfoApply) = suggestedPostInfoNodeLayout {
+                        let suggestedPostInfoNode = suggestedPostInfoApply()
+                        if suggestedPostInfoNode !== strongSelf.suggestedPostInfoNode {
+                            strongSelf.suggestedPostInfoNode?.removeFromSupernode()
+                            strongSelf.suggestedPostInfoNode = suggestedPostInfoNode
+                            strongSelf.addSubnode(suggestedPostInfoNode)
+                        }
+                        let suggestedPostInfoFrame = CGRect(origin: CGPoint(x: floor((params.width - suggestedPostInfoSize.width) * 0.5), y: 4.0), size: suggestedPostInfoSize)
+                        suggestedPostInfoNode.frame = suggestedPostInfoFrame
+                    } else if let suggestedPostInfoNode = strongSelf.suggestedPostInfoNode {
+                        strongSelf.suggestedPostInfoNode = nil
+                        suggestedPostInfoNode.removeFromSupernode()
+                    }
+                    
                     strongSelf.messageAccessibilityArea.frame = CGRect(origin: CGPoint(), size: layoutSize)
                     strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
                     strongSelf.contextSourceNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
@@ -1063,7 +1148,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                         }
                     }
                     
-                    var headersOffset: CGFloat = 0.0
+                    var headersOffset: CGFloat = additionalTopHeight
                     if let (threadInfoSize, threadInfoApply) = threadInfoApply {
                         let threadInfoNode = threadInfoApply(synchronousLoads)
                         if strongSelf.threadInfoNode == nil {
@@ -1276,9 +1361,9 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                         actionButtonsNode.frame = actionButtonsFrame
                         if actionButtonsNode !== strongSelf.actionButtonsNode {
                             strongSelf.actionButtonsNode = actionButtonsNode
-                            actionButtonsNode.buttonPressed = { button in
+                            actionButtonsNode.buttonPressed = { button, progress in
                                 if let strongSelf = weakSelf.value {
-                                    strongSelf.performMessageButtonAction(button: button)
+                                    strongSelf.performMessageButtonAction(button: button, progress: progress)
                                 }
                             }
                             actionButtonsNode.buttonLongTapped = { button in

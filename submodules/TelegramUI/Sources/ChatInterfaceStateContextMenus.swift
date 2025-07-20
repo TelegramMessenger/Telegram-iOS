@@ -124,6 +124,9 @@ private func canEditMessage(accountPeerId: PeerId, limitsConfiguration: EngineCo
             if let _ = attribute as? InlineBotMessageAttribute {
                 hasUneditableAttributes = true
                 break
+            } else if let _ = attribute as? PublishedSuggestedPostMessageAttribute {
+                hasUneditableAttributes = true
+                break
             }
         }
         if message.forwardInfo != nil {
@@ -166,6 +169,8 @@ private func canEditMessage(accountPeerId: PeerId, limitsConfiguration: EngineCo
             } else if let _ = media as? TelegramMediaGiveawayResults {
                 hasUneditableAttributes = true
                 break
+            } else if let _ = media as? TelegramMediaTodo {
+                unlimitedInterval = true
             }
         }
         
@@ -1064,7 +1069,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                 controllerInteraction.displayUndo(.info(title: presentationData.strings.Notifications_UploadError_TooLong_Title(fileName).string, text: presentationData.strings.Notifications_UploadError_TooLong_Text(stringForDuration(Int32(settings.maxDuration))).string, timeout: nil, customUndoText: nil))
                             } else {
                                 let _ = (context.engine.peers.saveNotificationSound(file: .message(message: MessageReference(message), media: file))
-                                |> deliverOnMainQueue).startStandalone(completed: {
+                                         |> deliverOnMainQueue).startStandalone(completed: {
                                     controllerInteraction.displayUndo(.notificationSoundAdded(title: presentationData.strings.Notifications_UploadSuccess_Title, text: presentationData.strings.Notifications_SaveSuccess_Text, action: {
                                         controllerInteraction.navigationController()?.pushViewController(notificationsAndSoundsController(context: context, exceptionsList: nil))
                                     }))
@@ -1294,8 +1299,8 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                     for media in message.media {
                                         if let image = media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
                                             let _ = (context.account.postbox.mediaBox.resourceData(largest.resource, option: .incremental(waitUntilFetchStatus: false))
-                                            |> take(1)
-                                            |> deliverOnMainQueue).startStandalone(next: { data in
+                                                     |> take(1)
+                                                     |> deliverOnMainQueue).startStandalone(next: { data in
                                                 if data.complete, let imageData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
                                                     if let image = UIImage(data: imageData) {
                                                         if !messageText.isEmpty {
@@ -1379,7 +1384,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Save"), color: theme.actionSheet.primaryTextColor)
                 }, action: { _, f in
                     let _ = (saveToCameraRoll(context: context, postbox: context.account.postbox, userLocation: .peer(message.id.peerId), mediaReference: mediaReference)
-                    |> deliverOnMainQueue).startStandalone(completed: {
+                             |> deliverOnMainQueue).startStandalone(completed: {
                         Queue.mainQueue().after(0.2) {
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                             controllerInteraction.presentControllerInCurrent(UndoOverlayController(presentationData: presentationData, content: .mediaSaved(text: isVideo ? presentationData.strings.Gallery_VideoSaved : presentationData.strings.Gallery_ImageSaved), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return true }), nil)
@@ -1478,26 +1483,77 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         } else {
             isMigrated = false
         }
-                
-        if data.canEdit && !isPinnedMessages && !isMigrated {
-            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_MessageDialogEdit, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.actionSheet.primaryTextColor)
-            }, action: { c, f in
-                interfaceInteraction.setupEditMessage(messages[0].id, { transition in
-                    f(.custom(transition))
-                })
-            })))
-        }
         
         var activePoll: TelegramMediaPoll?
+        var activeTodo: TelegramMediaTodo?
         for media in message.media {
             if let poll = media as? TelegramMediaPoll, !poll.isClosed, message.id.namespace == Namespaces.Message.Cloud, poll.pollId.namespace == Namespaces.Media.CloudPoll {
                 if !isPollEffectivelyClosed(message: message, poll: poll) {
                     activePoll = poll
                 }
+            } else if let todo = media as? TelegramMediaTodo {
+                activeTodo = todo
             }
         }
         
+        if data.canEdit && !isPinnedMessages && !isMigrated {
+            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_MessageDialogEdit, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.actionSheet.primaryTextColor)
+            }, action: { c, f in
+                if let _ = activeTodo {
+                    interfaceInteraction.editTodoMessage(messages[0].id, nil, false)
+                    f(.dismissWithoutContent)
+                } else {
+                    interfaceInteraction.setupEditMessage(messages[0].id, { transition in
+                        f(.custom(transition))
+                    })
+                }
+            })))
+        }
+        
+        if let message = messages.first, message.id.namespace == Namespaces.Message.Cloud, let channel = message.peers[message.id.peerId] as? TelegramChannel, channel.isMonoForum {
+            var canSuggestPost = true
+            for media in message.media {
+                if media is TelegramMediaAction {
+                    canSuggestPost = false
+                }
+            }
+            
+            if canSuggestPost {
+                if message.attributes.contains(where: { $0 is SuggestedPostMessageAttribute }) {
+                    actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Chat_ContextMenu_SuggestedPost_EditMessage, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { c, _ in
+                        c?.dismiss(completion: {
+                            interfaceInteraction.openSuggestPost(message, .editMessage)
+                        })
+                    })))
+                    actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Chat_ContextMenu_SuggestedPost_EditTime, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Calendar"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { c, _ in
+                        c?.dismiss(completion: {
+                            interfaceInteraction.openSuggestPost(message, .editTime)
+                        })
+                    })))
+                    actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Chat_ContextMenu_SuggestedPost_EditPrice, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/PriceTag"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { c, _ in
+                        c?.dismiss(completion: {
+                            interfaceInteraction.openSuggestPost(message, .editPrice)
+                        })
+                    })))
+                } else {
+                    actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Chat_ContextMenu_SuggestedPost_Create, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Customize"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { c, _ in
+                        c?.dismiss(completion: {
+                            interfaceInteraction.openSuggestPost(message, .default)
+                        })
+                    })))
+                }
+            }
+        }
+    
         if let activePoll = activePoll, let voters = activePoll.results.voters {
             var hasSelected = false
             for result in voters {
@@ -1511,6 +1567,28 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 }, action: { _, f in
                     interfaceInteraction.requestUnvoteInMessage(messages[0].id)
                     f(.default)
+                })))
+            }
+        }
+        
+        if let activeTodo {
+            var maxTodoItemsCount: Int = 30
+            if let data = context.currentAppConfiguration.with({ $0 }).data {
+                if let value = data["todo_items_max"] as? Double {
+                    maxTodoItemsCount = Int(value)
+                }
+            }
+            
+            var canAppend = false
+            if activeTodo.items.count < maxTodoItemsCount && (activeTodo.flags.contains(.othersCanAppend) || message.author?.id == context.account.peerId) {
+                canAppend = true
+            }
+            if canAppend {
+                actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Chat_Todo_ContextMenu_AddTask, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddCircle"), color: theme.actionSheet.primaryTextColor)
+                }, action: { _, f in
+                    interfaceInteraction.editTodoMessage(messages[0].id, nil, true)
+                    f(.dismissWithoutContent)
                 })))
             }
         }
@@ -1845,8 +1923,13 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     }
                 }), false))
             } else if !isUnremovableAction {
+                var iconName: String = isSending ? "Chat/Context Menu/Clear" : "Chat/Context Menu/Delete"
+                if message.attributes.contains(where: { $0 is PublishedSuggestedPostMessageAttribute }) {
+                    iconName = "Chat/Context Menu/DeletePaid"
+                }
+                
                 actions.append(.action(ContextMenuActionItem(text: title, textColor: .destructive, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: isSending ? "Chat/Context Menu/Clear" : "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
+                    return generateTintedImage(image: UIImage(bundleImageName: iconName), color: theme.actionSheet.destructiveActionTextColor)
                 }, action: { controller, f in
                     if isEditing {
                         context.account.pendingUpdateMessageManager.cancel(messageId: message.id)
@@ -1896,6 +1979,11 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         if let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum, let associatedPeerId = channel.associatedPeerId {
             if message.effectivelyIncoming(context.account.peerId), message.author?.id == associatedPeerId {
                 canViewAuthor = true
+                for media in message.media {
+                    if media is TelegramMediaAction {
+                        canViewAuthor = false
+                    }
+                }
             }
         } else if let messageReadStatsAreHidden = infoSummaryData.messageReadStatsAreHidden, !messageReadStatsAreHidden {
             canViewStats = canViewReadStats(message: message, participantCount: infoSummaryData.participantCount, isMessageRead: isMessageRead, isPremium: isPremium, appConfig: appConfig)

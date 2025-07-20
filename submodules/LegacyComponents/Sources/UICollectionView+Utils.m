@@ -1,4 +1,4 @@
-#import "UICollectionView+Utils.h"
+#import <LegacyComponents/UICollectionView+Utils.h>
 
 @implementation UICollectionView (Utils)
 

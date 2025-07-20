@@ -44,10 +44,6 @@ private final class UpdatedPeersNearbySubscriberContext {
     let subscribers = Bag<([PeerNearby]) -> Void>()
 }
 
-private final class UpdatedRevenueBalancesSubscriberContext {
-    let subscribers = Bag<([PeerId: RevenueStats.Balances]) -> Void>()
-}
-
 private final class UpdatedStarsBalanceSubscriberContext {
     let subscribers = Bag<([PeerId: StarsAmount]) -> Void>()
 }
@@ -353,8 +349,8 @@ public final class AccountStateManager {
         
         private var updatedWebpageContexts: [MediaId: UpdatedWebpageSubscriberContext] = [:]
         private var updatedPeersNearbyContext = UpdatedPeersNearbySubscriberContext()
-        private var updatedRevenueBalancesContext = UpdatedRevenueBalancesSubscriberContext()
         private var updatedStarsBalanceContext = UpdatedStarsBalanceSubscriberContext()
+        private var updatedTonBalanceContext = UpdatedStarsBalanceSubscriberContext()
         private var updatedStarsRevenueStatusContext = UpdatedStarsRevenueStatusSubscriberContext()
         
         private let delayNotificatonsUntil = Atomic<Int32?>(value: nil)
@@ -1111,11 +1107,11 @@ public final class AccountStateManager {
                             if let updatedPeersNearby = events.updatedPeersNearby {
                                 strongSelf.notifyUpdatedPeersNearby(updatedPeersNearby)
                             }
-                            if !events.updatedRevenueBalances.isEmpty {
-                                strongSelf.notifyUpdatedRevenueBalances(events.updatedRevenueBalances)
-                            }
                             if !events.updatedStarsBalance.isEmpty {
                                 strongSelf.notifyUpdatedStarsBalance(events.updatedStarsBalance)
+                            }
+                            if !events.updatedTonBalance.isEmpty {
+                                strongSelf.notifyUpdatedTonBalance(events.updatedTonBalance)
                             }
                             if !events.updatedStarsRevenueStatus.isEmpty {
                                 strongSelf.notifyUpdatedStarsRevenueStatus(events.updatedStarsRevenueStatus)
@@ -1704,33 +1700,6 @@ public final class AccountStateManager {
             }
         }
         
-        public func updatedRevenueBalances() -> Signal<[PeerId: RevenueStats.Balances], NoError> {
-            let queue = self.queue
-            return Signal { [weak self] subscriber in
-                let disposable = MetaDisposable()
-                queue.async {
-                    if let strongSelf = self {
-                        let index = strongSelf.updatedRevenueBalancesContext.subscribers.add({ revenueBalances in
-                            subscriber.putNext(revenueBalances)
-                        })
-                        
-                        disposable.set(ActionDisposable {
-                            if let strongSelf = self {
-                                strongSelf.updatedRevenueBalancesContext.subscribers.remove(index)
-                            }
-                        })
-                    }
-                }
-                return disposable
-            }
-        }
-        
-        private func notifyUpdatedRevenueBalances(_ updatedRevenueBalances: [PeerId: RevenueStats.Balances]) {
-            for subscriber in self.updatedRevenueBalancesContext.subscribers.copyItems() {
-                subscriber(updatedRevenueBalances)
-            }
-        }
-        
         public func updatedStarsBalance() -> Signal<[PeerId: StarsAmount], NoError> {
             let queue = self.queue
             return Signal { [weak self] subscriber in
@@ -1751,10 +1720,37 @@ public final class AccountStateManager {
                 return disposable
             }
         }
-        
+                
         private func notifyUpdatedStarsBalance(_ updatedStarsBalance: [PeerId: StarsAmount]) {
             for subscriber in self.updatedStarsBalanceContext.subscribers.copyItems() {
                 subscriber(updatedStarsBalance)
+            }
+        }
+                
+        public func updatedTonBalance() -> Signal<[PeerId: StarsAmount], NoError> {
+            let queue = self.queue
+            return Signal { [weak self] subscriber in
+                let disposable = MetaDisposable()
+                queue.async {
+                    if let strongSelf = self {
+                        let index = strongSelf.updatedTonBalanceContext.subscribers.add({ starsBalance in
+                            subscriber.putNext(starsBalance)
+                        })
+                        
+                        disposable.set(ActionDisposable {
+                            if let strongSelf = self {
+                                strongSelf.updatedTonBalanceContext.subscribers.remove(index)
+                            }
+                        })
+                    }
+                }
+                return disposable
+            }
+        }
+        
+        private func notifyUpdatedTonBalance(_ updatedTonBalance: [PeerId: StarsAmount]) {
+            for subscriber in self.updatedTonBalanceContext.subscribers.copyItems() {
+                subscriber(updatedTonBalance)
             }
         }
         
@@ -2007,6 +2003,7 @@ public final class AccountStateManager {
     let messagesRemovedContext = MessagesRemovedContext()
     
     public weak var starsContext: StarsContext?
+    public weak var tonContext: StarsContext?
     
     init(
         accountPeerId: PeerId,
@@ -2133,15 +2130,15 @@ public final class AccountStateManager {
         }
     }
     
-    public func updatedRevenueBalances() -> Signal<[PeerId: RevenueStats.Balances], NoError> {
-        return self.impl.signalWith { impl, subscriber in
-            return impl.updatedRevenueBalances().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
-        }
-    }
-
     public func updatedStarsBalance() -> Signal<[PeerId: StarsAmount], NoError> {
         return self.impl.signalWith { impl, subscriber in
             return impl.updatedStarsBalance().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
+        }
+    }
+    
+    public func updatedTonBalance() -> Signal<[PeerId: StarsAmount], NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            return impl.updatedTonBalance().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
         }
     }
     

@@ -8,7 +8,7 @@ import TextNodeWithEntities
 import AccountContext
 import ItemListUI
 import ComponentFlow
-import ComposePollUI
+import ListComposePollOptionComponent
 import TextFieldComponent
 
 public class ItemListFilterTitleInputItem: ListViewItem, ItemListItem {

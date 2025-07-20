@@ -1,6 +1,7 @@
 import Postbox
 import TelegramApi
 import MtProtoKit
+import Foundation
 
 public func smallestVideoRepresentation(_ representations: [TelegramMediaImage.VideoRepresentation]) -> TelegramMediaImage.VideoRepresentation? {
     if representations.count == 0 {

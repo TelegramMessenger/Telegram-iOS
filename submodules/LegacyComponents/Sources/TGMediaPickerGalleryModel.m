@@ -1,21 +1,22 @@
-#import "TGMediaPickerGalleryModel.h"
+#import <LegacyComponents/LegacyComponents.h>
+#import <LegacyComponents/TGMediaPickerGalleryModel.h>
 
-#import "TGMediaPickerGallerySelectedItemsModel.h"
+#import <LegacyComponents/TGMediaPickerGallerySelectedItemsModel.h>
 
 #import "LegacyComponentsInternal.h"
 
 #import <LegacyComponents/TGModernGalleryController.h>
 #import <LegacyComponents/TGModernGalleryItem.h>
-#import "TGModernGallerySelectableItem.h"
-#import "TGModernGalleryEditableItem.h"
-#import "TGModernGalleryEditableItemView.h"
-#import "TGMediaPickerGalleryItem.h"
+#import <LegacyComponents/TGModernGallerySelectableItem.h>
+#import <LegacyComponents/TGModernGalleryEditableItem.h>
+#import <LegacyComponents/TGModernGalleryEditableItemView.h>
+#import <LegacyComponents/TGMediaPickerGalleryItem.h>
 #import <LegacyComponents/TGModernGalleryZoomableItemView.h>
-#import "TGMediaPickerGalleryPhotoItem.h"
-#import "TGMediaPickerGalleryVideoItem.h"
-#import "TGMediaPickerGalleryVideoItemView.h"
+#import <LegacyComponents/TGMediaPickerGalleryPhotoItem.h>
+#import <LegacyComponents/TGMediaPickerGalleryVideoItem.h>
+#import <LegacyComponents/TGMediaPickerGalleryVideoItemView.h>
 
-#import "TGModernMediaListItem.h"
+#import <LegacyComponents/TGModernMediaListItem.h>
 #import "TGModernMediaListSelectableItem.h"
 
 #import <LegacyComponents/PGPhotoEditorValues.h>

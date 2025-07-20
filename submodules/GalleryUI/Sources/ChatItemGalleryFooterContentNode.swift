@@ -783,7 +783,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
             if let (attributeText, fullText) = self.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
                 concealed = !doesUrlMatchText(url: url, text: attributeText, fullText: fullText)
             }
-            return .url(url: url, concealed: concealed)
+            return .url(url: url, concealed: concealed, dismiss: true)
         } else if let peerMention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
             return .peerMention(peerMention.peerId, peerMention.mention)
         } else if let peerName = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {

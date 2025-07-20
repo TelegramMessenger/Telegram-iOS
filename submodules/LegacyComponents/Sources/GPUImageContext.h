@@ -10,7 +10,12 @@ typedef enum { kGPUImageNoRotation, kGPUImageRotateLeft, kGPUImageRotateRight, k
 
 @property(readonly, nonatomic) dispatch_queue_t contextQueue;
 @property(readwrite, retain, nonatomic) GLProgram *currentShaderProgram;
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 @property(readonly, retain, nonatomic) EAGLContext *context;
+#pragma clang diagnostic pop
+
 @property(readonly, nonatomic) CVOpenGLESTextureCacheRef coreVideoTextureCache;
 @property(readonly, nonatomic) GPUImageFramebufferCache *framebufferCache;
 
@@ -33,7 +38,10 @@ typedef enum { kGPUImageNoRotation, kGPUImageRotateLeft, kGPUImageRotateRight, k
 - (void)presentBufferForDisplay;
 - (GLProgram *)programForVertexShaderString:(NSString *)vertexShaderString fragmentShaderString:(NSString *)fragmentShaderString;
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 - (void)useSharegroup:(EAGLSharegroup *)sharegroup;
+#pragma clang diagnostic pop
 
 // Manage fast texture upload
 + (BOOL)supportsFastTextureUpload;

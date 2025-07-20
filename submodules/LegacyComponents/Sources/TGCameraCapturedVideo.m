@@ -1,14 +1,14 @@
-#import "TGCameraCapturedVideo.h"
+#import <LegacyComponents/TGCameraCapturedVideo.h>
 #import <AVFoundation/AVFoundation.h>
 #import <LegacyComponents/TGMediaAssetImageSignals.h>
 #import <LegacyComponents/TGPhotoEditorUtils.h>
 
-#import "LegacyComponentsGlobals.h"
-#import "TGStringUtils.h"
-#import "TGMediaAsset.h"
-#import "TGMediaAsset+TGMediaEditableItem.h"
+#import <LegacyComponents/LegacyComponentsGlobals.h>
+#import <LegacyComponents/TGStringUtils.h>
+#import <LegacyComponents/TGMediaAsset.h>
+#import <LegacyComponents/TGMediaAsset+TGMediaEditableItem.h>
 
-#import "TGGifConverter.h"
+#import <LegacyComponents/TGGifConverter.h>
 
 @interface TGCameraCapturedVideo ()
 {

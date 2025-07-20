@@ -1,12 +1,12 @@
-#import "TGModernConversationInputMicButton.h"
+#import <LegacyComponents/TGModernConversationInputMicButton.h>
 
 #import "LegacyComponentsInternal.h"
 
 #import <LegacyComponents/TGModernButton.h>
-#import "TGOverlayController.h"
+#import <LegacyComponents/TGOverlayController.h>
 #import "TGColor.h"
-#import "TGImageUtils.h"
-#import "TGPhotoEditorSparseView.h"
+#import <LegacyComponents/TGImageUtils.h>
+#import <LegacyComponents/TGPhotoEditorSparseView.h>
 
 static const CGFloat innerCircleRadius = 110.0f;
 static const CGFloat outerCircleRadius = innerCircleRadius + 50.0f;

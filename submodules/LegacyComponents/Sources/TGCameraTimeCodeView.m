@@ -1,4 +1,4 @@
-#import "TGCameraTimeCodeView.h"
+#import <LegacyComponents/TGCameraTimeCodeView.h>
 
 #import "LegacyComponentsInternal.h"
 

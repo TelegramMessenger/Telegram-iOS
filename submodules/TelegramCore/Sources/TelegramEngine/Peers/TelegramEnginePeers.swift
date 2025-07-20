@@ -889,21 +889,13 @@ public extension TelegramEngine {
         public func updatePeerStarGiftStatus(peerId: EnginePeer.Id, starGift: StarGift.UniqueGift, expirationDate: Int32?) -> Signal<Never, UpdatePeerEmojiStatusError> {
             return _internal_updatePeerStarGiftStatus(account: self.account, peerId: peerId, starGift: starGift, expirationDate: expirationDate)
         }
-        
-        public func checkChannelRevenueWithdrawalAvailability() -> Signal<Never, RequestRevenueWithdrawalError> {
-            return _internal_checkChannelRevenueWithdrawalAvailability(account: self.account)
-        }
-        
-        public func requestChannelRevenueWithdrawalUrl(peerId: EnginePeer.Id, password: String) -> Signal<String, RequestRevenueWithdrawalError> {
-            return _internal_requestChannelRevenueWithdrawalUrl(account: self.account, peerId: peerId, password: password)
-        }
-        
+                
         public func checkStarsRevenueWithdrawalAvailability() -> Signal<Never, RequestStarsRevenueWithdrawalError> {
             return _internal_checkStarsRevenueWithdrawalAvailability(account: self.account)
         }
         
-        public func requestStarsRevenueWithdrawalUrl(peerId: EnginePeer.Id, amount: Int64, password: String) -> Signal<String, RequestStarsRevenueWithdrawalError> {
-            return _internal_requestStarsRevenueWithdrawalUrl(account: self.account, peerId: peerId, amount: amount, password: password)
+        public func requestStarsRevenueWithdrawalUrl(peerId: EnginePeer.Id, ton: Bool, amount: Int64?, password: String) -> Signal<String, RequestStarsRevenueWithdrawalError> {
+            return _internal_requestStarsRevenueWithdrawalUrl(account: self.account, ton: ton, peerId: peerId, amount: amount, password: password)
         }
         
         public func requestStarsRevenueAdsAccountlUrl(peerId: EnginePeer.Id) -> Signal<String?, NoError> {
@@ -1494,12 +1486,16 @@ public extension TelegramEngine {
             return _internal_applyChannelBoost(account: self.account, peerId: peerId, slots: slots)
         }
         
-        public func getPaidMessagesRevenue(peerId: EnginePeer.Id) -> Signal<StarsAmount?, NoError> {
-            return _internal_getPaidMessagesRevenue(account: self.account, peerId: peerId)
+        public func getPaidMessagesRevenue(scopePeerId: EnginePeer.Id, peerId: EnginePeer.Id) -> Signal<StarsAmount?, NoError> {
+            return _internal_getPaidMessagesRevenue(account: self.account, scopePeerId: scopePeerId, peerId: peerId)
         }
         
-        public func addNoPaidMessagesException(peerId: EnginePeer.Id, refundCharged: Bool) -> Signal<Never, NoError> {
-            return _internal_addNoPaidMessagesException(account: self.account, peerId: peerId, refundCharged: refundCharged)
+        public func addNoPaidMessagesException(scopePeerId: EnginePeer.Id, peerId: EnginePeer.Id, refundCharged: Bool) -> Signal<Never, NoError> {
+            return _internal_addNoPaidMessagesException(account: self.account, scopePeerId: scopePeerId, peerId: peerId, refundCharged: refundCharged)
+        }
+        
+        public func reinstateNoPaidMessagesException(scopePeerId: EnginePeer.Id, peerId: EnginePeer.Id) -> Signal<Never, NoError> {
+            return _internal_reinstateNoPaidMessagesException(account: self.account, scopePeerId: scopePeerId, peerId: peerId)
         }
         
         public func updateChannelPaidMessagesStars(peerId: EnginePeer.Id, stars: StarsAmount?, broadcastMessagesAllowed: Bool) -> Signal<Never, NoError> {

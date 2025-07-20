@@ -182,10 +182,6 @@ func _internal_premiumGiftCodeOptions(account: Account, peerId: EnginePeer.Id?, 
         return .single([])
     } |> switchToLatest
     
-    var flags: Int32 = 0
-    if let _ = peerId {
-        flags |= 1 << 0
-    }
     let remote = account.postbox.transaction { transaction -> Peer? in
         if let peerId = peerId {
             return transaction.getPeer(peerId)
@@ -194,6 +190,10 @@ func _internal_premiumGiftCodeOptions(account: Account, peerId: EnginePeer.Id?, 
     }
     |> mapToSignal { peer in
         let inputPeer = peer.flatMap(apiInputPeer)
+        var flags: Int32 = 0
+        if let _ = inputPeer {
+            flags |= 1 << 0
+        }
         return account.network.request(Api.functions.payments.getPremiumGiftCodeOptions(flags: flags, boostPeer: inputPeer))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<[Api.PremiumGiftCodeOption]?, NoError> in

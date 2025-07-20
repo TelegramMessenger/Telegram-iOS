@@ -316,14 +316,14 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: threadId, messageId: nil, navigationController: navigationController, activateInput: nil, scrollToEndIfExists: false, keepStack: .always, animated: true).startStandalone()
             }
         }, tapMessage: nil, clickThroughMessage: { _, _ in }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _, _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _, _, _ in return false }, sendEmoji: { _, _, _ in }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _, _ in return false
-        }, requestMessageActionCallback: { [weak self] messageId, _, _, _ in
+        }, requestMessageActionCallback: { [weak self] message, _, _, _, _ in
             guard let self else {
                 return
             }
-            if self.expandedDeletedMessages.contains(messageId) {
-                self.expandedDeletedMessages.remove(messageId)
+            if self.expandedDeletedMessages.contains(message.id) {
+                self.expandedDeletedMessages.remove(message.id)
             } else {
-                self.expandedDeletedMessages.insert(messageId)
+                self.expandedDeletedMessages.insert(message.id)
             }
         }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _, _ in }, openUrl: { [weak self] url in
             self?.openUrl(url.url, progress: url.progress)
@@ -569,6 +569,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         break
                 }
             }
+        }, todoItemLongTap: { _, _ in
         }, openCheckoutOrReceipt: { _, _ in
         }, openSearch: {
         }, setupReply: { _ in
@@ -647,6 +648,9 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, playShakeAnimation: {
         }, displayQuickShare: { _, _ ,_ in
         }, updateChatLocationThread: { _, _ in
+        }, requestToggleTodoMessageItem: { _, _, _ in
+        }, displayTodoToggleUnavailable: { _ in
+        }, openStarsPurchase: { _ in
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
         pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(), presentationContext: ChatPresentationContext(context: context, backgroundNode: self.backgroundNode))
         self.controllerInteraction = controllerInteraction
@@ -1387,15 +1391,21 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                                     
                         let _ = (signal
                         |> deliverOnMainQueue).startStandalone(next: { [weak navigationController] resolvedCallLink in
-                            navigationController?.pushViewController(context.sharedContext.makeJoinSubjectScreen(context: context, mode: JoinSubjectScreenMode.groupCall(JoinSubjectScreenMode.GroupCall(
-                                id: resolvedCallLink.id,
-                                accessHash: resolvedCallLink.accessHash,
-                                slug: link,
-                                inviter: resolvedCallLink.inviter,
-                                members: resolvedCallLink.members,
-                                totalMemberCount: resolvedCallLink.totalMemberCount,
-                                info: resolvedCallLink
-                            ))))
+                            let _ = (context.engine.calls.getGroupCallPersistentSettings(callId: resolvedCallLink.id)
+                            |> deliverOnMainQueue).startStandalone(next: { value in
+                                let value: PresentationGroupCallPersistentSettings = value?.get(PresentationGroupCallPersistentSettings.self) ?? PresentationGroupCallPersistentSettings.default
+                                
+                                navigationController?.pushViewController(context.sharedContext.makeJoinSubjectScreen(context: context, mode: JoinSubjectScreenMode.groupCall(JoinSubjectScreenMode.GroupCall(
+                                    id: resolvedCallLink.id,
+                                    accessHash: resolvedCallLink.accessHash,
+                                    slug: link,
+                                    inviter: resolvedCallLink.inviter,
+                                    members: resolvedCallLink.members,
+                                    totalMemberCount: resolvedCallLink.totalMemberCount,
+                                    info: resolvedCallLink,
+                                    enableMicrophoneByDefault: value.isMicrophoneEnabledByDefault
+                                ))))
+                            })
                         })
                     case let .localization(identifier):
                         strongSelf.presentController(LanguageLinkPreviewController(context: strongSelf.context, identifier: identifier), .window(.root), nil)

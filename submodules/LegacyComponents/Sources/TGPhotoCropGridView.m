@@ -1,7 +1,7 @@
 #import "TGPhotoCropGridView.h"
 
 #import "LegacyComponentsInternal.h"
-#import "TGImageUtils.h"
+#import <LegacyComponents/TGImageUtils.h>
 
 const NSInteger TGPhotoCropMajorGridViewLinesCount = 2;
 const NSInteger TGPhotoCropMinorGridViewLinesCount = 8;

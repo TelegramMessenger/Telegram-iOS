@@ -1,5 +1,5 @@
-#import "TGPaintUtils.h"
-#import "TGPhotoEditorUtils.h"
+#import <LegacyComponents/TGPaintUtils.h>
+#import <LegacyComponents/TGPhotoEditorUtils.h>
 
 #import "LegacyComponentsInternal.h"
 
@@ -62,7 +62,10 @@ void TGSetupColorUniform(GLint location, UIColor *color)
         red = green = blue = components[0];
     }
     
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     glUniform4f(location, (GLfloat)red, (GLfloat)green, (GLfloat)blue, (GLfloat)alpha);
+#pragma clang diagnostic pop
 }
 
 UIImage *TGPaintCombineImages(UIImage *background, UIImage *foreground, bool opaque)

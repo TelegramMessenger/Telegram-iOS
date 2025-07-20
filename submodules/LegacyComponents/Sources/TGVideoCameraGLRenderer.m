@@ -1,4 +1,4 @@
-#import "TGVideoCameraGLRenderer.h"
+#import <LegacyComponents/TGVideoCameraGLRenderer.h>
 #import <OpenGLES/EAGL.h>
 #import <OpenGLES/ES2/glext.h>
 

@@ -2,6 +2,9 @@
 #import "GPUImageFilter.h"
 #import "LegacyComponentsInternal.h"
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 GLfloat kColorConversion601Default[] = {
     1.164,  1.164, 1.164,
     0.0, -0.392, 2.017,
@@ -517,3 +520,5 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
 }
 
 @end
+
+#pragma clang diagnostic pop

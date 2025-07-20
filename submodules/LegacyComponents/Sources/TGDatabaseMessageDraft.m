@@ -1,9 +1,9 @@
-#import "TGDatabaseMessageDraft.h"
+#import <LegacyComponents/TGDatabaseMessageDraft.h>
 
 #import "LegacyComponentsInternal.h"
 
-#import "PSKeyValueEncoder.h"
-#import "PSKeyValueDecoder.h"
+#import <LegacyComponents/PSKeyValueEncoder.h>
+#import <LegacyComponents/PSKeyValueDecoder.h>
 
 @implementation TGDatabaseMessageDraft
 

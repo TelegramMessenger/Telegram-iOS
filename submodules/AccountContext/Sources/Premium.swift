@@ -42,7 +42,7 @@ public enum PremiumIntroSource {
     case folderTags
     case animatedEmoji
     case messageEffects
-    case paidMessages
+    case todo
     case auth(String)
 }
 
@@ -81,7 +81,7 @@ public enum PremiumDemoSubject {
     case folderTags
     case business
     case messageEffects
-    case paidMessages
+    case todo
     
     case businessLocation
     case businessHours

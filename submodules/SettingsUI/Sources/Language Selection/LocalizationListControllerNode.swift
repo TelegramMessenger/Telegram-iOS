@@ -431,6 +431,32 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
             })
         }
         
+        let translationConfiguration = TranslationConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+        var translateButtonAvailable = false
+        var chatTranslationAvailable = false
+        
+        switch translationConfiguration.manual {
+        case .enabled, .alternative:
+            translateButtonAvailable = true
+        case .system:
+            if #available(iOS 18.0, *) {
+                translateButtonAvailable = true
+            }
+        default:
+            break
+        }
+        
+        switch translationConfiguration.auto {
+        case .enabled:
+            chatTranslationAvailable = true
+        case .system:
+            if #available(iOS 18.0, *) {
+                chatTranslationAvailable = true
+            }
+        default:
+            break
+        }
+        
         let previousState = Atomic<LocalizationListState?>(value: nil)
         let previousEntriesHolder = Atomic<([LanguageListEntry], PresentationTheme, PresentationStrings)?>(value: nil)
         self.listDisposable = combineLatest(
@@ -465,7 +491,6 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
                 if let languages = translationSettings.ignoredLanguages {
                     ignoredLanguages = languages
                 } else {
-                    
                     if var activeLanguage = activeLanguageCode {
                         let rawSuffix = "-raw"
                         if activeLanguage.hasSuffix(rawSuffix) {
@@ -497,12 +522,15 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
             if !localizationListState.availableOfficialLocalizations.isEmpty {
                 strongSelf.currentListState = localizationListState
                 
-                if #available(iOS 12.0, *) {
+                if translateButtonAvailable || chatTranslationAvailable {
                     entries.append(.translateTitle(text: presentationData.strings.Localization_TranslateMessages.uppercased()))
                     
-                    entries.append(.translate(text: presentationData.strings.Localization_ShowTranslate, value: showTranslate))
-                    
-                    entries.append(.translateEntire(text: presentationData.strings.Localization_TranslateEntireChat, value: translateChats, locked: !isPremium))
+                    if translateButtonAvailable {
+                        entries.append(.translate(text: presentationData.strings.Localization_ShowTranslate, value: showTranslate))
+                    }
+                    if chatTranslationAvailable {
+                        entries.append(.translateEntire(text: presentationData.strings.Localization_TranslateEntireChat, value: translateChats, locked: !isPremium))
+                    }
                     
                     var value = ""
                     if ignoredLanguages.count > 1 {

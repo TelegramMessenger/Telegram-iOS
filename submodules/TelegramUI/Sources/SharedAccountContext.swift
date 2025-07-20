@@ -2065,7 +2065,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     reference: .id(id: call.callInfo.id, accessHash: call.callInfo.accessHash),
                     beginWithVideo: isVideo,
                     invitePeerIds: peerIds,
-                    endCurrentIfAny: true
+                    endCurrentIfAny: true,
+                    unmuteByDefault: true
                 )
                 completion?()
             }
@@ -2318,7 +2319,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             clickThroughMessage?(view, location)
         }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _, _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _, _, _ in return false }, sendEmoji: { _, _, _ in }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _, _ in
             return false
-        }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _, _ in }, openUrl: { _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
+        }, requestMessageActionCallback: { _, _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _, _ in }, openUrl: { _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
         }, presentController: { _, _ in
         }, presentControllerInCurrent: { _, _ in
         }, navigationController: {
@@ -2326,7 +2327,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }, chatControllerNode: {
             return nil
         }, presentGlobalOverlayController: { _, _ in }, callPeer: { _, _ in }, openConferenceCall: { _ in                
-        }, longTap: { _, _ in }, openCheckoutOrReceipt: { _, _ in }, openSearch: { }, setupReply: { _ in
+        }, longTap: { _, _ in
+        }, todoItemLongTap: { _, _ in
+        }, openCheckoutOrReceipt: { _, _ in
+        }, openSearch: {
+        }, setupReply: { _ in
         }, canSetupReply: { _ in
             return .none
         }, canSendMessages: {
@@ -2399,6 +2404,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }, playShakeAnimation: {
         }, displayQuickShare: { _, _ ,_ in
         }, updateChatLocationThread: { _, _ in
+        }, requestToggleTodoMessageItem: { _, _, _ in
+        }, displayTodoToggleUnavailable: { _ in
+        }, openStarsPurchase: { _ in
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
         pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(), presentationContext: ChatPresentationContext(context: context, backgroundNode: backgroundNode as? WallpaperBackgroundNode))
         
@@ -2712,8 +2720,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSource = .messageEffects
         case .animatedEmoji:
             mappedSource = .animatedEmoji
-        case .paidMessages:
-            mappedSource = .paidMessages
+        case .todo:
+            mappedSource = .todo
         case let .auth(price):
             mappedSource = .auth(price)
         }
@@ -2790,8 +2798,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSubject = .folderTags
         case .messageEffects:
             mappedSubject = .messageEffects
-        case .paidMessages:
-            mappedSubject = .paidMessages
+        case .todo:
+            mappedSubject = .todo
         case .business:
             mappedSubject = .business
             buttonText = presentationData.strings.Chat_EmptyStateIntroFooterPremiumActionButton
@@ -3674,7 +3682,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     public func makeStarsTransactionsScreen(context: AccountContext, starsContext: StarsContext) -> ViewController {
         return StarsTransactionsScreen(context: context, starsContext: starsContext)
     }
-    
+        
     public func makeStarsPurchaseScreen(context: AccountContext, starsContext: StarsContext, options: [Any], purpose: StarsPurchasePurpose, completion: @escaping (Int64) -> Void) -> ViewController {
         return StarsPurchaseScreen(context: context, starsContext: starsContext, options: options, purpose: purpose, completion: completion)
     }
@@ -3708,26 +3716,30 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func makeStarsAmountScreen(context: AccountContext, initialValue: Int64?, completion: @escaping (Int64) -> Void) -> ViewController {
-        return StarsWithdrawScreen(context: context, mode: .paidMedia(initialValue), completion: completion)
+        return StarsWithdrawScreen(context: context, mode: .paidMedia(initialValue, completion: completion))
     }
     
     public func makeStarsWithdrawalScreen(context: AccountContext, stats: StarsRevenueStats, completion: @escaping (Int64) -> Void) -> ViewController {
-        return StarsWithdrawScreen(context: context, mode: .withdraw(stats), completion: completion)
+        return StarsWithdrawScreen(context: context, mode: .withdraw(stats, completion: completion))
     }
     
-    public func makeStarsWithdrawalScreen(context: AccountContext, subject: StarsWithdrawalScreenSubject, completion: @escaping (Int64) -> Void) -> ViewController {
+    public func makeStarsWithdrawalScreen(context: AccountContext, subject: StarsWithdrawalScreenSubject) -> ViewController {
         let mode: StarsWithdrawScreen.Mode
         switch subject {
-        case .withdraw:
-            mode = .accountWithdraw
-        case let .enterAmount(current, minValue, fractionAfterCommission, kind):
-            mode = .paidMessages(current: current.value, minValue: minValue.value, fractionAfterCommission: fractionAfterCommission, kind: kind)
+        case let .withdraw(completion):
+            mode = .accountWithdraw(completion: completion)
+        case let .enterAmount(current, minValue, fractionAfterCommission, kind, completion):
+            mode = .paidMessages(current: current.value, minValue: minValue.value, fractionAfterCommission: fractionAfterCommission, kind: kind, completion: completion)
+        case let .postSuggestion(channel, isFromAdmin, current, timestamp, completion):
+            mode = .suggestedPost(mode: .sender(channel: channel, isFromAdmin: isFromAdmin), price: current, timestamp: timestamp, completion: completion)
+        case let .postSuggestionModification(current, timestamp, completion):
+            mode = .suggestedPost(mode: .admin, price: current, timestamp: timestamp, completion: completion)
         }
-        return StarsWithdrawScreen(context: context, mode: mode, completion: completion)
+        return StarsWithdrawScreen(context: context, mode: mode)
     }
     
     public func makeStarGiftResellScreen(context: AccountContext, gift: StarGift.UniqueGift, update: Bool, completion: @escaping (Int64) -> Void) -> ViewController {
-        return StarsWithdrawScreen(context: context, mode: .starGiftResell(gift, update), completion: completion)
+        return StarsWithdrawScreen(context: context, mode: .starGiftResell(gift, update, completion: completion))
     }
     
     public func makeStarsGiftScreen(context: AccountContext, message: EngineMessage) -> ViewController {

@@ -1106,10 +1106,17 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 var range = NSRange(location: NSNotFound, length: 0)
                 range = (mutableString.string as NSString).range(of: "{amount}")
                 if range.location != NSNotFound {
-                    if currency == "XTR" {
+                    if currency == "TON" {
+                        let amountAttributedString = NSMutableAttributedString(string: "#\(formatTonAmountText(totalAmount, dateTimeFormat: dateTimeFormat))", font: titleBoldFont, textColor: primaryTextColor)
+                        if let range = amountAttributedString.string.range(of: "#") {
+                            amountAttributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .ton(tinted: true)), range: NSRange(range, in: amountAttributedString.string))
+                            amountAttributedString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: amountAttributedString.string))
+                        }
+                        mutableString.replaceCharacters(in: range, with: amountAttributedString)
+                    } else if currency == "XTR" {
                         let amountAttributedString = NSMutableAttributedString(string: "#\(totalAmount)", font: titleBoldFont, textColor: primaryTextColor)
                         if let range = amountAttributedString.string.range(of: "#") {
-                            amountAttributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: true)), range: NSRange(range, in: amountAttributedString.string))
+                            amountAttributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: NSRange(range, in: amountAttributedString.string))
                             amountAttributedString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: amountAttributedString.string))
                         }
                         mutableString.replaceCharacters(in: range, with: amountAttributedString)
@@ -1244,8 +1251,37 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 }
             case let .paidMessagesRefunded(_, stars):
                 let starsString = strings.Notification_PaidMessageRefund_Stars(Int32(stars))
-                if message.author?.id == accountPeerId, let messagePeer = message.peers[message.id.peerId] {
-                    let peerName = EnginePeer(messagePeer).compactDisplayTitle
+                
+                var isOutgoing = false
+                var messagePeer: EnginePeer?
+                if message.author?.id == accountPeerId, let messagePeerValue = message.peers[message.id.peerId] {
+                    isOutgoing = true
+                    messagePeer = EnginePeer(messagePeerValue)
+                } else if message.id.peerId.namespace == Namespaces.Peer.CloudChannel, let peer = message.peers[message.id.peerId] as? TelegramChannel, peer.isMonoForum {
+                    if let author = message.author, let threadId = message.threadId, let threadPeer = message.peers[PeerId(threadId)], author.id != threadPeer.id {
+                        if case .channel = author {
+                            var isUser = true
+                            if let peer = message.peers[message.id.peerId] as? TelegramChannel {
+                                if peer.isMonoForum, let linkedMonoforumId = peer.linkedMonoforumId, let mainChannel = message.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
+                                    isUser = false
+                                }
+                            }
+                            
+                            if isUser {
+                                messagePeer = author
+                            } else {
+                                messagePeer = EnginePeer(threadPeer)
+                                isOutgoing = true
+                            }
+                        } else {
+                            isOutgoing = true
+                            messagePeer = EnginePeer(threadPeer)
+                        }
+                    }
+                }
+                
+                if isOutgoing, let messagePeer {
+                    let peerName = messagePeer.compactDisplayTitle
                     var attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(1, messagePeer.id)])
                     attributes[0] = boldAttributes
                     let resultString = strings.Notification_PaidMessageRefundYou(starsString, peerName)
@@ -1285,6 +1321,194 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         }
                     }
                     attributedString = addAttributesToStringWithRanges(resultString._tuple, body: bodyAttributes, argumentAttributes: attributes)
+                }
+            case let .todoCompletions(completed, incompleted):
+                var todo: TelegramMediaTodo?
+                for attribute in message.attributes {
+                    if let attribute = attribute as? ReplyMessageAttribute, let message = message.associatedMessages[attribute.messageId] {
+                        for media in message.media {
+                            if let media = media as? TelegramMediaTodo {
+                                todo = media
+                            }
+                        }
+                    }
+                }
+                
+                var taskTitle: String?
+                if let todo {
+                    if let completedTaskId = completed.first, let completedTask = todo.items.first(where: { $0.id == completedTaskId }) {
+                        taskTitle = completedTask.text
+                    } else if let incompletedTaskId = incompleted.first, let incompletedTask = todo.items.first(where: { $0.id == incompletedTaskId }) {
+                        taskTitle = incompletedTask.text
+                    }
+                }
+                if let taskTitleValue = taskTitle, taskTitleValue.count > 20 {
+                    taskTitle = taskTitleValue.prefix(20) + "…"
+                }
+                
+                if message.author?.id == accountPeerId {
+                    let resultString: PresentationStrings.FormattedString
+                    if completed.count > 1 || (completed.count == 1 && taskTitle == nil) {
+                        resultString = strings.Notification_TodoMultipleCompletedYou(strings.Notification_TodoTasks(Int32(completed.count)))
+                    } else if let _ = completed.first {
+                        resultString = strings.Notification_TodoCompletedYou(taskTitle ?? "")
+                    } else if incompleted.count > 1 || (incompleted.count == 1 && taskTitle == nil) {
+                        resultString = strings.Notification_TodoMultipleIncompletedYou(strings.Notification_TodoTasks(Int32(incompleted.count)))
+                    } else if let _ = incompleted.first {
+                        resultString = strings.Notification_TodoIncompletedYou(taskTitle ?? "")
+                    } else {
+                        resultString = strings.Notification_TodoCompletedYou("")
+                    }
+                    attributedString = addAttributesToStringWithRanges(resultString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+                } else {
+                    let peerName = message.author?.compactDisplayTitle ?? ""
+                    
+                    var attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)])
+                    attributes[1] = boldAttributes
+                    
+                    let resultString: PresentationStrings.FormattedString
+                    if completed.count > 1 || (completed.count == 1 && taskTitle == nil) {
+                        resultString = strings.Notification_TodoMultipleCompleted(peerName, strings.Notification_TodoTasks(Int32(completed.count)))
+                    } else if let _ = completed.first {
+                        resultString = strings.Notification_TodoCompleted(peerName, taskTitle ?? "")
+                    } else if incompleted.count > 1 || (incompleted.count == 1 && taskTitle == nil) {
+                        resultString = strings.Notification_TodoMultipleIncompleted(peerName, strings.Notification_TodoTasks(Int32(incompleted.count)))
+                    } else if let _ = incompleted.first {
+                        resultString = strings.Notification_TodoIncompleted(peerName, taskTitle ?? "")
+                    } else {
+                        resultString = strings.Notification_TodoCompleted(peerName, "")
+                    }
+                    attributedString = addAttributesToStringWithRanges(resultString._tuple, body: bodyAttributes, argumentAttributes: attributes)
+                }
+            case let .todoAppendTasks(tasks):
+                var todoTitle = "DELETED"
+                for attribute in message.attributes {
+                    if let attribute = attribute as? ReplyMessageAttribute, let message = message.associatedMessages[attribute.messageId] {
+                        for media in message.media {
+                            if let todo = media as? TelegramMediaTodo {
+                                todoTitle = todo.text
+                            }
+                        }
+                    }
+                }
+                if todoTitle.count > 20 {
+                    todoTitle = todoTitle.prefix(20) + "…"
+                }
+                if message.author?.id == accountPeerId {
+                    let resultString: PresentationStrings.FormattedString
+                    if tasks.count == 1, let task = tasks.first {
+                        var taskTitle = task.text
+                        if taskTitle.count > 20 {
+                            taskTitle = taskTitle.prefix(20) + "…"
+                        }
+                        resultString = strings.Notification_TodoAddedTaskYou(taskTitle, todoTitle)
+                    } else {
+                        resultString = strings.Notification_TodoAddedMultipleTasksYou(strings.Notification_TodoAddedTasks(Int32(tasks.count)), todoTitle)
+                    }
+                    attributedString = addAttributesToStringWithRanges(resultString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes, 1: boldAttributes])
+                } else {
+                    let peerName = message.author?.compactDisplayTitle ?? ""
+                    var attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)])
+                    attributes[1] = boldAttributes
+                    attributes[2] = boldAttributes
+                    
+                    let resultString: PresentationStrings.FormattedString
+                    if tasks.count == 1, let task = tasks.first {
+                        var taskTitle = task.text
+                        if taskTitle.count > 20 {
+                            taskTitle = taskTitle.prefix(20) + "…"
+                        }
+                        resultString = strings.Notification_TodoAddedTask(peerName, taskTitle, todoTitle)
+                    } else {
+                        resultString = strings.Notification_TodoAddedMultipleTasks(peerName, strings.Notification_TodoAddedTasks(Int32(tasks.count)), todoTitle)
+                    }
+                    attributedString = addAttributesToStringWithRanges(resultString._tuple, body: bodyAttributes, argumentAttributes: attributes)
+                }
+            case let .suggestedPostApprovalStatus(status):
+                var messageText = ""
+                for attribute in message.attributes {
+                    if let attribute = attribute as? ReplyMessageAttribute, let message = message.associatedMessages[attribute.messageId] {
+                        messageText = message.text
+                    }
+                }
+                
+                let _ = messageText
+                
+                let string: String
+                if !message.flags.contains(.Incoming) {
+                    switch status {
+                    case .approved:
+                        string = strings.Chat_PostApproval_Status_AdminApproved
+                    case .rejected:
+                        string = strings.Chat_PostApproval_Status_AdminRejected
+                    }
+                } else {
+                    switch status {
+                    case .approved:
+                        string = strings.Chat_PostApproval_Status_UserApproved
+                    case .rejected:
+                        string = strings.Chat_PostApproval_Status_UserRejected
+                    }
+                }
+                attributedString = NSAttributedString(string: string, font: titleFont, textColor: primaryTextColor)
+            case let .suggestedPostSuccess(amount):
+                var isUser = true
+                var channelName: String = ""
+                if let peer = message.peers[message.id.peerId] as? TelegramChannel {
+                    channelName = peer.title
+                    if peer.isMonoForum, let linkedMonoforumId = peer.linkedMonoforumId, let mainChannel = message.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
+                        isUser = false
+                    }
+                }
+                let _ = isUser
+                
+                let amountString: String
+                switch amount.currency {
+                case .stars:
+                    amountString = strings.Chat_PostApproval_DetailStatus_StarsAmount(Int32((amount.amount.value == 1 && amount.amount.nanos == 0) ? 1 : 100)).replacingOccurrences(of: "#", with: "\(amount.amount)")
+                case .ton:
+                    amountString = strings.Chat_PostApproval_DetailStatus_TonAmount(Int32((amount.amount.value == 1 * 1_000_000_000) ? 1 : 100)).replacingOccurrences(of: "#", with: "\(formatTonAmountText(amount.amount.value, dateTimeFormat: dateTimeFormat, maxDecimalPositions: 3))")
+                }
+                attributedString = parseMarkdownIntoAttributedString(strings.Chat_PostApproval_DetailStatus_PostedPaid("\(channelName)", amountString).string, attributes: MarkdownAttributes(body: bodyAttributes, bold: boldAttributes, link: bodyAttributes, linkAttribute: { _ in return nil }))
+            case let .suggestedPostRefund(info):
+                var isUser = true
+                var channelName: String = ""
+                if let peer = message.peers[message.id.peerId] as? TelegramChannel {
+                    channelName = peer.title
+                    if peer.isMonoForum, let linkedMonoforumId = peer.linkedMonoforumId, let mainChannel = message.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
+                        isUser = false
+                    }
+                }
+                let _ = channelName
+                
+                if info.isUserInitiated {
+                    if isUser {
+                        attributedString = NSAttributedString(string: strings.Chat_PostApproval_DetailStatus_UserFailedRefunded, font: titleFont, textColor: primaryTextColor)
+                    } else {
+                        attributedString = NSAttributedString(string: strings.Chat_PostApproval_DetailStatus_AdminFailedRefunded, font: titleFont, textColor: primaryTextColor)
+                    }
+                } else {
+                    attributedString = NSAttributedString(string: strings.Chat_PostApproval_DetailStatus_FailedDeleted, font: titleFont, textColor: primaryTextColor)
+                }
+            case let .giftTon(currency, amount, _, _, _):
+                attributedString = nil
+                if !forAdditionalServiceMessage {
+                    attributedString = NSAttributedString(string: strings.Notification_Gift, font: titleFont, textColor: primaryTextColor)
+                } else {
+                    let price = formatCurrencyAmount(amount, currency: currency)
+                    if message.author?.id == accountPeerId {
+                        attributedString = addAttributesToStringWithRanges(strings.Notification_StarsGift_SentYou(price)._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+                    } else {
+                        var authorName = compactAuthorName
+                        var peerIds: [(Int, EnginePeer.Id?)] = [(0, message.author?.id)]
+                        if message.id.peerId.namespace == Namespaces.Peer.CloudUser && message.id.peerId.id._internalGetInt64Value() == 777000 {
+                            authorName = strings.Notification_StarsGift_UnknownUser
+                            peerIds = []
+                        }
+                        var attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: peerIds)
+                        attributes[1] = boldAttributes
+                        attributedString = addAttributesToStringWithRanges(strings.Notification_StarsGift_Sent(authorName, price)._tuple, body: bodyAttributes, argumentAttributes: attributes)
+                    }
                 }
             case .unknown:
                 attributedString = nil

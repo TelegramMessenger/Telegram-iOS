@@ -362,9 +362,58 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                     )
                     strongSelf.updateCurrentCall(call)
                 }))
+            } else if let currentCall = self.currentCall, currentCall.peerId == firstState.1.id, currentCall.peerId.id._internalGetInt64Value() < firstState.0.account.peerId.id._internalGetInt64Value() {
+                let _ = currentCall.hangUp().startStandalone()
+                
+                self.currentCallDisposable.set((combineLatest(
+                    firstState.0.account.postbox.preferencesView(keys: [PreferencesKeys.voipConfiguration, PreferencesKeys.appConfiguration]) |> take(1),
+                    accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings, ApplicationSpecificSharedDataKeys.experimentalUISettings]) |> take(1)
+                )
+                |> deliverOnMainQueue).start(next: { [weak self] preferences, sharedData in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if strongSelf.currentUpgradedToConferenceCallId == firstState.2.id {
+                        return
+                    }
+                    
+                    let configuration = preferences.values[PreferencesKeys.voipConfiguration]?.get(VoipConfiguration.self) ?? .defaultValue
+                    let autodownloadSettings = sharedData.entries[SharedDataKeys.autodownloadSettings]?.get(AutodownloadSettings.self) ?? .defaultSettings
+                    let experimentalSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings]?.get(ExperimentalUISettings.self) ?? .defaultSettings
+                    let appConfiguration = preferences.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
+                    
+                    let call = PresentationCallImpl(
+                        context: firstState.0,
+                        audioSession: strongSelf.audioSession,
+                        callSessionManager: firstState.0.account.callSessionManager,
+                        callKitIntegration: enableCallKit ? callKitIntegrationIfEnabled(strongSelf.callKitIntegration, settings: strongSelf.callSettings) : nil,
+                        serializedData: configuration.serializedData,
+                        dataSaving: effectiveDataSaving(for: strongSelf.callSettings, autodownloadSettings: autodownloadSettings),
+                        getDeviceAccessData: strongSelf.getDeviceAccessData,
+                        initialState: nil,
+                        internalId: firstState.2.id,
+                        peerId: firstState.2.peerId,
+                        isOutgoing: false,
+                        incomingConferenceSource: firstState.2.conferenceSource,
+                        peer: EnginePeer(firstState.1),
+                        proxyServer: strongSelf.proxyServer,
+                        auxiliaryServers: [],
+                        currentNetworkType: firstState.4,
+                        updatedNetworkType: firstState.0.account.networkType,
+                        startWithVideo: firstState.2.isVideo,
+                        isVideoPossible: firstState.2.isVideoPossible,
+                        enableStunMarking: shouldEnableStunMarking(appConfiguration: appConfiguration),
+                        enableTCP: experimentalSettings.enableVoipTcp,
+                        preferredVideoCodec: experimentalSettings.preferredVideoCodec
+                    )
+                    strongSelf.updateCurrentCall(call)
+                    
+                    call.answer()
+                }))
             } else {
                 for (context, _, state, _, _) in ringingStates {
                     if state.id != self.currentCall?.internalId {
+                        self.callKitIntegration?.dropCall(uuid: state.id)
                         context.account.callSessionManager.drop(internalId: state.id, reason: .busy, debugLog: .single(nil))
                     }
                 }
@@ -1085,7 +1134,8 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         reference: InternalGroupCallReference,
         beginWithVideo: Bool,
         invitePeerIds: [EnginePeer.Id],
-        endCurrentIfAny: Bool
+        endCurrentIfAny: Bool,
+        unmuteByDefault: Bool
     ) -> JoinGroupCallManagerResult {
         let begin: () -> Void = { [weak self] in
             guard let self else {
@@ -1114,7 +1164,8 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                 conferenceSourceId: nil,
                 isConference: true,
                 beginWithVideo: beginWithVideo,
-                sharedAudioContext: nil
+                sharedAudioContext: nil,
+                unmuteByDefault: unmuteByDefault
             )
             for peerId in invitePeerIds {
                 let _ = call.invitePeer(peerId, isVideo: beginWithVideo)

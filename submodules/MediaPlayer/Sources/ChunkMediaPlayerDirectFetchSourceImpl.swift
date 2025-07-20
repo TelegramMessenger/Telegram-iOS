@@ -5,6 +5,7 @@ import Postbox
 import TelegramCore
 import FFMpegBinding
 import RangeSet
+import CoreMedia
 
 private func FFMpegLookaheadReader_readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: UnsafeMutablePointer<UInt8>?, bufferSize: Int32) -> Int32 {
     let context = Unmanaged<FFMpegLookaheadReader>.fromOpaque(userData!).takeUnretainedValue()

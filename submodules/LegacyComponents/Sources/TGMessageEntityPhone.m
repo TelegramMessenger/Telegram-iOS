@@ -1,4 +1,4 @@
-#import "TGMessageEntityPhone.h"
+#import <LegacyComponents/TGMessageEntityPhone.h>
 
 @implementation TGMessageEntityPhone
 

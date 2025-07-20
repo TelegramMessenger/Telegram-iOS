@@ -792,8 +792,8 @@ final class BusinessHoursSetupScreenComponent: Component {
                 self.scrollView.contentSize = contentSize
             }
             let scrollInsets = UIEdgeInsets(top: environment.navigationHeight, left: 0.0, bottom: 0.0, right: 0.0)
-            if self.scrollView.scrollIndicatorInsets != scrollInsets {
-                self.scrollView.scrollIndicatorInsets = scrollInsets
+            if self.scrollView.verticalScrollIndicatorInsets != scrollInsets {
+                self.scrollView.verticalScrollIndicatorInsets = scrollInsets
             }
             self.ignoreScrolling = false
                         

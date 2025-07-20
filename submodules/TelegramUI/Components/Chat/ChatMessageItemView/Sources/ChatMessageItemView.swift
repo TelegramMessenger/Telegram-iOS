@@ -805,7 +805,7 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
         }
     }
     
-    open func performMessageButtonAction(button: ReplyMarkupButton) {
+    public func performMessageButtonAction(button: ReplyMarkupButton, progress: Promise<Bool>?) {
         if let item = self.item {
             switch button.action {
                 case .text:
@@ -815,15 +815,15 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
                     if url.hasPrefix("tg://") {
                         concealed = false
                     }
-                item.controllerInteraction.openUrl(ChatControllerInteraction.OpenUrl(url: url, concealed: concealed, progress: Promise()))
+                item.controllerInteraction.openUrl(ChatControllerInteraction.OpenUrl(url: url, concealed: concealed, progress: progress))
                 case .requestMap:
                     item.controllerInteraction.shareCurrentLocation()
                 case .requestPhone:
                     item.controllerInteraction.shareAccountContact()
                 case .openWebApp:
-                    item.controllerInteraction.requestMessageActionCallback(item.message.id, nil, true, false)
+                    item.controllerInteraction.requestMessageActionCallback(item.message, nil, true, false, progress)
                 case let .callback(requiresPassword, data):
-                    item.controllerInteraction.requestMessageActionCallback(item.message.id, data, false, requiresPassword)
+                    item.controllerInteraction.requestMessageActionCallback(item.message, data, false, requiresPassword, progress)
                 case let .switchInline(samePeer, query, peerTypes):
                     var botPeer: Peer?
                     

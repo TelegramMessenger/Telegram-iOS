@@ -180,7 +180,8 @@ public func translateMessageIds(context: AccountContext, messageIds: [EngineMess
                 }
             }
         }
-        return context.engine.messages.translateMessages(messageIds: messageIdsToTranslate, fromLang: fromLang, toLang: toLang, enableLocalIfPossible: context.sharedContext.immediateExperimentalUISettings.enableLocalTranslation)
+        
+        return context.engine.messages.translateMessages(messageIds: messageIdsToTranslate, fromLang: fromLang, toLang: toLang, enableLocalIfPossible: true) //context.sharedContext.immediateExperimentalUISettings.enableLocalTranslation)
         |> `catch` { _ -> Signal<Never, NoError> in
             return .complete()
         }
@@ -189,6 +190,10 @@ public func translateMessageIds(context: AccountContext, messageIds: [EngineMess
 
 public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64?) -> Signal<ChatTranslationState?, NoError> {
     if peerId.id == EnginePeer.Id.Id._internalFromInt64Value(777000) {
+        return .single(nil)
+    }
+    
+    guard canTranslateChats(context: context) else {
         return .single(nil)
     }
     

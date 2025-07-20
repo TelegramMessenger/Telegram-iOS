@@ -539,8 +539,6 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                             demoSubject = .messagePrivacy
                         case .messageEffects:
                             demoSubject = .messageEffects
-                        case .paidMessages:
-                            demoSubject = .paidMessages
                         case .business:
                             demoSubject = .business
                         default:

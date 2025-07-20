@@ -1,12 +1,12 @@
-#import "TGMediaAssetImageSignals.h"
+#import <LegacyComponents/TGMediaAssetImageSignals.h>
 
 #import <Photos/Photos.h>
 
 #import "TGMediaAssetModernImageSignals.h"
 
-#import "TGPhotoEditorUtils.h"
+#import <LegacyComponents/TGPhotoEditorUtils.h>
 
-#import "TGMediaAssetsLibrary.h"
+#import <LegacyComponents/TGMediaAssetsLibrary.h>
 
 const CGSize TGMediaAssetImageLegacySizeLimit = { 2048, 2048 };
 

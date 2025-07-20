@@ -1,6 +1,6 @@
-#import "TGChannelBannedRights.h"
+#import <LegacyComponents/TGChannelBannedRights.h>
 
-#import "PSKeyValueCoder.h"
+#import <LegacyComponents/PSKeyValueCoder.h>
 
 @implementation TGChannelBannedRights
 
