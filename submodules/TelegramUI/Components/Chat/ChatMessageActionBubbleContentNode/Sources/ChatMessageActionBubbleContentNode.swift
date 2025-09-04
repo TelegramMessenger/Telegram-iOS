@@ -169,6 +169,17 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
+    @objc private func createTopicsPressed() {
+        guard let item = self.item else { return }
+        let context = item.context
+        let peerId = item.message.id.peerId
+        let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: "General", iconColor: 0, iconFileId: nil)
+        |> deliverOnMainQueue).startStrict(next: { [weak item] topicId in
+            guard let item, let navigationController = item.controllerInteraction.navigationController() else { return }
+            let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: topicId, messageId: nil, navigationController: navigationController, activateInput: .text, scrollToEndIfExists: false, keepStack: .never, animated: true).startStandalone()
+        })
+    }
+    
     override public func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, unboundSize: CGSize?, maxWidth: CGFloat, layout: (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeLabelLayout = TextNodeWithEntities.asyncLayout(self.labelNode)
@@ -204,6 +215,7 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 var leadingIcon: UIImage?
                 var isStory = false
+                // Removed Bookmarks-specific override; handled via ChatEmptyNode greeting content
                 for media in item.message.media {
                     if let action = media as? TelegramMediaAction {
                         switch action.action {
@@ -211,6 +223,8 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                             image = img
                         case let .suggestedPostApprovalStatus(status):
                             suggestedPost = status
+                        case .groupCreated:
+                            break
                         case let .todoCompletions(completed, _):
                             if !completed.isEmpty {
                                 leadingIcon = PresentationResourcesChat.chatServiceMessageTodoCompletedIcon(item.presentationData.theme.theme)
@@ -245,6 +259,8 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                 var textAlignment: NSTextAlignment = .center
                 
                 let primaryTextColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper).primaryText
+                
+                var titleLayoutAndApply: (TextNodeLayout, () -> TextNode)?
                 
                 if let suggestedPost {
                     textAlignment = .left
@@ -366,7 +382,6 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 
-                var titleLayoutAndApply: (TextNodeLayout, () -> TextNode)?
                 if let suggestedPost {
                     let channelName: String
                     if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, peer.isMonoForum, let linkedMonoforumId = peer.linkedMonoforumId, let mainChannel = item.message.peers[linkedMonoforumId] as? TelegramChannel {
@@ -493,6 +508,7 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                 if item.message.effectivelyIncoming(item.context.account.peerId), let suggestedPost, case let .rejected(reason, _) = suggestedPost, case .lowBalance = reason {
                     hasBuyStarsButton = true
                 }
+                // No Bookmarks CTA here; handled by empty state
                 
                 var buyStarsTitleLayoutAndApply: (TextNodeLayout, () -> TextNode)?
                 var buyStarsButtonSize: CGSize?

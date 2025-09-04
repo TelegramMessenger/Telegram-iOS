@@ -24,6 +24,7 @@ import UndoUI
 import PremiumUI
 import LottieComponent
 import BundleIconComponent
+import ForumCreateTopicScreen
 
 private protocol ChatEmptyNodeContent {
     func updateLayout(interfaceState: ChatPresentationInterfaceState, subject: ChatEmptyNode.Subject, size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize
@@ -94,6 +95,9 @@ public final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNod
     
     private let titleNode: ImmediateTextNode
     private let textNode: ImmediateTextNode
+    private let actionButton: HighlightTrackingButton
+    private let actionButtonStarsNode: PremiumStarsNode
+    private var currentPeerId: EnginePeer.Id?
     
     private var stickerItem: ChatMediaInputStickerGridItem?
     public var stickerNode: ChatMediaInputStickerGridItemNode
@@ -125,11 +129,19 @@ public final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNod
         
         self.stickerNode = ChatMediaInputStickerGridItemNode()
         
+        self.actionButton = HighlightTrackingButton()
+        self.actionButton.clipsToBounds = true
+        self.actionButtonStarsNode = PremiumStarsNode()
+        self.actionButtonStarsNode.isUserInteractionEnabled = false
+        
         super.init()
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
         self.addSubnode(self.stickerNode)
+        self.view.addSubview(self.actionButton)
+        self.actionButton.addSubnode(self.actionButtonStarsNode)
+        self.actionButton.isHidden = true
     }
     
     override public func didLoad() {
@@ -138,6 +150,26 @@ public final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNod
         let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.stickerTapGesture(_:)))
         tapRecognizer.delegate = self.wrappedGestureRecognizerDelegate
         self.stickerNode.view.addGestureRecognizer(tapRecognizer)
+    }
+    
+    @objc private func createTopicsPressed() {
+        guard let peerId = self.currentPeerId, let interaction = self.interaction else { return }
+        let context = self.context
+        let controller = ForumCreateTopicScreen(context: context, peerId: peerId, mode: .create)
+        controller.navigationPresentation = .modal
+        controller.completion = { [weak controller, weak interaction] title, fileId, iconColor, _ in
+            controller?.isInProgress = true
+            controller?.view.endEditing(true)
+            let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: title, iconColor: iconColor, iconFileId: fileId)
+            |> deliverOnMainQueue).startStandalone(next: { topicId in
+                if let navigationController = interaction?.getNavigationController() {
+                    let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: topicId, messageId: nil, navigationController: navigationController, activateInput: .text, scrollToEndIfExists: false, keepStack: .never, animated: true).startStandalone()
+                }
+            }, error: { _ in
+                controller?.isInProgress = false
+            })
+        }
+        interaction.presentControllerInCurrent(controller, nil)
     }
     
     deinit {
@@ -166,10 +198,25 @@ public final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNod
         var customStickerFile: TelegramMediaFile?
         
         let serviceColor = serviceMessageColorComponents(theme: interfaceState.theme, wallpaper: interfaceState.chatWallpaper)
+        var isBookmarks = false
+        if let channel = interfaceState.renderedPeer?.peer as? TelegramChannel {
+            let title = EnginePeer(channel).displayTitle(strings: interfaceState.strings, displayOrder: interfaceState.nameDisplayOrder)
+            if title == "Bookmarks" {
+                isBookmarks = true
+            }
+        }
+        if let peer = interfaceState.renderedPeer?.peer {
+            self.currentPeerId = peer.id
+        }
         if case let .emptyChat(emptyChat) = subject, case let .customGreeting(stickerFile, title, text) = emptyChat {
             customStickerFile = stickerFile
             self.titleNode.attributedText = NSAttributedString(string: title, font: titleFont, textColor: serviceColor.primaryText)
             self.textNode.attributedText = NSAttributedString(string: text, font: messageFont, textColor: serviceColor.primaryText)
+        } else if isBookmarks {
+            let header = "Ready to save what\nmatters?"
+            let body = "Save messages from any\nchat and organize them by\ntopics. Create your first topic to begin building your\npersonal knowledge library."
+            self.titleNode.attributedText = NSAttributedString(string: header, font: titleFont, textColor: serviceColor.primaryText)
+            self.textNode.attributedText = NSAttributedString(string: body, font: messageFont, textColor: serviceColor.primaryText)
         } else if let businessIntro = interfaceState.businessIntro {
             self.titleNode.attributedText = NSAttributedString(string: !businessIntro.title.isEmpty ? businessIntro.title : interfaceState.strings.Conversation_EmptyPlaceholder, font: titleFont, textColor: serviceColor.primaryText)
             self.textNode.attributedText = NSAttributedString(string: !businessIntro.text.isEmpty ? businessIntro.text : interfaceState.strings.Conversation_GreetingText, font: messageFont, textColor: serviceColor.primaryText)
@@ -274,24 +321,71 @@ public final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNod
         
         var contentWidth: CGFloat = 220.0
         var contentHeight: CGFloat = 0.0
-                
+        
+        // Pre-compute button sizes (so background fits it)
+        var ctaTitleSize: CGSize?
+        var ctaButtonSize: CGSize?
+        if isBookmarks {
+            let buttonTitle = NSAttributedString(string: "Create topics", font: Font.semibold(15.0), textColor: serviceColor.primaryText)
+            let measured = buttonTitle.boundingRect(with: CGSize(width: 260.0, height: 100.0), options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil).size
+            ctaTitleSize = measured
+            ctaButtonSize = CGSize(width: measured.width + 40.0, height: measured.height + 18.0)
+        }
+        
+        // Layout with sticker on top
         let titleSize = self.titleNode.updateLayout(CGSize(width: contentWidth, height: CGFloat.greatestFiniteMagnitude))
         let textSize = self.textNode.updateLayout(CGSize(width: contentWidth, height: CGFloat.greatestFiniteMagnitude))
         
         contentWidth = max(contentWidth, max(titleSize.width, textSize.width))
+        if let buttonSize = ctaButtonSize {
+            contentWidth = max(contentWidth, buttonSize.width)
+        }
         
-        contentHeight += titleSize.height + titleSpacing + textSize.height + stickerSpacing + stickerSize.height
+        contentHeight += stickerSize.height + stickerSpacing + titleSize.height + titleSpacing + textSize.height
+        if let buttonSize = ctaButtonSize {
+            contentHeight += 12.0 + buttonSize.height
+        }
         
         let contentRect = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: contentWidth, height: contentHeight))
         
-        let titleFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((contentRect.width - titleSize.width) / 2.0), y: contentRect.minY), size: titleSize)
+        let stickerFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((contentRect.width - stickerSize.width) / 2.0), y: contentRect.minY), size: stickerSize)
+        transition.updateFrame(node: self.stickerNode, frame: stickerFrame)
+        
+        let titleFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((contentRect.width - titleSize.width) / 2.0), y: stickerFrame.maxY + stickerSpacing), size: titleSize)
         transition.updateFrame(node: self.titleNode, frame: titleFrame)
-       
+        
         let textFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((contentRect.width - textSize.width) / 2.0), y: titleFrame.maxY + titleSpacing), size: textSize)
         transition.updateFrame(node: self.textNode, frame: textFrame)
         
-        let stickerFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((contentRect.width - stickerSize.width) / 2.0), y: textFrame.maxY + stickerSpacing), size: stickerSize)
-        transition.updateFrame(node: self.stickerNode, frame: stickerFrame)
+        // Action button for Bookmarks
+        if isBookmarks, let titleSize = ctaTitleSize, let buttonSize = ctaButtonSize {
+            let buttonOrigin = CGPoint(x: contentRect.minX + floor((contentRect.width - buttonSize.width) * 0.5), y: textFrame.maxY + 12.0)
+            transition.updateFrame(view: self.actionButton, frame: CGRect(origin: buttonOrigin, size: buttonSize))
+            transition.updateCornerRadius(layer: self.actionButton.layer, cornerRadius: buttonSize.height * 0.5)
+            self.actionButton.backgroundColor = interfaceState.theme.overallDarkAppearance ? UIColor(rgb: 0xffffff, alpha: 0.12) : UIColor(rgb: 0x000000, alpha: 0.12)
+            self.actionButtonStarsNode.frame = CGRect(origin: CGPoint(), size: buttonSize)
+            self.actionButton.isHidden = false
+            self.actionButton.removeTarget(nil, action: nil, for: .touchUpInside)
+            self.actionButton.addTarget(self, action: #selector(self.createTopicsPressed), for: .touchUpInside)
+            // Add title view
+            let titleLabel: UILabel
+            if let existing = self.actionButton.viewWithTag(1001) as? UILabel {
+                titleLabel = existing
+            } else {
+                titleLabel = UILabel()
+                titleLabel.tag = 1001
+                titleLabel.isUserInteractionEnabled = false
+                titleLabel.textAlignment = .center
+                titleLabel.font = Font.semibold(15.0)
+                titleLabel.textColor = serviceColor.primaryText
+                self.actionButton.addSubview(titleLabel)
+            }
+            let buttonTitle = NSAttributedString(string: "Create topics", font: Font.semibold(15.0), textColor: serviceColor.primaryText)
+            titleLabel.attributedText = buttonTitle
+            titleLabel.frame = CGRect(origin: CGPoint(x: floor((buttonSize.width - titleSize.width) * 0.5), y: floor((buttonSize.height - titleSize.height) * 0.5)), size: titleSize)
+        } else {
+            self.actionButton.isHidden = true
+        }
         
         return contentRect.insetBy(dx: -insets.left, dy: -insets.top).size
     }
@@ -1190,6 +1284,7 @@ public final class ChatEmptyNodeTopicChatContent: ASDisplayNode, ChatEmptyNodeCo
             transition.updateFrame(view: iconComponentView, frame: iconFrame)
         }
         
+        // Place sticker (iconBackground+icon) ABOVE title
         let titleFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((contentRect.width - titleSize.width) / 2.0), y: iconFrame.maxY + iconSpacing), size: titleSize)
         transition.updateFrame(node: self.titleNode, frame: titleFrame)
        
@@ -1848,9 +1943,11 @@ public final class ChatEmptyNode: ASDisplayNode {
                 } else if let _ = peer as? TelegramSecretChat {
                     contentType = .secret
                 } else if let group = peer as? TelegramGroup, case .creator = group.role {
-                    contentType = .group
+                    let isBookmarks = EnginePeer(group).displayTitle(strings: interfaceState.strings, displayOrder: interfaceState.nameDisplayOrder) == "Bookmarks"
+                    contentType = isBookmarks ? .greeting : .group
                 } else if let channel = peer as? TelegramChannel, case .group = channel.info, channel.flags.contains(.isCreator) && !channel.flags.contains(.isGigagroup) && !channel.isMonoForum {
-                    contentType = .group
+                    let isBookmarks = EnginePeer(channel).displayTitle(strings: interfaceState.strings, displayOrder: interfaceState.nameDisplayOrder) == "Bookmarks"
+                    contentType = isBookmarks ? .greeting : .group
                 } else if let _ = interfaceState.peerNearbyData {
                     contentType = .peerNearby
                 } else if let peer = peer as? TelegramUser {

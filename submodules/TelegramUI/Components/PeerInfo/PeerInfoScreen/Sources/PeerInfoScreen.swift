@@ -514,6 +514,7 @@ private enum PeerInfoSettingsSection {
     case recentCalls
     case devices
     case chatFolders
+    case bookmarks
     case notificationsAndSounds
     case privacyAndSecurity
     case passwordSetup
@@ -787,6 +788,7 @@ private enum SettingsSection: Int, CaseIterable {
     case proxy
     case apps
     case shortcuts
+    case bookmarks
     case advanced
     case payment
     case extra
@@ -985,6 +987,22 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         interaction.openSettings(.chatFolders)
     }))
     
+    // Show NEW badge for Bookmarks for 30 days since first display
+    let bookmarksBadgeKey = "feature.bookmarks.newbadge.start"
+    let defaults = UserDefaults.standard
+    let now = Date().timeIntervalSince1970
+    var showBookmarksNewBadge = false
+    if let startTs = defaults.object(forKey: bookmarksBadgeKey) as? Double {
+        showBookmarksNewBadge = (now - startTs) < (30.0 * 24.0 * 60.0 * 60.0)
+    } else {
+        defaults.set(now, forKey: bookmarksBadgeKey)
+        showBookmarksNewBadge = true
+    }
+    let bookmarksLabel: PeerInfoScreenDisclosureItem.Label = showBookmarksNewBadge ? .titleBadge(presentationData.strings.Settings_New, presentationData.theme.list.itemAccentColor) : .none
+    items[.bookmarks]!.append(PeerInfoScreenDisclosureItem(id: 5, label: bookmarksLabel, text: presentationData.strings.Settings_Bookmarks, icon: PresentationResourcesSettings.bookmarks, action: {
+        interaction.openSettings(.bookmarks)
+    }))
+        
     let notificationsWarning: Bool
     if let settings = data.globalSettings {
         notificationsWarning = shouldDisplayNotificationsPermissionWarning(status: settings.notificationAuthorizationStatus, suppressed:  settings.notificationWarningSuppressed)
@@ -10560,6 +10578,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             })
         case .chatFolders:
             let controller = self.context.sharedContext.makeFilterSettingsController(context: self.context, modal: false, scrollToTags: false, dismissed: nil)
+            push(controller)
+        case .bookmarks:
+            let controller = self.context.sharedContext.makeBookmarksController(context: self.context)
             push(controller)
         case .notificationsAndSounds:
             if let settings = self.data?.globalSettings {

@@ -208,6 +208,8 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case videoMessagesPauseSuggestion = 81
     case voiceMessagesResumeTrimWarning = 82
     case globalPostsSearch = 83
+    case bookmarkQuickTooltip = 85
+    case bookmarkNewBadgeFirstShown = 86
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -328,6 +330,14 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func cellularDataPermissionWarning() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: permissionsNamespace), key: ApplicationSpecificGlobalNotice.cellularDataPermissionWarning.key)
+    }
+
+    static func bookmarkQuickTooltip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.bookmarkQuickTooltip.key)
+    }
+
+    static func bookmarkNewBadgeFirstShown() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.bookmarkNewBadgeFirstShown.key)
     }
     
     static func volumeButtonToUnmuteTip() -> NoticeEntryKey {
@@ -2446,6 +2456,60 @@ public struct ApplicationSpecificNotice {
 
             if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
                 transaction.setNotice(ApplicationSpecificNoticeKeys.starGiftWearTips(), entry)
+            }
+            
+            return Int(previousValue)
+        }
+    }
+
+    // MARK: Bookmark NEW badge timestamp
+    public static func getBookmarkNewBadgeTimestamp(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Int32?, NoError> {
+        return accountManager.transaction { transaction -> Int32? in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.bookmarkNewBadgeFirstShown())?.get(ApplicationSpecificTimestampNotice.self) {
+                return value.value
+            }
+            return nil
+        }
+    }
+
+    public static func setBookmarkNewBadgeTimestampIfNeeded(accountManager: AccountManager<TelegramAccountManagerTypes>, timestamp: Int32) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            var current: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.bookmarkNewBadgeFirstShown())?.get(ApplicationSpecificTimestampNotice.self) {
+                current = value.value
+            }
+            if current == 0 {
+                if let entry = CodableEntry(ApplicationSpecificTimestampNotice(value: timestamp)) {
+                    transaction.setNotice(ApplicationSpecificNoticeKeys.bookmarkNewBadgeFirstShown(), entry)
+                }
+                return timestamp
+            } else {
+                return current
+            }
+        }
+    }
+
+    public static func getBookmarkQuickTooltip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.bookmarkQuickTooltip())?.get(ApplicationSpecificCounterNotice.self) {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+
+    public static func incrementBookmarkQuickTooltip(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int = 1) -> Signal<Int, NoError> {
+        return accountManager.transaction { transaction -> Int in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.bookmarkQuickTooltip())?.get(ApplicationSpecificCounterNotice.self) {
+                currentValue = value.value
+            }
+            let previousValue = currentValue
+            currentValue += Int32(count)
+
+            if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.bookmarkQuickTooltip(), entry)
             }
             
             return Int(previousValue)

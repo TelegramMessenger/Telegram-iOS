@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
+import TooltipUI
 import SwiftSignalKit
 import Postbox
 import TelegramCore
@@ -37,6 +38,8 @@ import ChatMessageTextBubbleContentNode
 import ChatMessageItemCommon
 import ChatMessageReplyInfoNode
 import ChatMessageCallBubbleContentNode
+import ShareController
+import ForumCreateTopicScreen
 import ChatMessageInteractiveFileNode
 import ChatMessageFileBubbleContentNode
 import ChatMessageWebpageBubbleContentNode
@@ -52,6 +55,8 @@ import ChatMessageThreadInfoNode
 import ChatMessageActionButtonsNode
 import ChatSwipeToReplyRecognizer
 import ChatMessageReactionsFooterContentNode
+import AccountContext
+import Postbox
 import ChatMessageInstantVideoBubbleContentNode
 import ChatMessageCommentFooterContentNode
 import ChatMessageActionBubbleContentNode
@@ -81,6 +86,93 @@ import TelegramAnimatedStickerNode
 import LottieMetal
 import AvatarNode
 import ChatMessageSuggestedPostInfoNode
+import MapResourceToAvatarSizes
+
+// MARK: - Bookmarks Helper Functions
+
+private func resolveOrCreateBookmarksPeer(context: AccountContext) -> Signal<EnginePeer?, NoError> {
+    let presentationData: PresentationData = context.sharedContext.currentPresentationData.with { $0 }
+    let search: Signal<[EngineRenderedPeer], NoError> = context.engine.contacts.searchLocalPeers(query: "Bookmarks")
+
+    let found: Signal<EnginePeer?, NoError> = (search
+    |> take(1)
+    |> map { (peers: [EngineRenderedPeer]) -> EnginePeer? in
+        for rendered in peers {
+            if let peer = rendered.peer, case let .channel(channel) = peer, channel.isForum {
+                if peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder) == "Bookmarks" {
+                    return peer
+                }
+            }
+        }
+        return nil
+    })
+
+    return found
+    |> mapToSignal { maybePeer -> Signal<EnginePeer?, NoError> in
+        if let peer = maybePeer {
+            // Ensure the Bookmarks group has the bookmarks icon as its avatar
+            if let image = PresentationResourcesSettings.bookmarks, let data = image.jpegData(compressionQuality: 0.9) {
+                let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
+                context.account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+                let _ = (context.engine.peers.updatePeerPhoto(
+                    peerId: peer.id,
+                    photo: context.engine.peers.uploadedPeerPhoto(resource: resource),
+                    mapResourceToAvatarSizes: { res, reps in
+                        return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: res, representations: reps)
+                    }
+                )
+                |> deliverOnMainQueue).startStandalone()
+            }
+            return Signal<EnginePeer?, NoError>.single(peer)
+        } else {
+            return createBookmarksPeer(context: context)
+        }
+    }
+}
+
+private func createBookmarksPeer(context: AccountContext) -> Signal<EnginePeer?, NoError> {
+    // 1) Create forum supergroup → PeerId?, NoError
+    let createdId: Signal<PeerId?, NoError> = (context.engine.peers.createSupergroup(
+        title: "Bookmarks",
+        description: "",
+        isForum: true,
+        ttlPeriod: nil
+    )
+    |> map(Optional.init)
+    |> `catch` { _ -> Signal<PeerId?, NoError> in
+        return .single(nil)
+    })
+
+    // 2) Resolve EnginePeer from id; set avatar; return EnginePeer?, NoError
+    return createdId
+    |> mapToSignal { (peerIdOpt: PeerId?) -> Signal<EnginePeer?, NoError> in
+        guard let peerId = peerIdOpt else {
+            return .single(nil)
+        }
+        return (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+        |> take(1))
+        |> mapToSignal { (peerOpt: EnginePeer?) -> Signal<EnginePeer?, NoError> in
+            if let peer = peerOpt, case let .channel(channel) = peer, channel.isForum {
+                if let image = PresentationResourcesSettings.bookmarks, let data = image.jpegData(compressionQuality: 0.9) {
+                    let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
+                    context.account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+                    let _ = (context.engine.peers.updatePeerPhoto(
+                        peerId: peer.id,
+                        photo: context.engine.peers.uploadedPeerPhoto(resource: resource),
+                        mapResourceToAvatarSizes: { res, reps in
+                            return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: res, representations: reps)
+                        }
+                    )
+                    |> deliverOnMainQueue).startStandalone()
+                }
+                // View as Messages (и запретим пользователю переключать меню далее)
+                let _ = context.engine.peers.setChannelForumMode(id: peer.id, isForum: true, displayForumAsTabs: true).startStandalone()
+                let _ = context.engine.peers.updateForumViewAsMessages(peerId: peer.id, value: true).startStandalone()
+            }
+            return .single(peerOpt)
+        }
+    }
+}
 
 private struct BubbleItemAttributes {
     var index: Int?
@@ -473,7 +565,6 @@ private func mapVisibility(_ visibility: ListViewItemNodeVisibility, boundsSize:
         }
     }
 }
-
 public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode {
     public class ContentContainer {
         public let contentMessageStableId: UInt32
@@ -684,6 +775,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     private var mediaInfoNode: ChatMessageStarsMediaInfoNode?
     
     private var shareButtonNode: ChatMessageShareButton?
+    private var bookmarkButtonNode: HighlightTrackingButtonNode?
+    private var bookmarkBackgroundContent: WallpaperBubbleBackgroundNode?
+    private var bookmarkBackgroundBlurView: PortalView?
     
     private let messageAccessibilityArea: AccessibilityAreaNode
 
@@ -783,12 +877,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
             if let action = strongSelf.gestureRecognized(gesture: .longTap, location: location, recognizer: nil) {
                 switch action {
-                case .action:
-                    return .none
-                case .optionalAction:
+                case .action, .optionalAction:
                     return .none
                 case let .openContextMenu(openContextMenu):
-                    if openContextMenu.selectAll || strongSelf.contentContainers.count < 2 {
+                    if openContextMenu.selectAll, strongSelf.contentContainers.count < 2 {
                         if openContextMenu.disableDefaultPressAnimation {
                             return .customActivationProcess
                         } else {
@@ -1121,7 +1213,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             let _ = replyInfoNode.animateFromInputPanel(sourceReplyPanel: mappedPanel, unclippedTransitionNode: self.mainContextSourceNode.contentNode, localRect: localRect, transition: transition)
         }
     }
-
     public func animateFromMicInput(micInputNode: UIView, transition: CombinedTransition) -> ContextExtractedContentContainingNode? {
         for contentNode in self.contentNodes {
             if let contentNode = contentNode as? ChatMessageFileBubbleContentNode {
@@ -1170,7 +1261,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
         }
     }
-    
     override public func didLoad() {
         super.didLoad()
         
@@ -1216,6 +1306,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
                 
                 if let shareButtonNode = strongSelf.shareButtonNode, shareButtonNode.frame.contains(point) {
+                    return .fail
+                }
+                if let bookmarkButtonNode = strongSelf.bookmarkButtonNode, bookmarkButtonNode.frame.contains(point) {
                     return .fail
                 }
                 
@@ -1485,7 +1578,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             )
         }
     }
-    
     private static func beginLayout(
         selfReference: Weak<ChatMessageBubbleItemNode>,
         item: ChatMessageItem,
@@ -2069,7 +2161,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 mosaicRange = mosaicStartIndex ..< contentPropertiesAndPrepareLayouts.count
             }
         }
-        
         var hidesHeaders = false
         var shareButtonOffset: CGPoint?
         var avatarOffset: CGFloat?
@@ -2274,7 +2365,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
             }
         }
-        
         var displayHeader = false
         if initialDisplayHeader {
             if authorNameString != nil {
@@ -2437,7 +2527,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         var adminNodeSizeApply: (CGSize, () -> TextNode?) = (CGSize(), { nil })
         var boostNodeSizeApply: (CGSize, () -> TextNode?) = (CGSize(), { nil })
         var viaWidth: CGFloat = 0.0
-
         let threadInfoOriginY: CGFloat = 0.0
         let threadInfoSizeApply: (CGSize, (Bool) -> ChatMessageThreadInfoNode?) = (CGSize(), {  _ in nil })
         
@@ -2578,7 +2667,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     nameAvatarSpaceWidth += 26.0 + 5.0
                     if hasTitleTopicNavigation {
                         nameAvatarSpaceWidth += 4.0 + 26.0
-                        if let channel = item.message.peers[item.message.id.peerId], channel.isForum {
+                        if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.isForum {
                             nameAvatarSpaceWidth += 18.0
                         }
                     }
@@ -2950,7 +3039,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             maxContentWidth = max(maxContentWidth, minWidth)
             reactionButtonsFinalize = buttonsLayout
         }
-        
         for i in 0 ..< contentPropertiesAndLayouts.count {
             let (_, contentNodeProperties, preparePosition, _, contentNodeLayout, contentGroupId, itemSelection) = contentPropertiesAndLayouts[i]
             
@@ -3113,7 +3201,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 contentNodePropertiesAndFinalize.append((contentNodeProperties, contentPosition, contentNodeFinalize, contentGroupId, itemSelection))
             }
         }
-        
         var contentSize = CGSize(width: maxContentWidth, height: 0.0)
         var contentNodeFramesPropertiesAndApply: [(CGRect, ChatMessageBubbleContentProperties, Bool, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void)] = []
         var contentContainerNodeFrames: [(UInt32, CGRect, Bool?, CGFloat)] = []
@@ -3455,7 +3542,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             )
         })
     }
-    
     private static func applyLayout(selfReference: Weak<ChatMessageBubbleItemNode>,
         _ animation: ListViewItemUpdateAnimation,
         _ synchronousLoads: Bool,
@@ -4221,7 +4307,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 strongSelf.clippingNode.addSubnode(threadInfoNode)
                 animateFrame = false
                 
-                threadInfoNode.visibility = strongSelf.visibility != .none
+                threadInfoNode.visibility = strongSelf.visibilityStatus
                 
                 if animation.isAnimated {
                     threadInfoNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
@@ -4247,7 +4333,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 strongSelf.threadInfoNode = nil
             }
         }
-        
         let replyInfoFrame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + replyInfoOriginY), size: CGSize(width: backgroundFrame.width - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right - 6.0, height: replyInfoSizeApply.0.height))
         if let replyInfoNode = replyInfoSizeApply.1(replyInfoFrame.size, synchronousLoads, animation) {
             strongSelf.replyInfoNode = replyInfoNode
@@ -4307,7 +4392,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 let contextSourceNode = container.sourceNode
                 let containerNode = container.containerNode
                 
-                container.containerNode.shouldBegin = { [weak strongSelf, weak containerNode] location in
+                containerNode.shouldBegin = { [weak strongSelf, weak containerNode] location in
                     guard let strongSelf = strongSelf, let strongContainerNode = containerNode else {
                         return false
                     }
@@ -4737,7 +4822,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 mediaInfoNode.removeFromSupernode()
             })
         }
-
         if needsShareButton {
             if strongSelf.shareButtonNode == nil {
                 let shareButtonNode = ChatMessageShareButton()
@@ -4753,9 +4837,66 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     strongSelf?.openQuickShare(node: node, gesture: gesture)
                 }
             }
+            // Create bookmark button if missing (channels only)
+            if strongSelf.bookmarkButtonNode == nil {
+                let button = HighlightTrackingButtonNode()
+                button.isUserInteractionEnabled = true
+                let icon = generateTintedImage(image: UIImage(bundleImageName: "Instant View/bookmarkAction"), color: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper))
+                button.layer.cornerRadius = 15.0
+                button.backgroundColor = .clear
+                button.setImage(icon, for: [])
+                button.imageNode.displaysAsynchronously = false
+                strongSelf.bookmarkButtonNode = button
+                strongSelf.insertSubnode(button, belowSubnode: strongSelf.messageAccessibilityArea)
+                button.view.accessibilityIdentifier = "bookmarkQuick"
+                // Background like share: bubble background if available, otherwise blur view
+                if item.controllerInteraction.presentationContext.backgroundNode?.hasExtraBubbleBackground() == true {
+                    if strongSelf.bookmarkBackgroundContent == nil, let background = item.controllerInteraction.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {
+                        background.clipsToBounds = true
+                        background.isUserInteractionEnabled = false
+                        strongSelf.bookmarkBackgroundContent = background
+                        strongSelf.insertSubnode(background, belowSubnode: button)
+                    }
+                } else {
+                    if strongSelf.bookmarkBackgroundBlurView == nil, let blur = item.controllerInteraction.presentationContext.backgroundNode?.makeFreeBackground() {
+                        strongSelf.bookmarkBackgroundBlurView = blur
+                        // button is already in view hierarchy
+                        strongSelf.view.insertSubview(blur.view, belowSubview: button.view)
+                        blur.view.isUserInteractionEnabled = false
+                        blur.view.clipsToBounds = true
+                    }
+                }
+                // No-op for now; action will be added later
+                button.addTarget(strongSelf, action: #selector(ChatMessageBubbleItemNode.bookmarkButtonPressed), forControlEvents: .touchUpInside)
+                // Long press for quick flow via context gesture (same UX as share)
+                let contextGesture = ContextGesture(target: strongSelf, action: #selector(ChatMessageBubbleItemNode.bookmarkButtonContextGesture(_:)))
+                button.view.addGestureRecognizer(contextGesture)
+                button.highligthedChanged = { [weak button] highlighted in
+                    guard let button else { return }
+                    if highlighted {
+                        button.layer.removeAnimation(forKey: "opacity")
+                        button.alpha = 0.4
+                    } else {
+                        button.alpha = 1.0
+                        button.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    }
+                }
+            }
         } else if let shareButtonNode = strongSelf.shareButtonNode {
             strongSelf.shareButtonNode = nil
             shareButtonNode.removeFromSupernode()
+            if let bookmark = strongSelf.bookmarkButtonNode {
+                strongSelf.bookmarkButtonNode = nil
+                bookmark.removeFromSupernode()
+            }
+            if let bg = strongSelf.bookmarkBackgroundContent {
+                strongSelf.bookmarkBackgroundContent = nil
+                bg.removeFromSupernode()
+            }
+            if let blur = strongSelf.bookmarkBackgroundBlurView {
+                strongSelf.bookmarkBackgroundBlurView = nil
+                blur.view.removeFromSuperview()
+            }
         }
         
         let offset: CGFloat = params.leftInset + (incoming ? 42.0 : 0.0)
@@ -4801,6 +4942,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 actionButtonsNode.removeFromSupernode()
             }
         }
+        // Bookmark button positioned together with share button below
         
         if let reactionButtonsSizeAndApply = reactionButtonsSizeAndApply {
             let reactionButtonsNode = reactionButtonsSizeAndApply.1(animation)
@@ -4877,7 +5019,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         if item.associatedData.currentlyPlayingMessageId == item.message.index, let file = item.message.media.first(where: { $0 is TelegramMediaFile }) as? TelegramMediaFile, file.isInstantVideo {
             isCurrentlyPlayingMedia = true
         }
-        
         if case .System = animation/*, !strongSelf.mainContextSourceNode.isExtractedToContextPreview*/ {
             if !strongSelf.backgroundNode.frame.equalTo(backgroundFrame) {
                 animation.animator.updateFrame(layer: strongSelf.backgroundNode.layer, frame: backgroundFrame, completion: nil)
@@ -4932,6 +5073,22 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 animation.animator.updateBounds(layer: shareButtonNode.layer, bounds: CGRect(origin: CGPoint(), size: buttonFrame.size), completion: nil)
                 animation.animator.updateAlpha(layer: shareButtonNode.layer, alpha: (isCurrentlyPlayingMedia || isSidePanelOpen) ? 0.0 : 1.0, completion: nil)
                 animation.animator.updateScale(layer: shareButtonNode.layer, scale: (isCurrentlyPlayingMedia || isSidePanelOpen) ? 0.001 : 1.0, completion: nil)
+
+                if let bookmark = strongSelf.bookmarkButtonNode {
+                    let bookmarkSize = CGSize(width: 30.0, height: 30.0)
+                    let frame = CGRect(origin: CGPoint(x: buttonFrame.minX, y: buttonFrame.minY - bookmarkSize.height - 6.0), size: bookmarkSize)
+                    animation.animator.updateFrame(layer: bookmark.layer, frame: frame, completion: nil)
+                    if let bg = strongSelf.bookmarkBackgroundContent {
+                        bg.cornerRadius = min(bookmarkSize.width, bookmarkSize.height) / 2.0
+                        animation.animator.updateFrame(layer: bg.layer, frame: frame, completion: nil)
+                    }
+                    if let blur = strongSelf.bookmarkBackgroundBlurView {
+                        blur.view.layer.cornerRadius = min(bookmarkSize.width, bookmarkSize.height) / 2.0
+                        blur.view.frame = frame
+                    }
+                    animation.animator.updateAlpha(layer: bookmark.layer, alpha: (isCurrentlyPlayingMedia || isSidePanelOpen) ? 0.0 : 1.0, completion: nil)
+                    animation.animator.updateScale(layer: bookmark.layer, scale: (isCurrentlyPlayingMedia || isSidePanelOpen) ? 0.001 : 1.0, completion: nil)
+                }
             }
         } else {
             /*if let _ = strongSelf.backgroundFrameTransition {
@@ -4966,6 +5123,22 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 animation.animator.updateBounds(layer: shareButtonNode.layer, bounds: CGRect(origin: CGPoint(), size: buttonFrame.size), completion: nil)
                 animation.animator.updateAlpha(layer: shareButtonNode.layer, alpha: (isCurrentlyPlayingMedia || isSidePanelOpen) ? 0.0 : 1.0, completion: nil)
                 animation.animator.updateScale(layer: shareButtonNode.layer, scale: (isCurrentlyPlayingMedia || isSidePanelOpen) ? 0.001 : 1.0, completion: nil)
+
+                if let bookmark = strongSelf.bookmarkButtonNode {
+                    let bookmarkSize = CGSize(width: 30.0, height: 30.0)
+                    let frame = CGRect(origin: CGPoint(x: buttonFrame.minX, y: buttonFrame.minY - bookmarkSize.height - 6.0), size: bookmarkSize)
+                    animation.animator.updateFrame(layer: bookmark.layer, frame: frame, completion: nil)
+                    if let bg = strongSelf.bookmarkBackgroundContent {
+                        bg.cornerRadius = min(bookmarkSize.width, bookmarkSize.height) / 2.0
+                        animation.animator.updateFrame(layer: bg.layer, frame: frame, completion: nil)
+                    }
+                    if let blur = strongSelf.bookmarkBackgroundBlurView {
+                        blur.view.layer.cornerRadius = min(bookmarkSize.width, bookmarkSize.height) / 2.0
+                        blur.view.frame = frame
+                    }
+                    animation.animator.updateAlpha(layer: bookmark.layer, alpha: (isCurrentlyPlayingMedia || isSidePanelOpen) ? 0.0 : 1.0, completion: nil)
+                    animation.animator.updateScale(layer: bookmark.layer, scale: (isCurrentlyPlayingMedia || isSidePanelOpen) ? 0.001 : 1.0, completion: nil)
+                }
             }
             
             if case .System = animation, strongSelf.mainContextSourceNode.isExtractedToContextPreview {
@@ -5123,7 +5296,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             break
         }
     }
-    
     private func gestureRecognized(gesture: TapLongTapOrDoubleTapGesture, location: CGPoint, recognizer: TapLongTapOrDoubleTapGestureRecognizer?) -> InternalBubbleTapAction? {
         var mediaMessage: Message?
         var forceOpen = false
@@ -5181,7 +5353,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 mediaMessage = item.message
             }
         }
-        
         switch gesture {
             case .tap:
                 if let nameNode = self.nameNode, nameNode.frame.contains(location) {
@@ -5740,7 +5911,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         }
         return nil
     }
-    
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if !self.bounds.contains(point) {
             return nil
@@ -5771,6 +5941,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         
         if let shareButtonNode = self.shareButtonNode, shareButtonNode.frame.contains(point) {
             return shareButtonNode.view.hitTest(self.view.convert(point, to: shareButtonNode.view), with: event)
+        }
+        if let bookmarkButtonNode = self.bookmarkButtonNode, bookmarkButtonNode.frame.contains(point) {
+            return bookmarkButtonNode.view.hitTest(self.view.convert(point, to: bookmarkButtonNode.view), with: event)
         }
         
         if let selectionNode = self.selectionNode {
@@ -5915,7 +6088,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         }
         return nil
     }
-    
     override public func updateSelectionState(animated: Bool) {
         guard let item = self.item else {
             return
@@ -6239,6 +6411,113 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
         }
     }
+    
+    @objc private func bookmarkButtonPressed() {
+        guard let item = self.item else {
+            return
+        }
+        
+        // Preserve special cases from share logic
+        if item.message.adAttribute != nil {
+            item.controllerInteraction.openNoAdsDemo()
+            return
+        }
+        if case let .customChatContents(contents) = item.associatedData.subject, case .hashTagSearch = contents.kind {
+            item.controllerInteraction.navigateToMessage(item.content.firstMessage.id, item.content.firstMessage.id, NavigateToMessageParams(timestamp: nil, quote: nil, forceNew: true))
+            return
+        }
+        if case .pinnedMessages = item.associatedData.subject {
+            item.controllerInteraction.navigateToMessageStandalone(item.content.firstMessage.id)
+            return
+        }
+        if item.content.firstMessage.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
+            for attribute in item.content.firstMessage.attributes {
+                if let attribute = attribute as? SourceReferenceMessageAttribute {
+                    item.controllerInteraction.navigateToMessage(item.content.firstMessage.id, attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: nil))
+                    break
+                }
+            }
+            return
+        }
+        if let channel = item.message.peers[item.message.id.peerId], channel.isMonoForum, case .peer = item.chatLocation {
+            item.controllerInteraction.updateChatLocationThread(item.message.threadId, nil)
+            return
+        }
+        if !self.disablesComments, let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
+            for attribute in item.message.attributes {
+                if let _ = attribute as? ReplyThreadMessageAttribute {
+                    item.controllerInteraction.openMessageReplies(item.message.id, true, false)
+                    return
+                }
+            }
+        }
+        
+        // Resolve Bookmarks forum peer and present topics-only popup
+        let context = item.context
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let _ = (context.engine.contacts.searchLocalPeers(query: "Bookmarks")
+        |> take(1)
+        |> map { peers -> EnginePeer? in
+            for rendered in peers {
+                if let peer = rendered.peer, case let .channel(channel) = peer, channel.isForum {
+                    let title = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                    if title == "Bookmarks" {
+                        return peer
+                    }
+                }
+            }
+            return nil
+        }
+        |> deliverOnMainQueue).startStandalone(next: { bookmarksPeer in
+            guard let bookmarksPeer else {
+                // Fallback to default share menu if Bookmarks peer not found
+                item.controllerInteraction.openMessageShareMenu(item.message.id)
+                return
+            }
+            let strings = item.presentationData.strings
+            let createTopicAction = ShareControllerAction(title: strings.Chat_CreateTopic, action: { 
+                let createController = ForumCreateTopicScreen(context: context, peerId: bookmarksPeer.id, mode: .create)
+                createController.navigationPresentation = .modal
+                createController.completion = { [weak createController] title, fileId, iconColor, _ in
+                    createController?.isInProgress = true
+                    let _ = (context.engine.peers.createForumChannelTopic(id: bookmarksPeer.id, title: title, iconColor: iconColor, iconFileId: fileId)
+                    |> deliverOnMainQueue).startStandalone(next: { topicId in
+                        createController?.isInProgress = false
+                        createController?.dismiss()
+
+                        // Enqueue forwarding original message to the newly created topic
+                        let correlationId = Int64.random(in: Int64.min ... Int64.max)
+                        let messagesToEnqueue: [EnqueueMessage] = [
+                            .forward(source: item.message.id, threadId: topicId, grouping: .auto, attributes: [], correlationId: correlationId)
+                        ]
+                        let _ = (TelegramCore.enqueueMessages(account: context.account, peerId: bookmarksPeer.id, messages: messagesToEnqueue)
+                        |> deliverOnMainQueue).startStandalone(completed: {
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                            let text = presentationData.strings.Conversation_ForwardTooltip_Chat_One(title).string
+                            item.controllerInteraction.displayUndo(.info(title: nil, text: text, timeout: nil, customUndoText: nil))
+                        })
+                    })
+                }
+                item.controllerInteraction.presentController(createController, nil)
+            })
+            let shareController = ShareController(context: context, subject: .messages([item.message]), preferredAction: .custom(action: createTopicAction), immediateExternalShare: false, immediatePeerId: bookmarksPeer.id)
+            shareController.hideTopicsBackButton = true
+            shareController.onTopicSelected = { peerId, threadId, title in
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                let text = presentationData.strings.Conversation_ForwardTooltip_Chat_One(title).string
+                item.controllerInteraction.displayUndo(.info(title: nil, text: text, timeout: nil, customUndoText: nil))
+            }
+            item.controllerInteraction.presentController(shareController, nil)
+        })
+    }
+    // Removed custom UILongPress handler in favor of unified ContextGesture flow
+    
+    @objc private func bookmarkButtonContextGesture(_ gesture: ContextGesture) {
+        guard let item = self.item, let node = self.bookmarkButtonNode else { return }
+        if gesture.state == .began {
+            item.controllerInteraction.displayQuickShare(item.message.id, node, gesture)
+        }
+    }
                                                
     private func openQuickShare(node: ASDisplayNode, gesture: ContextGesture) {
         if let item = self.item {
@@ -6541,7 +6820,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         let subFrame = self.backgroundNode.frame
         item.controllerInteraction.openMessageContextMenu(item.message, true, self, subFrame, nil, nil)
     }
-    
     override public func makeProgress() -> Promise<Bool>? {
         if let unlockButtonNode = self.unlockButtonNode {
             return unlockButtonNode.makeProgress()
@@ -6554,7 +6832,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         }
         return nil
     }
-    
     override public func targetReactionView(value: MessageReaction.Reaction) -> UIView? {
         if let result = self.reactionButtonsNode?.reactionTargetView(value: value) {
             return result
@@ -6798,7 +7075,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         self.forceStopAnimations = forceStopAnimations
         self.updateVisibility()
     }
-    
     private func updateVisibility() {
         guard let item = self.item else {
             return

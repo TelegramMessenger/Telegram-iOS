@@ -3,6 +3,7 @@ import UIKit
 import AVFoundation
 import AsyncDisplayKit
 import Display
+import WallpaperBackgroundNode
 import SwiftSignalKit
 import Postbox
 import TelegramCore
@@ -41,7 +42,11 @@ import ChatMessageDeliveryFailedNode
 import ChatMessageShareButton
 import ChatMessageThreadInfoNode
 import ChatMessageActionButtonsNode
+import ShareController
+import ForumCreateTopicScreen
 import ChatSwipeToReplyRecognizer
+import AccountContext
+import Postbox
 import ChatMessageReactionsFooterContentNode
 import ManagedDiceAnimationNode
 import MessageHaptics
@@ -102,6 +107,9 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private var selectionNode: ChatMessageSelectionNode?
     private var deliveryFailedNode: ChatMessageDeliveryFailedNode?
     private var shareButtonNode: ChatMessageShareButton?
+    private var bookmarkButtonNode: HighlightTrackingButtonNode?
+    private var bookmarkBackgroundContent: WallpaperBubbleBackgroundNode?
+    private var bookmarkBackgroundBlurView: PortalView?
     
     public var telegramFile: TelegramMediaFile?
     public var emojiFile: TelegramMediaFile?
@@ -1589,10 +1597,70 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             }
                         }
                         let buttonSize = updatedShareButtonNode.update(presentationData: item.presentationData, controllerInteraction: item.controllerInteraction, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account)
-                        animation.animator.updateFrame(layer: updatedShareButtonNode.layer, frame: CGRect(origin: CGPoint(x: !incoming ? updatedImageFrame.minX - buttonSize.width - 6.0 : updatedImageFrame.maxX + 8.0, y: updatedImageFrame.maxY - buttonSize.height - 4.0 + imageBottomPadding), size: buttonSize), completion: nil)
+                        let shareFrame = CGRect(origin: CGPoint(x: !incoming ? updatedImageFrame.minX - buttonSize.width - 6.0 : updatedImageFrame.maxX + 8.0, y: updatedImageFrame.maxY - buttonSize.height - 4.0 + imageBottomPadding), size: buttonSize)
+                        animation.animator.updateFrame(layer: updatedShareButtonNode.layer, frame: shareFrame, completion: nil)
+                        // Ensure bookmark button exists when share is visible
+                        if strongSelf.bookmarkButtonNode == nil {
+                            let button = HighlightTrackingButtonNode()
+                            button.isUserInteractionEnabled = true
+                            let icon = generateTintedImage(image: UIImage(bundleImageName: "Instant View/bookmarkAction"), color: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper))
+                            button.layer.cornerRadius = 15.0
+                            button.setImage(icon, for: [])
+                            button.imageNode.displaysAsynchronously = false
+                            strongSelf.bookmarkButtonNode = button
+                            // Insert button first, then background to ensure proper z-order under the icon
+                            strongSelf.addSubnode(button)
+                            let contextGesture = ContextGesture(target: strongSelf, action: #selector(ChatMessageAnimatedStickerItemNode.bookmarkButtonContextGesture(_:)))
+                            button.view.addGestureRecognizer(contextGesture)
+                            button.view.accessibilityIdentifier = "bookmarkQuick"
+                            // Background like share
+                            if item.controllerInteraction.presentationContext.backgroundNode?.hasExtraBubbleBackground() == true {
+                                if strongSelf.bookmarkBackgroundContent == nil, let background = item.controllerInteraction.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {
+                                    background.clipsToBounds = true
+                                    strongSelf.bookmarkBackgroundContent = background
+                                    strongSelf.insertSubnode(background, belowSubnode: button)
+                                }
+                            } else {
+                                if strongSelf.bookmarkBackgroundBlurView == nil, let blur = item.controllerInteraction.presentationContext.backgroundNode?.makeFreeBackground() {
+                                    strongSelf.bookmarkBackgroundBlurView = blur
+                                    strongSelf.view.insertSubview(blur.view, belowSubview: button.view)
+                                    blur.view.clipsToBounds = true
+                                }
+                            }
+                            button.addTarget(strongSelf, action: #selector(ChatMessageAnimatedStickerItemNode.bookmarkButtonPressed), forControlEvents: .touchUpInside)
+                        }
+                        if let bookmark = strongSelf.bookmarkButtonNode {
+                            let bookmarkSize = CGSize(width: 30.0, height: 30.0)
+                            let x = shareFrame.minX
+                            let y = shareFrame.minY - bookmarkSize.height - 6.0
+                            let frame = CGRect(origin: CGPoint(x: x, y: y), size: bookmarkSize)
+                            animation.animator.updateFrame(layer: bookmark.layer, frame: frame, completion: nil)
+                            if let bg = strongSelf.bookmarkBackgroundContent {
+                                bg.cornerRadius = min(bookmarkSize.width, bookmarkSize.height) / 2.0
+                                animation.animator.updateFrame(layer: bg.layer, frame: frame, completion: nil)
+                            }
+                            if let blur = strongSelf.bookmarkBackgroundBlurView {
+                                blur.view.layer.cornerRadius = min(bookmarkSize.width, bookmarkSize.height) / 2.0
+                                blur.view.frame = frame
+                            }
+                            animation.animator.updateAlpha(layer: bookmark.layer, alpha: 1.0, completion: nil)
+                            animation.animator.updateScale(layer: bookmark.layer, scale: 1.0, completion: nil)
+                        }
                     } else if let shareButtonNode = strongSelf.shareButtonNode {
                         shareButtonNode.removeFromSupernode()
                         strongSelf.shareButtonNode = nil
+                        if let bookmark = strongSelf.bookmarkButtonNode {
+                            strongSelf.bookmarkButtonNode = nil
+                            bookmark.removeFromSupernode()
+                        }
+                        if let bg = strongSelf.bookmarkBackgroundContent {
+                            strongSelf.bookmarkBackgroundContent = nil
+                            bg.removeFromSupernode()
+                        }
+                        if let blur = strongSelf.bookmarkBackgroundBlurView {
+                            strongSelf.bookmarkBackgroundBlurView = nil
+                            blur.view.removeFromSuperview()
+                        }
                     }
                     
                     let dateAndStatusFrame = CGRect(origin: CGPoint(x: max(displayLeftInset, updatedImageFrame.maxX - dateAndStatusSize.width - 4.0), y: updatedImageFrame.maxY - dateAndStatusSize.height - 4.0 + imageBottomPadding), size: dateAndStatusSize)
@@ -2536,6 +2604,141 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     }
     
+    @objc private func bookmarkButtonPressed() {
+        guard let item = self.item else {
+            return
+        }
+        
+        if item.content.firstMessage.id.peerId.isReplies {
+            item.controllerInteraction.openReplyThreadOriginalMessage(item.content.firstMessage)
+            return
+        } else if item.content.firstMessage.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
+            for attribute in item.content.firstMessage.attributes {
+                if let attribute = attribute as? SourceReferenceMessageAttribute {
+                    item.controllerInteraction.navigateToMessage(item.content.firstMessage.id, attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: nil))
+                    break
+                }
+            }
+            return
+        }
+        
+        let context = item.context
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let _ = (context.engine.contacts.searchLocalPeers(query: "Bookmarks")
+        |> take(1)
+        |> map { peers -> EnginePeer? in
+            for rendered in peers {
+                if let peer = rendered.peer, case let .channel(channel) = peer, channel.isForum {
+                    let title = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                    if title == "Bookmarks" {
+                        return peer
+                    }
+                }
+            }
+            return nil
+        }
+        |> deliverOnMainQueue).startStandalone(next: { [weak self] bookmarksPeer in
+            guard let _ = self, let bookmarksPeer else {
+                item.controllerInteraction.openMessageShareMenu(item.message.id)
+                return
+            }
+            let strings = item.presentationData.strings
+            let createTopicAction = ShareControllerAction(title: strings.Chat_CreateTopic, action: {
+                let createController = ForumCreateTopicScreen(context: context, peerId: bookmarksPeer.id, mode: .create)
+                createController.navigationPresentation = .modal
+                createController.completion = { [weak createController] title, fileId, iconColor, _ in
+                    createController?.isInProgress = true
+                    let _ = (context.engine.peers.createForumChannelTopic(id: bookmarksPeer.id, title: title, iconColor: iconColor, iconFileId: fileId)
+                    |> deliverOnMainQueue).startStandalone(next: { topicId in
+                        createController?.isInProgress = false
+                        createController?.dismiss()
+
+                        // Enqueue forwarding original message to the newly created topic
+                        let correlationId = Int64.random(in: Int64.min ... Int64.max)
+                        let messagesToEnqueue: [EnqueueMessage] = [
+                            .forward(source: item.message.id, threadId: topicId, grouping: .auto, attributes: [], correlationId: correlationId)
+                        ]
+                        let _ = (TelegramCore.enqueueMessages(account: context.account, peerId: bookmarksPeer.id, messages: messagesToEnqueue)
+                        |> deliverOnMainQueue).startStandalone(completed: {
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                            let text = presentationData.strings.Conversation_ForwardTooltip_Chat_One(title).string
+                            item.controllerInteraction.displayUndo(.info(title: nil, text: text, timeout: nil, customUndoText: nil))
+                        })
+                    })
+                }
+                item.controllerInteraction.presentController(createController, nil)
+            })
+            let shareController = ShareController(context: context, subject: .messages([item.message]), preferredAction: .custom(action: createTopicAction), immediateExternalShare: false, immediatePeerId: bookmarksPeer.id)
+            shareController.hideTopicsBackButton = true
+            shareController.onTopicSelected = { peerId, threadId, title in
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                let text = presentationData.strings.Conversation_ForwardTooltip_Chat_One(title).string
+                item.controllerInteraction.displayUndo(.info(title: nil, text: text, timeout: nil, customUndoText: nil))
+            }
+            item.controllerInteraction.presentController(shareController, nil)
+        })
+    }
+    
+    @objc private func bookmarkButtonLongPressed(_ recognizer: UILongPressGestureRecognizer) {
+        guard let item = self.item else { return }
+        if recognizer.state == .began {
+            let context = item.context
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let _ = (context.engine.contacts.searchLocalPeers(query: "Bookmarks")
+            |> take(1)
+            |> map { peers -> EnginePeer? in
+                for rendered in peers {
+                    if let peer = rendered.peer, case let .channel(channel) = peer, channel.isForum {
+                        if peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder) == "Bookmarks" {
+                            return peer
+                        }
+                    }
+                }
+                return nil
+            }
+            |> deliverOnMainQueue).startStandalone(next: { bookmarksPeer in
+                guard let bookmarksPeer else { return }
+                let strings = item.presentationData.strings
+                let createTopicAction = ShareControllerAction(title: strings.Chat_CreateTopic, action: {
+                    let createController = ForumCreateTopicScreen(context: context, peerId: bookmarksPeer.id, mode: .create)
+                    createController.navigationPresentation = .modal
+                    createController.completion = { [weak createController] title, fileId, iconColor, _ in
+                        createController?.isInProgress = true
+                        let _ = (context.engine.peers.createForumChannelTopic(id: bookmarksPeer.id, title: title, iconColor: iconColor, iconFileId: fileId)
+                        |> deliverOnMainQueue).startStandalone(next: { topicId in
+                            createController?.isInProgress = false
+                            createController?.dismiss()
+                            let correlationId = Int64.random(in: Int64.min ... Int64.max)
+                            let messagesToEnqueue: [EnqueueMessage] = [
+                                .forward(source: item.message.id, threadId: topicId, grouping: .auto, attributes: [], correlationId: correlationId)
+                            ]
+                            let _ = (TelegramCore.enqueueMessages(account: context.account, peerId: bookmarksPeer.id, messages: messagesToEnqueue)
+                            |> deliverOnMainQueue).startStandalone(completed: {
+                                let text = presentationData.strings.Conversation_ForwardTooltip_Chat_One(title).string
+                                item.controllerInteraction.displayUndo(.info(title: nil, text: text, timeout: nil, customUndoText: nil))
+                            })
+                        })
+                    }
+                    item.controllerInteraction.presentController(createController, nil)
+                })
+                let shareController = ShareController(context: context, subject: .messages([item.message]), preferredAction: .custom(action: createTopicAction), immediateExternalShare: false, immediatePeerId: bookmarksPeer.id)
+                shareController.hideTopicsBackButton = true
+                shareController.onTopicSelected = { peerId, threadId, title in
+                    let text = presentationData.strings.Conversation_ForwardTooltip_Chat_One(title).string
+                    item.controllerInteraction.displayUndo(.info(title: nil, text: text, timeout: nil, customUndoText: nil))
+                }
+                item.controllerInteraction.presentController(shareController, nil)
+            })
+        }
+    }
+    
+    @objc private func bookmarkButtonContextGesture(_ gesture: ContextGesture) {
+        guard let item = self.item, let node = self.bookmarkButtonNode else { return }
+        if gesture.state == .began {
+            item.controllerInteraction.displayQuickShare(item.message.id, node, gesture)
+        }
+    }
+    
     private func openQuickShare(node: ASDisplayNode, gesture: ContextGesture) {
         if let item = self.item {
             item.controllerInteraction.displayQuickShare(item.message.id, node, gesture)
@@ -2670,6 +2873,9 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if let shareButtonNode = self.shareButtonNode, shareButtonNode.frame.contains(point) {
             return shareButtonNode.view.hitTest(self.view.convert(point, to: shareButtonNode.view), with: event)
+        }
+        if let bookmarkButtonNode = self.bookmarkButtonNode, bookmarkButtonNode.frame.contains(point) {
+            return bookmarkButtonNode.view.hitTest(self.view.convert(point, to: bookmarkButtonNode.view), with: event)
         }
         if let threadInfoNode = self.threadInfoNode, let result = threadInfoNode.hitTest(self.view.convert(point, to: threadInfoNode.view), with: event) {
             return result

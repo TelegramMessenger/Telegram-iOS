@@ -114,6 +114,7 @@ func updateChatPresentationInterfaceStateImpl(
             if case .contextRequest = kind {
                 selfController.performingInlineSearch.set(false)
             }
+            // Present bookmark hint on entry is triggered elsewhere; no-op here
         case let .update(query, signal):
             let currentQueryAndDisposable = selfController.contextQueryStates[kind]
             currentQueryAndDisposable?.1.dispose()

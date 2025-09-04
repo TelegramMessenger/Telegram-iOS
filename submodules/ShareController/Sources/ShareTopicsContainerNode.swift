@@ -188,6 +188,10 @@ final class ShareTopicsContainerNode: ASDisplayNode, ShareContentContainerNode {
     
     var backPressed: () -> Void = {}
     
+    func setBackHidden(_ hidden: Bool) {
+        self.backNode.isHidden = hidden
+    }
+    
     init(environment: ShareControllerEnvironment, context: ShareControllerAccountContext, theme: PresentationTheme, strings: PresentationStrings, peer: EnginePeer, topics: Signal<EngineChatList, NoError>, controllerInteraction: ShareControllerInteraction) {
         self.environment = environment
         self.context = context
