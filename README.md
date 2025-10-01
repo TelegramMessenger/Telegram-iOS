@@ -92,6 +92,13 @@ ERROR: Skipping '@rules_xcodeproj_generated//generator/Telegram/Telegram_xcodepr
 
 If you encounter this issue, re-run the project generation steps in the README.
 
+## Compilation fails with "error: Failed to build module 'SwiftSignalKit'"
+
+If you encounter a build failure related to SwiftSignalKit, try cleaning the build folder and rebuilding:
+```
+# In Xcode, go to Product > Clean Build Folder (Shift+Command+K)
+# Then rebuild the project
+```
 
 # Tips
 
