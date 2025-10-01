@@ -2558,6 +2558,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return chatListFilterPresetListController(context: context, mode: modal ? .modal : .default, scrollToTags: scrollToTags, dismissed: dismissed)
     }
     
+    public func makeBookmarksController(context: AccountContext) -> ViewController {
+        return bookmarksController(context: context)
+    }
+    
     public func makeBusinessSetupScreen(context: AccountContext) -> ViewController {
         return PremiumIntroScreen(context: context, mode: .business, source: .settings, modal: false, forceDark: false)
     }

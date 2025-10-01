@@ -37,6 +37,9 @@ import ChatMessageItemView
 import ChatMessageBubbleItemNode
 import AdsInfoScreen
 import AdsReportScreen
+import MapResourceToAvatarSizes
+
+// (Removed temporary Bookmarks helpers)
  
 private struct MessageContextMenuData {
     let starStatus: Bool?
@@ -1792,6 +1795,8 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             })))
         }
 
+        // (Removed temporary Bookmark action injection)
+        
         if data.messageActions.options.contains(.forward) {
             if !isCopyProtected {
                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuForward, icon: { theme in

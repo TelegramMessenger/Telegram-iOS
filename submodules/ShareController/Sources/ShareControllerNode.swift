@@ -664,20 +664,31 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                 strongSelf.controllerInteraction?.selectedPeerIds.insert(peer.peerId)
                 strongSelf.controllerInteraction?.selectedTopics[peer.peerId] = (threadId, threadData)
                 strongSelf.peersContentNode?.update()
-                
-                strongSelf.setActionNodesHidden(strongSelf.controllerInteraction!.selectedPeers.isEmpty && strongSelf.presetText == nil, inputField: true, actions: strongSelf.defaultAction == nil)
-                
-                strongSelf.peersContentNode?.updateSelectedPeers(animated: false)
-                strongSelf.updateButton()
-                
-                if let peersContentNode = strongSelf.peersContentNode, strongSelf.contentNode !== peersContentNode {
-                    strongSelf.transitionToContentNode(peersContentNode, animated: true)
-                    peersContentNode.prepareForAnimateIn()
+                if let onTopicSelected = strongSelf.controller?.onTopicSelected {
+                    let title: String
+                    if let threadData = threadData {
+                        title = threadData.info.title
+                    } else {
+                        title = peer.chatMainPeer?.compactDisplayTitle ?? ""
+                    }
+                    onTopicSelected(peer.peerId, threadId, title)
                 }
-                                
-                Queue.mainQueue().after(0.01, {
-                    strongSelf.closePeerTopics(peer.peerId, selected: true)
-                })
+                if strongSelf.controller?.hideTopicsBackButton == true {
+                    // In bookmark mode: send immediately without returning back to peers grid
+                    // Use selectedPeers/selectedTopics (already set) so threadId is preserved
+                    strongSelf.commitSend(peerId: nil, showNames: false, silently: false)
+                } else {
+                    strongSelf.setActionNodesHidden(strongSelf.controllerInteraction!.selectedPeers.isEmpty && strongSelf.presetText == nil, inputField: true, actions: strongSelf.defaultAction == nil)
+                    strongSelf.peersContentNode?.updateSelectedPeers(animated: false)
+                    strongSelf.updateButton()
+                    if let peersContentNode = strongSelf.peersContentNode, strongSelf.contentNode !== peersContentNode {
+                        strongSelf.transitionToContentNode(peersContentNode, animated: true)
+                        peersContentNode.prepareForAnimateIn()
+                    }
+                    Queue.mainQueue().after(0.01, {
+                        strongSelf.closePeerTopics(peer.peerId, selected: true)
+                    })
+                }
             }
         }, shareStory: shareStory.flatMap { shareStory in
             return { [weak self] in
@@ -817,6 +828,9 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
             topics: threads,
             controllerInteraction: controllerInteraction
         )
+        if self.controller?.hideTopicsBackButton == true {
+            topicsContentNode.setBackHidden(true)
+        }
         topicsContentNode.backPressed = { [weak self] in
             if let strongSelf = self {
                 strongSelf.closePeerTopics(peer.peerId, selected: false)

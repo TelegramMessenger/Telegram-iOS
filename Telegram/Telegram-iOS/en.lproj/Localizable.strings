@@ -5380,6 +5380,10 @@ Sorry for the inconvenience.";
 "ChatList.Tabs.AllChats" = "All Chats";
 "ChatList.Tabs.All" = "All";
 "Settings.ChatFolders" = "Chat Folders";
+"Settings.Bookmarks" = "Bookmarks";
+"Settings.Bookmarks_ListHeader" = "BOOKMARKS";
+"Settings.Bookmarks_AddNew" = "Create New Bookmark";
+
 "ChatList.ChatTypesSection" = "CHAT TYPES";
 "ChatList.PeerTypeNonContact" = "user";
 "ChatList.PeerTypeContact" = "contact";

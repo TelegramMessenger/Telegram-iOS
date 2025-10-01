@@ -116,6 +116,47 @@ extension ChatControllerImpl {
                 
                 actions.context = self.context
                 actions.animationCache = self.controllerInteraction?.presentationContext.animationCache
+                // Add Bookmark action for channel messages with visible bookmark/share buttons
+                if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, case .broadcast = channel.info {
+                    let canShowBookmark = true
+                    if canShowBookmark {
+                        var badge: ContextMenuActionBadge? = nil
+                        let now = Int32(Date().timeIntervalSince1970)
+                        let month: Int32 = 30 * 24 * 60 * 60
+                        let _ = (ApplicationSpecificNotice.getBookmarkNewBadgeTimestamp(accountManager: self.context.sharedContext.accountManager)
+                        |> deliverOnMainQueue).startStandalone(next: { firstShown in
+                            var shouldShow = true
+                            if let firstShown, now > firstShown + month {
+                                shouldShow = false
+                            }
+                            if shouldShow {
+                                badge = ContextMenuActionBadge(value: "NEW", color: .accent, style: .badge)
+                                let _ = ApplicationSpecificNotice.setBookmarkNewBadgeTimestampIfNeeded(accountManager: self.context.sharedContext.accountManager, timestamp: now).startStandalone()
+                            }
+                        })
+                        let bookmarkItem = ContextMenuItem.action(ContextMenuActionItem(text: "Bookmark", badge: badge, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Instant View/bookmarkAction"), color: theme.actionSheet.primaryTextColor)
+                        }, action: { action in
+                            action.dismissWithResult(.default)
+                            self.presentBookmarkForMessage(messages[0].id)
+                        }))
+
+                        switch actions.content {
+                        case let .list(list):
+                            var items = list
+                            let insertIndex = max(0, min(items.count / 2, items.count))
+                            items.insert(bookmarkItem, at: insertIndex)
+                            actions.content = .list(items)
+                        case let .twoLists(primary, secondary):
+                            var p = primary
+                            let insertIndex = max(0, min(p.count / 2, p.count))
+                            p.insert(bookmarkItem, at: insertIndex)
+                            actions.content = .twoLists(p, secondary)
+                        case .custom:
+                            break
+                        }
+                    }
+                }
                                                          
                 if canAddMessageReactions(message: topMessage), let allowedReactions = allowedReactions, !topReactions.isEmpty {
                     actions.reactionItems = topReactions.map { ReactionContextItem.reaction(item: $0, icon: .none) }

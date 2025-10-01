@@ -420,6 +420,8 @@ public final class ShareController: ViewController {
     
     private var defaultAction: ShareControllerAction?
     public private(set) var actionIsMediaSaving = false
+    public var hideTopicsBackButton: Bool = false
+    public var onTopicSelected: ((PeerId, Int64, String) -> Void)?
     
     public var actionCompleted: (() -> Void)?
     public var dismissed: ((Bool) -> Void)?

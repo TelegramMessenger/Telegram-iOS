@@ -3694,7 +3694,46 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 return
             }
             
-            let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let strings = presentationData.strings
+            
+            // Restrict menu for Bookmarks feature group: only Search and New Topic
+            if let peer = peer, peer.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder) == "Bookmarks" {
+                var items: [ContextMenuItem] = []
+                if let sourceController = sourceController as? ChatController {
+                    items.append(.action(ContextMenuActionItem(text: strings.Conversation_Search, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Search"), color: theme.contextMenu.primaryColor)
+                    }, action: { [weak sourceController] action in
+                        action.dismissWithResult(.default)
+                        sourceController?.beginMessageSearch("")
+                    })))
+                }
+                if channel.hasPermission(.createTopics) {
+                    items.append(.action(ContextMenuActionItem(text: strings.Chat_CreateTopic, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
+                    }, action: { action in
+                        action.dismissWithResult(.default)
+                        let controller = ForumCreateTopicScreen(context: context, peerId: peerId, mode: .create)
+                        controller.navigationPresentation = .modal
+                        controller.completion = { [weak controller] title, fileId, iconColor, _ in
+                            controller?.isInProgress = true
+                            controller?.view.endEditing(true)
+                            let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: title, iconColor: iconColor, iconFileId: fileId)
+                            |> deliverOnMainQueue).startStandalone(next: { topicId in
+                                if let navigationController = (sourceController.navigationController as? NavigationController) {
+                                    let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: topicId, messageId: nil, navigationController: navigationController, activateInput: .text, scrollToEndIfExists: false, keepStack: .never, animated: true).startStandalone()
+                                }
+                            }, error: { _ in
+                                controller?.isInProgress = false
+                            })
+                        }
+                        sourceController.push(controller)
+                    })))
+                }
+                let contextController = ContextController(presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: sourceController, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+                sourceController.presentInGlobalOverlay(contextController)
+                return
+            }
             
             var items: [ContextMenuItem] = []
             
@@ -3845,7 +3884,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 })))
             }
 
-            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let contextController = ContextController(presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: sourceController, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
             sourceController.presentInGlobalOverlay(contextController)
         })

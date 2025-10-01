@@ -1,8 +1,8 @@
 {
-	"bundle_id": "org.{! a random string !}.Telegram",
-	"api_id": "{! get one at https://my.telegram.org/apps !}",
-	"api_hash": "{! get one at https://my.telegram.org/apps !}",
-	"team_id": "{! check README.md !}",
+	"bundle_id": "org.5cadfb01253d109e.Telegram",
+	"api_id": "27611144",
+	"api_hash": "780adc61658db42203ac31143c6dcb92",
+	"team_id": "REMYSXBH9T",
 	"app_center_id": "0",
 	"is_internal_build": "true",
 	"is_appstore_build": "false",
