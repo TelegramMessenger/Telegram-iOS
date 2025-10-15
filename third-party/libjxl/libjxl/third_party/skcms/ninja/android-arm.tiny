@@ -1,0 +1,3 @@
+mode         = .tiny
+extra_cflags = -g0 -DNDEBUG -fno-unwind-tables -fno-asynchronous-unwind-tables
+include ninja/android-arm

@@ -1,36 +1,50 @@
 import Foundation
-import Postbox
+import TelegramCore
 import SwiftSignalKit
 
-public struct CallListSettings: PreferencesEntry, Equatable {
-    public var showTab: Bool
+public struct CallListSettings: Codable, Equatable {
+    public var _showTab: Bool?
     
     public static var defaultSettings: CallListSettings {
-        return CallListSettings(showTab: true)
+        return CallListSettings(showTab: nil)
     }
     
-    public init(showTab: Bool) {
-        self.showTab = showTab
+    public var showTab: Bool {
+        get {
+            if let value = self._showTab {
+                return value
+            } else {
+                return true
+            }
+        } set {
+            self._showTab = newValue
+        }
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.showTab = decoder.decodeInt32ForKey("showTab", orElse: 0) != 0
+    public init(showTab: Bool?) {
+        self._showTab = showTab
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.showTab ? 1 : 0, forKey: "showTab")
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        if let value = try container.decodeIfPresent(Int32.self, forKey: "showTab") {
+            self._showTab = value != 0
+        }
     }
     
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        if let to = to as? CallListSettings {
-            return self == to
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        if let showTab = self._showTab {
+            try container.encode((showTab ? 1 : 0) as Int32, forKey: "showTab")
         } else {
-            return false
+            try container.encodeNil(forKey: "showTab")
         }
     }
     
     public static func ==(lhs: CallListSettings, rhs: CallListSettings) -> Bool {
-        return lhs.showTab == rhs.showTab
+        return lhs._showTab == rhs._showTab
     }
     
     public func withUpdatedShowTab(_ showTab: Bool) -> CallListSettings {
@@ -38,16 +52,16 @@ public struct CallListSettings: PreferencesEntry, Equatable {
     }
 }
 
-public func updateCallListSettingsInteractively(accountManager: AccountManager, _ f: @escaping (CallListSettings) -> CallListSettings) -> Signal<Void, NoError> {
+public func updateCallListSettingsInteractively(accountManager: AccountManager<TelegramAccountManagerTypes>, _ f: @escaping (CallListSettings) -> CallListSettings) -> Signal<Void, NoError> {
     return accountManager.transaction { transaction -> Void in
         transaction.updateSharedData(ApplicationSpecificSharedDataKeys.callListSettings, { entry in
             let currentSettings: CallListSettings
-            if let entry = entry as? CallListSettings {
+            if let entry = entry?.get(CallListSettings.self) {
                 currentSettings = entry
             } else {
                 currentSettings = CallListSettings.defaultSettings
             }
-            return f(currentSettings)
+            return SharedPreferencesEntry(f(currentSettings))
         })
     }
 }

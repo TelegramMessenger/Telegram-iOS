@@ -1,0 +1,235 @@
+include "RichText.fbs";
+include "MediaId.fbs";
+include "TelegramChannel.fbs";
+include "PixelDimensions.fbs";
+include "RichText.fbs";
+
+namespace TelegramCore;
+
+union InstantPageBlock_Value {
+    InstantPageBlock_Unsupported,
+    InstantPageBlock_Title,
+    InstantPageBlock_Subtitle,
+    InstantPageBlock_AuthorDate,
+    InstantPageBlock_Header,
+    InstantPageBlock_Subheader,
+    InstantPageBlock_Paragraph,
+    InstantPageBlock_Preformatted,
+    InstantPageBlock_Footer,
+    InstantPageBlock_Divider,
+    InstantPageBlock_Anchor,
+    InstantPageBlock_List,
+    InstantPageBlock_BlockQuote,
+    InstantPageBlock_PullQuote,
+    InstantPageBlock_Image,
+    InstantPageBlock_Video,
+    InstantPageBlock_Audio,
+    InstantPageBlock_Cover,
+    InstantPageBlock_WebEmbed,
+    InstantPageBlock_PostEmbed,
+    InstantPageBlock_Collage,
+    InstantPageBlock_Slideshow,
+    InstantPageBlock_ChannelBanner,
+    InstantPageBlock_Kicker,
+    InstantPageBlock_Table,
+    InstantPageBlock_Details,
+    InstantPageBlock_RelatedArticles,
+    InstantPageBlock_Map
+}
+
+table InstantPageBlock {
+    value:InstantPageBlock_Value (id: 1, required);
+}
+
+table InstantPageBlock_Unsupported {}
+
+table InstantPageBlock_Title {
+    text:RichText (id: 0, required);
+}
+
+table InstantPageBlock_Subtitle {
+    text:RichText (id: 0, required);
+}
+
+table InstantPageBlock_AuthorDate {
+    author:RichText (id: 0, required);
+    date:int32 (id: 1);
+}
+
+table InstantPageBlock_Header {
+    text:RichText (id: 0, required);
+}
+
+table InstantPageBlock_Subheader {
+    text:RichText (id: 0, required);
+}
+
+table InstantPageBlock_Paragraph {
+    text:RichText (id: 0, required);
+}
+
+table InstantPageBlock_Preformatted {
+    text:RichText (id: 0, required);
+}
+
+table InstantPageBlock_Footer {
+    text:RichText (id: 0, required);
+}
+
+table InstantPageBlock_Divider {}
+
+table InstantPageBlock_Anchor {
+    name:string (id: 0, required);
+}
+
+table InstantPageBlock_List {
+    items:[InstantPageListItem] (id: 0, required);
+    ordered:bool (id: 1);
+}
+
+table InstantPageBlock_BlockQuote {
+    text:RichText (id: 0, required);
+    caption:RichText (id: 1, required);
+}
+
+table InstantPageBlock_PullQuote {
+    text:RichText (id: 0, required);
+    caption:RichText (id: 1, required);
+}
+
+table InstantPageBlock_Image {
+    id:MediaId (id: 0, required);
+    caption:InstantPageCaption (id: 1, required);
+    url:string (id: 2);
+    webpageId:MediaId (id: 3);
+}
+
+table InstantPageBlock_Video {
+    id:MediaId (id: 0, required);
+    caption:InstantPageCaption (id: 1, required);
+    autoplay:bool (id: 2);
+    loop:bool (id: 3);
+}
+
+table InstantPageBlock_Audio {
+    id:MediaId (id: 0, required);
+    caption:InstantPageCaption (id: 1, required);
+}
+
+table InstantPageBlock_Cover {
+    block:InstantPageBlock (id: 0, required);
+}
+
+table InstantPageBlock_WebEmbed {
+    url:string (id: 0);
+    html:string (id: 1);
+    dimensions:PixelDimensions (id: 2);
+    caption:InstantPageCaption (id: 3, required);
+    stretchToWidth:bool (id: 4);
+    allowScrolling:bool (id: 5);
+    coverId:MediaId (id: 6);
+}
+
+table InstantPageBlock_PostEmbed {
+    url:string (id: 0, required);
+    webpageId:MediaId (id: 1);
+    avatarId:MediaId (id: 2);
+    author:string (id: 3, required);
+    date:int32 (id: 4);
+    blocks:[InstantPageBlock] (id: 5, required);
+    caption:InstantPageCaption (id: 6, required);
+}
+
+table InstantPageBlock_Collage {
+    items:[InstantPageBlock] (id: 0, required);
+    caption:InstantPageCaption (id: 1, required);
+}
+
+table InstantPageBlock_Slideshow {
+    items:[InstantPageBlock] (id: 0, required);
+    caption:InstantPageCaption (id: 1, required);
+}
+
+table InstantPageBlock_ChannelBanner {
+    channel:TelegramChannel (id: 0);
+}
+
+table InstantPageBlock_Kicker {
+    text:RichText (id: 0, required);
+}
+
+table InstantPageBlock_Table {
+    title:RichText (id: 0, required);
+    rows:[InstantPageTableRow] (id: 1, required);
+    bordered:bool (id: 2);
+    striped:bool (id: 3);
+}
+
+table InstantPageBlock_Details {
+    title:RichText (id: 0, required);
+    blocks:[InstantPageBlock] (id: 1, required);
+    expanded:bool (id: 2);
+}
+
+table InstantPageBlock_RelatedArticles {
+    title:RichText (id: 0, required);
+    articles:[InstantPageRelatedArticle] (id: 1, required);
+}
+
+table InstantPageBlock_Map {
+    latitude:float64 (id: 0);
+    longitude:float64 (id: 1);
+    zoom:int32 (id: 2);
+    dimensions:PixelDimensions (id: 3, required);
+    caption:InstantPageCaption (id: 4, required);
+}
+
+table InstantPageCaption {
+    text:RichText (id: 0, required);
+    credit:RichText (id: 1, required);
+}
+
+union InstantPageListItem_Value {
+    InstantPageListItem_Text,
+    InstantPageListItem_Blocks,
+    InstantPageListItem_Unknown
+}
+
+table InstantPageListItem {
+    value:InstantPageListItem_Value (id: 1, required);
+}
+
+table InstantPageListItem_Text {
+    text:RichText (id: 0, required);
+    number:string (id: 1);
+}
+
+table InstantPageListItem_Blocks {
+    blocks:[InstantPageBlock] (id: 0, required);
+    number:string (id: 1);
+}
+
+table InstantPageListItem_Unknown {}
+
+table InstantPageTableCell {
+    text:RichText (id: 0);
+    header:bool (id: 1);
+    alignment:int32 (id: 2);
+    verticalAlignment:int32 (id: 3);
+    colspan:int32 (id: 4);
+    rowspan:int32 (id: 5);
+}
+
+table InstantPageTableRow {
+    cells:[InstantPageTableCell] (id: 0, required);
+}
+
+table InstantPageRelatedArticle {
+    url:string (id: 0, required);
+    webpageId:MediaId (id: 1, required);
+    title:string (id: 2);
+    description:string (id: 3);
+    photoId:MediaId (id: 4);
+    author:string (id: 5);
+    date:int32 (id: 6);
+}

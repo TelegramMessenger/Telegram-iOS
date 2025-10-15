@@ -1,0 +1,19 @@
+# Copyright (c) the JPEG XL Project Authors. All rights reserved.
+#
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
+# We use "edge functions" feature to substitute response with pre-compressed
+# entries whenever those are available and browser supports Brotli or Gzip
+# content-encoding.
+[[edge_functions]]
+path = "/*"
+function = "precompressed"
+
+# Request browser "site-isolation" enabled.
+# This allows using "SharedArrayBuffers" required for multi-threaded WASM.
+[[headers]]
+for = "/*"
+  [headers.values]
+    Cross-Origin-Opener-Policy = "same-origin"
+    Cross-Origin-Embedder-Policy = "require-corp"

@@ -1,0 +1,37 @@
+
+[submodule "submodules/rlottie/rlottie"]
+	path = submodules/rlottie/rlottie
+	url=../rlottie.git
+[submodule "build-system/bazel-rules/rules_apple"]
+	path = build-system/bazel-rules/rules_apple
+url=https://github.com/ali-fareed/rules_apple.git
+[submodule "build-system/bazel-rules/rules_swift"]
+	path = build-system/bazel-rules/rules_swift
+url=https://github.com/bazelbuild/rules_swift.git
+[submodule "build-system/bazel-rules/apple_support"]
+	path = build-system/bazel-rules/apple_support
+	url = https://github.com/bazelbuild/apple_support.git
+[submodule "submodules/TgVoipWebrtc/tgcalls"]
+	path = submodules/TgVoipWebrtc/tgcalls
+url=../tgcalls.git
+[submodule "third-party/libvpx/libvpx"]
+	path = third-party/libvpx/libvpx
+	url = https://github.com/webmproject/libvpx.git
+[submodule "third-party/webrtc/webrtc"]
+	path = third-party/webrtc/webrtc
+	url = https://github.com/ali-fareed/webrtc.git
+[submodule "build-system/bazel-rules/rules_xcodeproj"]
+	path = build-system/bazel-rules/rules_xcodeproj
+	url = https://github.com/MobileNativeFoundation/rules_xcodeproj.git
+[submodule "submodules/LottieCpp/lottiecpp"]
+	path = submodules/LottieCpp/lottiecpp
+	url = https://github.com/ali-fareed/lottiecpp.git
+[submodule "third-party/dav1d/dav1d"]
+	path = third-party/dav1d/dav1d
+	url = https://github.com/ali-fareed/dav1d.git
+[submodule "third-party/td/td"]
+	path = third-party/td/td
+	url = https://github.com/tdlib/td
+[submodule "third-party/XcodeGen"]
+	path = third-party/XcodeGen
+	url = https://github.com/yonaskolb/XcodeGen.git

@@ -1,0 +1,46 @@
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+
+swift_library(
+    name = "ShareExtensionContext",
+    module_name = "ShareExtensionContext",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
+    deps = [
+        "//submodules/AsyncDisplayKit",
+        "//submodules/Display",
+        "//submodules/TelegramCore",
+        "//submodules/SSignalKit/SwiftSignalKit",
+        "//submodules/Postbox",
+        "//submodules/TelegramPresentationData",
+        "//submodules/TelegramUIPreferences",
+        "//submodules/AccountContext",
+        "//submodules/ShareController",
+        "//submodules/LegacyUI",
+        "//submodules/PeerInfoUI",
+        "//submodules/ShareItems",
+        "//submodules/ShareItems/Impl:ShareItemsImpl",
+        "//submodules/SettingsUI",
+        "//submodules/OpenSSLEncryptionProvider",
+        "//submodules/AppLock",
+        "//submodules/OverlayStatusController",
+        "//submodules/PresentationDataUtils",
+        "//submodules/ChatImportUI",
+        "//third-party/ZipArchive",
+        "//submodules/ActivityIndicator",
+        "//submodules/DebugSettingsUI",
+        "//submodules/ManagedFile",
+        "//submodules/TelegramUI/Components/TelegramUIDeclareEncodables",
+        "//submodules/TelegramUI/Components/AnimationCache",
+        "//submodules/TelegramUI/Components/MultiAnimationRenderer",
+        "//submodules/TelegramUI/Components/TelegramAccountAuxiliaryMethods",
+        "//submodules/TelegramUI/Components/PeerSelectionController",
+        "//submodules/TelegramUI/Components/ContextMenuScreen",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+)

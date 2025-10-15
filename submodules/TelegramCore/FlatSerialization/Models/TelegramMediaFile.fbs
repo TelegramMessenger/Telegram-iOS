@@ -1,0 +1,25 @@
+include "MediaId.fbs";
+include "TelegramMediaResource.fbs";
+include "TelegramMediaFileAttribute.fbs";
+include "TelegramMediaImageRepresentation.fbs";
+include "VideoThumbnail.fbs";
+include "TelegramMediaImage.fbs";
+include "PartialMediaReference.fbs";
+
+namespace TelegramCore;
+
+table TelegramMediaFile {
+    fileId:MediaId (id: 0, required);
+    partialReference:PartialMediaReference (id: 1);
+    resource:TelegramMediaResource (id: 2, required);
+    previewRepresentations:[TelegramMediaImageRepresentation] (id: 3);
+    videoThumbnails:[VideoThumbnail] (id: 4);
+    videoCover:TelegramMediaImage (id: 5);
+    immediateThumbnailData:[ubyte] (id: 6);
+    mimeType:string (id: 7, required);
+    size:int64 (id: 8);
+    attributes:[TelegramMediaFileAttribute] (id: 9);
+    alternativeRepresentations:[TelegramMediaFile] (id: 10);
+}
+
+root_type TelegramMediaFile;

@@ -1,0 +1,2034 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder.WatchKit.Storyboard" version="3.0" toolsVersion="17701" targetRuntime="watchKit" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" colorMatched="YES" initialViewController="umr-Wa-jBL">
+    <device id="watch38"/>
+    <dependencies>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="17703"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBWatchKitPlugin" version="17500"/>
+    </dependencies>
+    <scenes>
+        <!--TGNeoConversationController-->
+        <scene sceneID="aC3-o1-R97">
+            <objects>
+                <controller identifier="TGNeoConversationController" hidesWhenLoading="NO" id="HwQ-Ni-22Z" customClass="TGNeoConversationController">
+                    <items>
+                        <table alignment="left" alpha="0.0" id="vyx-cG-8b6">
+                            <items>
+                                <tableRow identifier="TGNeoConversationSimpleRow" id="a2T-99-Tw5" customClass="TGNeoConversationSimpleRowController">
+                                    <group key="rootItem" width="1" height="0.0" alignment="left" radius="0.0" spacing="0.0" id="9by-9u-mzO">
+                                        <items>
+                                            <group width="5" height="9" alignment="right" verticalAlignment="bottom" hidden="YES" layout="vertical" spacing="0.0" id="LDS-Y2-iPo">
+                                                <items>
+                                                    <imageView width="5" height="5" alignment="left" image="MessageStatusDot" contentMode="center" id="Q1Z-Fj-h9w">
+                                                        <color key="tintColor" red="0.14697439968585968" green="0.56079143285751343" blue="0.88162887096405029" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                    </imageView>
+                                                </items>
+                                                <edgeInsets key="margins" left="0.0" right="0.0" top="0.5" bottom="0.0"/>
+                                            </group>
+                                            <group width="1" height="20" alignment="left" layout="vertical" id="rXb-jT-a1J">
+                                                <items>
+                                                    <group width="1" alignment="left" layout="vertical" spacing="0.0" id="fEI-vg-2P6">
+                                                        <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                                    </group>
+                                                </items>
+                                                <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                            </group>
+                                        </items>
+                                        <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                                        <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                    </group>
+                                    <connections>
+                                        <outlet property="bubbleGroup" destination="rXb-jT-a1J" id="Kj4-Pl-Ba5"/>
+                                        <outlet property="contentGroup" destination="fEI-vg-2P6" id="4Bt-Ph-0Fp"/>
+                                        <outlet property="statusGroup" destination="LDS-Y2-iPo" id="KYD-Ie-DUa"/>
+                                        <outlet property="statusIcon" destination="Q1Z-Fj-h9w" id="Abj-hO-a6B"/>
+                                    </connections>
+                                </tableRow>
+                                <tableRow identifier="TGNeoConversationRow" id="hPo-xa-YqN" customClass="TGNeoConversationRowController">
+                                    <group key="rootItem" width="1" height="0.0" alignment="left" radius="0.0" spacing="0.0" id="aao-qJ-ALZ">
+                                        <items>
+                                            <group width="5" height="9" alignment="right" verticalAlignment="bottom" hidden="YES" layout="vertical" spacing="0.0" id="jDn-dI-FR1">
+                                                <items>
+                                                    <imageView width="5" height="5" alignment="left" image="MessageStatusDot" contentMode="center" id="XpK-60-p9R">
+                                                        <color key="tintColor" red="0.14697439968585968" green="0.56079143285751343" blue="0.88162887096405029" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                    </imageView>
+                                                </items>
+                                                <edgeInsets key="margins" left="0.0" right="0.0" top="0.5" bottom="0.0"/>
+                                            </group>
+                                            <group width="1" height="20" alignment="left" layout="vertical" id="jXt-6E-AhF">
+                                                <items>
+                                                    <group width="1" alignment="left" layout="vertical" spacing="0.0" id="Z53-FZ-Nxl">
+                                                        <items>
+                                                            <group width="1" alignment="left" hidden="YES" id="C42-fj-WC0">
+                                                                <items>
+                                                                    <group width="26" height="26" alignment="left" radius="2" id="m0K-8c-tFb">
+                                                                        <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.089999999999999997" colorSpace="custom" customColorSpace="sRGB"/>
+                                                                    </group>
+                                                                </items>
+                                                            </group>
+                                                            <group width="1" alignment="left" hidden="YES" id="BBG-gM-uaA">
+                                                                <items>
+                                                                    <button alignment="left" verticalAlignment="center" hidden="YES" id="avd-iG-3mQ" userLabel="AudioButton">
+                                                                        <group key="contentGroup" width="26" height="26" alignment="left" radius="13" spacing="0.0" id="37m-z9-XMo">
+                                                                            <items>
+                                                                                <imageView width="26" height="26" alignment="left" image="MediaAudioPlay" contentMode="center" id="FIz-kT-nhD"/>
+                                                                            </items>
+                                                                            <color key="backgroundColor" red="0.35566622018814087" green="0.68838506937026978" blue="0.91561108827590942" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                                            <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                                                        </group>
+                                                                        <connections>
+                                                                            <action selector="remotePressedAction" destination="hPo-xa-YqN" id="CJi-6O-GUa"/>
+                                                                        </connections>
+                                                                    </button>
+                                                                    <group width="19" height="19" alignment="left" hidden="YES" radius="10" spacing="0.0" id="hK6-bY-tFN" userLabel="AvatarGroup">
+                                                                        <items>
+                                                                            <label width="19" height="18" alignment="center" hidden="YES" text="O" textAlignment="center" minimumScaleFactor="0.90000000000000002" id="9dN-wn-ef3" userLabel="AvatarInitials">
+                                                                                <fontDescription key="font" type="system" weight="medium" pointSize="12"/>
+                                                                            </label>
+                                                                        </items>
+                                                                        <color key="backgroundColor" red="0.10050980001688004" green="0.10041593015193939" blue="0.1033058762550354" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                                        <edgeInsets key="margins" left="1" right="1" top="0.0" bottom="0.0"/>
+                                                                    </group>
+                                                                </items>
+                                                            </group>
+                                                        </items>
+                                                        <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                                    </group>
+                                                </items>
+                                                <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                            </group>
+                                        </items>
+                                        <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                                        <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                    </group>
+                                    <connections>
+                                        <outlet property="audioButton" destination="avd-iG-3mQ" id="uCa-AQ-bCI"/>
+                                        <outlet property="audioButtonGroup" destination="37m-z9-XMo" id="3dZ-Qw-CNY"/>
+                                        <outlet property="audioIcon" destination="FIz-kT-nhD" id="kQy-TS-2e0"/>
+                                        <outlet property="avatarGroup" destination="hK6-bY-tFN" id="41q-tM-Q2v"/>
+                                        <outlet property="avatarLabel" destination="9dN-wn-ef3" id="Vz3-iN-OOu"/>
+                                        <outlet property="bubbleGroup" destination="jXt-6E-AhF" id="e0L-jD-CB2"/>
+                                        <outlet property="contentGroup" destination="Z53-FZ-Nxl" id="U4S-xm-4ga"/>
+                                        <outlet property="headerWrapperGroup" destination="C42-fj-WC0" id="wK2-S5-Mg5"/>
+                                        <outlet property="metaWrapperGroup" destination="BBG-gM-uaA" id="go5-Fh-WGW"/>
+                                        <outlet property="replyImageGroup" destination="m0K-8c-tFb" id="5ZY-vb-ffQ"/>
+                                        <outlet property="statusGroup" destination="jDn-dI-FR1" id="8HX-iA-yMM"/>
+                                        <outlet property="statusIcon" destination="XpK-60-p9R" id="7IO-6r-jRW"/>
+                                    </connections>
+                                </tableRow>
+                                <tableRow identifier="TGNeoConversationMediaRow" id="BMm-RD-Ch4" customClass="TGNeoConversationRowController">
+                                    <group key="rootItem" width="1" height="0.0" alignment="left" radius="0.0" spacing="0.0" id="rfD-pr-jGO">
+                                        <items>
+                                            <group width="5" height="9" alignment="right" verticalAlignment="bottom" hidden="YES" layout="vertical" spacing="0.0" id="TUb-Dm-AMR">
+                                                <items>
+                                                    <imageView width="5" height="5" alignment="left" image="MessageStatusDot" contentMode="center" id="9qr-mD-i5x">
+                                                        <color key="tintColor" red="0.14697439968585968" green="0.56079143285751343" blue="0.88162887096405029" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                    </imageView>
+                                                </items>
+                                                <edgeInsets key="margins" left="0.0" right="0.0" top="0.5" bottom="0.0"/>
+                                            </group>
+                                            <group width="1" height="20" alignment="left" layout="vertical" id="JFg-9U-jCR">
+                                                <items>
+                                                    <group width="1" alignment="left" layout="vertical" spacing="0.0" id="PUh-1e-Oss">
+                                                        <items>
+                                                            <group width="1" alignment="left" hidden="YES" id="m8w-54-XcL">
+                                                                <items>
+                                                                    <group width="26" height="26" alignment="left" radius="2" id="rWA-Yy-cze">
+                                                                        <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.089999999999999997" colorSpace="custom" customColorSpace="sRGB"/>
+                                                                    </group>
+                                                                </items>
+                                                            </group>
+                                                            <group width="1" alignment="left" hidden="YES" id="zAl-1M-oE7">
+                                                                <items>
+                                                                    <group width="1" alignment="left" hidden="YES" contentMode="scaleAspectFill" id="xf1-F7-hhR">
+                                                                        <items>
+                                                                            <imageView width="30" height="30" alignment="center" verticalAlignment="center" hidden="YES" image="Spinner" contentMode="center" animationDuration="0.65000000000000002" id="T7p-bM-uDk"/>
+                                                                            <button alignment="center" verticalAlignment="center" hidden="YES" id="tAn-qf-NEu">
+                                                                                <group key="contentGroup" width="40" height="40" alignment="left" radius="20" id="e97-uh-UqI">
+                                                                                    <items>
+                                                                                        <imageView width="40" height="40" alignment="center" verticalAlignment="center" image="RemotePlayVideo" contentMode="center" id="urg-4m-kNw" userLabel="PlayIcon"/>
+                                                                                    </items>
+                                                                                    <color key="backgroundColor" red="0.89292949438095093" green="0.91148859262466431" blue="0.93112039566040039" alpha="0.80000000000000004" colorSpace="custom" customColorSpace="sRGB"/>
+                                                                                </group>
+                                                                                <connections>
+                                                                                    <action selector="remotePressedAction" destination="BMm-RD-Ch4" id="aqf-um-ouo"/>
+                                                                                </connections>
+                                                                            </button>
+                                                                        </items>
+                                                                        <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.089999999999999997" colorSpace="custom" customColorSpace="sRGB"/>
+                                                                    </group>
+                                                                    <map width="10" height="10" alignment="left" hidden="YES" enabled="NO" id="exc-JY-nFB"/>
+                                                                </items>
+                                                            </group>
+                                                        </items>
+                                                        <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                                    </group>
+                                                </items>
+                                                <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                            </group>
+                                        </items>
+                                        <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                                        <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                    </group>
+                                    <connections>
+                                        <outlet property="bubbleGroup" destination="JFg-9U-jCR" id="TH2-rb-YHf"/>
+                                        <outlet property="contentGroup" destination="PUh-1e-Oss" id="vEv-6m-DOZ"/>
+                                        <outlet property="headerWrapperGroup" destination="m8w-54-XcL" id="Ffr-4s-jfh"/>
+                                        <outlet property="imageGroup" destination="xf1-F7-hhR" id="BgU-CW-ylL"/>
+                                        <outlet property="map" destination="exc-JY-nFB" id="kvd-Xr-5Q5"/>
+                                        <outlet property="mediaWrapperGroup" destination="zAl-1M-oE7" id="iha-d1-n8r"/>
+                                        <outlet property="replyImageGroup" destination="rWA-Yy-cze" id="xN2-97-eFP"/>
+                                        <outlet property="spinnerImage" destination="T7p-bM-uDk" id="mkx-af-HTr"/>
+                                        <outlet property="statusGroup" destination="TUb-Dm-AMR" id="CPv-Ls-d9G"/>
+                                        <outlet property="statusIcon" destination="9qr-mD-i5x" id="bal-FL-j5N"/>
+                                        <outlet property="videoButton" destination="tAn-qf-NEu" id="JJ3-8q-AeY"/>
+                                    </connections>
+                                </tableRow>
+                                <tableRow identifier="TGNeoConversationStaticRow" selectable="NO" id="WFI-cu-oXi" customClass="TGNeoConversationStaticRowController">
+                                    <group key="rootItem" width="1" height="0.0" alignment="left" radius="0.0" spacing="0.0" id="ymz-ch-NXX">
+                                        <items>
+                                            <group width="1" alignment="left" id="RkQ-Xv-mjJ"/>
+                                        </items>
+                                        <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                                        <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                    </group>
+                                    <connections>
+                                        <outlet property="contentGroup" destination="RkQ-Xv-mjJ" id="cP0-3h-fl5"/>
+                                    </connections>
+                                </tableRow>
+                                <tableRow identifier="TGNeoConversationTimeRow" selectable="NO" id="nW5-1j-Pxb" customClass="TGNeoConversationTimeRowController">
+                                    <group key="rootItem" width="1" height="0.0" alignment="left" radius="0.0" spacing="0.0" id="8Km-Yw-bup">
+                                        <items>
+                                            <label alignment="center" text="Timestamp" textAlignment="center" id="TLa-17-wWa">
+                                                <color key="textColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                <fontDescription key="font" type="system" pointSize="12"/>
+                                            </label>
+                                        </items>
+                                        <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                                        <edgeInsets key="margins" left="0.0" right="0.0" top="3" bottom="3"/>
+                                    </group>
+                                    <connections>
+                                        <outlet property="label" destination="TLa-17-wWa" id="0ax-Ey-TGV"/>
+                                    </connections>
+                                </tableRow>
+                                <tableRow identifier="TGConversationFooter" selectable="NO" id="Sk9-TZ-rcT" customClass="TGConversationFooterController">
+                                    <group key="rootItem" width="1" height="0.0" alignment="left" layout="vertical" spacing="2" id="3fN-q5-T3U" userLabel="RowGroup">
+                                        <items>
+                                            <group width="1" alignment="left" spacing="2" id="BtN-5J-B5d" userLabel="AttachmentsGroup">
+                                                <items>
+                                                    <button alignment="left" id="lgz-SW-48b">
+                                                        <group key="contentGroup" width="0.5" height="37.5" alignment="left" id="0B0-bB-UxE">
+                                                            <items>
+                                                                <imageView alignment="center" verticalAlignment="center" image="PickLocation" id="b84-m6-Y3J">
+                                                                    <color key="tintColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                                </imageView>
+                                                            </items>
+                                                            <color key="backgroundColor" red="0.13532151281833649" green="0.13521988689899445" blue="0.13833095133304596" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        </group>
+                                                        <connections>
+                                                            <action selector="locationButtonPressedAction" destination="Sk9-TZ-rcT" id="qWE-jn-BjT"/>
+                                                        </connections>
+                                                    </button>
+                                                    <button alignment="left" id="DEI-rh-mkw">
+                                                        <group key="contentGroup" width="0.5" height="37.5" alignment="left" id="EEm-cN-SVI">
+                                                            <items>
+                                                                <imageView alignment="center" verticalAlignment="center" image="StickerIcon" contentMode="center" id="1Qr-u2-IoZ"/>
+                                                            </items>
+                                                            <color key="backgroundColor" red="0.13532151281833649" green="0.13521988689899445" blue="0.13833095133304596" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        </group>
+                                                        <connections>
+                                                            <action selector="stickerButtonPressedAction" destination="Sk9-TZ-rcT" id="Na1-2e-2Y7"/>
+                                                        </connections>
+                                                    </button>
+                                                    <button alignment="left" hidden="YES" id="A2D-tU-jC0">
+                                                        <group key="contentGroup" width="0.33300000000000002" height="37.5" alignment="left" id="5kY-ZX-HL3">
+                                                            <items>
+                                                                <imageView alignment="center" verticalAlignment="center" image="MicIcon" contentMode="center" id="Kf9-EP-Fp9"/>
+                                                            </items>
+                                                            <color key="backgroundColor" red="0.13532151281833649" green="0.13521988689899445" blue="0.13833095133304596" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        </group>
+                                                        <connections>
+                                                            <action selector="voiceButtonPressedAction" destination="Sk9-TZ-rcT" id="OUQ-w4-z0i"/>
+                                                        </connections>
+                                                    </button>
+                                                    <button alignment="right" id="RWg-g5-O0W">
+                                                        <group key="contentGroup" width="0.001" height="37.5" alignment="left" id="afF-FZ-oDi">
+                                                            <items>
+                                                                <imageView width="18.5" height="18.5" alignment="center" verticalAlignment="center" image="BotCommandIcon" contentMode="scaleAspectFit" id="Sgd-li-bQM"/>
+                                                            </items>
+                                                            <color key="backgroundColor" red="0.13532151281833649" green="0.13521988689899445" blue="0.13833095133304596" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        </group>
+                                                        <connections>
+                                                            <action selector="commandsButtonPressedAction" destination="Sk9-TZ-rcT" id="bet-0O-cDm"/>
+                                                        </connections>
+                                                    </button>
+                                                </items>
+                                                <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                            </group>
+                                            <button width="1" alignment="left" title="Reply" id="2iG-T9-riG" userLabel="ReplyButton">
+                                                <fontDescription key="font" style="UICTFontTextStyleBody"/>
+                                                <connections>
+                                                    <action selector="bottomButtonPressedAction" destination="Sk9-TZ-rcT" id="Iax-Ma-NTR"/>
+                                                </connections>
+                                            </button>
+                                        </items>
+                                        <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                                        <edgeInsets key="margins" left="0.0" right="0.0" top="8" bottom="0.0"/>
+                                    </group>
+                                    <connections>
+                                        <outlet property="attachmentsGroup" destination="BtN-5J-B5d" id="cVb-3c-Jxd"/>
+                                        <outlet property="bottomButton" destination="2iG-T9-riG" id="Dyg-y0-YUp"/>
+                                        <outlet property="commandsButton" destination="RWg-g5-O0W" id="VQ3-Wi-utc"/>
+                                        <outlet property="commandsIcon" destination="Sgd-li-bQM" id="aGs-kd-dMV"/>
+                                        <outlet property="locationButton" destination="lgz-SW-48b" id="fvj-wX-YHJ"/>
+                                        <outlet property="stickerButton" destination="DEI-rh-mkw" id="EIj-55-X1O"/>
+                                        <outlet property="voiceButton" destination="A2D-tU-jC0" id="hGQ-R3-UfT"/>
+                                    </connections>
+                                </tableRow>
+                            </items>
+                        </table>
+                        <imageView width="30" height="30" alignment="center" verticalAlignment="center" image="Spinner" contentMode="center" animationDuration="0.65000000000000002" id="jCB-yf-QFK"/>
+                    </items>
+                    <connections>
+                        <outlet property="activityIndicator" destination="jCB-yf-QFK" id="spw-XW-LVX"/>
+                        <outlet property="table" destination="vyx-cG-8b6" id="Y3N-RK-owN"/>
+                    </connections>
+                </controller>
+            </objects>
+            <point key="canvasLocation" x="545" y="160"/>
+        </scene>
+        <!--TGStickerPacksController-->
+        <scene sceneID="ftS-qZ-KrX">
+            <objects>
+                <controller identifier="TGStickerPacksController" hidesWhenLoading="NO" id="xPn-cq-PLR" customClass="TGStickerPacksController">
+                    <items>
+                        <table alignment="left" id="5jS-Yg-j3C">
+                            <items>
+                                <tableRow identifier="TGStickerPackRow" id="mRQ-1b-4GN" customClass="TGStickerPackRowController">
+                                    <group key="rootItem" width="1" height="0.0" alignment="left" spacing="3" id="rSp-JT-s3T" userLabel="RowGroup">
+                                        <items>
+                                            <imageView width="26" height="26" alignment="left" verticalAlignment="center" contentMode="center" id="cOo-72-zUU"/>
+                                            <group height="35.5" alignment="left" verticalAlignment="center" layout="vertical" spacing="0.0" id="8RD-6x-KOR">
+                                                <items>
+                                                    <label alignment="left" verticalAlignment="center" text="Name" id="j04-aR-KSI">
+                                                        <color key="textColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        <fontDescription key="font" type="system" weight="medium" pointSize="16"/>
+                                                    </label>
+                                                    <label alignment="left" verticalAlignment="center" text="Count" id="lcf-QF-oNn">
+                                                        <color key="textColor" red="0.48779428005218506" green="0.48777967691421509" blue="0.48778796195983887" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        <fontDescription key="font" type="system" pointSize="13"/>
+                                                    </label>
+                                                </items>
+                                                <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                            </group>
+                                        </items>
+                                        <edgeInsets key="margins" left="5" right="5" top="3" bottom="3"/>
+                                    </group>
+                                    <connections>
+                                        <outlet property="countLabel" destination="lcf-QF-oNn" id="4kH-WS-ajc"/>
+                                        <outlet property="image" destination="cOo-72-zUU" id="F8s-J5-2aW"/>
+                                        <outlet property="nameLabel" destination="j04-aR-KSI" id="cWe-Iq-ANi"/>
+                                    </connections>
+                                </tableRow>
+                            </items>
+                        </table>
+                        <imageView width="30" height="30" alignment="center" verticalAlignment="center" image="Spinner" contentMode="center" animationDuration="0.65000000000000002" id="Cpj-bR-miN"/>
+                    </items>
+                    <connections>
+                        <outlet property="activityIndicator" destination="Cpj-bR-miN" id="Kxh-Z4-qhz"/>
+                        <outlet property="table" destination="5jS-Yg-j3C" id="1Eg-pt-eQ0"/>
+                    </connections>
+                </controller>
+            </objects>
+            <point key="canvasLocation" x="503" y="464"/>
+        </scene>
+        <!--Stickers-->
+        <scene sceneID="XPU-yi-WXb">
+            <objects>
+                <controller identifier="TGStickersController" hidesWhenLoading="NO" id="4sd-mc-CCK" userLabel="Stickers" customClass="TGStickersController">
+                    <items>
+                        <table alignment="left" spacing="0.0" id="8Sv-BS-GP9">
+                            <items>
+                                <tableRow identifier="TGStickersSectionHeader" selectable="NO" id="ca3-pa-ozi" customClass="TGStickersSectionHeaderController">
+                                    <group key="rootItem" width="1" height="0.0" alignment="left" id="mc5-tH-9Vo" userLabel="RowGroup">
+                                        <items>
+                                            <label alignment="left" verticalAlignment="bottom" text="TITLE" id="XM4-Tm-Tot" userLabel="Title">
+                                                <color key="textColor" red="0.48779428005218506" green="0.48777967691421509" blue="0.48778796195983887" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                <fontDescription key="font" type="system" pointSize="12"/>
+                                            </label>
+                                        </items>
+                                        <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                                        <edgeInsets key="margins" left="9" right="0.0" top="6" bottom="0.0"/>
+                                    </group>
+                                    <connections>
+                                        <outlet property="titleLabel" destination="XM4-Tm-Tot" id="0iJ-bM-d8p"/>
+                                    </connections>
+                                </tableRow>
+                                <tableRow identifier="TGStickersRow" selectable="NO" id="HMv-gl-d0Q" customClass="TGStickersRowController">
+                                    <group key="rootItem" width="1" height="80" alignment="left" id="QhP-S9-vSa" userLabel="RowGroup">
+                                        <items>
+                                            <button alignment="left" id="J00-d9-pQ9" userLabel="LeftStickerButton">
+                                                <group key="contentGroup" width="0.5" height="78" alignment="left" contentMode="scaleAspectFit" id="0Mz-5l-OQj" userLabel="StickerGroup">
+                                                    <variation key="device=watch38mm" height="68"/>
+                                                    <variation key="device=watch40mm" height="81"/>
+                                                    <variation key="device=watch44mm" height="92"/>
+                                                </group>
+                                                <connections>
+                                                    <action selector="leftStickerPressedAction" destination="HMv-gl-d0Q" id="Icb-eZ-Rvr"/>
+                                                </connections>
+                                            </button>
+                                            <button alignment="right" id="45x-3w-taC" userLabel="RightStickerButton">
+                                                <group key="contentGroup" width="0.5" height="78" alignment="left" contentMode="scaleAspectFit" id="fMc-mt-J2g" userLabel="StickerGroup">
+                                                    <variation key="device=watch38mm" height="68"/>
+                                                    <variation key="device=watch40mm" height="81"/>
+                                                    <variation key="device=watch44mm" height="92"/>
+                                                </group>
+                                                <connections>
+                                                    <action selector="rightStickerPressedAction" destination="HMv-gl-d0Q" id="yiF-VI-1Mv"/>
+                                                </connections>
+                                            </button>
+                                        </items>
+                                        <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                                        <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                        <variation key="device=watch38mm" height="70"/>
+                                        <variation key="device=watch40mm" height="83"/>
+                                        <variation key="device=watch44mm" height="94"/>
+                                    </group>
+                                    <connections>
+                                        <outlet property="leftStickerImageGroup" destination="0Mz-5l-OQj" id="t10-3D-jQh"/>
+                                        <outlet property="rightStickerImageGroup" destination="fMc-mt-J2g" id="7OY-mg-hlp"/>
+                                    </connections>
+                                </tableRow>
+                            </items>
+                        </table>
+                        <imageView width="30" height="30" alignment="center" verticalAlignment="center" image="Spinner" contentMode="center" animationDuration="0.65000000000000002" id="uGb-Iu-EA7"/>
+                        <group width="1" height="76" alignment="left" hidden="YES" id="gei-kd-SYz" userLabel="AlertGroup">
+                            <items>
+                                <label alignment="center" verticalAlignment="center" text="Your most recent and frequent stickers will appear here" textAlignment="center" numberOfLines="0" id="I8h-57-ntV" userLabel="AlertLabel">
+                                    <fontDescription key="font" type="system" pointSize="12"/>
+                                </label>
+                            </items>
+                            <variation key="device=watch42mm" height="100"/>
+                        </group>
+                    </items>
+                    <connections>
+                        <outlet property="activityIndicator" destination="uGb-Iu-EA7" id="ypJ-5L-Eqx"/>
+                        <outlet property="alertGroup" destination="gei-kd-SYz" id="8ew-fb-Fuu"/>
+                        <outlet property="alertLabel" destination="I8h-57-ntV" id="qIf-0d-Xzs"/>
+                        <outlet property="table" destination="8Sv-BS-GP9" id="yVs-uE-qqu"/>
+                    </connections>
+                </controller>
+            </objects>
+            <point key="canvasLocation" x="268" y="463.5"/>
+        </scene>
+        <!--TGBotCommandController-->
+        <scene sceneID="YEf-A6-Ffq">
+            <objects>
+                <controller identifier="TGBotCommandController" hidesWhenLoading="NO" id="Jpj-zg-TKq" customClass="TGBotCommandController">
+                    <items>
+                        <table alignment="left" hidden="YES" id="kMX-v6-NIM">
+                            <items>
+                                <tableRow identifier="TGUserRow" id="mrg-tc-PdU" customClass="TGUserRowController">
+                                    <group key="rootItem" width="1" height="0.0" alignment="left" spacing="2" id="ew3-Ow-RSu">
+                                        <items>
+                                            <group width="22" height="1" alignment="left" verticalAlignment="center" spacing="0.0" id="Ctc-eZ-43U" userLabel="AvatarWrapperGroup">
+                                                <items>
+                                                    <group width="19" height="19" alignment="left" radius="10" spacing="0.0" id="kPz-t3-vb6" userLabel="AvatarGroup">
+                                                        <items>
+                                                            <label width="19" height="18" alignment="center" text="O" textAlignment="center" minimumScaleFactor="0.90000000000000002" id="vXj-Oa-3wL" userLabel="AvatarInitials">
+                                                                <fontDescription key="font" type="system" weight="medium" pointSize="12"/>
+                                                            </label>
+                                                        </items>
+                                                        <color key="backgroundColor" red="0.9409174919128418" green="0.45293042063713074" blue="0.69630742073059082" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        <edgeInsets key="margins" left="1" right="1" top="0.0" bottom="0.0"/>
+                                                    </group>
+                                                </items>
+                                                <edgeInsets key="margins" left="0.0" right="0.0" top="8" bottom="0.0"/>
+                                            </group>
+                                            <group alignment="left" verticalAlignment="center" layout="vertical" spacing="0.0" id="Hna-22-ioO" userLabel="UserGroup">
+                                                <items>
+                                                    <label alignment="left" text="/command" id="ssL-SP-H9R" userLabel="Name">
+                                                        <color key="textColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        <fontDescription key="font" type="system" weight="medium" pointSize="16"/>
+                                                    </label>
+                                                    <label alignment="left" text="description" numberOfLines="0" id="WuA-Ct-cpr" userLabel="LastSeen">
+                                                        <color key="textColor" red="0.48779428005218506" green="0.48777967691421509" blue="0.48778796195983887" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        <fontDescription key="font" type="system" pointSize="13"/>
+                                                    </label>
+                                                </items>
+                                            </group>
+                                        </items>
+                                        <edgeInsets key="margins" left="7" right="7" top="3" bottom="3"/>
+                                    </group>
+                                    <connections>
+                                        <outlet property="avatarGroup" destination="kPz-t3-vb6" id="bsN-UY-hxo"/>
+                                        <outlet property="avatarInitialsLabel" destination="vXj-Oa-3wL" id="1lW-FT-OZF"/>
+                                        <outlet property="lastSeenLabel" destination="WuA-Ct-cpr" id="JpK-y0-E4R"/>
+                                        <outlet property="nameLabel" destination="ssL-SP-H9R" id="23u-On-Aj5"/>
+                                    </connections>
+                                </tableRow>
+                            </items>
+                        </table>
+                        <imageView width="30" height="30" alignment="center" verticalAlignment="center" image="Spinner" contentMode="center" animationDuration="0.65000000000000002" id="YkR-Lj-en7"/>
+                    </items>
+                    <connections>
+                        <outlet property="activityIndicator" destination="YkR-Lj-en7" id="kaY-tX-kaW"/>
+                        <outlet property="table" destination="kMX-v6-NIM" id="Av7-4q-0YK"/>
+                    </connections>
+                </controller>
+            </objects>
+            <point key="canvasLocation" x="1130" y="139"/>
+        </scene>
+        <!--TGBotKeyboardController-->
+        <scene sceneID="u8l-0s-lqa">
+            <objects>
+                <controller identifier="TGBotKeyboardController" hidesWhenLoading="NO" id="MQ0-c6-4FD" customClass="TGBotKeyboardController">
+                    <items>
+                        <table alignment="left" id="CuW-KI-UkJ">
+                            <items>
+                                <tableRow identifier="TGBotKeyboardButton" id="vtc-b6-9HF" customClass="TGBotKeyboardButtonController">
+                                    <group key="rootItem" width="1" height="0.0" alignment="left" id="kYH-Sq-TsO">
+                                        <items>
+                                            <label alignment="center" verticalAlignment="center" text="Button" minimumScaleFactor="0.80000000000000004" id="5Kj-Bq-KbZ">
+                                                <fontDescription key="font" type="system" weight="medium" pointSize="16"/>
+                                            </label>
+                                        </items>
+                                        <edgeInsets key="margins" left="2" right="2" top="9" bottom="9"/>
+                                    </group>
+                                    <connections>
+                                        <outlet property="textLabel" destination="5Kj-Bq-KbZ" id="bXW-fv-GyE"/>
+                                    </connections>
+                                </tableRow>
+                            </items>
+                        </table>
+                    </items>
+                    <connections>
+                        <outlet property="table" destination="CuW-KI-UkJ" id="oqW-RE-HcM"/>
+                    </connections>
+                </controller>
+            </objects>
+            <point key="canvasLocation" x="1305" y="139"/>
+        </scene>
+        <!--TGUserInfoController-->
+        <scene sceneID="JkT-sS-iAA">
+            <objects>
+                <controller identifier="TGUserInfoController" hidesWhenLoading="NO" id="qoH-v7-4dM" customClass="TGUserInfoController">
+                    <items>
+                        <table alignment="left" id="kAb-3v-xWp">
+                            <items>
+                                <tableRow identifier="TGUserInfoHeader" selectable="NO" id="yJQ-Gk-XMY" customClass="TGUserInfoHeaderController">
+                                    <group key="rootItem" width="1" height="0.0" alignment="left" layout="vertical" spacing="0.0" id="4TV-71-fvV" userLabel="RowGroup">
+                                        <items>
+                                            <button alignment="center" id="Bvw-wG-Nbk" userLabel="AvatarButton">
+                                                <group key="contentGroup" width="44" height="44" alignment="left" radius="22" id="h5v-il-NpW">
+                                                    <items>
+                                                        <label alignment="center" verticalAlignment="center" text="O" id="W4l-Wh-OcP" userLabel="AvatarInitials">
+                                                            <color key="textColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                            <fontDescription key="font" type="system" weight="medium" pointSize="28"/>
+                                                        </label>
+                                                        <imageView width="15.5" height="15.5" alignment="right" verticalAlignment="bottom" hidden="YES" image="VerifiedProfile" id="SyA-hd-PMv"/>
+                                                    </items>
+                                                    <color key="backgroundColor" red="0.10050980001688004" green="0.10041593015193939" blue="0.1033058762550354" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                </group>
+                                                <connections>
+                                                    <action selector="avatarPressedAction" destination="yJQ-Gk-XMY" id="jWl-Ng-cYl"/>
+                                                </connections>
+                                            </button>
+                                            <group width="1" alignment="left" layout="vertical" spacing="0.0" id="gNr-fR-srM" userLabel="InfoGroup">
+                                                <items>
+                                                    <label width="0.97999999999999998" alignment="center" text="Name" textAlignment="center" numberOfLines="0" id="Q5w-ti-hUD" userLabel="Name">
+                                                        <color key="textColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        <fontDescription key="font" type="system" weight="medium" pointSize="16"/>
+                                                    </label>
+                                                    <group width="1" alignment="center" spacing="2" id="1pp-xY-9Vs" userLabel="LastSeen">
+                                                        <items>
+                                                            <label alignment="center" text="last seen" textAlignment="center" id="v3K-g8-bwK">
+                                                                <color key="textColor" red="0.48779428005218506" green="0.48777967691421509" blue="0.48778796195983887" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                                <fontDescription key="font" type="system" pointSize="13"/>
+                                                            </label>
+                                                        </items>
+                                                        <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                                    </group>
+                                                </items>
+                                                <edgeInsets key="margins" left="0.0" right="0.0" top="5" bottom="3"/>
+                                            </group>
+                                        </items>
+                                        <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                                        <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                    </group>
+                                    <connections>
+                                        <outlet property="avatarButton" destination="Bvw-wG-Nbk" id="xEf-ge-nLV"/>
+                                        <outlet property="avatarGroup" destination="h5v-il-NpW" id="XiN-MK-fON"/>
+                                        <outlet property="avatarInitialsLabel" destination="W4l-Wh-OcP" id="XMC-ED-mcR"/>
+                                        <outlet property="avatarVerified" destination="SyA-hd-PMv" id="NzE-hb-4oU"/>
+                                        <outlet property="lastSeenLabel" destination="v3K-g8-bwK" id="44U-tx-tnO"/>
+                                        <outlet property="nameLabel" destination="Q5w-ti-hUD" id="ffI-9b-Tnc"/>
+                                    </connections>
+                                </tableRow>
+                                <tableRow identifier="TGUserHandleRow" selectable="NO" id="a3L-F2-GiG" customClass="TGUserHandleRowController">
+                                    <group key="rootItem" width="1" height="0.0" alignment="left" layout="vertical" spacing="0.0" id="Q6m-3d-zm2" userLabel="RowGroup">
+                                        <items>
+                                            <label alignment="left" text="handle" numberOfLines="0" id="bCD-bF-QjI" userLabel="Handle">
+                                                <color key="textColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                <fontDescription key="font" type="system" weight="medium" pointSize="15"/>
+                                            </label>
+                                            <label alignment="left" text="type" id="Adg-Kx-nm3" userLabel="Type">
+                                                <color key="textColor" red="0.4919407069683075" green="0.49192589521408081" blue="0.49193423986434937" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                <fontDescription key="font" type="system" pointSize="13"/>
+                                            </label>
+                                        </items>
+                                        <edgeInsets key="margins" left="7" right="7" top="3" bottom="3"/>
+                                    </group>
+                                    <connections>
+                                        <outlet property="handleLabel" destination="bCD-bF-QjI" id="juD-j2-Juu"/>
+                                        <outlet property="typeLabel" destination="Adg-Kx-nm3" id="h8i-pA-nHy"/>
+                                    </connections>
+                                </tableRow>
+                                <tableRow identifier="TGUserHandleActiveRow" id="IPC-pG-1da" customClass="TGUserHandleActiveRowController">
+                                    <group key="rootItem" width="1" height="0.0" alignment="left" layout="vertical" spacing="0.0" id="K77-nI-efs">
+                                        <items>
+                                            <label alignment="left" text="active handle" minimumScaleFactor="0.80000000000000004" id="Alz-bn-Eqt" userLabel="Handle">
+                                                <color key="textColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                <fontDescription key="font" type="system" weight="medium" pointSize="15"/>
+                                            </label>
+                                            <label alignment="left" text="type" id="Tkq-bb-Ggr" userLabel="Type">
+                                                <color key="textColor" red="0.4919407069683075" green="0.49192589521408081" blue="0.49193423986434937" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                <fontDescription key="font" type="system" pointSize="13"/>
+                                            </label>
+                                        </items>
+                                        <edgeInsets key="margins" left="7" right="7" top="3" bottom="3"/>
+                                    </group>
+                                    <connections>
+                                        <outlet property="handleLabel" destination="Alz-bn-Eqt" id="fVG-oj-KWa"/>
+                                        <outlet property="typeLabel" destination="Tkq-bb-Ggr" id="E2w-rt-kLf"/>
+                                    </connections>
+                                </tableRow>
+                            </items>
+                        </table>
+                        <imageView width="30" height="30" alignment="center" verticalAlignment="center" image="Spinner" contentMode="center" animationDuration="0.65000000000000002" id="qUv-SV-3gO"/>
+                    </items>
+                    <connections>
+                        <outlet property="activityIndicator" destination="qUv-SV-3gO" id="Yp5-01-P5D"/>
+                        <outlet property="table" destination="kAb-3v-xWp" id="vYJ-z6-ccB"/>
+                    </connections>
+                </controller>
+            </objects>
+            <point key="canvasLocation" x="937" y="197.5"/>
+        </scene>
+        <!--TGGroupInfoController-->
+        <scene sceneID="CcD-ua-UmX">
+            <objects>
+                <controller identifier="TGGroupInfoController" hidesWhenLoading="NO" id="3b9-Li-o8P" customClass="TGGroupInfoController">
+                    <items>
+                        <table alignment="left" id="wm7-0n-dZv">
+                            <items>
+                                <tableRow identifier="TGGroupInfoHeader" selectable="NO" id="vqn-iE-oBc" customClass="TGGroupInfoHeaderController">
+                                    <group key="rootItem" width="1" height="0.0" alignment="left" layout="vertical" spacing="0.0" id="MaQ-V0-ZEx" userLabel="RowGroup">
+                                        <items>
+                                            <button alignment="center" id="Fo7-hy-fwC" userLabel="AvatarButton">
+                                                <group key="contentGroup" width="44" height="44" alignment="left" radius="22" id="IsV-EM-1Wb">
+                                                    <items>
+                                                        <label alignment="center" verticalAlignment="center" text="O" id="yMk-0t-IGt" userLabel="AvatarInitials">
+                                                            <color key="textColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                            <fontDescription key="font" type="system" weight="medium" pointSize="28"/>
+                                                        </label>
+                                                    </items>
+                                                    <color key="backgroundColor" red="0.078835174441337585" green="0.078832820057868958" blue="0.078834161162376404" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                </group>
+                                                <connections>
+                                                    <action selector="avatarPressedAction" destination="vqn-iE-oBc" id="ENn-Oa-7N5"/>
+                                                </connections>
+                                            </button>
+                                            <group width="1" alignment="left" layout="vertical" spacing="0.0" id="abB-a4-dHk" userLabel="InfoGroup">
+                                                <items>
+                                                    <label width="0.97999999999999998" alignment="center" text="Name" textAlignment="center" numberOfLines="0" id="jhO-ox-IcI" userLabel="Name">
+                                                        <color key="textColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        <fontDescription key="font" type="system" weight="medium" pointSize="16"/>
+                                                    </label>
+                                                    <group width="1" alignment="center" spacing="2" id="3Xd-Os-9Qs" userLabel="ParticipantsGroup">
+                                                        <items>
+                                                            <label alignment="center" text="members," id="e6a-wt-Pr3" userLabel="TotalParticipants">
+                                                                <color key="textColor" red="0.48779428005218506" green="0.48777967691421509" blue="0.48778796195983887" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                                <fontDescription key="font" type="system" pointSize="13"/>
+                                                            </label>
+                                                            <label alignment="center" text="online" id="qwN-xb-MCa" userLabel="OnlineParticipants">
+                                                                <color key="textColor" red="0.15550534427165985" green="0.57037848234176636" blue="0.8720671534538269" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                                <fontDescription key="font" type="system" pointSize="13"/>
+                                                            </label>
+                                                        </items>
+                                                        <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                                    </group>
+                                                </items>
+                                                <edgeInsets key="margins" left="0.0" right="0.0" top="5" bottom="3"/>
+                                            </group>
+                                        </items>
+                                        <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                                        <edgeInsets key="margins" left="0.0" right="0.0" top="2" bottom="0.0"/>
+                                    </group>
+                                    <connections>
+                                        <outlet property="avatarButton" destination="Fo7-hy-fwC" id="e4Y-Yw-S0D"/>
+                                        <outlet property="avatarGroup" destination="IsV-EM-1Wb" id="bZG-cZ-ej3"/>
+                                        <outlet property="avatarInitialsLabel" destination="yMk-0t-IGt" id="kCP-N2-y0W"/>
+                                        <outlet property="nameLabel" destination="jhO-ox-IcI" id="Gzo-yH-Tnu"/>
+                                        <outlet property="onlineLabel" destination="qwN-xb-MCa" id="39D-60-lCk"/>
+                                        <outlet property="participantsLabel" destination="e6a-wt-Pr3" id="hcU-HH-XL8"/>
+                                    </connections>
+                                </tableRow>
+                                <tableRow identifier="TGUserRow" id="M2u-Pw-E1D" customClass="TGUserRowController">
+                                    <group key="rootItem" width="1" height="0.0" alignment="left" spacing="2" id="JKk-oo-VO1" userLabel="RowGroup">
+                                        <items>
+                                            <group width="22" height="1" alignment="left" verticalAlignment="center" spacing="0.0" id="NW4-pa-yEA" userLabel="AvatarWrapperGroup">
+                                                <items>
+                                                    <group width="19" height="19" alignment="left" verticalAlignment="center" radius="10" spacing="0.0" id="uMi-wi-790" userLabel="AvatarGroup">
+                                                        <items>
+                                                            <label width="19" height="18" alignment="center" text="O" textAlignment="center" minimumScaleFactor="0.90000000000000002" id="rfr-WW-22d" userLabel="AvatarInitials">
+                                                                <fontDescription key="font" type="system" weight="medium" pointSize="12"/>
+                                                            </label>
+                                                        </items>
+                                                        <color key="backgroundColor" red="0.9409174919128418" green="0.45293042063713074" blue="0.69630742073059082" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        <edgeInsets key="margins" left="1" right="1" top="0.0" bottom="0.0"/>
+                                                    </group>
+                                                </items>
+                                                <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                            </group>
+                                            <group alignment="left" verticalAlignment="center" layout="vertical" spacing="0.0" id="3EQ-w8-ga7" userLabel="UserGroup">
+                                                <items>
+                                                    <label alignment="left" text="Name" id="6Hx-UP-mou" userLabel="Name">
+                                                        <color key="textColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        <fontDescription key="font" type="system" weight="medium" pointSize="16"/>
+                                                    </label>
+                                                    <label alignment="left" text="last seen" id="GIZ-vh-BWi" userLabel="LastSeen">
+                                                        <color key="textColor" red="0.48779428005218506" green="0.48777967691421509" blue="0.48778796195983887" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        <fontDescription key="font" type="system" pointSize="13"/>
+                                                    </label>
+                                                </items>
+                                            </group>
+                                        </items>
+                                        <edgeInsets key="margins" left="7" right="7" top="3" bottom="3"/>
+                                        <connections>
+                                            <segue destination="qoH-v7-4dM" kind="push" id="DOp-fg-HXp"/>
+                                        </connections>
+                                    </group>
+                                    <connections>
+                                        <outlet property="avatarGroup" destination="uMi-wi-790" id="9Tr-fm-MCL"/>
+                                        <outlet property="avatarInitialsLabel" destination="rfr-WW-22d" id="gEn-3F-9Ha"/>
+                                        <outlet property="lastSeenLabel" destination="GIZ-vh-BWi" id="y6m-w5-qk3"/>
+                                        <outlet property="nameLabel" destination="6Hx-UP-mou" id="uaC-lz-moi"/>
+                                    </connections>
+                                </tableRow>
+                            </items>
+                        </table>
+                        <imageView width="30" height="30" alignment="center" verticalAlignment="center" image="Spinner" contentMode="center" animationDuration="0.65000000000000002" id="8cv-k6-wA2"/>
+                    </items>
+                    <connections>
+                        <outlet property="activityIndicator" destination="8cv-k6-wA2" id="ZLD-aU-eyN"/>
+                        <outlet property="table" destination="wm7-0n-dZv" id="B4T-Rx-jaS"/>
+                    </connections>
+                </controller>
+            </objects>
+            <point key="canvasLocation" x="729" y="198"/>
+        </scene>
+        <!--TGLocationController-->
+        <scene sceneID="qN1-Ap-POa">
+            <objects>
+                <controller identifier="TGLocationController" hidesWhenLoading="NO" id="W7d-8e-XWL" customClass="TGLocationController">
+                    <items>
+                        <group width="1" alignment="left" verticalAlignment="center" hidden="YES" layout="vertical" spacing="15" id="RQm-D8-1uA" userLabel="AlertGroup">
+                            <items>
+                                <imageView alignment="center" image="LocationIcon" id="Ayp-f4-Ipy"/>
+                                <label alignment="center" text="Alert" textAlignment="center" numberOfLines="0" id="Owx-AP-NfS" userLabel="AlertLabel">
+                                    <color key="textColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                    <fontDescription key="font" type="system" pointSize="12"/>
+                                </label>
+                            </items>
+                            <edgeInsets key="margins" left="2" right="2" top="0.0" bottom="0.0"/>
+                        </group>
+                        <table alignment="left" id="3DO-Dd-1Ph">
+                            <items>
+                                <tableRow identifier="TGLocationMapHeader" selectable="NO" id="kZx-WC-rdW" customClass="TGLocationMapHeaderController">
+                                    <group key="rootItem" width="1" height="0.0" alignment="left" layout="vertical" id="Z8a-Jj-XU0" userLabel="RowGroup">
+                                        <items>
+                                            <map height="65" alignment="left" enabled="NO" id="eup-ni-mX5"/>
+                                            <button alignment="left" id="6ED-V5-NfX">
+                                                <group key="contentGroup" width="1" alignment="left" id="cdY-Lo-Oct">
+                                                    <items>
+                                                        <label alignment="center" verticalAlignment="center" text="Current Location" minimumScaleFactor="0.70000000000000007" id="1hk-X0-a8q">
+                                                            <fontDescription key="font" type="system" weight="medium" pointSize="16"/>
+                                                        </label>
+                                                    </items>
+                                                    <color key="backgroundColor" red="0.13532151281833649" green="0.13521988689899445" blue="0.13833095133304596" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                    <edgeInsets key="margins" left="2" right="2" top="10" bottom="10"/>
+                                                </group>
+                                                <connections>
+                                                    <action selector="currentLocationPressedAction" destination="kZx-WC-rdW" id="oPJ-PX-5oh"/>
+                                                </connections>
+                                            </button>
+                                        </items>
+                                        <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                                        <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                    </group>
+                                    <connections>
+                                        <outlet property="currentLocationButton" destination="6ED-V5-NfX" id="AEj-I1-oOt"/>
+                                        <outlet property="currentLocationLabel" destination="1hk-X0-a8q" id="Dj5-CV-4em"/>
+                                        <outlet property="map" destination="eup-ni-mX5" id="itu-Lj-5Su"/>
+                                    </connections>
+                                </tableRow>
+                                <tableRow identifier="TGLocationVenueRow" id="gPr-MN-u2L" customClass="TGLocationVenueRowController">
+                                    <group key="rootItem" width="1" height="0.0" alignment="left" layout="vertical" spacing="0.0" id="Kgt-0y-MK5" userLabel="RowGroup">
+                                        <items>
+                                            <label alignment="left" text="Name" id="jbu-Oz-V8L" userLabel="Name">
+                                                <color key="textColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                <fontDescription key="font" type="system" weight="medium" pointSize="16"/>
+                                            </label>
+                                            <label alignment="left" text="Address" id="6uB-mu-QSZ" userLabel="Address">
+                                                <color key="textColor" red="0.48779428005218506" green="0.48777967691421509" blue="0.48778796195983887" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                <fontDescription key="font" type="system" pointSize="13"/>
+                                            </label>
+                                        </items>
+                                        <edgeInsets key="margins" left="7" right="7" top="3" bottom="3"/>
+                                    </group>
+                                    <connections>
+                                        <outlet property="addressLabel" destination="6uB-mu-QSZ" id="OFj-7g-1r3"/>
+                                        <outlet property="nameLabel" destination="jbu-Oz-V8L" id="Rf8-nw-vRD"/>
+                                    </connections>
+                                </tableRow>
+                            </items>
+                        </table>
+                        <group width="1" height="38" alignment="center" verticalAlignment="center" id="HUV-Rp-Bdl" userLabel="ActivityGroup">
+                            <items>
+                                <imageView width="30" height="30" alignment="center" verticalAlignment="center" image="Spinner" contentMode="center" animationDuration="0.65000000000000002" id="N9B-D6-kh5"/>
+                            </items>
+                            <variation key="device=watch42mm" height="62"/>
+                        </group>
+                    </items>
+                    <connections>
+                        <outlet property="activityGroup" destination="HUV-Rp-Bdl" id="sZq-ba-aJF"/>
+                        <outlet property="activityIndicator" destination="N9B-D6-kh5" id="TLF-Ag-aGq"/>
+                        <outlet property="alertGroup" destination="RQm-D8-1uA" id="8KO-Zv-vXL"/>
+                        <outlet property="alertLabel" destination="Owx-AP-NfS" id="iB8-H3-INo"/>
+                        <outlet property="table" destination="3DO-Dd-1Ph" id="0wQ-Pl-Oui"/>
+                    </connections>
+                </controller>
+            </objects>
+            <point key="canvasLocation" x="1130" y="723.5"/>
+        </scene>
+        <!--TGComposeController-->
+        <scene sceneID="ep3-eK-xyh">
+            <objects>
+                <controller identifier="TGComposeController" hidesWhenLoading="NO" id="Xxl-KR-S0j" customClass="TGComposeController">
+                    <items>
+                        <button alignment="left" id="PFh-Q1-V67" userLabel="AddContactButton">
+                            <group key="contentGroup" width="1" height="32" alignment="left" id="nfx-lb-qRM">
+                                <items>
+                                    <label alignment="left" verticalAlignment="center" id="8Hd-OQ-g3a">
+                                        <color key="textColor" red="0.62081408500671387" green="0.64553987979888916" blue="0.6959194540977478" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                        <fontDescription key="font" style="UICTFontTextStyleBody"/>
+                                    </label>
+                                </items>
+                                <color key="backgroundColor" red="0.10050980001688004" green="0.10041593015193939" blue="0.1033058762550354" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                <edgeInsets key="margins" left="7" right="7" top="0.0" bottom="0.0"/>
+                            </group>
+                            <connections>
+                                <action selector="addContactPressedAction" destination="Xxl-KR-S0j" id="BQb-NF-o92"/>
+                            </connections>
+                        </button>
+                        <button alignment="left" id="1Y0-XW-czC" userLabel="CreateMessageButton">
+                            <group key="contentGroup" width="1" height="1" heightAdjustment="-72" alignment="left" id="MpM-oY-AbO">
+                                <items>
+                                    <imageView width="16" height="19" alignment="left" hidden="YES" image="MediaLocation" contentMode="center" id="KP2-lN-4s8" userLabel="LocationIcon">
+                                        <color key="tintColor" red="0.62081408500671387" green="0.64553987979888916" blue="0.6959194540977478" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                    </imageView>
+                                    <label alignment="left" numberOfLines="0" id="Wid-QV-spp">
+                                        <color key="textColor" red="0.62081408500671387" green="0.64553987979888916" blue="0.6959194540977478" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                        <fontDescription key="font" style="UICTFontTextStyleBody"/>
+                                    </label>
+                                    <group width="0.5" height="64" alignment="left" hidden="YES" contentMode="center" id="89k-T5-kTb" userLabel="StickerGroup">
+                                        <variation key="device=watch42mm" height="72"/>
+                                    </group>
+                                </items>
+                                <color key="backgroundColor" red="0.10050980001688004" green="0.10041593015193939" blue="0.1033058762550354" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                <edgeInsets key="margins" left="7" right="7" top="7" bottom="7"/>
+                            </group>
+                            <connections>
+                                <action selector="createMessagePressedAction" destination="Xxl-KR-S0j" id="iWD-Ys-fR1"/>
+                            </connections>
+                        </button>
+                        <group width="1" alignment="left" id="vGw-Fu-net">
+                            <items>
+                                <button alignment="left" id="6Q8-In-oM3" userLabel="StickerButton">
+                                    <group key="contentGroup" width="0.5" height="37.5" alignment="left" id="fdh-fE-jCE">
+                                        <items>
+                                            <imageView alignment="center" verticalAlignment="center" image="StickerIcon" contentMode="center" id="ePK-F8-1ds"/>
+                                        </items>
+                                        <color key="backgroundColor" red="0.10050980001688004" green="0.10041593015193939" blue="0.1033058762550354" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                    </group>
+                                    <connections>
+                                        <action selector="stickerPressedAction" destination="Xxl-KR-S0j" id="gIe-8b-6HG"/>
+                                    </connections>
+                                </button>
+                                <button alignment="left" id="s60-y8-B6j" userLabel="LocationButton">
+                                    <group key="contentGroup" width="0.5" height="37.5" alignment="left" id="307-Eg-Kdr">
+                                        <items>
+                                            <imageView alignment="center" verticalAlignment="center" image="PickLocation" id="G3K-ff-i2c">
+                                                <color key="tintColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                            </imageView>
+                                        </items>
+                                        <color key="backgroundColor" red="0.10050980001688004" green="0.10041593015193939" blue="0.1033058762550354" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                    </group>
+                                    <connections>
+                                        <action selector="locationPressedAction" destination="Xxl-KR-S0j" id="Ddy-Qv-6w9"/>
+                                    </connections>
+                                </button>
+                                <button width="0.5" alignment="left" enabled="NO" id="xEa-JR-Oyd" userLabel="SendButton">
+                                    <color key="titleColor" red="0.62081408500671387" green="0.64553987979888916" blue="0.6959194540977478" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                    <color key="backgroundColor" red="0.043179497122764587" green="0.12616850435733795" blue="0.22855512797832489" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                    <fontDescription key="font" style="UICTFontTextStyleBody"/>
+                                    <connections>
+                                        <action selector="sendPressedAction" destination="Xxl-KR-S0j" id="PGB-fv-Yit"/>
+                                    </connections>
+                                </button>
+                            </items>
+                        </group>
+                    </items>
+                    <connections>
+                        <outlet property="addContactButton" destination="PFh-Q1-V67" id="oEX-Nq-maI"/>
+                        <outlet property="bottomGroup" destination="vGw-Fu-net" id="ehj-Bq-1AQ"/>
+                        <outlet property="createMessageButton" destination="1Y0-XW-czC" id="AOA-Fs-8Cj"/>
+                        <outlet property="locationButton" destination="s60-y8-B6j" id="AYi-sq-qDN"/>
+                        <outlet property="locationIcon" destination="KP2-lN-4s8" id="0hU-yk-pGO"/>
+                        <outlet property="messageLabel" destination="Wid-QV-spp" id="wmy-Z0-Wbd"/>
+                        <outlet property="recipientLabel" destination="8Hd-OQ-g3a" id="8VA-Sk-kDo"/>
+                        <outlet property="sendButton" destination="xEa-JR-Oyd" id="KQb-PJ-hkD"/>
+                        <outlet property="stickerButton" destination="6Q8-In-oM3" id="xnM-OU-zGC"/>
+                        <outlet property="stickerGroup" destination="89k-T5-kTb" id="nN1-wO-dpT"/>
+                    </connections>
+                </controller>
+            </objects>
+            <point key="canvasLocation" x="937" y="465"/>
+        </scene>
+        <!--TGForwardController-->
+        <scene sceneID="uT6-cN-QmM">
+            <objects>
+                <controller identifier="TGForwardController" hidesWhenLoading="NO" id="xce-cK-W8S" customClass="TGForwardController">
+                    <items>
+                        <table alignment="left" id="cIo-uV-BTU">
+                            <items>
+                                <tableRow identifier="TGChatsRow" id="Jft-Bz-u7G" customClass="TGChatsRowController">
+                                    <group key="rootItem" width="1" height="0.0" alignment="left" spacing="2" id="jP5-z0-BEB" userLabel="RowGroup">
+                                        <items>
+                                            <group width="22" height="1" alignment="left" spacing="0.0" id="OOu-YB-CEd" userLabel="AvatarWrapperGroup">
+                                                <items>
+                                                    <group width="19" height="19" alignment="left" radius="10" spacing="0.0" id="m2B-SF-mZY" userLabel="AvatarGroup">
+                                                        <items>
+                                                            <label width="19" height="18" alignment="center" text="O" textAlignment="center" minimumScaleFactor="0.90000000000000002" id="t2X-jq-3OE" userLabel="AvatarInitials">
+                                                                <fontDescription key="font" type="system" weight="medium" pointSize="12"/>
+                                                            </label>
+                                                        </items>
+                                                        <color key="backgroundColor" red="0.9409174919128418" green="0.45293042063713074" blue="0.69630742073059082" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        <edgeInsets key="margins" left="1" right="1" top="0.0" bottom="0.0"/>
+                                                    </group>
+                                                </items>
+                                                <edgeInsets key="margins" left="0.0" right="0.0" top="7" bottom="0.0"/>
+                                            </group>
+                                            <group width="1" widthAdjustment="-18" alignment="left" layout="vertical" spacing="0.0" id="ZuM-OA-g4P" userLabel="MessageGroup">
+                                                <items>
+                                                    <label height="17" alignment="left" text="Name" id="Ptx-Pg-MXb" userLabel="Name">
+                                                        <color key="textColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        <fontDescription key="font" type="system" weight="medium" pointSize="16"/>
+                                                    </label>
+                                                    <group width="1" alignment="left" spacing="3" id="pGh-6B-BGu" userLabel="TextGroup">
+                                                        <items>
+                                                            <label height="18" alignment="left" text="UN:" id="ODF-M0-uHm">
+                                                                <color key="textColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                                <fontDescription key="font" type="system" weight="medium" pointSize="16"/>
+                                                            </label>
+                                                            <imageView width="16" height="17" alignment="left" verticalAlignment="center" contentMode="center" id="nih-2G-6tj" userLabel="MediaIcon">
+                                                                <color key="tintColor" red="0.39493542909622192" green="0.3949236273765564" blue="0.39493030309677124" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                            </imageView>
+                                                            <label height="18" alignment="left" text="Text" id="6VU-Wo-3DB">
+                                                                <color key="textColor" red="0.48779428005218506" green="0.48777967691421509" blue="0.48778796195983887" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                                <fontDescription key="font" type="system" pointSize="16"/>
+                                                            </label>
+                                                        </items>
+                                                        <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                                    </group>
+                                                    <group width="1" height="16" alignment="left" id="hmk-2e-Chk" userLabel="MetaGroup">
+                                                        <items>
+                                                            <label alignment="left" verticalAlignment="center" text="Time" id="BDV-2m-YlU">
+                                                                <color key="textColor" red="0.48779428005218506" green="0.48777967691421509" blue="0.48778796195983887" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                                <fontDescription key="font" type="system" pointSize="13"/>
+                                                            </label>
+                                                        </items>
+                                                        <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                                    </group>
+                                                </items>
+                                                <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                            </group>
+                                        </items>
+                                        <edgeInsets key="margins" left="7" right="7" top="3" bottom="3"/>
+                                    </group>
+                                    <connections>
+                                        <outlet property="avatarGroup" destination="m2B-SF-mZY" id="e9f-SS-TRt"/>
+                                        <outlet property="avatarInitialsLabel" destination="t2X-jq-3OE" id="sJg-o3-kJk"/>
+                                        <outlet property="initialsLabel" destination="ODF-M0-uHm" id="oLA-gE-6Pl"/>
+                                        <outlet property="mediaIcon" destination="nih-2G-6tj" id="G0p-vZ-aRP"/>
+                                        <outlet property="messageTextLabel" destination="6VU-Wo-3DB" id="pF6-iA-j08"/>
+                                        <outlet property="nameLabel" destination="Ptx-Pg-MXb" id="IO2-eN-ODb"/>
+                                        <outlet property="timeLabel" destination="BDV-2m-YlU" id="zV1-EF-NoZ"/>
+                                    </connections>
+                                </tableRow>
+                            </items>
+                        </table>
+                        <imageView width="30" height="30" alignment="center" verticalAlignment="center" image="Spinner" contentMode="center" animationDuration="0.65000000000000002" id="oPR-k7-arm"/>
+                    </items>
+                    <connections>
+                        <outlet property="activityIndicator" destination="oPR-k7-arm" id="VDW-mi-4e0"/>
+                        <outlet property="table" destination="cIo-uV-BTU" id="LgV-cv-w3y"/>
+                    </connections>
+                </controller>
+            </objects>
+            <point key="canvasLocation" x="937" y="1037.5"/>
+        </scene>
+        <!--TGAudioMicAlertController-->
+        <scene sceneID="jSo-I9-2xp">
+            <objects>
+                <controller identifier="TGAudioMicAlertController" hidesWhenLoading="NO" id="IcI-Dt-5wg" customClass="TGAudioMicAlertController">
+                    <items>
+                        <group width="1" alignment="left" verticalAlignment="center" layout="vertical" spacing="15" id="70q-st-Qhh" userLabel="AlertGroup">
+                            <items>
+                                <imageView alignment="center" image="MicAccessIcon" id="DZS-iA-Gg7"/>
+                                <label alignment="center" text="Alert" textAlignment="center" numberOfLines="0" id="aKc-bd-iJw" userLabel="AlertLabel">
+                                    <color key="textColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                    <fontDescription key="font" type="system" pointSize="12"/>
+                                </label>
+                            </items>
+                            <edgeInsets key="margins" left="2" right="2" top="0.0" bottom="0.0"/>
+                        </group>
+                    </items>
+                    <connections>
+                        <outlet property="alertLabel" destination="aKc-bd-iJw" id="rqO-ki-JKR"/>
+                    </connections>
+                </controller>
+            </objects>
+            <point key="canvasLocation" x="1130" y="1037.5"/>
+        </scene>
+        <!--TGContactsController-->
+        <scene sceneID="0Pd-U9-NmH">
+            <objects>
+                <controller identifier="TGContactsController" hidesWhenLoading="NO" id="uAM-uj-kQ0" customClass="TGContactsController">
+                    <items>
+                        <table alignment="left" id="7Ul-sV-bkY">
+                            <items>
+                                <tableRow identifier="TGUserRow" id="B4T-4O-qSR" customClass="TGUserRowController">
+                                    <group key="rootItem" width="1" height="0.0" alignment="left" spacing="2" id="3rA-Ns-Ave" userLabel="RowGroup">
+                                        <items>
+                                            <group width="22" height="1" alignment="left" verticalAlignment="center" spacing="0.0" id="U6T-TR-rTg" userLabel="AvatarWrapperGroup">
+                                                <items>
+                                                    <group width="19" height="19" alignment="left" verticalAlignment="center" radius="10" spacing="0.0" id="VV2-6a-xGg" userLabel="AvatarGroup">
+                                                        <items>
+                                                            <label width="19" height="18" alignment="center" text="O" textAlignment="center" minimumScaleFactor="0.90000000000000002" id="Ddv-cq-oiQ" userLabel="AvatarInitials">
+                                                                <fontDescription key="font" type="system" weight="medium" pointSize="12"/>
+                                                            </label>
+                                                        </items>
+                                                        <color key="backgroundColor" red="0.9409174919128418" green="0.45293042063713074" blue="0.69630742073059082" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        <edgeInsets key="margins" left="1" right="1" top="0.0" bottom="0.0"/>
+                                                    </group>
+                                                </items>
+                                                <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                            </group>
+                                            <group alignment="left" verticalAlignment="center" layout="vertical" spacing="0.0" id="9Wt-2w-ayH" userLabel="UserGroup">
+                                                <items>
+                                                    <label alignment="left" text="Name" id="pwy-nS-BKU" userLabel="Name">
+                                                        <color key="textColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        <fontDescription key="font" type="system" weight="medium" pointSize="16"/>
+                                                    </label>
+                                                    <label alignment="left" text="last seen" id="gPu-uK-Rmu" userLabel="LastSeen">
+                                                        <color key="textColor" red="0.48779428005218506" green="0.48777967691421509" blue="0.48778796195983887" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        <fontDescription key="font" type="system" pointSize="13"/>
+                                                    </label>
+                                                </items>
+                                            </group>
+                                        </items>
+                                        <edgeInsets key="margins" left="7" right="7" top="3" bottom="3"/>
+                                    </group>
+                                    <connections>
+                                        <outlet property="avatarGroup" destination="VV2-6a-xGg" id="xtw-qS-jCM"/>
+                                        <outlet property="avatarInitialsLabel" destination="Ddv-cq-oiQ" id="gO6-lB-qsV"/>
+                                        <outlet property="lastSeenLabel" destination="gPu-uK-Rmu" id="bxn-nR-vQ1"/>
+                                        <outlet property="nameLabel" destination="pwy-nS-BKU" id="II4-ZA-8Sc"/>
+                                    </connections>
+                                </tableRow>
+                            </items>
+                        </table>
+                        <imageView width="30" height="30" alignment="center" verticalAlignment="center" image="Spinner" contentMode="center" animationDuration="0.65000000000000002" id="xZh-JE-ggP"/>
+                        <label alignment="center" hidden="YES" textAlignment="center" numberOfLines="0" id="FlC-BH-MFG">
+                            <string key="text">No matching
+contacts found.</string>
+                            <fontDescription key="font" type="system" pointSize="12"/>
+                        </label>
+                    </items>
+                    <connections>
+                        <outlet property="activityIndicator" destination="xZh-JE-ggP" id="bGd-Mr-PHP"/>
+                        <outlet property="alertLabel" destination="FlC-BH-MFG" id="NIb-XV-A7n"/>
+                        <outlet property="table" destination="7Ul-sV-bkY" id="4ZN-ru-jNQ"/>
+                    </connections>
+                </controller>
+            </objects>
+            <point key="canvasLocation" x="937" y="701"/>
+        </scene>
+        <!--TGProfilePhotoController-->
+        <scene sceneID="xxG-aP-ZK9">
+            <objects>
+                <controller identifier="TGProfilePhotoController" hidesWhenLoading="NO" id="uXL-7i-7ab" customClass="TGProfilePhotoController">
+                    <items>
+                        <group width="1" height="1" alignment="left" contentMode="scaleAspectFill" id="Yxn-fc-RPK" userLabel="ImageGroup">
+                            <items>
+                                <imageView width="30" height="30" alignment="center" verticalAlignment="center" image="Spinner" contentMode="center" animationDuration="0.65000000000000002" id="k3X-vU-4Vx"/>
+                            </items>
+                        </group>
+                    </items>
+                    <connections>
+                        <outlet property="activityIndicator" destination="k3X-vU-4Vx" id="x7i-EK-jDd"/>
+                        <outlet property="imageGroup" destination="Yxn-fc-RPK" id="4wF-na-Lba"/>
+                    </connections>
+                </controller>
+            </objects>
+            <point key="canvasLocation" x="1130" y="463"/>
+        </scene>
+        <!--Telegram-->
+        <scene sceneID="A9d-DL-l8r">
+            <objects>
+                <controller identifier="TGNeoChatsController" title="Telegram" hidesWhenLoading="NO" id="umr-Wa-jBL" customClass="TGNeoChatsController">
+                    <items>
+                        <group width="1" alignment="center" verticalAlignment="center" hidden="YES" layout="vertical" spacing="0.0" id="7GZ-1r-Kdn" userLabel="AuthAlertGroup">
+                            <items>
+                                <group width="1" alignment="left" spacing="0.0" id="FqJ-ic-bwk" userLabel="AlertImageGroup">
+                                    <items>
+                                        <imageView alignment="center" image="LoginIcon" contentMode="center" id="0SC-3v-t3x" userLabel="AuthAlertImage"/>
+                                    </items>
+                                    <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="15"/>
+                                </group>
+                                <label alignment="center" text="Alert" textAlignment="center" numberOfLines="0" id="mrs-fq-a0d" userLabel="AuthAlertLabel">
+                                    <color key="textColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                    <fontDescription key="font" type="system" pointSize="12"/>
+                                </label>
+                                <label alignment="center" hidden="YES" text="Desc" textAlignment="center" numberOfLines="0" id="Tvl-XX-zzg" userLabel="AuthAlertDescLabel">
+                                    <color key="textColor" red="0.61214590072631836" green="0.64118564128875732" blue="0.69138973951339722" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                    <fontDescription key="font" type="system" pointSize="12"/>
+                                </label>
+                            </items>
+                            <edgeInsets key="margins" left="2" right="2" top="0.0" bottom="0.0"/>
+                        </group>
+                        <table alignment="left" id="qs4-cZ-Fvg">
+                            <items>
+                                <tableRow identifier="TGNeoChatRow" id="nkH-dz-a10" customClass="TGNeoChatRowController">
+                                    <group key="rootItem" width="1" height="0.0" alignment="left" spacing="0.0" id="o87-aq-68R">
+                                        <items>
+                                            <group width="1" height="57" alignment="left" layout="vertical" spacing="0.0" id="wUQ-wj-fEK">
+                                                <items>
+                                                    <group width="19" height="19" alignment="left" radius="10" spacing="0.0" id="2JW-gM-0L8" userLabel="AvatarGroup">
+                                                        <items>
+                                                            <label width="19" height="18" alignment="center" hidden="YES" text="O" textAlignment="center" minimumScaleFactor="0.90000000000000002" id="oCf-V0-DPW" userLabel="AvatarInitials">
+                                                                <fontDescription key="font" type="system" weight="medium" pointSize="12"/>
+                                                            </label>
+                                                        </items>
+                                                        <color key="backgroundColor" red="0.10050980001688004" green="0.10041593015193939" blue="0.1033058762550354" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        <edgeInsets key="margins" left="1" right="1" top="0.0" bottom="0.0"/>
+                                                    </group>
+                                                    <group height="15" alignment="right" verticalAlignment="bottom" hidden="YES" radius="7.5" spacing="0.0" id="avW-pG-m6d" userLabel="StatusGroup">
+                                                        <items>
+                                                            <label alignment="center" verticalAlignment="center" text="0" textAlignment="center" id="w4b-XD-siz" userLabel="StatusLabel">
+                                                                <color key="textColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                                <fontDescription key="font" type="system" weight="medium" pointSize="12"/>
+                                                            </label>
+                                                        </items>
+                                                        <color key="backgroundColor" red="0.15550534427165985" green="0.57037848234176636" blue="0.8720671534538269" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        <edgeInsets key="margins" left="4" right="4" top="0.0" bottom="0.0"/>
+                                                    </group>
+                                                </items>
+                                                <edgeInsets key="margins" left="7" right="3" top="10" bottom="3"/>
+                                            </group>
+                                        </items>
+                                        <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                    </group>
+                                    <connections>
+                                        <outlet property="avatarGroup" destination="2JW-gM-0L8" id="vLe-fa-CTw"/>
+                                        <outlet property="avatarLabel" destination="oCf-V0-DPW" id="I1X-hW-eKR"/>
+                                        <outlet property="contentGroup" destination="wUQ-wj-fEK" id="qW0-hh-wix"/>
+                                        <outlet property="statusGroup" destination="avW-pG-m6d" id="6bX-Kw-vaL"/>
+                                        <outlet property="statusLabel" destination="w4b-XD-siz" id="dVb-yB-qSc"/>
+                                    </connections>
+                                </tableRow>
+                            </items>
+                        </table>
+                        <imageView width="30" height="30" alignment="center" verticalAlignment="center" image="Spinner" contentMode="center" animationDuration="0.65000000000000002" id="RtN-4k-baS"/>
+                    </items>
+                    <connections>
+                        <outlet property="activityIndicator" destination="RtN-4k-baS" id="cCq-Tr-gVy"/>
+                        <outlet property="authAlertDescLabel" destination="Tvl-XX-zzg" id="XZY-4m-528"/>
+                        <outlet property="authAlertGroup" destination="7GZ-1r-Kdn" id="Hhn-RD-Se5"/>
+                        <outlet property="authAlertImage" destination="0SC-3v-t3x" id="0qj-89-YoY"/>
+                        <outlet property="authAlertImageGroup" destination="FqJ-ic-bwk" id="9dg-Pj-cNo"/>
+                        <outlet property="authAlertLabel" destination="mrs-fq-a0d" id="EhR-Nq-efd"/>
+                        <outlet property="table" destination="qs4-cZ-Fvg" id="pte-GO-hTy"/>
+                    </connections>
+                </controller>
+            </objects>
+            <point key="canvasLocation" x="328" y="103"/>
+        </scene>
+        <!--TGMessageViewController-->
+        <scene sceneID="GvN-hy-nx6">
+            <objects>
+                <controller identifier="TGMessageViewController" hidesWhenLoading="NO" id="tfd-xH-kxd" customClass="TGMessageViewController">
+                    <items>
+                        <table alignment="left" id="ayv-Lt-gnN">
+                            <items>
+                                <tableRow identifier="TGUserRow" id="Dfl-MW-j5y" customClass="TGUserRowController">
+                                    <group key="rootItem" width="1" height="0.0" alignment="left" spacing="2" id="6MN-eE-b4P" userLabel="RowGroup">
+                                        <items>
+                                            <group width="22" height="1" alignment="left" spacing="0.0" id="Oec-Rl-5Kz" userLabel="AvatarWrapperGroup">
+                                                <items>
+                                                    <group width="19" height="19" alignment="left" verticalAlignment="center" radius="10" spacing="0.0" id="BFP-bM-cY5" userLabel="AvatarGroup">
+                                                        <items>
+                                                            <label width="19" height="18" alignment="center" text="O" textAlignment="center" minimumScaleFactor="0.90000000000000002" id="wvx-ky-HMv" userLabel="AvatarInitials">
+                                                                <fontDescription key="font" type="system" weight="medium" pointSize="12"/>
+                                                            </label>
+                                                        </items>
+                                                        <color key="backgroundColor" red="0.9409174919128418" green="0.45293042063713074" blue="0.69630742073059082" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        <edgeInsets key="margins" left="1" right="1" top="0.0" bottom="0.0"/>
+                                                    </group>
+                                                </items>
+                                                <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                            </group>
+                                            <label alignment="left" verticalAlignment="center" text="Name" id="h0t-5m-YPd" userLabel="Name">
+                                                <color key="textColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                <fontDescription key="font" type="system" weight="medium" pointSize="16"/>
+                                            </label>
+                                        </items>
+                                        <edgeInsets key="margins" left="7" right="7" top="9" bottom="9"/>
+                                    </group>
+                                    <connections>
+                                        <outlet property="avatarGroup" destination="BFP-bM-cY5" id="Ygd-UH-KSo"/>
+                                        <outlet property="avatarInitialsLabel" destination="wvx-ky-HMv" id="KRC-no-dyh"/>
+                                        <outlet property="nameLabel" destination="h0t-5m-YPd" id="lFr-EX-riy"/>
+                                    </connections>
+                                </tableRow>
+                                <tableRow identifier="TGMessageViewMessageRow" selectable="NO" id="NIk-WK-rUi" customClass="TGMessageViewMessageRowController">
+                                    <group key="rootItem" width="1" height="0.0" alignment="left" layout="vertical" id="uE6-0y-Qzi" userLabel="RowGroup">
+                                        <items>
+                                            <button alignment="left" id="5HL-mk-zQK" userLabel="ForwardHeader">
+                                                <group key="contentGroup" width="1" alignment="left" layout="vertical" spacing="0.0" id="0sw-2w-SwS">
+                                                    <items>
+                                                        <label alignment="left" verticalAlignment="center" text="Forwarded from" id="OLg-bD-2cG" userLabel="ForwardTitle">
+                                                            <color key="textColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                            <fontDescription key="font" type="system" pointSize="12"/>
+                                                        </label>
+                                                        <label alignment="left" verticalAlignment="center" text="Name" id="xo7-Bw-tBc" userLabel="ForwardFrom">
+                                                            <color key="textColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                            <fontDescription key="font" type="system" weight="medium" pointSize="12"/>
+                                                        </label>
+                                                    </items>
+                                                    <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                                                    <edgeInsets key="margins" left="3" right="3" top="0.0" bottom="0.0"/>
+                                                </group>
+                                                <connections>
+                                                    <action selector="forwardButtonPressedAction" destination="NIk-WK-rUi" id="t8C-0I-HOw"/>
+                                                </connections>
+                                            </button>
+                                            <group width="1" alignment="left" spacing="4" id="J4J-Ra-xp4" userLabel="ReplyHeader">
+                                                <items>
+                                                    <group width="2" height="26" alignment="left" verticalAlignment="center" radius="0.0" spacing="0.0" id="uC0-Fd-Mhl" userLabel="ReplyLine">
+                                                        <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                                    </group>
+                                                    <group width="26" height="26" alignment="left" verticalAlignment="center" radius="2" id="seG-Ag-ttw" userLabel="ReplyImage">
+                                                        <color key="backgroundColor" red="0.13532151281833649" green="0.13521988689899445" blue="0.13833095133304596" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                    </group>
+                                                    <group width="1" alignment="left" layout="vertical" spacing="0.0" id="G9j-qG-l18" userLabel="ReplyMessage">
+                                                        <items>
+                                                            <label alignment="left" text="Name" id="x5q-EG-ayD" userLabel="ReplyAuthor">
+                                                                <fontDescription key="font" type="system" weight="medium" pointSize="12"/>
+                                                            </label>
+                                                            <label alignment="left" text="Text" id="e0G-l6-VwZ" userLabel="ReplyText">
+                                                                <color key="textColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                                <fontDescription key="font" type="system" pointSize="12"/>
+                                                            </label>
+                                                        </items>
+                                                        <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                                    </group>
+                                                </items>
+                                                <edgeInsets key="margins" left="3" right="0.0" top="0.0" bottom="0.0"/>
+                                            </group>
+                                            <group width="1" height="1" alignment="center" contentMode="scaleAspectFit" layout="vertical" radius="10" spacing="0.0" id="uL1-HB-Jix" userLabel="MediaGroup">
+                                                <items>
+                                                    <imageView width="30" height="30" alignment="center" verticalAlignment="center" image="Spinner" contentMode="center" animationDuration="0.65000000000000002" id="GNc-BX-GpO"/>
+                                                    <button alignment="center" verticalAlignment="center" id="lJu-hi-GNT" userLabel="PlayButton">
+                                                        <group key="contentGroup" width="40" height="40" alignment="left" radius="20" id="jjr-Wk-skG">
+                                                            <items>
+                                                                <imageView width="40" height="40" alignment="center" verticalAlignment="center" image="RemotePlayVideo" contentMode="center" id="YQe-pq-zKp" userLabel="PlayIcon"/>
+                                                            </items>
+                                                            <color key="backgroundColor" red="0.89292949438095093" green="0.91148859262466431" blue="0.93112039566040039" alpha="0.80000000000000004" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        </group>
+                                                        <connections>
+                                                            <action selector="playButtonPressedAction" destination="NIk-WK-rUi" id="02F-xm-GRi"/>
+                                                        </connections>
+                                                    </button>
+                                                    <group alignment="right" verticalAlignment="bottom" radius="10" id="FDG-O6-eYj" userLabel="DurationGroup">
+                                                        <items>
+                                                            <label alignment="left" text="2:34" id="ASd-0Y-EQf" userLabel="Duration">
+                                                                <color key="textColor" red="0.24618944525718689" green="0.24618205428123474" blue="0.24618625640869141" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                                <fontDescription key="font" type="system" pointSize="12"/>
+                                                            </label>
+                                                        </items>
+                                                        <color key="backgroundColor" red="0.89292949438095093" green="0.91148859262466431" blue="0.93112039566040039" alpha="0.80000000000000004" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        <edgeInsets key="margins" left="6" right="6" top="2" bottom="2"/>
+                                                    </group>
+                                                </items>
+                                                <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                                                <edgeInsets key="margins" left="4" right="4" top="4" bottom="4"/>
+                                            </group>
+                                            <group width="1" alignment="left" layout="vertical" radius="10" spacing="0.0" id="3qt-rb-OLb" userLabel="LocationGroup">
+                                                <items>
+                                                    <map height="92" alignment="left" id="UPJ-sb-Y3G"/>
+                                                </items>
+                                            </group>
+                                            <button alignment="left" id="1dD-q9-1ZG" userLabel="ContactButton">
+                                                <group key="contentGroup" width="1" alignment="left" spacing="5" id="ceH-22-DvO">
+                                                    <items>
+                                                        <group width="19" height="19" alignment="left" verticalAlignment="center" radius="10" spacing="0.0" id="mVM-IY-f3h" userLabel="AvatarGroup">
+                                                            <items>
+                                                                <label width="19" height="18" alignment="center" text="O" textAlignment="center" minimumScaleFactor="0.90000000000000002" id="hD9-Rb-Ne1" userLabel="AvatarInitials">
+                                                                    <fontDescription key="font" type="system" weight="medium" pointSize="12"/>
+                                                                </label>
+                                                            </items>
+                                                            <color key="backgroundColor" red="0.9409174919128418" green="0.45293042063713074" blue="0.69630742073059082" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                            <edgeInsets key="margins" left="1" right="1" top="0.0" bottom="0.0"/>
+                                                        </group>
+                                                        <group alignment="left" verticalAlignment="center" layout="vertical" spacing="0.0" id="SNC-kk-T1p" userLabel="ContactMetaGroup">
+                                                            <items>
+                                                                <label alignment="left" text="Name" id="NcR-BI-vWb">
+                                                                    <color key="textColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                                    <fontDescription key="font" type="system" weight="medium" pointSize="12"/>
+                                                                </label>
+                                                                <label alignment="left" text="Phone" id="R1e-dx-sbf">
+                                                                    <color key="textColor" red="0.61214590072631836" green="0.64118564128875732" blue="0.69138973951339722" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                                    <fontDescription key="font" type="system" pointSize="12"/>
+                                                                </label>
+                                                            </items>
+                                                            <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                                        </group>
+                                                    </items>
+                                                    <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                                                    <edgeInsets key="margins" left="1" right="1" top="2" bottom="1"/>
+                                                </group>
+                                                <connections>
+                                                    <action selector="contactButtonPressedAction" destination="NIk-WK-rUi" id="JJm-EH-5Go"/>
+                                                </connections>
+                                            </button>
+                                            <group width="1" alignment="left" spacing="5" id="e7S-FV-a7G" userLabel="FileGroup">
+                                                <items>
+                                                    <imageView width="26" height="26" alignment="left" verticalAlignment="center" hidden="YES" image="PickLocation" contentMode="center" id="JMH-Rl-Mjf" userLabel="VenueIcon">
+                                                        <color key="tintColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                    </imageView>
+                                                    <button alignment="left" verticalAlignment="center" hidden="YES" id="CKs-Ha-1tZ" userLabel="AudioButton">
+                                                        <group key="contentGroup" width="26" height="26" alignment="left" radius="0.0" spacing="0.0" id="ZKr-oa-tPu">
+                                                            <items>
+                                                                <imageView width="26" height="26" alignment="left" image="MediaAudioPlay" contentMode="center" id="R5l-WM-ym7">
+                                                                    <color key="tintColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                                </imageView>
+                                                            </items>
+                                                            <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                                                            <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                                        </group>
+                                                        <connections>
+                                                            <action selector="playButtonPressedAction" destination="NIk-WK-rUi" id="3B1-SZ-sCn"/>
+                                                        </connections>
+                                                    </button>
+                                                    <group width="26" height="26" alignment="left" verticalAlignment="center" backgroundImage="File.png" contentMode="center" radius="0.0" id="jfK-ua-sLy" userLabel="FileIconGroup">
+                                                        <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                                                    </group>
+                                                    <group alignment="left" verticalAlignment="center" layout="vertical" spacing="0.0" id="v57-8E-T5L" userLabel="FileMetaGroup">
+                                                        <items>
+                                                            <label alignment="left" text="File Name" id="bUK-Dx-Liq">
+                                                                <color key="textColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                                <fontDescription key="font" type="system" weight="medium" pointSize="12"/>
+                                                            </label>
+                                                            <label alignment="left" text="Size" id="Cuu-hD-s5V">
+                                                                <color key="textColor" red="0.61214590072631836" green="0.64118564128875732" blue="0.69138973951339722" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                                <fontDescription key="font" type="system" pointSize="12"/>
+                                                            </label>
+                                                        </items>
+                                                        <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                                    </group>
+                                                </items>
+                                                <edgeInsets key="margins" left="1" right="1" top="2" bottom="1"/>
+                                            </group>
+                                            <group width="84" height="84" alignment="left" contentMode="center" id="V5j-v0-xZg" userLabel="StickerGroup">
+                                                <variation key="device=watch38mm" height="72" width="72"/>
+                                                <variation key="device=watch40mm" height="88" width="88"/>
+                                                <variation key="device=watch44mm" height="100" width="100"/>
+                                            </group>
+                                            <group width="1" alignment="left" id="3c1-ON-gVv" userLabel="TextGroup">
+                                                <items>
+                                                    <label alignment="left" text="Text" textAlignment="left" numberOfLines="0" id="yZh-D1-dhw" userLabel="MessageText">
+                                                        <color key="textColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        <fontDescription key="font" type="system" pointSize="16"/>
+                                                    </label>
+                                                </items>
+                                                <edgeInsets key="margins" left="3" right="3" top="0.0" bottom="0.0"/>
+                                            </group>
+                                        </items>
+                                        <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                                        <edgeInsets key="margins" left="0.0" right="0.0" top="3" bottom="0.0"/>
+                                    </group>
+                                    <connections>
+                                        <outlet property="activityIndicator" destination="GNc-BX-GpO" id="orK-ju-Ius"/>
+                                        <outlet property="audioButton" destination="CKs-Ha-1tZ" id="ADg-9M-EQE"/>
+                                        <outlet property="audioIcon" destination="R5l-WM-ym7" id="cVq-kZ-wmu"/>
+                                        <outlet property="avatarGroup" destination="mVM-IY-f3h" id="tlo-wf-SiC"/>
+                                        <outlet property="avatarInitialsLabel" destination="hD9-Rb-Ne1" id="muc-J1-OIT"/>
+                                        <outlet property="contactButton" destination="1dD-q9-1ZG" id="UlD-Us-DVE"/>
+                                        <outlet property="durationGroup" destination="FDG-O6-eYj" id="r3p-FO-8Re"/>
+                                        <outlet property="durationLabel" destination="ASd-0Y-EQf" id="nd9-4X-dNR"/>
+                                        <outlet property="fileGroup" destination="e7S-FV-a7G" id="pTR-Us-TdT"/>
+                                        <outlet property="fileIconGroup" destination="jfK-ua-sLy" id="rHd-Vj-RAd"/>
+                                        <outlet property="forwardFromLabel" destination="xo7-Bw-tBc" id="vR1-pL-Sht"/>
+                                        <outlet property="forwardHeaderButton" destination="5HL-mk-zQK" id="f5L-CE-yMK"/>
+                                        <outlet property="forwardTitleLabel" destination="OLg-bD-2cG" id="9Su-gb-nhA"/>
+                                        <outlet property="map" destination="UPJ-sb-Y3G" id="Aqk-e3-NCa"/>
+                                        <outlet property="mapGroup" destination="3qt-rb-OLb" id="ie4-6w-MJ9"/>
+                                        <outlet property="mediaGroup" destination="uL1-HB-Jix" id="rNh-Vl-NGG"/>
+                                        <outlet property="messageTextLabel" destination="yZh-D1-dhw" id="vxI-p7-jBW"/>
+                                        <outlet property="nameLabel" destination="NcR-BI-vWb" id="DqX-Vf-uDb"/>
+                                        <outlet property="phoneLabel" destination="R1e-dx-sbf" id="W3o-kC-oqw"/>
+                                        <outlet property="playButton" destination="lJu-hi-GNT" id="wXK-ze-qGE"/>
+                                        <outlet property="replyAuthorNameLabel" destination="x5q-EG-ayD" id="Pcz-BH-Yeg"/>
+                                        <outlet property="replyHeaderGroup" destination="J4J-Ra-xp4" id="8b7-p5-y3f"/>
+                                        <outlet property="replyHeaderImageGroup" destination="seG-Ag-ttw" id="pHS-MC-WgX"/>
+                                        <outlet property="replyMessageTextLabel" destination="e0G-l6-VwZ" id="xZh-35-rgi"/>
+                                        <outlet property="stickerGroup" destination="V5j-v0-xZg" id="E09-ur-qZm"/>
+                                        <outlet property="subtitleLabel" destination="Cuu-hD-s5V" id="csf-eQ-U9N"/>
+                                        <outlet property="titleLabel" destination="bUK-Dx-Liq" id="0se-3M-cOu"/>
+                                        <outlet property="venueIcon" destination="JMH-Rl-Mjf" id="C8e-Du-Huj"/>
+                                    </connections>
+                                </tableRow>
+                                <tableRow identifier="TGMessageViewWebPageRow" selectable="NO" id="Mec-iN-HTQ" customClass="TGMessageViewWebPageRowController">
+                                    <group key="rootItem" width="1" height="0.0" alignment="left" spacing="0.0" id="cc0-WQ-KcI" userLabel="RowGroup">
+                                        <items>
+                                            <group width="10" height="1" alignment="left" id="oiI-Ee-x1N">
+                                                <items>
+                                                    <group width="2" height="1" alignment="center" radius="0.0" spacing="0.0" id="Np5-1C-ogT">
+                                                        <color key="backgroundColor" red="0.54314166307449341" green="0.57561486959457397" blue="0.6244390606880188" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                                    </group>
+                                                </items>
+                                            </group>
+                                            <group width="1" widthAdjustment="-10" alignment="left" layout="vertical" spacing="0.0" id="dZ8-N9-r0d">
+                                                <items>
+                                                    <label alignment="left" text="Site" id="A6g-LX-5ni" userLabel="SiteLabel">
+                                                        <color key="textColor" red="0.61214590072631836" green="0.64118564128875732" blue="0.69138973951339722" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        <fontDescription key="font" type="system" pointSize="13"/>
+                                                    </label>
+                                                    <group width="1" alignment="left" id="k2G-Ta-Vc5" userLabel="HeaderGroup">
+                                                        <items>
+                                                            <label alignment="left" text="Article Title" numberOfLines="4" id="VPN-dp-dRi" userLabel="TitleLabel">
+                                                                <color key="textColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                                <fontDescription key="font" type="system" weight="medium" pointSize="13"/>
+                                                            </label>
+                                                            <group width="26" height="26" alignment="right" contentMode="scaleAspectFill" radius="4" id="5cC-eK-MeA" userLabel="TitleImageGroup">
+                                                                <color key="backgroundColor" red="0.13532151281833649" green="0.13521988689899445" blue="0.13833095133304596" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                            </group>
+                                                        </items>
+                                                    </group>
+                                                    <label alignment="left" text="Text" numberOfLines="10" id="zqg-to-DmT" userLabel="TextLabel">
+                                                        <fontDescription key="font" style="UICTFontTextStyleCaption1"/>
+                                                    </label>
+                                                    <group width="1" alignment="left" spacing="0.0" id="1w7-I1-YI2">
+                                                        <items>
+                                                            <group width="1" alignment="left" contentMode="scaleAspectFill" radius="10" id="C8l-5v-Hre" userLabel="ImageGroup">
+                                                                <items>
+                                                                    <imageView width="30" height="30" alignment="center" verticalAlignment="center" image="Spinner" contentMode="center" animationDuration="0.65000000000000002" id="FcJ-nh-1kU"/>
+                                                                    <group alignment="right" verticalAlignment="bottom" hidden="YES" radius="10" id="MHb-Wc-Qgd" userLabel="DurationGroup">
+                                                                        <items>
+                                                                            <label alignment="left" text="2:34" id="UEz-AF-a5J" userLabel="Duration">
+                                                                                <color key="textColor" red="0.24618944525718689" green="0.24618205428123474" blue="0.24618625640869141" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                                                <fontDescription key="font" type="system" pointSize="12"/>
+                                                                            </label>
+                                                                        </items>
+                                                                        <color key="backgroundColor" red="0.89292949438095093" green="0.91148859262466431" blue="0.93112039566040039" alpha="0.80000000000000004" colorSpace="custom" customColorSpace="sRGB"/>
+                                                                        <edgeInsets key="margins" left="6" right="6" top="2" bottom="2"/>
+                                                                    </group>
+                                                                </items>
+                                                            </group>
+                                                        </items>
+                                                        <edgeInsets key="margins" left="0.0" right="0.0" top="3" bottom="0.0"/>
+                                                    </group>
+                                                </items>
+                                                <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                            </group>
+                                        </items>
+                                        <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                                        <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                    </group>
+                                    <connections>
+                                        <outlet property="activityIndicator" destination="FcJ-nh-1kU" id="Mpt-Ul-Bhv"/>
+                                        <outlet property="durationGroup" destination="MHb-Wc-Qgd" id="gQY-3z-lUm"/>
+                                        <outlet property="durationLabel" destination="UEz-AF-a5J" id="wHl-lF-2LT"/>
+                                        <outlet property="imageGroup" destination="C8l-5v-Hre" id="hQy-AR-oKu"/>
+                                        <outlet property="siteNameLabel" destination="A6g-LX-5ni" id="Mfq-OV-zdc"/>
+                                        <outlet property="textLabel" destination="zqg-to-DmT" id="Rwv-B5-bnL"/>
+                                        <outlet property="titleImageGroup" destination="5cC-eK-MeA" id="fSK-Pr-87T"/>
+                                        <outlet property="titleLabel" destination="VPN-dp-dRi" id="9LC-Rh-goA"/>
+                                    </connections>
+                                </tableRow>
+                                <tableRow identifier="TGMessageViewFooter" selectable="NO" id="1Hh-aR-wxz" customClass="TGMessageViewFooterController">
+                                    <group key="rootItem" width="1" height="0.0" alignment="left" layout="vertical" spacing="2" id="xqV-Sa-yHT" userLabel="RowGroup">
+                                        <items>
+                                            <group width="1" alignment="left" id="0RZ-ju-o8i" userLabel="MetaGroup">
+                                                <items>
+                                                    <label alignment="left" text="Date" id="Nxu-ES-aFB" userLabel="DateLabel">
+                                                        <color key="textColor" red="0.61214590072631836" green="0.64118564128875732" blue="0.69138973951339722" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        <fontDescription key="font" style="UICTFontTextStyleFootnote"/>
+                                                    </label>
+                                                    <label alignment="right" text="Time" id="Bg8-7r-Qar" userLabel="TimeLabel">
+                                                        <color key="textColor" red="0.61214590072631836" green="0.64118564128875732" blue="0.69138973951339722" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        <fontDescription key="font" style="UICTFontTextStyleFootnote"/>
+                                                    </label>
+                                                </items>
+                                                <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="4"/>
+                                            </group>
+                                            <group width="1" alignment="left" id="sNj-bH-Ixp">
+                                                <items>
+                                                    <button alignment="left" id="rBO-C4-etS" userLabel="ForwardButton">
+                                                        <group key="contentGroup" width="0.5" alignment="left" id="Ca2-qt-UAS">
+                                                            <items>
+                                                                <label alignment="center" verticalAlignment="center" text="Forward" minimumScaleFactor="0.70000000000000007" id="gmz-9g-lxa">
+                                                                    <fontDescription key="font" style="UICTFontTextStyleBody"/>
+                                                                </label>
+                                                            </items>
+                                                            <color key="backgroundColor" red="0.13532151281833649" green="0.13521988689899445" blue="0.13833095133304596" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                            <edgeInsets key="margins" left="2" right="2" top="10" bottom="10"/>
+                                                        </group>
+                                                        <connections>
+                                                            <action selector="forwardButtonPressedAction" destination="1Hh-aR-wxz" id="Wfy-NV-rL2"/>
+                                                        </connections>
+                                                    </button>
+                                                    <button alignment="left" id="tXA-Wr-kO8" userLabel="ReplyButton">
+                                                        <group key="contentGroup" width="0.5" alignment="left" id="M9B-vH-KIU">
+                                                            <items>
+                                                                <label alignment="center" verticalAlignment="center" text="Reply" minimumScaleFactor="0.70000000000000007" id="vrf-Wa-mes">
+                                                                    <fontDescription key="font" style="UICTFontTextStyleBody"/>
+                                                                </label>
+                                                            </items>
+                                                            <color key="backgroundColor" red="0.13532151281833649" green="0.13521988689899445" blue="0.13833095133304596" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                            <edgeInsets key="margins" left="2" right="2" top="10" bottom="10"/>
+                                                        </group>
+                                                        <connections>
+                                                            <action selector="replyButtonPressedAction" destination="1Hh-aR-wxz" id="Gqn-8A-Hzo"/>
+                                                        </connections>
+                                                    </button>
+                                                </items>
+                                            </group>
+                                            <button alignment="left" id="kvN-p0-r41" userLabel="ViewButton">
+                                                <group key="contentGroup" width="1" alignment="left" id="E4s-LH-3yD">
+                                                    <items>
+                                                        <label alignment="center" verticalAlignment="center" text="View on phone" minimumScaleFactor="0.70000000000000007" id="J8D-Ro-XwE">
+                                                            <fontDescription key="font" style="UICTFontTextStyleBody"/>
+                                                        </label>
+                                                    </items>
+                                                    <color key="backgroundColor" red="0.13532151281833649" green="0.13521988689899445" blue="0.13833095133304596" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                    <edgeInsets key="margins" left="2" right="2" top="10" bottom="10"/>
+                                                </group>
+                                                <connections>
+                                                    <action selector="viewButtonPressedAction" destination="1Hh-aR-wxz" id="yKG-uy-T5R"/>
+                                                </connections>
+                                            </button>
+                                        </items>
+                                        <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                                        <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                    </group>
+                                    <connections>
+                                        <outlet property="dateLabel" destination="Nxu-ES-aFB" id="tFc-Na-aWe"/>
+                                        <outlet property="forwardButton" destination="rBO-C4-etS" id="Xng-WN-RC0"/>
+                                        <outlet property="forwardLabel" destination="gmz-9g-lxa" id="nAb-Sb-AiC"/>
+                                        <outlet property="replyButton" destination="tXA-Wr-kO8" id="qeP-D8-TJD"/>
+                                        <outlet property="replyLabel" destination="vrf-Wa-mes" id="cZJ-F0-Un4"/>
+                                        <outlet property="timeLabel" destination="Bg8-7r-Qar" id="XlK-Tz-a8j"/>
+                                        <outlet property="viewButton" destination="kvN-p0-r41" id="dKv-Lh-y1m"/>
+                                        <outlet property="viewLabel" destination="J8D-Ro-XwE" id="UPi-Lo-FNo"/>
+                                    </connections>
+                                </tableRow>
+                            </items>
+                        </table>
+                        <imageView width="30" height="30" alignment="center" verticalAlignment="center" image="Spinner" contentMode="center" animationDuration="0.65000000000000002" id="YpL-kz-s57"/>
+                    </items>
+                    <connections>
+                        <outlet property="activityIndicator" destination="YpL-kz-s57" id="rG3-Zy-Lsq"/>
+                        <outlet property="table" destination="ayv-Lt-gnN" id="3IV-p2-OsT"/>
+                    </connections>
+                </controller>
+            </objects>
+            <point key="canvasLocation" x="729" y="757.25"/>
+        </scene>
+        <!--Static M-->
+        <scene sceneID="uW0-5W-J6c">
+            <objects>
+                <notificationController backgroundImage="BubbleNotification" spacing="0.0" id="JcB-1W-jcv" userLabel="Static M">
+                    <items>
+                        <group width="1" alignment="left" layout="vertical" radius="0.0" spacing="0.0" id="11B-ry-7nl">
+                            <items>
+                                <label alignment="left" text="Name" id="TZ0-FP-E5f">
+                                    <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                    <fontDescription key="font" type="system" weight="medium" pointSize="16"/>
+                                </label>
+                                <label alignment="left" text="Text" numberOfLines="0" id="RMV-rW-0qs">
+                                    <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                    <fontDescription key="font" style="UICTFontTextStyleBody"/>
+                                </label>
+                            </items>
+                            <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                            <edgeInsets key="margins" left="8" right="8" top="10" bottom="11"/>
+                        </group>
+                    </items>
+                    <notificationCategory key="notificationCategory" identifier="m" id="MXx-dC-nsP">
+                        <color key="titleColor" red="0.10051588710000001" green="0.10051287709999999" blue="0.1005146056" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <color key="sashColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                    </notificationCategory>
+                    <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                    <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="4"/>
+                    <connections>
+                        <outlet property="notificationAlertLabel" destination="RMV-rW-0qs" id="buR-qh-N93"/>
+                        <outlet property="notificationTitleLabel" destination="TZ0-FP-E5f" id="5d7-td-uBA"/>
+                        <segue destination="RQh-4n-Jyy" kind="relationship" relationship="dynamicNotificationInterface" id="wDy-DD-bRl"/>
+                        <segue destination="RQh-4n-Jyy" kind="relationship" relationship="dynamicInteractiveNotificationInterface" id="MKi-5u-rhv"/>
+                    </connections>
+                </notificationController>
+            </objects>
+            <point key="canvasLocation" x="263" y="875"/>
+        </scene>
+        <!--Dynamic M-->
+        <scene sceneID="aFy-up-fB6">
+            <objects>
+                <controller backgroundImage="BubbleNotification" id="RQh-4n-Jyy" userLabel="Dynamic M" customClass="TGNotificationController">
+                    <items>
+                        <group width="1" alignment="left" layout="vertical" radius="0.0" spacing="0.0" id="Dd4-YD-hsp">
+                            <items>
+                                <group width="1" alignment="left" layout="vertical" spacing="0.0" id="ZlG-DJ-Ctv">
+                                    <items>
+                                        <label alignment="left" hidden="YES" text="Chat Title" id="frP-KX-c0b">
+                                            <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                            <fontDescription key="font" type="system" weight="medium" pointSize="12"/>
+                                        </label>
+                                        <label alignment="left" hidden="YES" text="Name" id="JUM-Bm-hxM">
+                                            <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                            <fontDescription key="font" type="system" weight="medium" pointSize="16"/>
+                                        </label>
+                                        <group width="1" height="29" alignment="left" hidden="YES" layout="vertical" spacing="0.0" id="r84-Ll-prj">
+                                            <items>
+                                                <label alignment="left" verticalAlignment="center" text="Forwarded from" id="Br6-65-UTH" userLabel="ForwardTitle">
+                                                    <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                    <fontDescription key="font" type="system" pointSize="12"/>
+                                                </label>
+                                                <label alignment="left" verticalAlignment="center" text="Name" id="DI0-a4-1u0" userLabel="ForwardFrom">
+                                                    <color key="textColor" red="0.1131299585" green="0.50641471149999995" blue="0.96399867530000005" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                    <fontDescription key="font" type="system" weight="medium" pointSize="12"/>
+                                                </label>
+                                            </items>
+                                            <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                                            <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                        </group>
+                                        <group width="1" height="29" alignment="left" hidden="YES" spacing="4" id="Th4-sR-kDF" userLabel="ReplyHeader">
+                                            <items>
+                                                <group width="2" height="26" alignment="left" verticalAlignment="center" radius="0.0" spacing="0.0" id="n46-ZY-9jJ" userLabel="ReplyLine">
+                                                    <color key="backgroundColor" red="0.1131299585" green="0.50641471149999995" blue="0.96399867530000005" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                    <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                                </group>
+                                                <group width="26" height="26" alignment="left" verticalAlignment="center" radius="2" id="FmK-ex-jTs" userLabel="ReplyImage">
+                                                    <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.089999999999999997" colorSpace="custom" customColorSpace="sRGB"/>
+                                                </group>
+                                                <group width="1" alignment="left" layout="vertical" spacing="0.0" id="tQQ-et-qfm" userLabel="ReplyMessage">
+                                                    <items>
+                                                        <label alignment="left" text="Name" id="ifF-tf-ens" userLabel="ReplyAuthor">
+                                                            <color key="textColor" red="0.1131299585" green="0.50641471149999995" blue="0.96399867530000005" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                            <fontDescription key="font" type="system" weight="medium" pointSize="12"/>
+                                                        </label>
+                                                        <label alignment="left" text="Text" id="tWb-zc-3NN" userLabel="ReplyText">
+                                                            <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                            <fontDescription key="font" type="system" pointSize="12"/>
+                                                        </label>
+                                                    </items>
+                                                    <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                                </group>
+                                            </items>
+                                            <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                        </group>
+                                        <label alignment="left" text="Text" numberOfLines="0" id="t9S-qg-lnm">
+                                            <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                            <fontDescription key="font" style="UICTFontTextStyleBody"/>
+                                        </label>
+                                    </items>
+                                    <edgeInsets key="margins" left="8" right="8" top="0.0" bottom="5"/>
+                                </group>
+                                <group width="1" alignment="left" hidden="YES" layout="vertical" id="CMM-a2-p1K" userLabel="WrapperGroup">
+                                    <items>
+                                        <group width="1" alignment="left" layout="vertical" radius="10" spacing="0.0" id="r4K-n7-uKy" userLabel="LocationGroup">
+                                            <items>
+                                                <map height="92" alignment="left" id="PY6-r9-1nn"/>
+                                            </items>
+                                            <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                        </group>
+                                        <group width="1" alignment="left" spacing="5" id="XJr-R0-HOA" userLabel="FileGroup">
+                                            <items>
+                                                <imageView width="26" height="26" alignment="left" verticalAlignment="center" hidden="YES" image="Location" contentMode="center" id="vZ3-mt-ICu" userLabel="VenueIcon">
+                                                    <color key="tintColor" red="0.35566622019999999" green="0.68838506939999999" blue="0.91561108830000004" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                </imageView>
+                                                <group width="26" height="26" alignment="left" verticalAlignment="center" hidden="YES" radius="13" spacing="0.0" id="IJt-Cp-BKm" userLabel="AudioGroup">
+                                                    <items>
+                                                        <imageView width="26" height="26" alignment="left" image="MediaAudioPlay" contentMode="center" id="PDu-Bz-gy5"/>
+                                                    </items>
+                                                    <color key="backgroundColor" red="0.35566622019999999" green="0.68838506939999999" blue="0.91561108830000004" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                    <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                                </group>
+                                                <group width="26" height="26" alignment="left" verticalAlignment="center" radius="0.0" id="Gd3-ap-jO4" userLabel="FileIconGroup">
+                                                    <items>
+                                                        <imageView alignment="center" verticalAlignment="center" image="File.png" contentMode="center" id="dZu-99-pMR">
+                                                            <color key="tintColor" red="0.14697439970000001" green="0.5607914329" blue="0.88162887099999998" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        </imageView>
+                                                    </items>
+                                                    <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                                                </group>
+                                                <group alignment="left" verticalAlignment="center" layout="vertical" spacing="0.0" id="DHa-mY-ceB" userLabel="FileMetaGroup">
+                                                    <items>
+                                                        <label alignment="left" text="File Name" id="tul-U8-7fj">
+                                                            <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                            <fontDescription key="font" type="system" weight="medium" pointSize="12"/>
+                                                        </label>
+                                                        <label alignment="left" text="Size" id="m2I-fn-zCe">
+                                                            <color key="textColor" red="0.41865724329999998" green="0.41825520989999998" blue="0.4306421876" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                            <fontDescription key="font" type="system" pointSize="12"/>
+                                                        </label>
+                                                    </items>
+                                                    <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                                </group>
+                                            </items>
+                                            <edgeInsets key="margins" left="6.5" right="6.5" top="2" bottom="1"/>
+                                        </group>
+                                        <group width="1" alignment="left" spacing="0.0" id="DLM-Wi-QFQ" userLabel="StickerWrapper">
+                                            <items>
+                                                <group width="0.5" height="64" alignment="left" contentMode="scaleAspectFit" id="7TZ-8f-EgD" userLabel="StickerGroup">
+                                                    <variation key="device=watch42mm" height="72"/>
+                                                </group>
+                                            </items>
+                                            <edgeInsets key="margins" left="6.5" right="0.0" top="0.0" bottom="0.0"/>
+                                        </group>
+                                        <group width="1" alignment="left" radius="12" id="sxE-kX-fH5" userLabel="MediaGroup">
+                                            <items>
+                                                <group alignment="right" verticalAlignment="bottom" radius="10" id="GEf-6R-cw1" userLabel="DurationGroup">
+                                                    <items>
+                                                        <label alignment="left" text="2:34" id="wRk-Fm-UIl" userLabel="Duration">
+                                                            <color key="textColor" red="0.2461894453" green="0.24618205430000001" blue="0.2461862564" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                            <fontDescription key="font" type="system" pointSize="12"/>
+                                                        </label>
+                                                    </items>
+                                                    <color key="backgroundColor" red="0.89292949440000002" green="0.91148859260000004" blue="0.93112039570000005" alpha="0.80000000000000004" colorSpace="custom" customColorSpace="sRGB"/>
+                                                    <edgeInsets key="margins" left="6" right="6" top="2" bottom="2"/>
+                                                </group>
+                                            </items>
+                                            <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.089999999999999997" colorSpace="custom" customColorSpace="sRGB"/>
+                                            <edgeInsets key="margins" left="4" right="4" top="4" bottom="4"/>
+                                        </group>
+                                        <group width="1" alignment="left" id="W49-eu-bIX" userLabel="CaptionGroup">
+                                            <items>
+                                                <label alignment="left" text="Caption" numberOfLines="0" id="3dY-xL-bio">
+                                                    <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                    <fontDescription key="font" type="system" pointSize="16"/>
+                                                </label>
+                                            </items>
+                                            <edgeInsets key="margins" left="8" right="8" top="4" bottom="4"/>
+                                        </group>
+                                    </items>
+                                    <edgeInsets key="margins" left="1.5" right="1.5" top="0.0" bottom="0.0"/>
+                                </group>
+                            </items>
+                            <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                            <edgeInsets key="margins" left="0.0" right="0.0" top="10" bottom="5"/>
+                        </group>
+                    </items>
+                    <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                    <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="4"/>
+                    <connections>
+                        <outlet property="audioGroup" destination="IJt-Cp-BKm" id="UDG-gj-AJm"/>
+                        <outlet property="captionGroup" destination="W49-eu-bIX" id="fLo-8u-qJ7"/>
+                        <outlet property="captionLabel" destination="3dY-xL-bio" id="HPd-qv-6SR"/>
+                        <outlet property="chatTitleLabel" destination="frP-KX-c0b" id="gQB-RH-eAC"/>
+                        <outlet property="durationGroup" destination="GEf-6R-cw1" id="b6I-rw-1ma"/>
+                        <outlet property="durationLabel" destination="wRk-Fm-UIl" id="OY4-mh-oGN"/>
+                        <outlet property="fileGroup" destination="XJr-R0-HOA" id="jAA-6n-GcD"/>
+                        <outlet property="fileIconGroup" destination="Gd3-ap-jO4" id="Gk0-pX-7xT"/>
+                        <outlet property="forwardFromLabel" destination="DI0-a4-1u0" id="97d-FM-hvd"/>
+                        <outlet property="forwardHeaderGroup" destination="r84-Ll-prj" id="eOS-0I-fH2"/>
+                        <outlet property="forwardTitleLabel" destination="Br6-65-UTH" id="ZXg-hL-4Nt"/>
+                        <outlet property="map" destination="PY6-r9-1nn" id="QtL-Ma-9i3"/>
+                        <outlet property="mapGroup" destination="r4K-n7-uKy" id="QaM-0N-n60"/>
+                        <outlet property="mediaGroup" destination="sxE-kX-fH5" id="oMl-K9-upS"/>
+                        <outlet property="messageTextLabel" destination="t9S-qg-lnm" id="NTR-1N-c27"/>
+                        <outlet property="nameLabel" destination="JUM-Bm-hxM" id="Eiz-Pp-a1C"/>
+                        <outlet property="replyAuthorNameLabel" destination="ifF-tf-ens" id="NSF-eV-jEP"/>
+                        <outlet property="replyHeaderGroup" destination="Th4-sR-kDF" id="SjQ-KI-BYD"/>
+                        <outlet property="replyHeaderImageGroup" destination="FmK-ex-jTs" id="j7i-Sc-BUV"/>
+                        <outlet property="replyMessageTextLabel" destination="tWb-zc-3NN" id="aSf-v0-kQf"/>
+                        <outlet property="stickerGroup" destination="7TZ-8f-EgD" id="f6z-Rx-GYV"/>
+                        <outlet property="stickerWrapperGroup" destination="DLM-Wi-QFQ" id="wXu-ff-inw"/>
+                        <outlet property="subtitleLabel" destination="m2I-fn-zCe" id="WMT-u4-Tgp"/>
+                        <outlet property="titleLabel" destination="tul-U8-7fj" id="VxJ-io-0DL"/>
+                        <outlet property="venueIcon" destination="vZ3-mt-ICu" id="WvO-Db-hRw"/>
+                        <outlet property="wrapperGroup" destination="CMM-a2-p1K" id="SSt-aA-79a"/>
+                    </connections>
+                </controller>
+            </objects>
+            <point key="canvasLocation" x="503" y="874.75"/>
+        </scene>
+        <!--Static R-->
+        <scene sceneID="Aix-4r-fFK">
+            <objects>
+                <notificationController backgroundImage="BubbleNotification" spacing="0.0" id="crw-Qo-dti" userLabel="Static R">
+                    <items>
+                        <group width="1" alignment="left" layout="vertical" radius="0.0" spacing="0.0" id="RTo-Ed-NsD">
+                            <items>
+                                <label alignment="left" text="Name" id="pKp-eS-3LS">
+                                    <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                    <fontDescription key="font" type="system" weight="medium" pointSize="16"/>
+                                </label>
+                                <label alignment="left" text="Text" numberOfLines="0" id="6f0-WK-Add">
+                                    <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                    <fontDescription key="font" style="UICTFontTextStyleBody"/>
+                                </label>
+                            </items>
+                            <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                            <edgeInsets key="margins" left="8" right="8" top="10" bottom="11"/>
+                        </group>
+                    </items>
+                    <notificationCategory key="notificationCategory" id="pgn-NP-bt0">
+                        <color key="titleColor" red="0.10051588710000001" green="0.10051287709999999" blue="0.1005146056" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <color key="sashColor" red="1" green="0.99997437" blue="0.99999129769999995" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                    </notificationCategory>
+                    <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                    <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="4"/>
+                    <connections>
+                        <outlet property="notificationAlertLabel" destination="6f0-WK-Add" id="ioT-Xv-KJp"/>
+                        <outlet property="notificationTitleLabel" destination="pKp-eS-3LS" id="Jbj-qy-H83"/>
+                        <segue destination="79a-X2-tmF" kind="relationship" relationship="dynamicNotificationInterface" id="dmG-n7-HwD"/>
+                        <segue destination="79a-X2-tmF" kind="relationship" relationship="dynamicInteractiveNotificationInterface" id="UyA-Ra-UVy"/>
+                    </connections>
+                </notificationController>
+            </objects>
+            <point key="canvasLocation" x="263" y="1281"/>
+        </scene>
+        <!--Dynamic R-->
+        <scene sceneID="K4P-nV-Yqh">
+            <objects>
+                <controller backgroundImage="BubbleNotification" spacing="0.0" id="79a-X2-tmF" userLabel="Dynamic R" customClass="TGNotificationController">
+                    <items>
+                        <group width="1" alignment="left" layout="vertical" radius="0.0" spacing="0.0" id="Go3-q1-pnJ">
+                            <items>
+                                <group width="1" alignment="left" layout="vertical" spacing="0.0" id="JAA-Ky-cyx">
+                                    <items>
+                                        <label alignment="left" hidden="YES" text="Chat Title" id="HtY-WB-aFI">
+                                            <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                            <fontDescription key="font" type="system" weight="medium" pointSize="12"/>
+                                        </label>
+                                        <label alignment="left" hidden="YES" text="Name" id="Hqd-Pr-2zp">
+                                            <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                            <fontDescription key="font" type="system" weight="medium" pointSize="16"/>
+                                        </label>
+                                        <group width="1" height="29" alignment="left" hidden="YES" layout="vertical" spacing="0.0" id="Kzq-HH-8Ev">
+                                            <items>
+                                                <label alignment="left" verticalAlignment="center" text="Forwarded from" id="NTL-lz-9dd" userLabel="ForwardTitle">
+                                                    <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                    <fontDescription key="font" type="system" pointSize="12"/>
+                                                </label>
+                                                <label alignment="left" verticalAlignment="center" text="Name" id="B2R-Qa-MeP" userLabel="ForwardFrom">
+                                                    <color key="textColor" red="0.1131299585" green="0.50641471149999995" blue="0.96399867530000005" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                    <fontDescription key="font" type="system" weight="medium" pointSize="12"/>
+                                                </label>
+                                            </items>
+                                            <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                                            <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                        </group>
+                                        <group width="1" height="29" alignment="left" hidden="YES" spacing="4" id="KRV-O6-45y" userLabel="ReplyHeader">
+                                            <items>
+                                                <group width="2" height="26" alignment="left" verticalAlignment="center" radius="0.0" spacing="0.0" id="eW6-JQ-FAY" userLabel="ReplyLine">
+                                                    <color key="backgroundColor" red="0.1131299585" green="0.50641471149999995" blue="0.96399867530000005" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                    <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                                </group>
+                                                <group width="26" height="26" alignment="left" verticalAlignment="center" radius="2" id="swd-Nx-MDo" userLabel="ReplyImage">
+                                                    <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.089999999999999997" colorSpace="custom" customColorSpace="sRGB"/>
+                                                </group>
+                                                <group width="1" alignment="left" layout="vertical" spacing="0.0" id="h1Y-se-IEW" userLabel="ReplyMessage">
+                                                    <items>
+                                                        <label alignment="left" text="Name" id="g6r-Nm-SOQ" userLabel="ReplyAuthor">
+                                                            <color key="textColor" red="0.1131299585" green="0.50641471149999995" blue="0.96399867530000005" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                            <fontDescription key="font" type="system" weight="medium" pointSize="12"/>
+                                                        </label>
+                                                        <label alignment="left" text="Text" id="dAz-x8-jbh" userLabel="ReplyText">
+                                                            <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                            <fontDescription key="font" type="system" pointSize="12"/>
+                                                        </label>
+                                                    </items>
+                                                    <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                                </group>
+                                            </items>
+                                            <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                        </group>
+                                        <label alignment="left" text="Text" numberOfLines="0" id="wxg-r7-aSG">
+                                            <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                            <fontDescription key="font" style="UICTFontTextStyleBody"/>
+                                        </label>
+                                    </items>
+                                    <edgeInsets key="margins" left="8" right="8" top="0.0" bottom="5"/>
+                                </group>
+                                <group width="1" alignment="left" hidden="YES" layout="vertical" id="0ch-zY-dJX" userLabel="WrapperGroup">
+                                    <items>
+                                        <group width="1" alignment="left" layout="vertical" radius="10" spacing="0.0" id="vel-8f-OFm" userLabel="LocationGroup">
+                                            <items>
+                                                <map height="92" alignment="left" id="k4c-6T-xVa"/>
+                                            </items>
+                                            <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                        </group>
+                                        <group width="1" alignment="left" spacing="5" id="pRF-iD-Gt4" userLabel="FileGroup">
+                                            <items>
+                                                <imageView width="26" height="26" alignment="left" verticalAlignment="center" hidden="YES" image="Location" contentMode="center" id="uxs-Nx-we9" userLabel="VenueIcon">
+                                                    <color key="tintColor" red="0.35566622019999999" green="0.68838506939999999" blue="0.91561108830000004" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                </imageView>
+                                                <group width="26" height="26" alignment="left" verticalAlignment="center" hidden="YES" radius="13" spacing="0.0" id="Y04-zP-Wh2" userLabel="AudioGroup">
+                                                    <items>
+                                                        <imageView width="26" height="26" alignment="left" image="MediaAudioPlay" contentMode="center" id="pcd-Ly-8eO"/>
+                                                    </items>
+                                                    <color key="backgroundColor" red="0.35566622019999999" green="0.68838506939999999" blue="0.91561108830000004" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                    <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                                </group>
+                                                <group width="26" height="26" alignment="left" verticalAlignment="center" radius="0.0" id="vs3-R3-hff" userLabel="FileIconGroup">
+                                                    <items>
+                                                        <imageView alignment="center" verticalAlignment="center" image="File.png" contentMode="center" id="XqZ-BE-Abt">
+                                                            <color key="tintColor" red="0.14697439970000001" green="0.5607914329" blue="0.88162887099999998" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                        </imageView>
+                                                    </items>
+                                                    <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                                                </group>
+                                                <group alignment="left" verticalAlignment="center" layout="vertical" spacing="0.0" id="7Mg-3H-okj" userLabel="FileMetaGroup">
+                                                    <items>
+                                                        <label alignment="left" text="File Name" id="xUk-Hc-qsr">
+                                                            <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                            <fontDescription key="font" type="system" weight="medium" pointSize="12"/>
+                                                        </label>
+                                                        <label alignment="left" text="Size" id="d5k-bL-6BP">
+                                                            <color key="textColor" red="0.41865724329999998" green="0.41825520989999998" blue="0.4306421876" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                            <fontDescription key="font" type="system" pointSize="12"/>
+                                                        </label>
+                                                    </items>
+                                                    <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
+                                                </group>
+                                            </items>
+                                            <edgeInsets key="margins" left="6.5" right="6.5" top="2" bottom="1"/>
+                                        </group>
+                                        <group width="1" alignment="left" spacing="0.0" id="zqd-Tm-ZRg" userLabel="StickerWrapper">
+                                            <items>
+                                                <group width="84" height="84" alignment="left" contentMode="scaleAspectFit" id="CH0-jD-uni" userLabel="StickerGroup">
+                                                    <variation key="device=watch38mm" height="72" width="72"/>
+                                                    <variation key="device=watch40mm" height="88" width="88"/>
+                                                    <variation key="device=watch44mm" height="100" width="100"/>
+                                                </group>
+                                            </items>
+                                            <edgeInsets key="margins" left="6.5" right="0.0" top="0.0" bottom="0.0"/>
+                                        </group>
+                                        <group width="1" alignment="left" radius="12" id="hTA-bS-Jf1" userLabel="MediaGroup">
+                                            <items>
+                                                <group alignment="right" verticalAlignment="bottom" radius="10" id="eEx-yh-cyr" userLabel="DurationGroup">
+                                                    <items>
+                                                        <label alignment="left" text="2:34" id="RiW-Br-zCj" userLabel="Duration">
+                                                            <color key="textColor" red="0.2461894453" green="0.24618205430000001" blue="0.2461862564" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                            <fontDescription key="font" type="system" pointSize="12"/>
+                                                        </label>
+                                                    </items>
+                                                    <color key="backgroundColor" red="0.89292949440000002" green="0.91148859260000004" blue="0.93112039570000005" alpha="0.80000000000000004" colorSpace="custom" customColorSpace="sRGB"/>
+                                                    <edgeInsets key="margins" left="6" right="6" top="2" bottom="2"/>
+                                                </group>
+                                            </items>
+                                            <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.089999999999999997" colorSpace="custom" customColorSpace="sRGB"/>
+                                            <edgeInsets key="margins" left="4" right="4" top="4" bottom="4"/>
+                                        </group>
+                                        <group width="1" alignment="left" id="0B5-0H-Py3" userLabel="CaptionGroup">
+                                            <items>
+                                                <label alignment="left" text="Caption" numberOfLines="0" id="isV-kh-Mdr">
+                                                    <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                    <fontDescription key="font" type="system" pointSize="16"/>
+                                                </label>
+                                            </items>
+                                            <edgeInsets key="margins" left="8" right="8" top="4" bottom="4"/>
+                                        </group>
+                                    </items>
+                                    <edgeInsets key="margins" left="1.5" right="1.5" top="0.0" bottom="0.0"/>
+                                </group>
+                            </items>
+                            <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                            <edgeInsets key="margins" left="0.0" right="0.0" top="10" bottom="5"/>
+                        </group>
+                    </items>
+                    <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                    <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="4"/>
+                    <connections>
+                        <outlet property="audioGroup" destination="Y04-zP-Wh2" id="qTp-zF-Epj"/>
+                        <outlet property="captionGroup" destination="0B5-0H-Py3" id="jwq-FC-JCS"/>
+                        <outlet property="captionLabel" destination="isV-kh-Mdr" id="egK-Dy-gRD"/>
+                        <outlet property="chatTitleLabel" destination="HtY-WB-aFI" id="sSF-mw-4JJ"/>
+                        <outlet property="durationGroup" destination="eEx-yh-cyr" id="8Qk-ml-oO8"/>
+                        <outlet property="durationLabel" destination="RiW-Br-zCj" id="19H-az-0O6"/>
+                        <outlet property="fileGroup" destination="pRF-iD-Gt4" id="I5Q-Fx-UjF"/>
+                        <outlet property="fileIconGroup" destination="vs3-R3-hff" id="MGI-5h-Lv8"/>
+                        <outlet property="forwardFromLabel" destination="B2R-Qa-MeP" id="kPS-wB-hNR"/>
+                        <outlet property="forwardHeaderGroup" destination="Kzq-HH-8Ev" id="bhU-ZI-H0w"/>
+                        <outlet property="forwardTitleLabel" destination="NTL-lz-9dd" id="CCG-3i-IZ9"/>
+                        <outlet property="map" destination="k4c-6T-xVa" id="2aI-Tb-Oqf"/>
+                        <outlet property="mapGroup" destination="vel-8f-OFm" id="mDw-hR-bxF"/>
+                        <outlet property="mediaGroup" destination="hTA-bS-Jf1" id="nQw-W2-W4B"/>
+                        <outlet property="messageTextLabel" destination="wxg-r7-aSG" id="yS9-nx-01R"/>
+                        <outlet property="nameLabel" destination="Hqd-Pr-2zp" id="ija-IM-5QH"/>
+                        <outlet property="replyAuthorNameLabel" destination="g6r-Nm-SOQ" id="dK1-3l-hWN"/>
+                        <outlet property="replyHeaderGroup" destination="KRV-O6-45y" id="RZE-Vt-aui"/>
+                        <outlet property="replyHeaderImageGroup" destination="swd-Nx-MDo" id="aYu-g3-upQ"/>
+                        <outlet property="replyMessageTextLabel" destination="dAz-x8-jbh" id="6Cn-zA-Kcs"/>
+                        <outlet property="stickerGroup" destination="CH0-jD-uni" id="CcD-rg-vXX"/>
+                        <outlet property="stickerWrapperGroup" destination="zqd-Tm-ZRg" id="kps-Rx-vsc"/>
+                        <outlet property="subtitleLabel" destination="d5k-bL-6BP" id="7va-0d-xfX"/>
+                        <outlet property="titleLabel" destination="xUk-Hc-qsr" id="ck7-ks-w9e"/>
+                        <outlet property="venueIcon" destination="uxs-Nx-we9" id="ab7-gA-XrO"/>
+                        <outlet property="wrapperGroup" destination="0ch-zY-dJX" id="YqT-J5-azh"/>
+                    </connections>
+                </controller>
+            </objects>
+            <point key="canvasLocation" x="503" y="1283"/>
+        </scene>
+    </scenes>
+    <inferredMetricsTieBreakers>
+        <segue reference="UyA-Ra-UVy"/>
+        <segue reference="wDy-DD-bRl"/>
+    </inferredMetricsTieBreakers>
+    <color key="tintColor" red="0.15550534427165985" green="0.57037848234176636" blue="0.8720671534538269" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+    <resources>
+        <image name="BotCommandIcon" width="128" height="128"/>
+        <image name="BubbleNotification" width="128" height="128"/>
+        <image name="File.png" width="128" height="128"/>
+        <image name="Location" width="128" height="128"/>
+        <image name="LocationIcon" width="128" height="128"/>
+        <image name="LoginIcon" width="128" height="128"/>
+        <image name="MediaAudioPlay" width="128" height="128"/>
+        <image name="MediaLocation" width="11" height="15"/>
+        <image name="MessageStatusDot" width="128" height="128"/>
+        <image name="MicAccessIcon" width="128" height="128"/>
+        <image name="MicIcon" width="128" height="128"/>
+        <image name="PickLocation" width="128" height="128"/>
+        <image name="RemotePlayVideo" width="128" height="128"/>
+        <image name="Spinner" width="128" height="128"/>
+        <image name="StickerIcon" width="128" height="128"/>
+        <image name="VerifiedProfile" width="128" height="128"/>
+    </resources>
+</document>

@@ -1,0 +1,50 @@
+RCT 1          /* YCoCg */
+GroupShift 3   /* Group size is 128 << 3 == 1024 */
+Width 1024
+Height 1024
+Bitdepth 8
+/* FloatExpBits 3 */
+/* Alpha */
+/* Squeeze */
+/* XYB */
+/* CbYCr */
+
+
+if c > 0
+  /* Co, Cg: diagonal stripes */
+  if W > 50
+    - Set -50
+    - W + 5
+  /* Y: elementary cellular automaton */
+  if y > 0
+    if N > 0
+      if NW-N > -1
+        if N-NE > 0
+          - Set 0
+          - Set 255
+        if N-NE > 0
+          - Set 255
+          - Set 0
+      if NW-N > 0
+        if N-NE > -1
+          - Set 255
+          - Set 0
+        if N-NE > -1
+          - Set 0
+          - Set 255
+   /* First row initialization */
+   if x > 511
+     - Set 255
+     - Set 0
+
+Everything after the end of the tree is ignored.
+
+The tree above represents a cellular automaton on a subtly striped background.
+
+
+
+List of properties: c, g, y, x, |N|, |W|, N, W, W-WW-NW+NWW, W+N-NW, W-NW, NW-N, N-NE, N-NN, W-WW, WGH,
+                    PrevAbs, Prev, PrevAbsErr, PrevErr, PPrevAbs, PPrev, PPrevAbsErr, PPrevErr
+
+List of predictors: Set, W, N, AvgW+N, Select, Gradient, Weighted, NE, NW, WW, AvgW+NW, AvgN+NW, AvgN+NE, AvgAll
+

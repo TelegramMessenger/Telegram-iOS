@@ -1,0 +1,17 @@
+{
+    "sweetpad.build.xcodeWorkspacePath": "Telegram/Telegram.xcodeproj/project.xcworkspace",
+    "lldb.library": "/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Versions/A/LLDB",
+    "lldb.launch.expressions": "native",
+    "search.followSymlinks": false,
+    "files.exclude": {
+        ".git/**": true
+    },
+    "files.watcherExclude": {
+        ".git/**": true
+    },
+    "search.exclude": {
+        ".git/**": true
+    },
+    "files.associations": {
+    }
+}

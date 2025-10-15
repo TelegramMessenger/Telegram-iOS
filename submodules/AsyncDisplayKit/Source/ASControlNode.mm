@@ -8,11 +8,9 @@
 //
 
 #import <AsyncDisplayKit/ASControlNode.h>
-#import <AsyncDisplayKit/ASControlNode+Private.h>
+#import "ASControlNode+Private.h"
 #import <AsyncDisplayKit/ASControlNode+Subclasses.h>
 #import <AsyncDisplayKit/ASDisplayNode+Subclasses.h>
-#import <AsyncDisplayKit/ASImageNode.h>
-#import <AsyncDisplayKit/AsyncDisplayKit+Debug.h>
 #import <AsyncDisplayKit/ASInternalHelpers.h>
 #import <AsyncDisplayKit/ASControlTargetAction.h>
 #import <AsyncDisplayKit/ASDisplayNode+FrameworkPrivate.h>
@@ -73,7 +71,6 @@ CGRect _ASControlNodeGetExpandedBounds(ASControlNode *controlNode);
 
 @implementation ASControlNode
 {
-  ASImageNode *_debugHighlightOverlay;
 }
 
 #pragma mark - Lifecycle
@@ -292,20 +289,6 @@ CGRect _ASControlNodeGetExpandedBounds(ASControlNode *controlNode);
 
   if (!_controlEventDispatchTable) {
     _controlEventDispatchTable = [[NSMutableDictionary alloc] initWithCapacity:kASControlNodeEventDispatchTableInitialCapacity]; // enough to handle common types without re-hashing the dictionary when adding entries.
-    
-    // only show tap-able areas for views with 1 or more addTarget:action: pairs
-    if ([ASControlNode enableHitTestDebug] && _debugHighlightOverlay == nil) {
-      // do not use ASPerformBlockOnMainThread here, if it performs the block synchronously it will continue
-      // holding the lock while calling addSubnode.
-      dispatch_async(dispatch_get_main_queue(), ^{
-        // add a highlight overlay node with area of ASControlNode + UIEdgeInsets
-        self.clipsToBounds = NO;
-        _debugHighlightOverlay = [[ASImageNode alloc] init];
-        _debugHighlightOverlay.zPosition = 1000;  // ensure we're over the top of any siblings
-        _debugHighlightOverlay.layerBacked = YES;
-        [self addSubnode:_debugHighlightOverlay];
-      });
-    }
   }
   
   // Create new target action pair
@@ -509,8 +492,8 @@ CGRect _ASControlNodeGetExpandedBounds(ASControlNode *controlNode) {
 }
 
 #pragma mark - Debug
-- (ASImageNode *)debugHighlightOverlay
+- (ASDisplayNode *)debugHighlightOverlay
 {
-  return _debugHighlightOverlay;
+  return nil;
 }
 @end

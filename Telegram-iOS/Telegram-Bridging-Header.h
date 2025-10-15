@@ -1,4 +1,0 @@
-#ifndef Telegram_iOS_Telegram_Bridging_Header_h
-#define Telegram_iOS_Telegram_Bridging_Header_h
-
-#endif

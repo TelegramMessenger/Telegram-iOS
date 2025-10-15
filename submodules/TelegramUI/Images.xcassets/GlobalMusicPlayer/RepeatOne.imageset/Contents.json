@@ -2,17 +2,7 @@
   "images" : [
     {
       "idiom" : "universal",
-      "scale" : "1x"
-    },
-    {
-      "idiom" : "universal",
-      "filename" : "MusicPlayerControlRepeatOne@2x.png",
-      "scale" : "2x"
-    },
-    {
-      "idiom" : "universal",
-      "filename" : "MusicPlayerControlRepeatOne@3x.png",
-      "scale" : "3x"
+      "filename" : "ic_musicrepeatone.pdf"
     }
   ],
   "info" : {

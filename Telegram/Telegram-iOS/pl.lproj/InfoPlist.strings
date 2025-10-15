@@ -1,0 +1,12 @@
+/* Localized versions of Info.plist keys */
+
+"NSContactsUsageDescription" = "Telegram będzie nieprzerwanie przesyłać kontakty do silnie zaszyfrowanych serwerów w chmurze, aby umożliwić ci połączenie się ze znajomymi na wszystkich urządzeniach.";
+"NSLocationWhenInUseUsageDescription" = "Gdy wysyłasz swoją lokalizację znajomym, Telegram potrzebuje dostępu, aby pokazać im mapę.";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "Gdy zdecydujesz się udostępnić swoją „lokalizację na żywo” znajomym podczas czatu, Telegram potrzebuje dostępu w tle do twojej lokalizacji, aby zapewnić jej aktualizację przez cały czas udostępniania „na żywo”.";
+"NSLocationAlwaysUsageDescription" = "Gdy zdecydujesz się udostępnić swoją „lokalizację na żywo” znajomym podczas czatu, Telegram potrzebuje dostępu w tle do twojej lokalizacji, aby zapewnić jej aktualizację przez cały czas udostępniania „na żywo”. Jest to również potrzebne do wysyłania lokalizacji z Apple Watch.";
+"NSCameraUsageDescription" = "Potrzebujemy tego, aby można było robić i udostępniać zdjęcia i wideo, a także prowadzić rozmowy wideo.";
+"NSPhotoLibraryUsageDescription" = "Potrzebujemy tego, aby można było udostępniać zdjęcia i wideo ze swojej biblioteki zdjęć.";
+"NSPhotoLibraryAddUsageDescription" = "Potrzebujemy tego, aby można było zapisywać zdjęcia i wideo w swojej bibliotece zdjęć.";
+"NSMicrophoneUsageDescription" = "Potrzebujemy tego, aby można było nagrywać i udostępniać wiadomości głosowe i wideo z dźwiękiem.";
+"NSSiriUsageDescription" = "Możesz użyć Siri do wysyłania wiadomości.";
+"NSFaceIDUsageDescription" = "Możesz użyć Face ID, aby odblokować aplikację.";

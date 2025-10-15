@@ -1,0 +1,130 @@
+
+common_flags = [
+    "-DWEBRTC_IOS",
+    "-DWEBRTC_MAC",
+    "-DWEBRTC_POSIX",
+    "-DHAVE_WEBRTC_VIDEO",
+    "-DRTC_ENABLE_VP9",
+    "-DRTC_ENABLE_H265",
+    "-DWEBRTC_USE_H264",
+    "-DHAVE_SCTP",
+    "-DWEBRTC_HAVE_DCSCTP",
+    "-DWEBRTC_HAVE_SCTP",
+    "-DWEBRTC_NS_FLOAT",
+    "-DRTC_DISABLE_TRACE_EVENTS",
+    #"-DWEBRTC_OPUS_SUPPORT_120MS_PTIME=1",
+    "-DWEBRTC_APM_DEBUG_DUMP=0",
+    "-DBWE_TEST_LOGGING_COMPILE_TIME_ENABLE=0",
+    "-DABSL_ALLOCATOR_NOTHROW=1",
+    "-DDYNAMIC_ANNOTATIONS_ENABLED=0",
+    #"-DNS_BLOCK_ASSERTIONS=1",
+    "-DWEBRTC_ENABLE_PROTOBUF=0",
+    "-DWEBRTC_ENABLE_AVX2",
+    "-DWEBRTC_NON_STATIC_TRACE_EVENT_HANDLERS=0",
+    "-Wno-shorten-64-to-32",
+    "-Wno-macro-redefined",
+    "-D__APPLE__",
+    "-DWEBRTC_OPUS_USE_CODEC_PLC",
+    "-DWEBRTC_OPUS_SUPPORT_DRED",
+]
+
+arm64_specific_flags = [
+    "-DWEBRTC_ARCH_ARM64",
+    "-DWEBRTC_HAS_NEON",
+    "-DLIBYUV_NEON",
+]
+
+arch_specific_cflags = select({
+    "@build_bazel_rules_apple//apple:ios_arm64": common_flags + arm64_specific_flags,
+    "//build-system:ios_sim_arm64": common_flags + arm64_specific_flags,
+})
+
+optimization_flags = select({
+    "//third-party/webrtc:debug_build": [
+    ],
+    "//conditions:default": ["-DNDEBUG"],
+})
+
+cc_library(
+    name = "libsrtp",
+    srcs = [ "third_party/libsrtp/" + path for path in [
+        # includes
+        "include/ekt.h",
+        "include/srtp.h",
+
+        # headers
+        "crypto/include/aes.h",
+        "crypto/include/aes_gcm_ossl.h",
+        "crypto/include/aes_icm.h",
+        "crypto/include/aes_icm_ossl.h",
+        "crypto/include/alloc.h",
+        "crypto/include/auth.h",
+        "crypto/include/cipher.h",
+        "crypto/include/cipher_types.h",
+        "crypto/include/crypto_kernel.h",
+        "crypto/include/crypto_types.h",
+        "crypto/include/datatypes.h",
+        "crypto/include/err.h",
+        "crypto/include/integers.h",
+        "crypto/include/key.h",
+        "crypto/include/null_auth.h",
+        "crypto/include/null_cipher.h",
+        "crypto/include/rdb.h",
+        "crypto/include/rdbx.h",
+        "crypto/include/stat.h",
+        "include/srtp_priv.h",
+        "include/ut_sim.h",
+
+        # sources
+        "crypto/cipher/aes_gcm_ossl.c",
+        "crypto/cipher/aes_icm_ossl.c",
+        "crypto/cipher/cipher.c",
+        "crypto/cipher/null_cipher.c",
+        "crypto/hash/auth.c",
+        "crypto/hash/hmac_ossl.c",
+        "crypto/hash/null_auth.c",
+        "crypto/kernel/alloc.c",
+        "crypto/kernel/crypto_kernel.c",
+        "crypto/kernel/err.c",
+        "crypto/kernel/key.c",
+        "crypto/math/datatypes.c",
+        "crypto/math/stat.c",
+        "crypto/replay/rdb.c",
+        "crypto/replay/rdbx.c",
+        "srtp/ekt.c",
+        "srtp/srtp.c",
+    ]],
+    copts = [
+        "-Ithird-party/webrtc/libsrtp/third_party/libsrtp/crypto/include",
+        "-Ithird-party/webrtc/libsrtp/third_party/libsrtp/include",
+        "-DOPENSSL",
+        "-DHAVE_STDLIB_H",
+        "-DHAVE_STRING_H",
+        "-DHAVE_STDINT_H",
+        "-DHAVE_INTTYPES_H",
+        "-DHAVE_INT16_T",
+        "-DHAVE_INT32_T",
+        "-DHAVE_INT8_T",
+        "-DHAVE_UINT16_T",
+        "-DHAVE_UINT32_T",
+        "-DHAVE_UINT64_T",
+        "-DHAVE_UINT8_T",
+        "-DHAVE_ARPA_INET_H",
+        "-DHAVE_NETINET_IN_H",
+        "-DHAVE_SYS_TYPES_H",
+        "-DHAVE_UNISTD_H",
+        "-DPACKAGE_STRING=\\\"\\\"",
+        "-DHAVE_SCTP",
+        "-DWEBRTC_HAVE_DCSCTP",
+        "-DWEBRTC_HAVE_SCTP",
+    ] + arch_specific_cflags + optimization_flags,
+    deps = [
+        "//third-party/boringssl:crypto",
+        "//third-party/boringssl:ssl",
+        "//third-party/webrtc/libsrtp_config",
+    ],
+    includes = [
+        ".",
+    ],
+    visibility = ["//visibility:public"],
+)
