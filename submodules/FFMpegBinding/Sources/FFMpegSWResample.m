@@ -72,6 +72,7 @@
         0,
         NULL
     ) != 0) {
+        NSLog(@"[FFMpegSWResample] Failed to allocate SWResample context for channel count %d", channelCount);
         return;
     }
     #else
@@ -89,9 +90,14 @@
     #pragma clang diagnostic pop
     #endif
     _currentSourceChannelCount = channelCount;
-    _ratio = MAX(1, _destinationSampleRate / MAX(_sourceSampleRate, 1)) * MAX(1, _destinationChannelCount / channelCount) * 2;
+    _ratio = MAX(1, _destinationSampleRate / MAX(_sourceSampleRate, 1)) * MAX(1, _destinationChannelCount / channelCount);
     if (_context) {
-        swr_init(_context);
+        int initResult = swr_init(_context);
+        if (initResult < 0) {
+            NSLog(@"[FFMpegSWResample] Failed to initialize SWResample context: %d", initResult);
+            swr_free(&_context);
+            _context = NULL;
+        }
     }
 }
 
@@ -108,14 +114,18 @@
     }
 
     if (!_context) {
+        NSLog(@"[FFMpegSWResample] No valid context available for resampling");
         return nil;
     }
 
     int bufSize = av_samples_get_buffer_size(NULL,
                                              (int)_destinationChannelCount,
-                                             frameImpl->nb_samples * (int)_ratio,
+                                             frameImpl->nb_samples,
                                              (enum AVSampleFormat)_destinationSampleFormat,
                                              1);
+    
+    // Add some padding to prevent buffer overflow
+    bufSize = bufSize * 2;
     
     if (!_buffer || _bufferSize < bufSize) {
         _bufferSize = bufSize;
@@ -126,10 +136,11 @@
     
     int numFrames = swr_convert(_context,
                                 outbuf,
-                                frameImpl->nb_samples * (int)_ratio,
+                                bufSize / (_destinationChannelCount * 2), // Use proper buffer size calculation
                                 (const uint8_t **)frameImpl->data,
                                 frameImpl->nb_samples);
     if (numFrames <= 0) {
+        NSLog(@"[FFMpegSWResample] Resampling failed with result: %d", numFrames);
         return nil;
     }
     

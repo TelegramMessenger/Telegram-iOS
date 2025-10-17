@@ -546,7 +546,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
                             startTime = CMTimeMake(value: rawStartTime, timescale: timebase.timescale)
                         }
                         
-                        audioStream = StreamContext(index: Int(streamIndex), codecContext: codecContext, fps: fps, timebase: timebase, startTime: startTime, duration: duration, decoder: FFMpegAudioFrameDecoder(codecContext: codecContext), rotationAngle: 0.0, aspect: 1.0)
+                        audioStream = StreamContext(index: Int(streamIndex), codecContext: codecContext, fps: fps, timebase: timebase, startTime: startTime, duration: duration, decoder: FFMpegAudioFrameDecoder(codecContext: codecContext, sampleRate: Int(codecContext.sampleRate())), rotationAngle: 0.0, aspect: 1.0)
                         break
                     }
                 }

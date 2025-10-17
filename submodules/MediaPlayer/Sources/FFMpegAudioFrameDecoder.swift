@@ -14,27 +14,36 @@ final class FFMpegAudioFrameDecoder: MediaTrackFrameDecoder {
     
     private var delayedFrames: [MediaTrackFrame] = []
     
-    init(codecContext: FFMpegAVCodecContext, sampleRate: Int = 44100, channelCount: Int = 2) {
+    init(codecContext: FFMpegAVCodecContext, sampleRate: Int = 44100, channelCount: Int? = nil) {
         self.codecContext = codecContext
         self.audioFrame = FFMpegAVFrame()
         
-        self.swrContext = FFMpegSWResample(sourceChannelCount: Int(codecContext.channels()), sourceSampleRate: Int(codecContext.sampleRate()), sourceSampleFormat: codecContext.sampleFormat(), destinationChannelCount: channelCount, destinationSampleRate: sampleRate, destinationSampleFormat: FFMPEG_AV_SAMPLE_FMT_S16)
+        // Use actual channel count from codec context, but ensure at least stereo for iOS compatibility
+        let actualChannelCount = Int(codecContext.channels())
+        let targetChannelCount = channelCount ?? max(actualChannelCount, 2)
+        
+        self.swrContext = FFMpegSWResample(sourceChannelCount: actualChannelCount, sourceSampleRate: Int(codecContext.sampleRate()), sourceSampleFormat: codecContext.sampleFormat(), destinationChannelCount: targetChannelCount, destinationSampleRate: sampleRate, destinationSampleFormat: FFMPEG_AV_SAMPLE_FMT_S16)
         
         var outputDescription = AudioStreamBasicDescription(
             mSampleRate: Float64(sampleRate),
             mFormatID: kAudioFormatLinearPCM,
             mFormatFlags: kAudioFormatFlagIsSignedInteger | kAudioFormatFlagsNativeEndian | kAudioFormatFlagIsPacked,
-            mBytesPerPacket: UInt32(2 * channelCount),
+            mBytesPerPacket: UInt32(2 * targetChannelCount),
             mFramesPerPacket: 1,
-            mBytesPerFrame: UInt32(2 * channelCount),
-            mChannelsPerFrame: UInt32(channelCount),
+            mBytesPerFrame: UInt32(2 * targetChannelCount),
+            mChannelsPerFrame: UInt32(targetChannelCount),
             mBitsPerChannel: 16,
             mReserved: 0
         )
         
         var channelLayout = AudioChannelLayout()
         memset(&channelLayout, 0, MemoryLayout<AudioChannelLayout>.size)
-        channelLayout.mChannelLayoutTag = kAudioChannelLayoutTag_Mono
+        // Use appropriate channel layout based on target channel count
+        if targetChannelCount == 1 {
+            channelLayout.mChannelLayoutTag = kAudioChannelLayoutTag_Mono
+        } else {
+            channelLayout.mChannelLayoutTag = kAudioChannelLayoutTag_Stereo
+        }
         
         var formatDescription: CMAudioFormatDescription?
         CMAudioFormatDescriptionCreate(allocator: nil, asbd: &outputDescription, layoutSize: MemoryLayout<AudioChannelLayout>.size, layout: &channelLayout, magicCookieSize: 0, magicCookie: nil, extensions: nil, formatDescriptionOut: &formatDescription)
