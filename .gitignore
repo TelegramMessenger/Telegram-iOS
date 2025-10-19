@@ -74,3 +74,5 @@ buildServer.json
 Telegram.LSP.json
 **/.build/**
 spm-files
+build-system/mosagee_configuration.json
+third-party/webrtc/BUILD.bak2

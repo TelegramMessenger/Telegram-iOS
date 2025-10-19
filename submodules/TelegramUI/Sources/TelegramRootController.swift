@@ -32,6 +32,7 @@ import PeerInfoStoryGridScreen
 import ShareWithPeersScreen
 import ChatEmptyNode
 import UndoUI
+import MosageeFeed
 
 private class DetailsChatPlaceholderNode: ASDisplayNode, NavigationDetailsPlaceholderNode {
     private var presentationData: PresentationData
@@ -79,6 +80,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
     public var contactsController: ContactsController?
     public var callListController: CallListController?
     public var chatListController: ChatListController?
+    public var feedController: MosageeFeedController?
     public var accountSettingsController: PeerInfoScreen?
     
     private var permissionsDisposable: Disposable?
@@ -208,7 +210,22 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
             controllers.append(callListController)
         }
         controllers.append(chatListController)
-        
+
+        // Mosagee Feed 탭 추가
+        print("🔵 [TelegramRoot] Feed 컨트롤러 생성 시작")
+        let feedController = MosageeFeedController(context: self.context)
+        feedController.tabBarItem.title = "피드"
+
+        // SF Symbols의 baseline 정렬을 위한 이미지 설정
+        let imageConfig = UIImage.SymbolConfiguration(pointSize: 23, weight: .regular, scale: .medium)
+        let normalImage = UIImage(systemName: "newspaper", withConfiguration: imageConfig)?.withBaselineOffset(fromBottom: 2.0)
+        let selectedImage = UIImage(systemName: "newspaper.fill", withConfiguration: imageConfig)?.withBaselineOffset(fromBottom: 2.0)
+
+        feedController.tabBarItem.image = normalImage
+        feedController.tabBarItem.selectedImage = selectedImage
+        controllers.append(feedController)
+        print("🔵 [TelegramRoot] Feed 컨트롤러 추가됨. 총 컨트롤러 수: \(controllers.count)")
+
         var restoreSettignsController: (ViewController & SettingsController)?
         if let sharedContext = self.context.sharedContext as? SharedAccountContextImpl {
             restoreSettignsController = sharedContext.switchingData.settingsController
@@ -233,6 +250,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         self.contactsController = contactsController
         self.callListController = callListController
         self.chatListController = chatListController
+        self.feedController = feedController
         self.accountSettingsController = accountSettingsController
         self.rootTabController = tabBarController
         self.pushViewController(tabBarController, animated: false)
@@ -248,8 +266,9 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
             controllers.append(self.callListController!)
         }
         controllers.append(self.chatListController!)
+        controllers.append(self.feedController!)
         controllers.append(self.accountSettingsController!)
-        
+
         rootTabController.setControllers(controllers, selectedIndex: nil)
     }
     
