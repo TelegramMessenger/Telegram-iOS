@@ -1425,9 +1425,11 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
                 var nodeList = document.getElementsByTagName('link');
                 for (var i = 0; i < nodeList.length; i++)
                 {
-                    if((nodeList[i].getAttribute('rel') == 'icon')||(nodeList[i].getAttribute('rel') == 'shortcut icon')||(nodeList[i].getAttribute('rel').startsWith('apple-touch-icon')))
+                    const node = nodeList[i];
+                    const relAttrValue = node.getAttribute('rel');
+
+                    if (typeof relAttrValue === 'string' && relAttrValue && (relAttrValue === 'icon' || relAttrValue === 'shortcut icon' || relAttrValue.startsWith('apple-touch-icon')))
                     {
-                        const node = nodeList[i];
                         favicons.push({
                             url: node.getAttribute('href'),
                             sizes: node.getAttribute('sizes')
