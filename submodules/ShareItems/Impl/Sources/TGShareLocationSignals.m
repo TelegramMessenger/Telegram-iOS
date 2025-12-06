@@ -14,15 +14,15 @@ NSString *const TGShareFoursquareHost = @"foursquare.com";
 NSString *const TGShareFoursquareVenuePath = @"/v";
 
 NSString *const TGShareFoursquareVenueEndpointUrl = @"https://api.foursquare.com/v2/venues/";
-NSString *const TGShareFoursquareClientId = @"BN3GWQF1OLMLKKQTFL0OADWD1X1WCDNISPPOT1EMMUYZTQV1";
-NSString *const TGShareFoursquareClientSecret = @"WEEZHCKI040UVW2KWW5ZXFAZ0FMMHKQ4HQBWXVSX4WXWBWYN";
+NSString *const TGShareFoursquareClientId = nil;  // Should be configured at runtime from secure storage
+NSString *const TGShareFoursquareClientSecret = nil;  // Should be configured at runtime from secure storage
 NSString *const TGShareFoursquareVersion = @"20150326";
 NSString *const TGShareFoursquareVenuesCountLimit = @"25";
 NSString *const TGShareFoursquareLocale = @"en";
 NSString *const TGShareFoursquareProvider = @"foursquare";
 
 NSString *const TGShareGoogleShortenerEndpointUrl = @"https://www.googleapis.com/urlshortener/v1/url";
-NSString *const TGShareGoogleAPIKey = @"AIzaSyBCTH4aAdvi0MgDGlGNmQAaFS8GTNBrfj4";
+NSString *const TGShareGoogleAPIKey = nil;  // Should be configured at runtime from secure storage
 NSString *const TGShareGoogleMapsShortHost = @"goo.gl";
 NSString *const TGShareGoogleMapsShortPath = @"/maps";
 NSString *const TGShareGoogleMapsHost = @"google.com";
