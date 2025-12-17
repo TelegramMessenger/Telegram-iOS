@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: macos-13
+    runs-on: macos-latest
 
     steps:
       - uses: actions/checkout@v2
@@ -19,7 +19,23 @@ jobs:
       - name: Set active Xcode path
         run: |
           XCODE_VERSION=$(cat versions.json | python3 -c 'import json,sys;obj=json.load(sys.stdin);print(obj["xcode"]);')
-          sudo xcode-select -s /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer
+          
+          # Try exact match first
+          if [ -d "/Applications/Xcode_$XCODE_VERSION.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer
+          # Try beta suffix
+          elif [ -d "/Applications/Xcode_${XCODE_VERSION}_beta.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_${XCODE_VERSION}_beta.app/Contents/Developer
+          # Try without minor version
+          elif [ -d "/Applications/Xcode_${XCODE_VERSION%%.*}.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_${XCODE_VERSION%%.*}.app/Contents/Developer
+          else
+            echo "ERROR: Xcode $XCODE_VERSION not found"
+            ls -la /Applications/ | grep Xcode
+            exit 1
+          fi
+          
+          xcodebuild -version
 
       - name: Create canonical source directory
         run: |
