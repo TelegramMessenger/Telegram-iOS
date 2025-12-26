@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
+import LegacyLiquidGlass
 
 private final class SwitchNodeViewLayer: CALayer {
     override func setNeedsDisplay() {
@@ -9,11 +10,13 @@ private final class SwitchNodeViewLayer: CALayer {
 
 private final class SwitchNodeView: UISwitch {
     override class var layerClass: AnyClass {
-        if #available(iOS 26.0, *) {
-            return super.layerClass
-        } else {
-            return SwitchNodeViewLayer.self
-        }
+        return super.layerClass
+    }
+}
+
+private final class SwitchNodeLegacyView: SwitchViewLGL {
+    override class var layerClass: AnyClass {
+        return SwitchNodeViewLayer.self
     }
 }
 
@@ -64,7 +67,11 @@ open class SwitchNode: ASDisplayNode {
         super.init()
         
         self.setViewBlock({
-            return SwitchNodeView()
+            if #available(iOS 26.0, *) {
+                return SwitchNodeView()
+            } else {
+                return SwitchNodeLegacyView()
+            }
         })
     }
     

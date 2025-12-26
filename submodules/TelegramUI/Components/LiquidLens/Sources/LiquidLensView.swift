@@ -3,6 +3,7 @@ import UIKit
 import Display
 import ComponentFlow
 import GlassBackgroundComponent
+import LegacyLiquidGlass
 
 private final class RestingBackgroundView: UIVisualEffectView {
     var isDark: Bool?
@@ -92,12 +93,14 @@ public final class LiquidLensView: UIView {
     private let liftedContainerView: UIView
     public let contentView: UIView
     private let restingBackgroundView: RestingBackgroundView
-    
+
     private var legacySelectionView: GlassBackgroundView.ContentImageView?
     private var legacyContentMaskView: UIView?
     private var legacyContentMaskBlobView: UIImageView?
     private var legacyLiftedContentBlobMaskView: UIImageView?
-
+    private var legacyLensView: LensViewLGL?
+    private var legacyBackgroundView: BackgroundViewLGL?
+    
     public var selectedContentView: UIView {
         return self.liftedContainerView
     }
@@ -106,6 +109,10 @@ public final class LiquidLensView: UIView {
     private var appliedLensParams: LensParams?
     private var isApplyingLensParams: Bool = false
     private var pendingLensParams: LensParams?
+
+    private var shiftPosition: CGPoint = .zero
+    private var indicatorStartX = 0.0
+    private var dragStartX = 0.0
 
     private var liftedDisplayLink: SharedDisplayLinkDriver.Link?
 
@@ -192,35 +199,17 @@ public final class LiquidLensView: UIView {
             
             lensView.setValue(UIColor(white: 0.0, alpha: 0.1), forKey: "restingBackgroundColor")
         } else {
-            let legacySelectionView = GlassBackgroundView.ContentImageView()
-            self.legacySelectionView = legacySelectionView
-            self.backgroundView.contentView.insertSubview(legacySelectionView, at: 0)
-            
-            let legacyContentMaskView = UIView()
-            legacyContentMaskView.backgroundColor = .white
-            self.legacyContentMaskView = legacyContentMaskView
-            self.contentView.mask = legacyContentMaskView
-            
-            if let filter = CALayer.luminanceToAlpha() {
-                legacyContentMaskView.layer.filters = [filter]
-            }
-            
-            let legacyContentMaskBlobView = UIImageView()
-            self.legacyContentMaskBlobView = legacyContentMaskBlobView
-            legacyContentMaskView.addSubview(legacyContentMaskBlobView)
-            
-            self.containerView.addSubview(self.contentView)
-            
-            let legacyLiftedContentBlobMaskView = UIImageView()
-            self.legacyLiftedContentBlobMaskView = legacyLiftedContentBlobMaskView
-            self.liftedContainerView.mask = legacyLiftedContentBlobMaskView
-            
-            self.containerView.addSubview(self.liftedContainerView)
+            setupLegacyLiquidGlass()
         }
     }
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    public override func layoutSubviews() {
+        super.layoutSubviews()
+        legacyBackgroundView?.center = backgroundView.center
     }
 
     public func update(size: CGSize, selectionX: CGFloat, selectionWidth: CGFloat, isDark: Bool, isLifted: Bool, transition: ComponentTransition) {
@@ -240,6 +229,7 @@ public final class LiquidLensView: UIView {
 
     private func updateLens(params: LensParams, animated: Bool) {
         guard let lensView = self.lensView else {
+            updateLegacyLens(params: params, animated: animated)
             return
         }
 
@@ -369,5 +359,148 @@ public final class LiquidLensView: UIView {
             self.liftedDisplayLink = nil
             liftedDisplayLink.invalidate()
         }
+    }
+}
+
+// MARK: - LegacyLiquidGlass
+
+extension LiquidLensView {
+
+    private func setupLegacyLiquidGlass() {
+        let legacySelectionView = GlassBackgroundView.ContentImageView()
+        self.legacySelectionView = legacySelectionView
+        self.backgroundView.contentView.insertSubview(legacySelectionView, at: 0)
+
+        let legacyLensView = LensViewLGL()
+        self.legacyLensView = legacyLensView
+        backgroundView.addSubview(legacyLensView)
+
+        let legacyBackgroundView = BackgroundViewLGL()
+        self.legacyBackgroundView = legacyBackgroundView
+        legacyBackgroundView.blurContainer.layer.opacity = 0.1
+        legacyBackgroundView.highlightLayer.opacity = 0.1
+        legacyBackgroundView.frame = backgroundView.bounds
+        backgroundView.addSubview(legacyBackgroundView)
+
+        legacyLensView.hiddenViewsDuringRendering = [LensViewLGL.WeakReference(contentView)]
+        legacyLensView.viewsToSetSystemBackground = [LensViewLGL.WeakReference(backgroundView)]
+
+        let legacyContentMaskView = UIView()
+        legacyContentMaskView.backgroundColor = .white
+        self.legacyContentMaskView = legacyContentMaskView
+        self.contentView.mask = legacyContentMaskView
+
+        if let filter = CALayer.luminanceToAlpha() {
+            legacyContentMaskView.layer.filters = [filter]
+        }
+
+        let legacyContentMaskBlobView = UIImageView()
+        self.legacyContentMaskBlobView = legacyContentMaskBlobView
+        legacyContentMaskView.addSubview(legacyContentMaskBlobView)
+
+        self.containerView.addSubview(self.contentView)
+
+        let legacyLiftedContentBlobMaskView = UIImageView()
+        self.legacyLiftedContentBlobMaskView = legacyLiftedContentBlobMaskView
+        self.liftedContainerView.mask = legacyLiftedContentBlobMaskView
+
+        self.containerView.addSubview(self.liftedContainerView)
+    }
+
+    private func updateLegacyLens(params: LensParams, animated: Bool) {
+        guard let legacyLensView = self.legacyLensView,
+              let legacySelectionView = self.legacySelectionView,
+              let legacyBackgroundView = self.legacyBackgroundView else {
+            return
+        }
+
+        if !isApplyingLensParams {
+            isApplyingLensParams = true
+            shiftPosition = backgroundView.layer.position
+            legacyBackgroundView.layer.cornerRadius = backgroundView.cornerRadius
+        }
+
+        let transition: ComponentTransition = animated ? .easeInOut(duration: 0.3) : .immediate
+
+        if params.isLifted {
+            let effectiveLensFrame = params.baseFrame.insetBy(dx: -5.0, dy: -5.0)
+            legacyLensView.showLens()
+            transition.setAlpha(view: legacySelectionView, alpha: 0)
+            transition.setFrame(view: legacySelectionView, frame: effectiveLensFrame)
+            transition.setFrame(view: legacyLensView, frame: effectiveLensFrame)
+            transition.setAlpha(view: legacyLensView, alpha: 1)
+            transition.setBackgroundColor(view: legacyBackgroundView, color: .systemGray
+                .withAlphaComponent(0.1))
+            transition.setFrame(view: self.backgroundView, frame: self.backgroundView.bounds.insetBy(dx: -1, dy: -1))
+        } else {
+            transition.setFrame(view: legacyLensView, frame: params.baseFrame)
+            transition.setFrame(view: legacySelectionView, frame: params.baseFrame)
+            transition.setAlpha(view: legacyLensView, alpha: 0)
+            transition.setAlpha(view: legacySelectionView, alpha: 1)
+            transition.setFrame(view: self.backgroundView, frame: self.backgroundView.bounds)
+            transition.setBackgroundColor(view: legacyBackgroundView, color: .clear) { _ in
+                legacyLensView.hideLens()
+            }
+        }
+    }
+
+    public func beganGesture(_ locationX: CGFloat) {
+        if #available(iOS 26.0, *) {
+
+        } else {
+            startShift(locationX)
+        }
+    }
+
+    public func changedGesture(_ velocityX: CGFloat, _ locationX: CGFloat) {
+        if #available(iOS 26.0, *) {
+
+        } else {
+            if abs(velocityX) > 300 {
+                legacyLensView?.animateLensSquash(with: velocityX, min: 300, scale: 1.05)
+            }
+            updateShift(locationX)
+        }
+    }
+
+    public func endedGesture() {
+        if #available(iOS 26.0, *) {
+
+        } else {
+            resetShift()
+        }
+    }
+
+    private func startShift(_ locationX: CGFloat) {
+        guard let legacySelectionView = self.legacySelectionView else { return }
+
+        dragStartX = locationX
+        indicatorStartX = legacySelectionView.frame.origin.x
+    }
+
+    private func updateShift(_ locationX: CGFloat) {
+        guard let legacySelectionView = self.legacySelectionView else { return }
+
+        let width: CGFloat = 0
+        let maxX = backgroundView.bounds.width - legacySelectionView.bounds.width + width
+        var newX = indicatorStartX + locationX - dragStartX
+        newX = max(-width, min(maxX, newX))
+
+        let centerX = backgroundView.bounds.width / 2
+        let indicatorCenterX = newX + legacySelectionView.bounds.width / 2
+
+        let progress = (indicatorCenterX - centerX) / centerX
+
+        let clampedProgress = max(-1.0, min(1.0, progress))
+        let shift = clampedProgress * abs(clampedProgress) * 4
+
+        let tabBarCentrPositionX = shiftPosition.x + shift
+        let transition: ComponentTransition = .easeInOut(duration: 0.1)
+        transition.setPosition(view: backgroundView, position: CGPoint(x: tabBarCentrPositionX, y: shiftPosition.y))
+    }
+
+    private func resetShift() {
+        let transition: ComponentTransition = .easeInOut(duration: 0.3)
+        transition.setPosition(view: backgroundView, position: shiftPosition)
     }
 }
