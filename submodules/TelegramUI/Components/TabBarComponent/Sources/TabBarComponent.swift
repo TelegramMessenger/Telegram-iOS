@@ -16,7 +16,10 @@ import AppBundle
 private final class TabSelectionRecognizer: UIGestureRecognizer {
     private var initialLocation: CGPoint?
     private var currentLocation: CGPoint?
-    
+    private var previousLocation: CGPoint?
+    private var previousTimestamp: TimeInterval?
+    private var currentVelocity: CGPoint = .zero
+
     override init(target: Any?, action: Selector?) {
         super.init(target: target, action: action)
         
@@ -57,7 +60,22 @@ private final class TabSelectionRecognizer: UIGestureRecognizer {
         super.touchesMoved(touches, with: event)
         
         self.currentLocation = touches.first?.location(in: self.view)
-        
+        let currentTimestamp = event.timestamp
+        if let previousLocation = self.previousLocation,
+           let previousTimestamp = self.previousTimestamp,
+           currentTimestamp > previousTimestamp {
+            let deltaTime = CGFloat(currentTimestamp - previousTimestamp)
+            let deltaX = self.currentLocation!.x - previousLocation.x
+            let deltaY = self.currentLocation!.y - previousLocation.y
+            self.currentVelocity = CGPoint(
+                x: deltaX / deltaTime,
+                y: deltaY / deltaTime
+            )
+        }
+
+        self.previousLocation = self.currentLocation
+        self.previousTimestamp = currentTimestamp
+
         self.state = .changed
     }
     
@@ -66,6 +84,10 @@ private final class TabSelectionRecognizer: UIGestureRecognizer {
             return CGPoint(x: currentLocation.x - initialLocation.x, y: currentLocation.y - initialLocation.y)
         }
         return CGPoint()
+    }
+
+    func velocity(in view: UIView?) -> CGPoint {
+        self.currentVelocity
     }
 }
 
@@ -288,11 +310,16 @@ public final class TabBarComponent: Component {
                     self.selectionGestureState = (startX, startX)
                     self.state?.updated(transition: .spring(duration: 0.4), isLocal: true)
                 }
+                let location = recognizer.location(in: self)
+                self.liquidLensView.beganGesture(location.x)
             case .changed:
                 if var selectionGestureState = self.selectionGestureState {
                     selectionGestureState.currentX = selectionGestureState.startX + recognizer.translation(in: self).x
                     self.selectionGestureState = selectionGestureState
                     self.state?.updated(transition: .immediate, isLocal: true)
+                    let velocity = recognizer.velocity(in: self)
+                    let location = recognizer.location(in: self)
+                    self.liquidLensView.changedGesture(velocity.x, location.x)
                 }
             case .ended, .cancelled:
                 self.selectionGestureState = nil
@@ -304,6 +331,7 @@ public final class TabBarComponent: Component {
                     item.action(false)
                 }
                 self.state?.updated(transition: .spring(duration: 0.4), isLocal: true)
+                self.liquidLensView.endedGesture()
             default:
                 break
             }

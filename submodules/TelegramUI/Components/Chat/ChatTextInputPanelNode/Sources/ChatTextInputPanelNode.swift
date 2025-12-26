@@ -58,6 +58,7 @@ import ChatRecordingViewOnceButtonNode
 import ChatRecordingPreviewInputPanelNode
 import ChatInputContextPanelNode
 import RasterizedCompositionComponent
+import LegacyLiquidGlass
 
 private let counterFont = Font.with(size: 14.0, design: .regular, traits: [.monospacedNumbers])
 
@@ -687,7 +688,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         self.attachmentButton.accessibilityLabel = presentationInterfaceState.strings.VoiceOver_AttachMedia
         self.attachmentButton.accessibilityTraits = [.button]
         self.attachmentButton.isAccessibilityElement = true
-        
+
         self.attachmentButtonBackground = GlassBackgroundView(frame: CGRect())
         self.attachmentButtonBackground.contentView.addSubview(self.attachmentButton)
         
@@ -716,7 +717,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         
         self.viewOnceButton = ChatRecordingViewOnceButtonNode(icon: .viewOnce)
         self.recordMoreButton = ChatRecordingViewOnceButtonNode(icon: .recordMore)
-        
+
         super.init()
         
         self.view.addSubview(self.glassBackgroundContainer)
@@ -1021,6 +1022,28 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     
     override public func didLoad() {
         super.didLoad()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            guard let self else { return }
+
+            if #available(iOS 26.0, *) {
+
+            } else {
+                let transformViews: [BackgroundViewLGL.WeakReference] = [
+                    BackgroundViewLGL.WeakReference(self.attachmentButton),
+                    BackgroundViewLGL.WeakReference(self.attachmentButtonBackground)
+//                    BackgroundViewLGL.WeakReference(self.attachmentButtonIcon)
+                ]
+
+//                if let commentsButtonCenterIcon = self.commentsButtonCenterIcon {
+//                    transformViews.append(BackgroundViewLGL.WeakReference(commentsButtonCenterIcon))
+//                }
+//                if let attachmentButtonUnseenIcon = self.attachmentButtonUnseenIcon {
+//                    transformViews.append(BackgroundViewLGL.WeakReference(attachmentButtonUnseenIcon))
+//                }
+
+                self.attachmentButton.setupBackgroundViewLGL(transformViews: transformViews)
+            }
+        }
     }
     
     public func loadTextInputNodeIfNeeded() {

@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import TelegramPresentationData
 import LegacyComponents
 import ComponentFlow
+import LegacyLiquidGlass
 
 public final class SliderComponent: Component {
     public final class Discrete: Equatable {
@@ -118,13 +119,13 @@ public final class SliderComponent: Component {
     }
     
     final class SliderView: UISlider {
-        
+
     }
-    
+
     public final class View: UIView {
-        private var nativeSliderView: SliderView?
+        private var nativeSliderView: UISlider?
         private var sliderView: TGPhotoEditorSliderView?
-        
+
         private var component: SliderComponent?
         private weak var state: EmptyComponentState?
         
@@ -157,16 +158,20 @@ public final class SliderComponent: Component {
             
             let size = CGSize(width: availableSize.width, height: 44.0)
             
-            if #available(iOS 26.0, *), component.useNative {
-                let sliderView: SliderView
+            if #available(iOS 10.0, *), component.useNative {
+                let sliderView: UISlider
                 if let current = self.nativeSliderView {
                     sliderView = current
                 } else {
-                    sliderView = SliderView()
+                    if #available(iOS 26.0, *) {
+                        sliderView = SliderView()
+                    } else {
+                        sliderView = SliderViewLGL()
+                    }
                     sliderView.disablesInteractiveTransitionGestureRecognizer = true
                     sliderView.addTarget(self, action: #selector(self.sliderValueChanged), for: .valueChanged)
                     sliderView.layer.allowsGroupOpacity = true
-                    
+
                     self.addSubview(sliderView)
                     self.nativeSliderView = sliderView
                     
@@ -177,7 +182,11 @@ public final class SliderComponent: Component {
                     case let .discrete(discrete):
                         sliderView.minimumValue = 0.0
                         sliderView.maximumValue = Float(discrete.valueCount - 1)
-                        sliderView.trackConfiguration = .init(numberOfTicks: discrete.valueCount)
+                        if #available(iOS 26.0, *) {
+                            sliderView.trackConfiguration = .init(numberOfTicks: discrete.valueCount)
+                        } else {
+
+                        }
                     }
                 }
                 switch component.content {
@@ -301,8 +310,32 @@ public final class SliderComponent: Component {
             
             return size
         }
-        
+        func printSliderHierarchy() {
+            print("\n=== Иерархия UISlider ===")
+            dumpSubviewHierarchy(view: nativeSliderView!, level: 0)
+        }
+
+        func dumpSubviewHierarchy(view: UIView, level: Int) {
+            let indent = String(repeating: "  ", count: level)
+            let className = String(describing: type(of: view))
+            let frame = view.frame
+            let isHidden = view.isHidden
+            let alpha = view.alpha
+
+            print("\(indent)\(className) frame: \(frame) hidden: \(isHidden) alpha: \(alpha) tag: \(view.tag)")
+
+            // Выводим дополнительную информацию для UIImageView
+            if let imageView = view as? UIImageView {
+                print("\(indent)  UIImageView: image = \(imageView.image != nil ? "YES" : "NO")")
+            }
+
+            // Рекурсивно для всех subviews
+            for subview in view.subviews {
+                dumpSubviewHierarchy(view: subview, level: level + 1)
+            }
+        }
         @objc private func sliderValueChanged() {
+            printSliderHierarchy()
             guard let component = self.component else {
                 return
             }

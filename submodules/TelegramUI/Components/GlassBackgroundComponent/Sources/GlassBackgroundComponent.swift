@@ -315,7 +315,9 @@ public class GlassBackgroundView: UIView {
     private let contentContainer: ContentContainer
     
     private var innerBackgroundView: UIView?
-    
+
+    public var cornerRadius: CGFloat = 0.0
+
     public var contentView: UIView {
         if let nativeView = self.nativeView {
             return nativeView.contentView
@@ -426,7 +428,12 @@ public class GlassBackgroundView: UIView {
             }
             transition.setFrame(view: backgroundNode.view, frame: CGRect(origin: CGPoint(), size: size))
         }
-        
+
+        switch shape {
+        case let .roundedRect(cornerRadius):
+            self.cornerRadius = cornerRadius
+        }
+
         let shadowInset: CGFloat = 32.0
         
         if let innerColor = tintColor.innerColor {
