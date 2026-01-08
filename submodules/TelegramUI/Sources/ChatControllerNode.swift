@@ -245,6 +245,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     
     private let titleAccessoryPanelContainer: ChatControllerTitlePanelNodeContainer
     private var currentTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode?
+    private var recentChatsPanelNode: RecentChatsPanelNode?
     
     private var floatingTopicsPanelContainer: ChatControllerTitlePanelNodeContainer
     private var floatingTopicsPanel: (view: ComponentView<ChatSidePanelEnvironment>, component: ChatFloatingTopicsPanel)?
@@ -1497,6 +1498,58 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             )
         } else {
             self.currentTitleAccessoryPanelNode = nil
+        }
+        
+        var displayRecentChats = false
+        // Allow in User, Group, and Channel chats
+        if case .standard(.default) = self.chatPresentationInterfaceState.mode, self.chatPresentationInterfaceState.search == nil {
+             if let peerId = self.chatPresentationInterfaceState.chatLocation.peerId {
+                 if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup || peerId.namespace == Namespaces.Peer.CloudChannel {
+                     displayRecentChats = true
+                 }
+             }
+        }
+        
+        if displayRecentChats {
+            let recentChatsPanelNode: RecentChatsPanelNode
+            if let current = self.recentChatsPanelNode {
+                recentChatsPanelNode = current
+            } else {
+                recentChatsPanelNode = RecentChatsPanelNode(context: self.context, animationCache: self.controllerInteraction.presentationContext.animationCache, animationRenderer: self.controllerInteraction.presentationContext.animationRenderer, peerSelected: { [weak self] (peer: EnginePeer) in
+                    guard let self = self else { return }
+                    
+                    // Bug 1: Ignore if tapping the current chat
+                    if let currentPeerId = self.chatPresentationInterfaceState.chatLocation.peerId, currentPeerId == peer.id {
+                        return
+                    }
+                    
+                    if let navigationController = self.controller?.navigationController as? NavigationController {
+                        let chatController = ChatControllerImpl(context: self.context, chatLocation: .peer(id: peer.id))
+                        chatController.scheduledActivateInput = .text
+                        
+                        var newStack = navigationController.viewControllers
+                        if let selfController = self.controller {
+                            if let index = newStack.lastIndex(where: { $0 === selfController }) {
+                                newStack.remove(at: index)
+                            }
+                        }
+                        newStack.append(chatController)
+                        navigationController.setViewControllers(newStack, animated: true)
+                    }
+                })
+                self.recentChatsPanelNode = recentChatsPanelNode
+            }
+            
+            headerPanels.append(HeaderPanelContainerComponent.Panel(
+                key: "recentChats",
+                orderIndex: 4,
+                component: AnyComponent(LegacyChatHeaderPanelComponent(
+                    panelNode: recentChatsPanelNode,
+                    interfaceState: self.chatPresentationInterfaceState
+                )))
+            )
+        } else {
+            self.recentChatsPanelNode = nil
         }
         
         var displayFeePanel: (value: Int64, peer: EnginePeer)?
