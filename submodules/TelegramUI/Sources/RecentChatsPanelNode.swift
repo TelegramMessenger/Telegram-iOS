@@ -467,18 +467,25 @@ final class RecentChatsPanelNode: ChatTitleAccessoryPanelNode {
         self.disposable.set(
             (recent 
             |> distinctUntilChanged 
-            |> mapToSignal { (peers: [EnginePeer]) -> Signal<([EnginePeer], [EnginePeer.Id: (Int32, Bool)], [EnginePeer.Id: EnginePeer.Presence]), NoError> in
+            |> mapToSignal { [weak self] (peers: [EnginePeer]) -> Signal<([EnginePeer], [EnginePeer.Id: (Int32, Bool)], [EnginePeer.Id: EnginePeer.Presence]), NoError> in
+                guard let self else {
+                     return .single(([], [:], [:]) as ([EnginePeer], [EnginePeer.Id: (Int32, Bool)], [EnginePeer.Id: EnginePeer.Presence]))
+                }
+                
                 if peers.isEmpty {
                     return .single(([], [:], [:]) as ([EnginePeer], [EnginePeer.Id: (Int32, Bool)], [EnginePeer.Id: EnginePeer.Presence]))
                 }
                 
                 let signals: [Signal<PeerView, NoError>] = peers.map {
-                    context.account.postbox.peerView(id: $0.id)
+                    self.context.account.postbox.peerView(id: $0.id)
                 }
                 
                 return combineLatest(queue: .mainQueue(), signals)
-                |> mapToSignal { (peerViews: [PeerView]) -> Signal<([EnginePeer], [EnginePeer.Id: (Int32, Bool)], [EnginePeer.Id: EnginePeer.Presence]), NoError> in
-                    return context.account.postbox.combinedView(keys: peerViews.map { item -> PostboxViewKey in
+                |> mapToSignal { [weak self] (peerViews: [PeerView]) -> Signal<([EnginePeer], [EnginePeer.Id: (Int32, Bool)], [EnginePeer.Id: EnginePeer.Presence]), NoError> in
+                    guard let self else {
+                        return .single(([], [:], [:]) as ([EnginePeer], [EnginePeer.Id: (Int32, Bool)], [EnginePeer.Id: EnginePeer.Presence]))
+                    }
+                    return self.context.account.postbox.combinedView(keys: peerViews.map { item -> PostboxViewKey in
                         let key = PostboxViewKey.unreadCounts(items: [UnreadMessageCountsItem.peer(id: item.peerId, handleThreads: true)])
                         return key
                     })

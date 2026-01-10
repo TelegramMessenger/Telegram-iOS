@@ -1879,9 +1879,9 @@ public final class ChatListNode: ListView {
         }
     
         self.updateIsMainTabDisposable = (self.isMainTab.get()
-        |> deliverOnMainQueue).startStrict(next: { isMainTab in
-            if isMainTab {
-                let _ = context.engine.privacy.cleanupSessionReviews().startStandalone()
+        |> deliverOnMainQueue).startStrict(next: { [weak self] isMainTab in
+            if let self, isMainTab {
+                let _ = self.context.engine.privacy.cleanupSessionReviews().startStandalone()
             }
         }).strict()
         
