@@ -9,21 +9,10 @@ import BundleIconComponent
 import TextFormat
 import AccountContext
 import LottieComponent
+import TelegramPresentationData
+import GlassBackgroundComponent
 
 public final class FilterSelectorComponent: Component {
-    public struct Colors: Equatable {
-        public var foreground: UIColor
-        public var background: UIColor
-        
-        public init(
-            foreground: UIColor,
-            background: UIColor
-        ) {
-            self.foreground = foreground
-            self.background = background
-        }
-    }
-    
     public struct Item: Equatable {
         public var id: AnyHashable
         public var index: Int
@@ -51,18 +40,18 @@ public final class FilterSelectorComponent: Component {
     }
     
     public let context: AccountContext?
-    public let colors: Colors
+    public let theme: PresentationTheme
     public let items: [Item]
     public let selectedItemId: AnyHashable?
     
     public init(
         context: AccountContext? = nil,
-        colors: Colors,
+        theme: PresentationTheme,
         items: [Item],
         selectedItemId: AnyHashable?
     ) {
         self.context = context
-        self.colors = colors
+        self.theme = theme
         self.items = items
         self.selectedItemId = selectedItemId
     }
@@ -71,7 +60,7 @@ public final class FilterSelectorComponent: Component {
         if lhs.context !== rhs.context {
             return false
         }
-        if lhs.colors != rhs.colors {
+        if lhs.theme !== rhs.theme {
             return false
         }
         if lhs.items != rhs.items {
@@ -133,11 +122,11 @@ public final class FilterSelectorComponent: Component {
             self.component = component
             self.state = state
             
-            let baseHeight: CGFloat = 28.0
+            let baseHeight: CGFloat = 36.0
             
             var spacing: CGFloat = 6.0
             
-            let itemFont = Font.semibold(14.0)
+            let itemFont = Font.medium(14.0)
             let allowScroll = true
             
             var innerContentWidth: CGFloat = 0.0
@@ -162,25 +151,19 @@ public final class FilterSelectorComponent: Component {
                 
                 let itemSize = itemView.title.update(
                     transition: transition,
-                    component: AnyComponent(PlainButtonComponent(
-                        content: AnyComponent(ItemComponent(
-                            context: component.context,
-                            index: item.index,
-                            iconName: item.iconName,
-                            text: item.title,
-                            font: itemFont,
-                            color: component.colors.foreground,
-                            backgroundColor: component.colors.background,
-                            isSelected: itemId == component.selectedItemId
-                        )),
-                        effectAlignment: .center,
-                        minSize: nil,
+                    component: AnyComponent(ItemComponent(
+                        context: component.context,
+                        index: item.index,
+                        iconName: item.iconName,
+                        text: item.title,
+                        font: itemFont,
+                        theme: component.theme,
+                        isSelected: itemId == component.selectedItemId,
                         action: { [weak itemView] in
                             if let view = itemView?.title.view {
                                 item.action(view)
                             }
-                        },
-                        animateScale: false
+                        }
                     )),
                     environment: {},
                     containerSize: CGSize(width: 200.0, height: 100.0)
@@ -261,9 +244,9 @@ private final class ItemComponent: Component {
     let iconName: String?
     let text: String
     let font: UIFont
-    let color: UIColor
-    let backgroundColor: UIColor
+    let theme: PresentationTheme
     let isSelected: Bool
+    let action: () -> Void
     
     init(
         context: AccountContext?,
@@ -271,18 +254,18 @@ private final class ItemComponent: Component {
         iconName: String?,
         text: String,
         font: UIFont,
-        color: UIColor,
-        backgroundColor: UIColor,
-        isSelected: Bool
+        theme: PresentationTheme,
+        isSelected: Bool,
+        action: @escaping () -> Void
     ) {
         self.context = context
         self.index = index
         self.iconName = iconName
         self.text = text
         self.font = font
-        self.color = color
-        self.backgroundColor = backgroundColor
+        self.theme = theme
         self.isSelected = isSelected
+        self.action = action
     }
     
     static func ==(lhs: ItemComponent, rhs: ItemComponent) -> Bool {
@@ -301,10 +284,7 @@ private final class ItemComponent: Component {
         if lhs.font != rhs.font {
             return false
         }
-        if lhs.color != rhs.color {
-            return false
-        }
-        if lhs.backgroundColor != rhs.backgroundColor {
+        if lhs.theme !== rhs.theme {
             return false
         }
         if lhs.isSelected != rhs.isSelected {
@@ -317,7 +297,7 @@ private final class ItemComponent: Component {
         private var component: ItemComponent?
         private weak var state: EmptyComponentState?
         
-        private let background = ComponentView<Empty>()
+        private let backgroundView: GlassBackgroundView
         private let title = ComponentView<Empty>()
         private let icon = ComponentView<Empty>()
         
@@ -327,11 +307,22 @@ private final class ItemComponent: Component {
         private let playOnce = ActionSlot<Void>()
         
         override init(frame: CGRect) {
+            self.backgroundView = GlassBackgroundView()
+            
             super.init(frame: frame)
+            
+            self.addSubview(self.backgroundView)
+            self.backgroundView.contentView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.onTapGesture(_:))))
         }
         
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
+        }
+        
+        @objc private func onTapGesture(_ recognizer: UITapGestureRecognizer) {
+            if case .ended = recognizer.state {
+                self.component?.action()
+            }
         }
         
         func update(component: ItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
@@ -342,7 +333,7 @@ private final class ItemComponent: Component {
             var animateTitleInDirection: CGFloat?
             if let previousComponent, previousComponent.text != component.text, !transition.animation.isImmediate, let titleView = self.title.view, let snapshotView = titleView.snapshotView(afterScreenUpdates: false) {
                 snapshotView.frame = titleView.frame
-                self.addSubview(snapshotView)
+                self.backgroundView.contentView.addSubview(snapshotView)
                 
                 var direction: CGFloat = 1.0
                 if previousComponent.index < component.index {
@@ -357,7 +348,7 @@ private final class ItemComponent: Component {
                 animateTitleInDirection = direction
             }
             
-            let attributedTitle = NSAttributedString(string: component.text, font: component.font, textColor: component.color)
+            let attributedTitle = NSAttributedString(string: component.text, font: component.font, textColor: component.theme.chat.inputPanel.panelControlColor)
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
@@ -374,7 +365,7 @@ private final class ItemComponent: Component {
                 transition: transition,
                 component: AnyComponent(LottieComponent(
                     content: LottieComponent.AppBundleContent(name: animationName),
-                    color: component.color,
+                    color: component.theme.chat.inputPanel.panelControlColor,
                     playOnce: self.playOnce
                 )),
                 environment: {},
@@ -406,29 +397,14 @@ private final class ItemComponent: Component {
             }
             let spacing: CGFloat = 4.0
             let totalWidth = titleSize.width + animationSize.width + spacing
-            let size = CGSize(width: totalWidth + leftPadding + padding, height: 28.0)
+            let size = CGSize(width: totalWidth + leftPadding + padding, height:36.0)
             
-            let backgroundSize = self.background.update(
-                transition: transition,
-                component: AnyComponent(RoundedRectangle(
-                    color: component.backgroundColor,
-                    cornerRadius: 14.0
-                )),
-                environment: {},
-                containerSize: size
-            )
-            
-            if let backgroundView = self.background.view {
-                if backgroundView.superview == nil {
-                    self.addSubview(backgroundView)
-                }
-                transition.setPosition(view: backgroundView, position: CGPoint(x: size.width / 2.0, y: size.height / 2.0))
-                transition.setBounds(view: backgroundView, bounds: CGRect(origin: CGPoint(), size: backgroundSize))
-            }
+            self.backgroundView.update(size: size, cornerRadius: size.height * 0.5, isDark: component.theme.overallDarkAppearance, tintColor: .init(kind: .panel, color: UIColor(white: component.theme.overallDarkAppearance ? 0.0 : 1.0, alpha: 0.6)), isInteractive: true, transition: transition)
+            transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(), size: size))
             
             if let titleView = self.title.view {
                 if titleView.superview == nil {
-                    self.addSubview(titleView)
+                    self.backgroundView.contentView.addSubview(titleView)
                 }
                 let titlePosition: CGPoint
                 if let _ = component.iconName {
@@ -446,7 +422,7 @@ private final class ItemComponent: Component {
             
             if let iconView = self.icon.view {
                 if iconView.superview == nil {
-                    self.addSubview(iconView)
+                    self.backgroundView.contentView.addSubview(iconView)
                 }
                 let iconPosition: CGPoint
                 if let _ = component.iconName {

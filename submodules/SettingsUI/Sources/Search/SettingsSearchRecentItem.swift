@@ -127,7 +127,7 @@ class SettingsSearchRecentItemNode: ItemListRevealOptionsItemNode {
         self.subtitleNode.contentMode = .left
         self.subtitleNode.contentsScale = UIScreenScale
         
-        super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
+        super.init(layerBacked: false, rotated: false, seeThrough: false)
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.separatorNode)

@@ -3,6 +3,7 @@ import UIKit
 
 public final class Button: Component {
     public let content: AnyComponent<Empty>
+    public let contentInsets: UIEdgeInsets
     public let minSize: CGSize?
     public let hitTestEdgeInsets: UIEdgeInsets?
     public let tag: AnyObject?
@@ -15,6 +16,7 @@ public final class Button: Component {
 
     convenience public init(
         content: AnyComponent<Empty>,
+        contentInsets: UIEdgeInsets = UIEdgeInsets(),
         isEnabled: Bool = true,
         automaticHighlight: Bool = true,
         action: @escaping () -> Void,
@@ -22,6 +24,7 @@ public final class Button: Component {
     ) {
         self.init(
             content: content,
+            contentInsets: contentInsets,
             minSize: nil,
             hitTestEdgeInsets: nil,
             tag: nil,
@@ -35,6 +38,7 @@ public final class Button: Component {
     
     private init(
         content: AnyComponent<Empty>,
+        contentInsets: UIEdgeInsets = UIEdgeInsets(),
         minSize: CGSize? = nil,
         hitTestEdgeInsets: UIEdgeInsets? = nil,
         tag: AnyObject? = nil,
@@ -46,6 +50,7 @@ public final class Button: Component {
         highlightedAction: ActionSlot<Bool>?
     ) {
         self.content = content
+        self.contentInsets = contentInsets
         self.minSize = minSize
         self.hitTestEdgeInsets = hitTestEdgeInsets
         self.tag = tag
@@ -60,6 +65,7 @@ public final class Button: Component {
     public func minSize(_ minSize: CGSize?) -> Button {
         return Button(
             content: self.content,
+            contentInsets: self.contentInsets,
             minSize: minSize,
             hitTestEdgeInsets: self.hitTestEdgeInsets,
             tag: self.tag,
@@ -75,6 +81,7 @@ public final class Button: Component {
     public func withHitTestEdgeInsets(_ hitTestEdgeInsets: UIEdgeInsets?) -> Button {
         return Button(
             content: self.content,
+            contentInsets: self.contentInsets,
             minSize: self.minSize,
             hitTestEdgeInsets: hitTestEdgeInsets,
             tag: self.tag,
@@ -90,6 +97,7 @@ public final class Button: Component {
     public func withIsExclusive(_ isExclusive: Bool) -> Button {
         return Button(
             content: self.content,
+            contentInsets: self.contentInsets,
             minSize: self.minSize,
             hitTestEdgeInsets: self.hitTestEdgeInsets,
             tag: self.tag,
@@ -106,6 +114,7 @@ public final class Button: Component {
     public func withHoldAction(_ holdAction: ((UIView) -> Void)?) -> Button {
         return Button(
             content: self.content,
+            contentInsets: self.contentInsets,
             minSize: self.minSize,
             hitTestEdgeInsets: self.hitTestEdgeInsets,
             tag: self.tag,
@@ -121,6 +130,7 @@ public final class Button: Component {
     public func tagged(_ tag: AnyObject) -> Button {
         return Button(
             content: self.content,
+            contentInsets: self.contentInsets,
             minSize: self.minSize,
             hitTestEdgeInsets: self.hitTestEdgeInsets,
             tag: tag,
@@ -135,6 +145,9 @@ public final class Button: Component {
     
     public static func ==(lhs: Button, rhs: Button) -> Bool {
         if lhs.content != rhs.content {
+            return false
+        }
+        if lhs.contentInsets != rhs.contentInsets {
             return false
         }
         if lhs.minSize != rhs.minSize {
@@ -318,6 +331,8 @@ public final class Button: Component {
                 size.width = max(size.width, minSize.width)
                 size.height = max(size.height, minSize.height)
             }
+            size.width += component.contentInsets.left + component.contentInsets.right
+            size.height += component.contentInsets.top + component.contentInsets.bottom
             
             self.component = component
             

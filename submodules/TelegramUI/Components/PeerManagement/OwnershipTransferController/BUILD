@@ -18,11 +18,12 @@ swift_library(
         "//submodules/PresentationDataUtils",
         "//submodules/AccountContext",
         "//submodules/TextFormat",
-        "//submodules/AlertUI",
         "//submodules/PasswordSetupUI",
         "//submodules/Markdown",
         "//submodules/ActivityIndicator",
         "//submodules/TelegramUI/Components/PeerManagement/OldChannelsController",
+        "//submodules/TelegramUI/Components/AlertComponent",
+        "//submodules/TelegramUI/Components/AlertComponent/AlertInputFieldComponent",
     ],
     visibility = [
         "//visibility:public",

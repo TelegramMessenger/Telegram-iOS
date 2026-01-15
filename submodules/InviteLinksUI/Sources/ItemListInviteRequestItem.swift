@@ -223,7 +223,7 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
         
         self.contentWrapperNode = ASDisplayNode()
         
-        super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
+        super.init(layerBacked: false, rotated: false, seeThrough: false)
         
         self.isAccessibilityElement = true
         

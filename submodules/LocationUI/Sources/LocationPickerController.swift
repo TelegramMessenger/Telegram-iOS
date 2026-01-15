@@ -129,7 +129,7 @@ public final class LocationPickerController: ViewController, AttachmentContainab
             
             let navigationBarPresentationData = NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: strongSelf.presentationData.theme, hideBackground: style == .glass, hideSeparator: true), strings: NavigationBarStrings(presentationStrings: strongSelf.presentationData.strings))
             
-            strongSelf.navigationBar?.updatePresentationData(navigationBarPresentationData)
+            strongSelf.navigationBar?.updatePresentationData(navigationBarPresentationData, transition: .immediate)
             strongSelf.searchNavigationContentNode?.updatePresentationData(strongSelf.presentationData)
             
             strongSelf.updateBarButtons()

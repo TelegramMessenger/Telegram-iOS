@@ -132,7 +132,7 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
         self.activateArea = AccessibilityAreaNode()
         self.activateArea.accessibilityTraits = .staticText
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.textNode.textNode)
         self.addSubnode(self.activateArea)

@@ -1012,7 +1012,7 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
             isHiddenUpdatedImpl?(isHidden)
         }, openPremium: {
             openPremiumImpl?()
-        }), navigationBarAppearance: .transparent)
+        }), navigationBarAppearance: .default)
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let title: String

@@ -396,7 +396,7 @@ public class WallpaperGalleryController: ViewController {
             self.title = self.presentationData.strings.WallpaperPreview_Title
         }
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
-        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
+        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData), transition: .immediate)
         self.toolbarNode?.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
         self.patternPanelNode?.updateTheme(self.presentationData.theme)
 

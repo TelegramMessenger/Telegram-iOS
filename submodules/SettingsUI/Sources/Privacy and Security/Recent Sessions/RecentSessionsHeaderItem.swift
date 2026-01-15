@@ -92,7 +92,7 @@ class RecentSessionsHeaderItemNode: ListViewItemNode {
         
         self.buttonNode = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: .black, foregroundColor: .white), fontSize: 16.0, height: 50.0, cornerRadius: 11.0)
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.animationNode)

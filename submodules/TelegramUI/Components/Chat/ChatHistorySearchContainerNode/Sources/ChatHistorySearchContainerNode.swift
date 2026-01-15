@@ -158,7 +158,7 @@ public final class ChatHistorySearchContainerNode: SearchDisplayControllerConten
         self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings, self.presentationData.dateTimeFormat, self.presentationData.listsFontSize))
         
         self.dimNode = ASDisplayNode()
-        self.dimNode.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        self.dimNode.backgroundColor = .clear
         self.listNode = ListView()
         self.listNode.accessibilityPageScrolledString = { row, count in
             return presentationData.strings.VoiceOver_ScrollStatus(row, count).string

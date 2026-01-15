@@ -166,6 +166,7 @@ private enum PeerMembersListEntry: Comparable, Identifiable {
                     actionIcon: .none,
                     index: nil,
                     header: nil,
+                    hideBackground: true,
                     action: member.peer.id == context.account.peerId ? nil : { _ in
                         action(member, .open)
                     },

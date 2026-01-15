@@ -8,6 +8,9 @@ import TelegramCore
 import TelegramPresentationData
 import AccountContext
 import TelegramStringFormatting
+import ComponentFlow
+import AlertComponent
+import AlertMultilineInputFieldComponent
 
 private final class PromptInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegate {
     private var theme: PresentationTheme
@@ -194,327 +197,95 @@ private final class PromptInputFieldNode: ASDisplayNode, ASEditableTextNodeDeleg
     }
 }
 
-private final class PromptAlertContentNode: AlertContentNode {
-    private let strings: PresentationStrings
-    private let text: String
-    private let titleFont: PromptControllerTitleFont
-    private let subtitle: String?
-
-    private let textNode: ASTextNode
-    private let subtitleNode: ASTextNode?
-    let inputFieldNode: PromptInputFieldNode
-    
-    private let actionNodesSeparator: ASDisplayNode
-    private let actionNodes: [TextAlertContentActionNode]
-    private let actionVerticalSeparators: [ASDisplayNode]
-    
-    private let disposable = MetaDisposable()
-    
-    private var validLayout: CGSize?
-    
-    private let hapticFeedback = HapticFeedback()
-    
-    var complete: (() -> Void)? {
-        didSet {
-            self.inputFieldNode.complete = self.complete
-        }
-    }
-    
-    override var dismissOnOutsideTap: Bool {
-        return self.isUserInteractionEnabled
-    }
-    
-    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, actions: [TextAlertAction], text: String, titleFont: PromptControllerTitleFont, subtitle: String?, value: String?, placeholder: String?, characterLimit: Int, displayCharacterLimit: Bool) {
-        self.strings = strings
-        self.text = text
-        self.titleFont = titleFont
-        self.subtitle = subtitle
-        
-        self.textNode = ASTextNode()
-        self.textNode.maximumNumberOfLines = 2
-        
-        if subtitle != nil {
-            let subtitleNode = ASTextNode()
-            subtitleNode.maximumNumberOfLines = 0
-            self.subtitleNode = subtitleNode
-        } else {
-            self.subtitleNode = nil
-        }
-        
-        self.inputFieldNode = PromptInputFieldNode(theme: ptheme, placeholder: placeholder ?? "", characterLimit: characterLimit, displayCharacterLimit: displayCharacterLimit)
-        self.inputFieldNode.text = value ?? ""
-        
-        self.actionNodesSeparator = ASDisplayNode()
-        self.actionNodesSeparator.isLayerBacked = true
-        
-        self.actionNodes = actions.map { action -> TextAlertContentActionNode in
-            return TextAlertContentActionNode(theme: theme, action: action)
-        }
-        
-        var actionVerticalSeparators: [ASDisplayNode] = []
-        if actions.count > 1 {
-            for _ in 0 ..< actions.count - 1 {
-                let separatorNode = ASDisplayNode()
-                separatorNode.isLayerBacked = true
-                actionVerticalSeparators.append(separatorNode)
-            }
-        }
-        self.actionVerticalSeparators = actionVerticalSeparators
-        
-        super.init()
-        
-        self.addSubnode(self.textNode)
-        if let subtitleNode = self.subtitleNode {
-            self.addSubnode(subtitleNode)
-        }
-        
-        self.addSubnode(self.inputFieldNode)
-
-        self.addSubnode(self.actionNodesSeparator)
-        
-        for actionNode in self.actionNodes {
-            self.addSubnode(actionNode)
-        }
-        self.actionNodes.last?.actionEnabled = true
-        
-        for separatorNode in self.actionVerticalSeparators {
-            self.addSubnode(separatorNode)
-        }
-        
-        self.inputFieldNode.updateHeight = { [weak self] in
-            if let strongSelf = self {
-                if let _ = strongSelf.validLayout {
-                    strongSelf.requestLayout?(.animated(duration: 0.15, curve: .spring))
-                }
-            }
-        }
-        
-//        self.inputFieldNode.textChanged = { [weak self] text in
-//            if let strongSelf = self, let lastNode = strongSelf.actionNodes.last {
-//                lastNode.actionEnabled = !text.isEmpty
-//            }
-//        }
-        
-        self.updateTheme(theme)
-    }
-    
-    deinit {
-        self.disposable.dispose()
-    }
-    
-    var value: String {
-        return self.inputFieldNode.text
-    }
-
-    override func updateTheme(_ theme: AlertControllerTheme) {
-        let titleFontValue: UIFont
-        switch self.titleFont {
-        case .regular:
-            titleFontValue = Font.regular(13.0)
-        case .bold:
-            titleFontValue = Font.semibold(17.0)
-        }
-        self.textNode.attributedText = NSAttributedString(string: self.text, font: titleFontValue, textColor: theme.primaryColor, paragraphAlignment: .center)
-        
-        if let subtitle = self.subtitle, let subtitleNode = self.subtitleNode {
-            subtitleNode.attributedText = NSAttributedString(string: subtitle, font: Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center)
-        }
-
-        self.actionNodesSeparator.backgroundColor = theme.separatorColor
-        for actionNode in self.actionNodes {
-            actionNode.updateTheme(theme)
-        }
-        for separatorNode in self.actionVerticalSeparators {
-            separatorNode.backgroundColor = theme.separatorColor
-        }
-        
-        if let size = self.validLayout {
-            _ = self.updateLayout(size: size, transition: .immediate)
-        }
-    }
-    
-    override func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
-        var size = size
-        size.width = min(size.width, 270.0)
-        let measureSize = CGSize(width: size.width - 16.0 * 2.0, height: CGFloat.greatestFiniteMagnitude)
-        
-        let hadValidLayout = self.validLayout != nil
-        
-        self.validLayout = size
-        
-        var origin: CGPoint = CGPoint(x: 0.0, y: 20.0)
-        let spacing: CGFloat = 5.0
-        
-        let titleSize = CGSize()
-//        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - titleSize.width) / 2.0), y: origin.y), size: titleSize))
-//        origin.y += titleSize.height + 4.0
-        
-        let textSize = self.textNode.measure(measureSize)
-        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: origin.y), size: textSize))
-        origin.y += textSize.height + 6.0 + spacing
-        
-        var subtitleSize: CGSize?
-        if let subtitleNode {
-            let subtitleSizeValue = subtitleNode.measure(measureSize)
-            subtitleSize = subtitleSizeValue
-            transition.updateFrame(node: subtitleNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - subtitleSizeValue.width) / 2.0), y: origin.y), size: subtitleSizeValue))
-            origin.y += subtitleSizeValue.height + 6.0 + spacing
-        }
-        
-        let actionButtonHeight: CGFloat = 44.0
-        var minActionsWidth: CGFloat = 0.0
-        let maxActionWidth: CGFloat = floor(size.width / CGFloat(self.actionNodes.count))
-        let actionTitleInsets: CGFloat = 8.0
-        
-        var effectiveActionLayout = TextAlertContentActionLayout.horizontal
-        for actionNode in self.actionNodes {
-            let actionTitleSize = actionNode.titleNode.updateLayout(CGSize(width: maxActionWidth, height: actionButtonHeight))
-            if case .horizontal = effectiveActionLayout, actionTitleSize.height > actionButtonHeight * 0.6667 {
-                effectiveActionLayout = .vertical
-            }
-            switch effectiveActionLayout {
-                case .horizontal:
-                    minActionsWidth += actionTitleSize.width + actionTitleInsets
-                case .vertical:
-                    minActionsWidth = max(minActionsWidth, actionTitleSize.width + actionTitleInsets)
-            }
-        }
-        
-        let insets = UIEdgeInsets(top: 18.0, left: 18.0, bottom: 9.0, right: 18.0)
-        
-        var contentWidth = max(titleSize.width, minActionsWidth)
-        if let subtitleSize {
-            contentWidth = max(contentWidth, subtitleSize.width)
-        }
-        contentWidth = max(contentWidth, 234.0)
-        
-        var actionsHeight: CGFloat = 0.0
-        switch effectiveActionLayout {
-            case .horizontal:
-                actionsHeight = actionButtonHeight
-            case .vertical:
-                actionsHeight = actionButtonHeight * CGFloat(self.actionNodes.count)
-        }
-        
-        let resultWidth = contentWidth + insets.left + insets.right
-        
-        let inputFieldWidth = resultWidth
-        let inputFieldHeight = self.inputFieldNode.updateLayout(width: inputFieldWidth, transition: transition)
-        let inputHeight = inputFieldHeight
-        transition.updateFrame(node: self.inputFieldNode, frame: CGRect(x: 0.0, y: origin.y, width: resultWidth, height: inputFieldHeight))
-        transition.updateAlpha(node: self.inputFieldNode, alpha: inputHeight > 0.0 ? 1.0 : 0.0)
-        
-        var resultSize = CGSize(width: resultWidth, height: titleSize.height + textSize.height + spacing + inputHeight + actionsHeight  + insets.top + insets.bottom)
-        if let subtitleSize {
-            resultSize.height += subtitleSize.height + spacing
-        }
-        
-        transition.updateFrame(node: self.actionNodesSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight - UIScreenPixel), size: CGSize(width: resultSize.width, height: UIScreenPixel)))
-        
-        var actionOffset: CGFloat = 0.0
-        let actionWidth: CGFloat = floor(resultSize.width / CGFloat(self.actionNodes.count))
-        var separatorIndex = -1
-        var nodeIndex = 0
-        for actionNode in self.actionNodes {
-            if separatorIndex >= 0 {
-                let separatorNode = self.actionVerticalSeparators[separatorIndex]
-                switch effectiveActionLayout {
-                    case .horizontal:
-                        transition.updateFrame(node: separatorNode, frame: CGRect(origin: CGPoint(x: actionOffset - UIScreenPixel, y: resultSize.height - actionsHeight), size: CGSize(width: UIScreenPixel, height: actionsHeight - UIScreenPixel)))
-                    case .vertical:
-                        transition.updateFrame(node: separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight + actionOffset - UIScreenPixel), size: CGSize(width: resultSize.width, height: UIScreenPixel)))
-                }
-            }
-            separatorIndex += 1
-            
-            let currentActionWidth: CGFloat
-            switch effectiveActionLayout {
-                case .horizontal:
-                    if nodeIndex == self.actionNodes.count - 1 {
-                        currentActionWidth = resultSize.width - actionOffset
-                    } else {
-                        currentActionWidth = actionWidth
-                    }
-                case .vertical:
-                    currentActionWidth = resultSize.width
-            }
-            
-            let actionNodeFrame: CGRect
-            switch effectiveActionLayout {
-                case .horizontal:
-                    actionNodeFrame = CGRect(origin: CGPoint(x: actionOffset, y: resultSize.height - actionsHeight), size: CGSize(width: currentActionWidth, height: actionButtonHeight))
-                    actionOffset += currentActionWidth
-                case .vertical:
-                    actionNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight + actionOffset), size: CGSize(width: currentActionWidth, height: actionButtonHeight))
-                    actionOffset += actionButtonHeight
-            }
-            
-            transition.updateFrame(node: actionNode, frame: actionNodeFrame)
-            
-            nodeIndex += 1
-        }
-        
-        if !hadValidLayout {
-            self.inputFieldNode.activateInput()
-        }
-        
-        return resultSize
-    }
-    
-    func animateError() {
-        self.inputFieldNode.layer.addShakeAnimation()
-        self.hapticFeedback.error()
-    }
-}
-
 public enum PromptControllerTitleFont {
     case regular
     case bold
 }
 
-public func promptController(sharedContext: SharedAccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, text: String, titleFont: PromptControllerTitleFont = .regular, subtitle: String? = nil, value: String?, placeholder: String? = nil, characterLimit: Int = 1000, displayCharacterLimit: Bool = false, apply: @escaping (String?) -> Void) -> AlertController {
-    let presentationData = updatedPresentationData?.initial ?? sharedContext.currentPresentationData.with { $0 }
+public func promptController(
+    context: AccountContext,
+    updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
+    text: String,
+    titleFont: PromptControllerTitleFont = .regular,
+    subtitle: String? = nil,
+    value: String?,
+    placeholder: String? = nil,
+    characterLimit: Int = 1000,
+    displayCharacterLimit: Bool = false,
+    apply: @escaping (String?) -> Void,
+    dismissed: @escaping () -> Void = {}
+) -> ViewController {
+    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+    let strings = presentationData.strings
     
-    var dismissImpl: ((Bool) -> Void)?
-    var applyImpl: (() -> Void)?
-    
-    let actions: [TextAlertAction] = [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
-        dismissImpl?(true)
-        apply(nil)
-    }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Done, action: {
-        dismissImpl?(true)
-        applyImpl?()
-    })]
-    
-    let contentNode = PromptAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: presentationData.strings, actions: actions, text: text, titleFont: titleFont, subtitle: subtitle, value: value, placeholder: placeholder, characterLimit: characterLimit, displayCharacterLimit: displayCharacterLimit)
-    contentNode.complete = {
-        dismissImpl?(true)
-        applyImpl?()
+    let inputState = AlertMultilineInputFieldComponent.ExternalState()
+            
+    var content: [AnyComponentWithIdentity<AlertComponentEnvironment>] = []
+    if subtitle == nil && titleFont == .regular {
+        content.append(AnyComponentWithIdentity(
+            id: "title",
+            component: AnyComponent(
+                AlertTextComponent(content: .plain(text))
+            )
+        ))
+    } else {
+        content.append(AnyComponentWithIdentity(
+            id: "title",
+            component: AnyComponent(
+                AlertTitleComponent(title: text)
+            )
+        ))
     }
-    applyImpl = { [weak contentNode] in
-        guard let contentNode = contentNode else {
-            return
+    if let subtitle {
+        content.append(AnyComponentWithIdentity(
+            id: "text",
+            component: AnyComponent(
+                AlertTextComponent(content: .plain(subtitle))
+            )
+        ))
+    }
+    content.append(AnyComponentWithIdentity(
+        id: "input",
+        component: AnyComponent(
+            AlertMultilineInputFieldComponent(
+                context: context,
+                initialValue: value.flatMap { NSAttributedString(string: $0) },
+                placeholder: placeholder ?? "",
+                characterLimit: characterLimit,
+                formatMenuAvailability: .none,
+                emptyLineHandling: .notAllowed,
+                isInitiallyFocused: true,
+                externalState: inputState
+            )
+        )
+    ))
+    
+    var effectiveUpdatedPresentationData: (PresentationData, Signal<PresentationData, NoError>)
+    if let updatedPresentationData {
+        effectiveUpdatedPresentationData = updatedPresentationData
+    } else {
+        effectiveUpdatedPresentationData = (presentationData, context.sharedContext.presentationData)
+    }
+    
+    let alertController = AlertScreen(
+        configuration: AlertScreen.Configuration(allowInputInset: true),
+        content: content,
+        actions: [
+            .init(title: strings.Common_Cancel, action: {
+                apply(nil)
+            }),
+            .init(title: strings.Common_Done, type: .default, action: {
+                apply(inputState.value.string)
+            })
+        ],
+        updatedPresentationData: effectiveUpdatedPresentationData
+    )
+    alertController.dismissed = { byOutsideTap in
+        if byOutsideTap {
+            dismissed()
         }
-        apply(contentNode.value)
     }
-    
-    let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode)
-    let presentationDataDisposable = (updatedPresentationData?.signal ?? sharedContext.presentationData).start(next: { [weak controller, weak contentNode] presentationData in
-        controller?.theme = AlertControllerTheme(presentationData: presentationData)
-        contentNode?.inputFieldNode.updateTheme(presentationData.theme)
-    })
-    controller.dismissed = { _ in
-        presentationDataDisposable.dispose()
-    }
-    dismissImpl = { [weak controller] animated in
-        contentNode.inputFieldNode.deactivateInput()
-        if animated {
-            controller?.dismissAnimated()
-        } else {
-            controller?.dismiss()
-        }
-    }
-    return controller
+    return alertController
 }
 
 private final class AuthAlertContentNode: AlertContentNode {

@@ -580,7 +580,7 @@ public class GiftAuctionsManager {
 }
 
 public extension GiftAuctionContext.State {
-    func getPlace(myBid: Int64?, myBidDate: Int32?) -> Int32? {
+    func getPlace(myBid: Int64?, myBidDate: Int32?) -> (place: Int32, isApproximate: Bool)? {
         guard case let .ongoing(_, _, _, _, bidLevels, _, _, _, _, _, _, _) = self.auctionState else {
             return nil
         }
@@ -592,7 +592,7 @@ public extension GiftAuctionContext.State {
         
         let levels = bidLevels
         guard !levels.isEmpty else {
-            return 1
+            return (1, false)
         }
         
         func isWorse(than level: GiftAuctionContext.State.BidLevel) -> Bool {
@@ -614,7 +614,7 @@ public extension GiftAuctionContext.State {
             }
         }
         if lowerIndex == -1 {
-            return 1
+            return (1, false)
         }
         
         let lowerPosition = levels[lowerIndex].position
@@ -626,14 +626,14 @@ public extension GiftAuctionContext.State {
             nextPosition = lowerPosition
         }
         if nextPosition == lowerPosition + 1 {
-            return lowerPosition + 1
+            return (lowerPosition + 1, false)
         } else {
-            return nextPosition
+            return (lowerPosition, true)
         }
     }
     
     var place: Int32? {
-        return self.getPlace(myBid: nil, myBidDate: nil)
+        return self.getPlace(myBid: nil, myBidDate: nil)?.place
     }
     
     var startDate: Int32 {

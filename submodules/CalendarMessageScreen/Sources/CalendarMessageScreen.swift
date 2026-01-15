@@ -1603,11 +1603,12 @@ public final class CalendarMessageScreen: ViewController {
                 }
                 frames[i] = monthFrame
             }
+            contentHeight += navigationHeight
 
             self.scrollLayout = (layout.size.width, contentHeight, frames)
 
-            self.contextGestureContainerNode.frame = CGRect(origin: CGPoint(x: 0.0, y: navigationHeight), size: CGSize(width: layout.size.width, height: layout.size.height - navigationHeight))
-            self.scrollView.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: layout.size.height - navigationHeight))
+            self.contextGestureContainerNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: layout.size.height))
+            self.scrollView.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: layout.size.height))
             self.scrollView.contentSize = CGSize(width: layout.size.width, height: contentHeight)
             self.scrollView.verticalScrollIndicatorInsets = UIEdgeInsets(top: max(layout.intrinsicInsets.bottom, self.scrollView.contentInset.top), left: 0.0, bottom: 0.0, right: layout.size.width - 3.0 - 6.0)
 
@@ -1862,8 +1863,9 @@ public final class CalendarMessageScreen: ViewController {
 
         self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
 
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData, style: .glass))
 
+        self._hasGlassStyle = true
         self.navigationPresentation = .modal
 
         self.navigationItem.setLeftBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(dismissPressed)), animated: false)

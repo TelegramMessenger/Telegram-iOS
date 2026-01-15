@@ -83,8 +83,8 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerD
         return !self.isDisplayingRevealedOptions
     }
     
-    override public init(layerBacked: Bool, dynamicBounce: Bool, rotated: Bool, seeThrough: Bool) {
-        super.init(layerBacked: layerBacked, dynamicBounce: dynamicBounce, rotated: rotated, seeThrough: seeThrough)
+    override public init(layerBacked: Bool, rotated: Bool, seeThrough: Bool) {
+        super.init(layerBacked: layerBacked, rotated: rotated, seeThrough: seeThrough)
     }
     
     open var controlsContainer: ASDisplayNode {

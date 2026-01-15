@@ -6,8 +6,8 @@ load(
 )
 
 apple_static_xcframework_import(
-    name = "RecaptchaEnterprise",
-    xcframework_imports = glob(["RecaptchaEnterprise.xcframework/**"]),
+    name = "RecaptchaEnterpriseSDK",
+    xcframework_imports = glob(["RecaptchaEnterpriseSDK.xcframework/**"]),
     features = [
     ],
     visibility = [

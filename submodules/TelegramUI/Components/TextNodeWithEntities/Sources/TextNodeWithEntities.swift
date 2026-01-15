@@ -106,7 +106,12 @@ public final class TextNodeWithEntities {
     public let textNode: TextNode
     private var inlineStickerItemLayers: [InlineStickerItemLayer.Key: InlineStickerItemLayer] = [:]
     
-    private var enableLooping: Bool = true
+    public var enableLooping: Bool = true
+    public var energySavingEnableLooping: Bool = true
+    
+    private var effectiveEnableLooping: Bool {
+        return self.enableLooping && self.energySavingEnableLooping
+    }
     
     public var resetEmojiToFirstFrameAutomatically: Bool = false
     
@@ -124,7 +129,7 @@ public final class TextNodeWithEntities {
                     } else {
                         isItemVisible = false
                     }
-                    let isVisibleForAnimations = self.enableLooping && isItemVisible && itemLayer.enableAnimation
+                    let isVisibleForAnimations = self.effectiveEnableLooping && isItemVisible && itemLayer.enableAnimation
                     if itemLayer.isVisibleForAnimations != isVisibleForAnimations {
                         itemLayer.isVisibleForAnimations = isVisibleForAnimations
                         if !isVisibleForAnimations && self.resetEmojiToFirstFrameAutomatically {
@@ -257,7 +262,7 @@ public final class TextNodeWithEntities {
     }
     
     private func updateInlineStickers(context: AccountContext, cache: AnimationCache, renderer: MultiAnimationRenderer, textLayout: TextNodeLayout?, placeholderColor: UIColor, attemptSynchronousLoad: Bool, emojiOffset: CGPoint, fontSizeNorm: CGFloat) {
-        self.enableLooping = context.sharedContext.energyUsageSettings.loopEmoji
+        self.energySavingEnableLooping = context.sharedContext.energyUsageSettings.loopEmoji
         
         var nextIndexById: [Int64: Int] = [:]
         var validIds: [InlineStickerItemLayer.Key] = []
@@ -292,7 +297,7 @@ public final class TextNodeWithEntities {
                         self.textNode.layer.addSublayer(itemLayer)
                     }
                     itemLayer.enableAnimation = stickerItem.enableAnimation
-                    let isVisibleForAnimations = self.enableLooping && self.isItemVisible(itemRect: itemFrame) && itemLayer.enableAnimation
+                    let isVisibleForAnimations = self.effectiveEnableLooping && self.isItemVisible(itemRect: itemFrame) && itemLayer.enableAnimation
                     if itemLayer.isVisibleForAnimations != isVisibleForAnimations {
                         if !isVisibleForAnimations && self.resetEmojiToFirstFrameAutomatically {
                             itemLayer.reloadAnimation()
@@ -410,7 +415,12 @@ public class ImmediateTextNodeWithEntities: TextNode {
     public var spoilerColor: UIColor = .black
     public var balancedTextLayout: Bool = false
     
-    private var enableLooping: Bool = true
+    public var enableLooping: Bool = true
+    public var energySavingEnableLooping: Bool = true
+    
+    private var effectiveEnableLooping: Bool {
+        return self.enableLooping && self.energySavingEnableLooping
+    }
     
     public var arguments: TextNodeWithEntities.Arguments?
     
@@ -423,7 +433,7 @@ public class ImmediateTextNodeWithEntities: TextNode {
         didSet {
             if !self.inlineStickerItemLayers.isEmpty && oldValue != self.visibility {
                 for (_, itemLayer) in self.inlineStickerItemLayers {
-                    let isVisibleForAnimations = self.enableLooping && self.visibility && itemLayer.enableAnimation
+                    let isVisibleForAnimations = self.effectiveEnableLooping && self.visibility && itemLayer.enableAnimation
                     if itemLayer.isVisibleForAnimations != isVisibleForAnimations {
                         itemLayer.isVisibleForAnimations = isVisibleForAnimations
                         if !isVisibleForAnimations && self.resetEmojiToFirstFrameAutomatically {
@@ -575,7 +585,7 @@ public class ImmediateTextNodeWithEntities: TextNode {
     }
     
     private func updateInlineStickers(context: AccountContext, cache: AnimationCache, renderer: MultiAnimationRenderer, textLayout: TextNodeLayout?, placeholderColor: UIColor, fontSizeNorm: CGFloat) {
-        self.enableLooping = context.sharedContext.energyUsageSettings.loopEmoji
+        self.energySavingEnableLooping = context.sharedContext.energyUsageSettings.loopEmoji
         
         var nextIndexById: [Int64: Int] = [:]
         var validIds: [InlineStickerItemLayer.Key] = []
@@ -613,7 +623,7 @@ public class ImmediateTextNodeWithEntities: TextNode {
                     }
                     
                     itemLayer.enableAnimation = stickerItem.enableAnimation
-                    let isVisibleForAnimations = self.enableLooping && self.visibility && itemLayer.enableAnimation
+                    let isVisibleForAnimations = self.effectiveEnableLooping && self.visibility && itemLayer.enableAnimation
                     if itemLayer.isVisibleForAnimations != isVisibleForAnimations {
                         itemLayer.isVisibleForAnimations = isVisibleForAnimations
                         if !isVisibleForAnimations && self.resetEmojiToFirstFrameAutomatically {

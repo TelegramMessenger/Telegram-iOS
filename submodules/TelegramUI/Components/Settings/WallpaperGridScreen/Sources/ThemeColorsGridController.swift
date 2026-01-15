@@ -158,7 +158,7 @@ public final class ThemeColorsGridController: ViewController, AttachmentContaina
         self.mode = mode
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData, style: .glass))
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
@@ -216,7 +216,7 @@ public final class ThemeColorsGridController: ViewController, AttachmentContaina
     private func updateThemeAndStrings() {
         self.title = self.presentationData.strings.WallpaperColors_Title
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
-        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
+        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData, style: .glass), transition: .immediate)
         
         if self.isNodeLoaded {
             self.controllerNode.updatePresentationData(self.presentationData)

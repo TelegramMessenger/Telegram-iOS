@@ -8,7 +8,8 @@ import TelegramPresentationData
 import SearchBarNode
 import ComponentFlow
 import ComponentDisplayAdapters
-import TabSelectorComponent
+import HorizontalTabsComponent
+import GlassBackgroundComponent
 
 private let searchBarFont = Font.regular(17.0)
 
@@ -23,6 +24,9 @@ final class HashtagSearchNavigationContentNode: NavigationBarContentNode {
     var onReturn: (String) -> Void = { _ in }
     
     private let searchBar: SearchBarNode
+    
+    private let tabsBackgroundContainer: GlassBackgroundContainerView
+    private let tabsBackgroundView: GlassBackgroundView
     private let tabSelector = ComponentView<Empty>()
     
     private var queryUpdated: ((String) -> Void)?
@@ -31,7 +35,7 @@ final class HashtagSearchNavigationContentNode: NavigationBarContentNode {
     var selectedIndex: Int = 0 {
         didSet {
             if let (size, leftInset, rightInset) = self.validLayout {
-                self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: .animated(duration: 0.35, curve: .spring))
+                let _ = self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: .animated(duration: 0.35, curve: .spring))
             }
         }
     }
@@ -40,7 +44,7 @@ final class HashtagSearchNavigationContentNode: NavigationBarContentNode {
         didSet {
             if self.transitionFraction != oldValue {
                 if let (size, leftInset, rightInset) = self.validLayout {
-                    self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: self.transitionFraction == nil ? .animated(duration: 0.35, curve: .spring) : .immediate)
+                    let _ = self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: self.transitionFraction == nil ? .animated(duration: 0.35, curve: .spring) : .immediate)
                 }
             }
         }
@@ -79,11 +83,17 @@ final class HashtagSearchNavigationContentNode: NavigationBarContentNode {
         var initialQuery = initialQuery
         initialQuery.removeFirst()
         
-        self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: theme, hasSeparator: false), strings: strings, fieldStyle: .modern, icon: icon, displayBackground: false)
+        self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: theme, hasSeparator: false), presentationTheme: theme, strings: strings, fieldStyle: .glass, icon: icon, displayBackground: false)
         self.searchBar.text = initialQuery
         self.searchBar.placeholderString = NSAttributedString(string: strings.HashtagSearch_SearchPlaceholder, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
         
+        self.tabsBackgroundContainer = GlassBackgroundContainerView()
+        self.tabsBackgroundView = GlassBackgroundView()
+        
         super.init()
+        
+        self.tabsBackgroundContainer.contentView.addSubview(self.tabsBackgroundView)
+        self.view.addSubview(self.tabsBackgroundContainer)
         
         self.searchBar.autocapitalization = .none
         
@@ -111,7 +121,7 @@ final class HashtagSearchNavigationContentNode: NavigationBarContentNode {
     
     func updateTheme(_ theme: PresentationTheme) {
         self.theme = theme
-        self.searchBar.updateThemeAndStrings(theme: SearchBarNodeTheme(theme: theme, hasSeparator: false), strings: self.strings)
+        self.searchBar.updateThemeAndStrings(theme: SearchBarNodeTheme(theme: theme, hasSeparator: false), presentationTheme: theme, strings: self.strings)
     }
     
     func setQueryUpdated(_ f: @escaping (String) -> Void) {
@@ -120,7 +130,7 @@ final class HashtagSearchNavigationContentNode: NavigationBarContentNode {
     
     override var nominalHeight: CGFloat {
         if self.hasCurrentChat {
-            return 54.0 + 44.0
+            return 64.0 + 44.0
         } else {
             return 45.0
         }
@@ -128,58 +138,98 @@ final class HashtagSearchNavigationContentNode: NavigationBarContentNode {
     
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
-    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
+    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
         self.validLayout = (size, leftInset, rightInset)
         
         let sideInset: CGFloat = 6.0
         
-        let searchBarFrame = CGRect(origin: CGPoint(x: 0.0, y: size.height - self.nominalHeight + 5.0), size: CGSize(width: size.width, height: 54.0))
+        let searchBarFrame = CGRect(origin: CGPoint(x: 0.0, y: 6.0), size: CGSize(width: size.width, height: 44.0))
         self.searchBar.frame = searchBarFrame
         self.searchBar.updateLayout(boundingSize: searchBarFrame.size, leftInset: leftInset + sideInset, rightInset: rightInset + sideInset, transition: transition)
         
         if self.hasTabs {
-            var items: [TabSelectorComponent.Item] = []
+            var items: [HorizontalTabsComponent.Tab] = []
             if self.hasCurrentChat {
-                items.append(TabSelectorComponent.Item(id: AnyHashable(0), title: self.strings.HashtagSearch_ThisChat))
+                items.append(HorizontalTabsComponent.Tab(
+                    id: AnyHashable(0),
+                    content: .title(HorizontalTabsComponent.Tab.Title(text: self.strings.HashtagSearch_ThisChat, entities: [], enableAnimations: false)),
+                    badge: nil,
+                    action: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.indexUpdated?(0)
+                    },
+                    contextAction: nil,
+                    deleteAction: nil
+                ))
             }
-            items.append(TabSelectorComponent.Item(id: AnyHashable(1), title: self.strings.HashtagSearch_MyMessages))
-            items.append(TabSelectorComponent.Item(id: AnyHashable(2), title: self.strings.HashtagSearch_PublicPosts))
+            
+            items.append(HorizontalTabsComponent.Tab(
+                id: AnyHashable(1),
+                content: .title(HorizontalTabsComponent.Tab.Title(text: self.strings.HashtagSearch_MyMessages, entities: [], enableAnimations: false)),
+                badge: nil,
+                action: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.indexUpdated?(1)
+                },
+                contextAction: nil,
+                deleteAction: nil
+            ))
+            
+            items.append(HorizontalTabsComponent.Tab(
+                id: AnyHashable(2),
+                content: .title(HorizontalTabsComponent.Tab.Title(text: self.strings.HashtagSearch_PublicPosts, entities: [], enableAnimations: false)),
+                badge: nil,
+                action: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.indexUpdated?(2)
+                },
+                contextAction: nil,
+                deleteAction: nil
+            ))
             
             let tabSelectorSize = self.tabSelector.update(
                 transition: ComponentTransition(transition),
-                component: AnyComponent(TabSelectorComponent(
-                    colors: TabSelectorComponent.Colors(
-                        foreground: self.theme.list.itemSecondaryTextColor,
-                        selection: self.theme.list.itemAccentColor
-                    ),
+                component: AnyComponent(HorizontalTabsComponent(
+                    context: nil,
                     theme: self.theme,
-                    customLayout: TabSelectorComponent.CustomLayout(
-                        font: Font.medium(14.0),
-                        spacing: self.hasCurrentChat ? 24.0 : 8.0,
-                        lineSelection: true
-                    ),
-                    items: items,
-                    selectedId: AnyHashable(self.selectedIndex),
-                    setSelectedId: { [weak self] id in
-                        guard let self, let index = id.base as? Int else {
-                            return
-                        }
-                        self.indexUpdated?(index)
-                    },
-                    transitionFraction: self.transitionFraction
+                    tabs: items,
+                    selectedTab: AnyHashable(self.selectedIndex),
+                    isEditing: false
                 )),
                 environment: {},
-                containerSize: CGSize(width: size.width, height: 44.0)
+                containerSize: CGSize(width: size.width - (leftInset + 16.0) * 2.0, height: 44.0)
             )
             let tabSelectorFrameOriginX = floorToScreenPixels((size.width - tabSelectorSize.width) / 2.0)
-            let tabSelectorFrame = CGRect(origin: CGPoint(x: tabSelectorFrameOriginX, y: size.height - tabSelectorSize.height - 10.0), size: tabSelectorSize)
-            if let tabSelectorView = self.tabSelector.view {
+            let tabSelectorFrame = CGRect(origin: CGPoint(x: tabSelectorFrameOriginX, y: searchBarFrame.maxY + 10.0), size: tabSelectorSize)
+            
+            transition.updateFrame(view: self.tabsBackgroundContainer, frame: tabSelectorFrame)
+            self.tabsBackgroundContainer.update(size: tabSelectorFrame.size, isDark: self.theme.overallDarkAppearance, transition: ComponentTransition(transition))
+            
+            transition.updateFrame(view: self.tabsBackgroundView, frame: CGRect(origin: CGPoint(), size: tabSelectorFrame.size))
+            self.tabsBackgroundView.update(size: tabSelectorFrame.size, cornerRadius: tabSelectorFrame.height * 0.5, isDark: self.theme.overallDarkAppearance, tintColor: .init(kind: .panel, color: UIColor(white: self.theme.overallDarkAppearance ? 0.0 : 1.0, alpha: 0.6)), transition: ComponentTransition(transition))
+            
+            if let tabSelectorView = self.tabSelector.view as? HorizontalTabsComponent.View {
                 if tabSelectorView.superview == nil {
-                    self.view.addSubview(tabSelectorView)
+                    self.tabsBackgroundView.contentView.addSubview(tabSelectorView)
+                    tabSelectorView.setOverlayContainerView(overlayContainerView: self.view)
                 }
-                transition.updateFrame(view: tabSelectorView, frame: tabSelectorFrame)
+                transition.updateFrame(view: tabSelectorView, frame: CGRect(origin: CGPoint(), size: tabSelectorFrame.size))
+                
+                var transitionFraction: CGFloat = 0.0
+                if let transitionFractionValue = self.transitionFraction {
+                    transitionFraction = -transitionFractionValue
+                }
+                tabSelectorView.updateTabSwitchFraction(fraction: transitionFraction, isDragging: false, transition: ComponentTransition(transition))
             }
         }
+        
+        return size
     }
     
     func activate() {

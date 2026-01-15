@@ -144,7 +144,7 @@ final class CommandMenuChatInputPanelItemNode: ListViewItemNode {
         self.activateAreaNode = AccessibilityAreaNode()
         self.activateAreaNode.accessibilityTraits = [.button]
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
                 
         self.addSubnode(self.clippingNode)
         self.clippingNode.addSubnode(self.shadowNode)

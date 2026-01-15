@@ -201,7 +201,7 @@ final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemNode {
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
         
-        super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
+        super.init(layerBacked: false, rotated: false, seeThrough: false)
         
         self.addSubnode(self.containerNode)
         self.containerNode.addSubnode(self.titleNode.textNode)

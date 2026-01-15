@@ -1091,7 +1091,7 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                 text = presentationData.strings.Channel_EditAdmin_CannotEdit
             }
             
-            presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+            presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
         })
     }, transferOwnership: {
         let _ = (context.engine.data.get(
@@ -1104,19 +1104,30 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
             }
             
             transferOwnershipDisposable.set((context.engine.peers.checkOwnershipTranfserAvailability(memberId: adminId) |> deliverOnMainQueue).start(error: { error in
-                let controller = channelOwnershipTransferController(context: context, updatedPresentationData: updatedPresentationData, peer: peer, member: member, initialError: error, present: { c, a in
-                    presentControllerImpl?(c, a)
-                }, completion: { upgradedPeerId in
-                    if let upgradedPeerId = upgradedPeerId {
-                        upgradedToSupergroupImpl(upgradedPeerId, {
+                let controller = channelOwnershipTransferController(
+                    context: context,
+                    updatedPresentationData: updatedPresentationData,
+                    peer: peer,
+                    member: member,
+                    initialError: error,
+                    present: { c, a in
+                        presentControllerImpl?(c, a)
+                    },
+                    push: { c in
+                        pushControllerImpl?(c)
+                    },
+                    completion: { upgradedPeerId in
+                        if let upgradedPeerId = upgradedPeerId {
+                            upgradedToSupergroupImpl(upgradedPeerId, {
+                                dismissImpl?()
+                                transferedOwnership(member.id)
+                            })
+                        } else {
                             dismissImpl?()
                             transferedOwnership(member.id)
-                        })
-                    } else {
-                        dismissImpl?()
-                        transferedOwnership(member.id)
+                        }
                     }
-                })
+                )
                 presentControllerImpl?(controller, nil)
             }))
         })
@@ -1617,20 +1628,21 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                 rightNavigationButton = nil
                 footerItem = ChannelAdminAddBotFooterItem(theme: presentationData.theme, title: state.adminRights ? presentationData.strings.Bot_AddToChat_Add_AddAsAdmin : presentationData.strings.Bot_AddToChat_Add_AddAsMember, action: {
                     if state.adminRights {
-                        let theme = AlertControllerTheme(presentationData: presentationData)
-                        let attributedTitle = NSAttributedString(string: presentationData.strings.Bot_AddToChat_Add_AdminAlertTitle, font: Font.semibold(presentationData.listsFontSize.baseDisplaySize), textColor: theme.primaryColor, paragraphAlignment: .center)
-                      
                         let text = isGroup ? presentationData.strings.Bot_AddToChat_Add_AdminAlertTextGroup(peerTitle).string : presentationData.strings.Bot_AddToChat_Add_AdminAlertTextChannel(peerTitle).string
-                        
-                        let body = MarkdownAttributeSet(font: Font.regular(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0), textColor: theme.primaryColor)
-                        let bold = MarkdownAttributeSet(font: Font.semibold(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0), textColor: theme.primaryColor)
-                        let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .center)
-                                               
-                        let controller = richTextAlertController(context: context, title: attributedTitle, text: attributedText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Bot_AddToChat_Add_AdminAlertAdd, action: {
-                            rightButtonActionImpl()
-                        }), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
-                        })], actionLayout: .vertical)
-                        presentControllerImpl?(controller, nil)
+
+                        let alertController = textAlertController(
+                            context: context,
+                            updatedPresentationData: updatedPresentationData,
+                            title: presentationData.strings.Bot_AddToChat_Add_AdminAlertTitle,
+                            text: text,
+                            actions: [
+                                TextAlertAction(type: .defaultAction, title: presentationData.strings.Bot_AddToChat_Add_AdminAlertAdd, action: { rightButtonActionImpl()
+                                }),
+                                TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}),
+                            ],
+                            actionLayout: .vertical
+                        )
+                        presentControllerImpl?(alertController, nil)
                     } else {
                         rightButtonActionImpl()
                     }

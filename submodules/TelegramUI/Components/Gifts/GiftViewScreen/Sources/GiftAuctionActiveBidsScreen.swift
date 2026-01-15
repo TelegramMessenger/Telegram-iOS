@@ -372,7 +372,7 @@ private final class GiftAuctionActiveBidsScreenComponent: Component {
             if self.backgroundHandleView.image == nil {
                 self.backgroundHandleView.image = generateStretchableFilledCircleImage(diameter: 5.0, color: .white)?.withRenderingMode(.alwaysTemplate)
             }
-            self.backgroundHandleView.tintColor = environment.theme.list.itemPrimaryTextColor.withMultipliedAlpha(environment.theme.overallDarkAppearance ? 0.2 : 0.07)
+            self.backgroundHandleView.tintColor = theme.list.itemPrimaryTextColor.withMultipliedAlpha(theme.overallDarkAppearance ? 0.2 : 0.07)
             let backgroundHandleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - 36.0) * 0.5), y: 5.0), size: CGSize(width: 36.0, height: 5.0))
             if self.backgroundHandleView.superview == nil {
                 self.navigationBarContainer.addSubview(self.backgroundHandleView)
@@ -383,13 +383,13 @@ private final class GiftAuctionActiveBidsScreenComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(GlassBarButtonComponent(
                     size: CGSize(width: 40.0, height: 40.0),
-                    backgroundColor: environment.theme.rootController.navigationBar.glassBarButtonBackgroundColor,
+                    backgroundColor: theme.rootController.navigationBar.glassBarButtonBackgroundColor,
                     isDark: environment.theme.overallDarkAppearance,
                     state: .generic,
                     component: AnyComponentWithIdentity(id: "close", component: AnyComponent(
                         BundleIconComponent(
                             name: "Navigation/Close",
-                            tintColor: environment.theme.rootController.navigationBar.glassBarButtonForegroundColor
+                            tintColor: theme.chat.inputPanel.panelControlColor
                         )
                     )),
                     action: { [weak self] _ in
@@ -413,14 +413,13 @@ private final class GiftAuctionActiveBidsScreenComponent: Component {
             let containerInset: CGFloat = environment.statusBarHeight + 10.0
             contentHeight += environment.safeInsets.bottom
             
-            var initialContentHeight = contentHeight
             let clippingY: CGFloat
             
             let titleText: String = environment.strings.Gift_ActiveAuctions_Title(Int32(self.auctionStates.count))
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: titleText, font: Font.semibold(17.0), textColor: environment.theme.list.itemPrimaryTextColor))
+                    text: .plain(NSAttributedString(string: titleText, font: Font.semibold(17.0), textColor: theme.list.itemPrimaryTextColor))
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
@@ -434,12 +433,12 @@ private final class GiftAuctionActiveBidsScreenComponent: Component {
                 transition.setFrame(view: titleView, frame: titleFrame)
             }
                                           
-            initialContentHeight = contentHeight
+            let initialContentHeight = contentHeight
             
             let edgeEffectHeight: CGFloat = 80.0
             let edgeEffectFrame = CGRect(origin: CGPoint(x: rawSideInset, y: 0.0), size: CGSize(width: fillingSize, height: edgeEffectHeight))
             transition.setFrame(view: self.topEdgeEffectView, frame: edgeEffectFrame)
-            self.topEdgeEffectView.update(content: environment.theme.actionSheet.opaqueItemBackgroundColor, blur: true, alpha: 1.0, rect: edgeEffectFrame, edge: .top, edgeSize: edgeEffectFrame.height, transition: transition)
+            self.topEdgeEffectView.update(content: theme.actionSheet.opaqueItemBackgroundColor, blur: true, alpha: 1.0, rect: edgeEffectFrame, edge: .top, edgeSize: edgeEffectFrame.height, transition: transition)
             if self.topEdgeEffectView.superview == nil {
                 self.navigationBarContainer.insertSubview(self.topEdgeEffectView, at: 0)
             }

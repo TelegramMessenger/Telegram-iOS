@@ -43,6 +43,7 @@ import GlassBarButtonComponent
 import BundleIconComponent
 import LottieComponent
 import CryptoKit
+import AlertComponent
 
 private let durgerKingBotIds: [Int64] = [5104055776, 2200339955]
 
@@ -685,7 +686,14 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     if let data = try? Data(contentsOf: url), let pass = try? PKPass(data: data) {
                         let passLibrary = PKPassLibrary()
                         if passLibrary.containsPass(pass) {
-                            let alertController = textAlertController(context: self.context, updatedPresentationData: nil, title: nil, text: self.presentationData.strings.WebBrowser_PassExistsError, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_OK, action: {})])
+                            let alertController = AlertScreen(
+                                context: self.context,
+                                title: nil,
+                                text: self.presentationData.strings.WebBrowser_PassExistsError,
+                                actions: [
+                                    .init(title: self.presentationData.strings.Common_OK, type: .default)
+                                ]
+                            )
                             self.controller?.present(alertController, in: .window(.root))
                         } else if let controller = PKAddPassesViewController(pass: pass) {
                             self.controller?.view.window?.rootViewController?.present(controller, animated: true)
@@ -761,12 +769,19 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 
         func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
             var completed = false
-            let alertController = textAlertController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, title: nil, text: message, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {
-                if !completed {
-                    completed = true
-                    completionHandler()
-                }
-            })])
+            let alertController = AlertScreen(
+                context: self.context,
+                title: nil,
+                text: message,
+                actions: [
+                    .init(title: self.presentationData.strings.Common_OK, action: {
+                        if !completed {
+                            completed = true
+                            completionHandler()
+                        }
+                    })
+                ]
+            )
             alertController.dismissed = { byOutsideTap in
                 if byOutsideTap {
                     if !completed {
@@ -780,17 +795,25 @@ public final class WebAppController: ViewController, AttachmentContainable {
 
         func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (Bool) -> Void) {
             var completed = false
-            let alertController = textAlertController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, title: nil, text: message, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {
-                if !completed {
-                    completed = true
-                    completionHandler(false)
-                }
-            }), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {
-                if !completed {
-                    completed = true
-                    completionHandler(true)
-                }
-            })])
+            let alertController = AlertScreen(
+                context: self.context,
+                title: nil,
+                text: message,
+                actions: [
+                    .init(title: self.presentationData.strings.Common_Cancel, action: {
+                        if !completed {
+                            completed = true
+                            completionHandler(false)
+                        }
+                    }),
+                    .init(title: self.presentationData.strings.Common_OK, type: .default, action: {
+                        if !completed {
+                            completed = true
+                            completionHandler(true)
+                        }
+                    })
+                ]
+            )
             alertController.dismissed = { byOutsideTap in
                 if byOutsideTap {
                     if !completed {
@@ -804,24 +827,28 @@ public final class WebAppController: ViewController, AttachmentContainable {
 
         func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (String?) -> Void) {
             var completed = false
-            let promptController = promptController(sharedContext: self.context.sharedContext, updatedPresentationData: self.controller?.updatedPresentationData, text: prompt, value: defaultText, apply: { value in
-                if !completed {
-                    completed = true
-                    if let value = value {
-                        completionHandler(value)
-                    } else {
-                        completionHandler(nil)
+            let promptController = promptController(
+                context: self.context,
+                updatedPresentationData: self.controller?.updatedPresentationData,
+                text: prompt,
+                value: defaultText,
+                apply: { value in
+                    if !completed {
+                        completed = true
+                        if let value = value {
+                            completionHandler(value)
+                        } else {
+                            completionHandler(nil)
+                        }
                     }
-                }
-            })
-            promptController.dismissed = { byOutsideTap in
-                if byOutsideTap {
+                },
+                dismissed: {
                     if !completed {
                         completed = true
                         completionHandler(nil)
                     }
                 }
-            }
+            )
             self.controller?.present(promptController, in: .window(.root))
         }
         
@@ -1385,7 +1412,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     let presentationData = self.presentationData
                     
                     let title = json["title"] as? String
-                    var alertButtons: [TextAlertAction] = []
+                    var actions: [AlertScreen.Action] = []
                     
                     for buttonJson in buttons.reversed() {
                         if let button = buttonJson as? [String: Any], let id = button["id"] as? String, let type = button["type"] as? String {
@@ -1395,27 +1422,27 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             let text = button["text"] as? String
                             switch type {
                                 case "default":
-                                    if let text = text {
-                                        alertButtons.append(TextAlertAction(type: .genericAction, title: text, action: {
+                                    if let text {
+                                        actions.append(AlertScreen.Action(title: text, action: {
                                             buttonAction()
                                         }))
                                     }
                                 case "destructive":
-                                    if let text = text {
-                                        alertButtons.append(TextAlertAction(type: .destructiveAction, title: text, action: {
+                                    if let text {
+                                        actions.append(AlertScreen.Action(title: text, type: .destructive, action: {
                                             buttonAction()
                                         }))
                                     }
                                 case "ok":
-                                    alertButtons.append(TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
+                                    actions.append(AlertScreen.Action(title: presentationData.strings.Common_OK, type: .default, action: {
                                         buttonAction()
                                     }))
                                 case "cancel":
-                                    alertButtons.append(TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+                                    actions.append(AlertScreen.Action(title: presentationData.strings.Common_Cancel, action: {
                                         buttonAction()
                                     }))
                                 case "close":
-                                    alertButtons.append(TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Close, action: {
+                                    actions.append(AlertScreen.Action(title: presentationData.strings.Common_Close, action: {
                                         buttonAction()
                                     }))
                                 default:
@@ -1424,12 +1451,18 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         }
                     }
                     
-                    var actionLayout: TextAlertContentActionLayout = .horizontal
-                    if alertButtons.count > 2 {
+                    var actionLayout: AlertScreen.ActionAligmnent = .default
+                    if actions.count > 2 {
                         actionLayout = .vertical
-                        alertButtons = Array(alertButtons.reversed())
+                        actions = Array(actions.reversed())
                     }
-                    let alertController = textAlertController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, title: title, text: message, actions: alertButtons, actionLayout: actionLayout)
+                    let alertController = AlertScreen(
+                        context: self.context,
+                        configuration: AlertScreen.Configuration(actionAlignment: actionLayout, dismissOnOutsideTap: true, allowInputInset: false),
+                        title: title,
+                        text: message,
+                        actions: actions
+                    )
                     alertController.dismissed = { byOutsideTap in
                         if byOutsideTap {
                             self.sendAlertButtonEvent(id: nil)
@@ -2113,18 +2146,26 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 if result {
                     sendEvent(true)
                 } else {
-                    let alertController = textAlertController(context: self.context, updatedPresentationData: controller.updatedPresentationData, title: self.presentationData.strings.WebApp_AllowWriteTitle, text: self.presentationData.strings.WebApp_AllowWriteConfirmation(controller.botName).string, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {
-                        sendEvent(false)
-                    }), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: { [weak self] in
-                        guard let self else {
-                            return
-                        }
-                        
-                        let _ = (self.context.engine.messages.allowBotSendMessages(botId: controller.botId)
-                        |> deliverOnMainQueue).start(completed: {
-                            sendEvent(true)
-                        })
-                    })], parseMarkdown: true)
+                    let alertController = AlertScreen(
+                        context: self.context,
+                        title: self.presentationData.strings.WebApp_AllowWriteTitle,
+                        text: self.presentationData.strings.WebApp_AllowWriteConfirmation(controller.botName).string,
+                        actions: [
+                            .init(title: self.presentationData.strings.Common_Cancel, action: {
+                                sendEvent(false)
+                            }),
+                            .init(title: self.presentationData.strings.Common_OK, type: .default, action: { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                
+                                let _ = (self.context.engine.messages.allowBotSendMessages(botId: controller.botId)
+                                |> deliverOnMainQueue).start(completed: {
+                                    sendEvent(true)
+                                })
+                            })
+                        ]
+                    )
                     alertController.dismissed = { byOutsideTap in
                         if byOutsideTap {
                             sendEvent(false)
@@ -2166,48 +2207,56 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     text = self.presentationData.strings.WebApp_SharePhoneConfirmation(botName).string
                 }
                 
-                let alertController = textAlertController(context: self.context, updatedPresentationData: controller.updatedPresentationData, title: self.presentationData.strings.WebApp_SharePhoneTitle, text: text, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {
-                    sendEvent(false)
-                }), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: { [weak self] in
-                    guard let self, case let .user(user) = accountPeer, let phone = user.phone, !phone.isEmpty else {
-                        return
-                    }
-                    
-                    let sendMessageSignal = enqueueMessages(account: self.context.account, peerId: botId, messages: [
-                        .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaContact(firstName: user.firstName ?? "", lastName: user.lastName ?? "", phoneNumber: phone, peerId: user.id, vCardData: nil)), threadId: nil, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
-                    ])
-                    |> mapToSignal { messageIds in
-                        if let maybeMessageId = messageIds.first, let messageId = maybeMessageId {
-                            return context.account.pendingMessageManager.pendingMessageStatus(messageId)
-                            |> mapToSignal { status, _ -> Signal<Bool, NoError> in
-                                if status != nil {
-                                    return .never()
+                let alertController = AlertScreen(
+                    context: self.context,
+                    title: self.presentationData.strings.WebApp_SharePhoneTitle,
+                    text: text,
+                    actions: [
+                        .init(title: self.presentationData.strings.Common_Cancel, action: {
+                            sendEvent(false)
+                        }),
+                        .init(title: self.presentationData.strings.Common_OK, type: .default, action: { [weak self] in
+                            guard let self, case let .user(user) = accountPeer, let phone = user.phone, !phone.isEmpty else {
+                                return
+                            }
+                            
+                            let sendMessageSignal = enqueueMessages(account: self.context.account, peerId: botId, messages: [
+                                .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaContact(firstName: user.firstName ?? "", lastName: user.lastName ?? "", phoneNumber: phone, peerId: user.id, vCardData: nil)), threadId: nil, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
+                            ])
+                            |> mapToSignal { messageIds in
+                                if let maybeMessageId = messageIds.first, let messageId = maybeMessageId {
+                                    return context.account.pendingMessageManager.pendingMessageStatus(messageId)
+                                    |> mapToSignal { status, _ -> Signal<Bool, NoError> in
+                                        if status != nil {
+                                            return .never()
+                                        } else {
+                                            return .single(true)
+                                        }
+                                    }
+                                    |> take(1)
                                 } else {
-                                    return .single(true)
+                                    return .complete()
                                 }
                             }
-                            |> take(1)
-                        } else {
-                            return .complete()
-                        }
-                    }
-                    
-                    let sendMessage = {
-                        let _ = (sendMessageSignal
-                        |> deliverOnMainQueue).start(completed: {
-                            sendEvent(true)
+                            
+                            let sendMessage = {
+                                let _ = (sendMessageSignal
+                                |> deliverOnMainQueue).start(completed: {
+                                    sendEvent(true)
+                                })
+                            }
+                            
+                            if requiresUnblock {
+                                let _ = (context.engine.privacy.requestUpdatePeerIsBlocked(peerId: botId, isBlocked: false)
+                                |> deliverOnMainQueue).start(completed: {
+                                    sendMessage()
+                                })
+                            } else {
+                                sendMessage()
+                            }
                         })
-                    }
-                    
-                    if requiresUnblock {
-                        let _ = (context.engine.privacy.requestUpdatePeerIsBlocked(peerId: botId, isBlocked: false)
-                        |> deliverOnMainQueue).start(completed: {
-                            sendMessage()
-                        })
-                    } else {
-                        sendMessage()
-                    }
-                })], parseMarkdown: true)
+                    ]
+                )
                 alertController.dismissed = { byOutsideTap in
                     if byOutsideTap {
                         sendEvent(false)
@@ -2328,14 +2377,21 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         alertText = self.presentationData.strings.WebApp_AlertBiometryAccessText(botPeer.compactDisplayTitle).string
                     }
                 }
-                controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: alertTitle, text: alertText, actions: [
-                    TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_No, action: {
-                        updateAccessGranted(false)
-                    }),
-                    TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_Yes, action: {
-                        updateAccessGranted(true)
-                    })
-                ], parseMarkdown: false), in: .window(.root))
+                
+                let alertController = AlertScreen(
+                    context: self.context,
+                    title: alertTitle,
+                    text: alertText,
+                    actions: [
+                        .init(title: self.presentationData.strings.Common_No, action: {
+                            updateAccessGranted(false)
+                        }),
+                        .init(title: self.presentationData.strings.Common_Yes, type: .default, action: {
+                            updateAccessGranted(true)
+                        })
+                    ]
+                )
+                controller.present(alertController, in: .window(.root))
             })
         }
         
@@ -2774,17 +2830,23 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 }
                 
                 let text: String = self.presentationData.strings.WebApp_Download_Text(controller.botName, fileName, fileSizeString).string
-                let alertController = standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: title, text: text, actions: [
-                    TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: { [weak self] in
-                        let data: JSON = [
-                            "status": "cancelled"
-                        ]
-                        self?.webView?.sendEvent(name: "file_download_requested", data: data.string)
-                    }),
-                    TextAlertAction(type: .defaultAction, title: self.presentationData.strings.WebApp_Download_Download, action: { [weak self] in
-                        self?.startDownload(url: url, fileName: fileName, fileSize: fileSize, isMedia: isMedia)
-                    })
-                ], parseMarkdown: true)
+                
+                let alertController = AlertScreen(
+                    context: self.context,
+                    title: title,
+                    text: text,
+                    actions: [
+                        .init(title: self.presentationData.strings.Common_Cancel, action: { [weak self] in
+                            let data: JSON = [
+                                "status": "cancelled"
+                            ]
+                            self?.webView?.sendEvent(name: "file_download_requested", data: data.string)
+                        }),
+                        .init(title: self.presentationData.strings.WebApp_Download_Download, type: .default, action: { [weak self] in
+                            self?.startDownload(url: url, fileName: fileName, fileSize: fileSize, isMedia: isMedia)
+                        })
+                    ]
+                )
                 alertController.dismissed = { [weak self] byOutsideTap in
                     let data: JSON = [
                         "status": "cancelled"
@@ -2962,7 +3024,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     accountPeer: accountPeer,
                     botName: controller.botName,
                     icons: iconStatusEmoji,
-                    completion: { [weak self] result in
+                    completion: { [weak self] result, byOutsideTap in
                         guard let self, let controller = self.controller else {
                             return
                         }
@@ -3017,17 +3079,13 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             self.webView?.sendEvent(name: "emoji_status_access_requested", data: data.string)
                         }
                         
-                        let _ = updateWebAppPermissionsStateInteractively(context: context, peerId: botId) { current in
-                            return WebAppPermissionsState(location: current?.location, emojiStatus: WebAppPermissionsState.EmojiStatus(isRequested: true))
-                        }.startStandalone()
+                        if !byOutsideTap {
+                            let _ = updateWebAppPermissionsStateInteractively(context: context, peerId: botId) { current in
+                                return WebAppPermissionsState(location: current?.location, emojiStatus: WebAppPermissionsState.EmojiStatus(isRequested: true))
+                            }.startStandalone()
+                        }
                     }
                 )
-                alertController.dismissed = { [weak self] byOutsideTap in
-                    let data: JSON = [
-                        "status": "cancelled"
-                    ]
-                    self?.webView?.sendEvent(name: "emoji_status_access_requested", data: data.string)
-                }
                 controller.present(alertController, in: .window(.root))
             })
         }
@@ -3510,7 +3568,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     
     private func updateNavigationButtons() {
         if case .attachMenu = self.source {
-            let barButtonSize = CGSize(width: 40.0, height: 40.0)
+            let barButtonSize = CGSize(width: 44.0, height: 44.0)
             let closeComponent: AnyComponentWithIdentity<Empty> = AnyComponentWithIdentity(
                 id: "close",
                 component: AnyComponent(GlassBarButtonComponent(
@@ -3521,7 +3579,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     component: AnyComponentWithIdentity(id: self.controllerNode.hasBackButton ? "back" : "close", component: AnyComponent(
                         BundleIconComponent(
                             name: self.controllerNode.hasBackButton ? "Navigation/Back" : "Navigation/Close",
-                            tintColor: self.presentationData.theme.rootController.navigationBar.glassBarButtonForegroundColor
+                            tintColor: self.presentationData.theme.chat.inputPanel.panelControlColor
                         )
                     )),
                     action: { [weak self] _ in
@@ -3542,7 +3600,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             content: LottieComponent.AppBundleContent(
                                 name: "anim_morewide"
                             ),
-                            color: self.presentationData.theme.rootController.navigationBar.glassBarButtonForegroundColor,
+                            color: self.presentationData.theme.chat.inputPanel.panelControlColor,
                             size: CGSize(width: 34.0, height: 34.0),
                             playOnce: self.moreButtonPlayOnce
                         )
@@ -3621,6 +3679,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         if let backgroundColor = self.controllerNode.headerColor, let textColor = self.controllerNode.headerPrimaryTextColor {
             navigationBarPresentationData = NavigationBarPresentationData(
                 theme: NavigationBarTheme(
+                    overallDarkAppearance: false,
                     buttonColor: textColor,
                     disabledButtonColor: textColor,
                     primaryTextColor: textColor,
@@ -3639,7 +3698,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 strings: NavigationBarStrings(back: "", close: "")
             )
         }
-        self.navigationBar?.updatePresentationData(navigationBarPresentationData)
+        self.navigationBar?.updatePresentationData(navigationBarPresentationData, transition: .immediate)
     }
     
     @objc fileprivate func cancelPressed() {
@@ -3857,13 +3916,22 @@ public final class WebAppController: ViewController, AttachmentContainable {
     
     private func removeAttachBot() {
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-        self.present(textAlertController(context: context, title: presentationData.strings.WebApp_RemoveConfirmationTitle, text: presentationData.strings.WebApp_RemoveAllConfirmationText(self.botName).string, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: { [weak self] in
-            guard let self else {
-                return
-            }
-            let _ = self.context.engine.messages.removeBotFromAttachMenu(botId: self.botId).start()
-            self.dismiss()
-        })], parseMarkdown: true), in: .window(.root))
+        let alertController = AlertScreen(
+            context: self.context,
+            title: presentationData.strings.WebApp_RemoveConfirmationTitle,
+            text: presentationData.strings.WebApp_RemoveAllConfirmationText(self.botName).string,
+            actions: [
+                .init(title: presentationData.strings.Common_Cancel),
+                .init(title: presentationData.strings.Common_OK, type: .default, action: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    let _ = self.context.engine.messages.removeBotFromAttachMenu(botId: self.botId).start()
+                    self.dismiss()
+                })
+            ]
+        )
+        self.present(alertController, in: .window(.root))
     }
     
     override public func loadDisplayNode() {

@@ -109,7 +109,8 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
         
         self.titleView = CounterControllerTitleView(theme: self.presentationData.theme)
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData, style: .glass))
+        self._hasGlassStyle = true
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
@@ -226,7 +227,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
     
     private func updateThemeAndStrings() {
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
-        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
+        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData, style: .glass), transition: .immediate)
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         self.updateTitle()
         self.contactsNode.updatePresentationData(self.presentationData)

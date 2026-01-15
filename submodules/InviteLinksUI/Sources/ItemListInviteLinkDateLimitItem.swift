@@ -170,7 +170,7 @@ private final class ItemListInviteLinkTimeLimitItemNode: ListViewItemNode {
         self.customTextNode.isUserInteractionEnabled = false
         self.customTextNode.displaysAsynchronously = false
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.lowTextNode)
         self.addSubnode(self.mediumTextNode)

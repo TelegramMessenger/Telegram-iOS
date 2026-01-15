@@ -157,7 +157,7 @@ public final class ThemePreviewController: ViewController {
                 let titleView = CounterControllerTitleView(theme: strongSelf.previewTheme)
                 titleView.title = CounterControllerTitle(title: themeName, counter: hasInstallsCount ? strongSelf.presentationData.strings.Theme_UsersCount(max(1, theme.installCount ?? 0)) : "")
                 strongSelf.navigationItem.titleView = titleView
-                strongSelf.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationTheme: presentationTheme, presentationStrings: strongSelf.presentationData.strings))
+                strongSelf.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationTheme: presentationTheme, presentationStrings: strongSelf.presentationData.strings), transition: .immediate)
             }
         })
         

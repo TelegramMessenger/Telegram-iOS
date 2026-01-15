@@ -131,7 +131,7 @@ private final class WallpaperPatternItemNode : ListViewItemNode {
     init() {
         self.wallpaperNode = SettingsThemeWallpaperNode(displayLoading: true)
         
-        super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
+        super.init(layerBacked: false, rotated: false, seeThrough: false)
 
         self.addSubnode(self.wallpaperNode)
     }

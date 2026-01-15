@@ -139,6 +139,7 @@ enum AccountStateMutationOperation {
     case UpdateMonoForumNoPaidException(peerId: PeerId, threadId: Int64, isFree: Bool)
     case UpdateStarGiftAuctionState(giftId: Int64, state: GiftAuctionContext.State.AuctionState)
     case UpdateStarGiftAuctionMyState(giftId: Int64, state: GiftAuctionContext.State.MyState)
+    case UpdateEmojiGameInfo(info: EmojiGameInfo)
 }
 
 struct HoleFromPreviousState {
@@ -737,9 +738,13 @@ struct AccountMutableState {
         self.addOperation(.UpdateStarGiftAuctionMyState(giftId: giftId, state: state))
     }
     
+    mutating func updateEmojiGameInfo(info: EmojiGameInfo) {
+        self.addOperation(.UpdateEmojiGameInfo(info: info))
+    }
+    
     mutating func addOperation(_ operation: AccountStateMutationOperation) {
         switch operation {
-        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .ReadOutbox, .ReadGroupFeedInbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .AddPeerLiveTypingDraftUpdate, .UpdateCachedPeerData, .UpdatePinnedItemIds, .UpdatePinnedSavedItemIds, .UpdatePinnedTopic, .UpdatePinnedTopicOrder, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdatePeerChatUnreadMark, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .UpdateWallpaper, .SyncChatListFilters, .UpdateChatListFilterOrder, .UpdateChatListFilter, .UpdateReadThread, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateGroupCallChainBlocks, .UpdateGroupCallMessage, .UpdateGroupCallOpaqueMessage, .UpdateMessagesPinned, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateExtendedMedia, .ResetForumTopic, .UpdateStory, .UpdateReadStories, .UpdateStoryStealthMode, .UpdateStorySentReaction, .UpdateNewAuthorization, .UpdateStarsBalance, .UpdateStarsRevenueStatus, .UpdateStarsReactionsDefaultPrivacy, .ReportMessageDelivery, .UpdateMonoForumNoPaidException, .UpdateStarGiftAuctionState, .UpdateStarGiftAuctionMyState:
+        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .ReadOutbox, .ReadGroupFeedInbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .AddPeerLiveTypingDraftUpdate, .UpdateCachedPeerData, .UpdatePinnedItemIds, .UpdatePinnedSavedItemIds, .UpdatePinnedTopic, .UpdatePinnedTopicOrder, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdatePeerChatUnreadMark, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .UpdateWallpaper, .SyncChatListFilters, .UpdateChatListFilterOrder, .UpdateChatListFilter, .UpdateReadThread, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateGroupCallChainBlocks, .UpdateGroupCallMessage, .UpdateGroupCallOpaqueMessage, .UpdateMessagesPinned, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateExtendedMedia, .ResetForumTopic, .UpdateStory, .UpdateReadStories, .UpdateStoryStealthMode, .UpdateStorySentReaction, .UpdateNewAuthorization, .UpdateStarsBalance, .UpdateStarsRevenueStatus, .UpdateStarsReactionsDefaultPrivacy, .ReportMessageDelivery, .UpdateMonoForumNoPaidException, .UpdateStarGiftAuctionState, .UpdateStarGiftAuctionMyState, .UpdateEmojiGameInfo:
                 break
             case let .AddMessages(messages, location):
                 for message in messages {
@@ -892,6 +897,7 @@ struct AccountReplayedFinalState {
     let addedConferenceInvitationMessagesIds: [MessageId]
     let updatedStarGiftAuctionState: [Int64: GiftAuctionContext.State.AuctionState]
     let updatedStarGiftAuctionMyState: [Int64: GiftAuctionContext.State.MyState]
+    let updatedEmojiGameInfo: EmojiGameInfo?
 }
 
 struct AccountFinalStateEvents {
@@ -927,12 +933,13 @@ struct AccountFinalStateEvents {
     let addedConferenceInvitationMessagesIds: [MessageId]
     let updatedStarGiftAuctionState: [Int64: GiftAuctionContext.State.AuctionState]
     let updatedStarGiftAuctionMyState: [Int64: GiftAuctionContext.State.MyState]
+    let updatedEmojiGameInfo: EmojiGameInfo?
     
     var isEmpty: Bool {
-        return self.addedIncomingMessageIds.isEmpty && self.addedReactionEvents.isEmpty && self.wasScheduledMessageIds.isEmpty && self.deletedMessageIds.isEmpty && self.sentScheduledMessageIds.isEmpty && self.updatedTypingActivities.isEmpty && self.updatedWebpages.isEmpty && self.updatedCalls.isEmpty && self.addedCallSignalingData.isEmpty && self.updatedGroupCallParticipants.isEmpty && self.groupCallMessageUpdates.isEmpty && self.storyUpdates.isEmpty && self.updatedPeersNearby?.isEmpty ?? true && self.isContactUpdates.isEmpty && self.displayAlerts.isEmpty && self.dismissBotWebViews.isEmpty && self.delayNotificatonsUntil == nil && self.updatedMaxMessageId == nil && self.updatedQts == nil && self.externallyUpdatedPeerId.isEmpty && !authorizationListUpdated && self.updatedIncomingThreadReadStates.isEmpty && self.updatedOutgoingThreadReadStates.isEmpty && !self.updateConfig && !self.isPremiumUpdated && self.updatedStarsBalance.isEmpty && self.updatedTonBalance.isEmpty && self.updatedStarsRevenueStatus.isEmpty && self.reportMessageDelivery.isEmpty && self.addedConferenceInvitationMessagesIds.isEmpty && self.updatedStarGiftAuctionState.isEmpty && self.updatedStarGiftAuctionMyState.isEmpty
+        return self.addedIncomingMessageIds.isEmpty && self.addedReactionEvents.isEmpty && self.wasScheduledMessageIds.isEmpty && self.deletedMessageIds.isEmpty && self.sentScheduledMessageIds.isEmpty && self.updatedTypingActivities.isEmpty && self.updatedWebpages.isEmpty && self.updatedCalls.isEmpty && self.addedCallSignalingData.isEmpty && self.updatedGroupCallParticipants.isEmpty && self.groupCallMessageUpdates.isEmpty && self.storyUpdates.isEmpty && self.updatedPeersNearby?.isEmpty ?? true && self.isContactUpdates.isEmpty && self.displayAlerts.isEmpty && self.dismissBotWebViews.isEmpty && self.delayNotificatonsUntil == nil && self.updatedMaxMessageId == nil && self.updatedQts == nil && self.externallyUpdatedPeerId.isEmpty && !authorizationListUpdated && self.updatedIncomingThreadReadStates.isEmpty && self.updatedOutgoingThreadReadStates.isEmpty && !self.updateConfig && !self.isPremiumUpdated && self.updatedStarsBalance.isEmpty && self.updatedTonBalance.isEmpty && self.updatedStarsRevenueStatus.isEmpty && self.reportMessageDelivery.isEmpty && self.addedConferenceInvitationMessagesIds.isEmpty && self.updatedStarGiftAuctionState.isEmpty && self.updatedStarGiftAuctionMyState.isEmpty && self.updatedEmojiGameInfo == nil
     }
     
-    init(addedIncomingMessageIds: [MessageId] = [], addedReactionEvents: [(reactionAuthor: Peer, reaction: MessageReaction.Reaction, message: Message, timestamp: Int32)] = [], wasScheduledMessageIds: [MessageId] = [], deletedMessageIds: [DeletedMessageId] = [], updatedTypingActivities: [PeerActivitySpace: [PeerId: PeerInputActivity?]] = [:], updatedWebpages: [MediaId: TelegramMediaWebpage] = [:], updatedCalls: [Api.PhoneCall] = [], addedCallSignalingData: [(Int64, Data)] = [], updatedGroupCallParticipants: [(Int64, GroupCallParticipantsContext.Update)] = [], groupCallMessageUpdates: [GroupCallMessageUpdate] = [], storyUpdates: [InternalStoryUpdate] = [], updatedPeersNearby: [PeerNearby]? = nil, isContactUpdates: [(PeerId, Bool)] = [], displayAlerts: [(text: String, isDropAuth: Bool)] = [], dismissBotWebViews: [Int64] = [], delayNotificatonsUntil: Int32? = nil, updatedMaxMessageId: Int32? = nil, updatedQts: Int32? = nil, externallyUpdatedPeerId: Set<PeerId> = Set(), authorizationListUpdated: Bool = false, updatedIncomingThreadReadStates: [PeerAndBoundThreadId: MessageId.Id] = [:], updatedOutgoingThreadReadStates: [PeerAndBoundThreadId: MessageId.Id] = [:], updateConfig: Bool = false, isPremiumUpdated: Bool = false, updatedStarsBalance: [PeerId: StarsAmount] = [:], updatedTonBalance: [PeerId: StarsAmount] = [:], updatedStarsRevenueStatus: [PeerId: StarsRevenueStats.Balances] = [:], sentScheduledMessageIds: Set<MessageId> = Set(), reportMessageDelivery: Set<MessageId> = Set(), addedConferenceInvitationMessagesIds: [MessageId] = [], updatedStarGiftAuctionState: [Int64: GiftAuctionContext.State.AuctionState] = [:], updatedStarGiftAuctionMyState: [Int64: GiftAuctionContext.State.MyState] = [:]) {
+    init(addedIncomingMessageIds: [MessageId] = [], addedReactionEvents: [(reactionAuthor: Peer, reaction: MessageReaction.Reaction, message: Message, timestamp: Int32)] = [], wasScheduledMessageIds: [MessageId] = [], deletedMessageIds: [DeletedMessageId] = [], updatedTypingActivities: [PeerActivitySpace: [PeerId: PeerInputActivity?]] = [:], updatedWebpages: [MediaId: TelegramMediaWebpage] = [:], updatedCalls: [Api.PhoneCall] = [], addedCallSignalingData: [(Int64, Data)] = [], updatedGroupCallParticipants: [(Int64, GroupCallParticipantsContext.Update)] = [], groupCallMessageUpdates: [GroupCallMessageUpdate] = [], storyUpdates: [InternalStoryUpdate] = [], updatedPeersNearby: [PeerNearby]? = nil, isContactUpdates: [(PeerId, Bool)] = [], displayAlerts: [(text: String, isDropAuth: Bool)] = [], dismissBotWebViews: [Int64] = [], delayNotificatonsUntil: Int32? = nil, updatedMaxMessageId: Int32? = nil, updatedQts: Int32? = nil, externallyUpdatedPeerId: Set<PeerId> = Set(), authorizationListUpdated: Bool = false, updatedIncomingThreadReadStates: [PeerAndBoundThreadId: MessageId.Id] = [:], updatedOutgoingThreadReadStates: [PeerAndBoundThreadId: MessageId.Id] = [:], updateConfig: Bool = false, isPremiumUpdated: Bool = false, updatedStarsBalance: [PeerId: StarsAmount] = [:], updatedTonBalance: [PeerId: StarsAmount] = [:], updatedStarsRevenueStatus: [PeerId: StarsRevenueStats.Balances] = [:], sentScheduledMessageIds: Set<MessageId> = Set(), reportMessageDelivery: Set<MessageId> = Set(), addedConferenceInvitationMessagesIds: [MessageId] = [], updatedStarGiftAuctionState: [Int64: GiftAuctionContext.State.AuctionState] = [:], updatedStarGiftAuctionMyState: [Int64: GiftAuctionContext.State.MyState] = [:], updatedEmojiGameInfo: EmojiGameInfo? = nil) {
         self.addedIncomingMessageIds = addedIncomingMessageIds
         self.addedReactionEvents = addedReactionEvents
         self.wasScheduledMessageIds = wasScheduledMessageIds
@@ -965,6 +972,7 @@ struct AccountFinalStateEvents {
         self.addedConferenceInvitationMessagesIds = addedConferenceInvitationMessagesIds
         self.updatedStarGiftAuctionState = updatedStarGiftAuctionState
         self.updatedStarGiftAuctionMyState = updatedStarGiftAuctionMyState
+        self.updatedEmojiGameInfo = updatedEmojiGameInfo
     }
     
     init(state: AccountReplayedFinalState) {
@@ -1000,6 +1008,7 @@ struct AccountFinalStateEvents {
         self.addedConferenceInvitationMessagesIds = state.addedConferenceInvitationMessagesIds
         self.updatedStarGiftAuctionState = state.updatedStarGiftAuctionState
         self.updatedStarGiftAuctionMyState = state.updatedStarGiftAuctionMyState
+        self.updatedEmojiGameInfo = state.updatedEmojiGameInfo
     }
     
     func union(with other: AccountFinalStateEvents) -> AccountFinalStateEvents {
@@ -1068,7 +1077,8 @@ struct AccountFinalStateEvents {
             reportMessageDelivery: reportMessageDelivery,
             addedConferenceInvitationMessagesIds: addedConferenceInvitationMessagesIds,
             updatedStarGiftAuctionState: self.updatedStarGiftAuctionState.merging(other.updatedStarGiftAuctionState, uniquingKeysWith: { lhs, _ in lhs }),
-            updatedStarGiftAuctionMyState: self.updatedStarGiftAuctionMyState.merging(other.updatedStarGiftAuctionMyState, uniquingKeysWith: { lhs, _ in lhs })
+            updatedStarGiftAuctionMyState: self.updatedStarGiftAuctionMyState.merging(other.updatedStarGiftAuctionMyState, uniquingKeysWith: { lhs, _ in lhs }),
+            updatedEmojiGameInfo: self.updatedEmojiGameInfo
         )
     }
 }

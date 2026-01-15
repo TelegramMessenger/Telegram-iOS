@@ -974,8 +974,9 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                             transition.setFrame(view: contentView.tintMaskContainer, frame: contentFrame)
                         }
                         
+                        let _ = bottomPanelHeight
                         if let contentViewWithBackground = contentView.view.componentView as? PagerContentViewWithBackground {
-                            contentViewWithBackground.pagerUpdateBackground(backgroundFrame: CGRect(origin: CGPoint(), size: CGSize(width: backgroundFrame.width, height: availableSize.height)), topPanelHeight: topPanelHeight, bottomPanelHeight: bottomPanelHeight, externalTintMaskContainer: component.externalTintMaskContainer == nil ? nil : contentView.tintMaskContainer, transition: contentTransition)
+                            contentViewWithBackground.pagerUpdateBackground(backgroundFrame: CGRect(origin: CGPoint(), size: CGSize(width: backgroundFrame.width, height: availableSize.height)), topPanelHeight: topPanelHeight, bottomPanelHeight: 0.0, externalTintMaskContainer: component.externalTintMaskContainer == nil ? nil : contentView.tintMaskContainer, transition: contentTransition)
                         }
                     }
                 }

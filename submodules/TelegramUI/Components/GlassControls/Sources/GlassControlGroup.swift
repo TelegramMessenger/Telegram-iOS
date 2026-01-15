@@ -148,13 +148,13 @@ public final class GlassControlGroupComponent: Component {
                     ))
                 case let .text(string):
                     content = AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: string, font: Font.semibold(15.0), textColor: component.background == .activeTint ? component.theme.list.itemCheckColors.foregroundColor :  component.theme.chat.inputPanel.panelControlColor))
+                        text: .plain(NSAttributedString(string: string, font: Font.medium(17.0), textColor: component.background == .activeTint ? component.theme.list.itemCheckColors.foregroundColor :  component.theme.chat.inputPanel.panelControlColor))
                     ))
                     itemInsets.left = 10.0
                     itemInsets.right = itemInsets.left
                 }
                 
-                var minItemWidth: CGFloat = 40.0
+                var minItemWidth: CGFloat = availableSize.height
                 if component.items.count == 1 {
                     minItemWidth = max(minItemWidth, component.minWidth)
                 }
@@ -163,7 +163,7 @@ public final class GlassControlGroupComponent: Component {
                     transition: itemTransition,
                     component: AnyComponent(PlainButtonComponent(
                         content: content,
-                        minSize: CGSize(width: minItemWidth, height: 40.0),
+                        minSize: CGSize(width: minItemWidth, height: availableSize.height),
                         contentInsets: itemInsets,
                         action: {
                             item.action?()
@@ -186,8 +186,9 @@ public final class GlassControlGroupComponent: Component {
                         itemComponentView.alpha = 0.0
                     }
                     itemTransition.setFrame(view: itemComponentView, frame: itemFrame)
+                    alphaTransition.setAlpha(view: itemComponentView, alpha: item.action != nil ? 1.0 : 0.5)
+                    
                     if animateIn {
-                        alphaTransition.setAlpha(view: itemComponentView, alpha: 1.0)
                         alphaTransition.animateBlur(layer: itemComponentView.layer, fromRadius: 8.0, toRadius: 0.0)
                     }
                 }
@@ -220,6 +221,7 @@ public final class GlassControlGroupComponent: Component {
                 tintColor = .init(kind: .panel, color: component.theme.chat.inputPanel.inputBackgroundColor.withMultipliedAlpha(0.7), innerColor: component.theme.list.itemCheckColors.fillColor)
             }
             transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(), size: size))
+            isInteractive = true
             self.backgroundView.update(size: size, cornerRadius: size.height * 0.5, isDark: component.theme.overallDarkAppearance, tintColor: tintColor, isInteractive: isInteractive, transition: transition)
             
             return size

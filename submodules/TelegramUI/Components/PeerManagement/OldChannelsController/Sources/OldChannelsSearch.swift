@@ -391,7 +391,7 @@ private final class OldChannelsSearchItemNode: ItemListControllerSearchNode {
         
         self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: OldChannelsSearchContainerNode(context: self.context, peers: self.peers, selectedPeerIds: self.selectedPeerIds, togglePeer: self.togglePeer), cancel: { [weak self] in
             self?.cancel()
-        })
+        }, fieldStyle: placeholderNode.fieldStyle)
         
         self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: navigationBarHeight, transition: .immediate)
         self.searchDisplayController?.activate(insertSubnode: { [weak self, weak placeholderNode] subnode, isSearchBar in

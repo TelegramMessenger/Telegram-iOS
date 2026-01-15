@@ -4026,7 +4026,7 @@ public final class EmojiPagerContentComponent: Component {
         private func updateTopPanelSeparator(transition: ComponentTransition) {
             if let topPanelSeparator = self.topPanelSeparator {
                 var offset = self.scrollView.contentOffset.y
-                let startOffset: CGFloat = 40.0 - self.topPanelHeight
+                let startOffset: CGFloat = 46.0 - self.topPanelHeight
                 let endOffset: CGFloat = startOffset + 10.0
                 
                 offset = min(max(offset, startOffset), endOffset)

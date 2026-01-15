@@ -280,13 +280,19 @@ extension ChatControllerImpl {
                                 return
                             }
                             
-                            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationTitle, text: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationText, actions: [
-                                TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
-                                }),
-                                TextAlertAction(type: .destructiveAction, title: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationAction, action: {
-                                    beginClear(.scheduledMessages)
-                                })
-                            ], parseMarkdown: true), in: .window(.root))
+                            let alertController = textAlertController(
+                                context: strongSelf.context,
+                                title: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationTitle,
+                                text: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationText,
+                                actions: [
+                                    TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
+                                    }),
+                                    TextAlertAction(type: .destructiveAction, title: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationAction, action: {
+                                        beginClear(.scheduledMessages)
+                                    })
+                                ]
+                            )
+                            strongSelf.present(alertController, in: .window(.root))
                         }))
                     } else {
                         if let _ = canClearForMyself ?? canClearForEveryone {
@@ -310,13 +316,19 @@ extension ChatControllerImpl {
                                         return
                                     }
                                     
-                                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: strongSelf.presentationData.strings.ChatList_DeleteForEveryoneConfirmationTitle, text: confirmationText, actions: [
-                                        TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
-                                        }),
-                                        TextAlertAction(type: .destructiveAction, title: strongSelf.presentationData.strings.ChatList_DeleteForEveryoneConfirmationAction, action: {
-                                            beginClear(.forEveryone)
-                                        })
-                                    ], parseMarkdown: true), in: .window(.root))
+                                    let alertController = textAlertController(
+                                        context: strongSelf.context,
+                                        title: strongSelf.presentationData.strings.ChatList_DeleteForEveryoneConfirmationTitle,
+                                        text: confirmationText,
+                                        actions: [
+                                            TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
+                                            }),
+                                            TextAlertAction(type: .destructiveAction, title: strongSelf.presentationData.strings.ChatList_DeleteForEveryoneConfirmationAction, action: {
+                                                beginClear(.forEveryone)
+                                            })
+                                        ]
+                                    )
+                                    strongSelf.present(alertController, in: .window(.root))
                                 }))
                             }
                             if let canClearForMyself = canClearForMyself {
@@ -330,13 +342,19 @@ extension ChatControllerImpl {
                                 items.append(ActionSheetButtonItem(title: text, color: .destructive, action: { [weak self, weak actionSheet] in
                                     actionSheet?.dismissAnimated()
                                     if mainPeer.id == context.account.peerId, let strongSelf = self {
-                                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationTitle, text: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationText, actions: [
-                                            TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
-                                            }),
-                                            TextAlertAction(type: .destructiveAction, title: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationAction, action: {
-                                                beginClear(.forLocalPeer)
-                                            })
-                                        ], parseMarkdown: true), in: .window(.root))
+                                        let alertController = textAlertController(
+                                            context: strongSelf.context,
+                                            title: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationTitle,
+                                            text: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationText,
+                                            actions: [
+                                                TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
+                                                }),
+                                                TextAlertAction(type: .destructiveAction, title: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationAction, action: {
+                                                    beginClear(.forLocalPeer)
+                                                })
+                                            ]
+                                        )
+                                        strongSelf.present(alertController, in: .window(.root))
                                     } else {
                                         beginClear(.forLocalPeer)
                                     }

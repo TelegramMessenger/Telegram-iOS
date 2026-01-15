@@ -133,7 +133,7 @@ public final class StatsGraphItemNode: ListViewItemNode {
         self.activityIndicator = ActivityIndicator(type: ActivityIndicatorType.custom(.black, 16.0, 2.0, false))
         self.activityIndicator.isHidden = true
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.chartContainerNode.addSubnode(self.chartNode)
         self.chartContainerNode.addSubnode(self.activityIndicator)

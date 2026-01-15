@@ -135,7 +135,7 @@ final class ChannelDiscussionGroupSearchContainerNode: SearchDisplayControllerCo
         
         super.init()
         
-        self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
+        self.dimNode.backgroundColor = .clear
         self.listNode.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         self.listNode.isHidden = true
         

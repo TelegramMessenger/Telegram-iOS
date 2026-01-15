@@ -127,8 +127,7 @@ final class BusinessLocationSetupScreenComponent: Component {
             let businessLocation = self.currentBusinessLocation()
             
             if businessLocation != component.initialValue {
-                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: environment.strings.BusinessLocationSetup_AlertUnsavedChanges_Text, actions: [
+                self.environment?.controller()?.present(textAlertController(context: component.context, title: nil, text: environment.strings.BusinessLocationSetup_AlertUnsavedChanges_Text, actions: [
                     TextAlertAction(type: .genericAction, title: environment.strings.Common_Cancel, action: {
                     }),
                     TextAlertAction(type: .destructiveAction, title: environment.strings.BusinessLocationSetup_AlertUnsavedChanges_ResetAction, action: {
@@ -250,8 +249,7 @@ final class BusinessLocationSetupScreenComponent: Component {
             let businessLocation = self.currentBusinessLocation()
             
             if businessLocation != nil && address.isEmpty {
-                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: environment.strings.BusinessLocationSetup_ErrorAddressEmpty_Text, actions: [
+                self.environment?.controller()?.present(textAlertController(context: component.context, title: nil, text: environment.strings.BusinessLocationSetup_ErrorAddressEmpty_Text, actions: [
                     TextAlertAction(type: .genericAction, title: environment.strings.Common_OK, action: {
                     })
                 ]), in: .window(.root))

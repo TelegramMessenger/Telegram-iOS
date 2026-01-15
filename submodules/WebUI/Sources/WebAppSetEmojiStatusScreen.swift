@@ -116,7 +116,7 @@ private final class SheetContent: CombinedComponent {
                     component: AnyComponentWithIdentity(id: "close", component: AnyComponent(
                         BundleIconComponent(
                             name: "Navigation/Close",
-                            tintColor: theme.rootController.navigationBar.glassBarButtonForegroundColor
+                            tintColor: theme.chat.inputPanel.panelControlColor
                         )
                     )),
                     action: { _ in
@@ -198,6 +198,7 @@ private final class SheetContent: CombinedComponent {
             
             let controller = environment.controller() as? WebAppSetEmojiStatusScreen
                         
+            let buttonInsets = ContainerViewLayout.concentricInsets(bottomInset: environment.safeInsets.bottom, innerDiameter: 52.0, sideInset: 30.0)
             let button = button.update(
                 component: ButtonComponent(
                     background: ButtonComponent.Background(
@@ -217,7 +218,7 @@ private final class SheetContent: CombinedComponent {
                         controller?.dismissAnimated()
                     }
                 ),
-                availableSize: CGSize(width: context.availableSize.width - 30.0 * 2.0, height: 52.0),
+                availableSize: CGSize(width: context.availableSize.width - buttonInsets.left - buttonInsets.right, height: 52.0),
                 transition: .immediate
             )
             context.add(button
@@ -226,8 +227,7 @@ private final class SheetContent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + button.size.height / 2.0))
             )
             contentSize.height += button.size.height
- 
-            contentSize.height += 48.0
+            contentSize.height += buttonInsets.bottom
             
             return contentSize
         }

@@ -257,7 +257,7 @@ final class VoiceChatTilesGridItemNode: ListViewItemNode {
         self.limitLabel = TextNode()
         self.limitLabel.alpha = 0.0
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
                 
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.cornersNode)

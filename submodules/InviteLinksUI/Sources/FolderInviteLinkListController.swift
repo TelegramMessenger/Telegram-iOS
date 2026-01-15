@@ -451,7 +451,7 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
             
             let state = stateValue.with({ $0 })
             
-            let promptController = promptController(sharedContext: context.sharedContext, updatedPresentationData: updatedPresentationData, text: presentationData.strings.FolderLinkScreen_NameLink_Title, titleFont: .bold, value: state.title ?? "", characterLimit: 32, apply: { value in
+            let promptController = promptController(context: context, updatedPresentationData: updatedPresentationData, text: presentationData.strings.FolderLinkScreen_NameLink_Title, titleFont: .bold, value: state.title ?? "", characterLimit: 32, apply: { value in
                 if let value {
                     updateState { state in
                         var state = state
@@ -763,15 +763,21 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
             
             if hasChanges {
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.FolderLinkScreen_SaveAlertTitle, text: presentationData.strings.FolderLinkScreen_SaveAlertText, actions: [
-                    TextAlertAction(type: .genericAction, title: presentationData.strings.FolderLinkScreen_SaveAlertActionDiscard, action: {
-                        f()
-                        dismissImpl?()
-                    }),
-                    TextAlertAction(type: .defaultAction, title: state.selectedPeerIds.isEmpty ? presentationData.strings.FolderLinkScreen_SaveAlertActionApply : presentationData.strings.FolderLinkScreen_SaveAlertActionContinue, action: {
-                        applyChangesImpl?()
-                    })
-                ]), nil)
+                let alertController = textAlertController(
+                    context: context,
+                    title: presentationData.strings.FolderLinkScreen_SaveAlertTitle,
+                    text: presentationData.strings.FolderLinkScreen_SaveAlertText,
+                    actions: [
+                        TextAlertAction(type: .genericAction, title: presentationData.strings.FolderLinkScreen_SaveAlertActionDiscard, action: {
+                            f()
+                            dismissImpl?()
+                        }),
+                        TextAlertAction(type: .defaultAction, title: state.selectedPeerIds.isEmpty ? presentationData.strings.FolderLinkScreen_SaveAlertActionApply : presentationData.strings.FolderLinkScreen_SaveAlertActionContinue, action: {
+                            applyChangesImpl?()
+                        })
+                    ]
+                )
+                presentControllerImpl?(alertController, nil)
                 return false
             } else {
                 f()

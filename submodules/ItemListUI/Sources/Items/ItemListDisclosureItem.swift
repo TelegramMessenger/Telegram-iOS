@@ -254,7 +254,7 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
         
         self.activateArea = AccessibilityAreaNode()
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.titleNode.textNode)
         self.addSubnode(self.labelNode)

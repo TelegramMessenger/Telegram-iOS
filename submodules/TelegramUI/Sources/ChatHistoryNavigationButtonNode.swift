@@ -20,21 +20,21 @@ enum ChatHistoryNavigationButtonType {
 
 class ChatHistoryNavigationButtonNode: ContextControllerSourceNode {
     let containerNode: ContextExtractedContentContainingNode
-    let buttonNode: HighlightTrackingButtonNode
     private let backgroundView: GlassBackgroundView
     let imageView: GlassBackgroundView.ContentImageView
     private let badgeBackgroundView: GlassBackgroundView
     private let badgeTextNode: ImmediateAnimatedCountLabelNode
+    private var tapRecognizer: UITapGestureRecognizer?
     
     var tapped: (() -> Void)? {
         didSet {
-            if (oldValue != nil) != (self.tapped != nil) {
-                if self.tapped != nil {
-                    self.buttonNode.addTarget(self, action: #selector(self.onTap), forControlEvents: .touchUpInside)
-                } else {
-                    self.buttonNode.removeTarget(self, action: #selector(self.onTap), forControlEvents: .touchUpInside)
-                }
-            }
+            self.tapRecognizer?.isEnabled = self.tapped != nil && self.isEnabled
+        }
+    }
+    
+    var isEnabled: Bool = true {
+        didSet {
+            self.tapRecognizer?.isEnabled = self.tapped != nil && self.isEnabled
         }
     }
     
@@ -54,7 +54,6 @@ class ChatHistoryNavigationButtonNode: ContextControllerSourceNode {
         self.type = type
         
         self.containerNode = ContextExtractedContentContainingNode()
-        self.buttonNode = HighlightTrackingButtonNode()
 
         self.backgroundView = GlassBackgroundView()
         
@@ -80,7 +79,10 @@ class ChatHistoryNavigationButtonNode: ContextControllerSourceNode {
         
         super.init()
         
-        self.targetNodeForActivationProgress = self.buttonNode
+        let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.onTapGesture(_:)))
+        self.tapRecognizer = tapRecognizer
+        self.backgroundView.contentView.addGestureRecognizer(tapRecognizer)
+        tapRecognizer.isEnabled = false
         
         self.addSubnode(self.containerNode)
         
@@ -89,18 +91,16 @@ class ChatHistoryNavigationButtonNode: ContextControllerSourceNode {
         self.containerNode.contentNode.frame = CGRect(origin: CGPoint(), size: size)
         self.containerNode.contentRect = CGRect(origin: CGPoint(), size: size)
         
-        self.buttonNode.frame = CGRect(origin: CGPoint(), size: size)
-        self.containerNode.contentNode.addSubnode(self.buttonNode)
+        self.containerNode.contentNode.view.addSubview(self.backgroundView)
 
-        self.buttonNode.view.addSubview(self.backgroundView)
         self.backgroundView.frame = CGRect(origin: CGPoint(), size: size)
-        self.backgroundView.update(size: size, cornerRadius: size.height * 0.5, isDark: theme.overallDarkAppearance, tintColor: .init(kind: .panel, color: theme.chat.inputPanel.inputBackgroundColor.withMultipliedAlpha(0.7)), transition: .immediate)
+        self.backgroundView.update(size: size, cornerRadius: size.height * 0.5, isDark: theme.overallDarkAppearance, tintColor: .init(kind: .panel, color: theme.chat.inputPanel.inputBackgroundColor.withMultipliedAlpha(0.7)), isInteractive: true, transition: .immediate)
         self.imageView.tintColor = theme.chat.inputPanel.panelControlColor
 
         self.backgroundView.contentView.addSubview(self.imageView)
         self.imageView.frame = CGRect(origin: CGPoint(), size: size)
         
-        self.buttonNode.view.addSubview(self.badgeBackgroundView)
+        self.containerNode.contentNode.view.addSubview(self.badgeBackgroundView)
         self.badgeBackgroundView.contentView.addSubview(self.badgeTextNode.view)
         
         self.frame = CGRect(origin: CGPoint(), size: size)
@@ -143,9 +143,11 @@ class ChatHistoryNavigationButtonNode: ContextControllerSourceNode {
         self.absoluteRect = (rect, containerSize)
     }
     
-    @objc func onTap() {
-        if let tapped = self.tapped {
-            tapped()
+    @objc private func onTapGesture(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            if let tapped = self.tapped {
+                tapped()
+            }
         }
     }
     

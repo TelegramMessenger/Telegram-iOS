@@ -38,7 +38,6 @@ public final class SheetComponentEnvironment: Equatable {
     }
 }
 
-public let sheetComponentTag = GenericComponentViewTag()
 public final class SheetComponent<ChildEnvironmentType: Sendable & Equatable>: Component {
     public typealias EnvironmentType = (ChildEnvironmentType, SheetComponentEnvironment)
     
@@ -342,7 +341,7 @@ public final class SheetComponent<ChildEnvironmentType: Sendable & Equatable>: C
                 let contentOffset = (self.scrollView.contentOffset.y + self.scrollView.contentInset.top - self.scrollView.contentSize.height) * -1.0
                 let dismissalOffset = self.scrollView.contentSize.height + abs(contentView.frame.minY)
                 let delta = dismissalOffset - contentOffset
-                var targetPosition = self.scrollView.center.y + delta
+                var targetPosition = self.scrollView.center.y + delta + 6.0
                 if self.isCentered {
                     targetPosition = self.frame.height + self.scrollView.frame.height * 0.5
                 }
@@ -351,7 +350,7 @@ public final class SheetComponent<ChildEnvironmentType: Sendable & Equatable>: C
                     completion()
                 })
             } else {
-                var targetOffset: CGFloat = self.scrollView.contentSize.height + abs(contentView.frame.minY)
+                var targetOffset: CGFloat = self.scrollView.contentSize.height + abs(contentView.frame.minY) + 6.0
                 if self.isCentered {
                     targetOffset = self.frame.height + self.scrollView.frame.height * 0.5
                 }
@@ -468,7 +467,7 @@ public final class SheetComponent<ChildEnvironmentType: Sendable & Equatable>: C
                     switch component.style {
                     case .glass:
                         let clipFrame = CGRect(origin: CGPoint(x: glassInset, y: -glassInset), size: CGSize(width: contentSize.width, height: contentSize.height))
-                        self.clipView.update(size: clipFrame.size, color: .clear, topCornerRadius: topCornerRadius, bottomCornerRadius: bottomCornerRadius, transition: transition)
+                        self.clipView.update(size: clipFrame.size, color: .clear, topCornerRadius: topCornerRadius - 1.5, bottomCornerRadius: bottomCornerRadius, transition: transition)
                         transition.setFrame(view: self.clipView, frame: clipFrame)
                         transition.setFrame(view: contentView, frame: CGRect(origin: .zero, size: CGSize(width: contentSize.width, height: contentSize.height)), completion: nil)
                         transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(x: glassInset, y: -glassInset), size: CGSize(width: contentSize.width, height: contentSize.height)), completion: nil)
@@ -482,7 +481,7 @@ public final class SheetComponent<ChildEnvironmentType: Sendable & Equatable>: C
                             transition.setFrame(view: effectView, frame: CGRect(origin: .zero, size: CGSize(width: contentSize.width, height: contentSize.height + 1000.0)), completion: nil)
                         }
                     }
-                    self.backgroundView.update(size: contentSize, color: backgroundColor, topCornerRadius: topCornerRadius, bottomCornerRadius: bottomCornerRadius, transition: transition)
+                    self.backgroundView.update(size: contentSize, color: backgroundColor, topCornerRadius: topCornerRadius + 1.5, bottomCornerRadius: bottomCornerRadius, transition: transition)
                 }
             }
             transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(), size: availableSize), completion: nil)

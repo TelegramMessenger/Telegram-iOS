@@ -205,8 +205,6 @@ final class GreetingMessageListItemComponent: Component {
                     },
                     openStarsTopup: { _ in
                     },
-                    dismissNotice: { _ in
-                    },
                     editPeer: { _ in
                     },
                     openWebApp: { _ in

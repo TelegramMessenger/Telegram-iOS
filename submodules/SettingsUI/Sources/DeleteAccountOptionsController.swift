@@ -16,6 +16,7 @@ import AccountUtils
 import PremiumUI
 import PasswordSetupUI
 import StorageUsageScreen
+import AlertComponent
 
 private struct DeleteAccountOptionsArguments {
     let changePhoneNumber: () -> Void
@@ -102,43 +103,43 @@ private enum DeleteAccountOptionsEntry: ItemListNodeEntry, Equatable {
         let arguments = arguments as! DeleteAccountOptionsArguments
         switch self {
             case let .changePhoneNumber(_, title, text):
-                return ItemListDisclosureItem(presentationData: presentationData, icon: PresentationResourcesSettings.changePhoneNumber, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesSettings.changePhoneNumber, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.changePhoneNumber()
                 })
             case let .addAccount(_, title, text):
-                return ItemListDisclosureItem(presentationData: presentationData, icon: PresentationResourcesSettings.deleteAddAccount, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesSettings.deleteAddAccount, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.addAccount()
                 })
             case let .changePrivacy(_, title, text):
-                return ItemListDisclosureItem(presentationData: presentationData, icon: PresentationResourcesSettings.security, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesSettings.security, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.setupPrivacy()
                 })
             case let .setTwoStepAuth(_, title, text):
-                return ItemListDisclosureItem(presentationData: presentationData, icon: PresentationResourcesSettings.deleteSetTwoStepAuth, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesSettings.deleteSetTwoStepAuth, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.setupTwoStepAuth()
                 })
             case let .setPasscode(_, title, text):
-                return ItemListDisclosureItem(presentationData: presentationData, icon: PresentationResourcesSettings.deleteSetPasscode, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesSettings.deleteSetPasscode, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.setPasscode()
                 })
             case let .clearCache(_, title, text):
-                return ItemListDisclosureItem(presentationData: presentationData, icon: PresentationResourcesSettings.dataAndStorage, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesSettings.dataAndStorage, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.clearCache()
                 })
             case let .clearSyncedContacts(_, title, text):
-                return ItemListDisclosureItem(presentationData: presentationData, icon: PresentationResourcesSettings.clearSynced, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesSettings.clearSynced, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.clearSyncedContacts()
                 })
             case let .deleteChats(_, title, text):
-                return ItemListDisclosureItem(presentationData: presentationData, icon: PresentationResourcesSettings.deleteChats, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesSettings.deleteChats, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.deleteChats()
                 })
             case let .contactSupport(_, title, text):
-                return ItemListDisclosureItem(presentationData: presentationData, icon: PresentationResourcesSettings.support, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesSettings.support, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.contactSupport()
                 })
             case let .deleteAccount(_, title):
-                return ItemListActionItem(presentationData: presentationData, title: title, kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: title, kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.deleteAccount()
                 })
         }
@@ -362,32 +363,36 @@ public func deleteAccountOptionsController(context: AccountContext, navigationCo
                 }, dismissInput: {}, contentContext: nil, progress: nil, completion: nil)
             })
         }
-
-        let alertController = textAlertController(context: context, title: nil, text: presentationData.strings.Settings_FAQ_Intro, actions: [
-            TextAlertAction(type: .genericAction, title: presentationData.strings.Settings_FAQ_Button, action: {
-                openFaq(resolvedUrlPromise)
-                dismissImpl?()
-            }),
-            TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
-                supportPeerDisposable.set((supportPeer.get()
-                |> take(1)
-                |> deliverOnMainQueue).start(next: { peerId in
-                    guard let peerId = peerId else {
-                        return
-                    }
-                    let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-                    |> deliverOnMainQueue).start(next: { peer in
-                        guard let peer = peer else {
+        let alertController = AlertScreen(
+            context: context,
+            title: nil,
+            text: presentationData.strings.Settings_FAQ_Intro,
+            actions: [
+                .init(title: presentationData.strings.Settings_FAQ_Button, action: {
+                    openFaq(resolvedUrlPromise)
+                    dismissImpl?()
+                }),
+                .init(title: presentationData.strings.Common_OK, type: .default, action: {
+                    supportPeerDisposable.set((supportPeer.get()
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { peerId in
+                        guard let peerId else {
                             return
                         }
-                        if let navigationController = navigationController {
-                            dismissImpl?()
-                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer)))
-                        }
-                    })
-                }))
-            })
-        ])
+                        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                        |> deliverOnMainQueue).start(next: { peer in
+                            guard let peer else {
+                                return
+                            }
+                            if let navigationController = navigationController {
+                                dismissImpl?()
+                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer)))
+                            }
+                        })
+                    }))
+                })
+            ]
+        )
         alertController.dismissed = { _ in
             addAppLogEvent(postbox: context.account.postbox, type: "deactivate.options_support_cancel")
         }

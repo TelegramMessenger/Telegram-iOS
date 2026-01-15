@@ -129,7 +129,7 @@ class VoiceChatActionItemNode: ListViewItemNode {
         
         self.activateArea = AccessibilityAreaNode()
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.highlightContainerNode.addSubnode(self.highlightedBackgroundNode)
         

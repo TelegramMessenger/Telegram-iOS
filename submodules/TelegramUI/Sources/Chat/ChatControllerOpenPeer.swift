@@ -357,7 +357,9 @@ extension ChatControllerImpl {
             })))
         }
         
-        items.append(.separator)
+        if !items.isEmpty {
+            items.append(.separator)
+        }
         items.append(.action(ContextMenuActionItem(text: strings.Conversation_Search, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Search"), color: theme.contextMenu.primaryColor)
         }, action: { [weak self] action in

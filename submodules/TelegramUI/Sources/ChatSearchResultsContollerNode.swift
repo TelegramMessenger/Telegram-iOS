@@ -291,7 +291,6 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, ASScrollViewDe
         }, hideChatFolderUpdates: {
         }, openStories: { _, _ in
         }, openStarsTopup: { _ in
-        }, dismissNotice: { _ in
         }, editPeer: { _ in
         }, openWebApp: { _ in
         }, openPhotoSetup: {

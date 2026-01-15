@@ -46,6 +46,9 @@ swift_library(
         "//submodules/TelegramUI/Components/Gifts/GiftViewScreen",
         "//submodules/TelegramUI/Components/EdgeEffect",
         "//submodules/TelegramUI/Components/GlassBarButtonComponent",
+        "//submodules/TelegramUI/Components/AlertComponent",
+        "//submodules/TelegramUI/Components/AlertComponent/AlertTransferHeaderComponent",
+        "//submodules/TelegramUI/Components/AvatarComponent",
     ],
     visibility = [
         "//visibility:public",

@@ -10,6 +10,7 @@ import TelegramCallsUI
 import TelegramUIPreferences
 import AccountContext
 import DeviceLocationManager
+import ItemListUI
 import LegacyUI
 import ChatListUI
 import PeersNearbyUI
@@ -92,6 +93,8 @@ import AttachmentFileController
 import NewContactScreen
 import PasskeysScreen
 import GiftDemoScreen
+import ChatTextLinkEditUI
+import CocoonInfoScreen
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -2242,6 +2245,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return ChatHistoryListNodeImpl(
             context: context,
             updatedPresentationData: updatedPresentationData,
+            systemStyle: .glass,
             chatLocation: chatLocation,
             chatLocationContextHolder: chatLocationContextHolder,
             adMessagesContext: nil,
@@ -3191,6 +3195,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             guard let controller, case let .starGiftTransfer(_, _, gift, transferStars, _, _) = source else {
                 return
             }
+            controller.view.window?.endEditing(true)
+            
             var dismissAlertImpl: (() -> Void)?
             let alertController = giftTransferAlertController(
                 context: context,
@@ -3317,7 +3323,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             controller.present(alertController, in: .current)
             
             dismissAlertImpl = { [weak alertController] in
-                alertController?.dismissAnimated()
+                alertController?.dismiss()
             }
         }
         
@@ -3713,7 +3719,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return stickerMediaPickerController(context: context, getSourceRect: getSourceRect, completion: completion, dismissed: dismissed)
     }
     
-    public func makeAvatarMediaPickerScreen(context: AccountContext, getSourceRect: @escaping () -> CGRect?, canDelete: Bool, performDelete: @escaping () -> Void, completion: @escaping (Any?, UIView?, CGRect, UIImage?, Bool, @escaping (Bool?) -> (UIView, CGRect)?, @escaping () -> Void) -> Void, dismissed: @escaping () -> Void) -> ViewController {
+    public func makeAvatarMediaPickerScreen(context: AccountContext, getSourceRect: @escaping () -> CGRect?, canDelete: Bool, performDelete: @escaping () -> Void, completion: @escaping (Any?, UIView?, CGRect, UIImage?, Bool, @escaping (Bool?) -> (UIView, CGRect)?, @escaping () -> Void) -> Void, dismissed: @escaping () -> Void) -> (ViewController?, Any?) {
         return avatarMediaPickerController(context: context, getSourceRect: getSourceRect, canDelete: canDelete, performDelete: performDelete, completion: completion, dismissed: dismissed)
     }
 
@@ -3857,20 +3863,20 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return GiftAuctionBidScreen(context: context, toPeerId: toPeerId, text: text, entities: entities, hideName: hideName, auctionContext: auctionContext, acquiredGifts: acquiredGifts)
     }
     
-    public func makeGiftAuctionViewScreen(context: AccountContext, auctionContext: GiftAuctionContext, completion: @escaping (Signal<[GiftAuctionAcquiredGift], NoError>, [StarGift.UniqueGift.Attribute]?) -> Void) -> ViewController {
-        return GiftAuctionViewScreen(context: context, auctionContext: auctionContext, completion: completion)
+    public func makeGiftAuctionViewScreen(context: AccountContext, auctionContext: GiftAuctionContext, peerId: EnginePeer.Id?, completion: @escaping (Signal<[GiftAuctionAcquiredGift], NoError>, [StarGift.UniqueGift.Attribute]?) -> Void) -> ViewController {
+        return GiftAuctionViewScreen(context: context, auctionContext: auctionContext, peerId: peerId, completion: completion)
     }
     
     public func makeGiftAuctionActiveBidsScreen(context: AccountContext) -> ViewController {
         return GiftAuctionActiveBidsScreen(context: context)
     }
     
-    public func makeGiftOfferScreen(context: AccountContext, gift: StarGift.UniqueGift, peer: EnginePeer, amount: CurrencyAmount, commit: @escaping () -> Void) -> ViewController {
-        return giftOfferAlertController(context: context, gift: gift, peer: peer, amount: amount, commit: commit)
+    public func makeGiftOfferScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, gift: StarGift.UniqueGift, peer: EnginePeer, amount: CurrencyAmount, commit: @escaping () -> Void) -> ViewController {
+        return giftOfferAlertController(context: context, updatedPresentationData: updatedPresentationData, gift: gift, peer: peer, amount: amount, commit: commit)
     }
     
-    public func makeGiftUpgradeVariantsPreviewScreen(context: AccountContext, gift: StarGift, attributes: [StarGift.UniqueGift.Attribute]) -> ViewController {
-        return GiftUpgradePreviewScreen(context: context, gift: gift, attributes: attributes)
+    public func makeGiftUpgradeVariantsScreen(context: AccountContext, gift: StarGift, attributes: [StarGift.UniqueGift.Attribute], selectedAttributes: [StarGift.UniqueGift.Attribute]?, focusedAttribute: StarGift.UniqueGift.Attribute?) -> ViewController {
+        return GiftUpgradeVariantsScreen(context: context, gift: gift, attributes: attributes, selectedAttributes: selectedAttributes, focusedAttribute: focusedAttribute)
     }
     
     public func makeGiftAuctionWearPreviewScreen(context: AccountContext, auctionContext: GiftAuctionContext, acquiredGifts: Signal<[GiftAuctionAcquiredGift], NoError>?, attributes: [StarGift.UniqueGift.Attribute], completion: @escaping () -> Void) -> ViewController {
@@ -4021,6 +4027,14 @@ public final class SharedAccountContextImpl: SharedAccountContext {
 
     public func makeSendInviteLinkScreen(context: AccountContext, subject: SendInviteLinkScreenSubject, peers: [TelegramForbiddenInvitePeer], theme: PresentationTheme?) -> ViewController {
         return SendInviteLinkScreen(context: context, subject: subject, peers: peers, theme: theme)
+    }
+    
+    public func makeCocoonInfoScreen(context: AccountContext) -> ViewController {
+        return CocoonInfoScreen(context: context)
+    }
+    
+    public func makeLinkEditController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, text: String, link: String?, apply: @escaping (String?) -> Void) -> ViewController {
+        return chatTextLinkEditController(context: context, updatedPresentationData: updatedPresentationData, text: text, link: link, apply: apply)
     }
     
     @available(iOS 13.0, *)

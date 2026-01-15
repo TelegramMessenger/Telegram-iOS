@@ -42,6 +42,8 @@ swift_library(
         "//submodules/TelegramUI/Components/Stars/BalanceNeededScreen",
         "//submodules/TelegramUI/Components/GlassBarButtonComponent",
         "//submodules/TelegramUI/Components/GlassBackgroundComponent",
+        "//submodules/TelegramUI/Components/AlertComponent",
+        "//submodules/TelegramUI/Components/AlertComponent/AlertInputFieldComponent",
     ],
     visibility = [
         "//visibility:public",

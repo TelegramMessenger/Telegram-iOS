@@ -229,7 +229,7 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
         
         self.containerNode = ASDisplayNode()
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.containerNode)
     }

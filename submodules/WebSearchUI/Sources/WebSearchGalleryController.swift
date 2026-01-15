@@ -60,7 +60,7 @@ final class WebSearchGalleryControllerPresentationArguments {
 }
 
 class WebSearchGalleryController: ViewController {
-    private static let navigationTheme = NavigationBarTheme(buttonColor: .white, disabledButtonColor: UIColor(rgb: 0x525252), primaryTextColor: .white, backgroundColor: .clear, enableBackgroundBlur: false, separatorColor: .clear, badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear)
+    private static let navigationTheme = NavigationBarTheme(overallDarkAppearance: false, buttonColor: .white, disabledButtonColor: UIColor(rgb: 0x525252), primaryTextColor: .white, backgroundColor: .clear, enableBackgroundBlur: false, separatorColor: .clear, badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear)
     
     private var galleryNode: GalleryControllerNode {
         return self.displayNode as! GalleryControllerNode

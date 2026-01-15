@@ -184,7 +184,7 @@ final class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
         
         self.activateArea = AccessibilityAreaNode()
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.containerNode.addSubnode(self.contextSourceNode)
         self.containerNode.targetNodeForActivationProgress = self.contextSourceNode.contentNode

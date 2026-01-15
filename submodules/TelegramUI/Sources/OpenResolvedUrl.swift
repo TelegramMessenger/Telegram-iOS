@@ -38,6 +38,7 @@ import TextFormat
 import BrowserUI
 import MediaEditorScreen
 import GiftSetupScreen
+import AlertComponent
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {
@@ -95,7 +96,7 @@ func openResolvedUrlImpl(
                 present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Resolve_ErrorNotFound, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
             }
         case .inaccessiblePeer:
-            present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.Conversation_ErrorInaccessibleMessage, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+            present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Conversation_ErrorInaccessibleMessage, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
         case let .botStart(peer, payload):
             openPeer(EnginePeer(peer), .withBotStartPayload(ChatControllerInitialBotStart(payload: payload, behavior: .interactive)))
         case let .groupBotStart(botPeerId, payload, adminRights, peerType):
@@ -132,9 +133,8 @@ func openResolvedUrlImpl(
                 
                 let addMemberImpl = {
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    let theme = AlertControllerTheme(presentationData: presentationData)
-                    let attributedTitle = NSAttributedString(string: presentationData.strings.Bot_AddToChat_Add_MemberAlertTitle, font: Font.semibold(presentationData.listsFontSize.baseDisplaySize), textColor: theme.primaryColor, paragraphAlignment: .center)
-                  
+                    let strings = presentationData.strings
+                    
                     var isGroup: Bool = false
                     var peerTitle: String = ""
                     if case let .legacyGroup(peer) = peer {
@@ -147,51 +147,54 @@ func openResolvedUrlImpl(
                         peerTitle = peer.title
                     }
                     
-                    let text = isGroup ? presentationData.strings.Bot_AddToChat_Add_MemberAlertTextGroup(peerTitle).string : presentationData.strings.Bot_AddToChat_Add_MemberAlertTextChannel(peerTitle).string
+                    let text = isGroup ? strings.Bot_AddToChat_Add_MemberAlertTextGroup(peerTitle).string : strings.Bot_AddToChat_Add_MemberAlertTextChannel(peerTitle).string
                     
-                    let body = MarkdownAttributeSet(font: Font.regular(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0), textColor: theme.primaryColor)
-                    let bold = MarkdownAttributeSet(font: Font.semibold(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0), textColor: theme.primaryColor)
-                    let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .center)
-                    
-                    let controller = richTextAlertController(context: context, title: attributedTitle, text: attributedText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Bot_AddToChat_Add_MemberAlertAdd, action: {
-                        if payload.isEmpty {
-                            if peerId.namespace == Namespaces.Peer.CloudGroup {
-                                let _ = (context.engine.peers.addGroupMember(peerId: peerId, memberId: botPeerId)
-                                |> deliverOnMainQueue).startStandalone(completed: {
-                                    controller?.dismiss()
-                                })
-                            } else {
-                                let _ = (context.engine.peers.addChannelMember(peerId: peerId, memberId: botPeerId)
-                                |> deliverOnMainQueue).startStandalone(completed: {
-                                    controller?.dismiss()
-                                })
-                            }
-                        } else {
-                            let _ = (context.engine.messages.requestStartBotInGroup(botPeerId: botPeerId, groupPeerId: peerId, payload: payload)
-                            |> deliverOnMainQueue).startStandalone(next: { result in
-                                let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-                                |> deliverOnMainQueue).startStandalone(next: { peer in
-                                    guard let peer = peer else {
-                                        return
+                    let alertController = textAlertController(
+                        context: context,
+                        title: strings.Bot_AddToChat_Add_MemberAlertTitle,
+                        text: text,
+                        actions: [
+                            TextAlertAction(type: .defaultAction, title: strings.Bot_AddToChat_Add_MemberAlertAdd, action: {
+                                if payload.isEmpty {
+                                    if peerId.namespace == Namespaces.Peer.CloudGroup {
+                                        let _ = (context.engine.peers.addGroupMember(peerId: peerId, memberId: botPeerId)
+                                        |> deliverOnMainQueue).startStandalone(completed: {
+                                            controller?.dismiss()
+                                        })
+                                    } else {
+                                        let _ = (context.engine.peers.addChannelMember(peerId: peerId, memberId: botPeerId)
+                                        |> deliverOnMainQueue).startStandalone(completed: {
+                                            controller?.dismiss()
+                                        })
                                     }
-                                    if let navigationController = navigationController {
-                                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer)))
-                                    }
-                                    switch result {
-                                    case let .channelParticipant(participant):
-                                        context.peerChannelMemberCategoriesContextsManager.externallyAdded(peerId: peerId, participant: participant)
-                                    case .none:
-                                        break
-                                    }
-                                    controller?.dismiss()
-                                })
-                            }, error: { _ in
-                                
-                            })
-                        }
-                    }), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
-                    })], actionLayout: .vertical)
-                    present(controller, nil)
+                                } else {
+                                    let _ = (context.engine.messages.requestStartBotInGroup(botPeerId: botPeerId, groupPeerId: peerId, payload: payload)
+                                    |> deliverOnMainQueue).startStandalone(next: { result in
+                                        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                                        |> deliverOnMainQueue).startStandalone(next: { peer in
+                                            guard let peer = peer else {
+                                                return
+                                            }
+                                            if let navigationController = navigationController {
+                                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer)))
+                                            }
+                                            switch result {
+                                            case let .channelParticipant(participant):
+                                                context.peerChannelMemberCategoriesContextsManager.externallyAdded(peerId: peerId, participant: participant)
+                                            case .none:
+                                                break
+                                            }
+                                            controller?.dismiss()
+                                        })
+                                    }, error: { _ in
+                                        
+                                    })
+                                }
+                            }),
+                            TextAlertAction(type: .genericAction, title: strings.Common_Cancel, action: {})
+                        ]
+                    )
+                    present(alertController, nil)
                 }
                 
                 if case let .channel(peer) = peer {
@@ -1340,15 +1343,21 @@ func openResolvedUrlImpl(
                     storyProgressPauseContext.update(controller)
                 }
             } else {
-                let controller = textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Chat_ErrorCantBoost, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
-                present(controller, nil)
-                
-                controller.dismissed = { _ in
+                let alertController = AlertScreen(
+                    context: context,
+                    title: nil,
+                    text: presentationData.strings.Chat_ErrorCantBoost,
+                    actions: [
+                        .init(title: presentationData.strings.Common_OK, type: .default)
+                    ]
+                )
+                alertController.dismissed = { _ in
                     dismissedImpl?()
                 }
+                present(alertController, nil)
                 
                 if let storyProgressPauseContext = contentContext as? StoryProgressPauseContext {
-                    storyProgressPauseContext.update(controller)
+                    storyProgressPauseContext.update(alertController)
                 }
             }
         case let .premiumGiftCode(slug):
@@ -1515,6 +1524,7 @@ func openResolvedUrlImpl(
                     let controller = context.sharedContext.makeGiftAuctionViewScreen(
                         context: context,
                         auctionContext: auctionContext,
+                        peerId: nil,
                         completion: { [weak navigationController] acquiredGifts, upgradeAttributes in
                             if let upgradeAttributes {
                                 let controller = context.sharedContext.makeGiftAuctionWearPreviewScreen(context: context, auctionContext: auctionContext, acquiredGifts: acquiredGifts, attributes: upgradeAttributes, completion: {

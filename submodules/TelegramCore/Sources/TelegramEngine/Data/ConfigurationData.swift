@@ -571,5 +571,26 @@ public extension TelegramEngine.EngineData.Item {
                 return value
             }
         }
+        
+        public struct EmojiGame: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = EmojiGameInfo
+
+            public init() {
+            }
+
+            var key: PostboxViewKey {
+                return .preferences(keys: Set([PreferencesKeys.emojiGameInfo()]))
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? PreferencesView else {
+                    preconditionFailure()
+                }
+                guard let emojiGameInfo = view.values[PreferencesKeys.emojiGameInfo()]?.get(EmojiGameInfo.self) else {
+                    return .unavailable
+                }
+                return emojiGameInfo
+            }
+        }
     }
 }

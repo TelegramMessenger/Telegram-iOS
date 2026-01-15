@@ -108,9 +108,13 @@ public extension UIColor {
         var green: CGFloat = 0.0
         var blue: CGFloat = 0.0
         if self.getRed(&red, green: &green, blue: &blue, alpha: nil) {
-            return (UInt32(max(0.0, red) * 255.0) << 16) | (UInt32(max(0.0, green) * 255.0) << 8) | (UInt32(max(0.0, blue) * 255.0))
+            let r: UInt32 = UInt32(max(0.0, red) * 255.0)
+            let g: UInt32 = UInt32(max(0.0, green) * 255.0)
+            let b: UInt32 = UInt32(max(0.0, blue) * 255.0)
+            return (r << 16) | (g << 8) | b
         } else if self.getWhite(&red, alpha: nil) {
-            return (UInt32(max(0.0, red) * 255.0) << 16) | (UInt32(max(0.0, red) * 255.0) << 8) | (UInt32(max(0.0, red) * 255.0))
+            let w: UInt32 = UInt32(max(0.0, red) * 255.0)
+            return (w << 16) | (w << 8) | w
         } else {
             return 0
         }
@@ -122,9 +126,15 @@ public extension UIColor {
         var blue: CGFloat = 0.0
         var alpha: CGFloat = 0.0
         if self.getRed(&red, green: &green, blue: &blue, alpha: &alpha) {
-            return (UInt32(alpha * 255.0) << 24) | (UInt32(max(0.0, red) * 255.0) << 16) | (UInt32(max(0.0, green) * 255.0) << 8) | (UInt32(max(0.0, blue) * 255.0))
+            let a: UInt32 = UInt32(alpha * 255.0)
+            let r: UInt32 = UInt32(max(0.0, red) * 255.0)
+            let g: UInt32 = UInt32(max(0.0, green) * 255.0)
+            let b: UInt32 = UInt32(max(0.0, blue) * 255.0)
+            return (a << 24) | (r << 16) | (g << 8) | b
         } else if self.getWhite(&red, alpha: &alpha) {
-            return (UInt32(max(0.0, alpha) * 255.0) << 24) | (UInt32(max(0.0, red) * 255.0) << 16) | (UInt32(max(0.0, red) * 255.0) << 8) | (UInt32(max(0.0, red) * 255.0))
+            let a: UInt32 = UInt32(max(0.0, alpha) * 255.0)
+            let w: UInt32 = UInt32(max(0.0, red) * 255.0)
+            return (a << 24) | (w << 16) | (w << 8) | w
         } else {
             return 0
         }

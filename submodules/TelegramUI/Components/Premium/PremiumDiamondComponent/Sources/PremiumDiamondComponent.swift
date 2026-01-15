@@ -251,7 +251,7 @@ public final class PremiumDiamondComponent: Component {
         func update(component: PremiumDiamondComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             self.component = component
             
-            self.sceneView.backgroundColor = component.theme.list.blocksBackgroundColor
+            //self.sceneView.backgroundColor = component.theme.list.blocksBackgroundColor
             
             self.sceneView.bounds = CGRect(origin: .zero, size: CGSize(width: availableSize.width * 2.0, height: availableSize.height * 2.0))
             self.sceneView.center = CGPoint(x: availableSize.width / 2.0, y: availableSize.height / 2.0)

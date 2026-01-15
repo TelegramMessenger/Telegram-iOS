@@ -622,7 +622,9 @@ private final class GiftSetupScreenComponent: Component {
                         }
                     }
                     
-                    starsContext.load(force: true)
+                    Queue.mainQueue().after(2.5) {
+                        starsContext.load(force: true)
+                    }
                 }, error: { [weak self] error in
                     guard let self, let controller = self.environment?.controller() else {
                         return
@@ -768,7 +770,6 @@ private final class GiftSetupScreenComponent: Component {
                     pendingUnpinnedAllMessages: false,
                     activeGroupCallInfo: nil,
                     hasActiveGroupCall: false,
-                    importState: nil,
                     threadData: nil,
                     isGeneralThreadClosed: nil,
                     replyMessage: nil,
@@ -1118,14 +1119,14 @@ private final class GiftSetupScreenComponent: Component {
             let closeButtonSize = self.closeButton.update(
                 transition: .immediate,
                 component: AnyComponent(GlassBarButtonComponent(
-                    size: CGSize(width: 40.0, height: 40.0),
-                    backgroundColor: environment.theme.rootController.navigationBar.glassBarButtonBackgroundColor,
+                    size: CGSize(width: 44.0, height: 44.0),
+                    backgroundColor: nil,
                     isDark: environment.theme.overallDarkAppearance,
-                    state: .generic,
+                    state: .glass,
                     component: AnyComponentWithIdentity(id: "close", component: AnyComponent(
                         BundleIconComponent(
                             name: "Navigation/Close",
-                            tintColor: environment.theme.rootController.navigationBar.glassBarButtonForegroundColor
+                            tintColor: environment.theme.chat.inputPanel.panelControlColor
                         )
                     )),
                     action: { [weak self] _ in
@@ -1136,7 +1137,7 @@ private final class GiftSetupScreenComponent: Component {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: 40.0, height: 40.0)
+                containerSize: CGSize(width: 44.0, height: 44.0)
             )
             let closeButtonFrame = CGRect(origin: CGPoint(x: rawSideInset + 16.0, y: 16.0), size: closeButtonSize)
             if let closeButtonView = self.closeButton.view {

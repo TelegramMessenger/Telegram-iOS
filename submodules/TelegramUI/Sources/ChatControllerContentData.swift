@@ -519,32 +519,44 @@ extension ChatControllerImpl {
                         if case .reply = info {
                             let titleContent: ChatTitleContent
                             if case let .reply(hasQuote) = messageOptionsTitleInfo, hasQuote {
-                                titleContent = .custom(strings.Chat_TitleQuoteSelection, subtitleText, false)
+                                titleContent = .custom(title: [ChatTitleContent.TitleTextItem(id: AnyHashable(0), content: .text(strings.Chat_TitleQuoteSelection))], subtitle: subtitleText, isEnabled: false)
                             } else {
-                                titleContent = .custom(strings.Chat_TitleReply, subtitleText, false)
+                                titleContent = .custom(title: [ChatTitleContent.TitleTextItem(id: AnyHashable(0), content: .text(strings.Chat_TitleReply))], subtitle: subtitleText, isEnabled: false)
                             }
                             
                             strongSelf.state.chatTitleContent = titleContent
                         } else if case .link = info {
-                            strongSelf.state.chatTitleContent = .custom(strings.Chat_TitleLinkOptions, subtitleText, false)
+                            strongSelf.state.chatTitleContent = .custom(title: [ChatTitleContent.TitleTextItem(id: AnyHashable(0), content: .text(strings.Chat_TitleLinkOptions))], subtitle: subtitleText, isEnabled: false)
                         } else if displayedCount == 1 {
-                            strongSelf.state.chatTitleContent = .custom(strings.Conversation_ForwardOptions_ForwardTitleSingle, subtitleText, false)
+                            strongSelf.state.chatTitleContent = .custom(title: [ChatTitleContent.TitleTextItem(id: AnyHashable(0), content: .text(strings.Conversation_ForwardOptions_ForwardTitleSingle))], subtitle: subtitleText, isEnabled: false)
                         } else {
-                            strongSelf.state.chatTitleContent = .custom(strings.Conversation_ForwardOptions_ForwardTitle(Int32(displayedCount ?? 1)), subtitleText, false)
+                            strongSelf.state.chatTitleContent = .custom(title: [ChatTitleContent.TitleTextItem(id: AnyHashable(0), content: .text(strings.Conversation_ForwardOptions_ForwardTitle(Int32(displayedCount ?? 1))))], subtitle: subtitleText, isEnabled: false)
                         }
                     } else if let selectionState = configuration.selectionState {
                         if selectionState.selectedIds.count > 0 {
-                            strongSelf.state.chatTitleContent = .custom(strings.Conversation_SelectedMessages(Int32(selectionState.selectedIds.count)), nil, false)
+                            let rawText = strings.Conversation_SelectedMessagesFormat(Int32(selectionState.selectedIds.count))
+                            var items: [ChatTitleContent.TitleTextItem] = []
+                            if let range = rawText.range(of: "{}") {
+                                if range.lowerBound != rawText.startIndex {
+                                    items.append(ChatTitleContent.TitleTextItem(id: AnyHashable("selection_0"), content: .text(String(rawText[rawText.startIndex ..< range.lowerBound]))))
+                                }
+                                items.append(ChatTitleContent.TitleTextItem(id: AnyHashable("selection_1"), content: .number(selectionState.selectedIds.count, minDigits: 1)))
+                                if range.upperBound != rawText.endIndex {
+                                    items.append(ChatTitleContent.TitleTextItem(id: AnyHashable("selection_2"), content: .text(String(rawText[range.upperBound ..< rawText.endIndex]))))
+                                }
+                            }
+                            
+                            strongSelf.state.chatTitleContent = .custom(title: items, subtitle: nil, isEnabled: false)
                         } else {
                             if let reportReason = configuration.reportReason {
-                                strongSelf.state.chatTitleContent = .custom(reportReason.title, strings.Conversation_SelectMessages, false)
+                                strongSelf.state.chatTitleContent = .custom(title: [ChatTitleContent.TitleTextItem(id: AnyHashable(1), content: .text(reportReason.title))], subtitle: strings.Conversation_SelectMessages, isEnabled: false)
                             } else {
-                                strongSelf.state.chatTitleContent = .custom(strings.Conversation_SelectMessages, nil, false)
+                                strongSelf.state.chatTitleContent = .custom(title: [ChatTitleContent.TitleTextItem(id: AnyHashable(2), content: .text(strings.Conversation_SelectMessages))], subtitle: nil, isEnabled: false)
                             }
                         }
                     } else if let peer = peerViewMainPeer(peerView) {
                         if case .pinnedMessages = configuration.subject {
-                            strongSelf.state.chatTitleContent = .custom(strings.Chat_TitlePinnedMessages(Int32(displayedCount ?? 1)), nil, false)
+                            strongSelf.state.chatTitleContent = .custom(title: [ChatTitleContent.TitleTextItem(id: AnyHashable(0), content: .text(strings.Chat_TitlePinnedMessages(Int32(displayedCount ?? 1))))], subtitle: nil, isEnabled: false)
                         } else if let channel = peer as? TelegramChannel, channel.isMonoForum {
                             if let linkedMonoforumId = channel.linkedMonoforumId, let mainPeer = peerView.peers[linkedMonoforumId] {
                                 strongSelf.state.chatTitleContent = .peer(peerView: ChatTitleContent.PeerData(
@@ -557,7 +569,7 @@ extension ChatControllerImpl {
                                     cachedData: nil
                                 ), customTitle: nil, customSubtitle: strings.Chat_Monoforum_Subtitle, onlineMemberCount: (nil, nil), isScheduledMessages: false, isMuted: nil, customMessageCount: nil, isEnabled: true)
                             } else {
-                                strongSelf.state.chatTitleContent = .custom(channel.debugDisplayTitle, nil, true)
+                                strongSelf.state.chatTitleContent = .custom(title: [ChatTitleContent.TitleTextItem(id: AnyHashable(0), content: .text(channel.debugDisplayTitle))], subtitle: nil, isEnabled: true)
                             }
                         } else {
                             strongSelf.state.chatTitleContent = .peer(peerView: ChatTitleContent.PeerData(peerView: peerView), customTitle: nil, customSubtitle: nil, onlineMemberCount: onlineMemberCount, isScheduledMessages: isScheduledMessages, isMuted: nil, customMessageCount: nil, isEnabled: hasPeerInfo)
@@ -1549,7 +1561,7 @@ extension ChatControllerImpl {
                             }
                             strongSelf.state.infoAvatar = .emojiStatus(content: avatarContent, contextActionIsEnabled: infoContextActionIsEnabled)
                         } else if chatLocation.threadId == EngineMessage.newTopicThreadId {
-                            strongSelf.state.chatTitleContent = .custom(strongSelf.presentationData.strings.Chat_MessageHeaderBotNewThread, nil, false)
+                            strongSelf.state.chatTitleContent = .custom(title: [ChatTitleContent.TitleTextItem(id: AnyHashable(0), content: .text(strongSelf.presentationData.strings.Chat_MessageHeaderBotNewThread))], subtitle: nil, isEnabled: false)
                             strongSelf.state.infoAvatar = nil
                         } else {
                             strongSelf.state.chatTitleContent = .replyThread(type: replyThreadType, count: count)
@@ -1742,11 +1754,11 @@ extension ChatControllerImpl {
                     case let .quickReplyMessageInput(shortcut, shortcutType):
                         switch shortcutType {
                         case .generic:
-                            self.state.chatTitleContent = .custom("\(shortcut)", nil, false)
+                            self.state.chatTitleContent = .custom(title: [ChatTitleContent.TitleTextItem(id: AnyHashable(0), content: .text("\(shortcut)"))], subtitle: nil, isEnabled: false)
                         case .greeting:
-                            self.state.chatTitleContent = .custom(strings.QuickReply_TitleGreetingMessage, nil, false)
+                            self.state.chatTitleContent = .custom(title: [ChatTitleContent.TitleTextItem(id: AnyHashable(0), content: .text(strings.QuickReply_TitleGreetingMessage))], subtitle: nil, isEnabled: false)
                         case .away:
-                            self.state.chatTitleContent = .custom(strings.QuickReply_TitleAwayMessage, nil, false)
+                            self.state.chatTitleContent = .custom(title: [ChatTitleContent.TitleTextItem(id: AnyHashable(0), content: .text(strings.QuickReply_TitleAwayMessage))], subtitle: nil, isEnabled: false)
                         }
                     case let .businessLinkSetup(link):
                         let linkUrl: String
@@ -1756,10 +1768,10 @@ extension ChatControllerImpl {
                             linkUrl = link.url
                         }
                         
-                        self.state.chatTitleContent = .custom(link.title ?? strings.Business_Links_EditLinkTitle, linkUrl, false)
+                        self.state.chatTitleContent = .custom(title: [ChatTitleContent.TitleTextItem(id: AnyHashable(0), content: .text(link.title ?? strings.Business_Links_EditLinkTitle))], subtitle: linkUrl, isEnabled: false)
                     }
                 } else {
-                    self.state.chatTitleContent = .custom(" ", nil, false)
+                    self.state.chatTitleContent = .custom(title: [ChatTitleContent.TitleTextItem(id: AnyHashable(0), content: .text(" "))], subtitle: nil, isEnabled: false)
                 }
                 
                 self.peerDisposable = (peerView

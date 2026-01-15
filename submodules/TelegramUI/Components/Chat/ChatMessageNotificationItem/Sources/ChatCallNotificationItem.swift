@@ -105,7 +105,7 @@ final class ChatCallNotificationItemNode: NotificationItemNode {
     override public func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         self.validLayout = width
         
-        let panelHeight: CGFloat = 66.0
+        let panelHeight: CGFloat = 64.0
         
         guard let item = self.item else {
             return panelHeight
@@ -113,19 +113,19 @@ final class ChatCallNotificationItemNode: NotificationItemNode {
         
         let presentationData = item.context.sharedContext.currentPresentationData.with { $0 }
         
-        let leftInset: CGFloat = 14.0
-        let rightInset: CGFloat = 14.0
-        let avatarSize: CGFloat = 38.0
+        let leftInset: CGFloat = 12.0
+        let rightInset: CGFloat = 12.0
+        let avatarSize: CGFloat = 40.0
         let avatarTextSpacing: CGFloat = 10.0
         let buttonSpacing: CGFloat = 14.0
-        let titleTextSpacing: CGFloat = 0.0
+        let titleTextSpacing: CGFloat = 1.0
         
         let maxTextWidth: CGFloat = width - leftInset - avatarTextSpacing - rightInset - avatarSize * 2.0 - buttonSpacing - avatarTextSpacing
         
         let titleSize = self.title.update(
             transition: .immediate,
             component: AnyComponent(MultilineTextComponent(
-                text: .plain(NSAttributedString(string: item.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), font: Font.semibold(16.0), textColor: presentationData.theme.list.itemPrimaryTextColor))
+                text: .plain(NSAttributedString(string: item.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), font: Font.semibold(15.0), textColor: presentationData.theme.list.itemPrimaryTextColor))
             )),
             environment: {},
             containerSize: CGSize(width: maxTextWidth, height: 100.0)
@@ -134,7 +134,7 @@ final class ChatCallNotificationItemNode: NotificationItemNode {
         let textSize = self.text.update(
             transition: .immediate,
             component: AnyComponent(MultilineTextComponent(
-                text: .plain(NSAttributedString(string: item.isVideo ? presentationData.strings.Notification_VideoCallIncoming : presentationData.strings.Notification_CallIncoming, font: Font.regular(13.0), textColor: presentationData.theme.list.itemPrimaryTextColor))
+                text: .plain(NSAttributedString(string: item.isVideo ? presentationData.strings.Notification_VideoCallIncoming : presentationData.strings.Notification_CallIncoming, font: Font.regular(15.0), textColor: presentationData.theme.list.itemPrimaryTextColor))
             )),
             environment: {},
             containerSize: CGSize(width: maxTextWidth, height: 100.0)

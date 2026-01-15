@@ -177,50 +177,7 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
     private var layoutData: (CGFloat, CGFloat, CGFloat, CGFloat, UIEdgeInsets, CGFloat, CGFloat, Bool, LayoutMetrics)?
     
     public override init() {
-        /*self.button = HighlightableButton()
-        self.buttonBackgroundView = GlassBackgroundView()
-        self.buttonBackgroundView.isUserInteractionEnabled = false
-        self.buttonTitle = ImmediateTextNode()
-        self.buttonTitle.isUserInteractionEnabled = false
-        self.buttonTintTitle = ImmediateTextNode()
-        self.buttonBackgroundView.contentView.addSubview(self.buttonTitle.view)
-        self.buttonBackgroundView.maskContentView.addSubview(self.buttonTintTitle.view)
-        self.buttonBackgroundView.contentView.addSubview(self.button)
-        
-        self.helpButton = HighlightableButton()
-        self.helpButtonBackgroundView = GlassBackgroundView()
-        self.helpButtonBackgroundView.isUserInteractionEnabled = false
-        self.helpButtonIconView = GlassBackgroundView.ContentImageView()
-        self.helpButtonBackgroundView.contentView.addSubview(self.helpButtonIconView)
-        self.helpButtonBackgroundView.contentView.addSubview(self.helpButton)
-        self.helpButtonBackgroundView.isHidden = true
-        
-        self.giftButton = HighlightableButton()
-        self.giftButtonBackgroundView = GlassBackgroundView()
-        self.giftButtonBackgroundView.isUserInteractionEnabled = false
-        self.giftButtonIconView = GlassBackgroundView.ContentImageView()
-        self.giftButtonBackgroundView.contentView.addSubview(self.giftButtonIconView)
-        self.giftButtonBackgroundView.contentView.addSubview(self.giftButton)
-        self.giftButtonBackgroundView.isHidden = true
-        
-        self.suggestedPostButton = HighlightableButton()
-        self.suggestedPostButtonBackgroundView = GlassBackgroundView()
-        self.suggestedPostButtonBackgroundView.isUserInteractionEnabled = false
-        self.suggestedPostButtonIconView = GlassBackgroundView.ContentImageView()
-        self.suggestedPostButtonBackgroundView.contentView.addSubview(self.suggestedPostButtonIconView)
-        self.suggestedPostButtonBackgroundView.contentView.addSubview(self.suggestedPostButton)
-        self.suggestedPostButtonBackgroundView.isHidden = true*/
-        
         super.init()
-        
-        /*self.view.addSubview(self.buttonBackgroundView)
-        self.view.addSubview(self.helpButtonBackgroundView)
-        self.view.addSubview(self.giftButtonBackgroundView)
-        self.view.addSubview(self.suggestedPostButtonBackgroundView)
-        self.button.addTarget(self, action: #selector(self.buttonPressed), for: .touchUpInside)
-        self.helpButton.addTarget(self, action: #selector(self.helpPressed), for: .touchUpInside)
-        self.giftButton.addTarget(self, action: #selector(self.giftPressed), for: .touchUpInside)
-        self.suggestedPostButton.addTarget(self, action: #selector(self.suggestedPostPressed), for: .touchUpInside)*/
         
         self.view.addSubview(self.panelContainer)
     }
@@ -495,7 +452,8 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                         self?.buttonPressed()
                     }
                 )],
-                background: centerAction.isAccent ? .activeTint : .panel
+                background: centerAction.isAccent ? .activeTint : .panel,
+                keepWide: true
             )
         }
         

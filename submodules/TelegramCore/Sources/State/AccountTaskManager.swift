@@ -125,6 +125,7 @@ final class AccountTaskManager {
                     tasks.add(managedPeerColorUpdates(postbox: self.stateManager.postbox, network: self.stateManager.network).start())
                     tasks.add(managedStarGiftsUpdates(postbox: self.stateManager.postbox, network: self.stateManager.network, accountPeerId: self.stateManager.accountPeerId).start())
                     tasks.add(managedSavedMusicIdsUpdates(postbox: self.stateManager.postbox, network: self.stateManager.network, accountPeerId: self.stateManager.accountPeerId).start())
+                    tasks.add(managedEmojiGameUpdates(postbox: self.stateManager.postbox, network: self.stateManager.network).start())
                     
                     self.managedTopReactionsDisposable.set(managedTopReactions(postbox: self.stateManager.postbox, network: self.stateManager.network).start())
                     

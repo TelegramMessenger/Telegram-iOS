@@ -4,6 +4,9 @@ import AsyncDisplayKit
 import ContextUI
 import TelegramPresentationData
 import Display
+import ComponentFlow
+import ComponentDisplayAdapters
+import GlassBackgroundComponent
 
 enum PeerInfoHeaderNavigationButtonKey {
     case back
@@ -24,101 +27,125 @@ enum PeerInfoHeaderNavigationButtonKey {
     case postStory
 }
 
-struct PeerInfoHeaderNavigationButtonSpec: Equatable {
+struct PeerInfoHeaderNavigationButtonSpec: Hashable {
     let key: PeerInfoHeaderNavigationButtonKey
     let isForExpandedView: Bool
 }
 
 final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
     private var presentationData: PresentationData?
-    private(set) var leftButtonNodes: [PeerInfoHeaderNavigationButtonKey: PeerInfoHeaderNavigationButton] = [:]
-    private(set) var rightButtonNodes: [PeerInfoHeaderNavigationButtonKey: PeerInfoHeaderNavigationButton] = [:]
+    
+    private let backgroundContainer: GlassBackgroundContainerView
+    private let leftButtonsBackground: GlassBackgroundView
+    private let rightButtonsBackground: GlassBackgroundView
+    private let leftButtonsContainer: UIView
+    private let rightButtonsContainer: UIView
+    
+    private(set) var leftButtonNodes: [PeerInfoHeaderNavigationButtonSpec: PeerInfoHeaderNavigationButton] = [:]
+    private(set) var rightButtonNodes: [PeerInfoHeaderNavigationButtonSpec: PeerInfoHeaderNavigationButton] = [:]
     
     private var currentLeftButtons: [PeerInfoHeaderNavigationButtonSpec] = []
     private var currentRightButtons: [PeerInfoHeaderNavigationButtonSpec] = []
     
     private var backgroundContentColor: UIColor = .clear
+    private var isOverColoredContents: Bool = false
     private var contentsColor: UIColor = .white
-    private var canBeExpanded: Bool = false
     
     var performAction: ((PeerInfoHeaderNavigationButtonKey, ContextReferenceContentNode?, ContextGesture?) -> Void)?
     
-    func updateContentsColor(backgroundContentColor: UIColor, contentsColor: UIColor, canBeExpanded: Bool, transition: ContainedViewLayoutTransition) {
-        self.backgroundContentColor = backgroundContentColor
-        self.contentsColor = contentsColor
-        self.canBeExpanded = canBeExpanded
+    override init() {
+        self.backgroundContainer = GlassBackgroundContainerView()
+        self.leftButtonsBackground = GlassBackgroundView()
+        self.rightButtonsBackground = GlassBackgroundView()
         
-        for (_, button) in self.leftButtonNodes {
-            button.updateContentsColor(backgroundColor: self.backgroundContentColor, contentsColor: self.contentsColor, canBeExpanded: canBeExpanded, transition: transition)
-            transition.updateSublayerTransformOffset(layer: button.layer, offset: CGPoint(x: canBeExpanded ? -8.0 : 0.0, y: 0.0))
+        self.leftButtonsContainer = UIView()
+        self.leftButtonsContainer.clipsToBounds = true
+        self.rightButtonsContainer = UIView()
+        self.rightButtonsContainer.clipsToBounds = true
+        
+        super.init()
+        
+        self.view.addSubview(self.backgroundContainer)
+        self.backgroundContainer.contentView.addSubview(self.leftButtonsBackground)
+        self.backgroundContainer.contentView.addSubview(self.rightButtonsBackground)
+        
+        self.leftButtonsBackground.contentView.addSubview(self.leftButtonsContainer)
+        self.rightButtonsBackground.contentView.addSubview(self.rightButtonsContainer)
+    }
+    
+    func updateContentsColor(backgroundContentColor: UIColor, contentsColor: UIColor, isOverColoredContents: Bool, transition: ContainedViewLayoutTransition) {
+        self.backgroundContentColor = backgroundContentColor
+        self.isOverColoredContents = isOverColoredContents
+        self.contentsColor = contentsColor
+        
+        guard let presentationData = self.presentationData else {
+            return
         }
         
-        var accumulatedRightButtonOffset: CGFloat = canBeExpanded ? 16.0 : 0.0
-        for spec in self.currentRightButtons.reversed() {
-            guard let button = self.rightButtonNodes[spec.key] else {
+        let normalButtonContentsColor: UIColor = self.isOverColoredContents ? .white :  presentationData.theme.chat.inputPanel.panelControlColor
+        let expandedButtonContentsColor: UIColor = presentationData.theme.chat.inputPanel.panelControlColor
+        
+        for (spec, button) in self.leftButtonNodes {
+            button.updateContentsColor(contentsColor: spec.isForExpandedView ? expandedButtonContentsColor : normalButtonContentsColor, transition: transition)
+        }
+        
+        for spec in self.currentRightButtons {
+            guard let button = self.rightButtonNodes[spec] else {
                 continue
             }
-            button.updateContentsColor(backgroundColor: self.backgroundContentColor, contentsColor: self.contentsColor, canBeExpanded: canBeExpanded, transition: transition)
-            if !spec.isForExpandedView {
-                transition.updateSublayerTransformOffset(layer: button.layer, offset: CGPoint(x: accumulatedRightButtonOffset, y: 0.0))
-                if self.backgroundContentColor.alpha != 0.0 {
-                    accumulatedRightButtonOffset -= 6.0
-                }
+            button.updateContentsColor(contentsColor: spec.isForExpandedView ? expandedButtonContentsColor : normalButtonContentsColor, transition: transition)
+        }
+        for (spec, button) in self.rightButtonNodes {
+            if !self.currentRightButtons.contains(where: { $0 == spec }) {
+                button.updateContentsColor(contentsColor: spec.isForExpandedView ? expandedButtonContentsColor : normalButtonContentsColor, transition: transition)
             }
         }
-        for (key, button) in self.rightButtonNodes {
-            if !self.currentRightButtons.contains(where: { $0.key == key }) {
-                button.updateContentsColor(backgroundColor: self.backgroundContentColor, contentsColor: self.contentsColor, canBeExpanded: canBeExpanded, transition: transition)
-                transition.updateSublayerTransformOffset(layer: button.layer, offset: CGPoint(x: 0.0, y: 0.0))
-            }
-        }
+        
+        self.updateBackgroundColors(transition: ComponentTransition(transition))
     }
     
     func update(size: CGSize, presentationData: PresentationData, leftButtons: [PeerInfoHeaderNavigationButtonSpec], rightButtons: [PeerInfoHeaderNavigationButtonSpec], expandFraction: CGFloat, shouldAnimateIn: Bool, transition: ContainedViewLayoutTransition) {
-        let sideInset: CGFloat = 24.0
-        let expandedSideInset: CGFloat = 16.0
+        transition.updateFrame(view: self.backgroundContainer, frame: CGRect(origin: CGPoint(), size: size))
         
-        let maximumExpandOffset: CGFloat = 14.0
-        let expandOffset: CGFloat = -expandFraction * maximumExpandOffset
+        let buttonHeight: CGFloat = 44.0
+        
+        let sideInset: CGFloat = 16.0
+        
+        var normalLeftButtonsWidth: CGFloat = 0.0
+        var expandedLeftButtonsWidth: CGFloat = 0.0
+        
+        let maxBlur: CGFloat = 5.0
+        
+        let normalButtonContentsColor: UIColor = self.isOverColoredContents ? .white :  presentationData.theme.chat.inputPanel.panelControlColor
+        let expandedButtonContentsColor: UIColor = presentationData.theme.chat.inputPanel.panelControlColor
         
         if self.currentLeftButtons != leftButtons || presentationData.strings !== self.presentationData?.strings {
             self.currentLeftButtons = leftButtons
             
-            var nextRegularButtonOrigin = sideInset
-            var nextExpandedButtonOrigin = sideInset
             for spec in leftButtons.reversed() {
                 let buttonNode: PeerInfoHeaderNavigationButton
                 var wasAdded = false
-                if let current = self.leftButtonNodes[spec.key] {
+                if let current = self.leftButtonNodes[spec] {
                     buttonNode = current
                 } else {
                     wasAdded = true
                     buttonNode = PeerInfoHeaderNavigationButton()
-                    self.leftButtonNodes[spec.key] = buttonNode
-                    self.addSubnode(buttonNode)
+                    self.leftButtonNodes[spec] = buttonNode
+                    self.leftButtonsContainer.addSubview(buttonNode.view)
                     buttonNode.action = { [weak self] _, gesture in
-                        guard let strongSelf = self, let buttonNode = strongSelf.leftButtonNodes[spec.key] else {
+                        guard let strongSelf = self, let buttonNode = strongSelf.leftButtonNodes[spec] else {
                             return
                         }
                         strongSelf.performAction?(spec.key, buttonNode.contextSourceNode, gesture)
                     }
                 }
-                let buttonSize = buttonNode.update(key: spec.key, presentationData: presentationData, height: size.height)
-                var nextButtonOrigin = spec.isForExpandedView ? nextExpandedButtonOrigin : nextRegularButtonOrigin
+                let buttonSize = buttonNode.update(key: spec.key, presentationData: presentationData, height: buttonHeight)
+                let buttonFrame = CGRect(origin: CGPoint(x: spec.isForExpandedView ? expandedLeftButtonsWidth : normalLeftButtonsWidth, y: 0.0), size: buttonSize)
                 
-                let buttonY: CGFloat
-                if case .back = spec.key {
-                    buttonY = 0.0
-                } else {
-                    buttonY = expandOffset + (spec.isForExpandedView ? maximumExpandOffset : 0.0)
-                }
-                let buttonFrame = CGRect(origin: CGPoint(x: nextButtonOrigin, y: buttonY), size: buttonSize)
-                
-                nextButtonOrigin += buttonSize.width + 4.0
                 if spec.isForExpandedView {
-                    nextExpandedButtonOrigin = nextButtonOrigin
+                    expandedLeftButtonsWidth += buttonSize.width
                 } else {
-                    nextRegularButtonOrigin = nextButtonOrigin
+                    normalLeftButtonsWidth += buttonSize.width
                 }
                 let alphaFactor: CGFloat
                 if case .back = spec.key {
@@ -126,48 +153,40 @@ final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
                 } else {
                     alphaFactor = spec.isForExpandedView ? expandFraction : (1.0 - expandFraction)
                 }
+                
                 if wasAdded {
                     buttonNode.frame = buttonFrame
                     buttonNode.alpha = 0.0
+                    ComponentTransition.immediate.setBlur(layer: buttonNode.layer, radius: maxBlur)
                     transition.updateAlpha(node: buttonNode, alpha: alphaFactor * alphaFactor)
-                    buttonNode.updateContentsColor(backgroundColor: self.backgroundContentColor, contentsColor: self.contentsColor, canBeExpanded: self.canBeExpanded, transition: .immediate)
-                    
-                    transition.updateSublayerTransformOffset(layer: buttonNode.layer, offset: CGPoint(x: canBeExpanded ? -8.0 : 0.0, y: 0.0))
+                    ComponentTransition(transition).setBlur(layer: buttonNode.layer, radius: 0.0)
+                    buttonNode.updateContentsColor(contentsColor: spec.isForExpandedView ? expandedButtonContentsColor : normalButtonContentsColor, transition: .immediate)
                 } else {
                     transition.updateFrameAdditiveToCenter(node: buttonNode, frame: buttonFrame)
                     transition.updateAlpha(node: buttonNode, alpha: alphaFactor * alphaFactor)
+                    ComponentTransition(transition).setBlur(layer: buttonNode.layer, radius: (1.0 - alphaFactor * alphaFactor) * maxBlur)
                 }
             }
-            var removeKeys: [PeerInfoHeaderNavigationButtonKey] = []
-            for (key, _) in self.leftButtonNodes {
-                if !leftButtons.contains(where: { $0.key == key }) {
-                    removeKeys.append(key)
+            var removeKeys: [PeerInfoHeaderNavigationButtonSpec] = []
+            for (spec, _) in self.leftButtonNodes {
+                if !leftButtons.contains(where: { $0 == spec }) {
+                    removeKeys.append(spec)
                 }
             }
-            for key in removeKeys {
-                if let buttonNode = self.leftButtonNodes.removeValue(forKey: key) {
-                    buttonNode.removeFromSupernode()
+            for spec in removeKeys {
+                if let buttonNode = self.leftButtonNodes.removeValue(forKey: spec) {
+                    buttonNode.view.removeFromSuperview()
                 }
             }
         } else {
-            var nextRegularButtonOrigin = sideInset
-            var nextExpandedButtonOrigin = sideInset
             for spec in leftButtons.reversed() {
-                if let buttonNode = self.leftButtonNodes[spec.key] {
+                if let buttonNode = self.leftButtonNodes[spec] {
                     let buttonSize = buttonNode.bounds.size
-                    var nextButtonOrigin = spec.isForExpandedView ? nextExpandedButtonOrigin : nextRegularButtonOrigin
-                    let buttonY: CGFloat
-                    if case .back = spec.key {
-                        buttonY = 0.0
-                    } else {
-                        buttonY = expandOffset + (spec.isForExpandedView ? maximumExpandOffset : 0.0)
-                    }
-                    let buttonFrame = CGRect(origin: CGPoint(x: nextButtonOrigin, y: buttonY), size: buttonSize)
-                    nextButtonOrigin += buttonSize.width + 4.0
+                    let buttonFrame = CGRect(origin: CGPoint(x: spec.isForExpandedView ? expandedLeftButtonsWidth : normalLeftButtonsWidth, y: 0.0), size: buttonSize)
                     if spec.isForExpandedView {
-                        nextExpandedButtonOrigin = nextButtonOrigin
+                        expandedLeftButtonsWidth += buttonSize.width
                     } else {
-                        nextRegularButtonOrigin = nextButtonOrigin
+                        normalLeftButtonsWidth += buttonSize.width
                     }
                     transition.updateFrameAdditiveToCenter(node: buttonNode, frame: buttonFrame)
                     let alphaFactor: CGFloat
@@ -182,17 +201,18 @@ final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
                         buttonTransition = .animated(duration: duration * 0.25, curve: curve)
                     }
                     buttonTransition.updateAlpha(node: buttonNode, alpha: alphaFactor * alphaFactor)
+                    ComponentTransition(buttonTransition).setBlur(layer: buttonNode.layer, radius: (1.0 - alphaFactor * alphaFactor) * maxBlur)
                 }
             }
         }
         
-        var accumulatedRightButtonOffset: CGFloat = self.canBeExpanded ? 16.0 : 0.0
+        var normalRightButtonsWidth: CGFloat = 0.0
+        var expandedRightButtonsWidth: CGFloat = 0.0
+        
         if self.currentRightButtons != rightButtons || presentationData.strings !== self.presentationData?.strings {
             self.currentRightButtons = rightButtons
             
-            var nextRegularButtonOrigin = size.width - sideInset - 8.0
-            var nextExpandedButtonOrigin = size.width - expandedSideInset
-            for spec in rightButtons.reversed() {
+            for spec in rightButtons {
                 let buttonNode: PeerInfoHeaderNavigationButton
                 var wasAdded = false
                 
@@ -201,32 +221,30 @@ final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
                     key = .moreSearchSort
                 }
                 
-                if let current = self.rightButtonNodes[key] {
+                if let current = self.rightButtonNodes[spec] {
                     buttonNode = current
                 } else {
                     wasAdded = true
                     buttonNode = PeerInfoHeaderNavigationButton()
-                    self.rightButtonNodes[key] = buttonNode
-                    self.addSubnode(buttonNode)
+                    self.rightButtonNodes[spec] = buttonNode
+                    self.rightButtonsContainer.addSubview(buttonNode.view)
                 }
                 buttonNode.action = { [weak self] _, gesture in
-                    guard let strongSelf = self, let buttonNode = strongSelf.rightButtonNodes[key] else {
+                    guard let strongSelf = self, let buttonNode = strongSelf.rightButtonNodes[spec] else {
                         return
                     }
                     strongSelf.performAction?(spec.key, buttonNode.contextSourceNode, gesture)
                 }
-                let buttonSize = buttonNode.update(key: spec.key, presentationData: presentationData, height: size.height)
-                var nextButtonOrigin = spec.isForExpandedView ? nextExpandedButtonOrigin : nextRegularButtonOrigin
-                let buttonFrame = CGRect(origin: CGPoint(x: nextButtonOrigin - buttonSize.width, y: expandOffset + (spec.isForExpandedView ? maximumExpandOffset : 0.0)), size: buttonSize)
-                nextButtonOrigin -= buttonSize.width + 15.0
+                let buttonSize = buttonNode.update(key: spec.key, presentationData: presentationData, height: buttonHeight)
+                let buttonFrame = CGRect(origin: CGPoint(x: spec.isForExpandedView ? expandedRightButtonsWidth : normalRightButtonsWidth, y: 0.0), size: buttonSize)
                 if spec.isForExpandedView {
-                    nextExpandedButtonOrigin = nextButtonOrigin
+                    expandedRightButtonsWidth += buttonSize.width
                 } else {
-                    nextRegularButtonOrigin = nextButtonOrigin
+                    normalRightButtonsWidth += buttonSize.width
                 }
                 let alphaFactor: CGFloat = spec.isForExpandedView ? expandFraction : (1.0 - expandFraction)
                 if wasAdded {
-                    buttonNode.updateContentsColor(backgroundColor: self.backgroundContentColor, contentsColor: self.contentsColor, canBeExpanded: self.canBeExpanded, transition: .immediate)
+                    buttonNode.updateContentsColor(contentsColor: spec.isForExpandedView ? expandedButtonContentsColor : normalButtonContentsColor, transition: .immediate)
                     
                     if shouldAnimateIn {
                         if key == .moreSearchSort || key == .searchWithTags || key == .standaloneSearch {
@@ -236,62 +254,51 @@ final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
                     
                     buttonNode.frame = buttonFrame
                     buttonNode.alpha = 0.0
+                    ComponentTransition.immediate.setBlur(layer: buttonNode.layer, radius: maxBlur)
                     transition.updateAlpha(node: buttonNode, alpha: alphaFactor * alphaFactor)
-                    
-                    if !spec.isForExpandedView {
-                        transition.updateSublayerTransformOffset(layer: buttonNode.layer, offset: CGPoint(x: accumulatedRightButtonOffset, y: 0.0))
-                        if self.backgroundContentColor.alpha != 0.0 {
-                            accumulatedRightButtonOffset -= 6.0
-                        }
-                    } else {
-                        transition.updateSublayerTransformOffset(layer: buttonNode.layer, offset: .zero)
-                    }
+                    ComponentTransition(transition).setBlur(layer: buttonNode.layer, radius: (1.0 - alphaFactor * alphaFactor) * maxBlur)
                 } else {
                     transition.updateFrameAdditiveToCenter(node: buttonNode, frame: buttonFrame)
                     transition.updateAlpha(node: buttonNode, alpha: alphaFactor * alphaFactor)
+                    ComponentTransition(transition).setBlur(layer: buttonNode.layer, radius: (1.0 - alphaFactor * alphaFactor) * maxBlur)
                 }
             }
-            var removeKeys: [PeerInfoHeaderNavigationButtonKey] = []
-            for (key, _) in self.rightButtonNodes {
-                if key == .moreSearchSort {
+            var removeKeys: [PeerInfoHeaderNavigationButtonSpec] = []
+            for (spec, _) in self.rightButtonNodes {
+                if spec.key == .moreSearchSort {
                     if !rightButtons.contains(where: { $0.key == .more || $0.key == .search || $0.key == .sort }) {
-                        removeKeys.append(key)
+                        removeKeys.append(spec)
                     }
-                } else if !rightButtons.contains(where: { $0.key == key }) {
-                    removeKeys.append(key)
+                } else if !rightButtons.contains(where: { $0 == spec }) {
+                    removeKeys.append(spec)
                 }
             }
-            for key in removeKeys {
-                if let buttonNode = self.rightButtonNodes.removeValue(forKey: key) {
-                    if key == .moreSearchSort || key == .searchWithTags || key == .standaloneSearch {
+            for spec in removeKeys {
+                if let buttonNode = self.rightButtonNodes.removeValue(forKey: spec) {
+                    if spec.key == .moreSearchSort || spec.key == .searchWithTags || spec.key == .standaloneSearch {
                         buttonNode.layer.animateAlpha(from: buttonNode.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak buttonNode] _ in
-                            buttonNode?.removeFromSupernode()
+                            buttonNode?.view.removeFromSuperview()
                         })
                         buttonNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, removeOnCompletion: false)
                     } else {
-                        buttonNode.removeFromSupernode()
+                        buttonNode.view.removeFromSuperview()
                     }
                 }
             }
         } else {
-            var nextRegularButtonOrigin = size.width - sideInset - 8.0
-            var nextExpandedButtonOrigin = size.width - expandedSideInset
-                        
-            for spec in rightButtons.reversed() {
+            for spec in rightButtons {
                 var key = spec.key
                 if key == .more || key == .search || key == .sort {
                     key = .moreSearchSort
                 }
                 
-                if let buttonNode = self.rightButtonNodes[key] {
+                if let buttonNode = self.rightButtonNodes[spec] {
                     let buttonSize = buttonNode.bounds.size
-                    var nextButtonOrigin = spec.isForExpandedView ? nextExpandedButtonOrigin : nextRegularButtonOrigin
-                    let buttonFrame = CGRect(origin: CGPoint(x: nextButtonOrigin - buttonSize.width, y: expandOffset + (spec.isForExpandedView ? maximumExpandOffset : 0.0)), size: buttonSize)
-                    nextButtonOrigin -= buttonSize.width + 15.0
+                    let buttonFrame = CGRect(origin: CGPoint(x: spec.isForExpandedView ? expandedRightButtonsWidth : normalRightButtonsWidth, y: 0.0), size: buttonSize)
                     if spec.isForExpandedView {
-                        nextExpandedButtonOrigin = nextButtonOrigin
+                        expandedRightButtonsWidth += buttonSize.width
                     } else {
-                        nextRegularButtonOrigin = nextButtonOrigin
+                        normalRightButtonsWidth += buttonSize.width
                     }
                     transition.updateFrameAdditiveToCenter(node: buttonNode, frame: buttonFrame)
                     let alphaFactor: CGFloat = spec.isForExpandedView ? expandFraction : (1.0 - expandFraction)
@@ -301,9 +308,60 @@ final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
                         buttonTransition = .animated(duration: duration * 0.25, curve: curve)
                     }
                     buttonTransition.updateAlpha(node: buttonNode, alpha: alphaFactor * alphaFactor)
+                    ComponentTransition(transition).setBlur(layer: buttonNode.layer, radius: (1.0 - alphaFactor * alphaFactor) * maxBlur)
                 }
             }
         }
         self.presentationData = presentationData
+        
+        let buttonsY: CGFloat = floor((size.height - buttonHeight) * 0.5) + 2.0
+        
+        let leftButtonsWidth = (1.0 - expandFraction) * normalLeftButtonsWidth + expandFraction * expandedLeftButtonsWidth
+        let rightButtonsWidth = (1.0 - expandFraction) * normalRightButtonsWidth + expandFraction * expandedRightButtonsWidth
+        
+        var leftButtonsFrame = CGRect(origin: CGPoint(x: sideInset, y: buttonsY), size: CGSize(width: max(44.0, leftButtonsWidth), height: buttonHeight))
+        if leftButtonsWidth < 44.0 {
+            let leftFraction = leftButtonsWidth / 44.0
+            leftButtonsFrame.origin.x = floorToScreenPixels(leftFraction * sideInset + (1.0 - leftFraction) * (-44.0))
+        }
+        var rightButtonsFrame = CGRect(origin: CGPoint(x: size.width - sideInset - rightButtonsWidth, y: buttonsY), size: CGSize(width: max(44.0, rightButtonsWidth), height: buttonHeight))
+        if rightButtonsWidth < 44.0 {
+            let rightFraction = rightButtonsWidth / 44.0
+            rightButtonsFrame.origin.x = floorToScreenPixels(rightFraction * (size.width - sideInset - 44.0) + (1.0 - rightFraction) * size.width)
+        }
+        
+        transition.updateFrame(view: self.leftButtonsBackground, frame: leftButtonsFrame)
+        transition.updateFrame(view: self.leftButtonsContainer, frame: CGRect(origin: CGPoint(), size: leftButtonsFrame.size))
+        self.leftButtonsContainer.layer.cornerRadius = leftButtonsFrame.height * 0.5
+        
+        transition.updateFrame(view: self.rightButtonsBackground, frame: rightButtonsFrame)
+        transition.updateFrame(view: self.rightButtonsContainer, frame: CGRect(origin: CGPoint(), size: rightButtonsFrame.size))
+        self.rightButtonsContainer.layer.cornerRadius = rightButtonsFrame.height * 0.5
+        
+        self.updateBackgroundColors(transition: ComponentTransition(transition))
+    }
+    
+    private func updateBackgroundColors(transition: ComponentTransition) {
+        guard let presentationData = self.presentationData else {
+            return
+        }
+        
+        let leftButtonsSize = self.leftButtonsBackground.bounds.size
+        let rightButtonsSize = self.rightButtonsBackground.bounds.size
+        
+        let tintColor: GlassBackgroundView.TintColor
+        let tintIsDark: Bool
+        if self.isOverColoredContents {
+            tintColor = .init(kind: .custom, color: self.backgroundContentColor)
+            tintIsDark = presentationData.theme.overallDarkAppearance
+        } else {
+            tintColor = .init(kind: .panel, color: UIColor(white: presentationData.theme.overallDarkAppearance ? 0.0 : 1.0, alpha: 0.6))
+            tintIsDark = presentationData.theme.overallDarkAppearance
+        }
+        
+        self.backgroundContainer.update(size: self.backgroundContainer.bounds.size, isDark: tintIsDark, transition: transition)
+        
+        self.rightButtonsBackground.update(size: rightButtonsSize, cornerRadius: rightButtonsSize.height * 0.5, isDark: tintIsDark, tintColor: tintColor, isInteractive: true, transition: transition)
+        self.leftButtonsBackground.update(size: leftButtonsSize, cornerRadius: leftButtonsSize.height * 0.5, isDark: tintIsDark, tintColor: tintColor, isInteractive: true, transition: transition)
     }
 }

@@ -18,7 +18,7 @@ public enum UndoOverlayContent {
     case swipeToReply(title: String, text: String)
     case actionSucceeded(title: String?, text: String, cancel: String?, destructive: Bool)
     case stickersModified(title: String, text: String, undo: Bool, info: StickerPackCollectionInfo, topItem: StickerPackItem?, context: AccountContext)
-    case dice(dice: TelegramMediaDice, context: AccountContext, text: String, action: String?)
+    case dice(dice: TelegramMediaDice, context: AccountContext, text: String, action: String?, changeAction: String?)
     case chatAddedToFolder(context: AccountContext, chatTitle: String, folderTitle: NSAttributedString)
     case chatRemovedFromFolder(context: AccountContext, chatTitle: String, folderTitle: NSAttributedString)
     case messagesUnpinned(title: String, text: String, undo: Bool, isHidden: Bool)

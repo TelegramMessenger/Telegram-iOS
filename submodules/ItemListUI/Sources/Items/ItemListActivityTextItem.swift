@@ -85,7 +85,7 @@ public class ItemListActivityTextItemNode: ListViewItemNode {
         
         self.activityIndicator = ActivityIndicator(type: ActivityIndicatorType.custom(.black, 16.0, 2.0, false))
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.activityIndicator)

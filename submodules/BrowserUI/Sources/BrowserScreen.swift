@@ -20,6 +20,7 @@ import InstantPageUI
 import NavigationStackComponent
 import LottieComponent
 import WebKit
+import GlassBarButtonComponent
 
 private let settingsTag = GenericComponentViewTag()
 
@@ -85,6 +86,8 @@ private final class BrowserScreenComponent: CombinedComponent {
         
         let navigationBarExternalState = BrowserNavigationBarComponent.ExternalState()
         
+        let moreButtonPlayOnce = ActionSlot<Void>()
+        
         return { context in
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
             let performAction = context.component.performAction
@@ -123,6 +126,8 @@ private final class BrowserScreenComponent: CombinedComponent {
                                 url: context.component.contentState?.url ?? "",
                                 isSecure: context.component.contentState?.isSecure ?? false,
                                 isExpanded: context.component.presentationState.addressFocused,
+                                readingProgress: context.component.contentState?.readingProgress ?? 0.0,
+                                loadingProgress: context.component.contentState?.estimatedProgress,
                                 performAction: performAction
                             )
                         )
@@ -134,7 +139,9 @@ private final class BrowserScreenComponent: CombinedComponent {
                         component: AnyComponent(
                             TitleBarContentComponent(
                                 theme: environment.theme,
-                                title: title
+                                title: title,
+                                readingProgress: context.component.contentState?.readingProgress ?? 0.0,
+                                loadingProgress: context.component.contentState?.estimatedProgress
                             )
                         )
                     )
@@ -150,37 +157,40 @@ private final class BrowserScreenComponent: CombinedComponent {
                             component: AnyComponent(
                                 Button(
                                     content: AnyComponent(
-                                        MultilineTextComponent(text: .plain(NSAttributedString(string: environment.strings.WebBrowser_Done, font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.accentTextColor, paragraphAlignment: .center)), horizontalAlignment: .left, maximumNumberOfLines: 1)
+                                        BundleIconComponent(
+                                            name: "Navigation/Close",
+                                            tintColor: environment.theme.chat.inputPanel.panelControlColor
+                                        )
                                     ),
                                     action: {
                                         performAction.invoke(.close)
                                     }
-                                )
+                                ).minSize(CGSize(width: 44.0, height: 44.0))
                             )
                         )
                     ]
                                         
                     if isTablet {
-                        #if DEBUG
-                        navigationLeftItems.append(
-                            AnyComponentWithIdentity(
-                                id: "minimize",
-                                component: AnyComponent(
-                                    Button(
-                                        content: AnyComponent(
-                                            BundleIconComponent(
-                                                name: "Media Gallery/PictureInPictureButton",
-                                                tintColor: environment.theme.rootController.navigationBar.accentTextColor
-                                            )
-                                        ),
-                                        action: {
-                                            performAction.invoke(.close)
-                                        }
-                                    )
-                                )
-                            )
-                        )
-                        #endif
+//                        #if DEBUG
+//                        navigationLeftItems.append(
+//                            AnyComponentWithIdentity(
+//                                id: "minimize",
+//                                component: AnyComponent(
+//                                    Button(
+//                                        content: AnyComponent(
+//                                            BundleIconComponent(
+//                                                name: "Media Gallery/PictureInPictureButton",
+//                                                tintColor: environment.theme.rootController.navigationBar.accentTextColor
+//                                            )
+//                                        ),
+//                                        action: {
+//                                            performAction.invoke(.close)
+//                                        }
+//                                    )
+//                                )
+//                            )
+//                        )
+//                        #endif
                         
                         let canGoBack = context.component.contentState?.canGoBack ?? false
                         let canGoForward = context.component.contentState?.canGoForward ?? false
@@ -193,13 +203,13 @@ private final class BrowserScreenComponent: CombinedComponent {
                                         content: AnyComponent(
                                             BundleIconComponent(
                                                 name: "Instant View/Back",
-                                                tintColor: environment.theme.rootController.navigationBar.accentTextColor.withAlphaComponent(canGoBack ? 1.0 : 0.4)
+                                                tintColor: environment.theme.chat.inputPanel.panelControlColor.withAlphaComponent(canGoBack ? 1.0 : 0.4)
                                             )
                                         ),
                                         action: {
                                             performAction.invoke(.navigateBack)
                                         }
-                                    )
+                                    ).minSize(CGSize(width: 44.0, height: 44.0))
                                 )
                             )
                         )
@@ -212,13 +222,13 @@ private final class BrowserScreenComponent: CombinedComponent {
                                         content: AnyComponent(
                                             BundleIconComponent(
                                                 name: "Instant View/Forward",
-                                                tintColor: environment.theme.rootController.navigationBar.accentTextColor.withAlphaComponent(canGoForward ? 1.0 : 0.4)
+                                                tintColor: environment.theme.chat.inputPanel.panelControlColor.withAlphaComponent(canGoForward ? 1.0 : 0.4)
                                             )
                                         ),
                                         action: {
                                             performAction.invoke(.navigateForward)
                                         }
-                                    )
+                                    ).minSize(CGSize(width: 44.0, height: 44.0))
                                 )
                             )
                         )
@@ -228,21 +238,22 @@ private final class BrowserScreenComponent: CombinedComponent {
                         AnyComponentWithIdentity(
                             id: "settings",
                             component: AnyComponent(
-                                ReferenceButtonComponent(
+                                Button(
                                     content: AnyComponent(
                                         LottieComponent(
                                             content: LottieComponent.AppBundleContent(
-                                                name: "anim_moredots"
+                                                name: "anim_morewide"
                                             ),
-                                            color: environment.theme.rootController.navigationBar.accentTextColor,
-                                            size: CGSize(width: 30.0, height: 30.0)
+                                            color: environment.theme.chat.inputPanel.panelControlColor,
+                                            size: CGSize(width: 34.0, height: 34.0),
+                                            playOnce: moreButtonPlayOnce
                                         )
                                     ),
-                                    tag: settingsTag,
                                     action: {
                                         performAction.invoke(.openSettings)
+                                        moreButtonPlayOnce.invoke(Void())
                                     }
-                                )
+                                ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(settingsTag)
                             )
                         )
                     ]
@@ -256,13 +267,13 @@ private final class BrowserScreenComponent: CombinedComponent {
                                         content: AnyComponent(
                                             BundleIconComponent(
                                                 name: "Instant View/Bookmark",
-                                                tintColor: environment.theme.rootController.navigationBar.accentTextColor
+                                                tintColor: environment.theme.chat.inputPanel.panelControlColor
                                             )
                                         ),
                                         action: {
                                             performAction.invoke(.openBookmarks)
                                         }
-                                    )
+                                    ).minSize(CGSize(width: 44.0, height: 44.0))
                                 )
                             ),
                             at: 0
@@ -275,14 +286,14 @@ private final class BrowserScreenComponent: CombinedComponent {
                                         Button(
                                             content: AnyComponent(
                                                 BundleIconComponent(
-                                                    name: "Chat List/NavigationShare",
-                                                    tintColor: environment.theme.rootController.navigationBar.accentTextColor
+                                                    name: "Instant View/Share",
+                                                    tintColor: environment.theme.chat.inputPanel.panelControlColor
                                                 )
                                             ),
                                             action: {
                                                 performAction.invoke(.share)
                                             }
-                                        )
+                                        ).minSize(CGSize(width: 44.0, height: 44.0))
                                     )
                                 ),
                                 at: 0
@@ -297,13 +308,13 @@ private final class BrowserScreenComponent: CombinedComponent {
                                             content: AnyComponent(
                                                 BundleIconComponent(
                                                     name: "Instant View/Browser",
-                                                    tintColor: environment.theme.rootController.navigationBar.accentTextColor
+                                                    tintColor: environment.theme.chat.inputPanel.panelControlColor
                                                 )
                                             ),
                                             action: {
                                                 performAction.invoke(.openIn)
                                             }
-                                        )
+                                        ).minSize(CGSize(width: 44.0, height: 44.0))
                                     )
                                 )
                             )
@@ -316,21 +327,15 @@ private final class BrowserScreenComponent: CombinedComponent {
             
             let navigationBar = navigationBar.update(
                 component: BrowserNavigationBarComponent(
-                    backgroundColor: environment.theme.rootController.navigationBar.blurredBackgroundColor,
-                    separatorColor: environment.theme.rootController.navigationBar.separatorColor,
-                    textColor: environment.theme.rootController.navigationBar.primaryTextColor,
-                    progressColor: environment.theme.rootController.navigationBar.segmentedBackgroundColor,
-                    accentColor: environment.theme.rootController.navigationBar.accentTextColor,
+                    theme: environment.theme,
                     topInset: environment.statusBarHeight,
-                    height: environment.navigationHeight - environment.statusBarHeight,
+                    height: environment.navigationHeight - environment.statusBarHeight + 8.0,
                     sideInset: environment.safeInsets.left,
                     metrics: environment.metrics,
                     externalState: navigationBarExternalState,
                     leftItems: navigationLeftItems,
                     rightItems: navigationRightItems,
                     centerItem: navigationContent,
-                    readingProgress: context.component.contentState?.readingProgress ?? 0.0,
-                    loadingProgress: context.component.contentState?.estimatedProgress,
                     collapseFraction: collapseFraction,
                     activate: {
                         performAction.invoke(.expand)
@@ -339,9 +344,6 @@ private final class BrowserScreenComponent: CombinedComponent {
                 availableSize: context.availableSize,
                 transition: context.transition
             )
-            context.add(navigationBar
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: navigationBar.size.height / 2.0))
-            )
             
             let toolbarContent: AnyComponentWithIdentity<Empty>?
             if context.component.presentationState.isSearching {
@@ -349,8 +351,8 @@ private final class BrowserScreenComponent: CombinedComponent {
                     id: "search",
                     component: AnyComponent(
                         SearchToolbarContentComponent(
+                            theme: environment.theme,
                             strings: environment.strings,
-                            textColor: environment.theme.rootController.navigationBar.primaryTextColor,
                             index: context.component.presentationState.searchResultIndex,
                             count: context.component.presentationState.searchResultCount,
                             isEmpty: context.component.presentationState.searchQueryIsEmpty,
@@ -363,8 +365,7 @@ private final class BrowserScreenComponent: CombinedComponent {
                     id: "navigation",
                     component: AnyComponent(
                         NavigationToolbarContentComponent(
-                            accentColor: environment.theme.rootController.navigationBar.accentTextColor,
-                            textColor: environment.theme.rootController.navigationBar.primaryTextColor,
+                            theme: environment.theme,
                             canGoBack: context.component.contentState?.canGoBack ?? false,
                             canGoForward: context.component.contentState?.canGoForward ?? false,
                             canOpenIn: canOpenIn,
@@ -384,15 +385,12 @@ private final class BrowserScreenComponent: CombinedComponent {
                 toolbarBottomInset = environment.safeInsets.bottom
             }
             
-            var toolbarSize: CGFloat = 0.0
             if isTablet && !context.component.presentationState.isSearching {
                 
             } else {
                 let toolbar = toolbar.update(
                     component: BrowserToolbarComponent(
-                        backgroundColor: environment.theme.rootController.navigationBar.blurredBackgroundColor,
-                        separatorColor: environment.theme.rootController.navigationBar.separatorColor,
-                        textColor: environment.theme.rootController.navigationBar.primaryTextColor,
+                        theme: environment.theme,
                         bottomInset: toolbarBottomInset,
                         sideInset: environment.safeInsets.left,
                         item: toolbarContent,
@@ -412,16 +410,9 @@ private final class BrowserScreenComponent: CombinedComponent {
                         })
                     })
                 )
-                toolbarSize = toolbar.size.height
             }
             
             if context.component.presentationState.addressFocused {
-                let addressListSize: CGSize
-                if isTablet {
-                    addressListSize = context.availableSize
-                } else {
-                    addressListSize = CGSize(width: context.availableSize.width, height: context.availableSize.height - navigationBar.size.height - toolbarSize)
-                }
                 let controller = environment.controller
                 let addressList = addressList.update(
                     component: BrowserAddressListComponent(
@@ -431,12 +422,13 @@ private final class BrowserScreenComponent: CombinedComponent {
                         insets: UIEdgeInsets(top: 0.0, left: environment.safeInsets.left, bottom: 0.0, right: environment.safeInsets.right),
                         metrics: environment.metrics,
                         addressBarFrame: navigationBarExternalState.centerItemFrame,
+                        navigationBarHeight: navigationBar.size.height,
                         performAction: performAction,
                         presentInGlobalOverlay: { c in
                             controller()?.presentInGlobalOverlay(c)
                         }
                     ),
-                    availableSize: addressListSize,
+                    availableSize: context.availableSize,
                     transition: context.transition
                 )
                 
@@ -448,13 +440,17 @@ private final class BrowserScreenComponent: CombinedComponent {
                     )
                 } else {
                     context.add(addressList
-                        .position(CGPoint(x: context.availableSize.width / 2.0, y: navigationBar.size.height + addressList.size.height / 2.0))
+                        .position(CGPoint(x: context.availableSize.width / 2.0, y: addressList.size.height / 2.0))
                         .clipsToBounds(true)
                         .appear(.default(alpha: true))
                         .disappear(.default(alpha: true))
                     )
                 }
             }
+            
+            context.add(navigationBar
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: navigationBar.size.height / 2.0))
+            )
             
             return context.availableSize
         }
@@ -1075,16 +1071,12 @@ public class BrowserScreen: ViewController, MinimizableController {
         }
         
         func openSettings() {
-            guard let referenceView = self.componentHost.findTaggedView(tag: settingsTag) as? ReferenceButtonComponent.View else {
+            guard let referenceView = self.componentHost.findTaggedView(tag: settingsTag) else {
                 return
             }
             
             guard let controller = self.controller, let content = self.content.last else {
                 return
-            }
-            
-            if let animationComponentView = referenceView.componentView.view as? LottieComponent.View {
-                animationComponentView.playOnce()
             }
             
             if let webContent = content as? BrowserWebContent {
@@ -1103,7 +1095,7 @@ public class BrowserScreen: ViewController, MinimizableController {
                 }
             }
             
-            let source: ContextContentSource = .reference(BrowserReferenceContentSource(controller: controller, sourceView: referenceView.referenceNode.view))
+            let source: ContextContentSource = .reference(BrowserReferenceContentSource(controller: controller, sourceView: referenceView))
             
             let items: Signal<ContextController.Items, NoError> = combineLatest(
                 queue: Queue.mainQueue(),
@@ -1549,6 +1541,8 @@ public class BrowserScreen: ViewController, MinimizableController {
         
         super.init(navigationBarPresentationData: nil)
         
+        self._hasGlassStyle = true
+        
         self.navigationPresentation = .modalInCompactLayout
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .allButUpsideDown)
@@ -1731,7 +1725,7 @@ private final class BrowserContentComponent: Component {
                 self.addSubview(component.content)
             }
             
-            let collapsedHeight: CGFloat = 24.0
+            let collapsedHeight: CGFloat = 54.0
             let topInset: CGFloat = component.navigationBarHeight * (1.0 - component.scrollingPanelOffsetFraction) + (component.insets.top + collapsedHeight) * component.scrollingPanelOffsetFraction
             let bottomInset = component.hasBottomPanel ? (49.0 + component.insets.bottom) * (1.0 - component.scrollingPanelOffsetFraction) : 0.0
             let insets = UIEdgeInsets(top: topInset, left: component.insets.left, bottom: bottomInset, right: component.insets.right)

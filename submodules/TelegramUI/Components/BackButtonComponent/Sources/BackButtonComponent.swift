@@ -88,7 +88,7 @@ public final class BackButtonComponent: Component {
             self.component = component
             
             if self.arrowView.image == nil {
-                self.arrowView.image = NavigationBar.backArrowImage(color: .white)?.withRenderingMode(.alwaysTemplate)
+                self.arrowView.image = navigationBarBackArrowImage(color: .white)?.withRenderingMode(.alwaysTemplate)
             }
             self.arrowView.tintColor = component.color
             

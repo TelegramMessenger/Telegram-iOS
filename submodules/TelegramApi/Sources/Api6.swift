@@ -24,12 +24,8 @@ public extension Api {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.DisallowedGiftsSettings.disallowedGiftsSettings(flags: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.DisallowedGiftsSettings.disallowedGiftsSettings(flags: _1!)
         }
     
     }
@@ -127,23 +123,25 @@ public extension Api {
             let _c9 = (Int(_1!) & Int(1 << 1) == 0) || _9 != nil
             let _c10 = _10 != nil
             let _c11 = _11 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
-                return Api.Document.document(flags: _1!, id: _2!, accessHash: _3!, fileReference: _4!, date: _5!, mimeType: _6!, size: _7!, thumbs: _8, videoThumbs: _9, dcId: _10!, attributes: _11!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            if !_c9 { return nil }
+            if !_c10 { return nil }
+            if !_c11 { return nil }
+            return Api.Document.document(flags: _1!, id: _2!, accessHash: _3!, fileReference: _4!, date: _5!, mimeType: _6!, size: _7!, thumbs: _8, videoThumbs: _9, dcId: _10!, attributes: _11!)
         }
         public static func parse_documentEmpty(_ reader: BufferReader) -> Document? {
             var _1: Int64?
             _1 = reader.readInt64()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.Document.documentEmpty(id: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.Document.documentEmpty(id: _1!)
         }
     
     }
@@ -268,12 +266,12 @@ public extension Api {
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.DocumentAttribute.documentAttributeAudio(flags: _1!, duration: _2!, title: _3, performer: _4, waveform: _5)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.DocumentAttribute.documentAttributeAudio(flags: _1!, duration: _2!, title: _3, performer: _4, waveform: _5)
         }
         public static func parse_documentAttributeCustomEmoji(_ reader: BufferReader) -> DocumentAttribute? {
             var _1: Int32?
@@ -287,23 +285,17 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.DocumentAttribute.documentAttributeCustomEmoji(flags: _1!, alt: _2!, stickerset: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.DocumentAttribute.documentAttributeCustomEmoji(flags: _1!, alt: _2!, stickerset: _3!)
         }
         public static func parse_documentAttributeFilename(_ reader: BufferReader) -> DocumentAttribute? {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.DocumentAttribute.documentAttributeFilename(fileName: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.DocumentAttribute.documentAttributeFilename(fileName: _1!)
         }
         public static func parse_documentAttributeHasStickers(_ reader: BufferReader) -> DocumentAttribute? {
             return Api.DocumentAttribute.documentAttributeHasStickers
@@ -315,12 +307,9 @@ public extension Api {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.DocumentAttribute.documentAttributeImageSize(w: _1!, h: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.DocumentAttribute.documentAttributeImageSize(w: _1!, h: _2!)
         }
         public static func parse_documentAttributeSticker(_ reader: BufferReader) -> DocumentAttribute? {
             var _1: Int32?
@@ -339,12 +328,11 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.DocumentAttribute.documentAttributeSticker(flags: _1!, alt: _2!, stickerset: _3!, maskCoords: _4)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.DocumentAttribute.documentAttributeSticker(flags: _1!, alt: _2!, stickerset: _3!, maskCoords: _4)
         }
         public static func parse_documentAttributeVideo(_ reader: BufferReader) -> DocumentAttribute? {
             var _1: Int32?
@@ -368,12 +356,14 @@ public extension Api {
             let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 4) == 0) || _6 != nil
             let _c7 = (Int(_1!) & Int(1 << 5) == 0) || _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.DocumentAttribute.documentAttributeVideo(flags: _1!, duration: _2!, w: _3!, h: _4!, preloadPrefixSize: _5, videoStartTs: _6, videoCodec: _7)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            return Api.DocumentAttribute.documentAttributeVideo(flags: _1!, duration: _2!, w: _3!, h: _4!, preloadPrefixSize: _5, videoStartTs: _6, videoCodec: _7)
         }
     
     }
@@ -454,12 +444,15 @@ public extension Api {
             let _c6 = _6 != nil
             let _c7 = (Int(_1!) & Int(1 << 7) == 0) || _7 != nil
             let _c8 = (Int(_1!) & Int(1 << 8) == 0) || _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.DraftMessage.draftMessage(flags: _1!, replyTo: _2, message: _3!, entities: _4, media: _5, date: _6!, effect: _7, suggestedPost: _8)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            return Api.DraftMessage.draftMessage(flags: _1!, replyTo: _2, message: _3!, entities: _4, media: _5, date: _6!, effect: _7, suggestedPost: _8)
         }
         public static func parse_draftMessageEmpty(_ reader: BufferReader) -> DraftMessage? {
             var _1: Int32?
@@ -468,12 +461,9 @@ public extension Api {
             if Int(_1!) & Int(1 << 0) != 0 {_2 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
-            if _c1 && _c2 {
-                return Api.DraftMessage.draftMessageEmpty(flags: _1!, date: _2)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.DraftMessage.draftMessageEmpty(flags: _1!, date: _2)
         }
     
     }
@@ -522,34 +512,22 @@ public extension Api {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.EmailVerification.emailVerificationApple(token: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.EmailVerification.emailVerificationApple(token: _1!)
         }
         public static func parse_emailVerificationCode(_ reader: BufferReader) -> EmailVerification? {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.EmailVerification.emailVerificationCode(code: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.EmailVerification.emailVerificationCode(code: _1!)
         }
         public static func parse_emailVerificationGoogle(_ reader: BufferReader) -> EmailVerification? {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.EmailVerification.emailVerificationGoogle(token: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.EmailVerification.emailVerificationGoogle(token: _1!)
         }
     
     }
@@ -605,12 +583,9 @@ public extension Api {
             _2 = parseString(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.EmailVerifyPurpose.emailVerifyPurposeLoginSetup(phoneNumber: _1!, phoneCodeHash: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.EmailVerifyPurpose.emailVerifyPurposeLoginSetup(phoneNumber: _1!, phoneCodeHash: _2!)
         }
         public static func parse_emailVerifyPurposePassport(_ reader: BufferReader) -> EmailVerifyPurpose? {
             return Api.EmailVerifyPurpose.emailVerifyPurposePassport
@@ -683,12 +658,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.EmojiGroup.emojiGroup(title: _1!, iconEmojiId: _2!, emoticons: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.EmojiGroup.emojiGroup(title: _1!, iconEmojiId: _2!, emoticons: _3!)
         }
         public static func parse_emojiGroupGreeting(_ reader: BufferReader) -> EmojiGroup? {
             var _1: String?
@@ -702,12 +675,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.EmojiGroup.emojiGroupGreeting(title: _1!, iconEmojiId: _2!, emoticons: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.EmojiGroup.emojiGroupGreeting(title: _1!, iconEmojiId: _2!, emoticons: _3!)
         }
         public static func parse_emojiGroupPremium(_ reader: BufferReader) -> EmojiGroup? {
             var _1: String?
@@ -716,12 +687,9 @@ public extension Api {
             _2 = reader.readInt64()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.EmojiGroup.emojiGroupPremium(title: _1!, iconEmojiId: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.EmojiGroup.emojiGroupPremium(title: _1!, iconEmojiId: _2!)
         }
     
     }
@@ -776,12 +744,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.EmojiKeyword.emojiKeyword(keyword: _1!, emoticons: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.EmojiKeyword.emojiKeyword(keyword: _1!, emoticons: _2!)
         }
         public static func parse_emojiKeywordDeleted(_ reader: BufferReader) -> EmojiKeyword? {
             var _1: String?
@@ -792,12 +757,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.EmojiKeyword.emojiKeywordDeleted(keyword: _1!, emoticons: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.EmojiKeyword.emojiKeywordDeleted(keyword: _1!, emoticons: _2!)
         }
     
     }
@@ -846,12 +808,11 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.EmojiKeywordsDifference.emojiKeywordsDifference(langCode: _1!, fromVersion: _2!, version: _3!, keywords: _4!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.EmojiKeywordsDifference.emojiKeywordsDifference(langCode: _1!, fromVersion: _2!, version: _3!, keywords: _4!)
         }
     
     }
@@ -882,12 +843,8 @@ public extension Api {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.EmojiLanguage.emojiLanguage(langCode: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.EmojiLanguage.emojiLanguage(langCode: _1!)
         }
     
     }
@@ -937,12 +894,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.EmojiList.emojiList(hash: _1!, documentId: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.EmojiList.emojiList(hash: _1!, documentId: _2!)
         }
         public static func parse_emojiListNotModified(_ reader: BufferReader) -> EmojiList? {
             return Api.EmojiList.emojiListNotModified
@@ -1023,12 +977,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.EmojiStatus.emojiStatus(flags: _1!, documentId: _2!, until: _3)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.EmojiStatus.emojiStatus(flags: _1!, documentId: _2!, until: _3)
         }
         public static func parse_emojiStatusCollectible(_ reader: BufferReader) -> EmojiStatus? {
             var _1: Int32?
@@ -1064,12 +1016,18 @@ public extension Api {
             let _c9 = _9 != nil
             let _c10 = _10 != nil
             let _c11 = (Int(_1!) & Int(1 << 0) == 0) || _11 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
-                return Api.EmojiStatus.emojiStatusCollectible(flags: _1!, collectibleId: _2!, documentId: _3!, title: _4!, slug: _5!, patternDocumentId: _6!, centerColor: _7!, edgeColor: _8!, patternColor: _9!, textColor: _10!, until: _11)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            if !_c9 { return nil }
+            if !_c10 { return nil }
+            if !_c11 { return nil }
+            return Api.EmojiStatus.emojiStatusCollectible(flags: _1!, collectibleId: _2!, documentId: _3!, title: _4!, slug: _5!, patternDocumentId: _6!, centerColor: _7!, edgeColor: _8!, patternColor: _9!, textColor: _10!, until: _11)
         }
         public static func parse_emojiStatusEmpty(_ reader: BufferReader) -> EmojiStatus? {
             return Api.EmojiStatus.emojiStatusEmpty
@@ -1084,12 +1042,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.EmojiStatus.inputEmojiStatusCollectible(flags: _1!, collectibleId: _2!, until: _3)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.EmojiStatus.inputEmojiStatusCollectible(flags: _1!, collectibleId: _2!, until: _3)
         }
     
     }

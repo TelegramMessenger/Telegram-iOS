@@ -277,7 +277,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
             }
         }
         
-        self.tokenListNode = EditableTokenListNode(context: self.context, presentationTheme: self.presentationData.theme, theme: EditableTokenListNodeTheme(backgroundColor: .clear, separatorColor: self.presentationData.theme.rootController.navigationBar.separatorColor, placeholderTextColor: self.presentationData.theme.list.itemPlaceholderTextColor, primaryTextColor: self.presentationData.theme.list.itemPrimaryTextColor, tokenBackgroundColor: self.presentationData.theme.list.itemCheckColors.strokeColor.withAlphaComponent(0.25), selectedTextColor: self.presentationData.theme.list.itemCheckColors.foregroundColor, selectedBackgroundColor: self.presentationData.theme.list.itemCheckColors.fillColor, accentColor: self.presentationData.theme.list.itemAccentColor, keyboardColor: self.presentationData.theme.rootController.keyboardColor), placeholder: placeholder, shortPlaceholder: shortPlaceholder)
+        self.tokenListNode = EditableTokenListNode(context: self.context, theme: self.presentationData.theme, placeholder: placeholder, shortPlaceholder: shortPlaceholder)
         
         super.init()
         
@@ -413,6 +413,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                             var insets = layout.insets(options: [.input])
                             insets.top += navigationBarHeight
                             insets.top += strongSelf.tokenListNode.bounds.size.height
+                            insets.top += 10.0 + 10.0
                             
                             var headerInsets = layout.insets(options: [.input])
                             headerInsets.top += actualNavigationBarHeight
@@ -465,16 +466,17 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight
+        insets.top += 10.0
                 
-        let tokenListHeight = self.tokenListNode.updateLayout(tokens: self.editableTokens, width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
+        let tokenListHeight = self.tokenListNode.updateLayout(tokens: self.editableTokens, width: layout.size.width - (16.0 + layout.safeInsets.left) * 2.0, leftInset: 0.0, rightInset: 0.0, transition: transition)
         
-        transition.updateFrame(node: self.tokenListNode, frame: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: tokenListHeight)))
+        transition.updateFrame(node: self.tokenListNode, frame: CGRect(origin: CGPoint(x: 16.0 + layout.safeInsets.left, y: insets.top), size: CGSize(width: layout.size.width - (16.0 + layout.safeInsets.left) * 2.0, height: tokenListHeight)))
         
         var headerInsets = layout.insets(options: [.input])
         headerInsets.top += actualNavigationBarHeight
         
-        insets.top += tokenListHeight
-        headerInsets.top += tokenListHeight
+        headerInsets.top += 10.0 + tokenListHeight + 8.0
+        insets = headerInsets
         
         if let footerPanelNode = self.footerPanelNode {
             var count = 0

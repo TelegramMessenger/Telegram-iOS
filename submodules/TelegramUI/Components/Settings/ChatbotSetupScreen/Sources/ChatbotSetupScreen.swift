@@ -23,6 +23,7 @@ import LottieComponent
 import Markdown
 import PeerListItemComponent
 import AvatarNode
+import AlertComponent
 
 private let checkIcon: UIImage = {
     return generateImage(CGSize(width: 12.0, height: 10.0), rotatedContext: { size, context in
@@ -527,14 +528,20 @@ final class ChatbotSetupScreenComponent: Component {
                 } else {
                     text = environment.strings.ChatbotSetup_Gift_Warning_CombinedText(botUsername).string
                 }
-                let alertController = textAlertController(context: component.context, title: environment.strings.ChatbotSetup_Gift_Warning_Title, text: text, actions: [
-                    TextAlertAction(type: .genericAction, title: environment.strings.Common_Cancel, action: {
-                        completion(false)
-                    }),
-                    TextAlertAction(type: .defaultAction, title: environment.strings.ChatbotSetup_Gift_Warning_Proceed, action: {
-                        completion(true)
-                    })
-                ], parseMarkdown: true)
+                
+                let alertController = AlertScreen(
+                    context: component.context,
+                    title: environment.strings.ChatbotSetup_Gift_Warning_Title,
+                    text: text,
+                    actions: [
+                        .init(title: environment.strings.Common_Cancel, action: {
+                            completion(false)
+                        }),
+                        .init(title: environment.strings.ChatbotSetup_Gift_Warning_Proceed, type: .default, action: {
+                            completion(true)
+                        }),
+                    ]
+                )
                 alertController.dismissed = { byOutsideTap in
                     if byOutsideTap {
                         completion(false)
@@ -785,7 +792,7 @@ final class ChatbotSetupScreenComponent: Component {
                                 self.botRights = [.reply, .readMessages, .deleteSentMessages, .deleteReceivedMessages]
                                 self.state?.updated(transition: .spring(duration: 0.3))
                             } else {
-                                self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.ChatbotSetup_ErrorBotNotBusinessCapable, actions: [
+                                self.environment?.controller()?.present(textAlertController(context: component.context, title: nil, text: presentationData.strings.ChatbotSetup_ErrorBotNotBusinessCapable, actions: [
                                     TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
                                     })
                                 ]), in: .window(.root))

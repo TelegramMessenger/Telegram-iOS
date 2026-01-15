@@ -298,7 +298,7 @@ private final class ThemeSettingsAccentColorIconItemNode : ListViewItemNode {
         self.dotsNode.displayWithoutProcessing = true
         self.dotsNode.image = generateDotsImage()
 
-        super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
+        super.init(layerBacked: false, rotated: false, seeThrough: false)
 
         self.addSubnode(self.containerNode)
         self.containerNode.addSubnode(self.fillNode)
@@ -537,7 +537,7 @@ private final class ThemeSettingsAccentColorPickerItemNode : ListViewItemNode {
         self.imageNode.displayWithoutProcessing = true
         self.imageNode.image = generateCustomSwatchImage()
 
-        super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
+        super.init(layerBacked: false, rotated: false, seeThrough: false)
 
         self.addSubnode(self.imageNode)
     }
@@ -734,7 +734,7 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
         self.listNode = ListView()
         self.listNode.transform = CATransform3DMakeRotation(-CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.containerNode)
         self.addSubnode(self.listNode)

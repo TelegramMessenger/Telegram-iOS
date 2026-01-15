@@ -114,6 +114,7 @@ swift_library(
         "//submodules/Components/HierarchyTrackingLayer",
         "//submodules/Utils/LokiRng",
         "//submodules/TelegramUI/Components/PeerNameTextComponent",
+        "//submodules/TelegramUI/Components/AlertComponent",
     ],
     visibility = [
         "//visibility:public",

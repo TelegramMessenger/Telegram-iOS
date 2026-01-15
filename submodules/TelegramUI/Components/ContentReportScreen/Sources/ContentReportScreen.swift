@@ -529,7 +529,7 @@ private final class SheetContent: CombinedComponent {
                     component: AnyComponentWithIdentity(id: isBack ? "back" : "close", component: AnyComponent(
                         BundleIconComponent(
                             name: isBack ? "Navigation/Back" : "Navigation/Close",
-                            tintColor: environment.theme.rootController.navigationBar.glassBarButtonForegroundColor
+                            tintColor: environment.theme.chat.inputPanel.panelControlColor
                         )
                     )),
                     action: { [weak state] _ in

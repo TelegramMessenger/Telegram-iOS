@@ -12,6 +12,22 @@ private let pink = UIColor(rgb: 0xef436c)
 private let latePurple = UIColor(rgb: 0x974aa9)
 private let latePink = UIColor(rgb: 0xf0436c)
 
+private func textForTimeout(value: Int32) -> String {
+    if value < 3600 {
+        let minutes = value / 60
+        let seconds = value % 60
+        let secondsPadding = seconds < 10 ? "0" : ""
+        return "\(minutes):\(secondsPadding)\(seconds)"
+    } else {
+        let hours = value / 3600
+        let minutes = (value % 3600) / 60
+        let minutesPadding = minutes < 10 ? "0" : ""
+        let seconds = value % 60
+        let secondsPadding = seconds < 10 ? "0" : ""
+        return "\(hours):\(minutesPadding)\(minutes):\(secondsPadding)\(seconds)"
+    }
+}
+
 final class VoiceChatTimerNode: ASDisplayNode {
     private let strings: PresentationStrings
     private let dateTimeFormat: PresentationDateTimeFormat

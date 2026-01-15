@@ -109,7 +109,7 @@ private final class TimezoneListSearchContainerNode: SearchDisplayControllerCont
         self.presentationDataPromise = Promise(self.presentationData)
         
         self.dimNode = ASDisplayNode()
-        self.dimNode.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        self.dimNode.backgroundColor = .clear
         
         self.listNode = ListView()
         self.listNode.accessibilityPageScrolledString = { row, count in
@@ -523,7 +523,7 @@ final class TimezoneSelectionScreenNode: ViewControllerTracingNode {
         
         self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: TimezoneListSearchContainerNode(context: self.context, timeZoneList: timeZoneList, action: self.action), inline: true, cancel: { [weak self] in
             self?.requestDeactivateSearch()
-        })
+        }, fieldStyle: placeholderNode.fieldStyle)
         
         self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: navigationBarHeight, transition: .immediate)
         self.searchDisplayController?.activate(insertSubnode: { [weak self, weak placeholderNode] subnode, isSearchBar in

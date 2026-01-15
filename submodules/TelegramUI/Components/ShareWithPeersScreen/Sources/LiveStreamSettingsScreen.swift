@@ -883,13 +883,13 @@ final class LiveStreamSettingsScreenComponent: Component {
                 transition: transition,
                 component: AnyComponent(GlassBarButtonComponent(
                     size: barButtonSize,
-                    backgroundColor: environment.theme.rootController.navigationBar.glassBarButtonBackgroundColor,
+                    backgroundColor: nil,
                     isDark: environment.theme.overallDarkAppearance,
-                    state: .generic,
+                    state: .glass,
                     component: AnyComponentWithIdentity(id: "close", component: AnyComponent(
                         BundleIconComponent(
                             name: "Navigation/Close",
-                            tintColor: environment.theme.rootController.navigationBar.glassBarButtonForegroundColor
+                            tintColor: environment.theme.chat.inputPanel.panelControlColor
                         )
                     )),
                     action: { [weak self] _ in

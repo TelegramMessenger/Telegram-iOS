@@ -676,7 +676,7 @@ public class PeerInfoStoryGridScreen: ViewControllerComponentContainer {
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         
         if self.selectionModeCompletion != nil {
-            self.titleView?.titleContent = .custom(presentationData.strings.Stories_AddStoriesTitle, nil, false)
+            self.titleView?.titleContent = .custom(title: [ChatTitleContent.TitleTextItem(id: AnyHashable(0), content: .text(presentationData.strings.Stories_AddStoriesTitle))], subtitle: nil, isEnabled: false)
         } else {
             switch self.scope {
             case .saved:
@@ -691,7 +691,7 @@ public class PeerInfoStoryGridScreen: ViewControllerComponentContainer {
                 } else {
                     title = nil
                 }
-                self.titleView?.titleContent = .custom(presentationData.strings.StoryList_TitleSaved, title, false)
+                self.titleView?.titleContent = .custom(title: [ChatTitleContent.TitleTextItem(id: AnyHashable(0), content: .text(presentationData.strings.StoryList_TitleSaved))], subtitle: title, isEnabled: false)
                 
                 if paneNode.isSelectionModeActive {
                     self.navigationItem.setRightBarButton(self.doneBarButtonItem, animated: false)
@@ -708,7 +708,7 @@ public class PeerInfoStoryGridScreen: ViewControllerComponentContainer {
                 } else {
                     title = presentationData.strings.StoryList_TitleArchive
                 }
-                self.titleView?.titleContent = .custom(title, nil, false)
+                self.titleView?.titleContent = .custom(title: [ChatTitleContent.TitleTextItem(id: AnyHashable(0), content: .text(title))], subtitle: nil, isEnabled: false)
                 
                 var hasMenu = false
                 if componentView.selectedCount != 0 {

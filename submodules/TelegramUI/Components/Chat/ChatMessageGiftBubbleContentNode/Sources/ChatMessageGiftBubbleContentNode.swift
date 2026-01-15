@@ -455,7 +455,9 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                         switch action.action {
                         case let .giftPremium(_, _, daysValue, _, _, giftText, giftEntities):
                             months = max(3, Int32(round(Float(daysValue) / 30.0)))
-                            if months == 12 {
+                            if daysValue < 30 {
+                                title = item.presentationData.strings.Notification_PremiumGift_DaysTitle(daysValue)
+                            } else if months == 12 {
                                 title = item.presentationData.strings.Notification_PremiumGift_YearsTitle(1)
                             } else {
                                 title = item.presentationData.strings.Notification_PremiumGift_MonthsTitle(months)
@@ -513,7 +515,8 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             title = item.presentationData.strings.Notification_StarsGiveaway_Title
                             let starsString = item.presentationData.strings.Notification_StarsGiveaway_Subtitle_Stars(Int32(clamping: count)).replacingOccurrences(of: " ", with: "\u{00A0}")
                             text = item.presentationData.strings.Notification_StarsGiveaway_Subtitle(peerName, starsString).string
-                        case let .giftCode(_, fromGiveaway, unclaimed, channelId, monthsValue, _, _, _, _, giftText, giftEntities):
+                        case let .giftCode(_, fromGiveaway, unclaimed, channelId, daysValue, _, _, _, _, giftText, giftEntities):
+                            let monthsValue = max(3, Int32(round(Float(daysValue) / 30.0)))
                             if channelId == nil {
                                 months = monthsValue
                                 if months == 12 {

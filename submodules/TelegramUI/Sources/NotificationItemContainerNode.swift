@@ -2,14 +2,16 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
+import ComponentFlow
 import TelegramPresentationData
 import ChatMessageNotificationItem
+import GlassBackgroundComponent
 
 final class NotificationItemContainerNode: ASDisplayNode {
-    private let backgroundNode: ASImageNode
+    private let theme: PresentationTheme
     
-    private var validLayout: ContainerViewLayout?
-    
+    private let backgroundView = GlassBackgroundView()
+        
     var item: NotificationItem?
     
     private var hapticFeedback: HapticFeedback?
@@ -40,6 +42,8 @@ final class NotificationItemContainerNode: ASDisplayNode {
         }
     }
     
+    private var validLayout: ContainerViewLayout?
+    
     var dismissed: ((NotificationItem) -> Void)?
     var cancelTimeout: ((NotificationItem) -> Void)?
     var resumeTimeout: ((NotificationItem) -> Void)?
@@ -48,15 +52,10 @@ final class NotificationItemContainerNode: ASDisplayNode {
     
     init(theme: PresentationTheme, contentNode: NotificationItemNode?) {
         self.contentNode = contentNode
-        
-        self.backgroundNode = ASImageNode()
-        self.backgroundNode.displayWithoutProcessing = true
-        self.backgroundNode.displaysAsynchronously = false
-        self.backgroundNode.image = PresentationResourcesRootController.inAppNotificationBackground(theme)
-        
+        self.theme = theme
+                
         super.init()
         
-        self.addSubnode(self.backgroundNode)
         if let contentNode {
             self.addSubnode(contentNode)
         }
@@ -64,6 +63,8 @@ final class NotificationItemContainerNode: ASDisplayNode {
     
     override func didLoad() {
         super.didLoad()
+        
+        self.view.insertSubview(self.backgroundView, at: 0)
         
         if let contentNode = self.contentNode, !contentNode.acceptsTouches {
             self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
@@ -76,13 +77,13 @@ final class NotificationItemContainerNode: ASDisplayNode {
     
     func animateIn() {
         if let _ = self.validLayout {
-            self.layer.animatePosition(from: CGPoint(x: 0.0, y: -self.backgroundNode.bounds.size.height), to: CGPoint(), duration: 0.4, additive: true)
+            self.layer.animatePosition(from: CGPoint(x: 0.0, y: -self.backgroundView.frame.maxY), to: CGPoint(), duration: 0.4, additive: true)
         }
     }
     
     func animateOut(completion: @escaping () -> Void) {
         if let _ = self.validLayout {
-            self.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -self.backgroundNode.bounds.size.height), duration: 0.4, removeOnCompletion: false, additive: true, completion: { _ in
+            self.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -self.backgroundView.frame.maxY), duration: 0.4, removeOnCompletion: false, additive: true, completion: { _ in
                 completion()
             })
         } else {
@@ -100,7 +101,7 @@ final class NotificationItemContainerNode: ASDisplayNode {
             
             if let statusBarHeight = layout.statusBarHeight, statusBarHeight >= 39.0 {
                 if layout.deviceMetrics.hasDynamicIsland {
-                    contentInsets.top = statusBarHeight
+                    contentInsets.top = statusBarHeight + 6.0
                 } else if statusBarHeight >= 44.0 {
                     contentInsets.top += 34.0
                 } else {
@@ -113,7 +114,10 @@ final class NotificationItemContainerNode: ASDisplayNode {
             let contentWidth = containerWidth - contentInsets.left - contentInsets.right
             let contentHeight = contentNode.updateLayout(width: contentWidth, transition: transition)
             
-            transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - containerWidth - 8.0 * 2.0) / 2.0), y: contentInsets.top - 16.0), size: CGSize(width: containerWidth + 8.0 * 2.0, height: 8.0 + contentHeight + 20.0 + 8.0)))
+            let backgroundInset: CGFloat = 8.0
+            let backgroundSize = CGSize(width: containerWidth - backgroundInset * 2.0, height: contentHeight)
+            self.backgroundView.update(size: backgroundSize, cornerRadius: 24.0, isDark: self.theme.overallDarkAppearance, tintColor: .init(kind: .panel, color: UIColor(white: self.theme.overallDarkAppearance ? 0.0 : 1.0, alpha: 0.6)), transition: ComponentTransition(transition))
+            transition.updateFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - backgroundSize.width) / 2.0), y: contentInsets.top), size: backgroundSize))
             
             transition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - contentWidth) / 2.0), y: contentInsets.top), size: CGSize(width: contentWidth, height: contentHeight)))
         }

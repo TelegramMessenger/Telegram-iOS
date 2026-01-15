@@ -13,6 +13,9 @@ import AccountContext
 import SearchBarNode
 import SearchUI
 import ChatListSearchItemHeader
+import EdgeEffect
+import ComponentFlow
+import ComponentDisplayAdapters
 
 extension SettingsSearchableItemIcon {
     func image() -> UIImage? {
@@ -55,113 +58,6 @@ extension SettingsSearchableItemIcon {
                 return PresentationResourcesSettings.premium
             case .stories:
                 return PresentationResourcesSettings.stories
-        }
-    }
-}
-
-final class SettingsSearchItem: ItemListControllerSearch {
-    let context: AccountContext
-    let theme: PresentationTheme
-    let placeholder: String
-    let activated: Bool
-    let updateActivated: (Bool) -> Void
-    let presentController: (ViewController, Any?) -> Void
-    let pushController: (ViewController) -> Void
-    let getNavigationController: (() -> NavigationController?)?
-    let resolvedFaqUrl: Signal<ResolvedUrl?, NoError>
-    let exceptionsList: Signal<NotificationExceptionsList?, NoError>
-    let archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>
-    let privacySettings: Signal<AccountPrivacySettings?, NoError>
-    let hasTwoStepAuth: Signal<Bool?, NoError>
-    let twoStepAuthData: Signal<TwoStepVerificationAccessConfiguration?, NoError>
-    let activeSessionsContext: Signal<ActiveSessionsContext?, NoError>
-    let webSessionsContext: Signal<WebSessionsContext?, NoError>
-    
-    private var updateActivity: ((Bool) -> Void)?
-    private var activity: ValuePromise<Bool> = ValuePromise(ignoreRepeated: false)
-    private let activityDisposable = MetaDisposable()
-    
-    init(context: AccountContext, theme: PresentationTheme, placeholder: String, activated: Bool, updateActivated: @escaping (Bool) -> Void, presentController: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, getNavigationController: (() -> NavigationController?)?, resolvedFaqUrl: Signal<ResolvedUrl?, NoError>, exceptionsList: Signal<NotificationExceptionsList?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>, privacySettings: Signal<AccountPrivacySettings?, NoError>, hasTwoStepAuth: Signal<Bool?, NoError>, twoStepAuthData: Signal<TwoStepVerificationAccessConfiguration?, NoError>, activeSessionsContext: Signal<ActiveSessionsContext?, NoError>, webSessionsContext: Signal<WebSessionsContext?, NoError>) {
-        self.context = context
-        self.theme = theme
-        self.placeholder = placeholder
-        self.activated = activated
-        self.updateActivated = updateActivated
-        self.presentController = presentController
-        self.pushController = pushController
-        self.getNavigationController = getNavigationController
-        self.resolvedFaqUrl = resolvedFaqUrl
-        self.exceptionsList = exceptionsList
-        self.archivedStickerPacks = archivedStickerPacks
-        self.privacySettings = privacySettings
-        self.hasTwoStepAuth = hasTwoStepAuth
-        self.twoStepAuthData = twoStepAuthData
-        self.activeSessionsContext = activeSessionsContext
-        self.webSessionsContext = webSessionsContext
-        self.activityDisposable.set((activity.get() |> mapToSignal { value -> Signal<Bool, NoError> in
-            if value {
-                return .single(value) |> delay(0.2, queue: Queue.mainQueue())
-            } else {
-                return .single(value)
-            }
-        }).start(next: { [weak self] value in
-            self?.updateActivity?(value)
-        }))
-    }
-    
-    deinit {
-        self.activityDisposable.dispose()
-    }
-    
-    func isEqual(to: ItemListControllerSearch) -> Bool {
-        if let to = to as? SettingsSearchItem {
-            if self.context !== to.context || self.theme !== to.theme || self.placeholder != to.placeholder || self.activated != to.activated {
-                return false
-            }
-            return true
-        } else {
-            return false
-        }
-    }
-    
-    func titleContentNode(current: (NavigationBarContentNode & ItemListControllerSearchNavigationContentNode)?) -> (NavigationBarContentNode & ItemListControllerSearchNavigationContentNode)? {
-        let updateActivated: (Bool) -> Void = self.updateActivated
-        if let current = current as? NavigationBarSearchContentNode {
-            current.updateThemeAndPlaceholder(theme: self.theme, placeholder: self.placeholder)
-            return current
-        } else {
-            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-            return NavigationBarSearchContentNode(theme: presentationData.theme, placeholder: presentationData.strings.Settings_Search, activate: {
-                updateActivated(true)
-            })
-        }
-    }
-    
-    func node(current: ItemListControllerSearchNode?, titleContentNode: (NavigationBarContentNode & ItemListControllerSearchNavigationContentNode)?) -> ItemListControllerSearchNode {
-        let updateActivated: (Bool) -> Void = self.updateActivated
-        let presentController: (ViewController, Any?) -> Void = self.presentController
-        let pushController: (ViewController) -> Void = self.pushController
-        
-        if let current = current as? SettingsSearchItemNode, let titleContentNode = titleContentNode as? NavigationBarSearchContentNode {
-            current.updatePresentationData(self.context.sharedContext.currentPresentationData.with { $0 })
-            if current.isSearching != self.activated {
-                if self.activated {
-                    current.activateSearch(placeholderNode: titleContentNode.placeholderNode)
-                } else {
-                    current.deactivateSearch(placeholderNode: titleContentNode.placeholderNode)
-                }
-            }
-            return current
-        } else {
-            return SettingsSearchItemNode(context: self.context, cancel: {
-                updateActivated(false)
-            }, updateActivity: { [weak self] value in
-                self?.activity.set(value)
-            }, pushController: { c in
-                pushController(c)
-            }, presentController: { c, a in
-                presentController(c, a)
-            }, getNavigationController: self.getNavigationController, resolvedFaqUrl: self.resolvedFaqUrl, exceptionsList: self.exceptionsList, archivedStickerPacks: self.archivedStickerPacks, privacySettings: self.privacySettings, hasTwoStepAuth: self.hasTwoStepAuth, twoStepAuthData: self.twoStepAuthData, activeSessionsContext: self.activeSessionsContext, webSessionsContext: self.webSessionsContext)
         }
     }
 }
@@ -333,6 +229,8 @@ public final class SettingsSearchContainerNode: SearchDisplayControllerContentNo
     private let listNode: ListView
     private let recentListNode: ListView
     
+    private let edgeEffectView: EdgeEffectView
+    
     private var enqueuedTransitions: [SettingsSearchContainerTransition] = []
     private var enqueuedRecentTransitions: [(SettingsSearchContainerRecentTransition, Bool)] = []
     private var hasValidLayout = false
@@ -365,12 +263,15 @@ public final class SettingsSearchContainerNode: SearchDisplayControllerContentNo
             return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
+        self.edgeEffectView = EdgeEffectView()
+        
         super.init()
         
         self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         
         self.addSubnode(self.recentListNode)
         self.addSubnode(self.listNode)
+        self.view.addSubview(self.edgeEffectView)
         
         let interaction = SettingsSearchInteraction(openItem: { result in
             addRecentSettingsSearchItem(engine: context.engine, item: result.id)
@@ -620,6 +521,12 @@ public final class SettingsSearchContainerNode: SearchDisplayControllerContentNo
                 self.dequeueTransition()
             }
         }
+        
+        let edgeEffectHeight: CGFloat = insets.bottom + 8.0
+        let edgeEffectFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - edgeEffectHeight), size: CGSize(width: layout.size.width, height: edgeEffectHeight))
+        transition.updateFrame(view: self.edgeEffectView, frame: edgeEffectFrame)
+        self.edgeEffectView.update(content: self.presentationData.theme.list.plainBackgroundColor, rect: edgeEffectFrame, edge: .bottom, edgeSize: min(edgeEffectHeight, 50.0), transition: ComponentTransition(transition))
+        transition.updateAlpha(layer: self.edgeEffectView.layer, alpha: edgeEffectHeight > 21.0 ? 1.0 : 0.0)
     }
     
     public override func scrollToTop() {
@@ -715,7 +622,7 @@ private final class SettingsSearchItemNode: ItemListControllerSearchNode {
             }
         }, resolvedFaqUrl: self.resolvedFaqUrl, exceptionsList: self.exceptionsList, archivedStickerPacks: self.archivedStickerPacks, privacySettings: self.privacySettings, hasTwoStepAuth: self.hasTwoStepAuth, twoStepAuthData: self.twoStepAuthData, activeSessionsContext: self.activeSessionsContext, webSessionsContext: self.webSessionsContext), cancel: { [weak self] in
             self?.cancel()
-        })
+        }, fieldStyle: placeholderNode.fieldStyle)
         
         self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: navigationBarHeight, transition: .immediate)
         self.searchDisplayController?.activate(insertSubnode: { [weak self, weak placeholderNode] subnode, isSearchBar in

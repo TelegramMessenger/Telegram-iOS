@@ -113,7 +113,7 @@ final class StarsTransactionItemNode: ListViewItemNode, ItemListItemNode {
     
         self.activateArea = AccessibilityAreaNode()
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
     }
     
     func asyncLayout() -> (_ item: StarsTransactionItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {

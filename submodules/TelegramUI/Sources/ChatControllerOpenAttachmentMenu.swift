@@ -1013,14 +1013,14 @@ extension ChatControllerImpl {
                     } else {
                         text = strongSelf.presentationData.strings.Chat_AttachmentLimitReached
                     }
-                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                 }, presentCantSendMultipleFiles: {
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.presentationData.strings.Chat_AttachmentMultipleFilesDisabled, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Chat_AttachmentMultipleFilesDisabled, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                 }, presentJpegConversionAlert: { completion in
-                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.presentationData.strings.MediaPicker_JpegConversionText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.MediaPicker_KeepHeic, action: {
+                    strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.MediaPicker_JpegConversionText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.MediaPicker_KeepHeic, action: {
                         completion(false)
                     }), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.MediaPicker_ConvertToJpeg, action: {
                         completion(true)
@@ -1463,7 +1463,7 @@ extension ChatControllerImpl {
                             text = strongSelf.presentationData.strings.Chat_AttachmentLimitReached
                         }
                         
-                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                        strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     }, presentSchedulePicker: { [weak self] media, done in
                         if let strongSelf = self {
                             strongSelf.presentScheduleTimePicker(style: media ? .media : .default, completion: { [weak self] time, repeatPeriod in
@@ -1588,19 +1588,19 @@ extension ChatControllerImpl {
                         switch itemType {
                         case .image:
                             if bannedSendPhotos != nil {
-                                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.restrictedSendingContentsText(), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.restrictedSendingContentsText(), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                 
                                 return false
                             }
                         case .video:
                             if bannedSendVideos != nil {
-                                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.restrictedSendingContentsText(), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.restrictedSendingContentsText(), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                 
                                 return false
                             }
                         case .gif:
                             if bannedSendGifs != nil {
-                                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.restrictedSendingContentsText(), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.restrictedSendingContentsText(), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                 
                                 return false
                             }

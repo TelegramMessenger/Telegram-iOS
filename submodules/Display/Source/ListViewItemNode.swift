@@ -129,7 +129,6 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
         return nil
     }
     
-    private final var spring: ListViewItemSpring?
     private final var animations: [(String, ListViewAnimation)] = []
     private final var pendingControlledTransitions: [ControlledTransition] = []
     private final var controlledTransitions: [ControlledTransitionContext] = []
@@ -141,8 +140,6 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
 
     open func attachedHeaderNodesUpdated() {
     }
-    
-    final let wantsScrollDynamics: Bool
     
     open var preferredAnimationCurve: (CGFloat) -> CGFloat {
         return listViewAnimationCurveSystem
@@ -236,12 +233,7 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
         return .complete()
     }
     
-    public init(layerBacked: Bool, dynamicBounce: Bool = true, rotated: Bool = false, seeThrough: Bool = false) {
-        if dynamicBounce {
-            self.spring = ListViewItemSpring(stiffness: -280.0, damping: -24.0, mass: 0.85)
-        }
-        self.wantsScrollDynamics = dynamicBounce
-        
+    public init(layerBacked: Bool, rotated: Bool = false, seeThrough: Bool = false) {
         self.rotated = rotated
         
         super.init()
@@ -338,55 +330,13 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
     }
     
     final func addScrollingOffset(_ scrollingOffset: CGFloat) {
-        if self.spring != nil {
-            self.contentOffset += scrollingOffset
-        }
     }
     
     func initializeDynamicsFromSibling(_ itemView: ListViewItemNode, additionalOffset: CGFloat) {
-        if let itemViewSpring = itemView.spring {
-            self.contentOffset = itemView.contentOffset + additionalOffset
-            self.spring?.velocity = itemViewSpring.velocity
-        }
     }
     
     public func animate(timestamp: Double, invertOffsetDirection: inout Bool) -> Bool {
         var continueAnimations = false
-        
-        if let _ = self.spring {
-            var offset = self.contentOffset
-            
-            let frictionConstant: CGFloat = testSpringFriction
-            let springConstant: CGFloat = testSpringConstant
-            let time: CGFloat = 1.0 / 60.0
-            
-            // friction force = velocity * friction constant
-            let frictionForce = self.spring!.velocity * frictionConstant
-            // spring force = (target point - current position) * spring constant
-            let springForce = -self.contentOffset * springConstant
-            // force = spring force - friction force
-            let force = springForce - frictionForce
-            
-            // velocity = current velocity + force * time / mass
-            self.spring!.velocity = self.spring!.velocity + force * time
-            // position = current position + velocity * time
-            offset = self.contentOffset + self.spring!.velocity * time
-            
-            offset = offset.isNaN ? 0.0 : offset
-            
-            let epsilon: CGFloat = 0.1
-            if abs(offset) < epsilon && abs(self.spring!.velocity) < epsilon {
-                offset = 0.0
-                self.spring!.velocity = 0.0
-            } else {
-                continueAnimations = true
-            }
-            
-            if abs(offset) > 250.0 {
-                offset = offset < 0.0 ? -250.0 : 250.0
-            }
-            self.contentOffset = offset
-        }
         
         var i = 0
         var animationCount = self.animations.count

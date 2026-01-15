@@ -31,7 +31,6 @@ swift_library(
         "//submodules/Components/BundleIconComponent:BundleIconComponent",
         "//submodules/UndoUI:UndoUI",
         "//submodules/ActivityIndicator:ActivityIndicator",
-        "//submodules/ChatListSearchItemNode:ChatListSearchItemNode",
         "//submodules/ShimmerEffect:ShimmerEffect",
     ],
     visibility = [

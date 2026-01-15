@@ -20,6 +20,7 @@ swift_library(
         "//submodules/WallpaperBackgroundNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemCommon",
         "//submodules/ContextUI",
+        "//submodules/Components/HierarchyTrackingLayer",
     ],
     visibility = [
         "//visibility:public",

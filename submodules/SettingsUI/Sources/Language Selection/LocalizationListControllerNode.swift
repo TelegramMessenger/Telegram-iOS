@@ -165,7 +165,7 @@ private final class LocalizationListSearchContainerNode: SearchDisplayController
         self.presentationDataPromise = Promise(self.presentationData)
         
         self.dimNode = ASDisplayNode()
-        self.dimNode.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        self.dimNode.backgroundColor = .clear
         
         self.listNode = ListView()
         self.listNode.accessibilityPageScrolledString = { row, count in
@@ -809,7 +809,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
         
         self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: LocalizationListSearchContainerNode(context: self.context, listState: self.currentListState ?? LocalizationListState.defaultSettings, selectLocalization: { [weak self] info in self?.selectLocalization(info) }, applyingCode: self.applyingCode.get()), inline: true, cancel: { [weak self] in
             self?.requestDeactivateSearch()
-        })
+        }, fieldStyle: placeholderNode.fieldStyle)
         
         self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: navigationBarHeight, transition: .immediate)
         self.searchDisplayController?.activate(insertSubnode: { [weak self, weak placeholderNode] subnode, isSearchBar in

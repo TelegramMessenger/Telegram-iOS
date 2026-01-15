@@ -14,6 +14,7 @@ import PresentationDataUtils
 import TelegramCallsUI
 import AttachmentUI
 import WebUI
+import LegacyChatHeaderPanelComponent
 
 func updateChatPresentationInterfaceStateImpl(
     selfController: ChatControllerImpl,

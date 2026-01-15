@@ -133,7 +133,7 @@ private final class AutodownloadDataUsagePickerItemNode: ListViewItemNode {
         
         self.activateArea = AccessibilityAreaNode()
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.lowTextNode)
         self.addSubnode(self.mediumTextNode)

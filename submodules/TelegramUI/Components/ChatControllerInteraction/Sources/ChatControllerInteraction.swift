@@ -313,6 +313,8 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public var enableFullTranslucency: Bool = true
     public var chatIsRotated: Bool = true
     public var canReadHistory: Bool = false
+    public var summarizedMessageIds: Set<MessageId> = Set()
+    
     
     private var isOpeningMediaValue: Bool = false
     public var isOpeningMedia: Bool {

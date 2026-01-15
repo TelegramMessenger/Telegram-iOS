@@ -18,7 +18,6 @@ import RoundedRectWithTailPath
 import AvatarNode
 import BundleIconComponent
 import TextFormat
-import CheckComponent
 import ContextUI
 import StarsBalanceOverlayComponent
 import StoryLiveChatMessageComponent
@@ -369,17 +368,20 @@ private final class PeerPlaceComponent: Component {
     let theme: PresentationTheme
     let color: UIColor
     let place: Int32?
+    let placeIsApproximate: Bool
     let groupingSeparator: String
     
     init(
         theme: PresentationTheme,
         color: UIColor,
         place: Int32?,
+        placeIsApproximate: Bool,
         groupingSeparator: String
     ) {
         self.theme = theme
         self.color = color
         self.place = place
+        self.placeIsApproximate = placeIsApproximate
         self.groupingSeparator = groupingSeparator
     }
     
@@ -391,6 +393,9 @@ private final class PeerPlaceComponent: Component {
             return false
         }
         if lhs.place != rhs.place {
+            return false
+        }
+        if lhs.placeIsApproximate != rhs.placeIsApproximate {
             return false
         }
         if lhs.groupingSeparator != rhs.groupingSeparator {
@@ -455,7 +460,7 @@ private final class PeerPlaceComponent: Component {
             var placeString: String
             if let place = component.place {
                 placeString = presentationStringsFormattedNumber(place, component.groupingSeparator)
-                if place >= 100 {
+                if component.placeIsApproximate {
                     placeString = "\(compactNumericCountString(Int(place), decimalSeparator: ".", showDecimalPart: false))+"
                 }
             } else {
@@ -501,6 +506,7 @@ private final class PeerComponent: Component {
     let groupingSeparator: String
     let peer: EnginePeer
     let place: Int32
+    let placeIsApproximate: Bool
     let amount: Int64
     let status: Status?
     let isLast: Bool
@@ -512,6 +518,7 @@ private final class PeerComponent: Component {
         groupingSeparator: String,
         peer: EnginePeer,
         place: Int32,
+        placeIsApproximate: Bool,
         amount: Int64,
         status: Status? = nil,
         isLast: Bool,
@@ -522,6 +529,7 @@ private final class PeerComponent: Component {
         self.groupingSeparator = groupingSeparator
         self.peer = peer
         self.place = place
+        self.placeIsApproximate = placeIsApproximate
         self.amount = amount
         self.status = status
         self.isLast = isLast
@@ -539,6 +547,9 @@ private final class PeerComponent: Component {
             return false
         }
         if lhs.place != rhs.place {
+            return false
+        }
+        if lhs.placeIsApproximate != rhs.placeIsApproximate {
             return false
         }
         if lhs.amount != rhs.amount {
@@ -623,8 +634,17 @@ private final class PeerComponent: Component {
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             let placeSize = self.place.update(
                 transition: .immediate,
-                component: AnyComponent(PeerPlaceComponent(theme: component.theme, color: color, place: component.status == .returned ? nil : component.place, groupingSeparator: presentationData.dateTimeFormat.groupingSeparator)),
-                environment: {},
+                component: AnyComponent(
+                    PeerPlaceComponent(
+                        theme: component.theme,
+                        color: color,
+                        place: component.status == .returned ? nil : component.place,
+                        placeIsApproximate: component.placeIsApproximate,
+                        groupingSeparator: presentationData.dateTimeFormat.groupingSeparator
+                    )
+                ),
+                environment: {
+                },
                 containerSize: CGSize(width: 40.0, height: 40.0)
             )
             let placeFrame = CGRect(origin: CGPoint(x: 0.0, y:  floorToScreenPixels((size.height - placeSize.height) / 2.0)), size: placeSize)
@@ -1616,8 +1636,10 @@ private final class GiftAuctionBidScreenComponent: Component {
                     ),
                     in: .current
                 )
-                                
-                component.context.starsContext?.load(force: true)
+                  
+                Queue.mainQueue().after(2.5) {
+                    component.context.starsContext?.load(force: true)
+                }
             }, error: { [weak self] _ in
                 guard let self else {
                     return
@@ -2061,7 +2083,7 @@ private final class GiftAuctionBidScreenComponent: Component {
                     if case .finished = auctionState?.auctionState, let controller = self.environment?.controller() {
                         if let navigationController = controller.navigationController as? NavigationController {
                             controller.dismiss()
-                            let auctionController = context.sharedContext.makeGiftAuctionViewScreen(context: context, auctionContext: auctionContext, completion: { _, _ in })
+                            let auctionController = context.sharedContext.makeGiftAuctionViewScreen(context: context, auctionContext: auctionContext, peerId: nil, completion: { _, _ in })
                             navigationController.pushViewController(auctionController)
                         }
                     }
@@ -2213,8 +2235,9 @@ private final class GiftAuctionBidScreenComponent: Component {
                     isBiddingUp = false
                 }
                                 
-                place = giftAuctionState.getPlace(myBid: myBidAmount, myBidDate: myBidDate) ?? 1
-                                    
+                let placeAndIsApproximate = giftAuctionState.getPlace(myBid: myBidAmount, myBidDate: myBidDate) ?? (1, false)
+                place = placeAndIsApproximate.place
+                
                 var bidTitle: String
                 var bidTitleColor: UIColor
                 var bidStatus: PeerComponent.Status?
@@ -2247,7 +2270,18 @@ private final class GiftAuctionBidScreenComponent: Component {
                 
                 if let peer = self.peersMap[component.context.account.peerId] {
                     myBidTitleComponent = AnyComponent(PeerHeaderComponent(color: bidTitleColor, dateTimeFormat: environment.dateTimeFormat, title: bidTitle, giftTitle: giftTitle, giftNumber: giftNumber))
-                    myBidComponent = AnyComponent(PeerComponent(context: component.context, theme: environment.theme, groupingSeparator: environment.dateTimeFormat.groupingSeparator, peer: peer, place: place, amount: myBidAmount, status: bidStatus, isLast: true, action: nil))
+                    myBidComponent = AnyComponent(PeerComponent(
+                        context: component.context,
+                        theme: environment.theme,
+                        groupingSeparator: environment.dateTimeFormat.groupingSeparator,
+                        peer: peer,
+                        place: place,
+                        placeIsApproximate: placeAndIsApproximate.isApproximate,
+                        amount: myBidAmount,
+                        status: bidStatus,
+                        isLast: true,
+                        action: nil
+                    ))
                 }
                 
                 var i: Int32 = 1
@@ -2259,7 +2293,17 @@ private final class GiftAuctionBidScreenComponent: Component {
                             break
                         }
                     }
-                    topBidsComponents.append((peer.id, AnyComponent(PeerComponent(context: component.context, theme: environment.theme, groupingSeparator: environment.dateTimeFormat.groupingSeparator, peer: peer, place: i, amount: bid, isLast: i == topBidders.count, action: nil))))
+                    topBidsComponents.append((peer.id, AnyComponent(PeerComponent(
+                        context: component.context,
+                        theme: environment.theme,
+                        groupingSeparator: environment.dateTimeFormat.groupingSeparator,
+                        peer: peer,
+                        place: i,
+                        placeIsApproximate: false,
+                        amount: bid,
+                        isLast: i == topBidders.count,
+                        action: nil
+                    ))))
                     i += 1
                 }
                 
@@ -2645,7 +2689,7 @@ private final class GiftAuctionBidScreenComponent: Component {
                     component: AnyComponentWithIdentity(id: "close", component: AnyComponent(
                         BundleIconComponent(
                             name: "Navigation/Close",
-                            tintColor: environment.theme.rootController.navigationBar.glassBarButtonForegroundColor
+                            tintColor: environment.theme.chat.inputPanel.panelControlColor
                         )
                     )),
                     action: { [weak self] _ in
@@ -2678,7 +2722,7 @@ private final class GiftAuctionBidScreenComponent: Component {
                             content: LottieComponent.AppBundleContent(
                                 name: "anim_morewide"
                             ),
-                            color: environment.theme.rootController.navigationBar.glassBarButtonForegroundColor,
+                            color: environment.theme.chat.inputPanel.panelControlColor,
                             size: CGSize(width: 34.0, height: 34.0),
                             playOnce: self.moreButtonPlayOnce
                         )

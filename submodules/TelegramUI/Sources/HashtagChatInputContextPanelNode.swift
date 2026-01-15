@@ -176,7 +176,7 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
                     peer: peer,
                     title: self.strings.Chat_HashtagSuggestion_UseLocal_Title("#\(query)@\(addressName)").string,
                     text: isGroup ? self.strings.Chat_HashtagSuggestion_UseLocal_Group_Text : self.strings.Chat_HashtagSuggestion_UseLocal_Channel_Text,
-                    badge: self.strings.ChatList_ContextMenuBadgeNew,
+                    badge: nil,
                     hashtag: "\(query)@\(addressName)",
                     revealed: false,
                     isAdditionalRecent: false

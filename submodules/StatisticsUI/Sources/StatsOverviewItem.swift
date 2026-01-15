@@ -327,7 +327,7 @@ class StatsOverviewItemNode: ListViewItemNode {
         self.bottomLeftItem = ValueItemNode()
         self.bottomRightItem = ValueItemNode()
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.clipsToBounds = true
         

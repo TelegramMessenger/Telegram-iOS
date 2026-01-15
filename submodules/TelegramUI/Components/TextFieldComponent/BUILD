@@ -18,7 +18,6 @@ swift_library(
         "//submodules/AccountContext",
         "//submodules/InvisibleInkDustNode",
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView",
-        "//submodules/ChatTextLinkEditUI",
         "//submodules/Pasteboard",
         "//submodules/ImageTransparency",
         "//submodules/TelegramUI/Components/Chat/ChatInputTextNode",

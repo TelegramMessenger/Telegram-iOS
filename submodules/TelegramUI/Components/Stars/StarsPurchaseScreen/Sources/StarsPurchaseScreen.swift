@@ -504,6 +504,7 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let overNavigationContainer: UIView
     let starsContext: StarsContext
     let options: [Any]
     let purpose: StarsPurchasePurpose
@@ -515,6 +516,7 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
     
     init(
         context: AccountContext,
+        overNavigationContainer: UIView,
         starsContext: StarsContext,
         options: [Any],
         purpose: StarsPurchasePurpose,
@@ -525,6 +527,7 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
         completion: @escaping (Int64) -> Void
     ) {
         self.context = context
+        self.overNavigationContainer = overNavigationContainer
         self.starsContext = starsContext
         self.options = options
         self.purpose = purpose
@@ -759,8 +762,6 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
         let scrollContent = Child(ScrollComponent<EnvironmentType>.self)
         let star = Child(PremiumStarComponent.self)
         let avatar = Child(GiftAvatarComponent.self)
-        let topPanel = Child(BlurredBackgroundComponent.self)
-        let topSeparator = Child(Rectangle.self)
         let title = Child(MultilineTextComponent.self)
         let balanceTitle = Child(MultilineTextComponent.self)
         let balanceValue = Child(MultilineTextComponent.self)
@@ -816,28 +817,12 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
                             UIColor(rgb: 0xfdd219)
                         ],
                         particleColor: UIColor(rgb: 0xf9b004),
-                        backgroundColor: environment.theme.list.blocksBackgroundColor
+                        backgroundColor: nil
                     ),
                     availableSize: CGSize(width: min(414.0, context.availableSize.width), height: 220.0),
                     transition: context.transition
                 )
             }
-            
-            let topPanel = topPanel.update(
-                component: BlurredBackgroundComponent(
-                    color: environment.theme.rootController.navigationBar.blurredBackgroundColor
-                ),
-                availableSize: CGSize(width: context.availableSize.width, height: environment.navigationHeight),
-                transition: context.transition
-            )
-            
-            let topSeparator = topSeparator.update(
-                component: Rectangle(
-                    color: environment.theme.rootController.navigationBar.separatorColor
-                ),
-                availableSize: CGSize(width: context.availableSize.width, height: UIScreenPixel),
-                transition: context.transition
-            )
             
             let titleText: String
             switch context.component.purpose {
@@ -948,14 +933,12 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0))
             )
                         
-            let topPanelAlpha: CGFloat
             let titleOffset: CGFloat
             let titleScale: CGFloat
             let titleOffsetDelta = (topInset + 160.0) - (environment.statusBarHeight + (environment.navigationHeight - environment.statusBarHeight) / 2.0)
             let titleAlpha: CGFloat
             
             if let topContentOffset = state.topContentOffset {
-                topPanelAlpha = min(20.0, max(0.0, topContentOffset - 95.0)) / 20.0
                 let topContentOffset = topContentOffset + max(0.0, min(1.0, topContentOffset / titleOffsetDelta)) * 10.0
                 titleOffset = topContentOffset
                 let fraction = max(0.0, min(1.0, titleOffset / titleOffsetDelta))
@@ -963,42 +946,37 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
                 
                 titleAlpha = 1.0
             } else {
-                topPanelAlpha = 0.0
                 titleScale = 1.0
                 titleOffset = 0.0
                 titleAlpha = 1.0
             }
             
-            context.add(header
+            context.addWithExternalContainer(header
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: topInset + header.size.height / 2.0 - 30.0 - titleOffset * titleScale))
-                .scale(titleScale)
+                .scale(titleScale),
+                container: context.component.overNavigationContainer
             )
             
-            context.add(topPanel
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: topPanel.size.height / 2.0))
-                .opacity(topPanelAlpha)
-            )
-            context.add(topSeparator
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: topPanel.size.height))
-                .opacity(topPanelAlpha)
-            )
-            
-            context.add(title
+            context.addWithExternalContainer(title
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: max(topInset + 160.0 - titleOffset, environment.statusBarHeight + (environment.navigationHeight - environment.statusBarHeight) / 2.0)))
                 .scale(titleScale)
-                .opacity(titleAlpha)
+                .opacity(titleAlpha),
+                container: context.component.overNavigationContainer
             )
             
             let navigationHeight = environment.navigationHeight - environment.statusBarHeight
             let topBalanceOriginY = environment.statusBarHeight + (navigationHeight - balanceTitle.size.height - balanceValue.size.height) / 2.0
-            context.add(balanceTitle
-                .position(CGPoint(x: context.availableSize.width - 16.0 - environment.safeInsets.right - balanceTitle.size.width / 2.0, y: topBalanceOriginY + balanceTitle.size.height / 2.0))
+            context.addWithExternalContainer(balanceTitle
+                .position(CGPoint(x: context.availableSize.width - 16.0 - environment.safeInsets.right - balanceTitle.size.width / 2.0, y: topBalanceOriginY + balanceTitle.size.height / 2.0)),
+                container: context.component.overNavigationContainer
             )
-            context.add(balanceValue
-                .position(CGPoint(x: context.availableSize.width - 16.0 - environment.safeInsets.right - balanceValue.size.width / 2.0, y: topBalanceOriginY + balanceTitle.size.height + balanceValue.size.height / 2.0))
+            context.addWithExternalContainer(balanceValue
+                .position(CGPoint(x: context.availableSize.width - 16.0 - environment.safeInsets.right - balanceValue.size.width / 2.0, y: topBalanceOriginY + balanceTitle.size.height + balanceValue.size.height / 2.0)),
+                container: context.component.overNavigationContainer
             )
-            context.add(balanceIcon
-                .position(CGPoint(x: context.availableSize.width - 16.0 - environment.safeInsets.right - balanceValue.size.width - balanceIcon.size.width / 2.0 - 2.0, y: topBalanceOriginY + balanceTitle.size.height + balanceValue.size.height / 2.0 - UIScreenPixel))
+            context.addWithExternalContainer(balanceIcon
+                .position(CGPoint(x: context.availableSize.width - 16.0 - environment.safeInsets.right - balanceValue.size.width - balanceIcon.size.width / 2.0 - 2.0, y: topBalanceOriginY + balanceTitle.size.height + balanceValue.size.height / 2.0 - UIScreenPixel)),
+                container: context.component.overNavigationContainer
             )
                                     
             return context.availableSize
@@ -1009,6 +987,8 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
 public final class StarsPurchaseScreen: ViewControllerComponentContainer {
     fileprivate let context: AccountContext
     fileprivate let starsContext: StarsContext
+    
+    private let overNavigationContainer: UIView
     
     private var didSetReady = false
     private let _ready = Promise<Bool>()
@@ -1027,6 +1007,8 @@ public final class StarsPurchaseScreen: ViewControllerComponentContainer {
     ) {
         self.context = context
         self.starsContext = starsContext
+        
+        self.overNavigationContainer = SparseContainerView()
             
         var openAppExamplesImpl: (() -> Void)?
         var updateInProgressImpl: ((Bool) -> Void)?
@@ -1034,6 +1016,7 @@ public final class StarsPurchaseScreen: ViewControllerComponentContainer {
         var completionImpl: ((Int64) -> Void)?
         super.init(context: context, component: StarsPurchaseScreenComponent(
             context: context,
+            overNavigationContainer: self.overNavigationContainer,
             starsContext: starsContext,
             options: options,
             purpose: purpose,
@@ -1050,7 +1033,7 @@ public final class StarsPurchaseScreen: ViewControllerComponentContainer {
             completion: { stars in
                 completionImpl?(stars)
             }
-        ), navigationBarAppearance: .transparent, presentationMode: .modal, theme: customTheme.flatMap { .custom($0) } ?? .default)
+        ), navigationBarAppearance: .default, presentationMode: .modal, theme: customTheme.flatMap { .custom($0) } ?? .default)
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -1089,6 +1072,10 @@ public final class StarsPurchaseScreen: ViewControllerComponentContainer {
                 
                 completion(stars)
             }
+        }
+        
+        if let navigationBar = self.navigationBar {
+            navigationBar.customOverBackgroundContentView.insertSubview(self.overNavigationContainer, at: 0)
         }
     }
     
@@ -1129,10 +1116,10 @@ public final class StarsPurchaseScreen: ViewControllerComponentContainer {
         super.containerLayoutUpdated(layout, transition: transition)
         
         if !self.didSetReady {
-            if let view = self.node.hostView.findTaggedView(tag: PremiumStarComponent.View.Tag()) as? PremiumStarComponent.View {
+            if let view = findTaggedComponentViewImpl(view: self.node.view, tag: PremiumStarComponent.View.Tag()) as? PremiumStarComponent.View {
                 self.didSetReady = true
                 self._ready.set(view.ready)
-            } else if let view = self.node.hostView.findTaggedView(tag: GiftAvatarComponent.View.Tag()) as? GiftAvatarComponent.View {
+            } else if let view = findTaggedComponentViewImpl(view: self.node.view, tag: GiftAvatarComponent.View.Tag()) as? GiftAvatarComponent.View {
                 self.didSetReady = true
                 self._ready.set(view.ready)
             }

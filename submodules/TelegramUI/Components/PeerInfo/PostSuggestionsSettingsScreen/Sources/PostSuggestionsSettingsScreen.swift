@@ -22,6 +22,10 @@ import Markdown
 import TelegramStringFormatting
 import MessagePriceItem
 import ListItemComponentAdaptor
+import ButtonComponent
+import PlainButtonComponent
+import UndoUI
+import ShareController
 
 final class PostSuggestionsSettingsScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -68,6 +72,7 @@ final class PostSuggestionsSettingsScreenComponent: Component {
         private let subtitle = ComponentView<Empty>()
         private let switchSection = ComponentView<Empty>()
         private let contentSection = ComponentView<Empty>()
+        private let linkSection = ComponentView<Empty>()
         
         private var isUpdating: Bool = false
         
@@ -164,6 +169,91 @@ final class PostSuggestionsSettingsScreenComponent: Component {
             if let navigationTitleView = self.navigationTitle.view {
                 transition.setAlpha(view: navigationTitleView, alpha: 1.0)
             }
+        }
+        
+        func dismissAllTooltips() {
+            guard let environment = self.environment, let controller = environment.controller() else {
+                return
+            }
+            controller.window?.forEachController({ controller in
+                if let controller = controller as? UndoOverlayController {
+                    controller.dismissWithCommitAction()
+                }
+            })
+        }
+        
+        func copyLink(_ link: String) {
+            guard let component = self.component, let environment = self.environment, let controller = environment.controller() else {
+                return
+            }
+            UIPasteboard.general.string = link
+            
+            self.dismissAllTooltips()
+            
+            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+            controller.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+        }
+        
+        func shareLink(_ link: String) {
+            guard let component = self.component, let environment = self.environment, let controller = environment.controller() else {
+                return
+            }
+            
+            let context = component.context
+            let shareController = ShareController(context: context, subject: .url(link), updatedPresentationData: nil)
+            shareController.completed = { [weak controller] peerIds in
+                let _ = (context.engine.data.get(
+                    EngineDataList(
+                        peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
+                    )
+                )
+                |> deliverOnMainQueue).start(next: { [weak controller] peerList in
+                    let peers = peerList.compactMap { $0 }
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    
+                    let text: String
+                    var savedMessages = false
+                    if peerIds.count == 1, let peerId = peerIds.first, peerId == context.account.peerId {
+                        text = presentationData.strings.InviteLink_InviteLinkForwardTooltip_SavedMessages_One
+                        savedMessages = true
+                    } else {
+                        if peers.count == 1, let peer = peers.first {
+                            let peerName = peer.id == context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                            text = presentationData.strings.UserInfo_LinkForwardTooltip_Chat_One(peerName).string
+                        } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
+                            let firstPeerName = firstPeer.id == context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                            let secondPeerName = secondPeer.id == context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                            text = presentationData.strings.UserInfo_LinkForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).string
+                        } else if let peer = peers.first {
+                            let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                            text = presentationData.strings.UserInfo_LinkForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").string
+                        } else {
+                            text = ""
+                        }
+                    }
+                    
+                    controller?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { action in
+                        if savedMessages, action == .info {
+                            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+                            |> deliverOnMainQueue).start(next: { [weak controller] peer in
+                                guard let peer else {
+                                    return
+                                }
+                                guard let navigationController = controller?.navigationController as? NavigationController else {
+                                    return
+                                }
+                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), forceOpenChat: true))
+                            })
+                        }
+                        return false
+                    }), in: .window(.root))
+                })
+            }
+            shareController.actionCompleted = {
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                controller.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+            }
+            controller.present(shareController, in: .window(.root))
         }
         
         func update(component: PostSuggestionsSettingsScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
@@ -429,6 +519,50 @@ final class PostSuggestionsSettingsScreenComponent: Component {
             
             if self.areSuggestionsEnabled {
                 contentHeight += contentSectionSize.height
+                contentHeight += sectionSpacing
+            }
+            
+            let address = component.peer?.addressName ?? ""
+            let link = "t.me/\(address)?direct"
+            let fullLink = "https://\(link)"
+            var linkSectionItems: [AnyComponentWithIdentity<Empty>] = []
+            linkSectionItems.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(
+                LinkComponent(
+                    theme: environment.theme,
+                    strings: environment.strings,
+                    link: link,
+                    copyAction: { [weak self] in
+                        self?.copyLink(fullLink)
+                    },
+                    shareAction: { [weak self] in
+                        self?.shareLink(fullLink)
+                    }
+                )
+            )))
+            let linkSectionSize = self.linkSection.update(
+                transition: transition,
+                component: AnyComponent(ListSectionComponent(
+                    theme: environment.theme,
+                    style: .glass,
+                    header: nil,
+                    footer: nil,
+                    items: linkSectionItems
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+            )
+            let linkSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: linkSectionSize)
+            if let linkSectionView = self.linkSection.view {
+                if linkSectionView.superview == nil {
+                    self.scrollView.addSubview(linkSectionView)
+                    self.linkSection.parentState = state
+                }
+                transition.setFrame(view: linkSectionView, frame: linkSectionFrame)
+                alphaTransition.setAlpha(view: linkSectionView, alpha: self.areSuggestionsEnabled && !address.isEmpty ? 1.0 : 0.0)
+            }
+            if self.areSuggestionsEnabled && !address.isEmpty {
+                contentHeight += switchSectionSize.height
+                contentHeight += sectionSpacing
             }
             
             contentHeight += bottomContentInset
@@ -545,4 +679,324 @@ public final class PostSuggestionsSettingsScreen: ViewControllerComponentContain
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
     }
+}
+
+
+private final class LinkContentComponent: Component {
+    let theme: PresentationTheme
+    let link: String
+    
+    init(
+        theme: PresentationTheme,
+        link: String
+    ) {
+        self.theme = theme
+        self.link = link
+    }
+
+    static func ==(lhs: LinkContentComponent, rhs: LinkContentComponent) -> Bool {
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.link != rhs.link {
+            return false
+        }
+        return true
+    }
+
+    final class View: UIView {
+        private var component: LinkContentComponent?
+        
+        private let background = ComponentView<Empty>()
+        private let link = ComponentView<Empty>()
+                
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        func update(component: LinkContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+            self.component = component
+                        
+            let padding: CGFloat = 10.0
+            
+            let backgroundSize = self.background.update(
+                transition: transition,
+                component: AnyComponent(
+                    FilledRoundedRectangleComponent(
+                        color: component.theme.list.itemInputField.backgroundColor,
+                        cornerRadius: .minEdge,
+                        smoothCorners: false
+                    )
+                ),
+                environment: {},
+                containerSize: availableSize
+            )
+            let backgroundFrame = CGRect(origin: .zero, size: backgroundSize)
+            if let backgroundView = self.background.view {
+                if backgroundView.superview == nil {
+                    self.addSubview(backgroundView)
+                }
+                transition.setFrame(view: backgroundView, frame: backgroundFrame)
+            }
+                        
+            let linkFont = Font.regular(17.0)
+            let linkSize = self.link.update(
+                transition: transition,
+                component: AnyComponent(
+                    MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: component.link, font: linkFont, textColor: component.theme.list.itemPrimaryTextColor)),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 2
+                    )
+                ),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - padding * 4.0, height: availableSize.height)
+            )
+            let linkFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - linkSize.width) / 2.0), y: floorToScreenPixels((availableSize.height - linkSize.height) / 2.0) - UIScreenPixel), size: linkSize)
+            if let linkView = self.link.view {
+                if linkView.superview == nil {
+                    self.addSubview(linkView)
+                }
+                transition.setFrame(view: linkView, frame: linkFrame)
+            }
+            
+            return availableSize
+        }
+    }
+
+    func makeView() -> View {
+        return View(frame: CGRect())
+    }
+
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
+private final class LinkComponent: Component {
+    let theme: PresentationTheme
+    let strings: PresentationStrings
+    let link: String
+    let copyAction: () -> Void
+    let shareAction: () -> Void
+    
+    init(
+        theme: PresentationTheme,
+        strings: PresentationStrings,
+        link: String,
+        copyAction: @escaping () -> Void,
+        shareAction: @escaping () -> Void
+    ) {
+        self.theme = theme
+        self.strings = strings
+        self.link = link
+        self.copyAction = copyAction
+        self.shareAction = shareAction
+    }
+    
+    static func ==(lhs: LinkComponent, rhs: LinkComponent) -> Bool {
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.strings !== rhs.strings {
+            return false
+        }
+        if lhs.link != rhs.link {
+            return false
+        }
+        return true
+    }
+    
+    final class View: UIView {
+        private let linkButton = ComponentView<Empty>()
+        private let moreButton = ComponentView<Empty>()
+        private var copyButton = ComponentView<Empty>()
+        private var shareButton = ComponentView<Empty>()
+                
+        private var component: LinkComponent?
+        private weak var state: EmptyComponentState?
+        
+        private var cachedMoreImage: (UIImage, PresentationTheme)?
+                
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        func update(component: LinkComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+            self.component = component
+            self.state = state
+            
+            let sideInset: CGFloat = 16.0
+            var contentHeight: CGFloat = sideInset
+      
+            let linkButtonSize = self.linkButton.update(
+                transition: transition,
+                component: AnyComponent(
+                    PlainButtonComponent(
+                        content: AnyComponent(LinkContentComponent(theme: component.theme, link: component.link)),
+                        action: { [weak self] in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            component.copyAction()
+                        },
+                        animateScale: false
+                    )
+                ),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 52.0)
+            )
+            let linkButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: linkButtonSize)
+            if let linkButtonView = self.linkButton.view {
+                if linkButtonView.superview == nil {
+                    self.addSubview(linkButtonView)
+                }
+                linkButtonView.frame = linkButtonFrame
+            }
+            
+            let moreButtonImage: UIImage
+            if let (image, theme) = self.cachedMoreImage, theme === component.theme {
+                moreButtonImage = image
+            } else {
+                moreButtonImage = actionButtonImage(color: component.theme.list.itemInputField.controlColor)!
+                self.cachedMoreImage = (moreButtonImage, component.theme)
+            }
+            
+            let moreButtonSize = self.moreButton.update(
+                transition: transition,
+                component: AnyComponent(
+                    PlainButtonComponent(
+                        content: AnyComponent(Image(image: moreButtonImage, contentMode: .center)),
+                        minSize: CGSize(width: 52.0, height: 52.0),
+                        action: { [weak self] in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            component.copyAction()
+                        },
+                        animateScale: false
+                    )
+                ),
+                environment: {},
+                containerSize: CGSize(width: 52.0, height: 52.0)
+            )
+            let moreButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - sideInset - moreButtonSize.width, y: contentHeight), size: moreButtonSize)
+            if let moreButtonView = self.moreButton.view {
+                if moreButtonView.superview == nil {
+                    self.addSubview(moreButtonView)
+                }
+                moreButtonView.frame = moreButtonFrame
+            }
+            
+            contentHeight += linkButtonSize.height
+            contentHeight += 10.0
+            
+            var buttonWidth = availableSize.width - sideInset * 2.0
+            buttonWidth = (buttonWidth - 10.0) / 2.0
+            
+            let copyButtonSize = self.copyButton.update(
+                transition: transition,
+                component: AnyComponent(ButtonComponent(
+                    background: ButtonComponent.Background(
+                        style: .glass,
+                        color: component.theme.list.itemCheckColors.fillColor,
+                        foreground: component.theme.list.itemCheckColors.foregroundColor,
+                        pressedColor: component.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.8)
+                    ),
+                    content: AnyComponentWithIdentity(id: "label", component: AnyComponent(Text(text: component.strings.FolderLinkScreen_LinkActionCopy, font: Font.semibold(17.0), color: component.theme.list.itemCheckColors.foregroundColor))),
+                    action: { [weak self] in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        component.copyAction()
+                    }
+                )),
+                environment: {},
+                containerSize: CGSize(width: buttonWidth, height: 52.0)
+            )
+            let copyButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: copyButtonSize)
+            if let copyButtonView = self.copyButton.view {
+                if copyButtonView.superview == nil {
+                    self.addSubview(copyButtonView)
+                }
+                copyButtonView.frame = copyButtonFrame
+            }
+            
+            let shareButtonSize = self.shareButton.update(
+                transition: transition,
+                component: AnyComponent(ButtonComponent(
+                    background: ButtonComponent.Background(
+                        style: .glass,
+                        color: component.theme.list.itemCheckColors.fillColor,
+                        foreground: component.theme.list.itemCheckColors.foregroundColor,
+                        pressedColor: component.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.8)
+                    ),
+                    content: AnyComponentWithIdentity(id: "label", component: AnyComponent(Text(text: component.strings.FolderLinkScreen_LinkActionShare, font: Font.semibold(17.0), color: component.theme.list.itemCheckColors.foregroundColor))),
+                    action: { [weak self] in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        component.shareAction()
+                    }
+                )),
+                environment: {},
+                containerSize: CGSize(width: buttonWidth, height: 52.0)
+            )
+            let shareButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - sideInset - shareButtonSize.width, y: contentHeight), size: shareButtonSize)
+            if let shareButtonView = self.shareButton.view {
+                if shareButtonView.superview == nil {
+                    self.addSubview(shareButtonView)
+                }
+                shareButtonView.frame = shareButtonFrame
+            }
+                
+            contentHeight += copyButtonSize.height
+            contentHeight += sideInset
+            
+            return CGSize(width: availableSize.width, height: contentHeight)
+        }
+    }
+    
+    func makeView() -> View {
+        return View(frame: CGRect())
+    }
+    
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
+func stringForRemainingTime(_ duration: Int32) -> String {
+    let hours = duration / 3600
+    let minutes = duration / 60 % 60
+    let seconds = duration % 60
+    let durationString: String
+    if hours > 0 {
+        durationString = String(format: "%d:%02d", hours, minutes)
+    } else {
+        durationString = String(format: "%02d:%02d", minutes, seconds)
+    }
+    return durationString
+}
+
+private func actionButtonImage(color: UIColor) -> UIImage? {
+    return generateImage(CGSize(width: 24.0, height: 24.0), contextGenerator: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        context.setFillColor(color.cgColor)
+        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+        
+        context.setBlendMode(.clear)
+        context.fillEllipse(in: CGRect(origin: CGPoint(x: 4.0, y: 10.0), size: CGSize(width: 4.0, height: 4.0)))
+        context.fillEllipse(in: CGRect(origin: CGPoint(x: 10.0, y: 10.0), size: CGSize(width: 4.0, height: 4.0)))
+        context.fillEllipse(in: CGRect(origin: CGPoint(x: 16.0, y: 10.0), size: CGSize(width: 4.0, height: 4.0)))
+    })
 }

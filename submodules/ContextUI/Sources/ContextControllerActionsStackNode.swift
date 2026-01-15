@@ -346,6 +346,7 @@ public final class ContextControllerActionsListActionItemNode: HighlightTracking
         }
         
         let titleColor: UIColor
+        let linkColor = presentationData.theme.list.itemAccentColor
         switch self.item.textColor {
         case .primary:
             titleColor = presentationData.theme.contextMenu.primaryColor
@@ -365,6 +366,8 @@ public final class ContextControllerActionsListActionItemNode: HighlightTracking
                         return ChatTextInputStateTextAttribute(type: .bold, range: entity.range)
                     } else if case .Italic = entity.type {
                         return ChatTextInputStateTextAttribute(type: .italic, range: entity.range)
+                    } else if case .Url = entity.type {
+                        return ChatTextInputStateTextAttribute(type: .textUrl(""), range: entity.range)
                     }
                     return nil
                 })
@@ -375,9 +378,12 @@ public final class ContextControllerActionsListActionItemNode: HighlightTracking
                 ], range: NSRange(location: 0, length: result.length))
                 for attribute in inputStateText.attributes {
                     if case .bold = attribute.type {
-                        result.addAttribute(NSAttributedString.Key.font, value: Font.semibold(presentationData.listsFontSize.baseDisplaySize), range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
+                        result.addAttribute(NSAttributedString.Key.font, value: titleBoldFont, range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
                     } else if case .italic = attribute.type {
                         result.addAttribute(NSAttributedString.Key.font, value: Font.semibold(15.0), range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
+                    } else if case .textUrl = attribute.type {
+                        result.addAttribute(NSAttributedString.Key.foregroundColor, value: linkColor, range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
+                        result.addAttribute(NSAttributedString.Key.font, value: titleBoldFont, range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
                     }
                 }
                 attributedText = result

@@ -104,7 +104,7 @@ extension Api.MessageMedia {
 extension Api.Message {
     var rawId: Int32 {
         switch self {
-        case let .message(_, _, id, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+        case let .message(_, _, id, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
                 return id
             case let .messageEmpty(_, id, _):
                 return id
@@ -115,7 +115,7 @@ extension Api.Message {
     
     func id(namespace: MessageId.Namespace = Namespaces.Message.Cloud) -> MessageId? {
         switch self {
-            case let .message(_, flags2, id, _, _, messagePeerId, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+            case let .message(_, flags2, id, _, _, messagePeerId, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
                 var namespace = namespace
                 if (flags2 & (1 << 4)) != 0 {
                     namespace = Namespaces.Message.ScheduledCloud
@@ -136,7 +136,7 @@ extension Api.Message {
     
     var peerId: PeerId? {
         switch self {
-        case let .message(_, _, _, _, _, messagePeerId, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+        case let .message(_, _, _, _, _, messagePeerId, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
             let peerId: PeerId = messagePeerId.peerId
             return peerId
         case let .messageEmpty(_, _, peerId):
@@ -149,7 +149,7 @@ extension Api.Message {
 
     var timestamp: Int32? {
         switch self {
-            case let .message(_, _, _, _, _, _, _, _, _, _, _, date, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+            case let .message(_, _, _, _, _, _, _, _, _, _, _, date, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
                 return date
             case let .messageService(_, _, _, _, _, _, date, _, _, _):
                 return date
@@ -160,7 +160,7 @@ extension Api.Message {
     
     var preCachedResources: [(MediaResource, Data)]? {
         switch self {
-        case let .message(_, _, _, _, _, _, _, _, _, _, _, _, _, media, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+        case let .message(_, _, _, _, _, _, _, _, _, _, _, _, _, media, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
             return media?.preCachedResources
         default:
             return nil
@@ -169,7 +169,7 @@ extension Api.Message {
     
     var preCachedStories: [StoryId: Api.StoryItem]? {
         switch self {
-        case let .message(_, _, _, _, _, _, _, _, _, _, _, _, _, media, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+        case let .message(_, _, _, _, _, _, _, _, _, _, _, _, _, media, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
             return media?.preCachedStories
         default:
             return nil

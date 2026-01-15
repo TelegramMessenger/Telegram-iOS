@@ -1283,7 +1283,6 @@ private final class ChatListFilterPresetController: ItemListController {
                 pendingUnpinnedAllMessages: false,
                 activeGroupCallInfo: nil,
                 hasActiveGroupCall: false,
-                importState: nil,
                 threadData: nil,
                 isGeneralThreadClosed: nil,
                 replyMessage: nil,
@@ -1753,14 +1752,14 @@ func chatListFilterPresetController(context: AccountContext, currentPreset initi
             if initialPreset == nil {
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 let text = presentationData.strings.ChatListFilter_AlertCreateFolderBeforeSharingText
-                presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
             } else {
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 
                 let state = stateValue.with({ $0 })
                 if state.additionallyIncludePeers.isEmpty {
                     let text = presentationData.strings.ChatListFilter_ErrorShareInvalidFolder
-                    presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                    presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                     
                     return
                 }
@@ -1785,7 +1784,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset initi
                                 statusController?.dismiss()
                                 
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: unavailableText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                presentControllerImpl?(textAlertController(context: context, title: nil, text: unavailableText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 
                                 return
                             }
@@ -2360,7 +2359,7 @@ func openCreateChatListFolderLink(context: AccountContext, folderId: Int32, chec
                     case .someUserTooManyChannels:
                         text = presentationData.strings.ChatListFilter_CreateLinkErrorSomeoneHasChannelLimit
                     }
-                    presentController(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]))
+                    presentController(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]))
                 })
             }
         })

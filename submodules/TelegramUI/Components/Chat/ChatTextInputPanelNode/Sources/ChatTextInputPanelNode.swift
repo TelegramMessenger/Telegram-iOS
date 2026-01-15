@@ -703,7 +703,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         self.sendActionButtons.micButtonBackgroundView.alpha = 0.0
         self.sendActionButtons.micButton.alpha = 0.0
         self.sendActionButtons.micButtonTintMaskView.alpha = 0.0
-        self.sendActionButtons.expandMediaInputButton.alpha = 0.0
+        self.sendActionButtons.expandMediaInputButtonBackgroundView.alpha = 0.0
         
         self.mediaActionButtons = ChatTextInputActionButtonsNode(context: context, presentationInterfaceState: presentationInterfaceState, presentationContext: presentationContext, presentController: presentController)
         self.mediaActionButtons.sendContainerNode.alpha = 0.0
@@ -811,11 +811,9 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                 if highlighted {
                     self.attachmentButtonIcon.layer.removeAnimation(forKey: "opacity")
                     self.attachmentButtonIcon.alpha = 0.4
-                    self.attachmentButtonIcon.layer.allowsGroupOpacity = true
                 } else {
                     self.attachmentButtonIcon.alpha = 1.0
                     self.attachmentButtonIcon.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
-                    self.attachmentButtonIcon.layer.allowsGroupOpacity = false
                 }
             }
         }
@@ -901,7 +899,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         self.mediaActionButtons.updateAccessibility()
         
         self.mediaActionButtons.expandMediaInputButton.addTarget(self, action: #selector(self.expandButtonPressed), for: .touchUpInside)
-        self.mediaActionButtons.expandMediaInputButton.alpha = 0.0
+        self.mediaActionButtons.expandMediaInputButtonBackgroundView.alpha = 0.0
         
         self.searchLayoutClearButton.highligthedChanged = { [weak self] highlighted in
             guard let self else {
@@ -1174,6 +1172,9 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         self.touchDownGestureRecognizer = recognizer
         
         textInputNode.textView.accessibilityHint = self.textPlaceholderNode.attributedText?.string
+        
+        self.isAccessibilityContainer = true
+        self.accessibilityElements = [textInputNode.textView]
     }
     
     private func textFieldMaxHeight(_ maxHeight: CGFloat, metrics: LayoutMetrics, bottomInset: CGFloat) -> CGFloat {
@@ -2437,8 +2438,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                 self.attachmentButtonBackground.contentView.addSubview(dotAnimationView)
                 dotAnimationView.frame = dotAnimationSize.centered(in: self.attachmentButtonBackground.contentView.bounds)
                 
-                self.attachmentButtonIcon.layer.opacity = 0.0
-                self.attachmentButtonIcon.layer.transform = CATransform3DMakeScale(0.001, 0.001, 1.0)
+                self.attachmentButtonIcon.isHidden = true
                 dotAnimationView.playOnce(completion: { [weak self, weak dotAnimationView] in
                     guard let self else {
                         return
@@ -2453,8 +2453,9 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                         transition.setScale(view: dotAnimationView, scale: 0.001)
                     }
                     
-                    transition.setAlpha(view: self.attachmentButtonIcon, alpha: 1.0)
-                    transition.setScale(view: self.attachmentButtonIcon, scale: 1.0)
+                    self.attachmentButtonIcon.isHidden = false
+                    transition.animateAlpha(view: self.attachmentButtonIcon, from: 0.0, to: 1.0)
+                    transition.animateScale(view: self.attachmentButtonIcon, from: 0.001, to: 1.0)
                 })
             }
         }
@@ -2692,8 +2693,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                         
                         transition.updatePosition(layer: dotAnimationView.layer, position: self.attachmentButtonBackground.contentView.bounds.center)
                         
-                        self.attachmentButtonIcon.layer.opacity = 0.0
-                        self.attachmentButtonIcon.layer.transform = CATransform3DMakeScale(0.001, 0.001, 1.0)
+                        self.attachmentButtonIcon.isHidden = true
                         dotAnimationView.playOnce(completion: { [weak self, weak dotAnimationView] in
                             guard let self else {
                                 return
@@ -2708,8 +2708,9 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                                 transition.setScale(view: dotAnimationView, scale: 0.001)
                             }
                             
-                            transition.setAlpha(view: self.attachmentButtonIcon, alpha: 1.0)
-                            transition.setScale(view: self.attachmentButtonIcon, scale: 1.0)
+                            self.attachmentButtonIcon.isHidden = false
+                            transition.animateAlpha(view: self.attachmentButtonIcon, from: 0.0, to: 1.0)
+                            transition.animateScale(view: self.attachmentButtonIcon, from: 0.001, to: 1.0)
                         })
                     }
                 } else {
@@ -4463,15 +4464,15 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         }
         
         if mediaInputIsActive && !hideExpandMediaInput {
-            if self.mediaActionButtons.expandMediaInputButton.alpha.isZero {
-                self.mediaActionButtons.expandMediaInputButton.alpha = 1.0
+            if self.mediaActionButtons.expandMediaInputButtonBackgroundView.alpha.isZero {
+                self.mediaActionButtons.expandMediaInputButtonBackgroundView.alpha = 1.0
                 if alphaTransition.isAnimated {
-                    self.mediaActionButtons.expandMediaInputButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    self.mediaActionButtons.expandMediaInputButtonBackgroundView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 }
             }
         } else {
-            if !self.mediaActionButtons.expandMediaInputButton.alpha.isZero {
-                alphaTransition.updateAlpha(layer: self.mediaActionButtons.expandMediaInputButton.layer, alpha: 0.0)
+            if !self.mediaActionButtons.expandMediaInputButtonBackgroundView.alpha.isZero {
+                alphaTransition.updateAlpha(layer: self.mediaActionButtons.expandMediaInputButtonBackgroundView.layer, alpha: 0.0)
             }
         }
         

@@ -1211,8 +1211,7 @@ private final class AdminUserActionsSheetComponent: Component {
                                 return
                             }
                             if !isEnabled {
-                                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                                self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: environment.strings.GroupPermission_PermissionDisabledByDefault, actions: [
+                                self.environment?.controller()?.present(textAlertController(context: component.context, title: nil, text: environment.strings.GroupPermission_PermissionDisabledByDefault, actions: [
                                     TextAlertAction(type: .defaultAction, title: environment.strings.Common_OK, action: {
                                     })
                                 ]), in: .window(.root))

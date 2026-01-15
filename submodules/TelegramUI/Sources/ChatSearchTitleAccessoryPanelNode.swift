@@ -17,6 +17,7 @@ import ContextUI
 import PromptUI
 import BundleIconComponent
 import SavedTagNameAlertController
+import LegacyChatHeaderPanelComponent
 
 private let backgroundTagImage: UIImage? = {
     if let image = UIImage(bundleImageName: "Chat/Title Panels/SearchTagTab") {
@@ -557,7 +558,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
             self.update(params: params, transition: transition)
         }
         
-        let panelHeight: CGFloat = 39.0
+        let panelHeight: CGFloat = 40.0
         
         return LayoutResult(backgroundHeight: panelHeight, insetHeight: panelHeight, hitTestSlop: 0.0)
     }
@@ -567,7 +568,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
     }
     
     private func update(params: Params, transition: ContainedViewLayoutTransition) {
-        let panelHeight: CGFloat = 39.0
+        let panelHeight: CGFloat = 40.0
         
         let containerInsets = UIEdgeInsets(top: 0.0, left: params.leftInset + 16.0, bottom: 0.0, right: params.rightInset + 16.0)
         let itemSpacing: CGFloat = 24.0
@@ -598,7 +599,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
             }
             
             let itemSize = promoView.update(theme: params.interfaceState.theme, strings: params.interfaceState.strings, height: panelHeight, isUnlock: !self.items.isEmpty, transition: .immediate)
-            let itemFrame = CGRect(origin: CGPoint(x: contentSize.width, y: -5.0), size: itemSize)
+            let itemFrame = CGRect(origin: CGPoint(x: contentSize.width, y: 0.0), size: itemSize)
             
             itemTransition.updatePosition(layer: promoView.layer, position: itemFrame.center)
             promoView.bounds = CGRect(origin: CGPoint(), size: itemFrame.size)
@@ -704,7 +705,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
                 }
             }
             let itemSize = itemView.update(item: item, isSelected: isSelected, isLocked: !params.interfaceState.isPremium, theme: params.interfaceState.theme, height: panelHeight, transition: .immediate)
-            let itemFrame = CGRect(origin: CGPoint(x: contentSize.width, y: -5.0), size: itemSize)
+            let itemFrame = CGRect(origin: CGPoint(x: contentSize.width, y: 0.0), size: itemSize)
             
             itemTransition.updatePosition(layer: itemView.layer, position: itemFrame.center)
             itemTransition.updateBounds(layer: itemView.layer, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))

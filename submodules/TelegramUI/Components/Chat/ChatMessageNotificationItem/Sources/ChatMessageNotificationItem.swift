@@ -381,11 +381,11 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         var applyImage: (() -> Void)?
         if let imageDimensions = imageDimensions {
             let boundingSize = CGSize(width: 55.0, height: 55.0)
-            var radius: CGFloat = 6.0
+            var radius: CGFloat = 20.0
             if isRound {
                 radius = floor(boundingSize.width / 2.0)
             }
-            applyImage = imageNodeLayout(TransformImageArguments(corners: ImageCorners(radius: radius), imageSize: imageDimensions.aspectFilled(boundingSize), boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets()))
+            applyImage = imageNodeLayout(TransformImageArguments(corners: ImageCorners(radius: radius, curve: isRound ? .circular : .continuous), imageSize: imageDimensions.aspectFilled(boundingSize), boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets()))
         }
         
         var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
@@ -424,16 +424,16 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         let compact = self.compact ?? false
         
         let panelHeight: CGFloat = compact ? 64.0 : 74.0
-        let imageSize: CGSize = compact ? CGSize(width: 44.0, height: 44.0) : CGSize(width: 54.0, height: 54.0)
-        let imageSpacing: CGFloat = compact ? 19.0 : 23.0
+        let imageSize: CGSize = compact ? CGSize(width: 40.0, height: 40.0) : CGSize(width: 54.0, height: 54.0)
+        let imageSpacing: CGFloat = compact ? 22.0 : 23.0
         let leftInset: CGFloat = imageSize.width + imageSpacing
-        var rightInset: CGFloat = 8.0
+        var rightInset: CGFloat = 10.0
         
         if !self.imageNode.isHidden {
-            rightInset += imageSize.width + 8.0
+            rightInset += imageSize.width + 10.0
         }
         
-        transition.updateFrame(node: self.avatarNode, frame: CGRect(origin: CGPoint(x: 10.0, y: (panelHeight - imageSize.height) / 2.0), size: imageSize))
+        transition.updateFrame(node: self.avatarNode, frame: CGRect(origin: CGPoint(x: 12.0, y: (panelHeight - imageSize.height) / 2.0), size: imageSize))
         
         var titleInset: CGFloat = 0.0
         if let image = self.titleIconNode.image {
@@ -465,7 +465,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                 
         let textSpacing: CGFloat = 1.0
         
-        let titleFrame = CGRect(origin: CGPoint(x: leftInset + titleInset, y: 1.0 + floor((panelHeight - textLayout.size.height - titleLayout.size.height - textSpacing) / 2.0)), size: titleLayout.size)
+        let titleFrame = CGRect(origin: CGPoint(x: leftInset + titleInset, y: floor((panelHeight - textLayout.size.height - titleLayout.size.height - textSpacing) / 2.0)), size: titleLayout.size)
         transition.updateFrame(node: self.titleNode, frame: titleFrame)
         
         if let image = self.titleIconNode.image {
@@ -475,7 +475,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         let textFrame = CGRect(origin: CGPoint(x: leftInset, y: titleFrame.maxY + textSpacing), size: textLayout.size)
         transition.updateFrame(node: self.textNode.textNode, frame: textFrame)
         
-        transition.updateFrame(node: self.imageNode, frame: CGRect(origin: CGPoint(x: width - 10.0 - imageSize.width, y: (panelHeight - imageSize.height) / 2.0), size: imageSize))
+        transition.updateFrame(node: self.imageNode, frame: CGRect(origin: CGPoint(x: width - 12.0 - imageSize.width, y: (panelHeight - imageSize.height) / 2.0), size: imageSize))
         
         if !textLayout.spoilers.isEmpty, let item = self.item {
             let presentationData = item.context.sharedContext.currentPresentationData.with({ $0 })

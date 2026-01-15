@@ -66,7 +66,7 @@ final class ListMessageHoleItemNode: ListViewItemNode {
     private var activityIndicator: UIActivityIndicatorView?
     
     init() {
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
     }
     
     override func didLoad() {

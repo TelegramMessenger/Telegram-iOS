@@ -181,7 +181,7 @@ public class InfoItemNode: ListViewItemNode {
         self.closeButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
         self.closeButton.displaysAsynchronously = false
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.badgeNode)
         self.addSubnode(self.labelNode)

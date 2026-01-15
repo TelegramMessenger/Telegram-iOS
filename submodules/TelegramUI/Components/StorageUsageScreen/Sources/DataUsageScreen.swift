@@ -24,22 +24,26 @@ import GalleryData
 import AnimatedTextComponent
 import TelegramUIPreferences
 import SegmentControlComponent
+import GlassBackgroundComponent
 
 final class DataUsageScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let overNavigationContainer: UIView
     let statsSet: StatsSet
     let mediaAutoDownloadSettings: MediaAutoDownloadSettings
     let makeAutodownloadSettingsController: (Bool) -> ViewController
     
     init(
         context: AccountContext,
+        overNavigationContainer: UIView,
         statsSet: StatsSet,
         mediaAutoDownloadSettings: MediaAutoDownloadSettings,
         makeAutodownloadSettingsController: @escaping (Bool) -> ViewController
     ) {
         self.context = context
+        self.overNavigationContainer = overNavigationContainer
         self.statsSet = statsSet
         self.mediaAutoDownloadSettings = mediaAutoDownloadSettings
         self.makeAutodownloadSettingsController = makeAutodownloadSettingsController
@@ -313,12 +317,9 @@ final class DataUsageScreenComponent: Component {
         private var mediaAutoDownloadSettings: MediaAutoDownloadSettings = .defaultSettings
         private var mediaAutoDownloadSettingsDisposable: Disposable?
         
-        private let navigationBackgroundView: BlurredBackgroundView
-        private let navigationSeparatorLayer: SimpleLayer
-        private let navigationSeparatorLayerContainer: SimpleLayer
-        
         private let headerView = ComponentView<Empty>()
         private let headerOffsetContainer: HeaderContainer
+        private let headerContentContainer: HeaderContainer
         private let headerDescriptionView = ComponentView<Empty>()
         
         private var doneLabel: ComponentView<Empty>?
@@ -356,14 +357,7 @@ final class DataUsageScreenComponent: Component {
         
         override init(frame: CGRect) {
             self.headerOffsetContainer = HeaderContainer()
-            
-            self.navigationBackgroundView = BlurredBackgroundView(color: nil, enableBlur: true)
-            self.navigationBackgroundView.alpha = 0.0
-            
-            self.navigationSeparatorLayer = SimpleLayer()
-            self.navigationSeparatorLayer.opacity = 1.0
-            self.navigationSeparatorLayerContainer = SimpleLayer()
-            self.navigationSeparatorLayerContainer.opacity = 0.0
+            self.headerContentContainer = HeaderContainer()
             
             self.scrollContainerView = UIView()
             
@@ -396,12 +390,7 @@ final class DataUsageScreenComponent: Component {
             
             self.scrollContainerView.addSubview(self.autoDownloadSettingsContainerView)
             
-            self.addSubview(self.navigationBackgroundView)
-            
-            self.navigationSeparatorLayerContainer.addSublayer(self.navigationSeparatorLayer)
-            self.layer.addSublayer(self.navigationSeparatorLayerContainer)
-            
-            self.addSubview(self.headerOffsetContainer)
+            self.headerOffsetContainer.addSubview(self.headerContentContainer)
         }
         
         required init?(coder: NSCoder) {
@@ -447,41 +436,19 @@ final class DataUsageScreenComponent: Component {
                 headerOffset = min(headerOffset, minOffset)
                 
                 let animatedTransition = ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut))
-                let navigationBackgroundAlpha: CGFloat = abs(headerOffset - minOffset) < 4.0 ? 1.0 : 0.0
                 
                 let navigationButtonAlpha: CGFloat = scrollBounds.minY >= navigationMetrics.navigationHeight ? 0.0 : 1.0
                 
-                animatedTransition.setAlpha(view: self.navigationBackgroundView, alpha: navigationBackgroundAlpha)
-                animatedTransition.setAlpha(layer: self.navigationSeparatorLayerContainer, alpha: navigationBackgroundAlpha)
-                
-                /*let expansionDistance: CGFloat = 32.0
-                var expansionDistanceFactor: CGFloat = abs(scrollBounds.maxY - self.scrollView.contentSize.height) / expansionDistance
-                expansionDistanceFactor = max(0.0, min(1.0, expansionDistanceFactor))
-                
-                transition.setAlpha(layer: self.navigationSeparatorLayer, alpha: expansionDistanceFactor)*/
-                
-                /*var offsetFraction: CGFloat = abs(headerOffset - minOffset) / 60.0
-                offsetFraction = min(1.0, max(0.0, offsetFraction))
-                transition.setScale(view: headerView, scale: 1.0 * offsetFraction + 0.8 * (1.0 - offsetFraction))*/
-                
                 transition.setBounds(view: self.headerOffsetContainer, bounds: CGRect(origin: CGPoint(x: 0.0, y: headerOffset), size: self.headerOffsetContainer.bounds.size))
+                
+                let headerContentsAlpha: CGFloat
+                let offsetFraction = abs(headerOffset - minOffset) / 60.0
+                headerContentsAlpha = min(1.0, max(0.0, offsetFraction))
+                
+                transition.setAlpha(view: self.headerContentContainer, alpha: headerContentsAlpha)
                 
                 if let controller = self.controller?(), let backButtonNode = controller.navigationBar?.backButtonNode {
                     backButtonNode.updateManualAlpha(alpha: navigationButtonAlpha, transition: animatedTransition.containedViewLayoutTransition)
-                    
-                    /*if backButtonNode.alpha != navigationButtonAlpha {
-                        if backButtonNode.isHidden {
-                            backButtonNode.alpha = 0.0
-                            backButtonNode.isHidden = false
-                        }
-                        animatedTransition.setAlpha(layer: backButtonNode.layer, alpha: navigationButtonAlpha, completion: { [weak backButtonNode] completed in
-                            if let backButtonNode, completed {
-                                if navigationButtonAlpha.isZero {
-                                    backButtonNode.isHidden = true
-                                }
-                            }
-                        })
-                    }*/
                 }
             }
         }
@@ -539,17 +506,9 @@ final class DataUsageScreenComponent: Component {
             
             self.navigationMetrics = (environment.navigationHeight, environment.statusBarHeight)
             
-            self.navigationSeparatorLayer.backgroundColor = environment.theme.rootController.navigationBar.separatorColor.cgColor
-            
-            let navigationFrame = CGRect(origin: CGPoint(), size: CGSize(width: availableSize.width, height: environment.navigationHeight))
-            self.navigationBackgroundView.updateColor(color: environment.theme.rootController.navigationBar.blurredBackgroundColor, transition: .immediate)
-            self.navigationBackgroundView.update(size: navigationFrame.size, transition: transition.containedViewLayoutTransition)
-            transition.setFrame(view: self.navigationBackgroundView, frame: navigationFrame)
-            
-            let navigationSeparatorFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationFrame.maxY), size: CGSize(width: availableSize.width, height: UIScreenPixel))
-            
-            transition.setFrame(layer: self.navigationSeparatorLayerContainer, frame: navigationSeparatorFrame)
-            transition.setFrame(layer: self.navigationSeparatorLayer, frame: CGRect(origin: CGPoint(), size: navigationSeparatorFrame.size))
+            if self.headerOffsetContainer.superview == nil {
+                component.overNavigationContainer.addSubview(self.headerOffsetContainer)
+            }
             
             self.backgroundColor = environment.theme.list.blocksBackgroundColor
             
@@ -709,7 +668,7 @@ final class DataUsageScreenComponent: Component {
             let pieChartFrame = CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: pieChartSize)
             if let pieChartComponentView = self.pieChartView.view {
                 if pieChartComponentView.superview == nil {
-                    self.scrollView.addSubview(pieChartComponentView)
+                    self.headerContentContainer.addSubview(pieChartComponentView)
                 }
                 
                 pieChartTransition.setFrame(view: pieChartComponentView, frame: pieChartFrame)
@@ -740,7 +699,7 @@ final class DataUsageScreenComponent: Component {
                 if let doneLabelView = doneLabel.view {
                     var animateIn = false
                     if doneLabelView.superview == nil {
-                        self.scrollView.addSubview(doneLabelView)
+                        self.headerContentContainer.addSubview(doneLabelView)
                         animateIn = true
                     }
                     doneLabelTransition.setFrame(view: doneLabelView, frame: doneLabelFrame)
@@ -755,7 +714,7 @@ final class DataUsageScreenComponent: Component {
                 if let doneSupLabelView = doneSupLabel.view {
                     var animateIn = false
                     if doneSupLabelView.superview == nil {
-                        self.scrollView.addSubview(doneSupLabelView)
+                        self.headerContentContainer.addSubview(doneSupLabelView)
                         animateIn = true
                     }
                     doneLabelTransition.setFrame(view: doneSupLabelView, frame: doneSupLabelFrame)
@@ -796,7 +755,7 @@ final class DataUsageScreenComponent: Component {
             let headerViewFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - headerViewSize.width) / 2.0), y: contentHeight), size: headerViewSize)
             if let headerComponentView = self.headerView.view {
                 if headerComponentView.superview == nil {
-                    self.scrollContainerView.addSubview(headerComponentView)
+                    self.headerOffsetContainer.addSubview(headerComponentView)
                 }
                 transition.setPosition(view: headerComponentView, position: headerViewFrame.center)
                 headerComponentView.bounds = CGRect(origin: CGPoint(), size: headerViewFrame.size)
@@ -838,7 +797,7 @@ final class DataUsageScreenComponent: Component {
             let headerDescriptionFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - headerDescriptionSize.width) / 2.0), y: contentHeight), size: headerDescriptionSize)
             if let headerDescriptionComponentView = self.headerDescriptionView.view {
                 if headerDescriptionComponentView.superview == nil {
-                    self.scrollContainerView.addSubview(headerDescriptionComponentView)
+                    self.headerContentContainer.addSubview(headerDescriptionComponentView)
                 }
                 transition.setPosition(view: headerDescriptionComponentView, position: headerDescriptionFrame.center)
                 headerDescriptionComponentView.bounds = CGRect(origin: CGPoint(), size: headerDescriptionFrame.size)
@@ -892,7 +851,7 @@ final class DataUsageScreenComponent: Component {
                 )
                 if let chartTotalLabelView = self.chartTotalLabel.view {
                     if chartTotalLabelView.superview == nil {
-                        self.scrollContainerView.addSubview(chartTotalLabelView)
+                        self.headerContentContainer.addSubview(chartTotalLabelView)
                     }
                     
                     let chartAreaHeight: CGFloat
@@ -926,7 +885,7 @@ final class DataUsageScreenComponent: Component {
                         self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(value: .modeChanged)))
                     })),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
+                containerSize: CGSize(width: availableSize.width - (environment.safeInsets.left + 16.0 + 44.0 + 10.0) * 2.0, height: 100.0)
             )
             let segmentedControlFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - segmentedSize.width) * 0.5), y: contentHeight), size: segmentedSize)
             if let segmentedControlComponentView = self.segmentedControlView.view {
@@ -1252,6 +1211,8 @@ final class DataUsageScreenComponent: Component {
 public final class DataUsageScreen: ViewControllerComponentContainer {
     private let context: AccountContext
     
+    private let overNavigationContainer: UIView
+    
     private let readyValue = Promise<Bool>()
     override public var ready: Promise<Bool> {
         return self.readyValue
@@ -1260,8 +1221,14 @@ public final class DataUsageScreen: ViewControllerComponentContainer {
     public init(context: AccountContext, stats: NetworkUsageStats, mediaAutoDownloadSettings: MediaAutoDownloadSettings, makeAutodownloadSettingsController: @escaping (Bool) -> ViewController) {
         self.context = context
         
+        self.overNavigationContainer = SparseContainerView()
+        
         //let componentReady = Promise<Bool>()
-        super.init(context: context, component: DataUsageScreenComponent(context: context, statsSet: DataUsageScreenComponent.StatsSet(stats: stats), mediaAutoDownloadSettings: mediaAutoDownloadSettings, makeAutodownloadSettingsController: makeAutodownloadSettingsController), navigationBarAppearance: .transparent)
+        super.init(context: context, component: DataUsageScreenComponent(context: context, overNavigationContainer: self.overNavigationContainer, statsSet: DataUsageScreenComponent.StatsSet(stats: stats), mediaAutoDownloadSettings: mediaAutoDownloadSettings, makeAutodownloadSettingsController: makeAutodownloadSettingsController), navigationBarAppearance: .default)
+        
+        if let navigationBar = self.navigationBar {
+            navigationBar.customOverBackgroundContentView.insertSubview(self.overNavigationContainer, at: 0)
+        }
         
         //self.readyValue.set(componentReady.get() |> timeout(0.3, queue: .mainQueue(), alternate: .single(true)))
         self.readyValue.set(.single(true))

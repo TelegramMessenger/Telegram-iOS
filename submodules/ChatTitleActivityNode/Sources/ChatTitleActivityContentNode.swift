@@ -110,7 +110,7 @@ public class ChatTitleActivityContentNode: ASDisplayNode {
         })
         
         if case .slide = style {
-            self.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: 14.0), duration: transitionDuration, additive: true)
+            self.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: 4.0), duration: transitionDuration, additive: true)
         }
     }
         
@@ -118,7 +118,7 @@ public class ChatTitleActivityContentNode: ASDisplayNode {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: transitionDuration)
         
         if case .slide = style {
-            self.layer.animatePosition(from: CGPoint(x: 0.0, y: -14.0), to: CGPoint(), duration: transitionDuration, additive: true)
+            self.layer.animatePosition(from: CGPoint(x: 0.0, y: -4.0), to: CGPoint(), duration: transitionDuration, additive: true)
         }
     }
     

@@ -508,7 +508,7 @@ public final class MediaStreamComponent: CombinedComponent {
                             let title: String = presentationData.strings.LiveStream_EditTitle
                             let text: String = presentationData.strings.LiveStream_EditTitleText
                             
-                            let editController = voiceChatTitleEditController(sharedContext: call.accountContext.sharedContext, account: call.accountContext.account, forceTheme: defaultDarkPresentationTheme, title: title, text: text, placeholder: EnginePeer(chatPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), value: initialTitle, maxLength: 40, apply: { [weak call] title in
+                            let editController = voiceChatTitleEditController(context: call.accountContext, forceTheme: defaultDarkPresentationTheme, title: title, text: text, placeholder: EnginePeer(chatPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), value: initialTitle, maxLength: 40, apply: { [weak call] title in
                                 guard let call = call else {
                                     return
                                 }
@@ -574,7 +574,7 @@ public final class MediaStreamComponent: CombinedComponent {
                                 title = presentationData.strings.LiveStream_StartRecordingTitle
                                 text = presentationData.strings.LiveStream_StartRecordingTextVideo
                                 
-                                let editController = voiceChatTitleEditController(sharedContext: call.accountContext.sharedContext, account: call.accountContext.account, forceTheme: defaultDarkPresentationTheme, title: title, text: text, placeholder: placeholder, value: nil, maxLength: 40, apply: { [weak call, weak controller] title in
+                                let editController = voiceChatTitleEditController(context: call.accountContext, forceTheme: defaultDarkPresentationTheme, title: title, text: text, placeholder: placeholder, value: nil, maxLength: 40, apply: { [weak call, weak controller] title in
                                     guard let call = call, let controller = controller else {
                                         return
                                     }

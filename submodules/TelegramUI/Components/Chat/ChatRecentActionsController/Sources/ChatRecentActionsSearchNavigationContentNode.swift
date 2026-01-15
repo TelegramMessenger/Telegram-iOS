@@ -25,7 +25,7 @@ final class ChatRecentActionsSearchNavigationContentNode: NavigationBarContentNo
         
         self.cancel = cancel
         
-        self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: theme, hasSeparator: false), strings: strings, fieldStyle: .modern, displayBackground: false)
+        self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: theme, hasSeparator: false), presentationTheme: theme, strings: strings, fieldStyle: .modern, displayBackground: false)
         let placeholderText = strings.Common_Search
         self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
         
@@ -51,10 +51,12 @@ final class ChatRecentActionsSearchNavigationContentNode: NavigationBarContentNo
         return 54.0
     }
     
-    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
+    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
         let searchBarFrame = CGRect(origin: CGPoint(x: 0.0, y: size.height - self.nominalHeight), size: CGSize(width: size.width, height: 54.0))
         self.searchBar.frame = searchBarFrame
         self.searchBar.updateLayout(boundingSize: searchBarFrame.size, leftInset: leftInset, rightInset: rightInset, transition: transition)
+        
+        return size
     }
     
     func activate() {

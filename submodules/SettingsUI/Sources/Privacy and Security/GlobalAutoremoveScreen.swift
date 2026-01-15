@@ -269,8 +269,8 @@ public func globalAutoremoveScreen(context: AccountContext, initialValue: Int32,
         } else {
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let valueText = timeIntervalString(strings: presentationData.strings, value: timeout, usage: .afterTime)
-            presentControllerImpl?(standardTextAlertController(
-                theme: AlertControllerTheme(presentationData: presentationData),
+            presentControllerImpl?(textAlertController(
+                context: context,
                 title: presentationData.strings.GlobalAutodeleteSettings_SetConfirmTitle,
                 text: presentationData.strings.GlobalAutodeleteSettings_SetConfirmText(valueText).string,
                 actions: [
@@ -350,8 +350,8 @@ public func globalAutoremoveScreen(context: AccountContext, initialValue: Int32,
                         text = presentationData.strings.GlobalAutodeleteSettings_AttemptDisabledGenericSelection
                     }
                     
-                    presentControllerImpl?(standardTextAlertController(
-                        theme: AlertControllerTheme(presentationData: presentationData),
+                    presentControllerImpl?(textAlertController(
+                        context: context,
                         title: nil,
                         text: text,
                         actions: [

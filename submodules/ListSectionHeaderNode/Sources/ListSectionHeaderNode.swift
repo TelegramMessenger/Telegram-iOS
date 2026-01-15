@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import ImageBlur
 
 private let titleFont = Font.regular(13.0)
 private let actionFont = Font.regular(13.0)
@@ -15,6 +16,7 @@ public enum ListSectionHeaderActionType {
 public final class ListSectionHeaderNode: ASDisplayNode {
     private let backgroundLayer: SimpleLayer
     private let label: ImmediateTextNode
+    private let labelBackgroundView: UIImageView
     private var actionButtonLabel: ImmediateTextNode?
     private var actionButton: HighlightableButtonNode?
     private var theme: PresentationTheme
@@ -89,13 +91,16 @@ public final class ListSectionHeaderNode: ASDisplayNode {
         self.label.isAccessibilityElement = true
         self.label.displaysAsynchronously = false
         
+        self.labelBackgroundView = UIImageView()
+        
         super.init()
         
         self.layer.addSublayer(self.backgroundLayer)
         
+        //self.view.addSubview(self.labelBackgroundView)
         self.addSubnode(self.label)
         
-        self.backgroundLayer.backgroundColor = theme.chatList.sectionHeaderFillColor.cgColor
+        //self.backgroundLayer.backgroundColor = theme.chatList.sectionHeaderFillColor.cgColor
     }
     
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -135,7 +140,7 @@ public final class ListSectionHeaderNode: ASDisplayNode {
         if self.theme !== theme {
             self.theme = theme
                         
-            self.backgroundLayer.backgroundColor = theme.chatList.sectionHeaderFillColor.cgColor
+            //self.backgroundLayer.backgroundColor = theme.chatList.sectionHeaderFillColor.cgColor
             
             self.label.attributedText = NSAttributedString(string: self.title ?? "", font: titleFont, textColor: self.theme.chatList.sectionHeaderTextColor)
 
@@ -150,7 +155,22 @@ public final class ListSectionHeaderNode: ASDisplayNode {
     public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, showBackground: Bool = true) {
         self.validLayout = (size, leftInset, rightInset)
         let labelSize = self.label.updateLayout(CGSize(width: max(0.0, size.width - leftInset - rightInset - 18.0), height: size.height))
-        self.label.frame = CGRect(origin: CGPoint(x: leftInset + 16.0, y: 6.0 + UIScreenPixel), size: CGSize(width: labelSize.width, height: size.height))
+        let labelFrame = CGRect(origin: CGPoint(x: leftInset + 16.0, y: 6.0 + UIScreenPixel), size: CGSize(width: labelSize.width, height: labelSize.height))
+        self.label.frame = labelFrame
+        
+        let labelBackgroundSize: CGFloat = labelSize.height
+        let labelBackgroundInnerInset: CGFloat = 2.0
+        let labelBackgroundInset: CGFloat = 10.0 + labelBackgroundInnerInset
+        if self.labelBackgroundView.image?.size.width != labelBackgroundSize + labelBackgroundInset * 2.0 {
+            self.labelBackgroundView.image = blurredImage(generateImage(CGSize(width: labelBackgroundSize + labelBackgroundInset * 2.0, height: labelBackgroundSize + labelBackgroundInset * 2.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.setFillColor(UIColor.white.cgColor)
+                context.fillEllipse(in: CGRect(origin: CGPoint(x: labelBackgroundInset - labelBackgroundInnerInset, y: labelBackgroundInset - labelBackgroundInnerInset), size: CGSize(width: labelBackgroundSize + labelBackgroundInnerInset * 2.0, height: labelBackgroundSize + labelBackgroundInnerInset * 2.0)))
+            })!, radius: 17, iterations: 3)?.stretchableImage(withLeftCapWidth: Int(labelBackgroundInset + labelBackgroundSize * 0.5), topCapHeight: Int(labelBackgroundInset + labelBackgroundSize * 0.5)).withRenderingMode(.alwaysTemplate)
+        }
+        self.labelBackgroundView.tintColor = self.theme.list.plainBackgroundColor.withAlphaComponent(self.theme.overallDarkAppearance ? 0.5 : 0.7)
+        
+        self.labelBackgroundView.frame = labelFrame.insetBy(dx: -labelBackgroundInset - 4.0, dy: -labelBackgroundInset)
         
         if let actionButton = self.actionButton, let actionButtonLabel = self.actionButtonLabel {
             let buttonSize = actionButtonLabel.updateLayout(CGSize(width: size.width, height: size.height))

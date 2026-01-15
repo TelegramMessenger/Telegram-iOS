@@ -10,9 +10,10 @@ swift_library(
         "-warnings-as-errors",
     ],
     deps = [
-        "//submodules/AsyncDisplayKit:AsyncDisplayKit",
-        "//submodules/Display:Display",
-        "//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/AsyncDisplayKit",
+        "//submodules/Display",
+        "//submodules/TelegramPresentationData",
+        "//submodules/ImageBlur",
     ],
     visibility = [
         "//visibility:public",

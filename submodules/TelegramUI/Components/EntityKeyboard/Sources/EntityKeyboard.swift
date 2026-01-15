@@ -403,7 +403,7 @@ public final class EntityKeyboardComponent: Component {
                 if let _ = component.maskContent?.inputInteractionHolder.inputInteraction?.openStickerSettings {
                     contentAccessoryRightButtons.append(AnyComponentWithIdentity(id: "masks", component: AnyComponent(EntityKeyboardBottomPanelButton(
                         icon: "Chat/Input/Media/EntityInputSettingsIcon",
-                        color: component.theme.chat.inputPanel.inputControlColor,
+                        theme: component.theme,
                         action: {
                             maskContent.inputInteractionHolder.inputInteraction?.openStickerSettings?()
                         }
@@ -417,7 +417,7 @@ public final class EntityKeyboardComponent: Component {
                 if let addImage = component.stickerContent?.inputInteractionHolder.inputInteraction?.addImage {
                     contentAccessoryLeftButtons.append(AnyComponentWithIdentity(id: "gifs", component: AnyComponent(EntityKeyboardBottomPanelButton(
                         icon: "Media Editor/AddImage",
-                        color: component.theme.chat.inputPanel.inputControlColor,
+                        theme: component.theme,
                         action: {
                             addImage()
                         }
@@ -537,7 +537,7 @@ public final class EntityKeyboardComponent: Component {
                 if let _ = component.stickerContent?.inputInteractionHolder.inputInteraction?.openStickerSettings {
                     contentAccessoryRightButtons.append(AnyComponentWithIdentity(id: "stickers", component: AnyComponent(EntityKeyboardBottomPanelButton(
                         icon: "Chat/Input/Media/EntityInputSettingsIcon",
-                        color: component.theme.chat.inputPanel.inputControlColor,
+                        theme: component.theme,
                         action: {
                             stickerContent.inputInteractionHolder.inputInteraction?.openStickerSettings?()
                         }
@@ -546,7 +546,7 @@ public final class EntityKeyboardComponent: Component {
                 if let addImage = component.stickerContent?.inputInteractionHolder.inputInteraction?.addImage {
                     contentAccessoryLeftButtons.append(AnyComponentWithIdentity(id: "stickers", component: AnyComponent(EntityKeyboardBottomPanelButton(
                         icon: "Media Editor/AddImage",
-                        color: component.theme.chat.inputPanel.inputControlColor,
+                        theme: component.theme,
                         action: {
                             addImage()
                         }
@@ -649,7 +649,7 @@ public final class EntityKeyboardComponent: Component {
                 if let _ = deleteBackwards {
                     contentAccessoryLeftButtons.append(AnyComponentWithIdentity(id: "emoji", component: AnyComponent(EntityKeyboardBottomPanelButton(
                         icon: "Chat/Input/Media/EntityInputGlobeIcon",
-                        color: component.theme.chat.inputPanel.inputControlColor,
+                        theme: component.theme,
                         action: { [weak self] in
                             guard let strongSelf = self, let component = strongSelf.component else {
                                 return
@@ -660,7 +660,7 @@ public final class EntityKeyboardComponent: Component {
                 } else if let addImage = component.emojiContent?.inputInteractionHolder.inputInteraction?.addImage {
                     contentAccessoryLeftButtons.append(AnyComponentWithIdentity(id: "emoji", component: AnyComponent(EntityKeyboardBottomPanelButton(
                         icon: "Media Editor/AddImage",
-                        color: component.theme.chat.inputPanel.inputControlColor,
+                        theme: component.theme,
                         action: {
                             addImage()
                         }
@@ -671,7 +671,7 @@ public final class EntityKeyboardComponent: Component {
             if let _ = deleteBackwards {
                 contentAccessoryRightButtons.append(AnyComponentWithIdentity(id: "emoji", component: AnyComponent(EntityKeyboardBottomPanelButton(
                     icon: "Chat/Input/Media/EntityInputClearIcon",
-                    color: component.theme.chat.inputPanel.inputControlColor,
+                    theme: component.theme,
                     action: {
                         deleteBackwards?()
                         AudioServicesPlaySystemSound(1155)
@@ -721,7 +721,8 @@ public final class EntityKeyboardComponent: Component {
                     topPanel: AnyComponent(EntityKeyboardTopContainerPanelComponent(
                         theme: component.theme,
                         overflowHeight: component.hiddenInputHeight,
-                        topInset: component.externalTopPanelContainer == nil ? 6.0 : 0.0,
+                        topInset: component.externalTopPanelContainer == nil ? 8.0 : 0.0,
+                        height: component.externalTopPanelContainer == nil ? 40.0 : 34.0,
                         displayBackground: component.externalTopPanelContainer != nil ? .none : component.displayTopPanelBackground
                     )),
                     externalTopPanelContainer: component.externalTopPanelContainer,

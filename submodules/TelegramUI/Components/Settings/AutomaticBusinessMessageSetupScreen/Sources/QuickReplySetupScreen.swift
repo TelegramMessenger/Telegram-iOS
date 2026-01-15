@@ -219,8 +219,6 @@ final class QuickReplySetupScreenComponent: Component {
                     },
                     openStarsTopup: { _ in
                     },
-                    dismissNotice: { _ in
-                    },
                     editPeer: { [weak listNode] _ in
                         guard let listNode, let parentView = listNode.parentView else {
                             return
@@ -798,8 +796,7 @@ final class QuickReplySetupScreenComponent: Component {
                     }
                 ))) : nil,
                 rightButtons: rightButtons,
-                backTitle: isModal ? nil : strings.Common_Back,
-                backPressed: { [weak self] in
+                backPressed: isModal ? nil :{ [weak self] in
                     guard let self else {
                         return
                     }
@@ -818,14 +815,15 @@ final class QuickReplySetupScreenComponent: Component {
                     strings: strings,
                     statusBarHeight: statusBarHeight,
                     sideInset: insets.left,
-                    isSearchActive: self.isSearchDisplayControllerActive,
-                    isSearchEnabled: !self.isEditing,
+                    search: ChatListNavigationBar.Search(isEnabled: !self.isEditing),
+                    activeSearch: self.isSearchDisplayControllerActive ? ChatListNavigationBar.ActiveSearch(isExternal: false) : nil,
                     primaryContent: headerContent,
                     secondaryContent: nil,
                     secondaryTransition: 0.0,
                     storySubscriptions: nil,
                     storiesIncludeHidden: false,
                     uploadProgress: [:],
+                    headerPanels: nil,
                     tabsNode: nil,
                     tabsNodeIsSearch: false,
                     accessoryPanelContainer: nil,
@@ -1022,8 +1020,9 @@ final class QuickReplySetupScreenComponent: Component {
                     let searchBarTheme = SearchBarNodeTheme(theme: environment.theme, hasSeparator: false)
                     searchBarNode = SearchBarNode(
                         theme: searchBarTheme,
+                        presentationTheme: environment.theme,
                         strings: environment.strings,
-                        fieldStyle: .modern,
+                        fieldStyle: .glass,
                         displayBackground: false
                     )
                     searchBarNode.placeholderString = NSAttributedString(string: environment.strings.Common_Search, font: Font.regular(17.0), textColor: searchBarTheme.placeholder)

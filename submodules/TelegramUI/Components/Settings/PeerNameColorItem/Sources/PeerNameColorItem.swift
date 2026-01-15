@@ -370,7 +370,7 @@ public final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
         
         self.maskNode = ASImageNode()
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.containerNode)
     }

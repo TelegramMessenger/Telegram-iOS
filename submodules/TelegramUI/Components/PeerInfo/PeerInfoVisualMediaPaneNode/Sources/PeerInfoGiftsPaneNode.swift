@@ -35,6 +35,7 @@ import EmojiTextAttachmentView
 import TextFormat
 import PromptUI
 import CollectionTabItemComponent
+import EdgeEffect
 
 public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScrollViewDelegate {
     public enum GiftCollection: Equatable {
@@ -91,8 +92,8 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     private let tabSelector = ComponentView<Empty>()
     public private(set) var currentCollection: GiftCollection = .all
     
-    private var panelBackground: NavigationBackgroundNode?
-    private var panelSeparator: ASDisplayNode?
+    private var panelEdgeEffectView: EdgeEffectView?
+    private var panelContentContainer: UIView?
     private var panelButton: ComponentView<Empty>?
     private var panelCheck: ComponentView<Empty>?
         
@@ -233,7 +234,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             return
         }
         
-        let promptController = promptController(sharedContext: self.context.sharedContext, updatedPresentationData: nil, text: params.presentationData.strings.PeerInfo_Gifts_CreateCollection_Title, titleFont: .bold, subtitle: params.presentationData.strings.PeerInfo_Gifts_CreateCollection_Text, value: "", placeholder: params.presentationData.strings.PeerInfo_Gifts_CreateCollection_Placeholder, characterLimit: 12, displayCharacterLimit: true, apply: { [weak self] value in
+        let promptController = promptController(context: self.context, updatedPresentationData: nil, text: params.presentationData.strings.PeerInfo_Gifts_CreateCollection_Title, titleFont: .bold, subtitle: params.presentationData.strings.PeerInfo_Gifts_CreateCollection_Text, value: "", placeholder: params.presentationData.strings.PeerInfo_Gifts_CreateCollection_Placeholder, characterLimit: 12, displayCharacterLimit: true, apply: { [weak self] value in
             guard let self, let value else {
                 return
             }
@@ -304,7 +305,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             return
         }
         
-        let promptController = promptController(sharedContext: self.context.sharedContext, updatedPresentationData: nil, text: params.presentationData.strings.PeerInfo_Gifts_RenameCollection_Title, titleFont: .bold, value: collection.title, placeholder: params.presentationData.strings.PeerInfo_Gifts_CreateCollection_Placeholder, characterLimit: 12, displayCharacterLimit: true, apply: { [weak self] value in
+        let promptController = promptController(context: self.context, updatedPresentationData: nil, text: params.presentationData.strings.PeerInfo_Gifts_RenameCollection_Title, titleFont: .bold, value: collection.title, placeholder: params.presentationData.strings.PeerInfo_Gifts_CreateCollection_Placeholder, characterLimit: 12, displayCharacterLimit: true, apply: { [weak self] value in
             guard let self, let value else {
                 return
             }
@@ -579,7 +580,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
         if let params = self.currentParams {
             let visibleBounds = self.scrollNode.bounds.insetBy(dx: 0.0, dy: -10.0)
                 
-            var topInset: CGFloat = 60.0
+            var topInset: CGFloat = params.topInset
             
             var canEditCollections = false
             if self.peerId == self.context.account.peerId || self.canManage {
@@ -657,14 +658,15 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                     component: AnyComponent(TabSelectorComponent(
                         context: self.context,
                         colors: TabSelectorComponent.Colors(
-                            foreground: params.presentationData.theme.list.itemSecondaryTextColor,
+                            foreground: params.presentationData.theme.list.itemPrimaryTextColor,
                             selection: params.presentationData.theme.list.itemSecondaryTextColor.withMultipliedAlpha(0.15),
                             simple: true
                         ),
                         theme: params.presentationData.theme,
                         customLayout: TabSelectorComponent.CustomLayout(
-                            font: Font.medium(14.0),
-                            spacing: 2.0
+                            font: Font.medium(15.0),
+                            spacing: 2.0,
+                            height: 44.0 - 5.0 * 2.0
                         ),
                         items: tabSelectorItems,
                         selectedId: AnyHashable(self.currentCollection.rawValue),
@@ -701,7 +703,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         }
                     )),
                     environment: {},
-                    containerSize: CGSize(width: params.size.width - 10.0 * 2.0, height: 50.0)
+                    containerSize: CGSize(width: params.size.width - 14.0 * 2.0, height: 44.0)
                 )
                 if let tabSelectorView = self.tabSelector.view {
                     if tabSelectorView.superview == nil {
@@ -712,9 +714,9 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                             tabSelectorView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
                         }
                     }
-                    transition.setFrame(view: tabSelectorView, frame: CGRect(origin: CGPoint(x: floor((params.size.width - tabSelectorSize.width) / 2.0), y: 60.0), size: tabSelectorSize))
+                    transition.setFrame(view: tabSelectorView, frame: CGRect(origin: CGPoint(x: floor((params.size.width - tabSelectorSize.width) / 2.0), y: topInset), size: tabSelectorSize))
                     
-                    topInset += tabSelectorSize.height + 14.0
+                    topInset += tabSelectorSize.height + 15.0
                 }
             } else if let tabSelectorView = self.tabSelector.view {
                 tabSelectorView.alpha = 0.0
@@ -731,32 +733,31 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             let bottomInset = params.bottomInset
             let presentationData = params.presentationData
           
-            let themeUpdated = self.theme !== presentationData.theme
             self.theme = presentationData.theme
             
-            let panelBackground: NavigationBackgroundNode
-            let panelSeparator: ASDisplayNode
+            let panelEdgeEffectView: EdgeEffectView
+            let panelContentContainer: UIView
             
             var panelVisibility = params.expandProgress < 1.0 ? 0.0 : 1.0
             if !self.canGift || self.resultsAreEmpty {
                 panelVisibility = 0.0
             }
             
-            let panelTransition: ComponentTransition = .immediate
-            if let current = self.panelBackground {
-                panelBackground = current
+            if let current = self.panelContentContainer {
+                panelContentContainer = current
             } else {
-                panelBackground = NavigationBackgroundNode(color: presentationData.theme.rootController.tabBar.backgroundColor)
-                self.addSubnode(panelBackground)
-                self.panelBackground = panelBackground
+                panelContentContainer = UIView()
+                self.view.addSubview(panelContentContainer)
+                self.panelContentContainer = panelContentContainer
             }
             
-            if let current = self.panelSeparator {
-                panelSeparator = current
+            let panelTransition: ComponentTransition = .immediate
+            if let current = self.panelEdgeEffectView {
+                panelEdgeEffectView = current
             } else {
-                panelSeparator = ASDisplayNode()
-                panelBackground.addSubnode(panelSeparator)
-                self.panelSeparator = panelSeparator
+                panelEdgeEffectView = EdgeEffectView()
+                panelContentContainer.addSubview(panelEdgeEffectView)
+                self.panelEdgeEffectView = panelEdgeEffectView
             }
                     
             let panelButton: ComponentView<Empty>
@@ -767,7 +768,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 self.panelButton = panelButton
             }
             
-            let buttonSideInset = sideInset + 16.0
+            let buttonInsets = ContainerViewLayout.concentricInsets(bottomInset: params.bottomInset, innerDiameter: 52.0 * 0.5, sideInset: sideInset + 30.0)
             
             let buttonTitle: String
             var buttonIconName: String?
@@ -800,6 +801,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 component: AnyComponent(
                     ButtonComponent(
                         background: ButtonComponent.Background(
+                            style: .glass,
                             color: presentationData.theme.list.itemCheckColors.fillColor,
                             foreground: presentationData.theme.list.itemCheckColors.foregroundColor,
                             pressedColor: presentationData.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.8)
@@ -815,32 +817,27 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                     )
                 ),
                 environment: {},
-                containerSize: CGSize(width: size.width - buttonSideInset * 2.0, height: 50.0)
+                containerSize: CGSize(width: size.width - buttonInsets.left * 2.0, height: 52.0)
             )
             
             var scrollOffset: CGFloat = max(0.0, size.height - params.visibleHeight)
             
-            let effectiveBottomInset = max(8.0, bottomInset)
-            var bottomPanelHeight = effectiveBottomInset + panelButtonSize.height + 8.0
+            let effectiveBottomInset = max(buttonInsets.bottom, bottomInset)
+            let bottomPanelHeight = effectiveBottomInset + panelButtonSize.height + 8.0
             if params.visibleHeight < 110.0 {
                 scrollOffset -= bottomPanelHeight
             }
             
             if let panelButtonView = panelButton.view {
                 if panelButtonView.superview == nil {
-                    panelBackground.view.addSubview(panelButtonView)
+                    panelContentContainer.addSubview(panelButtonView)
                 }
-                panelButtonView.frame = CGRect(origin: CGPoint(x: buttonSideInset, y: 8.0), size: panelButtonSize)
+                panelButtonView.frame = CGRect(origin: CGPoint(x: buttonInsets.left, y: 8.0), size: panelButtonSize)
             }
             
-            if themeUpdated {
-                panelBackground.updateColor(color: presentationData.theme.rootController.tabBar.backgroundColor, transition: .immediate)
-                panelSeparator.backgroundColor = presentationData.theme.rootController.tabBar.separatorColor
-            }
+            panelTransition.setFrame(view: panelContentContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: size.height - bottomPanelHeight), size: CGSize(width: size.width, height: bottomPanelHeight)))
             
             if self.canManage {
-                bottomPanelHeight -= 9.0
-                
                 let panelCheck: ComponentView<Empty>
                 if let current = self.panelCheck {
                     panelCheck = current
@@ -903,20 +900,20 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 )
                 if let panelCheckView = panelCheck.view {
                     if panelCheckView.superview == nil {
-                        panelBackground.view.addSubview(panelCheckView)
+                        panelContentContainer.addSubview(panelCheckView)
                     }
-                    panelCheckView.frame = CGRect(origin: CGPoint(x: floor((size.width - panelCheckSize.width) / 2.0), y: 16.0), size: panelCheckSize)
+                    panelCheckView.frame = CGRect(origin: CGPoint(x: floor((size.width - panelCheckSize.width) / 2.0), y: 16.0 + 16.0), size: panelCheckSize)
                 }
                 if let panelButtonView = panelButton.view {
                     panelButtonView.isHidden = true
                 }
             }
             
-            panelTransition.setFrame(view: panelBackground.view, frame: CGRect(x: 0.0, y: size.height - bottomPanelHeight - scrollOffset, width: size.width, height: bottomPanelHeight))
-            ComponentTransition.spring(duration: 0.4).setSublayerTransform(view: panelBackground.view, transform: CATransform3DMakeTranslation(0.0, bottomPanelHeight * (1.0 - panelVisibility), 0.0))
+            let edgeEffectFrame = CGRect(x: 0.0, y: 0.0, width: size.width, height: bottomPanelHeight)
+            panelTransition.setFrame(view: panelEdgeEffectView, frame: edgeEffectFrame)
+            panelEdgeEffectView.update(content: presentationData.theme.list.blocksBackgroundColor, blur: false, rect: edgeEffectFrame, edge: .bottom, edgeSize: 40.0, transition: panelTransition)
             
-            panelBackground.update(size: CGSize(width: size.width, height: bottomPanelHeight), transition: transition.containedViewLayoutTransition)
-            panelTransition.setFrame(view: panelSeparator.view, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: UIScreenPixel))
+            ComponentTransition.spring(duration: 0.4).setSublayerTransform(view: panelContentContainer, transform: CATransform3DMakeTranslation(0.0, bottomPanelHeight * (1.0 - panelVisibility), 0.0))
             
             contentHeight += bottomPanelHeight
             bottomScrollInset = bottomPanelHeight - 40.0
@@ -932,7 +929,9 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
         
         let bottomContentOffset = max(0.0, self.scrollNode.view.contentSize.height - self.scrollNode.view.contentOffset.y - self.scrollNode.view.frame.height)
         if bottomContentOffset < 200.0 {
-            self.giftsListView.loadMore()
+            Queue.mainQueue().justDispatch {
+                self.giftsListView.loadMore()
+            }
         }
     }
         
@@ -1438,7 +1437,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
         self.presentationDataPromise.set(.single(presentationData))
         
         self.backgroundNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
-        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 48.0), size: size))
+        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset), size: CGSize(width: size.width, height: size.height - topInset)))
         transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: size))
         
         let visibleBounds = self.scrollNode.bounds.insetBy(dx: 0.0, dy: -10.0)

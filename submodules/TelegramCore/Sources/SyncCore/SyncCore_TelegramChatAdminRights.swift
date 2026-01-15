@@ -62,7 +62,8 @@ public struct TelegramChatAdminRightsFlags: OptionSet, Hashable {
         .canPostStories,
         .canEditStories,
         .canDeleteStories,
-        .canManageDirect
+        .canManageDirect,
+        .canBanUsers
     ]
     
     public static func peerSpecific(peer: EnginePeer) -> TelegramChatAdminRightsFlags {

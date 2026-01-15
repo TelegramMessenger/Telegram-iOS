@@ -134,7 +134,7 @@ public class ItemListTextWithLabelItemNode: ListViewItemNode {
         self.textNode.contentMode = .left
         self.textNode.contentsScale = UIScreen.main.scale
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.isAccessibilityElement = true
         

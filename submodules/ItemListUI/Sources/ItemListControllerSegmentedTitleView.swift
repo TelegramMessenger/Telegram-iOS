@@ -3,9 +3,12 @@ import UIKit
 import Display
 import TelegramPresentationData
 import ComponentFlow
-import TabSelectorComponent
+import GlassBackgroundComponent
+import HorizontalTabsComponent
 
 public final class ItemListControllerSegmentedTitleView: UIView {
+    private let backgroundContainer: GlassBackgroundContainerView
+    private let backgroundView: GlassBackgroundView
     private let tabSelector = ComponentView<Empty>()
     
     public var theme: PresentationTheme {
@@ -42,7 +45,13 @@ public final class ItemListControllerSegmentedTitleView: UIView {
         self.segments = segments
         self.index = selectedIndex
         
+        self.backgroundContainer = GlassBackgroundContainerView()
+        self.backgroundView = GlassBackgroundView()
+        
         super.init(frame: CGRect())
+        
+        self.addSubview(self.backgroundContainer)
+        self.backgroundContainer.contentView.addSubview(self.backgroundView)
     }
     
     required public init?(coder aDecoder: NSCoder) {
@@ -62,10 +71,19 @@ public final class ItemListControllerSegmentedTitleView: UIView {
             return
         }
         
-        let mappedItems = zip(0 ..< self.segments.count, self.segments).map { index, segment in
-            return TabSelectorComponent.Item(
+        let mappedItems: [HorizontalTabsComponent.Tab] = zip(0 ..< self.segments.count, self.segments).map { index, segment in
+            return HorizontalTabsComponent.Tab(
                 id: AnyHashable(index),
-                title: segment
+                content: .title(HorizontalTabsComponent.Tab.Title(text: segment, entities: [], enableAnimations: false)),
+                badge: nil,
+                action: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.indexUpdated?(index)
+                },
+                contextAction: nil,
+                deleteAction: nil
             )
         }
         
@@ -77,34 +95,32 @@ public final class ItemListControllerSegmentedTitleView: UIView {
         
         let tabSelectorSize = self.tabSelector.update(
             transition: transition,
-            component: AnyComponent(TabSelectorComponent(
-                colors: TabSelectorComponent.Colors(
-                    foreground: self.theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.8),
-                    selection: self.theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.05)
-                ),
+            component: AnyComponent(HorizontalTabsComponent(
+                context: nil,
                 theme: self.theme,
-                customLayout: TabSelectorComponent.CustomLayout(
-                    font: Font.medium(15.0),
-                    spacing: 8.0
-                ),
-                items: mappedItems,
-                selectedId: AnyHashable(self.index),
-                setSelectedId: { [weak self] id in
-                    guard let self, let index = id.base as? Int else {
-                        return
-                    }
-                    self.indexUpdated?(index)
-                }
+                tabs: mappedItems,
+                selectedTab: AnyHashable(self.index),
+                isEditing: false,
+                layout: .fit
             )),
             environment: {},
             containerSize: CGSize(width: size.width, height: 44.0)
         )
+        
         let tabSelectorFrame = CGRect(origin: CGPoint(x: floor((size.width - tabSelectorSize.width) / 2.0), y: floor((size.height - tabSelectorSize.height) / 2.0)), size: tabSelectorSize)
-        if let tabSelectorView = self.tabSelector.view {
+        
+        transition.setFrame(view: self.backgroundContainer, frame: tabSelectorFrame)
+        self.backgroundContainer.update(size: tabSelectorFrame.size, isDark: self.theme.overallDarkAppearance, transition: transition)
+        
+        transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(), size: tabSelectorFrame.size))
+        self.backgroundView.update(size: tabSelectorFrame.size, cornerRadius: tabSelectorFrame.height * 0.5, isDark: theme.overallDarkAppearance, tintColor: .init(kind: .panel, color: UIColor(white: self.theme.overallDarkAppearance ? 0.0 : 1.0, alpha: 0.6)), transition: transition)
+        
+        if let tabSelectorView = self.tabSelector.view as? HorizontalTabsComponent.View {
             if tabSelectorView.superview == nil {
-                self.addSubview(tabSelectorView)
+                self.backgroundView.contentView.addSubview(tabSelectorView)
+                tabSelectorView.setOverlayContainerView(overlayContainerView: self)
             }
-            transition.setFrame(view: tabSelectorView, frame: tabSelectorFrame)
+            transition.setFrame(view: tabSelectorView, frame: CGRect(origin: CGPoint(), size: tabSelectorFrame.size))
         }
     }
 }

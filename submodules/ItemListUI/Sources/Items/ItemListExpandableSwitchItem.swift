@@ -267,7 +267,7 @@ public class ItemListExpandableSwitchItemNode: ListViewItemNode, ItemListItemNod
         self.subItemContainer = ASDisplayNode()
         self.subItemContainer.clipsToBounds = true
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.titleValueNode)

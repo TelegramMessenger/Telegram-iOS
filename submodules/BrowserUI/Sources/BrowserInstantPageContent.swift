@@ -90,12 +90,21 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
     private let updateLayoutDisposable = MetaDisposable()
         
     private let loadProgress = ValuePromise<CGFloat>(1.0, ignoreRepeated: true)
-    private let readingProgress = ValuePromise<CGFloat>(1.0, ignoreRepeated: true)
+    private let readingProgress = ValuePromise<CGFloat>(0.0, ignoreRepeated: true)
 
     private var containerLayout: (size: CGSize, insets: UIEdgeInsets, fullInsets: UIEdgeInsets)?
     private var setupScrollOffsetOnLayout = false
     
-    init(context: AccountContext, presentationData: PresentationData, webPage: TelegramMediaWebpage, anchor: String?, url: String, sourceLocation: InstantPageSourceLocation, preloadedResouces: [Any]?, originalContent: BrowserContent? = nil) {
+    init(
+        context: AccountContext,
+        presentationData: PresentationData,
+        webPage: TelegramMediaWebpage,
+        anchor: String?,
+        url: String,
+        sourceLocation: InstantPageSourceLocation,
+        preloadedResouces: [Any]?,
+        originalContent: BrowserContent? = nil
+    ) {
         self.context = context
         var instantPage: InstantPage?
         if case let .Loaded(content) = webPage.content {
@@ -131,6 +140,8 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
         self.scrollNodeFooter.backgroundColor = self.theme.panelBackgroundColor
         
         super.init(frame: .zero)
+        
+        self.backgroundColor = self.theme.pageBackgroundColor
         
         self.statePromise.set(.single(self._state)
         |> then(
@@ -193,6 +204,8 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
         self.presentationData = presentationData
         
         self.theme = instantPageThemeForType(presentationData.theme.overallDarkAppearance ? .dark : .light, settings: self.settings)
+        self.backgroundColor = self.theme.pageBackgroundColor
+        
         self.updatePageLayout()
         self.updateVisibleItems(visibleBounds: self.scrollNode.view.bounds)
     }
@@ -415,8 +428,7 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
         var updateVisibleItems = false
         let resetContentOffset = self.scrollNode.bounds.size.width.isZero || self.setupScrollOffsetOnLayout || !(self.initialAnchor ?? "").isEmpty
         
-        var scrollInsets = insets
-        scrollInsets.top = 0.0
+        let scrollInsets = fullInsets
         if self.scrollNode.view.contentInset != scrollInsets {
             self.scrollNode.view.contentInset = scrollInsets
             self.scrollNode.view.scrollIndicatorInsets = scrollInsets
@@ -424,7 +436,7 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
         
         self.wrapperNode.frame = CGRect(origin: .zero, size: size)
         
-        let scrollFrame = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: size.width, height: size.height - insets.top))
+        let scrollFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height))
         let scrollFrameUpdated = self.scrollNode.bounds.size != scrollFrame.size
         if scrollFrameUpdated {
             let widthUpdated = self.scrollNode.bounds.size.width != scrollFrame.width

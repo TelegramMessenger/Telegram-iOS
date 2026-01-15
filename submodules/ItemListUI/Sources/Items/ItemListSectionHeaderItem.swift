@@ -139,7 +139,7 @@ public class ItemListSectionHeaderItemNode: ListViewItemNode {
         self.activateArea = AccessibilityAreaNode()
         self.activateArea.accessibilityTraits = [.staticText, .header]
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.accessoryTextNode)

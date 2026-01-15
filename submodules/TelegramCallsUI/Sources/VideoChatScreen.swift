@@ -691,7 +691,7 @@ final class VideoChatScreenComponent: Component {
                     text = environment.strings.VoiceChat_EditTitleText
                 }
 
-                let controller = voiceChatTitleEditController(sharedContext: groupCall.accountContext.sharedContext, account: groupCall.accountContext.account, forceTheme: environment.theme, title: title, text: text, placeholder: EnginePeer(chatPeer).displayTitle(strings: environment.strings, displayOrder: groupCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).nameDisplayOrder), value: initialTitle, maxLength: 40, apply: { [weak self] title in
+                let controller = voiceChatTitleEditController(context: groupCall.accountContext, forceTheme: environment.theme, title: title, text: text, placeholder: EnginePeer(chatPeer).displayTitle(strings: environment.strings, displayOrder: groupCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).nameDisplayOrder), value: initialTitle, maxLength: 40, apply: { [weak self] title in
                     guard let self, let environment = self.environment, case let .group(groupCall) = self.currentCall else {
                         return
                     }
@@ -3448,7 +3448,6 @@ final class VideoChatScreenComponent: Component {
                         pendingUnpinnedAllMessages: false,
                         activeGroupCallInfo: nil,
                         hasActiveGroupCall: false,
-                        importState: nil,
                         threadData: nil,
                         isGeneralThreadClosed: nil,
                         replyMessage: nil,

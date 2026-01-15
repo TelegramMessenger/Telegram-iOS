@@ -18,9 +18,17 @@ import TelegramStringFormatting
 import WallpaperResources
 import UrlEscaping
 
-private let iconFont = Font.with(size: 30.0, design: .round, weight: .bold)
+private let iconFont = Font.with(size: 28.0, design: .round, weight: .bold)
 
 private let iconTextBackgroundImage = generateStretchableFilledCircleImage(radius: 6.0, color: UIColor(rgb: 0xFF9500))
+private let iconTextGlassBackgroundImage = generateImage(CGSize(width: 40.0, height: 40.0), contextGenerator: { size, context in
+    context.clear(CGRect(origin: CGPoint(), size: size))
+    context.setFillColor(UIColor(rgb: 0xFF9500).cgColor)
+    
+    let path = UIBezierPath(roundedRect: CGRect(origin: .zero, size: size), cornerRadius: 12.0)
+    context.addPath(path.cgPath)
+    context.fillPath()
+})
 
 public final class ListMessageSnippetItemNode: ListMessageNode {
     private let contextSourceNode: ContextExtractedContentContainingNode
@@ -273,7 +281,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
             var iconImageReferenceAndRepresentation: (AnyMediaReference, TelegramMediaImageRepresentation)?
             var updateIconImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
             
-            let applyIconTextBackgroundImage = iconTextBackgroundImage
+            let applyIconTextBackgroundImage = item.systemStyle == .glass ? iconTextGlassBackgroundImage : iconTextBackgroundImage
             
             var primaryUrl: String?
             
@@ -637,7 +645,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
             var iconImageApply: (() -> Void)?
             if let iconImageReferenceAndRepresentation = iconImageReferenceAndRepresentation {
                 let iconSize = CGSize(width: 40.0, height: 40.0)
-                let imageCorners = ImageCorners(radius: 6.0)
+                let imageCorners = ImageCorners(radius: item.systemStyle == .glass ? 12.0 : 6.0, curve: item.systemStyle == .glass ? .continuous : .circular)
                 let arguments = TransformImageArguments(corners: imageCorners, imageSize: iconImageReferenceAndRepresentation.1.dimensions.cgSize.aspectFilled(iconSize), boundingSize: iconSize, intrinsicInsets: UIEdgeInsets(), emptyColor: item.presentationData.theme.theme.list.mediaPlaceholderColor)
                 iconImageApply = iconImageLayout(arguments)
             }
@@ -754,7 +762,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                     }
                     
                     let iconFrame = CGRect(origin: CGPoint(x: params.leftInset + leftOffset + 12.0, y: 12.0), size: CGSize(width: 40.0, height: 40.0))
-                    transition.updateFrame(node: strongSelf.iconTextNode, frame: CGRect(origin: CGPoint(x: iconFrame.minX + floorToScreenPixels((iconFrame.width - iconTextLayout.size.width) / 2.0), y: iconFrame.minY + floorToScreenPixels((iconFrame.height - iconTextLayout.size.height) / 2.0) + 2.0), size: iconTextLayout.size))
+                    transition.updateFrame(node: strongSelf.iconTextNode, frame: CGRect(origin: CGPoint(x: iconFrame.minX + floorToScreenPixels((iconFrame.width - iconTextLayout.size.width) / 2.0) + 1.0 - UIScreenPixel, y: iconFrame.minY + floorToScreenPixels((iconFrame.height - iconTextLayout.size.height) / 2.0) + 2.0), size: iconTextLayout.size))
                     
                     let _ = iconTextApply()
                     

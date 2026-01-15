@@ -59,6 +59,7 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
         }
     }
 
+    private let backgroundContainerView: GlassBackgroundContainerView
     private let leftControlsBackgroundView: GlassBackgroundView
     private let rightControlsBackgroundView: GlassBackgroundView
     private let calendarButton = ComponentView<Empty>()
@@ -93,13 +94,15 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
     init(theme: PresentationTheme, alwaysShowTotalMessagesCount: Bool) {
         self.alwaysShowTotalMessagesCount = alwaysShowTotalMessagesCount
         
+        self.backgroundContainerView = GlassBackgroundContainerView()
         self.leftControlsBackgroundView = GlassBackgroundView()
         self.rightControlsBackgroundView = GlassBackgroundView()
         
         super.init()
         
-        self.view.addSubview(self.leftControlsBackgroundView)
-        self.view.addSubview(self.rightControlsBackgroundView)
+        self.view.addSubview(self.backgroundContainerView)
+        self.backgroundContainerView.contentView.addSubview(self.leftControlsBackgroundView)
+        self.backgroundContainerView.contentView.addSubview(self.rightControlsBackgroundView)
     }
     
     deinit {
@@ -108,6 +111,14 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
     }
     
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, maxOverlayHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics, isMediaInputExpanded: Bool) -> CGFloat {
+        var leftInset = leftInset + 8.0
+        var rightInset = rightInset + 8.0
+        
+        if bottomInset <= 32.0 {
+            leftInset += 18.0
+            rightInset += 18.0
+        }
+        
         let params = Params(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, additionalSideInsets: additionalSideInsets, maxHeight: maxHeight, maxOverlayHeight: maxOverlayHeight, isSecondary: isSecondary, interfaceState: interfaceState, metrics: metrics, isMediaInputExpanded: isMediaInputExpanded)
         if let currentLayout = self.currentLayout, currentLayout.params == params {
             return currentLayout.height
@@ -332,7 +343,7 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
                     buttonView.alpha = 0.0
                     self.view.addSubview(buttonView)
                 }
-                let listModeFrame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 20.0 - 8.0 - buttonSize.width, y: floor((size.height - buttonSize.height) * 0.5)), size: buttonSize)
+                let listModeFrame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 8.0 - buttonSize.width, y: floor((size.height - buttonSize.height) * 0.5)), size: buttonSize)
                 listModeButtonFrameValue = listModeFrame
                 listModeButtonTransition.setPosition(view: buttonView, position: CGPoint(x: listModeFrame.minX + listModeFrame.width * buttonView.layer.anchorPoint.x, y: listModeFrame.minY + listModeFrame.height * buttonView.layer.anchorPoint.y))
                 listModeButtonTransition.setBounds(view: buttonView, bounds: CGRect(origin: CGPoint(), size: listModeFrame.size))
@@ -349,7 +360,7 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
             }
         }
         
-        var nextLeftX: CGFloat = 16.0 + 8.0
+        var nextLeftX: CGFloat = params.leftInset + 4.0
         
         var calendarButtonFrameValue: CGRect?
         var membersButtonFrameValue: CGRect?
@@ -547,7 +558,7 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
             }
         }
         
-        var leftControlsBackgroundFrame = CGRect(origin: CGPoint(x: 20.0, y: floor((height - 40.0) * 0.5)), size: CGSize(width: 0.0, height: 40.0))
+        var leftControlsBackgroundFrame = CGRect(origin: CGPoint(x: params.leftInset, y: floor((height - 40.0) * 0.5)), size: CGSize(width: 0.0, height: 40.0))
         leftControlsBackgroundFrame.size.width = max(40.0, leftControlsRect.maxX - leftControlsBackgroundFrame.minX)
         transition.setFrame(view: self.leftControlsBackgroundView, frame: leftControlsBackgroundFrame)
         self.leftControlsBackgroundView.update(size: leftControlsBackgroundFrame.size, cornerRadius: leftControlsBackgroundFrame.height * 0.5, isDark: params.interfaceState.theme.overallDarkAppearance, tintColor: .init(kind: .panel, color: params.interfaceState.theme.chat.inputPanel.inputBackgroundColor.withMultipliedAlpha(0.7)), transition: transition)
@@ -568,12 +579,15 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
             }
         }
         
-        var rightControlsBackgroundFrame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 20.0, y: floor((height - 40.0) * 0.5)), size: CGSize(width: 0.0, height: 40.0))
+        var rightControlsBackgroundFrame = CGRect(origin: CGPoint(x: params.width - params.rightInset, y: floor((height - 40.0) * 0.5)), size: CGSize(width: 0.0, height: 40.0))
         rightControlsBackgroundFrame.size.width = max(40.0, rightControlsRect.maxX - rightControlsRect.minX + 8.0 * 2.0)
         rightControlsBackgroundFrame.origin.x -= rightControlsBackgroundFrame.width
         transition.setFrame(view: self.rightControlsBackgroundView, frame: rightControlsBackgroundFrame)
         self.rightControlsBackgroundView.update(size: rightControlsBackgroundFrame.size, cornerRadius: rightControlsBackgroundFrame.height * 0.5, isDark: params.interfaceState.theme.overallDarkAppearance, tintColor: .init(kind: .panel, color: params.interfaceState.theme.chat.inputPanel.inputBackgroundColor.withMultipliedAlpha(0.7)), transition: transition)
-        transition.setAlpha(view: self.rightControlsBackgroundView, alpha: rightControlsRect.isEmpty ? 0.0 : 1.0)
+        self.rightControlsBackgroundView.isHidden = rightControlsRect.isEmpty
+        
+        transition.setFrame(view: self.backgroundContainerView, frame: CGRect(origin: CGPoint(), size: CGSize(width: params.width, height: height)))
+        self.backgroundContainerView.update(size: CGSize(width: params.width, height: height), isDark: params.interfaceState.theme.overallDarkAppearance, transition: transition)
 
         return height
     }

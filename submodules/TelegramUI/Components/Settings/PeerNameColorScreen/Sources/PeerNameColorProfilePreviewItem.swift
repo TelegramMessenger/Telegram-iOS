@@ -142,7 +142,7 @@ final class PeerNameColorProfilePreviewItemNode: ListViewItemNode {
         let avatarFont = avatarPlaceholderFont(size: floor(100.0 * 16.0 / 37.0))
         self.avatarNode = AvatarNode(font: avatarFont)
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.clipsToBounds = true
         self.isUserInteractionEnabled = false

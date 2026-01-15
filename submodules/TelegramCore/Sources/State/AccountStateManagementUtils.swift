@@ -1906,6 +1906,8 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 }
             case let .updateStarGiftAuctionUserState(giftId, userState):
                 updatedState.updateStarGiftAuctionMyState(giftId: giftId, state: GiftAuctionContext.State.MyState(apiAuctionUserState: userState))
+            case let .updateEmojiGameInfo(info):
+                updatedState.updateEmojiGameInfo(info: EmojiGameInfo(apiEmojiGameInfo: info))
             default:
                 break
         }
@@ -3629,7 +3631,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddQuickReplyMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .AddPeerLiveTypingDraftUpdate, .UpdateCachedPeerData, .UpdatePinnedItemIds, .UpdatePinnedSavedItemIds, .UpdatePinnedTopic, .UpdatePinnedTopicOrder, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilter, .UpdateChatListFilterOrder, .UpdateReadThread, .UpdateMessagesPinned, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateGroupCallChainBlocks, .UpdateGroupCallMessage, .UpdateGroupCallOpaqueMessage, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateExtendedMedia, .ResetForumTopic, .UpdateStory, .UpdateReadStories, .UpdateStoryStealthMode, .UpdateStorySentReaction, .UpdateNewAuthorization, .UpdateWallpaper, .UpdateStarsBalance, .UpdateStarsRevenueStatus, .UpdateStarsReactionsDefaultPrivacy, .ReportMessageDelivery, .UpdateMonoForumNoPaidException, .UpdateStarGiftAuctionState, .UpdateStarGiftAuctionMyState:
+        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .AddPeerLiveTypingDraftUpdate, .UpdateCachedPeerData, .UpdatePinnedItemIds, .UpdatePinnedSavedItemIds, .UpdatePinnedTopic, .UpdatePinnedTopicOrder, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilter, .UpdateChatListFilterOrder, .UpdateReadThread, .UpdateMessagesPinned, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateGroupCallChainBlocks, .UpdateGroupCallMessage, .UpdateGroupCallOpaqueMessage, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateExtendedMedia, .ResetForumTopic, .UpdateStory, .UpdateReadStories, .UpdateStoryStealthMode, .UpdateStorySentReaction, .UpdateNewAuthorization, .UpdateWallpaper, .UpdateStarsBalance, .UpdateStarsRevenueStatus, .UpdateStarsReactionsDefaultPrivacy, .ReportMessageDelivery, .UpdateMonoForumNoPaidException, .UpdateStarGiftAuctionState, .UpdateStarGiftAuctionMyState, .UpdateEmojiGameInfo:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -3772,6 +3774,7 @@ func replayFinalState(
     var reportMessageDelivery = Set<MessageId>()
     var updatedStarGiftAuctionState: [Int64: GiftAuctionContext.State.AuctionState] = [:]
     var updatedStarGiftAuctionMyState: [Int64: GiftAuctionContext.State.MyState] = [:]
+    var updatedEmojiGameInfo: EmojiGameInfo?
     
     var holesFromPreviousStateMessageIds: [MessageId] = []
     var clearHolesFromPreviousStateForChannelMessagesWithPts: [PeerIdAndMessageNamespace: Int32] = [:]
@@ -5339,6 +5342,8 @@ func replayFinalState(
                 updatedStarGiftAuctionState[giftId] = state
             case let .UpdateStarGiftAuctionMyState(giftId, state):
                 updatedStarGiftAuctionMyState[giftId] = state
+            case let .UpdateEmojiGameInfo(info):
+                updatedEmojiGameInfo = info
         }
     }
     
@@ -5889,6 +5894,7 @@ func replayFinalState(
         reportMessageDelivery: reportMessageDelivery,
         addedConferenceInvitationMessagesIds: addedConferenceInvitationMessagesIds,
         updatedStarGiftAuctionState: updatedStarGiftAuctionState,
-        updatedStarGiftAuctionMyState: updatedStarGiftAuctionMyState
+        updatedStarGiftAuctionMyState: updatedStarGiftAuctionMyState,
+        updatedEmojiGameInfo: updatedEmojiGameInfo
     )
 }

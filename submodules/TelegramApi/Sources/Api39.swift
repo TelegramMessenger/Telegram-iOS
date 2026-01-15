@@ -6246,6 +6246,21 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
+                static func getEmojiGameInfo() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.EmojiGameInfo>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-75592537)
+                    
+                    return (FunctionDescription(name: "messages.getEmojiGameInfo", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.EmojiGameInfo? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.EmojiGameInfo?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.EmojiGameInfo
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
                 static func getEmojiGroups(hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.EmojiGroups>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1955122779)
@@ -8986,6 +9001,24 @@ public extension Api.functions.messages {
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
+                static func summarizeText(flags: Int32, peer: Api.InputPeer, id: Int32, toLang: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.TextWithEntities>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1656683294)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(toLang!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "messages.summarizeText", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("id", String(describing: id)), ("toLang", String(describing: toLang))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.TextWithEntities? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.TextWithEntities?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.TextWithEntities
                         }
                         return result
                     })

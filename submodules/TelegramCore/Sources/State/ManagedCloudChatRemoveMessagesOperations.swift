@@ -479,6 +479,26 @@ private func _internal_clearHistory(transaction: Transaction, postbox: Postbox, 
                 |> `catch` { _ -> Signal<Void, NoError> in
                     return .complete()
                 }
+            } else if let threadId = operation.threadId {
+                guard let inputPeer = apiInputPeer(peer) else {
+                    return .complete()
+                }
+                return network.request(Api.functions.messages.deleteTopicHistory(peer: inputPeer, topMsgId: Int32(clamping: threadId)))
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<Api.messages.AffectedHistory?, NoError> in
+                    return .single(nil)
+                }
+                |> mapToSignal { result -> Signal<Void, NoError> in
+                    if let result = result {
+                        switch result {
+                        case let .affectedHistory(pts, ptsCount, _):
+                            stateManager.addUpdateGroups([.updatePts(pts: pts, ptsCount: ptsCount)])
+                            return .complete()
+                        }
+                    } else {
+                        return .complete()
+                    }
+                }
             } else {
                 return requestClearHistory(postbox: postbox, network: network, stateManager: stateManager, inputPeer: inputPeer, maxId: operation.topMessageId.id, justClear: true, minTimestamp: operation.minTimestamp, maxTimestamp: operation.maxTimestamp, type: operation.type)
             }

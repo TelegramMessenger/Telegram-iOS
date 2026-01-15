@@ -108,7 +108,7 @@ public final class ChatNewThreadInfoItemNode: ListViewItemNode, ASGestureRecogni
         
         self.arrowView = UIImageView()
         
-        super.init(layerBacked: false, dynamicBounce: true, rotated: true)
+        super.init(layerBacked: false, rotated: true)
         
         self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
         

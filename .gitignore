@@ -74,4 +74,7 @@ buildServer.json
 Telegram.LSP.json
 **/.build/**
 spm-files
+xcode-files
 .bsp/**
+/.claude/
+/buildbox/*

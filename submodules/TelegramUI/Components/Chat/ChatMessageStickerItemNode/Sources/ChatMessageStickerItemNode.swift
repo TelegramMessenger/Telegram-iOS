@@ -777,6 +777,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                     quote: replyQuote,
                     todoItemId: replyTodoItemId,
                     story: replyStory,
+                    isSummarized: false,
                     parentMessage: item.message,
                     constrainedSize: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude),
                     animationCache: item.controllerInteraction.presentationContext.animationCache,

@@ -37,6 +37,9 @@ swift_library(
         "//submodules/AppBundle",
         "//submodules/ActivityIndicator",
         "//submodules/TelegramUI/Components/Gifts/GiftItemComponent",
+        "//submodules/TelegramUI/Components/AlertComponent",
+        "//submodules/TelegramUI/Components/AlertComponent/AlertTransferHeaderComponent",
+        "//submodules/TelegramUI/Components/AvatarComponent",
     ],
     visibility = [
         "//visibility:public",

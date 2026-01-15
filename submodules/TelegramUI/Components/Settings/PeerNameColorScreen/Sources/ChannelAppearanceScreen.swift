@@ -39,6 +39,7 @@ import Markdown
 import GroupStickerPackSetupController
 import PeerNameColorItem
 import EmojiActionIconComponent
+import EdgeEffect
 
 final class ChannelAppearanceScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -169,13 +170,13 @@ final class ChannelAppearanceScreenComponent: Component {
     }
     
     final class View: UIView, UIScrollViewDelegate {
+        private let edgeEffectView: EdgeEffectView
         private let topOverscrollLayer = SimpleLayer()
         private let scrollView: ScrollView
         private let actionButton = ComponentView<Empty>()
         private let bottomPanelBackgroundView: BlurredBackgroundView
         private let bottomPanelSeparator: SimpleLayer
         
-        private let backButton = PeerInfoHeaderNavigationButton()
         private let navigationTitle = ComponentView<Empty>()
         
         private let previewSection = ComponentView<Empty>()
@@ -227,6 +228,8 @@ final class ChannelAppearanceScreenComponent: Component {
         private weak var emojiStatusSelectionController: ViewController?
         
         override init(frame: CGRect) {
+            self.edgeEffectView = EdgeEffectView()
+            
             self.scrollView = ScrollView()
             self.scrollView.showsVerticalScrollIndicator = true
             self.scrollView.showsHorizontalScrollIndicator = false
@@ -249,14 +252,10 @@ final class ChannelAppearanceScreenComponent: Component {
             
             self.scrollView.layer.addSublayer(self.topOverscrollLayer)
             
+            self.addSubview(self.edgeEffectView)
+            
             self.addSubview(self.bottomPanelBackgroundView)
             self.layer.addSublayer(self.bottomPanelSeparator)
-            
-            self.backButton.action = { [weak self] _, _ in
-                if let self, let controller = self.environment?.controller() {
-                    controller.navigationController?.popViewController(animated: true)
-                }
-            }
         }
         
         required init?(coder: NSCoder) {
@@ -291,20 +290,26 @@ final class ChannelAppearanceScreenComponent: Component {
                 }
                 
                 let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.Channel_Appearance_UnsavedChangesAlertTitle, text: presentationData.strings.Channel_Appearance_UnsavedChangesAlertText, actions: [
-                    TextAlertAction(type: .genericAction, title: presentationData.strings.Channel_Appearance_UnsavedChangesAlertDiscard, action: { [weak self] in
-                        guard let self else {
-                            return
-                        }
-                        self.environment?.controller()?.dismiss()
-                    }),
-                    TextAlertAction(type: .defaultAction, title: presentationData.strings.Channel_Appearance_UnsavedChangesAlertApply, action: { [weak self] in
-                        guard let self else {
-                            return
-                        }
-                        self.applySettings()
-                    })
-                ]), in: .window(.root))
+                let alertController = textAlertController(
+                    context: component.context,
+                    title: presentationData.strings.Channel_Appearance_UnsavedChangesAlertTitle,
+                    text: presentationData.strings.Channel_Appearance_UnsavedChangesAlertText,
+                    actions: [
+                        TextAlertAction(type: .genericAction, title: presentationData.strings.Channel_Appearance_UnsavedChangesAlertDiscard, action: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.environment?.controller()?.dismiss()
+                        }),
+                        TextAlertAction(type: .defaultAction, title: presentationData.strings.Channel_Appearance_UnsavedChangesAlertApply, action: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.applySettings()
+                        })
+                    ]
+                )
+                self.environment?.controller()?.present(alertController, in: .window(.root))
                 
                 return false
             }
@@ -342,6 +347,8 @@ final class ChannelAppearanceScreenComponent: Component {
             if let navigationTitleView = self.navigationTitle.view {
                 transition.setAlpha(view: navigationTitleView, alpha: navigationAlpha)
             }
+            
+            transition.setAlpha(view: self.edgeEffectView, alpha: navigationAlpha)
             
             let bottomNavigationAlphaDistance: CGFloat = 16.0
             let bottomNavigationAlpha: CGFloat = max(0.0, min(1.0, (self.scrollView.contentSize.height - self.scrollView.bounds.maxY) / bottomNavigationAlphaDistance))
@@ -534,7 +541,15 @@ final class ChannelAppearanceScreenComponent: Component {
                 }
                 
                 let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                let alertController = textAlertController(
+                    context: component.context,
+                    title: nil,
+                    text: presentationData.strings.Login_UnknownError,
+                    actions: [
+                        TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
+                    ]
+                )
+                self.environment?.controller()?.present(alertController, in: .window(.root))
                 
                 self.isApplyingSettings = false
                 self.state?.updated(transition: .immediate)
@@ -992,6 +1007,10 @@ final class ChannelAppearanceScreenComponent: Component {
             }
             self.requiredBoostSubject = requiredBoostSubject
             
+            let edgeEffectHeight: CGFloat = environment.navigationHeight + 8.0
+            let edgeEffectFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: availableSize.width, height: edgeEffectHeight))
+            transition.setFrame(view: self.edgeEffectView, frame: edgeEffectFrame)
+            self.edgeEffectView.update(content: environment.theme.list.blocksBackgroundColor, blur: true, rect: edgeEffectFrame, edge: .top, edgeSize: min(30, edgeEffectFrame.height), transition: transition)
             
             let headerColor: UIColor
             if let profileColor {
@@ -1002,7 +1021,6 @@ final class ChannelAppearanceScreenComponent: Component {
             }
             self.topOverscrollLayer.backgroundColor = headerColor.cgColor
             
-            let backSize = self.backButton.update(key: .back, presentationData: component.context.sharedContext.currentPresentationData.with { $0 }, height: 44.0)
             var scrolledUp = self.scrolledUp
             if profileColor == nil {
                 scrolledUp = false
@@ -1010,14 +1028,6 @@ final class ChannelAppearanceScreenComponent: Component {
             
             if let controller = self.environment?.controller() as? ChannelAppearanceScreen {
                 controller.statusBar.updateStatusBarStyle(scrolledUp ? .White : .Ignore, animated: true)
-            }
-
-            self.backButton.updateContentsColor(backgroundColor: scrolledUp ? UIColor(white: 0.0, alpha: 0.1) : .clear, contentsColor: scrolledUp ? .white : environment.theme.rootController.navigationBar.accentTextColor, canBeExpanded: !scrolledUp, transition: .animated(duration: 0.2, curve: .easeInOut))
-            self.backButton.frame = CGRect(origin: CGPoint(x: environment.safeInsets.left + 16.0, y: environment.navigationHeight - 44.0), size: backSize)
-            if self.backButton.view.superview == nil {
-                if let controller = self.environment?.controller(), let navigationBar = controller.navigationBar {
-                    navigationBar.view.addSubview(self.backButton.view)
-                }
             }
             
             let navigationTitleSize = self.navigationTitle.update(
@@ -1897,12 +1907,11 @@ public class ChannelAppearanceScreen: ViewControllerComponentContainer {
             context: context,
             peerId: peerId,
             boostStatus: boostStatus
-        ), navigationBarAppearance: .default, theme: .default, updatedPresentationData: updatedPresentationData)
+        ), navigationBarAppearance: .transparent, theme: .default, updatedPresentationData: updatedPresentationData)
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.title = ""
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
-        self.navigationItem.leftBarButtonItem = UIBarButtonItem(customView: UIView())
         
         self.ready.set(.never())
         

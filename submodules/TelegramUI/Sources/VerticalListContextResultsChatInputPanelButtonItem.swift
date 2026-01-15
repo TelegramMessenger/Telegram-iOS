@@ -96,7 +96,7 @@ final class VerticalListContextResultsChatInputPanelButtonItemNode: ListViewItem
         
         self.titleNode = TextNode()
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.separatorNode)
         

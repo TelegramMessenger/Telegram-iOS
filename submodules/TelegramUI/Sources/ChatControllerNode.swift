@@ -51,6 +51,16 @@ import ChatThemeScreen
 import ChatTextInputPanelNode
 import ChatInputAccessoryPanel
 import ChatMessageTextBubbleContentNode
+import HeaderPanelContainerComponent
+import MediaPlaybackHeaderPanelComponent
+import LiveLocationHeaderPanelComponent
+import TranslateHeaderPanelComponent
+import AdPanelHeaderPanelComponent
+import MessageFeeHeaderPanelComponent
+import LegacyChatHeaderPanelComponent
+import ChatSearchNavigationContentNode
+import GroupCallHeaderPanelComponent
+import PresentationDataUtils
 
 final class VideoNavigationControllerDropContentItem: NavigationControllerDropContentItem {
     let itemNode: OverlayMediaItemNode
@@ -218,26 +228,29 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     private let inputPanelClippingNode: SparseNode
     let inputPanelBackgroundNode: NavigationBackgroundNode
     
-    private var navigationBarBackgroundContent: WallpaperBubbleBackgroundNode?
-    
     private var intrinsicInputPanelBackgroundNodeSize: CGSize?
     private var inputPanelBottomBackgroundSeparatorBaseOffset: CGFloat = 0.0
     private var plainInputSeparatorAlpha: CGFloat?
     private var usePlainInputSeparator: Bool
     
-    private var chatImportStatusPanel: ChatImportStatusPanel?
-    
-    private(set) var adPanelNode: ChatAdPanelNode?
-    private(set) var feePanelNode: ChatFeePanelNode?
+    var adPanelMessage: Message? {
+        guard let headerPanelsComponentView = self.headerPanelsView?.view as? HeaderPanelContainerComponent.View else {
+            return nil
+        }
+        guard let adPanelView = headerPanelsComponentView.panel(forKey: AnyHashable("ad")) as? AdPanelHeaderPanelComponent.View else {
+            return nil
+        }
+        return adPanelView.message?._asMessage()
+    }
     
     private let titleAccessoryPanelContainer: ChatControllerTitlePanelNodeContainer
-    private var titleAccessoryPanelNode: ChatTitleAccessoryPanelNode?
-    
-    private var chatTranslationPanel: ChatTranslationPanelNode?
+    private var currentTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode?
     
     private var floatingTopicsPanelContainer: ChatControllerTitlePanelNodeContainer
     private var floatingTopicsPanel: (view: ComponentView<ChatSidePanelEnvironment>, component: ChatFloatingTopicsPanel)?
+    private var headerPanelsView: ComponentView<Empty>?
     
+    private var topBackgroundEdgeEffectNode: WallpaperEdgeEffectNode?
     private var bottomBackgroundEdgeEffectNode: WallpaperEdgeEffectNode?
     
     private(set) var inputPanelNode: ChatInputPanelNode?
@@ -1091,7 +1104,18 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 if self.inputPanelContainerNode.expansionFraction > 0.3 {
                     statusBar.updateStatusBarStyle(.White, animated: true)
                 } else {
-                    statusBar.updateStatusBarStyle(self.chatPresentationInterfaceState.theme.rootController.statusBarStyle.style, animated: true)
+                    let statusBarStyle: StatusBarStyle
+                    if let isDark = self.backgroundNode.isDark {
+                        if isDark {
+                            statusBarStyle = .White
+                        } else {
+                            statusBarStyle = .Black
+                        }
+                    } else {
+                        statusBarStyle = self.chatPresentationInterfaceState.theme.rootController.statusBarStyle.style
+                    }
+                    
+                    statusBar.updateStatusBarStyle(statusBarStyle, animated: true)
                 }
                 self.controller?.deferScreenEdgeGestures = []
             case .overlay:
@@ -1318,7 +1342,275 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         self.containerLayoutAndNavigationBarHeight = (layout, navigationBarHeight)
         
+        var headerPanels: [HeaderPanelContainerComponent.Panel] = []
+        if let mediaPlayback = self.controller?.globalControlPanelsContextState?.mediaPlayback {
+            headerPanels.append(HeaderPanelContainerComponent.Panel(
+                key: "media",
+                orderIndex: 0,
+                component: AnyComponent(MediaPlaybackHeaderPanelComponent(
+                    context: self.context,
+                    theme: self.chatPresentationInterfaceState.theme,
+                    strings: self.chatPresentationInterfaceState.strings,
+                    data: mediaPlayback,
+                    controller: { [weak self] in
+                        return self?.controller
+                    }
+                )))
+            )
+        }
+        if let liveLocation = self.controller?.globalControlPanelsContextState?.liveLocation {
+            headerPanels.append(HeaderPanelContainerComponent.Panel(
+                key: "liveLocation",
+                orderIndex: 1,
+                component: AnyComponent(LiveLocationHeaderPanelComponent(
+                    context: self.context,
+                    theme: self.chatPresentationInterfaceState.theme,
+                    strings: self.chatPresentationInterfaceState.strings,
+                    data: liveLocation,
+                    controller: { [weak self] in
+                        return self?.controller
+                    }
+                )))
+            )
+        }
+        if let groupCall = self.controller?.globalControlPanelsContextState?.groupCall {
+            headerPanels.append(HeaderPanelContainerComponent.Panel(
+                key: "groupCall",
+                orderIndex: 2,
+                component: AnyComponent(GroupCallHeaderPanelComponent(
+                    context: self.context,
+                    theme: self.chatPresentationInterfaceState.theme,
+                    strings: self.chatPresentationInterfaceState.strings,
+                    data: groupCall,
+                    onTapAction: { [weak self] in
+                        guard let self, let groupCall = self.controller?.globalControlPanelsContextState?.groupCall else {
+                            return
+                        }
+                        self.controller?.joinGroupCall(
+                            peerId: groupCall.peerId,
+                            invite: nil,
+                            activeCall: EngineGroupCallDescription(
+                                id: groupCall.info.id,
+                                accessHash: groupCall.info.accessHash,
+                                title: groupCall.info.title,
+                                scheduleTimestamp: groupCall.info.scheduleTimestamp,
+                                subscribedToScheduled: groupCall.info.subscribedToScheduled,
+                                isStream: groupCall.info.isStream
+                            )
+                        )
+                    },
+                    onNotifyScheduledTapAction: { [weak self] in
+                        guard let self, let controller = self.controller, let groupCall = self.controller?.globalControlPanelsContextState?.groupCall else {
+                            return
+                        }
+                        if groupCall.info.scheduleTimestamp != nil && !groupCall.info.subscribedToScheduled {
+                            let _ = self.context.engine.calls.toggleScheduledGroupCallSubscription(peerId: groupCall.peerId, reference: .id(id: groupCall.info.id, accessHash: groupCall.info.accessHash), subscribe: true).startStandalone()
+                            
+                            controller.controllerInteraction?.displayUndo(
+                                .universal(
+                                    animation: "anim_set_notification",
+                                    scale: 0.06,
+                                    colors: [
+                                        "Middle.Group 1.Fill 1": UIColor.white,
+                                        "Top.Group 1.Fill 1": UIColor.white,
+                                        "Bottom.Group 1.Fill 1": UIColor.white,
+                                        "EXAMPLE.Group 1.Fill 1": UIColor.white,
+                                        "Line.Group 1.Stroke 1": UIColor.white
+                                    ],
+                                    title: nil,
+                                    text: controller.presentationData.strings.Chat_ToastSubscribedToScheduledLiveStream_Text,
+                                    customUndoText: nil,
+                                    timeout: nil
+                                )
+                            )
+                        }
+                    }
+                )))
+            )
+        }
+        
+        var hasTranslationPanel = false
+        if let _ = self.chatPresentationInterfaceState.translationState, self.emptyType == nil {
+            if case .overlay = self.chatPresentationInterfaceState.mode {
+            } else if self.chatPresentationInterfaceState.renderedPeer?.peer?.restrictionText(platform: "ios", contentSettings: self.context.currentContentSettings.with { $0 }) != nil {
+            } else if self.chatPresentationInterfaceState.search != nil {
+            } else {
+                hasTranslationPanel = true
+            }
+        }
+        
+        var displayAdPanel = false
+        if let _ = self.chatPresentationInterfaceState.adMessage {
+            if let chatHistoryState = self.chatPresentationInterfaceState.chatHistoryState, case .loaded(false, _) = chatHistoryState {
+                if let user = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo != nil && !self.chatPresentationInterfaceState.peerIsBlocked && self.chatPresentationInterfaceState.hasAtLeast3Messages {
+                    displayAdPanel = true
+                }
+            }
+        }
+        if displayAdPanel, let adMessage = self.chatPresentationInterfaceState.adMessage {
+            headerPanels.append(HeaderPanelContainerComponent.Panel(
+                key: "ad",
+                orderIndex: 2,
+                component: AnyComponent(AdPanelHeaderPanelComponent(
+                    context: self.context,
+                    theme: self.chatPresentationInterfaceState.theme,
+                    strings: self.chatPresentationInterfaceState.strings,
+                    info: AdPanelHeaderPanelComponent.Info(
+                        message: EngineMessage(adMessage)
+                    ),
+                    action: { [weak self] message in
+                        guard let self else {
+                            return
+                        }
+                        self.controllerInteraction.activateAdAction(message.id, nil, false, false)
+                    },
+                    contextAction: { [weak self] message, sourceNode, gesture in
+                        guard let self else {
+                            return
+                        }
+                        self.controllerInteraction.adContextAction(message._asMessage(), sourceNode, gesture)
+                    },
+                    close: { [weak self] in
+                        guard let self, let adMessage = self.chatPresentationInterfaceState.adMessage else {
+                            return
+                        }
+                        if self.context.isPremium, let adAttribute = adMessage.adAttribute {
+                            self.controllerInteraction.removeAd(adAttribute.opaqueId)
+                        } else {
+                            self.controllerInteraction.openNoAdsDemo()
+                        }
+                    }
+                )))
+            )
+        }
+        
+        if let titleAccessoryPanelNode = titlePanelForChatPresentationInterfaceState(self.chatPresentationInterfaceState, context: self.context, currentPanel: self.currentTitleAccessoryPanelNode, controllerInteraction: self.controllerInteraction, interfaceInteraction: self.interfaceInteraction, force: false) {
+            self.currentTitleAccessoryPanelNode = titleAccessoryPanelNode
+            let panelKey = "\(type(of: titleAccessoryPanelNode))"
+            headerPanels.append(HeaderPanelContainerComponent.Panel(
+                key: panelKey,
+                orderIndex: 3,
+                component: AnyComponent(LegacyChatHeaderPanelComponent(
+                    panelNode: titleAccessoryPanelNode,
+                    interfaceState: self.chatPresentationInterfaceState
+                )))
+            )
+        } else {
+            self.currentTitleAccessoryPanelNode = nil
+        }
+        
+        var displayFeePanel: (value: Int64, peer: EnginePeer)?
+        if let chatHistoryState = self.chatPresentationInterfaceState.chatHistoryState, case .loaded(false, _) = chatHistoryState {
+            if let user = self.chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo == nil {
+                if !self.chatPresentationInterfaceState.peerIsBlocked, let paidMessageStars = self.chatPresentationInterfaceState.contactStatus?.peerStatusSettings?.paidMessageStars, paidMessageStars.value > 0 {
+                    displayFeePanel = (paidMessageStars.value, .user(user))
+                }
+            } else if let removePaidMessageFeeData = self.chatPresentationInterfaceState.removePaidMessageFeeData {
+                displayFeePanel = (removePaidMessageFeeData.amount.value, removePaidMessageFeeData.peer)
+            }
+        }
+        if let displayFeePanel {
+            headerPanels.append(HeaderPanelContainerComponent.Panel(
+                key: "fee",
+                orderIndex: 4,
+                component: AnyComponent(MessageFeeHeaderPanelComponent(
+                    context: self.context,
+                    theme: self.chatPresentationInterfaceState.theme,
+                    strings: self.chatPresentationInterfaceState.strings,
+                    info: MessageFeeHeaderPanelComponent.Info(
+                        value: displayFeePanel.value,
+                        peer: displayFeePanel.peer
+                    ),
+                    removeFee: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.controllerInteraction.openMessageFeeException()
+                    },
+                )))
+            )
+        }
+        
+        if hasTranslationPanel, let translationState = self.chatPresentationInterfaceState.translationState {
+            headerPanels.append(HeaderPanelContainerComponent.Panel(
+                key: "translate",
+                orderIndex: 5,
+                component: AnyComponent(TranslateHeaderPanelComponent(
+                    context: self.context,
+                    theme: self.chatPresentationInterfaceState.theme,
+                    strings: self.chatPresentationInterfaceState.strings,
+                    info: TranslateHeaderPanelComponent.Info(
+                        isPremium: self.chatPresentationInterfaceState.isPremium,
+                        isActive: translationState.isEnabled,
+                        fromLang: translationState.fromLang,
+                        toLang: translationState.toLang,
+                        peer: (self.chatPresentationInterfaceState.renderedPeer?.chatMainPeer).flatMap(EnginePeer.init)
+                    ),
+                    close: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.interfaceInteraction?.hideTranslationPanel()
+                    },
+                    toggle: { [weak self] in
+                        guard let self, let translationState = self.chatPresentationInterfaceState.translationState else {
+                            return
+                        }
+                        self.interfaceInteraction?.toggleTranslation(translationState.isEnabled ? .original : .translated)
+                    },
+                    changeLanguage: { [weak self] code in
+                        guard let self else {
+                            return
+                        }
+                        self.interfaceInteraction?.changeTranslationLanguage(code)
+                    },
+                    addDoNotTranslateLanguage: { [weak self] code in
+                        guard let self else {
+                            return
+                        }
+                        self.interfaceInteraction?.addDoNotTranslateLanguage(code)
+                    },
+                    controller: { [weak self] in
+                        return self?.controller
+                    }
+                )))
+            )
+        }
+        
         var floatingTopicsPanelInsets = UIEdgeInsets()
+        
+        var headerPanelsSize: CGSize?
+        if !headerPanels.isEmpty {
+            let headerPanelsView: ComponentView<Empty>
+            var headerPanelsTransition = ComponentTransition(transition)
+            if let current = self.headerPanelsView {
+                headerPanelsView = current
+            } else {
+                headerPanelsTransition = headerPanelsTransition.withAnimation(.none)
+                headerPanelsView = ComponentView()
+                self.headerPanelsView = headerPanelsView
+            }
+            let headerPanelsSizeValue = headerPanelsView.update(
+                transition: headerPanelsTransition,
+                component: AnyComponent(HeaderPanelContainerComponent(
+                    theme: self.chatPresentationInterfaceState.theme,
+                    tabs: nil,
+                    panels: headerPanels
+                )),
+                environment: {},
+                containerSize: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: layout.size.height)
+            )
+            headerPanelsSize = headerPanelsSizeValue
+            floatingTopicsPanelInsets.top += headerPanelsSizeValue.height
+        } else if let headerPanelsView = self.headerPanelsView {
+            self.headerPanelsView = nil
+            if let headerPanelsComponentView = headerPanelsView.view {
+                transition.updateAlpha(layer: headerPanelsComponentView.layer, alpha: 0.0, completion: { [weak headerPanelsComponentView] _ in
+                    headerPanelsComponentView?.removeFromSuperview()
+                })
+            }
+        }
+        
         var dismissedFloatingTopicsPanel: (view: ComponentView<ChatSidePanelEnvironment>, component: ChatFloatingTopicsPanel)?
         var immediatelyLayoutFloatingTopicsNodeAndAnimateAppearance = false
         var didChangeFloatingTopicsPanel = false
@@ -1337,213 +1629,13 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             
             switch floatingTopicsPanelComponent.location {
             case .side:
-                floatingTopicsPanelInsets.left = 72.0 + 8.0 + 8.0
+                floatingTopicsPanelInsets.left += 72.0 + 10.0 + 10.0
             case .top:
-                floatingTopicsPanelInsets.top = 40.0 + 8.0
+                floatingTopicsPanelInsets.top += 40.0 + 10.0
             }
         } else if let floatingTopicsPanel = self.floatingTopicsPanel {
             self.floatingTopicsPanel = nil
             dismissedFloatingTopicsPanel = floatingTopicsPanel
-        }
-        
-        var dismissedTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode?
-        var immediatelyLayoutTitleAccessoryPanelNodeAndAnimateAppearance = false
-        var titleAccessoryPanelHeight: CGFloat?
-        var titleAccessoryPanelBackgroundHeight: CGFloat?
-        var titleAccessoryPanelHitTestSlop: CGFloat?
-        
-        if let titleAccessoryPanelNode = titlePanelForChatPresentationInterfaceState(self.chatPresentationInterfaceState, context: self.context, currentPanel: self.titleAccessoryPanelNode, controllerInteraction: self.controllerInteraction, interfaceInteraction: self.interfaceInteraction, force: false) {
-            if self.titleAccessoryPanelNode != titleAccessoryPanelNode {
-                dismissedTitleAccessoryPanelNode = self.titleAccessoryPanelNode
-                self.titleAccessoryPanelNode = titleAccessoryPanelNode
-                immediatelyLayoutTitleAccessoryPanelNodeAndAnimateAppearance = true
-                self.titleAccessoryPanelContainer.addSubnode(titleAccessoryPanelNode)
-                
-                titleAccessoryPanelNode.clipsToBounds = true
-            }
-            
-            let layoutResult = titleAccessoryPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: immediatelyLayoutTitleAccessoryPanelNodeAndAnimateAppearance ? .immediate : transition, interfaceState: self.chatPresentationInterfaceState)
-            titleAccessoryPanelHeight = layoutResult.insetHeight
-            titleAccessoryPanelBackgroundHeight = layoutResult.backgroundHeight
-            titleAccessoryPanelHitTestSlop = layoutResult.hitTestSlop
-            if immediatelyLayoutTitleAccessoryPanelNodeAndAnimateAppearance {
-                if transition.isAnimated {
-                    titleAccessoryPanelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                }
-                titleAccessoryPanelNode.subnodeTransform = CATransform3DMakeTranslation(0.0, -layoutResult.backgroundHeight, 0.0)
-                transition.updateSublayerTransformOffset(layer: titleAccessoryPanelNode.layer, offset: CGPoint())
-            }
-        } else if let titleAccessoryPanelNode = self.titleAccessoryPanelNode {
-            dismissedTitleAccessoryPanelNode = titleAccessoryPanelNode
-            self.titleAccessoryPanelNode = nil
-        }
-        
-        var dismissedTranslationPanelNode: ChatTranslationPanelNode?
-        var immediatelyLayoutTranslationPanelNodeAndAnimateAppearance = false
-        var translationPanelHeight: CGFloat?
-        
-        var hasTranslationPanel = false
-        if let _ = self.chatPresentationInterfaceState.translationState, self.emptyType == nil {
-            if case .overlay = self.chatPresentationInterfaceState.mode {
-            } else if self.chatPresentationInterfaceState.renderedPeer?.peer?.restrictionText(platform: "ios", contentSettings: self.context.currentContentSettings.with { $0 }) != nil {
-            } else if self.chatPresentationInterfaceState.search != nil {
-            } else {
-                hasTranslationPanel = true
-            }
-        }
-        
-        /*#if DEBUG
-        if "".isEmpty {
-            hasTranslationPanel = true
-        }
-        #endif*/
-        
-        if hasTranslationPanel {
-            let translationPanelNode: ChatTranslationPanelNode
-            if let current = self.chatTranslationPanel {
-                translationPanelNode = current
-            } else {
-                translationPanelNode = ChatTranslationPanelNode(context: self.context)
-            }
-            translationPanelNode.interfaceInteraction = self.interfaceInteraction
-            
-            if self.chatTranslationPanel != translationPanelNode {
-                dismissedTranslationPanelNode = self.chatTranslationPanel
-                self.chatTranslationPanel = translationPanelNode
-                immediatelyLayoutTranslationPanelNodeAndAnimateAppearance = true
-                self.titleAccessoryPanelContainer.addSubnode(translationPanelNode)
-                
-                translationPanelNode.clipsToBounds = true
-            }
-            
-            let height = translationPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, leftDisplayInset: 0.0, transition: immediatelyLayoutTitleAccessoryPanelNodeAndAnimateAppearance ? .immediate : transition, interfaceState: self.chatPresentationInterfaceState)
-            translationPanelHeight = height
-            if immediatelyLayoutTranslationPanelNodeAndAnimateAppearance {
-                translationPanelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                translationPanelNode.subnodeTransform = CATransform3DMakeTranslation(0.0, -height, 0.0)
-                transition.updateSublayerTransformOffset(layer: translationPanelNode.layer, offset: CGPoint())
-            }
-        } else if let chatTranslationPanel = self.chatTranslationPanel {
-            dismissedTranslationPanelNode = chatTranslationPanel
-            self.chatTranslationPanel = nil
-        }
-        
-        var dismissedImportStatusPanelNode: ChatImportStatusPanel?
-        var importStatusPanelHeight: CGFloat?
-        if let importState = self.chatPresentationInterfaceState.importState {
-            let importStatusPanelNode: ChatImportStatusPanel
-            if let current = self.chatImportStatusPanel {
-                importStatusPanelNode = current
-            } else {
-                importStatusPanelNode = ChatImportStatusPanel()
-            }
-            
-            if self.chatImportStatusPanel != importStatusPanelNode {
-                 dismissedImportStatusPanelNode = self.chatImportStatusPanel
-                self.chatImportStatusPanel = importStatusPanelNode
-                self.contentContainerNode.contentNode.addSubnode(importStatusPanelNode)
-            }
-            
-            importStatusPanelHeight = importStatusPanelNode.update(context: self.context, progress: CGFloat(importState.progress), presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: self.chatPresentationInterfaceState.theme, wallpaper: self.chatPresentationInterfaceState.chatWallpaper), fontSize: self.chatPresentationInterfaceState.fontSize, strings: self.chatPresentationInterfaceState.strings, dateTimeFormat: self.chatPresentationInterfaceState.dateTimeFormat, nameDisplayOrder: self.chatPresentationInterfaceState.nameDisplayOrder, disableAnimations: false, largeEmoji: false, chatBubbleCorners: PresentationChatBubbleCorners(mainRadius: 0.0, auxiliaryRadius: 0.0, mergeBubbleCorners: false)), width: layout.size.width)
-        } else if let importStatusPanelNode = self.chatImportStatusPanel {
-            dismissedImportStatusPanelNode = importStatusPanelNode
-            self.chatImportStatusPanel = nil
-        }
-        
-        var dismissedAdPanelNode: ChatAdPanelNode?
-        var adPanelHeight: CGFloat?
-        
-        var displayAdPanel = false
-        if let _ = self.chatPresentationInterfaceState.adMessage {
-            if let chatHistoryState = self.chatPresentationInterfaceState.chatHistoryState, case .loaded(false, _) = chatHistoryState {
-                if let user = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo != nil && !self.chatPresentationInterfaceState.peerIsBlocked && self.chatPresentationInterfaceState.hasAtLeast3Messages {
-                    displayAdPanel = true
-                }
-            }
-        }
-        
-        if displayAdPanel {
-            var animateAppearance = false
-            let adPanelNode: ChatAdPanelNode
-            if let current = self.adPanelNode {
-                adPanelNode = current
-            } else {
-                adPanelNode = ChatAdPanelNode(context: self.context, animationCache: self.controllerInteraction.presentationContext.animationCache, animationRenderer: self.controllerInteraction.presentationContext.animationRenderer)
-                adPanelNode.controllerInteraction = self.controllerInteraction
-                adPanelNode.clipsToBounds = true
-                animateAppearance = true
-            }
-            
-            if self.adPanelNode != adPanelNode {
-                dismissedAdPanelNode = self.adPanelNode
-                self.adPanelNode = adPanelNode
-                self.titleAccessoryPanelContainer.addSubnode(adPanelNode)
-            }
-            
-            let height = adPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition, interfaceState: self.chatPresentationInterfaceState)
-            if let adMessage = self.chatPresentationInterfaceState.adMessage, let opaqueId = adMessage.adAttribute?.opaqueId {
-                self.historyNode.markAdAsSeen(opaqueId: opaqueId)
-            }
-            
-            adPanelHeight = height
-            if transition.isAnimated && animateAppearance {
-                adPanelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                adPanelNode.subnodeTransform = CATransform3DMakeTranslation(0.0, -height, 0.0)
-                transition.updateSublayerTransformOffset(layer: adPanelNode.layer, offset: CGPoint())
-            }
-        } else if let adPanelNode = self.adPanelNode {
-            dismissedAdPanelNode = adPanelNode
-            self.adPanelNode = nil
-        }
-        
-        var dismissedFeePanelNode: ChatFeePanelNode?
-        var feePanelHeight: CGFloat?
-        
-        var displayFeePanel = false
-        if let chatHistoryState = self.chatPresentationInterfaceState.chatHistoryState, case .loaded(false, _) = chatHistoryState {
-            if let user = self.chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo == nil {
-                if !self.chatPresentationInterfaceState.peerIsBlocked, let paidMessageStars = self.chatPresentationInterfaceState.contactStatus?.peerStatusSettings?.paidMessageStars, paidMessageStars.value > 0 {
-                    displayFeePanel = true
-                }
-            } else if self.chatPresentationInterfaceState.removePaidMessageFeeData != nil {
-                displayFeePanel = true
-            }
-        }
-        
-        var immediatelyLayoutFeePanelNodeAndAnimateAppearance = false
-        if displayFeePanel {
-            var animateAppearance = false
-            let feePanelNode: ChatFeePanelNode
-            if let current = self.feePanelNode {
-                feePanelNode = current
-            } else {
-                feePanelNode = ChatFeePanelNode(context: self.context)
-                feePanelNode.controllerInteraction = self.controllerInteraction
-                feePanelNode.clipsToBounds = true
-                animateAppearance = true
-            }
-            
-            if self.feePanelNode != feePanelNode {
-                dismissedFeePanelNode = self.feePanelNode
-                self.feePanelNode = feePanelNode
-                self.titleAccessoryPanelContainer.addSubnode(feePanelNode)
-            }
-            
-            let height = feePanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, leftDisplayInset: 0.0, transition: animateAppearance ? .immediate : transition, interfaceState: self.chatPresentationInterfaceState)
-            
-            feePanelHeight = height
-            if transition.isAnimated && animateAppearance {
-                immediatelyLayoutFeePanelNodeAndAnimateAppearance = true
-            }
-            
-            if immediatelyLayoutFeePanelNodeAndAnimateAppearance {
-                feePanelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                feePanelNode.subnodeTransform = CATransform3DMakeTranslation(0.0, -height, 0.0)
-                transition.updateSublayerTransformOffset(layer: feePanelNode.layer, offset: CGPoint())
-            }
-        } else if let feePanelNode = self.feePanelNode {
-            dismissedFeePanelNode = feePanelNode
-            self.feePanelNode = nil
         }
         
         var isSidebarOpen = false
@@ -1830,54 +1922,10 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         
         transition.updateFrame(node: self.inputContextPanelContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: layout.size.height)))
         transition.updateFrame(node: self.inputContextOverTextPanelContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: layout.size.height)))
-        
-        var extraNavigationBarHeight: CGFloat = 0.0
-        var extraNavigationBarHitTestSlop: CGFloat = 0.0
 
-        var titlePanelsContentOffset: CGFloat = 0.0
-
-        var titleAccessoryPanelFrame: CGRect?
-        let titleAccessoryPanelBaseY = titlePanelsContentOffset
-        if let _ = self.titleAccessoryPanelNode, let panelHeight = titleAccessoryPanelHeight {
-            titleAccessoryPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: titlePanelsContentOffset), size: CGSize(width: layout.size.width, height: panelHeight))
-            insets.top += panelHeight
-            extraNavigationBarHeight += titleAccessoryPanelBackgroundHeight ?? 0.0
-            extraNavigationBarHitTestSlop = titleAccessoryPanelHitTestSlop ?? 0.0
-            titlePanelsContentOffset += panelHeight
-        }
+        updateExtraNavigationBarBackgroundHeight(0.0, 0.0, nil, transition)
         
-        let feePanelBaseY = titlePanelsContentOffset
-        
-        var translationPanelFrame: CGRect?
-        if let _ = self.chatTranslationPanel, let panelHeight = translationPanelHeight {
-            translationPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: extraNavigationBarHeight), size: CGSize(width: layout.size.width, height: panelHeight))
-            insets.top += panelHeight
-            extraNavigationBarHeight += panelHeight
-        }
-
-        var importStatusPanelFrame: CGRect?
-        if let _ = self.chatImportStatusPanel, let panelHeight = importStatusPanelHeight {
-            importStatusPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: panelHeight))
-            insets.top += panelHeight
-        }
-        
-        var adPanelFrame: CGRect?
-        if let _ = self.adPanelNode, let panelHeight = adPanelHeight {
-            adPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: extraNavigationBarHeight), size: CGSize(width: layout.size.width, height: panelHeight))
-            insets.top += panelHeight
-            extraNavigationBarHeight += panelHeight
-        }
-        
-        var feePanelFrame: CGRect?
-        if let _ = self.feePanelNode, let panelHeight = feePanelHeight {
-            feePanelFrame = CGRect(origin: CGPoint(x: 0.0, y: extraNavigationBarHeight), size: CGSize(width: layout.size.width, height: panelHeight))
-            insets.top += panelHeight
-            extraNavigationBarHeight += panelHeight
-        }
-
-        updateExtraNavigationBarBackgroundHeight(extraNavigationBarHeight, extraNavigationBarHitTestSlop, nil, transition)
-        
-        let sidePanelTopInset: CGFloat = insets.top
+        var sidePanelTopInset: CGFloat = insets.top + 4.0
         
         let contentBounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width - wrappingInsets.left - wrappingInsets.right, height: layout.size.height - wrappingInsets.top - wrappingInsets.bottom)
         
@@ -2129,7 +2177,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 additionalOffset = 80.0
             }
             if let _ = inputPanelSize {
-                inputPanelHideOffset += -40.0 - additionalOffset
+                inputPanelHideOffset += -48.0 - additionalOffset
             }
             if let accessoryPanelSize = accessoryPanelSize {
                 inputPanelHideOffset += -accessoryPanelSize.height - additionalOffset
@@ -2146,7 +2194,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         
         if self.secondaryInputPanelNode != nil {
-            secondaryInputPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - bottomOverflowOffset - inputPanelsHeight - secondaryInputPanelSize!.height - 8.0), size: CGSize(width: layout.size.width, height: secondaryInputPanelSize!.height))
+            secondaryInputPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - bottomOverflowOffset - inputPanelsHeight - 8.0 - secondaryInputPanelSize!.height - 8.0), size: CGSize(width: layout.size.width, height: secondaryInputPanelSize!.height))
             if self.dismissedAsOverlay {
                 secondaryInputPanelFrame!.origin.y = layout.size.height
             }
@@ -2199,12 +2247,13 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         if let bottomBackgroundEdgeEffectNode {
             var blurFrame = inputBackgroundFrame
-            blurFrame.origin.y -= 26.0
+            blurFrame.origin.y -= 18.0
             blurFrame.size.height = max(100.0, layout.size.height - blurFrame.origin.y)
             transition.updateFrame(node: bottomBackgroundEdgeEffectNode, frame: blurFrame)
             bottomBackgroundEdgeEffectNode.update(
                 rect: blurFrame,
-                edge: WallpaperEdgeEffectEdge(edge: .bottom, size: 80.0),
+                edge: WallpaperEdgeEffectEdge(edge: .bottom, size: 100.0),
+                blur: false,
                 containerSize: wallpaperBounds.size,
                 transition: transition
             )
@@ -2328,15 +2377,6 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         
         if displayTopDimNode {
-            var topInset = listInsets.bottom + UIScreenPixel
-            if let titleAccessoryPanelHeight = titleAccessoryPanelHeight {
-                if expandTopDimNode {
-                    topInset -= titleAccessoryPanelHeight
-                } else {
-                    topInset -= UIScreenPixel
-                }
-            }
-            
             let inputPanelOrigin = layout.size.height - insets.bottom - bottomOverflowOffset - inputPanelsHeight
             
             if expandTopDimNode {
@@ -2399,6 +2439,29 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             }
         })
         
+        var topBackgroundEdgeEffectNode: WallpaperEdgeEffectNode?
+        if let current = self.topBackgroundEdgeEffectNode {
+            topBackgroundEdgeEffectNode = current
+        } else {
+            if let value = self.backgroundNode.makeEdgeEffectNode() {
+                topBackgroundEdgeEffectNode = value
+                self.topBackgroundEdgeEffectNode = value
+                self.historyNodeContainer.view.superview?.insertSubview(value.view, aboveSubview: self.historyNodeContainer.view)
+            }
+        }
+        if let topBackgroundEdgeEffectNode {
+            var blurFrame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: max(100.0, listInsets.bottom + 10.0)))
+            blurFrame.origin.y = listInsets.bottom + 10.0 - blurFrame.height
+            transition.updateFrame(node: topBackgroundEdgeEffectNode, frame: blurFrame)
+            topBackgroundEdgeEffectNode.update(
+                rect: blurFrame,
+                edge: WallpaperEdgeEffectEdge(edge: .top, size: 100.0),
+                blur: false,
+                containerSize: wallpaperBounds.size,
+                transition: transition
+            )
+        }
+        
         if self.isScrollingLockedAtTop {
             switch self.historyNode.visibleContentOffset() {
             case let .known(value) where value <= CGFloat.ulpOfOne:
@@ -2454,6 +2517,18 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         transition.updateBounds(node: self.inputPanelOverlayNode, bounds: CGRect(origin: CGPoint(x: 0.0, y: apparentInputBackgroundFrame.origin.y), size: layout.size), beginWithCurrentState: true)
         transition.updateFrame(node: self.inputPanelBackgroundNode, frame: apparentInputBackgroundFrame, beginWithCurrentState: true)
         
+        if let headerPanelsComponentView = self.headerPanelsView?.view, let headerPanelsSize {
+            let headerPanelsFrame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: sidePanelTopInset), size: headerPanelsSize)
+            var headerPanelsTransition = ComponentTransition(transition)
+            if headerPanelsComponentView.superview == nil {
+                headerPanelsTransition.animateAlpha(view: headerPanelsComponentView, from: 0.0, to: 1.0)
+                headerPanelsTransition = headerPanelsTransition.withAnimation(.none)
+                self.floatingTopicsPanelContainer.view.addSubview(headerPanelsComponentView)
+            }
+            headerPanelsTransition.setFrame(view: headerPanelsComponentView, frame: headerPanelsFrame)
+            sidePanelTopInset += headerPanelsSize.height + 2.0
+        }
+        
         let floatingTopicsPanelContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 0.0, height: layout.size.height))
         transition.updateFrame(node: self.floatingTopicsPanelContainer, frame: floatingTopicsPanelContainerFrame)
         if let floatingTopicsPanel = self.floatingTopicsPanel {
@@ -2502,11 +2577,6 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             })*/
             dismissedFloatingTopicsPanelView.removeFromSuperview()
         }
-
-        if let navigationBarBackgroundContent = self.navigationBarBackgroundContent {
-            transition.updateFrame(node: navigationBarBackgroundContent, frame: CGRect(origin: .zero, size: CGSize(width: layout.size.width, height: navigationBarHeight + (titleAccessoryPanelBackgroundHeight ?? 0.0) + (translationPanelHeight ?? 0.0))), beginWithCurrentState: true)
-            navigationBarBackgroundContent.update(rect: CGRect(origin: .zero, size: CGSize(width: layout.size.width, height: navigationBarHeight + (titleAccessoryPanelBackgroundHeight ?? 0.0) + (translationPanelHeight ?? 0.0))), within: layout.size, transition: transition)
-        }
         
         transition.updateFrame(node: self.contentDimNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: apparentInputBackgroundFrame.origin.y)))
         
@@ -2517,47 +2587,6 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         
         transition.updateFrame(node: self.navigateButtons, frame: apparentNavigateButtonsFrame)
         self.navigateButtons.update(rect: apparentNavigateButtonsFrame, within: layout.size, transition: transition)
-    
-        if let titleAccessoryPanelNode = self.titleAccessoryPanelNode, let titleAccessoryPanelFrame, !titleAccessoryPanelNode.frame.equalTo(titleAccessoryPanelFrame) {
-            let previousFrame = titleAccessoryPanelNode.frame
-            titleAccessoryPanelNode.frame = titleAccessoryPanelFrame
-            if transition.isAnimated && previousFrame.width != titleAccessoryPanelFrame.width {
-            } else if immediatelyLayoutAccessoryPanelAndAnimateAppearance {
-                transition.animatePositionAdditive(node: titleAccessoryPanelNode, offset: CGPoint(x: 0.0, y: -titleAccessoryPanelFrame.height))
-            } else if previousFrame.minY != titleAccessoryPanelFrame.minY {
-                transition.animatePositionAdditive(node: titleAccessoryPanelNode, offset: CGPoint(x: 0.0, y: previousFrame.minY - titleAccessoryPanelFrame.minY))
-            }
-        }
-        
-        if let chatTranslationPanel = self.chatTranslationPanel, let translationPanelFrame, !chatTranslationPanel.frame.equalTo(translationPanelFrame) {
-            let previousFrame = chatTranslationPanel.frame
-            chatTranslationPanel.frame = translationPanelFrame
-            if transition.isAnimated && previousFrame.width != translationPanelFrame.width {
-            } else if immediatelyLayoutTranslationPanelNodeAndAnimateAppearance {
-                transition.animatePositionAdditive(node: chatTranslationPanel, offset: CGPoint(x: 0.0, y: -translationPanelFrame.height))
-            } else if previousFrame.minY != translationPanelFrame.minY {
-                transition.animatePositionAdditive(node: chatTranslationPanel, offset: CGPoint(x: 0.0, y: previousFrame.minY - translationPanelFrame.minY))
-            }
-        }
-        
-        if let chatImportStatusPanel = self.chatImportStatusPanel, let importStatusPanelFrame, !chatImportStatusPanel.frame.equalTo(importStatusPanelFrame) {
-            chatImportStatusPanel.frame = importStatusPanelFrame
-        }
-        
-        if let adPanelNode = self.adPanelNode, let adPanelFrame, !adPanelNode.frame.equalTo(adPanelFrame) {
-            adPanelNode.frame = adPanelFrame
-        }
-        
-        if let feePanelNode = self.feePanelNode, let feePanelFrame, !feePanelNode.frame.equalTo(feePanelFrame) {
-            let previousFrame = feePanelNode.frame
-            feePanelNode.frame = feePanelFrame
-            if transition.isAnimated && previousFrame.width != feePanelFrame.width {
-            } else if immediatelyLayoutFeePanelNodeAndAnimateAppearance {
-                transition.animatePositionAdditive(node: feePanelNode, offset: CGPoint(x: 0.0, y: -feePanelFrame.height))
-            } else if previousFrame.minY != feePanelFrame.minY {
-                transition.animatePositionAdditive(node: feePanelNode, offset: CGPoint(x: 0.0, y: previousFrame.minY - feePanelFrame.minY))
-            }
-        }
         
         if let secondaryInputPanelNode = self.secondaryInputPanelNode, let apparentSecondaryInputPanelFrame = apparentSecondaryInputPanelFrame, !secondaryInputPanelNode.frame.equalTo(apparentSecondaryInputPanelFrame) {
             if immediatelyLayoutSecondaryInputPanelAndAnimateAppearance {
@@ -2599,10 +2628,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 inputContextPanelNode.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: insets.bottom + inputPanelsHeight + 8.0, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
             }
             
-            if !inputContextPanelNode.frame.equalTo(panelFrame) || inputContextPanelNode.theme !== self.chatPresentationInterfaceState.theme {
-                transition.updateFrame(node: inputContextPanelNode, frame: panelFrame)
-                inputContextPanelNode.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: 0.0, transition: transition, interfaceState: self.chatPresentationInterfaceState)
-            }
+            transition.updateFrame(node: inputContextPanelNode, frame: panelFrame)
+            inputContextPanelNode.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: insets.bottom + inputPanelsHeight + 8.0, transition: transition, interfaceState: self.chatPresentationInterfaceState)
         }
         
         if let overlayContextPanelNode = self.overlayContextPanelNode {
@@ -2638,60 +2665,6 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                     transition.updateFrame(view: externalTopPanelContainer, frame: CGRect(origin: inputNodeFrame.origin, size: CGSize(width: inputNodeFrame.width, height: 0.0)))
                 }
             }
-        }
-        
-        if let dismissedTitleAccessoryPanelNode {
-            var dismissedPanelFrame = dismissedTitleAccessoryPanelNode.frame
-            transition.updateSublayerTransformOffset(layer: dismissedTitleAccessoryPanelNode.layer, offset: CGPoint(x: 0.0, y: -dismissedPanelFrame.height))
-            dismissedPanelFrame.origin.y = titleAccessoryPanelBaseY
-            dismissedTitleAccessoryPanelNode.clipsToBounds = true
-            dismissedPanelFrame.size.height = 0.0
-            if transition.isAnimated {
-                dismissedTitleAccessoryPanelNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
-            }
-            transition.updateFrame(node: dismissedTitleAccessoryPanelNode, frame: dismissedPanelFrame, completion: { [weak dismissedTitleAccessoryPanelNode] _ in
-                dismissedTitleAccessoryPanelNode?.removeFromSupernode()
-            })
-        }
-        
-        if let dismissedTranslationPanelNode {
-            var dismissedPanelFrame = dismissedTranslationPanelNode.frame
-            dismissedPanelFrame.origin.y = -dismissedPanelFrame.size.height
-            transition.updateAlpha(node: dismissedTranslationPanelNode, alpha: 0.0, completion: { [weak dismissedTranslationPanelNode] _ in
-                dismissedTranslationPanelNode?.removeFromSupernode()
-            })
-            dismissedTranslationPanelNode.animateOut()
-        }
-        
-        if let dismissedImportStatusPanelNode {
-            var dismissedPanelFrame = dismissedImportStatusPanelNode.frame
-            dismissedPanelFrame.origin.y = -dismissedPanelFrame.size.height
-            transition.updateFrame(node: dismissedImportStatusPanelNode, frame: dismissedPanelFrame, completion: { [weak dismissedImportStatusPanelNode] _ in
-                dismissedImportStatusPanelNode?.removeFromSupernode()
-            })
-        }
-        
-        if let dismissedAdPanelNode {
-            var dismissedPanelFrame = dismissedAdPanelNode.frame
-            dismissedPanelFrame.origin.y = -dismissedPanelFrame.size.height
-            transition.updateAlpha(node: dismissedAdPanelNode, alpha: 0.0)
-            transition.updateFrame(node: dismissedAdPanelNode, frame: dismissedPanelFrame, completion: { [weak dismissedAdPanelNode] _ in
-                dismissedAdPanelNode?.removeFromSupernode()
-            })
-        }
-        
-        if let dismissedFeePanelNode {
-            var dismissedPanelFrame = dismissedFeePanelNode.frame
-            transition.updateSublayerTransformOffset(layer: dismissedFeePanelNode.layer, offset: CGPoint(x: 0.0, y: -dismissedPanelFrame.height))
-            dismissedPanelFrame.origin.y = feePanelBaseY
-            dismissedFeePanelNode.clipsToBounds = true
-            dismissedPanelFrame.size.height = 0.0
-            if transition.isAnimated {
-                dismissedFeePanelNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
-            }
-            transition.updateFrame(node: dismissedFeePanelNode, frame: dismissedPanelFrame, completion: { [weak dismissedFeePanelNode] _ in
-                dismissedFeePanelNode?.removeFromSupernode()
-            })
         }
         
         if let inputPanelNode = self.inputPanelNode, let apparentInputPanelFrame = apparentInputPanelFrame, !inputPanelNode.frame.equalTo(apparentInputPanelFrame) {
@@ -3485,22 +3458,6 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 self.updatePlainInputSeparator(transition: .immediate)
 
                 self.backgroundNode.updateBubbleTheme(bubbleTheme: chatPresentationInterfaceState.theme, bubbleCorners: chatPresentationInterfaceState.bubbleCorners)
-                
-                if self.backgroundNode.hasExtraBubbleBackground() {
-                    if self.navigationBarBackgroundContent == nil {
-                        if let navigationBarBackgroundContent = self.backgroundNode.makeBubbleBackground(for: .free) {
-                            self.navigationBarBackgroundContent = navigationBarBackgroundContent
-                            
-                            navigationBarBackgroundContent.allowsGroupOpacity = true
-                            navigationBarBackgroundContent.implicitContentUpdate = false
-                            navigationBarBackgroundContent.alpha = 0.3
-                            self.navigationBar?.insertSubnode(navigationBarBackgroundContent, at: 1)
-                        }
-                    }
-                } else {
-                    self.navigationBarBackgroundContent?.removeFromSupernode()
-                    self.navigationBarBackgroundContent = nil
-                }
             }
             
             let keepSendButtonEnabled = chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil || chatPresentationInterfaceState.interfaceState.editMessage != nil
@@ -4445,11 +4402,11 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                         }
                     }
                     
-                    if !found {
+                    if !found, let controller = self.controller {
                         let authorName: String = (replyMessage.author.flatMap(EnginePeer.init))?.compactDisplayTitle ?? ""
                         let errorTextData =  self.chatPresentationInterfaceState.strings.Chat_ErrorQuoteOutdatedText(authorName)
                         let errorText = errorTextData.string
-                        self.controller?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.context.sharedContext.currentPresentationData.with({ $0 })), title: self.chatPresentationInterfaceState.strings.Chat_ErrorQuoteOutdatedTitle, text: errorText, actions: [
+                        controller.present(textAlertController(context: self.context, title: self.chatPresentationInterfaceState.strings.Chat_ErrorQuoteOutdatedTitle, text: errorText, actions: [
                             TextAlertAction(type: .genericAction, title: self.chatPresentationInterfaceState.strings.Common_Cancel, action: {}),
                             TextAlertAction(type: .defaultAction, title: self.chatPresentationInterfaceState.strings.Chat_ErrorQuoteOutdatedActionEdit, action: { [weak self] in
                                 guard let self, let controller = self.controller else {
@@ -4909,11 +4866,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         titleViewSnapshotState: ChatTitleView.SnapshotState?,
         avatarSnapshotState: ChatAvatarNavigationNode.SnapshotState?
     ) -> SnapshotState {
-        var titleAccessoryPanelSnapshot: UIView?
-        if let titleAccessoryPanelNode = self.titleAccessoryPanelNode, let snapshot = titleAccessoryPanelNode.view.snapshotView(afterScreenUpdates: false) {
-            snapshot.frame = titleAccessoryPanelNode.frame
-            titleAccessoryPanelSnapshot = snapshot
-        }
+        let titleAccessoryPanelSnapshot: UIView? = nil
         var inputPanelNodeSnapshot: UIView?
         if let inputPanelNode = self.inputPanelNode, let snapshot = inputPanelNode.view.snapshotView(afterScreenUpdates: false) {
             snapshot.frame = inputPanelNode.frame
@@ -4944,25 +4897,9 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
 
         if let titleAccessoryPanelSnapshot = snapshotState.titleAccessoryPanelSnapshot {
             self.titleAccessoryPanelContainer.view.addSubview(titleAccessoryPanelSnapshot)
-            if let _ = self.titleAccessoryPanelNode {
-                titleAccessoryPanelSnapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak titleAccessoryPanelSnapshot] _ in
-                    titleAccessoryPanelSnapshot?.removeFromSuperview()
-                })
-                titleAccessoryPanelSnapshot.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -10.0), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
-            } else {
-                titleAccessoryPanelSnapshot.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -titleAccessoryPanelSnapshot.bounds.height), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: { [weak titleAccessoryPanelSnapshot] _ in
-                    titleAccessoryPanelSnapshot?.removeFromSuperview()
-                })
-            }
-        }
-
-        if let titleAccessoryPanelNode = self.titleAccessoryPanelNode {
-            if let _ = snapshotState.titleAccessoryPanelSnapshot {
-                titleAccessoryPanelNode.layer.animatePosition(from: CGPoint(x: 0.0, y: 10.0), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: true, additive: true)
-                titleAccessoryPanelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, removeOnCompletion: true)
-            } else {
-                titleAccessoryPanelNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -titleAccessoryPanelNode.bounds.height), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: true, additive: true)
-            }
+            titleAccessoryPanelSnapshot.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -titleAccessoryPanelSnapshot.bounds.height), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: { [weak titleAccessoryPanelSnapshot] _ in
+                titleAccessoryPanelSnapshot?.removeFromSuperview()
+            })
         }
 
         if let navigationBar = self.navigationBar {

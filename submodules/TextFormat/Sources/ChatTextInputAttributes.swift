@@ -412,6 +412,7 @@ public final class ChatTextInputTextCustomEmojiAttribute: NSObject, Codable {
         case ton(tinted: Bool)
         case animation(name: String)
         case verification
+        case dice
     }
     
     public let interactivelySelectedFromPackId: ItemCollectionId?

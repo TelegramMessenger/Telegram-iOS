@@ -647,8 +647,13 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     if let restrictedText = restrictedText {
                         storeMessageTextInPasteboard(restrictedText, entities: nil)
                     } else {
-                        if let translationState = chatPresentationInterfaceState.translationState, translationState.isEnabled,
-                           let translation = message.attributes.first(where: { ($0 as? TranslationMessageAttribute)?.toLang == translationState.toLang }) as? TranslationMessageAttribute, !translation.text.isEmpty {
+                        var translateToLang: String?
+                        if let translationState = chatPresentationInterfaceState.translationState, translationState.isEnabled {
+                            translateToLang = translationState.toLang
+                        }
+                        if controllerInteraction.summarizedMessageIds.contains(message.id), let attribute = message.attributes.first(where: { $0 is SummarizationMessageAttribute }) as? SummarizationMessageAttribute, let summary = attribute.summaryForLang(translateToLang) {
+                            storeMessageTextInPasteboard(summary.text, entities: summary.entities)
+                        } else if let translateToLang, let translation = message.attributes.first(where: { ($0 as? TranslationMessageAttribute)?.toLang == translateToLang }) as? TranslationMessageAttribute, !translation.text.isEmpty {
                             storeMessageTextInPasteboard(translation.text, entities: translation.entities)
                         } else {
                             storeMessageTextInPasteboard(message.text, entities: messageEntities)
@@ -1178,8 +1183,8 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     c?.dismiss(completion: {
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         
-                        controllerInteraction.presentController(standardTextAlertController(
-                            theme: AlertControllerTheme(presentationData: presentationData),
+                        controllerInteraction.presentController(textAlertController(
+                            context: context,
                             title: presentationData.strings.Chat_ScheduledForceSendProcessingVideo_Title,
                             text: presentationData.strings.Chat_ScheduledForceSendProcessingVideo_Text,
                             actions: [
@@ -1282,11 +1287,16 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                     if let restrictedText = restrictedText {
                                         storeMessageTextInPasteboard(restrictedText, entities: nil)
                                     } else {
-                                        if let translationState = chatPresentationInterfaceState.translationState, translationState.isEnabled,
-                                           let translation = message.attributes.first(where: { ($0 as? TranslationMessageAttribute)?.toLang == translationState.toLang }) as? TranslationMessageAttribute, !translation.text.isEmpty {
+                                        var translateToLang: String?
+                                        if let translationState = chatPresentationInterfaceState.translationState, translationState.isEnabled {
+                                            translateToLang = translationState.toLang
+                                        }
+                                        if controllerInteraction.summarizedMessageIds.contains(message.id), let attribute = message.attributes.first(where: { $0 is SummarizationMessageAttribute }) as? SummarizationMessageAttribute, let summary = attribute.summaryForLang(translateToLang) {
+                                            storeMessageTextInPasteboard(summary.text, entities: summary.entities)
+                                        } else if let translateToLang, let translation = message.attributes.first(where: { ($0 as? TranslationMessageAttribute)?.toLang == translateToLang }) as? TranslationMessageAttribute, !translation.text.isEmpty {
                                             storeMessageTextInPasteboard(translation.text, entities: translation.entities)
                                         } else {
-                                            storeMessageTextInPasteboard(messageText, entities: messageEntities)
+                                            storeMessageTextInPasteboard(message.text, entities: messageEntities)
                                         }
                                     }
                                     
@@ -1355,10 +1365,17 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Message"), color: theme.actionSheet.primaryTextColor)
                     }, action: { _, f in
                         var text = messageText
-                        if let translationState = chatPresentationInterfaceState.translationState, translationState.isEnabled,
-                           let translation = message.attributes.first(where: { ($0 as? TranslationMessageAttribute)?.toLang == translationState.toLang }) as? TranslationMessageAttribute, !translation.text.isEmpty {
+                        
+                        var translateToLang: String?
+                        if let translationState = chatPresentationInterfaceState.translationState, translationState.isEnabled {
+                            translateToLang = translationState.toLang
+                        }
+                        if controllerInteraction.summarizedMessageIds.contains(message.id), let attribute = message.attributes.first(where: { $0 is SummarizationMessageAttribute }) as? SummarizationMessageAttribute, let summary = attribute.summaryForLang(translateToLang) {
+                            text = summary.text
+                        } else if let translateToLang, let translation = message.attributes.first(where: { ($0 as? TranslationMessageAttribute)?.toLang == translateToLang }) as? TranslationMessageAttribute, !translation.text.isEmpty {
                             text = translation.text
                         }
+                        
                         controllerInteraction.performTextSelectionAction(message, !isCopyProtected, NSAttributedString(string: text), .speak)
                         f(.default)
                     })))
@@ -2162,8 +2179,13 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                         if let restrictedText = restrictedText {
                             storeMessageTextInPasteboard(restrictedText, entities: nil)
                         } else {
-                            if let translationState = chatPresentationInterfaceState.translationState, translationState.isEnabled,
-                               let translation = message.attributes.first(where: { ($0 as? TranslationMessageAttribute)?.toLang == translationState.toLang }) as? TranslationMessageAttribute, !translation.text.isEmpty {
+                            var translateToLang: String?
+                            if let translationState = chatPresentationInterfaceState.translationState, translationState.isEnabled {
+                                translateToLang = translationState.toLang
+                            }
+                            if controllerInteraction.summarizedMessageIds.contains(message.id), let attribute = message.attributes.first(where: { $0 is SummarizationMessageAttribute }) as? SummarizationMessageAttribute, let summary = attribute.summaryForLang(translateToLang) {
+                                storeMessageTextInPasteboard(summary.text, entities: summary.entities)
+                            } else if let translateToLang, let translation = message.attributes.first(where: { ($0 as? TranslationMessageAttribute)?.toLang == translateToLang }) as? TranslationMessageAttribute, !translation.text.isEmpty {
                                 storeMessageTextInPasteboard(translation.text, entities: translation.entities)
                             } else {
                                 storeMessageTextInPasteboard(message.text, entities: messageEntities)

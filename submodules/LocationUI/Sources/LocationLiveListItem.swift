@@ -119,7 +119,7 @@ final class LocationLiveListItemNode: ListViewItemNode {
         self.avatarNode = AvatarNode(font: avatarFont)
         self.avatarNode.isLayerBacked = !smartInvertColorsEnabled()
     
-        super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
+        super.init(layerBacked: false, rotated: false, seeThrough: false)
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.separatorNode)

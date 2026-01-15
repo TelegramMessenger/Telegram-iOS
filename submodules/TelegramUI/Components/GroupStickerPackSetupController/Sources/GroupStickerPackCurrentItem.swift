@@ -170,7 +170,7 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
         self.removeButtonIcon = ASImageNode()
         self.removeButtonIcon.displaysAsynchronously = false
         
-        super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
+        super.init(layerBacked: false, rotated: false, seeThrough: false)
         
         if let placeholderNode = self.placeholderNode {
             self.addSubnode(placeholderNode)

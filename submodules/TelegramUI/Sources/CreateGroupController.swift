@@ -321,7 +321,7 @@ private enum CreateGroupEntry: ItemListNodeEntry {
         let arguments = arguments as! CreateGroupArguments
         switch self {
             case let .groupInfo(_, _, dateTimeFormat, peer, state, avatar):
-                return ItemListAvatarAndNameInfoItem(itemContext: .accountContext(arguments.context), presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .editSettings, peer: peer.flatMap(EnginePeer.init), presence: nil, memberCount: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { editingName in
+                return ItemListAvatarAndNameInfoItem(itemContext: .accountContext(arguments.context), presentationData: presentationData, systemStyle: .glass, dateTimeFormat: dateTimeFormat, mode: .editSettings, peer: peer.flatMap(EnginePeer.init), presence: nil, memberCount: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, editingNameCompleted: {
                     arguments.done()
@@ -329,13 +329,13 @@ private enum CreateGroupEntry: ItemListNodeEntry {
                     arguments.changeProfilePhoto()
                 }, updatingImage: avatar, tag: CreateGroupEntryTag.info)
             case let .setProfilePhoto(_, text):
-                return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.changeProfilePhoto()
                 })
             case let .usernameHeader(_, title):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
             case let .username(theme, placeholder, text):
-                return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: "t.me/", textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: placeholder, type: .username, clearType: .always, tag: nil, sectionId: self.section, textUpdated: { updatedText in
+                return ItemListSingleLineInputItem(presentationData: presentationData, systemStyle: .glass, title: NSAttributedString(string: "t.me/", textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: placeholder, type: .username, clearType: .always, tag: nil, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updatePublicLinkText(updatedText)
                 }, action: {
                 })
@@ -364,24 +364,24 @@ private enum CreateGroupEntry: ItemListNodeEntry {
             case let .usernameInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
             case let .topics(_, text):
-                return ItemListSwitchItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/Menu/Topics")?.precomposed(), title: text, value: true, enabled: false, sectionId: self.section, style: .blocks, updated: { _ in })
+                return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, icon: UIImage(bundleImageName: "Settings/Menu/Topics")?.precomposed(), title: text, value: true, enabled: false, sectionId: self.section, style: .blocks, updated: { _ in })
             case let .topicsInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .autoDelete(text, value):
-                return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .optionArrows, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .optionArrows, action: {
                     arguments.updateAutoDelete()
                 }, tag: CreateGroupEntryTag.autoDelete)
             case let .autoDeleteInfo(text):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
             case let .member(_, _, _, dateTimeFormat, nameDisplayOrder, peer, presence):
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: EnginePeer(peer), presence: presence.flatMap(EnginePeer.Presence.init), text: .presence, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in })
+                return ItemListPeerItem(presentationData: presentationData, systemStyle: .glass, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: EnginePeer(peer), presence: presence.flatMap(EnginePeer.Presence.init), text: .presence, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in })
             case let .locationHeader(_, title):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
             case let .location(theme, location):
                 let imageSignal = chatMapSnapshotImage(engine: arguments.context.engine, resource: MapSnapshotMediaResource(latitude: location.latitude, longitude: location.longitude, width: 90, height: 90))
-                return ItemListAddressItem(theme: theme, label: "", text: location.address.replacingOccurrences(of: ", ", with: "\n"), imageSignal: imageSignal, selected: nil, sectionId: self.section, style: .blocks, action: nil)
+                return ItemListAddressItem(theme: theme, systemStyle: .glass, label: "", text: location.address.replacingOccurrences(of: ", ", with: "\n"), imageSignal: imageSignal, selected: nil, sectionId: self.section, style: .blocks, action: nil)
             case let .changeLocation(_, text):
-                return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.changeLocation()
                 })
             case let .locationInfo(_, text):
@@ -389,7 +389,7 @@ private enum CreateGroupEntry: ItemListNodeEntry {
             case let .venueHeader(_, title):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
             case let .venue(_, _, venue):
-                return ItemListVenueItem(presentationData: presentationData, engine: arguments.context.engine, venue: venue, sectionId: self.section, style: .blocks, action: {
+                return ItemListVenueItem(presentationData: presentationData, systemStyle: .glass, engine: arguments.context.engine, venue: venue, sectionId: self.section, style: .blocks, action: {
                     arguments.updateWithVenue(venue)
                 })
         }

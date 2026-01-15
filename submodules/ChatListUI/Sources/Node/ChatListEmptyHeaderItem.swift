@@ -55,7 +55,7 @@ class ChatListEmptyHeaderItemNode: ListViewItemNode {
     private var item: ChatListEmptyHeaderItem?
     
     required init() {
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
     }
     
     override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {

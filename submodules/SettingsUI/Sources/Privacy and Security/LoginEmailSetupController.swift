@@ -5,6 +5,7 @@ import SwiftSignalKit
 import TelegramCore
 import AccountContext
 import TelegramPresentationData
+import PresentationDataUtils
 import AuthorizationUI
 import AuthenticationServices
 import UndoUI
@@ -76,7 +77,7 @@ public func loginEmailSetupController(context: AccountContext, blocking: Bool, e
             var dismissCodeControllerImpl: (() -> Void)?
             var presentControllerImpl: ((ViewController) -> Void)?
             
-            let codeController = AuthorizationSequenceCodeEntryController(presentationData: presentationData, back: {
+            let codeController = AuthorizationSequenceCodeEntryController(sharedContext: context.sharedContext, presentationData: presentationData, back: {
                 dismissCodeControllerImpl?()
                 dismiss()
             })
@@ -119,7 +120,7 @@ public func loginEmailSetupController(context: AccountContext, blocking: Bool, e
                                 codeController?.resetCode()
                             }
                                 
-                            presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]))
+                            presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]))
                         }
                     }
                 }, completed: { [weak codeController] in
@@ -148,7 +149,7 @@ public func loginEmailSetupController(context: AccountContext, blocking: Bool, e
                     text = presentationData.strings.Login_EmailNotAllowedError
             }
             
-            presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]))
+            presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]))
         }, completed: { [weak emailController] in
             emailController?.inProgress = false
         })
@@ -173,7 +174,7 @@ public func loginEmailSetupController(context: AccountContext, blocking: Bool, e
                 switch credential {
                     case let appleIdCredential as ASAuthorizationAppleIDCredential:
                         guard let tokenData = appleIdCredential.identityToken, let token = String(data: tokenData, encoding: .utf8) else {
-                            emailController?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                            emailController?.present(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                             return
                         }
                         let _ = (verifyLoginEmailChange(account: context.account, code: .appleToken(token))
@@ -193,7 +194,7 @@ public func loginEmailSetupController(context: AccountContext, blocking: Bool, e
                                 case .emailNotAllowed:
                                     text = presentationData.strings.Login_EmailNotAllowedError
                             }
-                            emailController?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                            emailController?.present(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                         }, completed: { [weak emailController] in
                             emailController?.authorization = nil
                             emailController?.authorizationDelegate = nil

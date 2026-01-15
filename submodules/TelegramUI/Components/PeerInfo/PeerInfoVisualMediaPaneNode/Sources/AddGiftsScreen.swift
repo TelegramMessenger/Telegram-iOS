@@ -484,18 +484,18 @@ private final class FilterHeaderButton: HighlightableButtonNode {
             component: AnyComponent(
                 BundleIconComponent(
                     name: "Peer Info/SortIcon",
-                    tintColor: theme.rootController.navigationBar.accentTextColor
+                    tintColor: theme.chat.inputPanel.panelControlColor
                 )
             ),
             environment: {},
-            containerSize: CGSize(width: 30.0, height: 30.0)
+            containerSize: CGSize(width: 44.0, height: 44.0)
         )
         if let view = self.icon.view {
             if view.superview == nil {
                 view.isUserInteractionEnabled = false
                 self.referenceNode.view.addSubview(view)
             }
-            view.frame = CGRect(origin: CGPoint(x: 14.0, y: 7.0), size: iconSize)
+            view.frame = CGRect(origin: CGPoint(x: 7.0, y: 7.0), size: iconSize)
         }
         
         self.containerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 44.0, height: 44.0))

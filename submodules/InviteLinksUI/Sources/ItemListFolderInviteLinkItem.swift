@@ -203,7 +203,7 @@ public class ItemListFolderInviteLinkItemNode: ListViewItemNode, ItemListItemNod
                 
         self.activateArea = AccessibilityAreaNode()
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.fieldNode)
         self.addSubnode(self.addressNode)

@@ -245,7 +245,7 @@ private class MessagePriceItemNode: ListViewItemNode {
         
         self.button = ComponentView<Empty>()
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.leftTextNode)
         self.addSubnode(self.rightTextNode)

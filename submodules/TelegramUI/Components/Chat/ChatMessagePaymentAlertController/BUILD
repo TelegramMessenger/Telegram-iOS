@@ -25,6 +25,8 @@ swift_library(
         "//submodules/CheckNode",
         "//submodules/TelegramUIPreferences",
         "//submodules/TelegramUI/Components/Stars/StarsBalanceOverlayComponent",
+        "//submodules/TelegramUI/Components/AlertComponent",
+        "//submodules/TelegramUI/Components/AlertComponent/AlertCheckComponent",
         "//submodules/Markdown",
     ],
     visibility = [

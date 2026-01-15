@@ -34,6 +34,7 @@ final class GiftOptionsScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let overNavigationContainer: UIView
     let starsContext: StarsContext
     let peerId: EnginePeer.Id
     let premiumOptions: [CachedPremiumGiftOption]
@@ -42,6 +43,7 @@ final class GiftOptionsScreenComponent: Component {
     
     init(
         context: AccountContext,
+        overNavigationContainer: UIView,
         starsContext: StarsContext,
         peerId: EnginePeer.Id,
         premiumOptions: [CachedPremiumGiftOption],
@@ -49,6 +51,7 @@ final class GiftOptionsScreenComponent: Component {
         completion: (() -> Void)?
     ) {
         self.context = context
+        self.overNavigationContainer = overNavigationContainer
         self.starsContext = starsContext
         self.peerId = peerId
         self.premiumOptions = premiumOptions
@@ -366,7 +369,7 @@ final class GiftOptionsScreenComponent: Component {
                         return
                     }
                     
-                    if gift.flags.contains(.isAuction) {
+                    if gift.flags.contains(.isAuction) && !((gift.availability?.resale ?? 0) > 0 && component.peerId != component.context.account.peerId) {
                         guard let giftAuctionsManager = component.context.giftAuctionsManager else {
                             return
                         }
@@ -416,6 +419,7 @@ final class GiftOptionsScreenComponent: Component {
                                         let giftController = component.context.sharedContext.makeGiftAuctionViewScreen(
                                             context: component.context,
                                             auctionContext: auctionContext,
+                                            peerId: component.peerId,
                                             completion: { [weak mainController] acquiredGifts, upgradeAttributes in
                                                 if component.peerId == context.account.peerId, let upgradeAttributes, let navigationController = mainController?.navigationController as? NavigationController {
                                                     let controller = context.sharedContext.makeGiftAuctionWearPreviewScreen(context: context, auctionContext: auctionContext, acquiredGifts: acquiredGifts, attributes: upgradeAttributes, completion: {
@@ -988,7 +992,7 @@ final class GiftOptionsScreenComponent: Component {
             controller.present(alertController, in: .current)
             
             dismissAlertImpl = { [weak alertController] in
-                alertController?.dismissAnimated()
+                alertController?.dismiss()
             }
         }
         
@@ -1084,6 +1088,9 @@ final class GiftOptionsScreenComponent: Component {
                             guard let self, let component = self.component, let controller = controller(), let navigationController = controller.navigationController as? NavigationController else {
                                 return
                             }
+                            guard component.peerId != component.context.account.peerId else {
+                                return
+                            }
                             let _ = (component.context.engine.data.get(
                                 TelegramEngine.EngineData.Item.Peer.Peer(id: component.peerId)
                             )
@@ -1141,18 +1148,18 @@ final class GiftOptionsScreenComponent: Component {
             }
             
             if isGlass {
-                let barButtonSize = CGSize(width: 40.0, height: 40.0)
+                let barButtonSize = CGSize(width: 44.0, height: 44.0)
                 let cancelButtonSize = self.cancelButton.update(
                     transition: transition,
                     component: AnyComponent(GlassBarButtonComponent(
                         size: barButtonSize,
-                        backgroundColor: theme.rootController.navigationBar.glassBarButtonBackgroundColor,
+                        backgroundColor: nil,
                         isDark: theme.overallDarkAppearance,
-                        state: .generic,
+                        state: .glass,
                         component: AnyComponentWithIdentity(id: "close", component: AnyComponent(
                             BundleIconComponent(
                                 name: "Navigation/Close",
-                                tintColor: theme.rootController.navigationBar.glassBarButtonForegroundColor
+                                tintColor: theme.chat.inputPanel.panelControlColor
                             )
                         )),
                         action: { _ in
@@ -1919,6 +1926,8 @@ final class GiftOptionsScreenComponent: Component {
 open class GiftOptionsScreen: ViewControllerComponentContainer, GiftOptionsScreenProtocol {
     private let context: AccountContext
     
+    private let overNavigationContainer: UIView
+    
     public var parentController: () -> ViewController? = {
         return nil
     }
@@ -1933,8 +1942,11 @@ open class GiftOptionsScreen: ViewControllerComponentContainer, GiftOptionsScree
     ) {
         self.context = context
         
+        self.overNavigationContainer = SparseContainerView()
+        
         super.init(context: context, component: GiftOptionsScreenComponent(
             context: context,
+            overNavigationContainer: self.overNavigationContainer,
             starsContext: starsContext,
             peerId: peerId,
             premiumOptions: premiumOptions,
@@ -1950,6 +1962,10 @@ open class GiftOptionsScreen: ViewControllerComponentContainer, GiftOptionsScree
                 return
             }
             componentView.scrollToTop()
+        }
+        
+        if let navigationBar = self.navigationBar {
+            navigationBar.customOverBackgroundContentView.insertSubview(self.overNavigationContainer, at: 0)
         }
     }
     

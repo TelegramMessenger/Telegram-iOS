@@ -32,6 +32,7 @@ swift_library(
         "//submodules/WallpaperBackgroundNode",
         "//submodules/LocalMediaResources",
         "//submodules/AppBundle",
+        "//submodules/TelegramStringFormatting",
         "//submodules/ChatPresentationInterfaceState",
         "//submodules/TelegramUI/Components/TextNodeWithEntities",
         "//submodules/TelegramUI/Components/ChatControllerInteraction",

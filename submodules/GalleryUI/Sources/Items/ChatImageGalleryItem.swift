@@ -1651,7 +1651,7 @@ private class ImageRecognitionOverlayContentNode: GalleryOverlayContentNode {
         if isHidden && !self.buttonNode.isSelected {
             buttonPosition = CGPoint(x: size.width - insets.right - buttonSize.width - 59.0, y: -50.0)
         } else {
-            buttonPosition = CGPoint(x: size.width - insets.right - buttonSize.width - (self.buttonNode.isSelected ? 24.0 : 59.0), y: insets.top - 50.0)
+            buttonPosition = CGPoint(x: size.width - insets.right - buttonSize.width - (self.buttonNode.isSelected ? 24.0 : 59.0), y: insets.top - 58.0)
         }
         
         transition.updateFrame(node: self.buttonNode, frame: CGRect(origin: buttonPosition, size: CGSize(width: buttonSize.width + 24.0, height: buttonSize.height + 24.0)))

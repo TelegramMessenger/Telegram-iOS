@@ -469,7 +469,7 @@ extension VideoChatScreenComponent.View {
                                 }
                             }
 
-                            let controller = voiceChatTitleEditController(sharedContext: currentCall.accountContext.sharedContext, account: currentCall.accountContext.account, forceTheme: environment.theme, title: title, text: text, placeholder: placeholder, value: nil, maxLength: 40, apply: { [weak self] title in
+                            let controller = voiceChatTitleEditController(context: currentCall.accountContext, forceTheme: environment.theme, title: title, text: text, placeholder: placeholder, value: nil, maxLength: 40, apply: { [weak self] title in
                                 guard let self, let environment = self.environment, case let .group(groupCall) = self.currentCall, let peer = self.peer, let title else {
                                     return
                                 }

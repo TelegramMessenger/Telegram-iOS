@@ -6,6 +6,7 @@ import TelegramCore
 import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
+import PresentationDataUtils
 import AccountContext
 import ContextUI
 import PhotoResources
@@ -1824,6 +1825,8 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
         self.maxStoriesPerFolder = maxStoriesPerFolder
         
         super.init()
+        
+        self.clipsToBounds = true
 
         if case .peer = self.scope {
             let _ = (ApplicationSpecificNotice.getSharedMediaScrollingTooltip(accountManager: context.sharedContext.accountManager)
@@ -2112,7 +2115,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             }
 
             if case .botPreview = scope {
-                let backgroundColor = presentationData.theme.list.plainBackgroundColor
+                let backgroundColor = presentationData.theme.list.blocksBackgroundColor
                 let foregroundColor = presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.6)
                 
                 return SparseItemGrid.ShimmerColors(background: backgroundColor.argb, foreground: foregroundColor.argb)
@@ -4024,14 +4027,17 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             transition: folderTabTransition,
             component: AnyComponent(TabSelectorComponent(
                 colors: TabSelectorComponent.Colors(
-                    foreground: self.presentationData.theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.8),
-                    selection: self.presentationData.theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.05)
+                    foreground: self.presentationData.theme.list.itemPrimaryTextColor,
+                    selection: self.presentationData.theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.05),
+                    normal: self.presentationData.theme.list.itemPrimaryTextColor,
+                    simple: true
                 ),
                 theme: self.presentationData.theme,
                 customLayout: TabSelectorComponent.CustomLayout(
-                    font: Font.medium(14.0),
+                    font: Font.medium(15.0),
                     spacing: 9.0,
-                    verticalInset: 11.0
+                    verticalInset: 11.0,
+                    height: 44.0 - 5.0 * 2.0
                 ),
                 items: folderItems,
                 selectedId: selectedId,
@@ -4090,9 +4096,9 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 }
             )),
             environment: {},
-            containerSize: CGSize(width: size.width, height: 44.0)
+            containerSize: CGSize(width: size.width - 6.0 * 2.0, height: 44.0)
         )
-        var folderTabFrame = CGRect(origin: CGPoint(x: floor((size.width - folderTabSize.width) * 0.5), y: topInset - 11.0), size: folderTabSize)
+        var folderTabFrame = CGRect(origin: CGPoint(x: floor((size.width - folderTabSize.width) * 0.5), y: topInset - 21.0), size: folderTabSize)
         
         let effectiveScrollingOffset: CGFloat
         effectiveScrollingOffset = self.itemGrid.scrollingOffset
@@ -4236,7 +4242,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
         }
         
         var hasBarBackground = false
-        if self.isProfileEmbedded {
+        if self.isProfileEmbedded && !"".isEmpty {
             if case .botPreview = self.scope {
                 hasBarBackground = true
             } else if case let .peer(_, _, isArchived) = self.scope, ((self.canManageStories && !isArchived) || !self.currentStoryFolders.isEmpty) {
@@ -4278,9 +4284,9 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             if case .botPreview = self.scope {
                 updateBotPreviewFooter(size: size, bottomInset: 0.0, transition: transition)
                 if let botPreviewFooterView = self.botPreviewFooter?.view {
-                listBottomInset += 18.0 + botPreviewFooterView.bounds.height
+                    listBottomInset += 18.0 + botPreviewFooterView.bounds.height
+                }
             }
-        }
         }
         
         if self.isProfileEmbedded, let selectedIds = self.itemInteraction.selectedIds, self.canManageStories, case let .peer(peerId, _, isArchived) = self.scope {
@@ -4589,12 +4595,13 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 } else {
                     backgroundColor = presentationData.theme.list.blocksBackgroundColor
                 }
+                let _ = backgroundColor
                 
-                if self.didUpdateItemsOnce {
+                /*if self.didUpdateItemsOnce {
                     ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut)).setBackgroundColor(view: self.view, color: backgroundColor)
                 } else {
                     self.view.backgroundColor = backgroundColor
-                }
+                }*/
             } else {
                 let emptyStateView: ComponentView<Empty>
                 var emptyStateTransition = ComponentTransition(transition)
@@ -4656,12 +4663,13 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 } else {
                     backgroundColor = presentationData.theme.list.blocksBackgroundColor
                 }
+                let _ = backgroundColor
                 
-                if self.didUpdateItemsOnce {
+                /*if self.didUpdateItemsOnce {
                     ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut)).setBackgroundColor(view: self.view, color: backgroundColor)
                 } else {
                     self.view.backgroundColor = backgroundColor
-                }
+                }*/
             }
         } else if case .botPreview = self.scope, let items = self.items, items.items.isEmpty, items.count == 0 {
             let emptyStateView: ComponentView<Empty>
@@ -4741,12 +4749,13 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             } else {
                 backgroundColor = presentationData.theme.list.blocksBackgroundColor
             }
+            let _ = backgroundColor
             
-            if self.didUpdateItemsOnce {
+            /*if self.didUpdateItemsOnce {
                 ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut)).setBackgroundColor(view: self.view, color: backgroundColor)
             } else {
                 self.view.backgroundColor = backgroundColor
-            }
+            }*/
         } else if case let .peer(_, _, isArchived) = self.scope, self.canManageStories, !isArchived, self.isProfileEmbedded, let items = self.items, items.items.isEmpty, items.count == 0 {
             let emptyStateView: ComponentView<Empty>
             var emptyStateTransition = ComponentTransition(transition)
@@ -4822,12 +4831,13 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             } else {
                 backgroundColor = presentationData.theme.list.blocksBackgroundColor
             }
+            let _ = backgroundColor
             
-            if self.didUpdateItemsOnce {
+            /*if self.didUpdateItemsOnce {
                 ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut)).setBackgroundColor(view: self.view, color: backgroundColor)
             } else {
                 self.view.backgroundColor = backgroundColor
-            }
+            }*/
         } else {
             if let emptyStateView = self.emptyStateView {
                 let subTransition = ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut))
@@ -4843,17 +4853,17 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                     }
                 }
                 
-                if self.isProfileEmbedded, case .botPreview = self.scope {
+                /*if self.isProfileEmbedded, case .botPreview = self.scope {
                     subTransition.setBackgroundColor(view: self.view, color: presentationData.theme.list.blocksBackgroundColor)
                 } else if self.isProfileEmbedded, case let .peer(_, _, isArchived) = self.scope, ((self.canManageStories && !isArchived) || !self.currentStoryFolders.isEmpty), self.isProfileEmbedded {
                     subTransition.setBackgroundColor(view: self.view, color: presentationData.theme.list.blocksBackgroundColor)
                 } else if self.isProfileEmbedded {
-                    subTransition.setBackgroundColor(view: self.view, color: presentationData.theme.list.plainBackgroundColor)
+                    subTransition.setBackgroundColor(view: self.view, color: presentationData.theme.list.blocksBackgroundColor)
                 } else {
                     subTransition.setBackgroundColor(view: self.view, color: presentationData.theme.list.blocksBackgroundColor)
-                }
+                }*/
             } else {
-                if self.isProfileEmbedded, case .botPreview = self.scope {
+                /*if self.isProfileEmbedded, case .botPreview = self.scope {
                     self.view.backgroundColor = presentationData.theme.list.blocksBackgroundColor
                 } else if self.isProfileEmbedded, case let .peer(_, _, isArchived) = self.scope, self.canManageStories, self.isProfileEmbedded, !isArchived {
                     self.view.backgroundColor = presentationData.theme.list.blocksBackgroundColor
@@ -4863,7 +4873,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                     } else {
                         self.view.backgroundColor = .clear
                     }
-                }
+                }*/
             }
         }
 
@@ -5013,7 +5023,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
     
     private func presentAddStoryFolder(addItems: [EngineStoryItem] = []) {
         let promptController = promptController(
-            sharedContext: self.context.sharedContext,
+            context: self.context,
             updatedPresentationData: nil,
             text: self.presentationData.strings.Stories_CreateAlbum_Title,
             titleFont: .bold,
@@ -5046,7 +5056,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
     
     private func presentRenameStoryFolder(id: Int64, title: String) {
         let promptController = promptController(
-            sharedContext: self.context.sharedContext,
+            context: self.context,
             updatedPresentationData: nil,
             text: self.presentationData.strings.Stories_EditAlbum_Title,
             titleFont: .bold,
@@ -5173,14 +5183,14 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
     }
     
     public func presentUnableToAddMorePreviewsAlert() {
-        self.parentController?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: nil, text: self.presentationData.strings.BotPreviews_AlertTooManyPreviews(Int32(self.maxBotPreviewCount)), actions: [
+        self.parentController?.present(textAlertController(context: self.context, title: nil, text: self.presentationData.strings.BotPreviews_AlertTooManyPreviews(Int32(self.maxBotPreviewCount)), actions: [
             TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {
             })
         ], parseMarkdown: true), in: .window(.root))
     }
     
     public func presentDeleteBotPreviewLanguage() {
-        self.parentController?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: self.presentationData.strings.BotPreviews_DeleteTranslationAlert_Title, text: self.presentationData.strings.BotPreviews_DeleteTranslationAlert_Text, actions: [
+        self.parentController?.present(textAlertController(context: self.context, title: self.presentationData.strings.BotPreviews_DeleteTranslationAlert_Title, text: self.presentationData.strings.BotPreviews_DeleteTranslationAlert_Text, actions: [
             TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_Cancel, action: {
             }),
             TextAlertAction(type: .destructiveAction, title: self.presentationData.strings.Common_OK, action: { [weak self] in

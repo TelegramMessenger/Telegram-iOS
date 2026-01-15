@@ -9,6 +9,7 @@ import AppBundle
 import StoryPeerListComponent
 import TelegramCore
 import MoreHeaderButton
+import GlassBackgroundComponent
 
 public final class HeaderNetworkStatusComponent: Component {
     public enum Content: Equatable {
@@ -79,7 +80,6 @@ public final class ChatListHeaderComponent: Component {
         public let chatListTitle: NetworkStatusTitle?
         public let leftButton: AnyComponentWithIdentity<NavigationButtonComponentEnvironment>?
         public let rightButtons: [AnyComponentWithIdentity<NavigationButtonComponentEnvironment>]
-        public let backTitle: String?
         public let backPressed: (() -> Void)?
         
         public init(
@@ -89,7 +89,6 @@ public final class ChatListHeaderComponent: Component {
             chatListTitle: NetworkStatusTitle?,
             leftButton: AnyComponentWithIdentity<NavigationButtonComponentEnvironment>?,
             rightButtons: [AnyComponentWithIdentity<NavigationButtonComponentEnvironment>],
-            backTitle: String?,
             backPressed: (() -> Void)?
         ) {
             self.title = title
@@ -98,7 +97,6 @@ public final class ChatListHeaderComponent: Component {
             self.chatListTitle = chatListTitle
             self.leftButton = leftButton
             self.rightButtons = rightButtons
-            self.backTitle = backTitle
             self.backPressed = backPressed
         }
         
@@ -121,7 +119,7 @@ public final class ChatListHeaderComponent: Component {
             if lhs.rightButtons != rhs.rightButtons {
                 return false
             }
-            if lhs.backTitle != rhs.backTitle {
+            if (lhs.backPressed == nil) != (rhs.backPressed == nil) {
                 return false
             }
             return true
@@ -226,8 +224,6 @@ public final class ChatListHeaderComponent: Component {
         private let onPressed: () -> Void
         
         let arrowView: UIImageView
-        let titleOffsetContainer: UIView
-        let titleView: ImmediateTextView
         
         private var currentColor: UIColor?
         
@@ -235,15 +231,10 @@ public final class ChatListHeaderComponent: Component {
             self.onPressed = onPressed
             
             self.arrowView = UIImageView()
-            self.titleOffsetContainer = UIView()
-            self.titleView = ImmediateTextView()
             
             super.init(frame: CGRect())
             
             self.addSubview(self.arrowView)
-            
-            self.addSubview(self.titleOffsetContainer)
-            self.titleOffsetContainer.addSubview(self.titleView)
             
             self.highligthedChanged = { [weak self] highlighted in
                 guard let self else {
@@ -266,37 +257,37 @@ public final class ChatListHeaderComponent: Component {
             self.onPressed()
         }
         
-        func update(title: String, theme: PresentationTheme, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
-            let titleText = NSAttributedString(string: title, font: Font.regular(17.0), textColor: theme.rootController.navigationBar.accentTextColor)
-            let titleTextUpdated = self.titleView.attributedText != titleText
-            self.titleView.attributedText = titleText
-            let titleSize = self.titleView.updateLayout(CGSize(width: 100.0, height: 44.0))
-            
-            self.accessibilityLabel = title
+        func update(theme: PresentationTheme, strings: PresentationStrings, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
+            self.accessibilityLabel = strings.Common_Back
             self.accessibilityTraits = [.button]
             
-            if self.currentColor != theme.rootController.navigationBar.accentTextColor {
-                self.currentColor = theme.rootController.navigationBar.accentTextColor
-                self.arrowView.image = NavigationBarTheme.generateBackArrowImage(color: theme.rootController.navigationBar.accentTextColor)
+            if self.currentColor != theme.chat.inputPanel.panelControlColor {
+                self.currentColor = theme.chat.inputPanel.panelControlColor
+                let imageSize = CGSize(width: 44.0, height: 44.0)
+                let topRightPoint = CGPoint(x: 24.6, y: 14.0)
+                let centerPoint = CGPoint(x: 17.0, y: imageSize.height * 0.5)
+                self.arrowView.image = generateImage(imageSize, rotatedContext: { size, context in
+                    context.clear(CGRect(origin: CGPoint(), size: size))
+                    context.setStrokeColor(UIColor.white.cgColor)
+                    context.setLineWidth(2.0)
+                    context.setLineCap(.round)
+                    context.setLineJoin(.round)
+                    context.move(to: topRightPoint)
+                    context.addLine(to: centerPoint)
+                    context.addLine(to: CGPoint(x: topRightPoint.x, y: size.height - topRightPoint.y))
+                    context.strokePath()
+                })?.withRenderingMode(.alwaysTemplate)
+                self.arrowView.tintColor = theme.chat.inputPanel.panelControlColor
             }
             
-            let iconSpacing: CGFloat = 8.0
-            let iconOffset: CGFloat = -7.0
-            
+            let size = CGSize(width: 44.0, height: availableSize.height)
             let arrowSize = self.arrowView.image?.size ?? CGSize(width: 13.0, height: 22.0)
             
-            let arrowFrame = CGRect(origin: CGPoint(x: iconOffset - 1.0, y: floor((availableSize.height - arrowSize.height) / 2.0)), size: arrowSize)
+            let arrowFrame = arrowSize.centered(in: CGRect(origin: CGPoint(), size: size))
             transition.setPosition(view: self.arrowView, position: arrowFrame.center)
             transition.setBounds(view: self.arrowView, bounds: CGRect(origin: CGPoint(), size: arrowFrame.size))
             
-            let titleFrame = CGRect(origin: CGPoint(x: iconOffset - 3.0 + arrowSize.width + iconSpacing, y: floor((availableSize.height - titleSize.height) / 2.0)), size: titleSize)
-            if titleTextUpdated {
-                self.titleView.frame = titleFrame
-            } else {
-                transition.setFrame(view: self.titleView, frame: titleFrame)
-            }
-            
-            return CGSize(width: iconOffset + arrowSize.width + iconSpacing + titleSize.width, height: availableSize.height)
+            return size
         }
     }
     
@@ -305,9 +296,9 @@ public final class ChatListHeaderComponent: Component {
         let openStatusSetup: (UIView) -> Void
         let toggleIsLocked: () -> Void
         
-        let leftButtonOffsetContainer: UIView
+        let leftButtonsContainer: UIView
         var leftButtonViews: [AnyHashable: ComponentView<NavigationButtonComponentEnvironment>] = [:]
-        let rightButtonOffsetContainer: UIView
+        let rightButtonsContainer: UIView
         var rightButtonViews: [AnyHashable: ComponentView<NavigationButtonComponentEnvironment>] = [:]
         var backButtonView: BackButtonView?
         
@@ -324,6 +315,9 @@ public final class ChatListHeaderComponent: Component {
         
         private(set) var centerContentOffsetX: CGFloat = 0.0
         private(set) var centerContentOrigin: CGFloat = 0.0
+
+        private(set) var leftButtonsWidth: CGFloat = 0.0
+        private(set) var rightButtonsWidth: CGFloat = 0.0
         
         init(
             backPressed: @escaping () -> Void,
@@ -334,8 +328,9 @@ public final class ChatListHeaderComponent: Component {
             self.openStatusSetup = openStatusSetup
             self.toggleIsLocked = toggleIsLocked
             
-            self.leftButtonOffsetContainer = UIView()
-            self.rightButtonOffsetContainer = UIView()
+            self.leftButtonsContainer = UIView()            
+            self.rightButtonsContainer = UIView()
+
             self.titleOffsetContainer = UIView()
             self.titleScaleContainer = UIView()
             
@@ -345,8 +340,6 @@ public final class ChatListHeaderComponent: Component {
             
             self.addSubview(self.titleOffsetContainer)
             self.titleOffsetContainer.addSubview(self.titleScaleContainer)
-            self.addSubview(self.leftButtonOffsetContainer)
-            self.addSubview(self.rightButtonOffsetContainer)
             
             self.titleScaleContainer.addSubview(self.titleTextView)
         }
@@ -393,12 +386,12 @@ public final class ChatListHeaderComponent: Component {
             transition.setSublayerTransform(view: self.titleOffsetContainer, transform: transform)
         }
         
-        func updateNavigationTransitionAsPrevious(nextView: ContentView, fraction: CGFloat, transition: ComponentTransition, completion: @escaping () -> Void) {
-            transition.setBounds(view: self.leftButtonOffsetContainer, bounds: CGRect(origin: CGPoint(x: fraction * self.bounds.width * 0.5, y: 0.0), size: self.leftButtonOffsetContainer.bounds.size), completion: { _ in
-                completion()
-            })
-            transition.setAlpha(view: self.leftButtonOffsetContainer, alpha: pow(1.0 - fraction, 2.0))
-            transition.setAlpha(view: self.rightButtonOffsetContainer, alpha: pow(1.0 - fraction, 2.0))
+        func updateNavigationTransitionAsPrevious(nextView: ContentView, width: CGFloat, fraction: CGFloat, transition: ComponentTransition, completion: @escaping () -> Void) {
+            let alphaTransition: ComponentTransition = transition.animation.isImmediate ? .immediate : .easeInOut(duration: 0.3)
+            alphaTransition.setAlpha(view: self.leftButtonsContainer, alpha: pow(1.0 - fraction, 2.0))
+            alphaTransition.setBlur(layer: self.leftButtonsContainer.layer, radius: fraction * 10.0)
+            alphaTransition.setAlpha(view: self.rightButtonsContainer, alpha: pow(1.0 - fraction, 2.0))
+            alphaTransition.setBlur(layer: self.rightButtonsContainer.layer, radius: fraction * 10.0)
             
             if let backButtonView = self.backButtonView {
                 transition.setBounds(view: backButtonView, bounds: CGRect(origin: CGPoint(x: fraction * self.bounds.width * 0.5, y: 0.0), size: backButtonView.bounds.size), completion: { _ in
@@ -406,80 +399,53 @@ public final class ChatListHeaderComponent: Component {
                 })
             }
             
-            if let chatListTitleView = self.chatListTitleView, let nextBackButtonView = nextView.backButtonView {
-                let titleFrame = chatListTitleView.titleNode.view.convert(chatListTitleView.titleNode.bounds, to: self.titleOffsetContainer)
-                let backButtonTitleFrame = nextBackButtonView.convert(nextBackButtonView.titleView.frame, to: nextView)
-                
-                let totalOffset = titleFrame.minX - backButtonTitleFrame.minX
-                
-                transition.setBounds(view: self.titleOffsetContainer, bounds: CGRect(origin: CGPoint(x: totalOffset * fraction, y: 0.0), size: self.titleOffsetContainer.bounds.size))
-                transition.setAlpha(view: self.titleOffsetContainer, alpha: pow(1.0 - fraction, 2.0))
-            }
+            let totalOffset = -width * fraction
+            
+            transition.setBounds(view: self.titleOffsetContainer, bounds: CGRect(origin: CGPoint(x: totalOffset * fraction, y: 0.0), size: self.titleOffsetContainer.bounds.size))
+            transition.setAlpha(view: self.titleOffsetContainer, alpha: pow(1.0 - fraction, 2.0))
         }
         
         func updateNavigationTransitionAsNext(previousView: ContentView, storyPeerListView: StoryPeerListComponent.View?, fraction: CGFloat, transition: ComponentTransition, completion: @escaping () -> Void) {
+            let alphaTransition: ComponentTransition = transition.animation.isImmediate ? .immediate : .easeInOut(duration: 0.3)
+
             transition.setBounds(view: self.titleOffsetContainer, bounds: CGRect(origin: CGPoint(x: -(1.0 - fraction) * self.bounds.width, y: 0.0), size: self.titleOffsetContainer.bounds.size), completion: { _ in
                 completion()
             })
-            transition.setAlpha(view: self.rightButtonOffsetContainer, alpha: pow(fraction, 2.0))
-            transition.setBounds(view: self.rightButtonOffsetContainer, bounds: CGRect(origin: CGPoint(x: -(1.0 - fraction) * self.bounds.width, y: 0.0), size: self.rightButtonOffsetContainer.bounds.size))
-            if let backButtonView = self.backButtonView {
-                transition.setScale(view: backButtonView.arrowView, scale: pow(max(0.001, fraction), 2.0))
-                transition.setAlpha(view: backButtonView.arrowView, alpha: pow(fraction, 2.0))
-                
-                if let storyPeerListView {
-                    let previousTitleFrame = storyPeerListView.titleFrame()
-                    let backButtonTitleFrame = backButtonView.convert(backButtonView.titleView.frame, to: self)
-                    
-                    let totalOffset = previousTitleFrame.minX - backButtonTitleFrame.minX
-                    
-                    transition.setBounds(view: backButtonView.titleOffsetContainer, bounds: CGRect(origin: CGPoint(x: -totalOffset * (1.0 - fraction), y: 0.0), size: backButtonView.titleOffsetContainer.bounds.size))
-                    transition.setAlpha(view: backButtonView.titleOffsetContainer, alpha: pow(fraction, 2.0))
-                } else if let previousChatListTitleView = previousView.chatListTitleView {
-                    let previousTitleFrame = previousChatListTitleView.titleNode.view.convert(previousChatListTitleView.titleNode.bounds, to: previousView.titleOffsetContainer)
-                    let backButtonTitleFrame = backButtonView.convert(backButtonView.titleView.frame, to: self)
-                    
-                    let totalOffset = previousTitleFrame.minX - backButtonTitleFrame.minX
-                    
-                    transition.setBounds(view: backButtonView.titleOffsetContainer, bounds: CGRect(origin: CGPoint(x: -totalOffset * (1.0 - fraction), y: 0.0), size: backButtonView.titleOffsetContainer.bounds.size))
-                    transition.setAlpha(view: backButtonView.titleOffsetContainer, alpha: pow(fraction, 2.0))
-                }
-            }
+            alphaTransition.setAlpha(view: self.rightButtonsContainer, alpha: pow(fraction, 2.0))
+
+            alphaTransition.setBlur(layer: self.leftButtonsContainer.layer, radius: (1.0 - fraction) * 10.0)
+            alphaTransition.setBlur(layer: self.rightButtonsContainer.layer, radius: (1.0 - fraction) * 10.0)
         }
         
         func updateNavigationTransitionAsPreviousInplace(nextView: ContentView, fraction: CGFloat, transition: ComponentTransition, completion: @escaping () -> Void) {
-            transition.setBounds(view: self.leftButtonOffsetContainer, bounds: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: self.leftButtonOffsetContainer.bounds.size), completion: { _ in
-            })
-            transition.setAlpha(view: self.leftButtonOffsetContainer, alpha: pow(1.0 - fraction, 2.0))
-            transition.setAlpha(view: self.rightButtonOffsetContainer, alpha: pow(1.0 - fraction, 2.0), completion: { _ in
+            let alphaTransition: ComponentTransition = transition.animation.isImmediate ? .immediate : .easeInOut(duration: 0.3)
+
+            alphaTransition.setAlpha(view: self.leftButtonsContainer, alpha: pow(1.0 - fraction, 2.0))
+            alphaTransition.setBlur(layer: self.leftButtonsContainer.layer, radius: fraction * 10.0)
+            alphaTransition.setAlpha(view: self.rightButtonsContainer, alpha: pow(1.0 - fraction, 2.0), completion: { _ in
                 completion()
             })
-            
-            if let backButtonView = self.backButtonView {
-                transition.setBounds(view: backButtonView, bounds: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: backButtonView.bounds.size), completion: { _ in
-                })
-            }
+            alphaTransition.setBlur(layer: self.rightButtonsContainer.layer, radius: fraction * 10.0)
             
             transition.setBounds(view: self.titleOffsetContainer, bounds: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: self.titleOffsetContainer.bounds.size))
             transition.setAlpha(view: self.titleOffsetContainer, alpha: pow(1.0 - fraction, 2.0))
         }
         
         func updateNavigationTransitionAsNextInplace(previousView: ContentView, fraction: CGFloat, transition: ComponentTransition, completion: @escaping () -> Void) {
+            let alphaTransition: ComponentTransition = transition.animation.isImmediate ? .immediate : .easeInOut(duration: 0.3)
+
             transition.setBounds(view: self.titleOffsetContainer, bounds: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: self.titleOffsetContainer.bounds.size), completion: { _ in
                 completion()
             })
-            transition.setAlpha(view: self.rightButtonOffsetContainer, alpha: pow(fraction, 2.0))
-            transition.setBounds(view: self.rightButtonOffsetContainer, bounds: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: self.rightButtonOffsetContainer.bounds.size))
-            if let backButtonView = self.backButtonView {
-                transition.setScale(view: backButtonView.arrowView, scale: pow(max(0.001, fraction), 2.0))
-                transition.setAlpha(view: backButtonView.arrowView, alpha: pow(fraction, 2.0))
-                
-                transition.setBounds(view: backButtonView.titleOffsetContainer, bounds: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: backButtonView.titleOffsetContainer.bounds.size))
-                transition.setAlpha(view: backButtonView.titleOffsetContainer, alpha: pow(fraction, 2.0))
-            }
+            alphaTransition.setBlur(layer: self.leftButtonsContainer.layer, radius: (1.0 - fraction) * 10.0)
+            alphaTransition.setAlpha(view: self.leftButtonsContainer, alpha: pow(fraction, 2.0))
+            alphaTransition.setBlur(layer: self.rightButtonsContainer.layer, radius: (1.0 - fraction) * 10.0)
+            alphaTransition.setAlpha(view: self.rightButtonsContainer, alpha: pow(fraction, 2.0))
         }
         
-        func update(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, content: Content, backTitle: String?, sideInset: CGFloat, sideContentWidth: CGFloat, sideContentFraction: CGFloat, size: CGSize, transition: ComponentTransition) {
+        func update(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, content: Content, displayBackButton: Bool, sideInset: CGFloat, sideContentWidth: CGFloat, sideContentFraction: CGFloat, size: CGSize, transition: ComponentTransition) {
+            let alphaTransition: ComponentTransition = transition.animation.isImmediate ? .immediate : .easeInOut(duration: 0.3)
+
             transition.setPosition(view: self.titleOffsetContainer, position: CGPoint(x: size.width * 0.5, y: size.height * 0.5))
             transition.setBounds(view: self.titleOffsetContainer, bounds: CGRect(origin: self.titleOffsetContainer.bounds.origin, size: size))
             
@@ -490,11 +456,10 @@ public final class ChatListHeaderComponent: Component {
             let titleTextUpdated = self.titleTextView.attributedText != titleText
             self.titleTextView.attributedText = titleText
             
-            let buttonSpacing: CGFloat = 8.0
+            let buttonSpacing: CGFloat = 0.0
+            var nextLeftButtonX: CGFloat = 0.0
             
-            var leftOffset = sideInset
-            
-            if let backTitle = backTitle {
+            if displayBackButton {
                 var backButtonTransition = transition
                 let backButtonView: BackButtonView
                 if let current = self.backButtonView {
@@ -508,11 +473,14 @@ public final class ChatListHeaderComponent: Component {
                         self.backPressed()
                     })
                     self.backButtonView = backButtonView
-                    self.addSubview(backButtonView)
+                    self.leftButtonsContainer.addSubview(backButtonView)
                 }
-                let backButtonSize = backButtonView.update(title: backTitle, theme: theme, availableSize: CGSize(width: 100.0, height: size.height), transition: backButtonTransition)
-                backButtonTransition.setFrame(view: backButtonView, frame: CGRect(origin: CGPoint(x: leftOffset, y: floor((size.height - backButtonSize.height) / 2.0)), size: backButtonSize))
-                leftOffset += backButtonSize.width + buttonSpacing
+                let backButtonSize = backButtonView.update(theme: theme, strings: strings, availableSize: CGSize(width: 100.0, height: size.height), transition: backButtonTransition)
+                backButtonTransition.setFrame(view: backButtonView, frame: CGRect(origin: CGPoint(x: nextLeftButtonX, y: floor((size.height - backButtonSize.height) / 2.0)), size: backButtonSize))
+                if nextLeftButtonX != 0.0 {
+                    nextLeftButtonX += buttonSpacing
+                }
+                nextLeftButtonX += backButtonSize.width
             } else if let backButtonView = self.backButtonView {
                 self.backButtonView = nil
                 backButtonView.removeFromSuperview()
@@ -521,6 +489,10 @@ public final class ChatListHeaderComponent: Component {
             var validLeftButtons = Set<AnyHashable>()
             if let leftButton = content.leftButton {
                 validLeftButtons.insert(leftButton.id)
+
+                if nextLeftButtonX != 0.0 {
+                    nextLeftButtonX += buttonSpacing
+                }
                 
                 var buttonTransition = transition
                 var animateButtonIn = false
@@ -541,23 +513,25 @@ public final class ChatListHeaderComponent: Component {
                     },
                     containerSize: CGSize(width: 100.0, height: size.height)
                 )
-                let buttonFrame = CGRect(origin: CGPoint(x: leftOffset, y: floor((size.height - buttonSize.height) / 2.0)), size: buttonSize)
+                let buttonFrame = CGRect(origin: CGPoint(x: nextLeftButtonX, y: floor((size.height - buttonSize.height) / 2.0)), size: buttonSize)
                 if let buttonComponentView = buttonView.view {
                     if buttonComponentView.superview == nil {
-                        self.leftButtonOffsetContainer.addSubview(buttonComponentView)
+                        self.leftButtonsContainer.addSubview(buttonComponentView)
                     }
                     buttonTransition.setFrame(view: buttonComponentView, frame: buttonFrame)
                     if animateButtonIn {
-                        transition.animateAlpha(view: buttonComponentView, from: 0.0, to: 1.0)
+                        alphaTransition.animateBlur(layer: buttonComponentView.layer, fromRadius: 10.0, toRadius: 0.0)
+                        alphaTransition.animateAlpha(view: buttonComponentView, from: 0.0, to: 1.0)
                     }
                 }
-                leftOffset = buttonFrame.maxX + buttonSpacing
+                nextLeftButtonX += buttonSize.width
             }
             var removeLeftButtons: [AnyHashable] = []
             for (id, buttonView) in self.leftButtonViews {
                 if !validLeftButtons.contains(id) {
                     if let buttonComponentView = buttonView.view {
-                        transition.setAlpha(view: buttonComponentView, alpha: 0.0, completion: { [weak buttonComponentView] _ in
+                        alphaTransition.setBlur(layer: buttonComponentView.layer, radius: 10.0)
+                        alphaTransition.setAlpha(view: buttonComponentView, alpha: 0.0, completion: { [weak buttonComponentView] _ in
                             buttonComponentView?.removeFromSuperview()
                         })
                     }
@@ -568,10 +542,14 @@ public final class ChatListHeaderComponent: Component {
                 self.leftButtonViews.removeValue(forKey: id)
             }
             
-            var rightOffset = size.width - sideInset
+            var nextRightButtonX: CGFloat = 0.0
             var validRightButtons = Set<AnyHashable>()
-            for rightButton in content.rightButtons {
+            for rightButton in content.rightButtons.reversed() {
                 validRightButtons.insert(rightButton.id)
+
+                if nextRightButtonX != 0.0 {
+                    nextRightButtonX += buttonSpacing
+                }
                 
                 var buttonTransition = transition
                 var animateButtonIn = false
@@ -592,23 +570,25 @@ public final class ChatListHeaderComponent: Component {
                     },
                     containerSize: CGSize(width: 100.0, height: size.height)
                 )
-                let buttonFrame = CGRect(origin: CGPoint(x: rightOffset - buttonSize.width, y: floor((size.height - buttonSize.height) / 2.0)), size: buttonSize)
+                let buttonFrame = CGRect(origin: CGPoint(x: nextRightButtonX, y: floor((size.height - buttonSize.height) / 2.0)), size: buttonSize)
                 if let buttonComponentView = buttonView.view {
                     if buttonComponentView.superview == nil {
-                        self.rightButtonOffsetContainer.addSubview(buttonComponentView)
+                        self.rightButtonsContainer.addSubview(buttonComponentView)
                     }
                     buttonTransition.setFrame(view: buttonComponentView, frame: buttonFrame)
                     if animateButtonIn {
-                        transition.animateAlpha(view: buttonComponentView, from: 0.0, to: 1.0)
+                        alphaTransition.animateBlur(layer: buttonComponentView.layer, fromRadius: 10.0, toRadius: 0.0)
+                        alphaTransition.animateAlpha(view: buttonComponentView, from: 0.0, to: 1.0)
                     }
                 }
-                rightOffset = buttonFrame.minX - buttonSpacing
+                nextRightButtonX += buttonSize.width
             }
             var removeRightButtons: [AnyHashable] = []
             for (id, buttonView) in self.rightButtonViews {
                 if !validRightButtons.contains(id) {
                     if let buttonComponentView = buttonView.view {
-                        transition.setAlpha(view: buttonComponentView, alpha: 0.0, completion: { [weak buttonComponentView] _ in
+                        alphaTransition.setBlur(layer: buttonComponentView.layer, radius: 10.0)
+                        alphaTransition.setAlpha(view: buttonComponentView, alpha: 0.0, completion: { [weak buttonComponentView] _ in
                             buttonComponentView?.removeFromSuperview()
                         })
                     }
@@ -618,8 +598,11 @@ public final class ChatListHeaderComponent: Component {
             for id in removeRightButtons {
                 self.rightButtonViews.removeValue(forKey: id)
             }
-            
-            let commonInset: CGFloat = max(leftOffset, size.width - rightOffset)
+
+            self.leftButtonsWidth = nextLeftButtonX
+            self.rightButtonsWidth = nextRightButtonX
+
+            let commonInset: CGFloat = sideInset + max(nextLeftButtonX, nextRightButtonX) + 8.0
             let remainingWidth = size.width - commonInset * 2.0
             
             let titleTextSize = self.titleTextView.updateLayout(CGSize(width: remainingWidth, height: size.height))
@@ -662,10 +645,10 @@ public final class ChatListHeaderComponent: Component {
             }
             
             var centerContentLeftInset: CGFloat = 0.0
-            centerContentLeftInset = leftOffset - 4.0
+            centerContentLeftInset = nextLeftButtonX + 4.0
             
             var centerContentRightInset: CGFloat = 0.0
-            centerContentRightInset = size.width - rightOffset - 8.0
+            centerContentRightInset = nextRightButtonX + 20.0
             
             var centerContentWidth: CGFloat = 0.0
             var centerContentOffsetX: CGFloat = 0.0
@@ -687,13 +670,11 @@ public final class ChatListHeaderComponent: Component {
                 chatListTitleView.theme = theme
                 chatListTitleView.strings = strings
                 chatListTitleView.setTitle(chatListTitle, animated: false)
-                let titleContentRect = chatListTitleView.updateLayout(size: chatListTitleContentSize, clearBounds: CGRect(origin: CGPoint(), size: chatListTitleContentSize), transition: transition.containedViewLayoutTransition)
+                let titleContentRect = chatListTitleView.updateLayoutInternal(size: chatListTitleContentSize, transition: transition.containedViewLayoutTransition)
                 centerContentWidth = floor((chatListTitleContentSize.width * 0.5 - titleContentRect.minX) * 2.0)
                 
-                //sideWidth + centerWidth + centerOffset = size.width
-                //let centerOffset = -(size.width - (sideContentWidth + centerContentWidth)) * 0.5 + size.width * 0.5
                 let centerOffset = sideContentWidth * 0.5
-                centerContentOffsetX = -max(0.0, centerOffset + titleContentRect.maxX - 2.0 - rightOffset)
+                centerContentOffsetX = -max(0.0, centerOffset + titleContentRect.maxX - 2.0 - (size.width - sideInset - nextRightButtonX))
                 
                 chatListTitleView.openStatusSetup = { [weak self] sourceView in
                     guard let self else {
@@ -734,13 +715,18 @@ public final class ChatListHeaderComponent: Component {
         }
     }
     
-    public final class View: UIView, NavigationBarHeaderView {
+    public final class View: UIView {
         private var component: ChatListHeaderComponent?
         private weak var state: EmptyComponentState?
         
         private var primaryContentView: ContentView?
         private var secondaryContentView: ContentView?
         private var storyOffsetFraction: CGFloat = 0.0
+
+        private let leftButtonsContainer: UIView
+        private let rightButtonsContainer: UIView
+        private var leftButtonsBackgroundContainer: GlassBackgroundView?
+        private var rightButtonsBackgroundContainer: GlassBackgroundView?
         
         private let storyPeerListExternalState = StoryPeerListComponent.ExternalState()
         private var storyPeerList: ComponentView<Empty>?
@@ -753,6 +739,10 @@ public final class ChatListHeaderComponent: Component {
         }
         
         override init(frame: CGRect) {
+            self.leftButtonsContainer = UIView()
+            self.rightButtonsContainer = UIView()
+            self.rightButtonsContainer.layer.anchorPoint = CGPoint(x: 1.0, y: 0.0)
+
             super.init(frame: frame)
             
             self.storyOffsetFraction = 1.0
@@ -764,10 +754,6 @@ public final class ChatListHeaderComponent: Component {
         
         public var backArrowView: UIView? {
             return self.effectiveContentView?.backButtonView?.arrowView
-        }
-        
-        public var backButtonTitleView: UIView? {
-            return self.effectiveContentView?.backButtonView?.titleView
         }
         
         public var rightButtonView: UIView? {
@@ -782,29 +768,6 @@ public final class ChatListHeaderComponent: Component {
         
         public var titleContentView: UIView? {
             return self.effectiveContentView?.titleContentView?.view 
-        }
-        
-        public func makeTransitionBackArrowView(accentColor: UIColor) -> UIView? {
-            if let backArrowView = self.backArrowView {
-                let view = UIImageView()
-                view.image = NavigationBar.backArrowImage(color: accentColor)
-                view.frame = backArrowView.convert(backArrowView.bounds, to: self)
-                return view
-            } else {
-                return nil
-            }
-        }
-        
-        public func makeTransitionBackButtonView(accentColor: UIColor) -> UIView? {
-            if let backButtonTitleView = self.backButtonTitleView as? ImmediateTextView {
-                let view = ImmediateTextView()
-                view.attributedText = NSAttributedString(string: backButtonTitleView.attributedText?.string ?? "", font: Font.regular(17.0), textColor: accentColor)
-                let _ = view.updateLayout(CGSize(width: 100.0, height: 100.0))
-                view.frame = backButtonTitleView.convert(backButtonTitleView.bounds, to: self)
-                return view
-            } else {
-                return nil
-            }
         }
         
         public func storyPeerListView() -> StoryPeerListComponent.View? {
@@ -848,8 +811,8 @@ public final class ChatListHeaderComponent: Component {
             let previousComponent = self.component
             self.component = component
             
+            var primaryContentTransition = transition
             if var primaryContent = component.primaryContent {
-                var primaryContentTransition = transition
                 let primaryContentView: ContentView
                 if let current = self.primaryContentView {
                     primaryContentView = current
@@ -877,6 +840,8 @@ public final class ChatListHeaderComponent: Component {
                     )
                     self.primaryContentView = primaryContentView
                     self.addSubview(primaryContentView)
+                    self.leftButtonsContainer.addSubview(primaryContentView.leftButtonsContainer)
+                    self.rightButtonsContainer.addSubview(primaryContentView.rightButtonsContainer)
                 }
                 
                 let sideContentWidth: CGFloat = 0.0
@@ -889,18 +854,19 @@ public final class ChatListHeaderComponent: Component {
                         chatListTitle: nil,
                         leftButton: primaryContent.leftButton,
                         rightButtons: primaryContent.rightButtons,
-                        backTitle: primaryContent.backTitle,
                         backPressed: primaryContent.backPressed
                     )
                 }
                 
-                primaryContentView.update(context: component.context, theme: component.theme, strings: component.strings, content: primaryContent, backTitle: primaryContent.backTitle, sideInset: component.sideInset, sideContentWidth: sideContentWidth, sideContentFraction: (1.0 - component.storiesFraction), size: availableSize, transition: primaryContentTransition)
+                primaryContentView.update(context: component.context, theme: component.theme, strings: component.strings, content: primaryContent, displayBackButton: primaryContent.backPressed != nil, sideInset: component.sideInset, sideContentWidth: sideContentWidth, sideContentFraction: (1.0 - component.storiesFraction), size: availableSize, transition: primaryContentTransition)
                 primaryContentTransition.setFrame(view: primaryContentView, frame: CGRect(origin: CGPoint(), size: availableSize))
                 
                 primaryContentView.updateContentOffsetFraction(contentOffsetFraction: 1.0 - self.storyOffsetFraction, transition: primaryContentTransition)
             } else if let primaryContentView = self.primaryContentView {
                 self.primaryContentView = nil
                 primaryContentView.removeFromSuperview()
+                primaryContentView.leftButtonsContainer.removeFromSuperview()
+                primaryContentView.rightButtonsContainer.removeFromSuperview()
             }
             
             var storyListTransition = transition
@@ -991,13 +957,16 @@ public final class ChatListHeaderComponent: Component {
                 )
             }
             
+            var secondaryContentTransition = transition
+            var secondaryContentIsAnimatingIn = false
+            var removedSecondaryContentView: ContentView?
             if let secondaryContent = component.secondaryContent {
-                var secondaryContentTransition = transition
                 let secondaryContentView: ContentView
                 if let current = self.secondaryContentView {
                     secondaryContentView = current
                 } else {
                     secondaryContentTransition = .immediate
+                    secondaryContentIsAnimatingIn = true
                     secondaryContentView = ContentView(
                         backPressed: { [weak self] in
                             guard let self, let component = self.component else {
@@ -1019,9 +988,15 @@ public final class ChatListHeaderComponent: Component {
                         }
                     )
                     self.secondaryContentView = secondaryContentView
-                    self.addSubview(secondaryContentView)
+                    if let primaryContentView = self.primaryContentView {
+                        self.insertSubview(secondaryContentView, aboveSubview: primaryContentView)
+                    } else {
+                        self.addSubview(secondaryContentView)
+                    }
+                    self.leftButtonsContainer.addSubview(secondaryContentView.leftButtonsContainer)
+                    self.rightButtonsContainer.addSubview(secondaryContentView.rightButtonsContainer)
                 }
-                secondaryContentView.update(context: component.context, theme: component.theme, strings: component.strings, content: secondaryContent, backTitle: component.primaryContent?.navigationBackTitle ?? component.primaryContent?.title, sideInset: component.sideInset, sideContentWidth: 0.0, sideContentFraction: 0.0, size: availableSize, transition: secondaryContentTransition)
+                secondaryContentView.update(context: component.context, theme: component.theme, strings: component.strings, content: secondaryContent, displayBackButton: true, sideInset: component.sideInset, sideContentWidth: 0.0, sideContentFraction: 0.0, size: availableSize, transition: secondaryContentTransition)
                 secondaryContentTransition.setFrame(view: secondaryContentView, frame: CGRect(origin: CGPoint(), size: availableSize))
                 
                 secondaryContentView.updateContentOffsetFraction(contentOffsetFraction: 1.0 - self.storyOffsetFraction, transition: secondaryContentTransition)
@@ -1032,7 +1007,7 @@ public final class ChatListHeaderComponent: Component {
                             primaryContentView.updateNavigationTransitionAsPreviousInplace(nextView: secondaryContentView, fraction: 0.0, transition: .immediate, completion: {})
                             secondaryContentView.updateNavigationTransitionAsNextInplace(previousView: primaryContentView, fraction: 0.0, transition: .immediate, completion: {})
                         } else {
-                            primaryContentView.updateNavigationTransitionAsPrevious(nextView: secondaryContentView, fraction: 0.0, transition: .immediate, completion: {})
+                            primaryContentView.updateNavigationTransitionAsPrevious(nextView: secondaryContentView,  width: availableSize.width, fraction: 0.0, transition: .immediate, completion: {})
                             secondaryContentView.updateNavigationTransitionAsNext(previousView: primaryContentView, storyPeerListView: self.storyPeerListView(), fraction: 0.0, transition: .immediate, completion: {})
                         }
                     }
@@ -1041,26 +1016,33 @@ public final class ChatListHeaderComponent: Component {
                         primaryContentView.updateNavigationTransitionAsPreviousInplace(nextView: secondaryContentView, fraction: component.secondaryTransition, transition: transition, completion: {})
                         secondaryContentView.updateNavigationTransitionAsNextInplace(previousView: primaryContentView, fraction: component.secondaryTransition, transition: transition, completion: {})
                     } else {
-                        primaryContentView.updateNavigationTransitionAsPrevious(nextView: secondaryContentView, fraction: component.secondaryTransition, transition: transition, completion: {})
+                        primaryContentView.updateNavigationTransitionAsPrevious(nextView: secondaryContentView, width: availableSize.width, fraction: component.secondaryTransition, transition: transition, completion: {})
                         secondaryContentView.updateNavigationTransitionAsNext(previousView: primaryContentView, storyPeerListView: self.storyPeerListView(), fraction: component.secondaryTransition, transition: transition, completion: {})
                     }
                 }
             } else if let secondaryContentView = self.secondaryContentView {
                 self.secondaryContentView = nil
+                removedSecondaryContentView = secondaryContentView
                 
                 if let primaryContentView = self.primaryContentView {
                     if self.storyOffsetFraction < 0.8 {
                         primaryContentView.updateNavigationTransitionAsPreviousInplace(nextView: secondaryContentView, fraction: 0.0, transition: transition, completion: {})
                         secondaryContentView.updateNavigationTransitionAsNextInplace(previousView: primaryContentView, fraction: 0.0, transition: transition, completion: { [weak secondaryContentView] in
+                            secondaryContentView?.leftButtonsContainer.removeFromSuperview()
+                            secondaryContentView?.rightButtonsContainer.removeFromSuperview()
                             secondaryContentView?.removeFromSuperview()
                         })
                     } else {
-                        primaryContentView.updateNavigationTransitionAsPrevious(nextView: secondaryContentView, fraction: 0.0, transition: transition, completion: {})
+                        primaryContentView.updateNavigationTransitionAsPrevious(nextView: secondaryContentView, width: availableSize.width, fraction: 0.0, transition: transition, completion: {})
                         secondaryContentView.updateNavigationTransitionAsNext(previousView: primaryContentView, storyPeerListView: self.storyPeerListView(), fraction: 0.0, transition: transition, completion: { [weak secondaryContentView] in
+                            secondaryContentView?.leftButtonsContainer.removeFromSuperview()
+                            secondaryContentView?.rightButtonsContainer.removeFromSuperview()
                             secondaryContentView?.removeFromSuperview()
                         })
                     }
                 } else {
+                    secondaryContentView.leftButtonsContainer.removeFromSuperview()
+                    secondaryContentView.rightButtonsContainer.removeFromSuperview()
                     secondaryContentView.removeFromSuperview()
                 }
             }
@@ -1070,18 +1052,10 @@ public final class ChatListHeaderComponent: Component {
                     self.addSubview(storyPeerListComponentView)
                 }
                 
-                //let storyPeerListMinOffset: CGFloat = -7.0
                 let storyPeerListMaxOffset: CGFloat = availableSize.height + 2.0
                 
-                //let storyPeerListPosition: CGFloat = storyPeerListMinOffset * (1.0 - component.storiesFraction) + storyPeerListMaxOffset * component.storiesFraction
-                
                 var storiesX: CGFloat = 0.0
-                if let nextBackButtonView = self.secondaryContentView?.backButtonView {
-                    let backButtonTitleFrame = nextBackButtonView.convert(nextBackButtonView.titleView.frame, to: self)
-                    let storyListTitleFrame = storyPeerListComponentView.titleFrame()
-                    
-                    storiesX += (backButtonTitleFrame.minX - storyListTitleFrame.minX) * component.secondaryTransition
-                }
+                storiesX -= availableSize.width * component.secondaryTransition
                 
                 storyListTransition.setFrame(view: storyPeerListComponentView, frame: CGRect(origin: CGPoint(x: storiesX, y: storyPeerListMaxOffset), size: CGSize(width: availableSize.width, height: 79.0)))
                 
@@ -1089,6 +1063,90 @@ public final class ChatListHeaderComponent: Component {
                 
                 let storyListAlpha: CGFloat = (1.0 - component.secondaryTransition) * storyListNormalAlpha
                 storyListTransition.setAlpha(view: storyPeerListComponentView, alpha: storyListAlpha)
+            }
+
+            var leftButtonsEffectiveWidth: CGFloat = 0.0
+            var rightButtonsEffectiveWidth: CGFloat = 0.0
+            if let primaryContentView = self.primaryContentView, let secondaryContentView = self.secondaryContentView {
+
+                leftButtonsEffectiveWidth = primaryContentView.leftButtonsWidth * (1.0 - component.secondaryTransition) + secondaryContentView.leftButtonsWidth * component.secondaryTransition
+                rightButtonsEffectiveWidth = primaryContentView.rightButtonsWidth * (1.0 - component.secondaryTransition) + secondaryContentView.rightButtonsWidth * component.secondaryTransition
+
+                primaryContentTransition.setFrame(view: primaryContentView.leftButtonsContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: max(44.0, primaryContentView.leftButtonsWidth), height: 44.0)))
+                secondaryContentTransition.setFrame(view: secondaryContentView.leftButtonsContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: max(44.0, secondaryContentView.leftButtonsWidth), height: 44.0)))
+
+                primaryContentTransition.setFrame(view: primaryContentView.rightButtonsContainer, frame: CGRect(origin: CGPoint(x: rightButtonsEffectiveWidth - primaryContentView.rightButtonsWidth, y: 0.0), size: CGSize(width: max(44.0, primaryContentView.rightButtonsWidth), height: 44.0)))
+
+                if secondaryContentIsAnimatingIn {
+                    secondaryContentView.rightButtonsContainer.frame = CGRect(origin: CGPoint(x: self.rightButtonsContainer.bounds.width - secondaryContentView.rightButtonsWidth, y: 0.0), size: CGSize(width: max(44.0, secondaryContentView.rightButtonsWidth), height: 44.0))
+                }
+                transition.setFrame(view: secondaryContentView.rightButtonsContainer, frame: CGRect(origin: CGPoint(x: rightButtonsEffectiveWidth - secondaryContentView.rightButtonsWidth, y: 0.0), size: CGSize(width: max(44.0, secondaryContentView.rightButtonsWidth), height: 44.0)))
+            } else if let primaryContentView = self.primaryContentView {
+                leftButtonsEffectiveWidth = primaryContentView.leftButtonsWidth
+                rightButtonsEffectiveWidth = primaryContentView.rightButtonsWidth
+
+                primaryContentTransition.setFrame(view: primaryContentView.leftButtonsContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: max(44.0, primaryContentView.leftButtonsWidth), height: 44.0)))
+                primaryContentTransition.setFrame(view: primaryContentView.rightButtonsContainer, frame: CGRect(origin: CGPoint(x: rightButtonsEffectiveWidth - primaryContentView.rightButtonsWidth, y: 0.0), size: CGSize(width: max(44.0, primaryContentView.rightButtonsWidth), height: 44.0)))
+
+                if let removedSecondaryContentView {
+                    transition.setFrame(view: removedSecondaryContentView.rightButtonsContainer, frame: CGRect(origin: CGPoint(x: rightButtonsEffectiveWidth - removedSecondaryContentView.rightButtonsWidth, y: 0.0), size: CGSize(width: max(44.0, removedSecondaryContentView.rightButtonsWidth), height: 44.0)))
+                }
+            }
+
+            if leftButtonsEffectiveWidth != 0.0 {
+                let leftButtonsBackgroundContainer: GlassBackgroundView
+                var leftButtonsBackgroundContainerTransition = transition
+                if let current = self.leftButtonsBackgroundContainer {
+                    leftButtonsBackgroundContainer = current
+                } else {
+                    leftButtonsBackgroundContainerTransition = leftButtonsBackgroundContainerTransition.withAnimation(.none)
+                    leftButtonsBackgroundContainer = GlassBackgroundView()
+                    self.leftButtonsBackgroundContainer = leftButtonsBackgroundContainer
+                    self.addSubview(leftButtonsBackgroundContainer)
+                    leftButtonsBackgroundContainer.contentView.addSubview(self.leftButtonsContainer)
+                }
+                let leftButtonsContainerFrame = CGRect(origin: CGPoint(x: component.sideInset, y: 0.0), size: CGSize(width: max(44.0, leftButtonsEffectiveWidth), height: 44.0))
+                leftButtonsBackgroundContainerTransition.setFrame(view: leftButtonsBackgroundContainer, frame: leftButtonsContainerFrame)
+                leftButtonsBackgroundContainer.update(size: leftButtonsContainerFrame.size, cornerRadius: leftButtonsContainerFrame.height * 0.5, isDark: component.theme.overallDarkAppearance, tintColor: .init(kind: .panel, color: UIColor(white: component.theme.overallDarkAppearance ? 0.0 : 1.0, alpha: 0.6)), isInteractive: true, transition: leftButtonsBackgroundContainerTransition)
+                leftButtonsBackgroundContainerTransition.setFrame(view: self.leftButtonsContainer, frame: CGRect(origin: CGPoint(), size: leftButtonsContainerFrame.size)) 
+            } else {
+                if let leftButtonsBackgroundContainer = self.leftButtonsBackgroundContainer {
+                    self.leftButtonsBackgroundContainer = nil
+                    transition.setAlpha(view: leftButtonsBackgroundContainer, alpha: 0.0, completion: { [weak leftButtonsBackgroundContainer] _ in
+                        leftButtonsBackgroundContainer?.removeFromSuperview()
+                    })
+                }
+            }
+
+            if rightButtonsEffectiveWidth != 0.0 {
+                let rightButtonsBackgroundContainer: GlassBackgroundView
+                var rightButtonsBackgroundContainerTransition = transition
+                
+                let rightButtonsContainerFrame = CGRect(origin: CGPoint(x: availableSize.width - component.sideInset - max(44.0, rightButtonsEffectiveWidth), y: 0.0), size: CGSize(width: max(44.0, rightButtonsEffectiveWidth), height: 44.0))
+                
+                if let current = self.rightButtonsBackgroundContainer {
+                    rightButtonsBackgroundContainer = current
+                } else {
+                    rightButtonsBackgroundContainerTransition = rightButtonsBackgroundContainerTransition.withAnimation(.none)
+                    rightButtonsBackgroundContainer = GlassBackgroundView()
+                    self.rightButtonsBackgroundContainer = rightButtonsBackgroundContainer
+                    self.addSubview(rightButtonsBackgroundContainer)
+                    rightButtonsBackgroundContainer.contentView.addSubview(self.rightButtonsContainer)
+                    
+                    rightButtonsBackgroundContainer.update(size: rightButtonsContainerFrame.size, cornerRadius: rightButtonsContainerFrame.height * 0.5, isDark: component.theme.overallDarkAppearance, tintColor: .init(kind: .panel, color: UIColor(white: component.theme.overallDarkAppearance ? 0.0 : 1.0, alpha: 0.6)), isInteractive: true, isVisible: false, transition: .immediate)
+                }
+                rightButtonsBackgroundContainerTransition.setFrame(view: rightButtonsBackgroundContainer, frame: rightButtonsContainerFrame)
+                rightButtonsBackgroundContainer.update(size: rightButtonsContainerFrame.size, cornerRadius: rightButtonsContainerFrame.height * 0.5, isDark: component.theme.overallDarkAppearance, tintColor: .init(kind: .panel, color: UIColor(white: component.theme.overallDarkAppearance ? 0.0 : 1.0, alpha: 0.6)), isInteractive: true, transition: transition)
+                rightButtonsBackgroundContainerTransition.setFrame(view: self.rightButtonsContainer, frame: CGRect(origin: CGPoint(), size: rightButtonsContainerFrame.size))
+            } else {
+                if let rightButtonsBackgroundContainer = self.rightButtonsBackgroundContainer {
+                    self.rightButtonsBackgroundContainer = nil
+                    
+                    rightButtonsBackgroundContainer.update(size: rightButtonsBackgroundContainer.bounds.size, cornerRadius: rightButtonsBackgroundContainer.bounds.height * 0.5, isDark: component.theme.overallDarkAppearance, tintColor: .init(kind: .panel, color: UIColor(white: component.theme.overallDarkAppearance ? 0.0 : 1.0, alpha: 0.6)), isInteractive: true, isVisible: false, transition: transition)
+                    transition.attachAnimation(view: rightButtonsBackgroundContainer, id: "remove", completion: { [weak rightButtonsBackgroundContainer] _ in
+                        rightButtonsBackgroundContainer?.removeFromSuperview()
+                    })
+                }
             }
             
             return availableSize
@@ -1116,254 +1174,6 @@ public final class ChatListHeaderComponent: Component {
     }
     
     public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
-        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
-    }
-}
-
-public final class NavigationButtonComponentEnvironment: Equatable {
-    public let theme: PresentationTheme
-    
-    public init(theme: PresentationTheme) {
-        self.theme = theme
-    }
-    
-    public static func ==(lhs: NavigationButtonComponentEnvironment, rhs: NavigationButtonComponentEnvironment) -> Bool {
-        if lhs.theme != rhs.theme {
-            return false
-        }
-        return true
-    }
-}
-
-public final class NavigationButtonComponent: Component {
-    public typealias EnvironmentType = NavigationButtonComponentEnvironment
-    
-    public enum Content: Equatable {
-        case text(title: String, isBold: Bool)
-        case more
-        case icon(imageName: String)
-        case proxy(status: ChatTitleProxyStatus)
-    }
-    
-    public let content: Content
-    public let pressed: (UIView) -> Void
-    public let contextAction: ((UIView, ContextGesture?) -> Void)?
-    
-    public init(
-        content: Content,
-        pressed: @escaping (UIView) -> Void,
-        contextAction: ((UIView, ContextGesture?) -> Void)? = nil
-    ) {
-        self.content = content
-        self.pressed = pressed
-        self.contextAction = contextAction
-    }
-    
-    public static func ==(lhs: NavigationButtonComponent, rhs: NavigationButtonComponent) -> Bool {
-        if lhs.content != rhs.content {
-            return false
-        }
-        return true
-    }
-    
-    public final class View: HighlightTrackingButton {
-        private var textView: ImmediateTextView?
-        
-        private var iconView: UIImageView?
-        private var iconImageName: String?
-        
-        private var proxyNode: ChatTitleProxyNode?
-        
-        private var moreButton: MoreHeaderButton?
-        
-        private var component: NavigationButtonComponent?
-        private var theme: PresentationTheme?
-        
-        override init(frame: CGRect) {
-            super.init(frame: frame)
-            
-            self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
-            
-            self.highligthedChanged = { [weak self] highlighted in
-                guard let self else {
-                    return
-                }
-                if highlighted {
-                    self.textView?.alpha = 0.6
-                    self.proxyNode?.alpha = 0.6
-                    self.iconView?.alpha = 0.6
-                } else {
-                    self.textView?.alpha = 1.0
-                    self.textView?.layer.animateAlpha(from: 0.6, to: 1.0, duration: 0.2)
-                    
-                    self.proxyNode?.alpha = 1.0
-                    self.proxyNode?.layer.animateAlpha(from: 0.6, to: 1.0, duration: 0.2)
-                    
-                    self.iconView?.alpha = 1.0
-                    self.iconView?.layer.animateAlpha(from: 0.6, to: 1.0, duration: 0.2)
-                }
-            }
-        }
-        
-        required public init?(coder: NSCoder) {
-            fatalError("init(coder:) has not been implemented")
-        }
-        
-        @objc private func pressed() {
-            self.component?.pressed(self)
-        }
-        
-        func update(component: NavigationButtonComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<NavigationButtonComponentEnvironment>, transition: ComponentTransition) -> CGSize {
-            self.component = component
-            
-            let theme = environment[NavigationButtonComponentEnvironment.self].value.theme
-            var themeUpdated = false
-            if self.theme !== theme {
-                self.theme = theme
-                themeUpdated = true
-            }
-            
-            let iconOffset: CGFloat = 4.0
-            
-            var textString: NSAttributedString?
-            var imageName: String?
-            var proxyStatus: ChatTitleProxyStatus?
-            var isMore: Bool = false
-            
-            switch component.content {
-            case let .text(title, isBold):
-                textString = NSAttributedString(string: title, font: isBold ? Font.bold(17.0) : Font.regular(17.0), textColor: theme.rootController.navigationBar.accentTextColor)
-            case .more:
-                isMore = true
-            case let .icon(imageNameValue):
-                imageName = imageNameValue
-            case let .proxy(status):
-                proxyStatus = status
-            }
-            
-            var size = CGSize(width: 0.0, height: availableSize.height)
-            
-            if let textString = textString {
-                let textView: ImmediateTextView
-                if let current = self.textView {
-                    textView = current
-                } else {
-                    textView = ImmediateTextView()
-                    textView.isUserInteractionEnabled = false
-                    self.textView = textView
-                    self.addSubview(textView)
-                }
-                
-                textView.attributedText = textString
-                let textSize = textView.updateLayout(availableSize)
-                size.width = textSize.width
-                
-                textView.frame = CGRect(origin: CGPoint(x: 0.0, y: floor((availableSize.height - textSize.height) / 2.0)), size: textSize)
-            } else if let textView = self.textView {
-                self.textView = nil
-                textView.removeFromSuperview()
-            }
-            
-            if let imageName = imageName {
-                let iconView: UIImageView
-                if let current = self.iconView {
-                    iconView = current
-                } else {
-                    iconView = UIImageView()
-                    iconView.isUserInteractionEnabled = false
-                    self.iconView = iconView
-                    self.addSubview(iconView)
-                }
-                if self.iconImageName != imageName || themeUpdated {
-                    self.iconImageName = imageName
-                    iconView.image = generateTintedImage(image: UIImage(bundleImageName: imageName), color: theme.rootController.navigationBar.accentTextColor)
-                }
-                
-                if let iconSize = iconView.image?.size {
-                    size.width = iconSize.width
-                    
-                    iconView.frame = CGRect(origin: CGPoint(x: iconOffset, y: floor((availableSize.height - iconSize.height) / 2.0)), size: iconSize)
-                }
-            } else if let iconView = self.iconView {
-                self.iconView = nil
-                iconView.removeFromSuperview()
-                self.iconImageName = nil
-            }
-            
-            if let proxyStatus = proxyStatus {
-                let proxyNode: ChatTitleProxyNode
-                if let current = self.proxyNode {
-                    proxyNode = current
-                } else {
-                    proxyNode = ChatTitleProxyNode(theme: theme)
-                    proxyNode.isUserInteractionEnabled = false
-                    self.proxyNode = proxyNode
-                    self.addSubnode(proxyNode)
-                }
-                
-                let proxySize = CGSize(width: 30.0, height: 30.0)
-                size.width = proxySize.width
-                
-                proxyNode.theme = theme
-                proxyNode.status = proxyStatus
-                
-                proxyNode.frame = CGRect(origin: CGPoint(x: iconOffset, y: floor((availableSize.height - proxySize.height) / 2.0)), size: proxySize)
-            } else if let proxyNode = self.proxyNode {
-                self.proxyNode = nil
-                proxyNode.removeFromSupernode()
-            }
-            
-            if isMore {
-                let moreButton: MoreHeaderButton
-                if let current = self.moreButton, !themeUpdated {
-                    moreButton = current
-                } else {
-                    if let moreButton = self.moreButton {
-                        moreButton.removeFromSupernode()
-                        self.moreButton = nil
-                    }
-                    
-                    moreButton = MoreHeaderButton(color: theme.rootController.navigationBar.buttonColor)
-                    moreButton.isUserInteractionEnabled = true
-                    moreButton.setContent(.more(MoreHeaderButton.optionsCircleImage(color: theme.rootController.navigationBar.buttonColor)))
-                    moreButton.onPressed = { [weak self] in
-                        guard let self, let component = self.component else {
-                            return
-                        }
-                        self.moreButton?.play()
-                        component.pressed(self)
-                    }
-                    moreButton.contextAction = { [weak self] sourceNode, gesture in
-                        guard let self, let component = self.component else {
-                            return
-                        }
-                        self.moreButton?.play()
-                        component.contextAction?(self, gesture)
-                    }
-                    self.moreButton = moreButton
-                    self.addSubnode(moreButton)
-                }
-                
-                let buttonSize = CGSize(width: 26.0, height: 44.0)
-                size.width = buttonSize.width
-                
-                moreButton.setContent(.more(MoreHeaderButton.optionsCircleImage(color: theme.rootController.navigationBar.buttonColor)))
-                
-                moreButton.frame = CGRect(origin: CGPoint(x: iconOffset, y: floor((availableSize.height - buttonSize.height) / 2.0)), size: buttonSize)
-            } else if let moreButton = self.moreButton {
-                self.moreButton = nil
-                moreButton.removeFromSupernode()
-            }
-            
-            return size
-        }
-    }
-    
-    public func makeView() -> View {
-        return View(frame: CGRect())
-    }
-    
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<NavigationButtonComponentEnvironment>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

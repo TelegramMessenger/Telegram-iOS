@@ -10,7 +10,6 @@ import EmojiTextAttachmentView
 import AccountContext
 import TextFormat
 import Pasteboard
-import ChatTextLinkEditUI
 import MobileCoreServices
 import ImageTransparency
 import ChatInputTextNode
@@ -161,6 +160,9 @@ public final class TextFieldComponent: Component {
     public let externalHandlingForMultilinePaste: Bool
     public let formatMenuAvailability: FormatMenuAvailability
     public let returnKeyType: UIReturnKeyType
+    public let keyboardType: UIKeyboardType
+    public let autocapitalizationType: UITextAutocapitalizationType
+    public let autocorrectionType: UITextAutocorrectionType
     public let lockedFormatAction: () -> Void
     public let present: (ViewController) -> Void
     public let paste: (PasteData) -> Void
@@ -188,6 +190,9 @@ public final class TextFieldComponent: Component {
         externalHandlingForMultilinePaste: Bool = false,
         formatMenuAvailability: FormatMenuAvailability,
         returnKeyType: UIReturnKeyType = .default,
+        keyboardType: UIKeyboardType = .default,
+        autocapitalizationType: UITextAutocapitalizationType = .sentences,
+        autocorrectionType: UITextAutocorrectionType = .default,
         lockedFormatAction: @escaping () -> Void,
         present: @escaping (ViewController) -> Void,
         paste: @escaping (PasteData) -> Void,
@@ -214,11 +219,14 @@ public final class TextFieldComponent: Component {
         self.externalHandlingForMultilinePaste = externalHandlingForMultilinePaste
         self.formatMenuAvailability = formatMenuAvailability
         self.returnKeyType = returnKeyType
+        self.keyboardType = keyboardType
         self.lockedFormatAction = lockedFormatAction
         self.present = present
         self.paste = paste
         self.returnKeyAction = returnKeyAction
         self.backspaceKeyAction = backspaceKeyAction
+        self.autocapitalizationType = autocapitalizationType
+        self.autocorrectionType = autocorrectionType
     }
     
     public static func ==(lhs: TextFieldComponent, rhs: TextFieldComponent) -> Bool {
@@ -280,6 +288,15 @@ public final class TextFieldComponent: Component {
             return false
         }
         if lhs.returnKeyType != rhs.returnKeyType {
+            return false
+        }
+        if lhs.keyboardType != rhs.keyboardType {
+            return false
+        }
+        if lhs.autocapitalizationType != rhs.autocapitalizationType {
+            return false
+        }
+        if lhs.autocorrectionType != rhs.autocorrectionType {
             return false
         }
         return true
@@ -409,7 +426,7 @@ public final class TextFieldComponent: Component {
             let inputState = f(self.inputState)
             
             let currentAttributedText = self.textView.attributedText
-            let updatedAttributedText = textAttributedStringForStateText(context: component.context, stateText:  inputState.inputText, fontSize: component.fontSize, textColor: component.textColor, accentTextColor: component.accentColor, writingDirection: nil, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(component.context.animatedEmojiStickersValue.keys), emojiViewProvider: self.emojiViewProvider, makeCollapsedQuoteAttachment: { text, attributes in
+            let updatedAttributedText = textAttributedStringForStateText(context: component.context, stateText: inputState.inputText, fontSize: component.fontSize, textColor: component.textColor, accentTextColor: component.accentColor, writingDirection: nil, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(component.context.animatedEmojiStickersValue.keys), emojiViewProvider: self.emojiViewProvider, makeCollapsedQuoteAttachment: { text, attributes in
                 return ChatInputTextCollapsedQuoteAttachmentImpl(text: text, attributes: attributes)
             })
             if currentAttributedText != updatedAttributedText {
@@ -986,7 +1003,7 @@ public final class TextFieldComponent: Component {
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: component.theme)
             let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>) = (presentationData, .single(presentationData))
-            let controller = chatTextLinkEditController(sharedContext: component.context.sharedContext, updatedPresentationData: updatedPresentationData, account: component.context.account, text: text.string, link: link, allowEmpty: true, apply: { [weak self] link in
+            let controller = component.context.sharedContext.makeLinkEditController(context: component.context, updatedPresentationData: updatedPresentationData, text: text.string, link: link, apply: { [weak self] link in
                 if let self {
                     if let link {
                         if !link.isEmpty {
@@ -1387,6 +1404,15 @@ public final class TextFieldComponent: Component {
             
             if self.textView.returnKeyType != component.returnKeyType {
                 self.textView.returnKeyType = component.returnKeyType
+            }
+            if self.textView.keyboardType != component.keyboardType {
+                self.textView.keyboardType = component.keyboardType
+            }
+            if self.textView.autocapitalizationType != component.autocapitalizationType {
+                self.textView.autocapitalizationType = component.autocapitalizationType
+            }
+            if self.textView.autocorrectionType != component.autocorrectionType {
+                self.textView.autocorrectionType = component.autocorrectionType
             }
             
             if let initialText = component.externalState.initialText {

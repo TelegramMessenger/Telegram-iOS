@@ -194,7 +194,7 @@ private enum CreateChannelEntry: ItemListNodeEntry {
         let arguments = arguments as! CreateChannelArguments
         switch self {
             case let .channelInfo(_, _, dateTimeFormat, peer, state, avatar):
-                return ItemListAvatarAndNameInfoItem(itemContext: .accountContext(arguments.context), presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .editSettings, peer: peer.flatMap(EnginePeer.init), presence: nil, memberCount: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { editingName in
+                return ItemListAvatarAndNameInfoItem(itemContext: .accountContext(arguments.context), presentationData: presentationData, systemStyle: .glass, dateTimeFormat: dateTimeFormat, mode: .editSettings, peer: peer.flatMap(EnginePeer.init), presence: nil, memberCount: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, editingNameCompleted: {
                     arguments.focusOnDescription()
@@ -202,11 +202,11 @@ private enum CreateChannelEntry: ItemListNodeEntry {
                     arguments.changeProfilePhoto()
                 }, updatingImage: avatar, tag: CreateChannelEntryTag.info)
             case let .setProfilePhoto(_, text):
-                return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.changeProfilePhoto()
                 })
             case let .descriptionSetup(_, text, value):
-                return ItemListMultilineInputItem(presentationData: presentationData, text: value, placeholder: text, maxLength: ItemListMultilineInputItemTextLimit(value: 255, display: true), sectionId: self.section, style: .blocks, textUpdated: { updatedText in
+                return ItemListMultilineInputItem(presentationData: presentationData, systemStyle: .glass, text: value, placeholder: text, maxLength: ItemListMultilineInputItemTextLimit(value: 255, display: true), sectionId: self.section, style: .blocks, textUpdated: { updatedText in
                     arguments.updateEditingDescriptionText(updatedText)
                 }, tag: CreateChannelEntryTag.description)
             case let .descriptionInfo(_, text):
@@ -214,7 +214,7 @@ private enum CreateChannelEntry: ItemListNodeEntry {
             case let .usernameHeader(_, title):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
             case let .username(theme, placeholder, text):
-                return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: "t.me/", textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: placeholder, type: .username, clearType: .always, tag: nil, sectionId: self.section, textUpdated: { updatedText in
+                return ItemListSingleLineInputItem(presentationData: presentationData, systemStyle: .glass, title: NSAttributedString(string: "t.me/", textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: placeholder, type: .username, clearType: .always, tag: nil, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updatePublicLinkText(updatedText)
                 }, action: {
                 })

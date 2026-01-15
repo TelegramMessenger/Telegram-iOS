@@ -128,7 +128,7 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
 
 func apiMessagePeerId(_ messsage: Api.Message) -> PeerId? {
     switch messsage {
-        case let .message(_, _, _, _, _, messagePeerId, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+        case let .message(_, _, _, _, _, messagePeerId, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
             let chatPeerId = messagePeerId
             return chatPeerId.peerId
         case let .messageEmpty(_, _, peerId):
@@ -144,7 +144,7 @@ func apiMessagePeerId(_ messsage: Api.Message) -> PeerId? {
 
 func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
     switch message {
-        case let .message(_, _, _, fromId, _, chatPeerId, savedPeerId, fwdHeader, viaBotId, viaBusinessBotId, replyTo, _, _, media, _, entities, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+        case let .message(_, _, _, fromId, _, chatPeerId, savedPeerId, fwdHeader, viaBotId, viaBusinessBotId, replyTo, _, _, media, _, entities, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
             let peerId: PeerId = chatPeerId.peerId
             
             var result = [peerId]
@@ -279,7 +279,7 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
 
 func apiMessageAssociatedMessageIds(_ message: Api.Message) -> (replyIds: ReferencedReplyMessageIds, generalIds: [MessageId])? {
     switch message {
-        case let .message(_, _, id, _, _, chatPeerId, _, _, _, _, replyTo, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+        case let .message(_, _, id, _, _, chatPeerId, _, _, _, _, replyTo, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
             if let replyTo = replyTo {
                 let peerId: PeerId = chatPeerId.peerId
                 
@@ -457,8 +457,17 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
                 }
                 return (TelegramMediaTodo(flags: flags, text: todoText, textEntities: todoEntities, items: list.map(TelegramMediaTodo.Item.init(apiItem:)), completions: todoCompletions), nil, nil, nil, nil, nil)
             }
-        case let .messageMediaDice(value, emoticon):
-            return (TelegramMediaDice(emoji: emoticon, value: value), nil, nil, nil, nil, nil)
+        case let .messageMediaDice(_, value, emoticon, apiGameOutcome):
+            var gameOutcome: TelegramMediaDice.GameOutcome?
+            var tonAmount: Int64?
+            switch apiGameOutcome {
+            case let .emojiGameOutcome(seed, stakeTonAmount, outcomeTonAmount):
+                gameOutcome = TelegramMediaDice.GameOutcome(seed: seed.makeData(), tonAmount: outcomeTonAmount)
+                tonAmount = stakeTonAmount
+            default:
+                break
+            }
+            return (TelegramMediaDice(emoji: emoticon, tonAmount: tonAmount, value: value, gameOutcome: gameOutcome), nil, nil, nil, nil, nil)
         case let .messageMediaStory(flags, peerId, id, _):
             let isMention = (flags & (1 << 1)) != 0
             return (TelegramMediaStory(storyId: StoryId(peerId: peerId.peerId, id: id), isMention: isMention), nil, nil, nil, nil, nil)
@@ -703,7 +712,7 @@ func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [Mes
 extension StoreMessage {
     convenience init?(apiMessage: Api.Message, accountPeerId: PeerId, peerIsForum: Bool, namespace: MessageId.Namespace = Namespaces.Message.Cloud) {
         switch apiMessage {
-            case let .message(flags, flags2, id, fromId, boosts, chatPeerId, savedPeerId, fwdFrom, viaBotId, viaBusinessBotId, replyTo, date, message, media, replyMarkup, entities, views, forwards, replies, editDate, postAuthor, groupingId, reactions, restrictionReason, ttlPeriod, quickReplyShortcutId, messageEffectId, factCheck, reportDeliveryUntilDate, paidMessageStars, suggestedPost, scheduledRepeatPeriod):
+            case let .message(flags, flags2, id, fromId, boosts, chatPeerId, savedPeerId, fwdFrom, viaBotId, viaBusinessBotId, replyTo, date, message, media, replyMarkup, entities, views, forwards, replies, editDate, postAuthor, groupingId, reactions, restrictionReason, ttlPeriod, quickReplyShortcutId, messageEffectId, factCheck, reportDeliveryUntilDate, paidMessageStars, suggestedPost, scheduledRepeatPeriod, summaryFromLanguage):
                 var attributes: [MessageAttribute] = []
             
                 if (flags2 & (1 << 4)) != 0 {
@@ -964,6 +973,10 @@ extension StoreMessage {
                     attributes.append(ScheduledRepeatAttribute(repeatPeriod: scheduledRepeatPeriod))
                 }
             
+                if let summaryFromLanguage {
+                    attributes.append(SummarizationMessageAttribute(fromLang: summaryFromLanguage))
+                }
+            
                 var entitiesAttribute: TextEntitiesMessageAttribute?
                 if let entities = entities, !entities.isEmpty {
                     let attribute = TextEntitiesMessageAttribute(entities: messageTextEntitiesFromApiEntities(entities))
@@ -988,7 +1001,7 @@ extension StoreMessage {
                     }
                 }
                 
-                if (flags & (1 << 17)) != 0 {
+                if (flags & (1 << 19)) != 0 {
                     attributes.append(ContentRequiresValidationMessageAttribute())
                 }
             
@@ -1174,7 +1187,7 @@ extension StoreMessage {
                     threadId = 1
                 }
                 
-                if (flags & (1 << 17)) != 0 {
+                if (flags & (1 << 19)) != 0 {
                     attributes.append(ContentRequiresValidationMessageAttribute())
                 }
             

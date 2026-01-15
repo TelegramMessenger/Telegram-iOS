@@ -24,6 +24,7 @@ swift_library(
         "//submodules/Components/MultilineTextComponent",
         "//submodules/Markdown",
         "//submodules/TelegramUI/Components/ButtonComponent",
+        "//submodules/TelegramUI/Components/PlainButtonComponent",
         "//submodules/Components/BundleIconComponent",
         "//submodules/TextFormat",
         "//submodules/TelegramUI/Components/ListSectionComponent",
@@ -32,6 +33,8 @@ swift_library(
         "//submodules/TelegramStringFormatting",
         "//submodules/TelegramUI/Components/ListItemComponentAdaptor",
         "//submodules/TelegramUI/Components/PeerInfo/MessagePriceItem",
+        "//submodules/UndoUI",
+        "//submodules/ShareController",
     ],
     visibility = [
         "//visibility:public",

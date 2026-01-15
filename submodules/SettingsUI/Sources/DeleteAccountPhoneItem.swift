@@ -167,7 +167,7 @@ final class DeleteAccountPhoneItemNode: ListViewItemNode, ItemListItemNode {
         
         self.phoneInputNode = PhoneInputNode(fontSize: 17.0)
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.phoneBackground)
         self.addSubnode(self.countryButton)

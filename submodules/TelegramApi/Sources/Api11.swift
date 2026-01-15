@@ -13,6 +13,7 @@ public extension Api {
         case inputMediaPhoto(flags: Int32, id: Api.InputPhoto, ttlSeconds: Int32?)
         case inputMediaPhotoExternal(flags: Int32, url: String, ttlSeconds: Int32?)
         case inputMediaPoll(flags: Int32, poll: Api.Poll, correctAnswers: [Buffer]?, solution: String?, solutionEntities: [Api.MessageEntity]?)
+        case inputMediaStakeDice(gameHash: String, tonAmount: Int64, clientSeed: Buffer)
         case inputMediaStory(peer: Api.InputPeer, id: Int32)
         case inputMediaTodo(todo: Api.TodoList)
         case inputMediaUploadedDocument(flags: Int32, file: Api.InputFile, thumb: Api.InputFile?, mimeType: String, attributes: [Api.DocumentAttribute], stickers: [Api.InputDocument]?, videoCover: Api.InputPhoto?, videoTimestamp: Int32?, ttlSeconds: Int32?)
@@ -148,6 +149,14 @@ public extension Api {
                         item.serialize(buffer, true)
                     }}
                     break
+                case .inputMediaStakeDice(let gameHash, let tonAmount, let clientSeed):
+                    if boxed {
+                        buffer.appendInt32(-207018934)
+                    }
+                    serializeString(gameHash, buffer: buffer, boxed: false)
+                    serializeInt64(tonAmount, buffer: buffer, boxed: false)
+                    serializeBytes(clientSeed, buffer: buffer, boxed: false)
+                    break
                 case .inputMediaStory(let peer, let id):
                     if boxed {
                         buffer.appendInt32(-1979852936)
@@ -245,6 +254,8 @@ public extension Api {
                 return ("inputMediaPhotoExternal", [("flags", flags as Any), ("url", url as Any), ("ttlSeconds", ttlSeconds as Any)])
                 case .inputMediaPoll(let flags, let poll, let correctAnswers, let solution, let solutionEntities):
                 return ("inputMediaPoll", [("flags", flags as Any), ("poll", poll as Any), ("correctAnswers", correctAnswers as Any), ("solution", solution as Any), ("solutionEntities", solutionEntities as Any)])
+                case .inputMediaStakeDice(let gameHash, let tonAmount, let clientSeed):
+                return ("inputMediaStakeDice", [("gameHash", gameHash as Any), ("tonAmount", tonAmount as Any), ("clientSeed", clientSeed as Any)])
                 case .inputMediaStory(let peer, let id):
                 return ("inputMediaStory", [("peer", peer as Any), ("id", id as Any)])
                 case .inputMediaTodo(let todo):
@@ -273,23 +284,18 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.InputMedia.inputMediaContact(phoneNumber: _1!, firstName: _2!, lastName: _3!, vcard: _4!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.InputMedia.inputMediaContact(phoneNumber: _1!, firstName: _2!, lastName: _3!, vcard: _4!)
         }
         public static func parse_inputMediaDice(_ reader: BufferReader) -> InputMedia? {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputMedia.inputMediaDice(emoticon: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.InputMedia.inputMediaDice(emoticon: _1!)
         }
         public static func parse_inputMediaDocument(_ reader: BufferReader) -> InputMedia? {
             var _1: Int32?
@@ -314,12 +320,13 @@ public extension Api {
             let _c4 = (Int(_1!) & Int(1 << 4) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.InputMedia.inputMediaDocument(flags: _1!, id: _2!, videoCover: _3, videoTimestamp: _4, ttlSeconds: _5, query: _6)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            return Api.InputMedia.inputMediaDocument(flags: _1!, id: _2!, videoCover: _3, videoTimestamp: _4, ttlSeconds: _5, query: _6)
         }
         public static func parse_inputMediaDocumentExternal(_ reader: BufferReader) -> InputMedia? {
             var _1: Int32?
@@ -339,12 +346,12 @@ public extension Api {
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 3) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.InputMedia.inputMediaDocumentExternal(flags: _1!, url: _2!, ttlSeconds: _3, videoCover: _4, videoTimestamp: _5)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.InputMedia.inputMediaDocumentExternal(flags: _1!, url: _2!, ttlSeconds: _3, videoCover: _4, videoTimestamp: _5)
         }
         public static func parse_inputMediaEmpty(_ reader: BufferReader) -> InputMedia? {
             return Api.InputMedia.inputMediaEmpty
@@ -355,12 +362,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.InputGame
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputMedia.inputMediaGame(id: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.InputMedia.inputMediaGame(id: _1!)
         }
         public static func parse_inputMediaGeoLive(_ reader: BufferReader) -> InputMedia? {
             var _1: Int32?
@@ -380,12 +383,12 @@ public extension Api {
             let _c3 = (Int(_1!) & Int(1 << 2) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 3) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.InputMedia.inputMediaGeoLive(flags: _1!, geoPoint: _2!, heading: _3, period: _4, proximityNotificationRadius: _5)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.InputMedia.inputMediaGeoLive(flags: _1!, geoPoint: _2!, heading: _3, period: _4, proximityNotificationRadius: _5)
         }
         public static func parse_inputMediaGeoPoint(_ reader: BufferReader) -> InputMedia? {
             var _1: Api.InputGeoPoint?
@@ -393,12 +396,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.InputGeoPoint
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputMedia.inputMediaGeoPoint(geoPoint: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.InputMedia.inputMediaGeoPoint(geoPoint: _1!)
         }
         public static func parse_inputMediaInvoice(_ reader: BufferReader) -> InputMedia? {
             var _1: Int32?
@@ -439,12 +438,17 @@ public extension Api {
             let _c8 = _8 != nil
             let _c9 = (Int(_1!) & Int(1 << 1) == 0) || _9 != nil
             let _c10 = (Int(_1!) & Int(1 << 2) == 0) || _10 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
-                return Api.InputMedia.inputMediaInvoice(flags: _1!, title: _2!, description: _3!, photo: _4, invoice: _5!, payload: _6!, provider: _7, providerData: _8!, startParam: _9, extendedMedia: _10)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            if !_c9 { return nil }
+            if !_c10 { return nil }
+            return Api.InputMedia.inputMediaInvoice(flags: _1!, title: _2!, description: _3!, photo: _4, invoice: _5!, payload: _6!, provider: _7, providerData: _8!, startParam: _9, extendedMedia: _10)
         }
         public static func parse_inputMediaPaidMedia(_ reader: BufferReader) -> InputMedia? {
             var _1: Int32?
@@ -461,12 +465,11 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.InputMedia.inputMediaPaidMedia(flags: _1!, starsAmount: _2!, extendedMedia: _3!, payload: _4)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.InputMedia.inputMediaPaidMedia(flags: _1!, starsAmount: _2!, extendedMedia: _3!, payload: _4)
         }
         public static func parse_inputMediaPhoto(_ reader: BufferReader) -> InputMedia? {
             var _1: Int32?
@@ -480,12 +483,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.InputMedia.inputMediaPhoto(flags: _1!, id: _2!, ttlSeconds: _3)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.InputMedia.inputMediaPhoto(flags: _1!, id: _2!, ttlSeconds: _3)
         }
         public static func parse_inputMediaPhotoExternal(_ reader: BufferReader) -> InputMedia? {
             var _1: Int32?
@@ -497,12 +498,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.InputMedia.inputMediaPhotoExternal(flags: _1!, url: _2!, ttlSeconds: _3)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.InputMedia.inputMediaPhotoExternal(flags: _1!, url: _2!, ttlSeconds: _3)
         }
         public static func parse_inputMediaPoll(_ reader: BufferReader) -> InputMedia? {
             var _1: Int32?
@@ -526,12 +525,27 @@ public extension Api {
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.InputMedia.inputMediaPoll(flags: _1!, poll: _2!, correctAnswers: _3, solution: _4, solutionEntities: _5)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.InputMedia.inputMediaPoll(flags: _1!, poll: _2!, correctAnswers: _3, solution: _4, solutionEntities: _5)
+        }
+        public static func parse_inputMediaStakeDice(_ reader: BufferReader) -> InputMedia? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Buffer?
+            _3 = parseBytes(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.InputMedia.inputMediaStakeDice(gameHash: _1!, tonAmount: _2!, clientSeed: _3!)
         }
         public static func parse_inputMediaStory(_ reader: BufferReader) -> InputMedia? {
             var _1: Api.InputPeer?
@@ -542,12 +556,9 @@ public extension Api {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputMedia.inputMediaStory(peer: _1!, id: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.InputMedia.inputMediaStory(peer: _1!, id: _2!)
         }
         public static func parse_inputMediaTodo(_ reader: BufferReader) -> InputMedia? {
             var _1: Api.TodoList?
@@ -555,12 +566,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.TodoList
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputMedia.inputMediaTodo(todo: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.InputMedia.inputMediaTodo(todo: _1!)
         }
         public static func parse_inputMediaUploadedDocument(_ reader: BufferReader) -> InputMedia? {
             var _1: Int32?
@@ -600,12 +607,16 @@ public extension Api {
             let _c7 = (Int(_1!) & Int(1 << 6) == 0) || _7 != nil
             let _c8 = (Int(_1!) & Int(1 << 7) == 0) || _8 != nil
             let _c9 = (Int(_1!) & Int(1 << 1) == 0) || _9 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
-                return Api.InputMedia.inputMediaUploadedDocument(flags: _1!, file: _2!, thumb: _3, mimeType: _4!, attributes: _5!, stickers: _6, videoCover: _7, videoTimestamp: _8, ttlSeconds: _9)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            if !_c9 { return nil }
+            return Api.InputMedia.inputMediaUploadedDocument(flags: _1!, file: _2!, thumb: _3, mimeType: _4!, attributes: _5!, stickers: _6, videoCover: _7, videoTimestamp: _8, ttlSeconds: _9)
         }
         public static func parse_inputMediaUploadedPhoto(_ reader: BufferReader) -> InputMedia? {
             var _1: Int32?
@@ -624,12 +635,11 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.InputMedia.inputMediaUploadedPhoto(flags: _1!, file: _2!, stickers: _3, ttlSeconds: _4)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.InputMedia.inputMediaUploadedPhoto(flags: _1!, file: _2!, stickers: _3, ttlSeconds: _4)
         }
         public static func parse_inputMediaVenue(_ reader: BufferReader) -> InputMedia? {
             var _1: Api.InputGeoPoint?
@@ -652,12 +662,13 @@ public extension Api {
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             let _c6 = _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.InputMedia.inputMediaVenue(geoPoint: _1!, title: _2!, address: _3!, provider: _4!, venueId: _5!, venueType: _6!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            return Api.InputMedia.inputMediaVenue(geoPoint: _1!, title: _2!, address: _3!, provider: _4!, venueId: _5!, venueType: _6!)
         }
         public static func parse_inputMediaWebPage(_ reader: BufferReader) -> InputMedia? {
             var _1: Int32?
@@ -666,12 +677,9 @@ public extension Api {
             _2 = parseString(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputMedia.inputMediaWebPage(flags: _1!, url: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.InputMedia.inputMediaWebPage(flags: _1!, url: _2!)
         }
     
     }
@@ -733,23 +741,16 @@ public extension Api {
             _2 = reader.readInt64()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputMessage.inputMessageCallbackQuery(id: _1!, queryId: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.InputMessage.inputMessageCallbackQuery(id: _1!, queryId: _2!)
         }
         public static func parse_inputMessageID(_ reader: BufferReader) -> InputMessage? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputMessage.inputMessageID(id: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.InputMessage.inputMessageID(id: _1!)
         }
         public static func parse_inputMessagePinned(_ reader: BufferReader) -> InputMessage? {
             return Api.InputMessage.inputMessagePinned
@@ -758,12 +759,8 @@ public extension Api {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputMessage.inputMessageReplyTo(id: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.InputMessage.inputMessageReplyTo(id: _1!)
         }
     
     }
@@ -842,12 +839,9 @@ public extension Api {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputNotifyPeer.inputNotifyForumTopic(peer: _1!, topMsgId: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.InputNotifyPeer.inputNotifyForumTopic(peer: _1!, topMsgId: _2!)
         }
         public static func parse_inputNotifyPeer(_ reader: BufferReader) -> InputNotifyPeer? {
             var _1: Api.InputPeer?
@@ -855,12 +849,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.InputPeer
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputNotifyPeer.inputNotifyPeer(peer: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.InputNotifyPeer.inputNotifyPeer(peer: _1!)
         }
         public static func parse_inputNotifyUsers(_ reader: BufferReader) -> InputNotifyPeer? {
             return Api.InputNotifyPeer.inputNotifyUsers
@@ -870,10 +860,17 @@ public extension Api {
 }
 public extension Api {
     enum InputPasskeyCredential: TypeConstructorDescription {
+        case inputPasskeyCredentialFirebasePNV(pnvToken: String)
         case inputPasskeyCredentialPublicKey(id: String, rawId: String, response: Api.InputPasskeyResponse)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
+                case .inputPasskeyCredentialFirebasePNV(let pnvToken):
+                    if boxed {
+                        buffer.appendInt32(1528613672)
+                    }
+                    serializeString(pnvToken, buffer: buffer, boxed: false)
+                    break
                 case .inputPasskeyCredentialPublicKey(let id, let rawId, let response):
                     if boxed {
                         buffer.appendInt32(1009235855)
@@ -887,11 +884,20 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
+                case .inputPasskeyCredentialFirebasePNV(let pnvToken):
+                return ("inputPasskeyCredentialFirebasePNV", [("pnvToken", pnvToken as Any)])
                 case .inputPasskeyCredentialPublicKey(let id, let rawId, let response):
                 return ("inputPasskeyCredentialPublicKey", [("id", id as Any), ("rawId", rawId as Any), ("response", response as Any)])
     }
     }
     
+        public static func parse_inputPasskeyCredentialFirebasePNV(_ reader: BufferReader) -> InputPasskeyCredential? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if !_c1 { return nil }
+            return Api.InputPasskeyCredential.inputPasskeyCredentialFirebasePNV(pnvToken: _1!)
+        }
         public static func parse_inputPasskeyCredentialPublicKey(_ reader: BufferReader) -> InputPasskeyCredential? {
             var _1: String?
             _1 = parseString(reader)
@@ -904,12 +910,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.InputPasskeyCredential.inputPasskeyCredentialPublicKey(id: _1!, rawId: _2!, response: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.InputPasskeyCredential.inputPasskeyCredentialPublicKey(id: _1!, rawId: _2!, response: _3!)
         }
     
     }
@@ -964,12 +968,11 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.InputPasskeyResponse.inputPasskeyResponseLogin(clientData: _1!, authenticatorData: _2!, signature: _3!, userHandle: _4!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.InputPasskeyResponse.inputPasskeyResponseLogin(clientData: _1!, authenticatorData: _2!, signature: _3!, userHandle: _4!)
         }
         public static func parse_inputPasskeyResponseRegister(_ reader: BufferReader) -> InputPasskeyResponse? {
             var _1: Api.DataJSON?
@@ -980,122 +983,9 @@ public extension Api {
             _2 = parseBytes(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputPasskeyResponse.inputPasskeyResponseRegister(clientData: _1!, attestationData: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum InputPaymentCredentials: TypeConstructorDescription {
-        case inputPaymentCredentials(flags: Int32, data: Api.DataJSON)
-        case inputPaymentCredentialsApplePay(paymentData: Api.DataJSON)
-        case inputPaymentCredentialsGooglePay(paymentToken: Api.DataJSON)
-        case inputPaymentCredentialsSaved(id: String, tmpPassword: Buffer)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .inputPaymentCredentials(let flags, let data):
-                    if boxed {
-                        buffer.appendInt32(873977640)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    data.serialize(buffer, true)
-                    break
-                case .inputPaymentCredentialsApplePay(let paymentData):
-                    if boxed {
-                        buffer.appendInt32(178373535)
-                    }
-                    paymentData.serialize(buffer, true)
-                    break
-                case .inputPaymentCredentialsGooglePay(let paymentToken):
-                    if boxed {
-                        buffer.appendInt32(-1966921727)
-                    }
-                    paymentToken.serialize(buffer, true)
-                    break
-                case .inputPaymentCredentialsSaved(let id, let tmpPassword):
-                    if boxed {
-                        buffer.appendInt32(-1056001329)
-                    }
-                    serializeString(id, buffer: buffer, boxed: false)
-                    serializeBytes(tmpPassword, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .inputPaymentCredentials(let flags, let data):
-                return ("inputPaymentCredentials", [("flags", flags as Any), ("data", data as Any)])
-                case .inputPaymentCredentialsApplePay(let paymentData):
-                return ("inputPaymentCredentialsApplePay", [("paymentData", paymentData as Any)])
-                case .inputPaymentCredentialsGooglePay(let paymentToken):
-                return ("inputPaymentCredentialsGooglePay", [("paymentToken", paymentToken as Any)])
-                case .inputPaymentCredentialsSaved(let id, let tmpPassword):
-                return ("inputPaymentCredentialsSaved", [("id", id as Any), ("tmpPassword", tmpPassword as Any)])
-    }
-    }
-    
-        public static func parse_inputPaymentCredentials(_ reader: BufferReader) -> InputPaymentCredentials? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.DataJSON?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.DataJSON
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputPaymentCredentials.inputPaymentCredentials(flags: _1!, data: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputPaymentCredentialsApplePay(_ reader: BufferReader) -> InputPaymentCredentials? {
-            var _1: Api.DataJSON?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.DataJSON
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputPaymentCredentials.inputPaymentCredentialsApplePay(paymentData: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputPaymentCredentialsGooglePay(_ reader: BufferReader) -> InputPaymentCredentials? {
-            var _1: Api.DataJSON?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.DataJSON
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputPaymentCredentials.inputPaymentCredentialsGooglePay(paymentToken: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputPaymentCredentialsSaved(_ reader: BufferReader) -> InputPaymentCredentials? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: Buffer?
-            _2 = parseBytes(reader)
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputPaymentCredentials.inputPaymentCredentialsSaved(id: _1!, tmpPassword: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.InputPasskeyResponse.inputPasskeyResponseRegister(clientData: _1!, attestationData: _2!)
         }
     
     }

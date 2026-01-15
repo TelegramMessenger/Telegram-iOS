@@ -35,7 +35,9 @@ public class TimezoneSelectionScreen: ViewController {
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData, style: .glass))
+        
+        self._hasGlassStyle = true
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
@@ -82,7 +84,7 @@ public class TimezoneSelectionScreen: ViewController {
     
     private func updateThemeAndStrings() {
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
-        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
+        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData, style: .glass), transition: .immediate)
         self.searchContentNode?.updateThemeAndPlaceholder(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Common_Search)
         self.title = self.presentationData.strings.Settings_AppLanguage
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)

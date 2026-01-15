@@ -18,7 +18,7 @@ final class LocationSearchNavigationContentNode: NavigationBarContentNode {
         self.presentationData = presentationData
         self.interaction = interaction
         
-        self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: presentationData.theme, hasSeparator: false), strings: presentationData.strings, fieldStyle: .modern)
+        self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: presentationData.theme, hasSeparator: false), presentationTheme: presentationData.theme, strings: presentationData.strings, fieldStyle: .modern)
         self.searchBar.placeholderString = NSAttributedString(string: presentationData.strings.Map_Search, font: searchBarFont, textColor: presentationData.theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
         
         super.init()
@@ -38,10 +38,12 @@ final class LocationSearchNavigationContentNode: NavigationBarContentNode {
         return 56.0
     }
     
-    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
+    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
         let searchBarFrame = CGRect(origin: CGPoint(x: 0.0, y: size.height - self.nominalHeight), size: CGSize(width: size.width, height: 56.0))
         self.searchBar.frame = searchBarFrame
         self.searchBar.updateLayout(boundingSize: searchBarFrame.size, leftInset: leftInset, rightInset: rightInset, transition: transition)
+        
+        return size
     }
     
     func activate() {
@@ -58,6 +60,6 @@ final class LocationSearchNavigationContentNode: NavigationBarContentNode {
     
     func updatePresentationData(_ presentationData: PresentationData) {
         self.presentationData = presentationData
-        self.searchBar.updateThemeAndStrings(theme: SearchBarNodeTheme(theme: presentationData.theme, hasSeparator: false), strings: presentationData.strings)
+        self.searchBar.updateThemeAndStrings(theme: SearchBarNodeTheme(theme: presentationData.theme, hasSeparator: false), presentationTheme: presentationData.theme, strings: presentationData.strings)
     }
 }

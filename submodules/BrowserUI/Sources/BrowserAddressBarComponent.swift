@@ -9,6 +9,9 @@ import AccountContext
 import BundleIconComponent
 import MultilineTextComponent
 import UrlEscaping
+import GlassBackgroundComponent
+import GlassBarButtonComponent
+import EdgeEffect
 
 final class AddressBarContentComponent: Component {
     public typealias EnvironmentType = BrowserNavigationBarEnvironment
@@ -19,6 +22,8 @@ final class AddressBarContentComponent: Component {
     let url: String
     let isSecure: Bool
     let isExpanded: Bool
+    let readingProgress: CGFloat
+    let loadingProgress: Double?
     let performAction: ActionSlot<BrowserScreen.Action>
     
     init(
@@ -28,6 +33,8 @@ final class AddressBarContentComponent: Component {
         url: String,
         isSecure: Bool,
         isExpanded: Bool,
+        readingProgress: CGFloat,
+        loadingProgress: Double?,
         performAction: ActionSlot<BrowserScreen.Action>
     ) {
         self.theme = theme
@@ -36,6 +43,8 @@ final class AddressBarContentComponent: Component {
         self.url = url
         self.isSecure = isSecure
         self.isExpanded = isExpanded
+        self.readingProgress = readingProgress
+        self.loadingProgress = loadingProgress
         self.performAction = performAction
     }
     
@@ -56,6 +65,12 @@ final class AddressBarContentComponent: Component {
             return false
         }
         if lhs.isExpanded != rhs.isExpanded {
+            return false
+        }
+        if lhs.readingProgress != rhs.readingProgress {
+            return false
+        }
+        if lhs.loadingProgress != rhs.loadingProgress {
             return false
         }
         return true
@@ -85,6 +100,8 @@ final class AddressBarContentComponent: Component {
             var isSecure: Bool
             var collapseFraction: CGFloat
             var isTablet: Bool
+            var readingProgress: CGFloat
+            var loadingProgress: Double?
             
             static func ==(lhs: Params, rhs: Params) -> Bool {
                 if lhs.theme !== rhs.theme {
@@ -111,25 +128,32 @@ final class AddressBarContentComponent: Component {
                 if lhs.isTablet != rhs.isTablet {
                     return false
                 }
+                if lhs.readingProgress != rhs.readingProgress {
+                    return false
+                }
+                if lhs.loadingProgress != rhs.loadingProgress {
+                    return false
+                }
                 return true
             }
         }
         
         private let activated: (Bool) -> Void = { _ in }
         private let deactivated: (Bool) -> Void = { _ in }
-    
-        private let backgroundLayer: SimpleLayer
-        
-        private let iconView: UIImageView
+            
+        private let backgroundView: GlassBackgroundView
         
         private let clearIconView: UIImageView
         private let clearIconButton: HighlightTrackingButton
         
-        private let cancelButtonTitle: ComponentView<Empty>
-        private let cancelButton: HighlightTrackingButton
+        private let cancelButton = ComponentView<Empty>()
         
         private var placeholderContent = ComponentView<Empty>()
         private var titleContent = ComponentView<Empty>()
+        
+        private let clippingView = UIView()
+        private var loadingProgress = ComponentView<Empty>()
+        private var readingProgressView = UIView()
         
         private var textFrame: CGRect?
         private var textField: TextField?
@@ -144,50 +168,30 @@ final class AddressBarContentComponent: Component {
         }
         
         init() {
-            self.backgroundLayer = SimpleLayer()
-            
-            self.iconView = UIImageView()
+            self.backgroundView = GlassBackgroundView()
             
             self.clearIconView = UIImageView()
             self.clearIconButton = HighlightableButton()
             self.clearIconView.isHidden = false
             self.clearIconButton.isHidden = false
-            
-            self.cancelButtonTitle = ComponentView()
-            self.cancelButton = HighlightTrackingButton()
-                        
+                                    
             super.init(frame: CGRect())
             
-            self.layer.addSublayer(self.backgroundLayer)
+            self.clippingView.clipsToBounds = true
             
-            self.addSubview(self.iconView)
-            self.addSubview(self.clearIconView)
-            self.addSubview(self.clearIconButton)
+            self.addSubview(self.backgroundView)
+            self.backgroundView.contentView.addSubview(self.clippingView)
+            self.clippingView.addSubview(self.readingProgressView)
             
-            self.addSubview(self.cancelButton)
+            self.backgroundView.contentView.addSubview(self.clearIconView)
+            self.backgroundView.contentView.addSubview(self.clearIconButton)
+            
             self.clipsToBounds = true
             
             let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
             self.tapRecognizer = tapRecognizer
             self.addGestureRecognizer(tapRecognizer)
-            
-            self.cancelButton.highligthedChanged = { [weak self] highlighted in
-                if let strongSelf = self {
-                    if highlighted {
-                        if let cancelButtonTitleView = strongSelf.cancelButtonTitle.view {
-                            cancelButtonTitleView.layer.removeAnimation(forKey: "opacity")
-                            cancelButtonTitleView.alpha = 0.4
-                        }
-                    } else {
-                        if let cancelButtonTitleView = strongSelf.cancelButtonTitle.view {
-                            cancelButtonTitleView.alpha = 1.0
-                            cancelButtonTitleView.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
-                        }
-                    }
-                }
-            }
-            self.cancelButton.addTarget(self, action: #selector(self.cancelPressed), for: .touchUpInside)
-            
+                        
             self.clearIconButton.highligthedChanged = { [weak self] highlighted in
                 if let strongSelf = self {
                     if highlighted {
@@ -263,11 +267,16 @@ final class AddressBarContentComponent: Component {
             self.placeholderContent.view?.isHidden = !text.isEmpty
             
             if let params = self.params {
-                self.update(theme: params.theme, strings: params.strings, size: params.size, isActive: params.isActive, title: params.title, isSecure: params.isSecure, collapseFraction: params.collapseFraction, isTablet: params.isTablet, transition: .immediate)
+                self.update(theme: params.theme, strings: params.strings, size: params.size, isActive: params.isActive, title: params.title, isSecure: params.isSecure, collapseFraction: params.collapseFraction, isTablet: params.isTablet, readingProgress: params.readingProgress, loadingProgress: params.loadingProgress, transition: .immediate)
             }
         }
         
-        func update(component: AddressBarContentComponent, availableSize: CGSize, environment: Environment<BrowserNavigationBarEnvironment>, transition: ComponentTransition) -> CGSize {
+        func update(
+            component: AddressBarContentComponent,
+            availableSize: CGSize,
+            environment: Environment<BrowserNavigationBarEnvironment>,
+            transition: ComponentTransition
+        ) -> CGSize {
             let collapseFraction = environment[BrowserNavigationBarEnvironment.self].fraction
             
             let wasExpanded = self.component?.isExpanded ?? false
@@ -282,12 +291,36 @@ final class AddressBarContentComponent: Component {
             let isActive = self.textField?.isFirstResponder ?? false
             
             let title = getDisplayUrl(component.url, hostOnly: true)
-            self.update(theme: component.theme, strings: component.strings, size: availableSize, isActive: isActive, title: title.lowercased(), isSecure: component.isSecure, collapseFraction: collapseFraction, isTablet: component.metrics.isTablet, transition: transition)
+            self.update(
+                theme: component.theme,
+                strings: component.strings,
+                size: availableSize,
+                isActive: isActive,
+                title: title.lowercased(),
+                isSecure: component.isSecure,
+                collapseFraction: collapseFraction,
+                isTablet: component.metrics.isTablet,
+                readingProgress: component.readingProgress,
+                loadingProgress: component.loadingProgress,
+                transition: transition
+            )
             
             return availableSize
         }
         
-        public func update(theme: PresentationTheme, strings: PresentationStrings, size: CGSize, isActive: Bool, title: String, isSecure: Bool, collapseFraction: CGFloat, isTablet: Bool, transition: ComponentTransition) {
+        public func update(
+            theme: PresentationTheme,
+            strings: PresentationStrings,
+            size: CGSize,
+            isActive: Bool,
+            title: String,
+            isSecure: Bool,
+            collapseFraction: CGFloat,
+            isTablet: Bool,
+            readingProgress: CGFloat,
+            loadingProgress: Double?,
+            transition: ComponentTransition
+        ) {
             let params = Params(
                 theme: theme,
                 strings: strings,
@@ -296,7 +329,9 @@ final class AddressBarContentComponent: Component {
                 title: title,
                 isSecure: isSecure,
                 collapseFraction: collapseFraction,
-                isTablet: isTablet
+                isTablet: isTablet,
+                readingProgress: readingProgress,
+                loadingProgress: loadingProgress
             )
             
             if self.params == params {
@@ -306,8 +341,6 @@ final class AddressBarContentComponent: Component {
             let isActiveWithText = self.component?.isExpanded ?? false
             
             if self.params?.theme !== theme {
-                self.iconView.image = generateTintedImage(image: UIImage(bundleImageName: "Media Grid/Lock"), color: .white)?.withRenderingMode(.alwaysTemplate)
-                self.iconView.tintColor = theme.rootController.navigationSearchBar.inputIconColor
                 self.clearIconView.image = generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: .white)?.withRenderingMode(.alwaysTemplate)
                 self.clearIconView.tintColor = theme.rootController.navigationSearchBar.inputClearButtonColor
             }
@@ -315,56 +348,8 @@ final class AddressBarContentComponent: Component {
             self.params = params
             
             let sideInset: CGFloat = 10.0
-            let inputHeight: CGFloat = 36.0
+            let inputHeight: CGFloat = 44.0
             let topInset: CGFloat = (size.height - inputHeight) / 2.0
-            
-            self.backgroundLayer.backgroundColor = theme.rootController.navigationSearchBar.inputFillColor.cgColor
-            self.backgroundLayer.cornerRadius = 10.5
-            transition.setAlpha(layer: self.backgroundLayer, alpha: max(0.0, min(1.0, 1.0 - collapseFraction * 1.5)))
-            
-            let cancelTextSize = self.cancelButtonTitle.update(
-                transition: .immediate,
-                component: AnyComponent(Text(
-                    text: strings.Common_Cancel,
-                    font: Font.regular(17.0),
-                    color: theme.rootController.navigationBar.accentTextColor
-                )),
-                environment: {},
-                containerSize: CGSize(width: size.width - 32.0, height: 100.0)
-            )
-           
-            let cancelButtonSpacing: CGFloat = 8.0
-            
-            var backgroundFrame = CGRect(origin: CGPoint(x: sideInset, y: topInset), size: CGSize(width: size.width - sideInset * 2.0, height: inputHeight))
-            if isActiveWithText && !isTablet {
-                backgroundFrame.size.width -= cancelTextSize.width + cancelButtonSpacing
-            }
-            transition.setFrame(layer: self.backgroundLayer, frame: backgroundFrame)
-            
-            transition.setFrame(view: self.cancelButton, frame: CGRect(origin: CGPoint(x: backgroundFrame.maxX, y: 0.0), size: CGSize(width: cancelButtonSpacing + cancelTextSize.width, height: size.height)))
-            self.cancelButton.isUserInteractionEnabled = isActiveWithText && !isTablet
-            
-            let textX: CGFloat = backgroundFrame.minX + sideInset
-            let textFrame = CGRect(origin: CGPoint(x: textX, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.maxX - textX, height: backgroundFrame.height))
-                                
-            let placeholderSize = self.placeholderContent.update(
-                transition: transition,
-                component: AnyComponent(
-                    Text(text: strings.WebBrowser_AddressPlaceholder, font: Font.regular(17.0), color: theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
-                ),
-                environment: {},
-                containerSize: size
-            )
-            if let placeholderContentView = self.placeholderContent.view {
-                if placeholderContentView.superview == nil {
-                    placeholderContentView.alpha = 0.0
-                    placeholderContentView.isHidden = true
-                    self.addSubview(placeholderContentView)
-                }
-                let placeholderContentFrame = CGRect(origin: CGPoint(x: textFrame.minX, y: backgroundFrame.midY - placeholderSize.height / 2.0), size: placeholderSize)
-                transition.setFrame(view: placeholderContentView, frame: placeholderContentFrame)
-                transition.setAlpha(view: placeholderContentView, alpha: isActiveWithText ? 1.0 : 0.0)
-            }
             
             let titleSize = self.titleContent.update(
                 transition: transition,
@@ -379,51 +364,96 @@ final class AddressBarContentComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: size.width - 36.0, height: size.height)
             )
-            var titleContentFrame = CGRect(origin: CGPoint(x: isActiveWithText ? textFrame.minX : backgroundFrame.midX - titleSize.width / 2.0, y: backgroundFrame.midY - titleSize.height / 2.0), size: titleSize)
-            if isSecure && !isActiveWithText {
-                titleContentFrame.origin.x += 7.0
+
+            let expandedBackgroundWidth = size.width - 14.0 * 2.0
+            let collapsedBackgroundWidth = titleSize.width + 32.0
+            var backgroundSize = CGSize(width: expandedBackgroundWidth * (1.0 - collapseFraction) + collapsedBackgroundWidth * collapseFraction, height: 44.0)
+                        
+            let cancelButtonSpacing: CGFloat = 8.0
+            let cancelSize = self.cancelButton.update(
+                transition: transition,
+                component: AnyComponent(
+                    GlassBarButtonComponent(
+                        size: CGSize(width: 44.0, height: 44.0),
+                        backgroundColor: nil,
+                        isDark: theme.overallDarkAppearance,
+                        state: .glass,
+                        component: AnyComponentWithIdentity(id: "close", component: AnyComponent(
+                            BundleIconComponent(name: "Navigation/Close", tintColor: theme.chat.inputPanel.panelControlColor)
+                        )),
+                        action: { [weak self] _ in
+                            self?.cancelPressed()
+                        }
+                    )
+                ),
+                environment: {},
+                containerSize: CGSize(width: 44.0, height: 44.0)
+            )
+           
+            if isActiveWithText && !isTablet {
+                backgroundSize.width -= cancelSize.width + cancelButtonSpacing + 4.0
             }
-            var titleSizeChanged = false
+            self.backgroundView.update(size: backgroundSize, cornerRadius: backgroundSize.height * 0.5, isDark: theme.overallDarkAppearance, tintColor: .init(kind: .panel, color: UIColor(white: theme.overallDarkAppearance ? 0.0 : 1.0, alpha: 0.6)), isInteractive: true, transition: transition)
+
+            
+            var backgroundFrame = CGRect(origin: CGPoint(x: floor((size.width - backgroundSize.width) / 2.0), y: topInset), size: backgroundSize)
+            if isActiveWithText && !isTablet {
+                backgroundFrame.origin.x = 16.0
+            }
+            transition.setFrame(view: self.backgroundView, frame: backgroundFrame)
+            
+            transition.setFrame(view: self.clippingView, frame: CGRect(origin: .zero, size: backgroundFrame.size))
+            transition.setCornerRadius(layer: self.clippingView.layer, cornerRadius: backgroundFrame.size.height * 0.5)
+            
+            let textX: CGFloat = sideInset
+            let textFrame = CGRect(origin: CGPoint(x: textX, y: 0.0), size: CGSize(width: backgroundFrame.maxX - textX, height: backgroundFrame.height))
+                                
+            let placeholderSize = self.placeholderContent.update(
+                transition: transition,
+                component: AnyComponent(
+                    Text(text: strings.WebBrowser_AddressPlaceholder, font: Font.regular(17.0), color: theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
+                ),
+                environment: {},
+                containerSize: size
+            )
+            if let placeholderContentView = self.placeholderContent.view {
+                if placeholderContentView.superview == nil {
+                    placeholderContentView.alpha = 0.0
+                    placeholderContentView.isHidden = true
+                    self.backgroundView.contentView.addSubview(placeholderContentView)
+                }
+                let placeholderContentFrame = CGRect(origin: CGPoint(x: textFrame.minX, y: backgroundFrame.size.height / 2.0 - placeholderSize.height / 2.0), size: placeholderSize)
+                transition.setFrame(view: placeholderContentView, frame: placeholderContentFrame)
+                transition.setAlpha(view: placeholderContentView, alpha: isActiveWithText ? 1.0 : 0.0)
+            }
+            
+            let titleContentFrame = CGRect(origin: CGPoint(x: isActiveWithText ? textFrame.minX : backgroundFrame.width / 2.0 - titleSize.width / 2.0, y: backgroundFrame.height / 2.0 - titleSize.height / 2.0), size: titleSize)
             if let titleContentView = self.titleContent.view {
                 if titleContentView.superview == nil {
-                    self.addSubview(titleContentView)
-                }
-                if titleContentView.frame.width != titleContentFrame.size.width {
-                    titleSizeChanged = true
+                    self.backgroundView.contentView.addSubview(titleContentView)
                 }
                 transition.setPosition(view: titleContentView, position: titleContentFrame.center)
                 titleContentView.bounds = CGRect(origin: .zero, size: titleContentFrame.size)
                 transition.setAlpha(view: titleContentView, alpha: isActiveWithText ? 0.0 : 1.0)
             }
-            
-            if let image = self.iconView.image {
-                let iconFrame = CGRect(origin: CGPoint(x: titleContentFrame.minX - image.size.width - 3.0, y: backgroundFrame.minY + floor((backgroundFrame.height - image.size.height) / 2.0)), size: image.size)
-                var iconTransition = transition
-                if titleSizeChanged {
-                    iconTransition = .immediate
-                }
-                iconTransition.setFrame(view: self.iconView, frame: iconFrame)
-                transition.setAlpha(view: self.iconView, alpha: isActiveWithText || !isSecure ? 0.0 : 1.0)
-            }
-            
+                        
             if let image = self.clearIconView.image {
-                let iconFrame = CGRect(origin: CGPoint(x: backgroundFrame.maxX - image.size.width - 4.0, y: backgroundFrame.minY + floor((backgroundFrame.height - image.size.height) / 2.0)), size: image.size)
+                let iconFrame = CGRect(origin: CGPoint(x: backgroundFrame.width - image.size.width - 4.0, y: floor((backgroundFrame.height - image.size.height) / 2.0)), size: image.size)
                 transition.setFrame(view: self.clearIconView, frame: iconFrame)
                 transition.setFrame(view: self.clearIconButton, frame: iconFrame.insetBy(dx: -8.0, dy: -10.0))
                 transition.setAlpha(view: self.clearIconView, alpha: isActiveWithText ? 1.0 : 0.0)
                 self.clearIconButton.isUserInteractionEnabled = isActiveWithText
             }
             
-            if let cancelButtonTitleComponentView = self.cancelButtonTitle.view {
-                if cancelButtonTitleComponentView.superview == nil {
-                    self.addSubview(cancelButtonTitleComponentView)
-                    cancelButtonTitleComponentView.isUserInteractionEnabled = false
+            if let cancelButtonView = self.cancelButton.view {
+                if cancelButtonView.superview == nil {
+                    self.addSubview(cancelButtonView)
                 }
-                transition.setFrame(view: cancelButtonTitleComponentView, frame: CGRect(origin: CGPoint(x: backgroundFrame.maxX + cancelButtonSpacing, y: floor((size.height - cancelTextSize.height) / 2.0)), size: cancelTextSize))
-                transition.setAlpha(view: cancelButtonTitleComponentView, alpha: isActiveWithText && !isTablet ? 1.0 : 0.0)
+                transition.setFrame(view: cancelButtonView, frame: CGRect(origin: CGPoint(x: backgroundFrame.maxX + cancelButtonSpacing, y: floor((size.height - cancelSize.height) / 2.0)), size: cancelSize))
+                transition.setAlpha(view: cancelButtonView, alpha: isActiveWithText && !isTablet ? 1.0 : 0.0)
             }
                         
-            let textFieldFrame = CGRect(origin: CGPoint(x: textFrame.minX, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.maxX - textFrame.minX, height: backgroundFrame.height))
+            let textFieldFrame = CGRect(origin: CGPoint(x: sideInset, y: 0.0), size: CGSize(width: backgroundFrame.width - sideInset, height: backgroundFrame.height))
             
             let textField: TextField
             if let current = self.textField {
@@ -434,7 +464,7 @@ final class AddressBarContentComponent: Component {
                 textField.autocorrectionType = .no
                 textField.keyboardType = .URL
                 textField.returnKeyType = .go
-                self.insertSubview(textField, belowSubview: self.clearIconView)
+                self.backgroundView.contentView.insertSubview(textField, belowSubview: self.clearIconView)
                 self.textField = textField
                 
                 textField.delegate = self
@@ -450,9 +480,34 @@ final class AddressBarContentComponent: Component {
             }
             
             textField.textColor = theme.rootController.navigationSearchBar.inputTextColor
-            transition.setFrame(view: textField, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + sideInset, y: backgroundFrame.minY - UIScreenPixel), size: CGSize(width: backgroundFrame.width - sideInset - 32.0, height: backgroundFrame.height)))
+            transition.setFrame(view: textField, frame: CGRect(origin: CGPoint(x: sideInset, y: -UIScreenPixel), size: CGSize(width: backgroundFrame.width - sideInset - 32.0, height: backgroundFrame.height)))
             transition.setAlpha(view: textField, alpha: isActiveWithText ? 1.0 : 0.0)
             textField.isUserInteractionEnabled = isActiveWithText
+            
+            
+            let loadingProgressInset: CGFloat = 12.0
+            let loadingProgressSize = CGSize(width: backgroundSize.width - loadingProgressInset * 2.0, height: 2.0)
+            let _ = self.loadingProgress.update(
+                transition: transition,
+                component: AnyComponent(LoadingProgressComponent(
+                    color: theme.rootController.navigationBar.accentTextColor,
+                    height: loadingProgressSize.height,
+                    value: params.loadingProgress ?? 0.0
+                )),
+                environment: {},
+                containerSize: loadingProgressSize
+            )
+            if let loadingProgressView = self.loadingProgress.view {
+                if loadingProgressView.superview == nil {
+                    self.clippingView.addSubview(loadingProgressView)
+                }
+                transition.setFrame(view: loadingProgressView, frame: CGRect(origin: CGPoint(x: loadingProgressInset, y: backgroundSize.height - loadingProgressSize.height), size: loadingProgressSize))
+                transition.setAlpha(view: loadingProgressView, alpha: isActiveWithText ? 0.0 : 1.0)
+            }
+            
+            self.readingProgressView.backgroundColor =  theme.rootController.navigationBar.primaryTextColor.withMultipliedAlpha(0.07)
+            self.readingProgressView.frame = CGRect(origin: .zero, size: CGSize(width: backgroundSize.width * params.readingProgress, height: backgroundSize.height))
+            transition.setAlpha(view: self.readingProgressView, alpha: isActiveWithText ? 0.0 : 1.0)
         }
     }
 

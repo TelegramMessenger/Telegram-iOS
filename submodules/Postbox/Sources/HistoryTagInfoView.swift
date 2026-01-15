@@ -32,7 +32,7 @@ final class MutableHistoryTagInfoView: MutablePostboxView {
                     }
                 case let .Remove(indicesAndTags):
                     if self.currentIndex != nil {
-                        for (index, tags) in indicesAndTags {
+                        for (index, tags, _) in indicesAndTags {
                             if tags.contains(self.tag) {
                                 if index == self.currentIndex {
                                     self.currentIndex = nil

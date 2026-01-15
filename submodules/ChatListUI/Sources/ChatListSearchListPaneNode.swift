@@ -38,6 +38,7 @@ import MultilineTextComponent
 import ButtonComponent
 import BundleIconComponent
 import AnimatedTextComponent
+import TextFormat
 
 private enum ChatListRecentEntryStableId: Hashable {
     case topPeers
@@ -1696,7 +1697,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
     private var emptyRecentAnimationNode: AnimatedStickerNode?
     private var emptyRecentAnimationSize = CGSize()
     
-    private var currentParams: (size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, presentationData: PresentationData)?
+    private var currentParams: (size: CGSize, sideInset: CGFloat, topInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, presentationData: PresentationData)?
     
     private let ready = Promise<Bool>()
     private var didSetReady: Bool = false
@@ -3495,7 +3496,6 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 self.interaction.openStories?(id, sourceNode.avatarNode)
             }
         }, openStarsTopup: { _ in
-        }, dismissNotice: { _ in
         }, editPeer: { _ in
         }, openWebApp: { _ in
         }, openPhotoSetup: {
@@ -4508,7 +4508,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                                 return
                             }
                             dismissImpl?()
-                            if let value = attributes[NSAttributedString.Key(rawValue: "URL")] as? String {
+                            if let value = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
                                 if !value.isEmpty {
                                     context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: value, forceExternal: false, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: navigationController, dismissInput: {})
                                 } else {
@@ -4536,7 +4536,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     )
                     interaction.present(alertController, nil)
                     dismissImpl = { [weak alertController] in
-                        alertController?.dismissAnimated()
+                        alertController?.dismiss()
                     }
                 },
                 isChannelsTabExpanded: recentItems.isChannelsTabExpanded,
@@ -4640,8 +4640,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         self.playlistStateAndType = nil
                     }
                     
-                    if let (size, sideInset, bottomInset, visibleHeight, presentationData) = self.currentParams {
-                        self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, presentationData: presentationData, synchronous: true, transition: .animated(duration: 0.4, curve: .spring))
+                    if let (size, sideInset, topInset, bottomInset, visibleHeight, presentationData) = self.currentParams {
+                        self.update(size: size, sideInset: sideInset, topInset: topInset, bottomInset: bottomInset, visibleHeight: visibleHeight, presentationData: presentationData, synchronous: true, transition: .animated(duration: 0.4, curve: .spring))
                     }
                 }
                 self.playlistLocation = playlistStateAndType?.1.playlistLocation
@@ -4758,10 +4758,10 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         }
     }
     
-    func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
+    func update(size: CGSize, sideInset: CGFloat, topInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
         let hadValidLayout = self.currentParams != nil
-        let layoutChanged = self.currentParams?.size != size || self.currentParams?.sideInset != sideInset || self.currentParams?.bottomInset != bottomInset || self.currentParams?.visibleHeight != visibleHeight
-        self.currentParams = (size, sideInset, bottomInset, visibleHeight, presentationData)
+        let layoutChanged = self.currentParams?.size != size || self.currentParams?.sideInset != sideInset ||  self.currentParams?.topInset != topInset || self.currentParams?.bottomInset != bottomInset || self.currentParams?.visibleHeight != visibleHeight
+        self.currentParams = (size, sideInset, topInset, bottomInset, visibleHeight, presentationData)
         
         var topPanelHeight: CGFloat = 0.0
         if let (item, previousItem, nextItem, order, type, _) = self.playlistStateAndType {
@@ -5035,9 +5035,9 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         
         transition.updateFrame(node: self.mediaAccessoryPanelContainer, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: MediaNavigationAccessoryHeaderNode.minimizedHeight)))
         
-        let topInset: CGFloat = topPanelHeight
-        let overflowInset: CGFloat = 20.0
-        let insets = UIEdgeInsets(top: topPanelHeight, left: sideInset, bottom: bottomInset, right: sideInset)
+        let topInset: CGFloat = topInset + topPanelHeight
+        let overflowInset: CGFloat = 0.0
+        let insets = UIEdgeInsets(top: topInset + topPanelHeight, left: sideInset, bottom: bottomInset, right: sideInset)
         
         self.shimmerNode.frame = CGRect(origin: CGPoint(x: overflowInset, y: topInset), size: CGSize(width: size.width - overflowInset * 2.0, height: size.height))
         self.shimmerNode.update(context: self.context, size: CGSize(width: size.width - overflowInset * 2.0, height: size.height), presentationData: self.presentationData, animationCache: self.animationCache, animationRenderer: self.animationRenderer, key: !(self.searchQueryValue?.isEmpty ?? true) && self.key == .media ? .chats : self.key, hasSelection: self.selectedMessages != nil, transition: transition)
@@ -5480,8 +5480,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         strongSelf.emptyResultsButtonSubtitleText = nil
                     }
 
-                    if let (size, sideInset, bottomInset, visibleHeight, presentationData) = strongSelf.currentParams {
-                        strongSelf.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, presentationData: presentationData, synchronous: true, transition: .animated(duration: 0.4, curve: .spring))
+                    if let (size, sideInset, topInset, bottomInset, visibleHeight, presentationData) = strongSelf.currentParams {
+                        strongSelf.update(size: size, sideInset: sideInset, topInset: topInset, bottomInset: bottomInset, visibleHeight: visibleHeight, presentationData: presentationData, synchronous: true, transition: .animated(duration: 0.4, curve: .spring))
                     }
                     
                     if strongSelf.key == .downloads {
@@ -5783,7 +5783,6 @@ public final class ChatListSearchShimmerNode: ASDisplayNode {
             }, openChatFolderUpdates: {}, hideChatFolderUpdates: {
             }, openStories: { _, _ in
             }, openStarsTopup: { _ in
-            }, dismissNotice: { _ in
             }, editPeer: { _ in
             }, openWebApp: { _ in
             }, openPhotoSetup: {

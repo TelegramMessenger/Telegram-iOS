@@ -374,6 +374,7 @@ public final class AccountStateManager {
         private let appliedQtsPromise = Promise<Int32?>(nil)
         private let appliedQtsDisposable = MetaDisposable()
         private let reportMessageDeliveryDisposable = DisposableSet()
+        private let updateEmojiGameInfoDisposable = MetaDisposable()
         
         let updateConfigRequested: (() -> Void)?
         let isPremiumUpdated: (() -> Void)?
@@ -414,6 +415,7 @@ public final class AccountStateManager {
             self.appliedMaxMessageIdDisposable.dispose()
             self.appliedQtsDisposable.dispose()
             self.reportMessageDeliveryDisposable.dispose()
+            self.updateEmojiGameInfoDisposable.dispose()
         }
         
         public func reset() {
@@ -1136,6 +1138,11 @@ public final class AccountStateManager {
                             }
                             if !events.updatedStarGiftAuctionMyState.isEmpty {
                                 strongSelf.notifyUpdatedStarGiftAuctionMyState(events.updatedStarGiftAuctionMyState)
+                            }
+                            if let updatedEmojiGameInfo = events.updatedEmojiGameInfo {
+                                strongSelf.updateEmojiGameInfoDisposable.set(strongSelf.postbox.transaction({ transaction in
+                                    updateEmojiGameInfo(transaction: transaction, { _ in return updatedEmojiGameInfo })
+                                }).start())
                             }
                             if !events.updatedCalls.isEmpty {
                                 for call in events.updatedCalls {

@@ -195,7 +195,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
             
             if self.isOn {
                 if !self.hasAccessToAllChatsByDefault && self.additionalPeerList.categories.isEmpty && self.additionalPeerList.peers.isEmpty {
-                    self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.BusinessMessageSetup_ErrorNoRecipients_Text, actions: [
+                    self.environment?.controller()?.present(textAlertController(context: component.context, title: nil, text: presentationData.strings.BusinessMessageSetup_ErrorNoRecipients_Text, actions: [
                         TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
                         }),
                         TextAlertAction(type: .defaultAction, title: presentationData.strings.BusinessMessageSetup_ErrorNoRecipients_ResetAction, action: {
@@ -223,7 +223,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                     }
                     
                     if let errorText {
-                        self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: errorText, actions: [
+                        self.environment?.controller()?.present(textAlertController(context: component.context, title: nil, text: errorText, actions: [
                             TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
                             }),
                             TextAlertAction(type: .defaultAction, title: presentationData.strings.BusinessMessageSetup_ErrorScheduleTime_ResetAction, action: {

@@ -2076,7 +2076,7 @@ public final class PendingMessageManager {
             if message.scheduleTime != nil && message.scheduleTime == apiMessage.timestamp {
                 isScheduled = true
             }
-            if case let .message(_, flags2, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _) = apiMessage {
+            if case let .message(_, flags2, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _) = apiMessage {
                 if (flags2 & (1 << 4)) != 0 {
                     isScheduled = true
                 }
@@ -2120,7 +2120,7 @@ public final class PendingMessageManager {
                 namespace = Namespaces.Message.QuickReplyCloud
             } else if let apiMessage = result.messages.first, message.scheduleTime != nil && message.scheduleTime == apiMessage.timestamp {
                 namespace = Namespaces.Message.ScheduledCloud
-            } else if let apiMessage = result.messages.first, case let .message(_, flags2, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _) = apiMessage, (flags2 & (1 << 4)) != 0 {
+            } else if let apiMessage = result.messages.first, case let .message(_, flags2, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _) = apiMessage, (flags2 & (1 << 4)) != 0 {
                 namespace = Namespaces.Message.ScheduledCloud
             }
         }

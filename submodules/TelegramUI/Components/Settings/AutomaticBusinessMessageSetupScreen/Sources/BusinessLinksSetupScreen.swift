@@ -4,6 +4,7 @@ import Display
 import ComponentFlow
 import ListSectionComponent
 import TelegramPresentationData
+import PresentationDataUtils
 import AppBundle
 import AccountContext
 import ViewControllerComponent
@@ -185,7 +186,7 @@ final class BusinessLinksSetupScreenComponent: Component {
                     errorText = presentationData.strings.Business_Links_ErrorTooManyLinks
                 }
                 
-                environment.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: errorText, actions: [
+                environment.controller()?.present(textAlertController(context: component.context, title: nil, text: errorText, actions: [
                     TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
                     })
                 ]), in: .window(.root))

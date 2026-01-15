@@ -32,6 +32,7 @@ public final class SearchInputPanelComponent: Component {
     public let safeInsets: UIEdgeInsets
     public let placeholder: String?
     public let resetText: ResetText?
+    public let hasEdgeEffect: Bool
     public let updated: ((String) -> Void)
     public let cancel: () -> Void
 
@@ -42,6 +43,7 @@ public final class SearchInputPanelComponent: Component {
         safeInsets: UIEdgeInsets,
         placeholder: String? = nil,
         resetText: ResetText? = nil,
+        hasEdgeEffect: Bool = true,
         updated: @escaping ((String) -> Void),
         cancel: @escaping () -> Void
     ) {
@@ -51,6 +53,7 @@ public final class SearchInputPanelComponent: Component {
         self.safeInsets = safeInsets
         self.placeholder = placeholder
         self.resetText = resetText
+        self.hasEdgeEffect = hasEdgeEffect
         self.updated = updated
         self.cancel = cancel
     }
@@ -292,7 +295,7 @@ public final class SearchInputPanelComponent: Component {
                     component: AnyComponentWithIdentity(id: "close", component: AnyComponent(
                         BundleIconComponent(
                             name: "Navigation/Close",
-                            tintColor: component.theme.rootController.navigationBar.glassBarButtonForegroundColor
+                            tintColor: component.theme.chat.inputPanel.panelControlColor
                         )
                     )),
                     action: { [weak self] _ in
@@ -321,6 +324,7 @@ public final class SearchInputPanelComponent: Component {
             let edgeEffectFrame = CGRect(origin: CGPoint(x: 0.0, y: size.height - edgeEffectHeight + 30.0), size: CGSize(width: size.width, height: edgeEffectHeight))
             transition.setFrame(view: self.edgeEffectView, frame: edgeEffectFrame)
             self.edgeEffectView.update(content: edgeColor, blur: true, rect: edgeEffectFrame, edge: .bottom, edgeSize: edgeEffectFrame.height, transition: transition)
+            self.edgeEffectView.isHidden = !component.hasEdgeEffect
             
             transition.setFrame(view: self.containerView, frame: CGRect(origin: .zero, size: size))
             self.containerView.update(size: size, isDark: component.theme.overallDarkAppearance, transition: transition)

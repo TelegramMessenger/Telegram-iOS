@@ -86,7 +86,7 @@ class InviteLinkInviteHeaderItemNode: ListViewItemNode {
         self.iconNode.displaysAsynchronously = false
         self.iconNode.displayWithoutProcessing = true
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)

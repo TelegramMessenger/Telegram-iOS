@@ -23,6 +23,8 @@ import InvisibleInkDustNode
 import PremiumStarComponent
 import GlassBarButtonComponent
 import ButtonComponent
+import TableComponent
+import PeerTableCellComponent
 
 private final class PremiumGiftCodeSheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -163,7 +165,7 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
                     component: AnyComponentWithIdentity(id: "close", component: AnyComponent(
                         BundleIconComponent(
                             name: "Navigation/Close",
-                            tintColor: theme.rootController.navigationBar.glassBarButtonForegroundColor
+                            tintColor: theme.chat.inputPanel.panelControlColor
                         )
                     )),
                     action: { _ in
@@ -326,7 +328,7 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
                 title: strings.GiftLink_From,
                 component: AnyComponent(
                     Button(
-                        content: AnyComponent(PeerCellComponent(context: context.component.context, textColor: tableLinkColor, peer: fromPeer)),
+                        content: AnyComponent(PeerTableCellComponent(context: context.component.context, theme: theme, strings: strings, peer: fromPeer)),
                         action: {
                             if let peer = fromPeer, peer.id != accountContext.account.peerId {
                                 component.openPeer(peer)
@@ -344,7 +346,7 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
                     title: strings.GiftLink_To,
                     component: AnyComponent(
                         Button(
-                            content: AnyComponent(PeerCellComponent(context: context.component.context, textColor: tableLinkColor, peer: toPeer)),
+                            content: AnyComponent(PeerTableCellComponent(context: context.component.context, theme: theme, strings: strings, peer: toPeer)),
                             action: {
                                 if toPeer.id != accountContext.account.peerId {
                                     component.openPeer(toPeer)
@@ -854,306 +856,6 @@ final class GiftLinkButtonContentComponent: CombinedComponent {
 
             return context.availableSize
         }
-    }
-}
-
-private final class TableComponent: CombinedComponent {
-    class Item: Equatable {
-        public let id: AnyHashable
-        public let title: String
-        public let component: AnyComponent<Empty>
-
-        public init<IdType: Hashable>(id: IdType, title: String, component: AnyComponent<Empty>) {
-            self.id = AnyHashable(id)
-            self.title = title
-            self.component = component
-        }
-
-        public static func == (lhs: Item, rhs: Item) -> Bool {
-            if lhs.id != rhs.id {
-                return false
-            }
-            if lhs.title != rhs.title {
-                return false
-            }
-            if lhs.component != rhs.component {
-                return false
-            }
-            return true
-        }
-    }
-    
-    private let theme: PresentationTheme
-    private let items: [Item]
-
-    public init(theme: PresentationTheme, items: [Item]) {
-        self.theme = theme
-        self.items = items
-    }
-
-    public static func ==(lhs: TableComponent, rhs: TableComponent) -> Bool {
-        if lhs.theme !== rhs.theme {
-            return false
-        }
-        if lhs.items != rhs.items {
-            return false
-        }
-        return true
-    }
-    
-    final class State: ComponentState {
-        var cachedBorderImage: (UIImage, PresentationTheme)?
-    }
-    
-    func makeState() -> State {
-        return State()
-    }
-
-    public static var body: Body {
-        let leftColumnBackground = Child(Rectangle.self)
-        let verticalBorder = Child(Rectangle.self)
-        let titleChildren = ChildMap(environment: Empty.self, keyedBy: AnyHashable.self)
-        let valueChildren = ChildMap(environment: Empty.self, keyedBy: AnyHashable.self)
-        let borderChildren = ChildMap(environment: Empty.self, keyedBy: AnyHashable.self)
-        let outerBorder = Child(Image.self)
-
-        return { context in
-            let verticalPadding: CGFloat = 11.0
-            let horizontalPadding: CGFloat = 12.0
-            let borderWidth: CGFloat = 1.0
-            
-            let backgroundColor = context.component.theme.actionSheet.opaqueItemBackgroundColor
-            let borderColor = backgroundColor.mixedWith(context.component.theme.list.itemBlocksSeparatorColor, alpha: 0.6)
-            
-            var leftColumnWidth: CGFloat = 0.0
-            
-            var updatedTitleChildren: [_UpdatedChildComponent] = []
-            var updatedValueChildren: [_UpdatedChildComponent] = []
-            var updatedBorderChildren: [_UpdatedChildComponent] = []
-            
-            for item in context.component.items {
-                let titleChild = titleChildren[item.id].update(
-                    component: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: item.title, font: Font.regular(15.0), textColor: context.component.theme.list.itemPrimaryTextColor))
-                    )),
-                    availableSize: context.availableSize,
-                    transition: context.transition
-                )
-                updatedTitleChildren.append(titleChild)
-                
-                if titleChild.size.width > leftColumnWidth {
-                    leftColumnWidth = titleChild.size.width
-                }
-            }
-            
-            leftColumnWidth = max(100.0, leftColumnWidth + horizontalPadding * 2.0)
-            let rightColumnWidth = context.availableSize.width - leftColumnWidth
-            
-            var i = 0
-            var rowHeights: [Int: CGFloat] = [:]
-            var totalHeight: CGFloat = 0.0
-            
-            for item in context.component.items {
-                let titleChild = updatedTitleChildren[i]
-                let valueChild = valueChildren[item.id].update(
-                    component: item.component,
-                    availableSize: CGSize(width: rightColumnWidth - horizontalPadding * 2.0, height: context.availableSize.height),
-                    transition: context.transition
-                )
-                updatedValueChildren.append(valueChild)
-                
-                let rowHeight = max(40.0, max(titleChild.size.height, valueChild.size.height) + verticalPadding * 2.0)
-                rowHeights[i] = rowHeight
-                totalHeight += rowHeight
-                
-                if i < context.component.items.count - 1 {
-                    let borderChild = borderChildren[item.id].update(
-                        component: AnyComponent(Rectangle(color: borderColor)),
-                        availableSize: CGSize(width: context.availableSize.width, height: borderWidth),
-                        transition: context.transition
-                    )
-                    updatedBorderChildren.append(borderChild)
-                }
-                
-                i += 1
-            }
-            
-            let leftColumnBackground = leftColumnBackground.update(
-                component: Rectangle(color: context.component.theme.list.itemInputField.backgroundColor),
-                availableSize: CGSize(width: leftColumnWidth, height: totalHeight),
-                transition: context.transition
-            )
-            context.add(
-                leftColumnBackground
-                    .position(CGPoint(x: leftColumnWidth / 2.0, y: totalHeight / 2.0))
-            )
-            
-            let borderImage: UIImage
-            if let (currentImage, theme) = context.state.cachedBorderImage, theme === context.component.theme {
-                borderImage = currentImage
-            } else {
-                let borderRadius: CGFloat = 14.0
-                borderImage = generateImage(CGSize(width: borderRadius * 2.0 + 6.0, height: borderRadius * 2.0 + 6.0), rotatedContext: { size, context in
-                    let bounds = CGRect(origin: .zero, size: size)
-                    context.setFillColor(backgroundColor.cgColor)
-                    context.fill(bounds)
-                    
-                    let path = CGPath(roundedRect: bounds.insetBy(dx: borderWidth / 2.0, dy: borderWidth / 2.0), cornerWidth: borderRadius, cornerHeight: borderRadius, transform: nil)
-                    context.setBlendMode(.clear)
-                    context.addPath(path)
-                    context.fillPath()
-                    
-                    context.setBlendMode(.normal)
-                    context.setStrokeColor(borderColor.cgColor)
-                    context.setLineWidth(borderWidth)
-                    context.addPath(path)
-                    context.strokePath()
-                })!.stretchableImage(withLeftCapWidth: Int(borderRadius), topCapHeight: Int(borderRadius))
-                context.state.cachedBorderImage = (borderImage, context.component.theme)
-            }
-            
-            let outerBorder = outerBorder.update(
-                component: Image(image: borderImage),
-                availableSize: CGSize(width: context.availableSize.width, height: totalHeight),
-                transition: context.transition
-            )
-            context.add(outerBorder
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: totalHeight / 2.0))
-            )
-            
-            let verticalBorder = verticalBorder.update(
-                component: Rectangle(color: borderColor),
-                availableSize: CGSize(width: borderWidth, height: totalHeight),
-                transition: context.transition
-            )
-            context.add(
-                verticalBorder
-                    .position(CGPoint(x: leftColumnWidth - borderWidth / 2.0, y: totalHeight / 2.0))
-            )
-            
-            i = 0
-            var originY: CGFloat = 0.0
-            for (titleChild, valueChild) in zip(updatedTitleChildren, updatedValueChildren) {
-                let rowHeight = rowHeights[i] ?? 0.0
-                
-                let titleFrame = CGRect(origin: CGPoint(x: horizontalPadding, y: originY + verticalPadding), size: titleChild.size)
-                let valueFrame = CGRect(origin: CGPoint(x: leftColumnWidth + horizontalPadding, y: originY + verticalPadding), size: valueChild.size)
-                
-                context.add(titleChild
-                    .position(titleFrame.center)
-                )
-                
-                context.add(valueChild
-                    .position(valueFrame.center)
-                )
-                
-                if i < updatedBorderChildren.count {
-                    let borderChild = updatedBorderChildren[i]
-                    context.add(borderChild
-                        .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + rowHeight - borderWidth / 2.0))
-                    )
-                }
-                
-                originY += rowHeight
-                i += 1
-            }
-            
-            return CGSize(width: context.availableSize.width, height: totalHeight)
-        }
-    }
-}
-
-private final class PeerCellComponent: Component {
-    let context: AccountContext
-    let textColor: UIColor
-    let peer: EnginePeer?
-
-    init(context: AccountContext, textColor: UIColor, peer: EnginePeer?) {
-        self.context = context
-        self.textColor = textColor
-        self.peer = peer
-    }
-
-    static func ==(lhs: PeerCellComponent, rhs: PeerCellComponent) -> Bool {
-        if lhs.context !== rhs.context {
-            return false
-        }
-        if lhs.textColor !== rhs.textColor {
-            return false
-        }
-        if lhs.peer != rhs.peer {
-            return false
-        }
-        return true
-    }
-
-    final class View: UIView {
-        private let avatarNode: AvatarNode
-        private let text = ComponentView<Empty>()
-                
-        private var component: PeerCellComponent?
-        private weak var state: EmptyComponentState?
-        
-        override init(frame: CGRect) {
-            self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 13.0))
-            
-            super.init(frame: frame)
-            
-            self.addSubnode(self.avatarNode)
-        }
-        
-        required init?(coder: NSCoder) {
-            fatalError("init(coder:) has not been implemented")
-        }
-        
-        func update(component: PeerCellComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
-            self.component = component
-            self.state = state
-                                    
-            self.avatarNode.setPeer(
-                context: component.context,
-                theme: component.context.sharedContext.currentPresentationData.with({ $0 }).theme,
-                peer: component.peer,
-                synchronousLoad: true
-            )
-            
-            let avatarSize = CGSize(width: 22.0, height: 22.0)
-            let spacing: CGFloat = 6.0
-            
-            let textSize = self.text.update(
-                transition: .immediate,
-                component: AnyComponent(
-                    MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: component.peer?.compactDisplayTitle ?? "", font: Font.regular(15.0), textColor: component.textColor, paragraphAlignment: .left))
-                    )
-                ),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width - avatarSize.width - spacing, height: availableSize.height)
-            )
-            
-            let size = CGSize(width: avatarSize.width + textSize.width + spacing, height: textSize.height)
-            
-            let avatarFrame = CGRect(origin: CGPoint(x: 0.0, y: floorToScreenPixels((size.height - avatarSize.height) / 2.0)), size: avatarSize)
-            self.avatarNode.frame = avatarFrame
-            
-            if let view = self.text.view {
-                if view.superview == nil {
-                    self.addSubview(view)
-                }
-                let textFrame = CGRect(origin: CGPoint(x: avatarSize.width + spacing, y: floorToScreenPixels((size.height - textSize.height) / 2.0)), size: textSize)
-                transition.setFrame(view: view, frame: textFrame)
-            }
-            
-            return size
-        }
-    }
-
-    func makeView() -> View {
-        return View(frame: CGRect())
-    }
-
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
-        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
 

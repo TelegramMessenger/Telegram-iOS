@@ -320,7 +320,9 @@ final class BubbleSettingsController: ViewController {
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.presentationThemeSettings = presentationThemeSettings
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationTheme: self.presentationData.theme, presentationStrings: self.presentationData.strings))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationTheme: self.presentationData.theme, presentationStrings: self.presentationData.strings, style: .glass))
+        
+        self._hasGlassStyle = true
         
         self.blocksBackgroundWhenInOverlay = true
         self.acceptsFocusWhenInOverlay = true

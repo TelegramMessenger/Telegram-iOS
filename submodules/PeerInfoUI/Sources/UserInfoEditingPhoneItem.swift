@@ -131,7 +131,7 @@ class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode, ItemListItemN
         self.clearButton.displaysAsynchronously = false
         self.clearButton.isHidden = true
         
-        super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
+        super.init(layerBacked: false, rotated: false, seeThrough: false)
         
         self.addSubnode(self.editableControlNode)
         self.addSubnode(self.labelNode)

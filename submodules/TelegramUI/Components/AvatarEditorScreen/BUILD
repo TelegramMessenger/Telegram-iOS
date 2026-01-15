@@ -41,7 +41,7 @@ swift_library(
         "//submodules/TelegramUI/Components/MediaEditor",
         "//submodules/TelegramUI/Components/AvatarBackground",
         "//submodules/TelegramUI/Components/LottieComponent",
-        "//submodules/TelegramUI/Components/Premium/PremiumStarComponent",
+        "//submodules/TelegramUI/Components/PremiumAlertController",
     ],
     visibility = [
         "//visibility:public",

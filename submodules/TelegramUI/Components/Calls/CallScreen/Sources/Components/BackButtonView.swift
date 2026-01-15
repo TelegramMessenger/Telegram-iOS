@@ -29,7 +29,7 @@ final class BackButtonView: HighlightableButton {
     var pressAction: (() -> Void)?
     
     override init(frame: CGRect) {
-        self.iconView = UIImageView(image: NavigationBar.backArrowImage(color: .white))
+        self.iconView = UIImageView(image: navigationBarBackArrowImage(color: .white))
         self.iconView.isUserInteractionEnabled = false
         
         self.textView = TextView()

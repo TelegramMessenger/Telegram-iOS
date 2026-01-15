@@ -3,7 +3,9 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import TelegramPresentationData
+import PresentationDataUtils
 import ProgressNavigationButtonNode
+import AccountContext
 
 final class AuthorizationSequencePasswordEntryController: ViewController {
     private var controllerNode: AuthorizationSequencePasswordEntryControllerNode {
@@ -12,6 +14,7 @@ final class AuthorizationSequencePasswordEntryController: ViewController {
     
     private var validLayout: ContainerViewLayout?
     
+    private let sharedContext: SharedAccountContext
     private let presentationData: PresentationData
     
     var loginWithPassword: ((String) -> Void)?
@@ -40,7 +43,8 @@ final class AuthorizationSequencePasswordEntryController: ViewController {
         }
     }
     
-    init(presentationData: PresentationData, back: @escaping () -> Void) {
+    init(sharedContext: SharedAccountContext, presentationData: PresentationData, back: @escaping () -> Void) {
+        self.sharedContext = sharedContext
         self.presentationData = presentationData
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: AuthorizationSequenceController.navigationBarTheme(presentationData.theme), strings: NavigationBarStrings(presentationStrings: presentationData.strings)))
@@ -153,10 +157,8 @@ final class AuthorizationSequencePasswordEntryController: ViewController {
     }
     
     func forgotPressed() {
-        /*if self.suggestReset {
-            self.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: nil, text: self.presentationData.strings.TwoStepAuth_RecoveryFailed, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-        } else*/ if self.didForgotWithNoRecovery {
-            self.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: nil, text: self.presentationData.strings.TwoStepAuth_RecoveryUnavailable, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+        if self.didForgotWithNoRecovery {
+            self.present(textAlertController(sharedContext: self.sharedContext, title: nil, text: self.presentationData.strings.TwoStepAuth_RecoveryUnavailable, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
         } else {
             self.forgot?()
         }

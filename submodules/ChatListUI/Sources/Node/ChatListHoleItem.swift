@@ -56,7 +56,7 @@ class ChatListHoleItemNode: ListViewItemNode {
     var relativePosition: (first: Bool, last: Bool) = (false, false)
     
     required init() {
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
     }
     
     override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
@@ -153,7 +153,7 @@ class ChatListSearchEmptyFooterItemNode: ListViewItemNode {
         self.searchAllMessagesTitle = TextNode()
         self.searchAllMessagesTitle.isUserInteractionEnabled = false
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.contentNode)
         self.contentNode.addSubnode(self.titleNode)

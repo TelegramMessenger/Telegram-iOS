@@ -327,7 +327,7 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
         
         self.callButton = HighlightableButtonNode()
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.isAccessibilityElement = true
         

@@ -76,7 +76,7 @@ class PeersNearbyHeaderItemNode: ListViewItemNode {
         
         self.animationNode = DefaultAnimatedStickerNodeImpl()
                 
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.animationNode)

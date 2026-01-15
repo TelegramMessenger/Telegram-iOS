@@ -179,14 +179,21 @@ final class PasskeysScreenComponent: Component {
             guard let component = self.component, let environment = self.environment, let controller = environment.controller() else {
                 return
             }
-            let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
-            controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: environment.strings.Passkeys_DeleteAlert_Title, text: environment.strings.Passkeys_DeleteAlert_Text, actions: [TextAlertAction(type: .genericAction, title: environment.strings.Common_Cancel, action: {
-            }), TextAlertAction(type: .destructiveAction, title: environment.strings.Passkeys_DeleteAlert_Action, action: { [weak self] in
-                guard let self else {
-                    return
-                }
-                self.deletePasskey(id: id)
-            })]), in: .window(.root))
+            let alertController = textAlertController(
+                context: component.context,
+                title: environment.strings.Passkeys_DeleteAlert_Title,
+                text: environment.strings.Passkeys_DeleteAlert_Text,
+                actions: [
+                    TextAlertAction(type: .genericAction, title: environment.strings.Common_Cancel, action: {}),
+                    TextAlertAction(type: .destructiveAction, title: environment.strings.Passkeys_DeleteAlert_Action, action: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.deletePasskey(id: id)
+                    })
+                ]
+            )
+            controller.present(alertController, in: .window(.root))
         }
         
         private func deletePasskey(id: String) {

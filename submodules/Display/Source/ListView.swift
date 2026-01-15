@@ -210,7 +210,6 @@ open class ListView: ASDisplayNode, ASScrollViewDelegate, ASGestureRecognizerDel
     private final var displayLink: CADisplayLink!
     private final var needsAnimations = false
     
-    public final var dynamicBounceEnabled = true
     public final var rotated = false
     public final var experimentalSnapScrollToItem = false
     public final var useMainQueueTransactions = false
@@ -265,6 +264,9 @@ open class ListView: ASDisplayNode, ASScrollViewDelegate, ASGestureRecognizerDel
     public final var addContentOffset: ((CGFloat, ListViewItemNode?) -> Void)?
     public final var shouldStopScrolling: ((CGFloat) -> Bool)?
     public final var onContentsUpdated: ((ContainedViewLayoutTransition) -> Void)?
+    
+    public private(set) final var edgeEffectExtension: CGFloat = 0.0
+    public final var onEdgeEffectExtensionUpdated: ((ContainedViewLayoutTransition) -> Void)?
 
     public final var updateScrollingIndicator: ((ScrollingIndicatorState?, ContainedViewLayoutTransition) -> Void)?
     
@@ -1044,41 +1046,10 @@ open class ListView: ASDisplayNode, ASScrollViewDelegate, ASGestureRecognizerDel
             self.enqueueUpdateVisibleItems(synchronous: false)
         }
         
-        var useScrollDynamics = false
-        
-        let anchor: CGFloat
-        if self.isTracking {
-            anchor = self.touchesPosition.y
-        } else if deltaY < 0.0 {
-            anchor = self.visibleSize.height
-        } else {
-            anchor = 0.0
-        }
-        
         self.didScrollWithOffset?(deltaY, .immediate, nil, self.isTrackingOrDecelerating)
         
         for itemNode in self.itemNodes {
             itemNode.updateFrame(itemNode.frame.offsetBy(dx: 0.0, dy: -deltaY), within: self.visibleSize)
-            
-            if self.dynamicBounceEnabled && itemNode.wantsScrollDynamics {
-                useScrollDynamics = true
-                
-                var distance: CGFloat
-                let itemFrame = itemNode.apparentFrame
-                if anchor < itemFrame.origin.y {
-                    distance = abs(itemFrame.origin.y - anchor)
-                } else if anchor > itemFrame.origin.y + itemFrame.size.height {
-                    distance = abs(anchor - (itemFrame.origin.y + itemFrame.size.height))
-                } else {
-                    distance = 0.0
-                }
-                
-                let factor: CGFloat = max(0.08, abs(distance) / self.visibleSize.height)
-                
-                let resistance: CGFloat = testSpringFreeResistance
-
-                itemNode.addScrollingOffset(deltaY * factor * resistance)
-            }
         }
         
         if !self.snapToBounds(snapTopItem: false, stackFromBottom: self.stackFromBottom, insetDeltaOffsetFix: 0.0).offset.isZero {
@@ -1088,38 +1059,10 @@ open class ListView: ASDisplayNode, ASScrollViewDelegate, ASGestureRecognizerDel
         
         self.updateItemHeaders(leftInset: self.insets.left, rightInset: self.insets.right, synchronousLoad: false)
         
-        for (_, headerNode) in self.itemHeaderNodes {
-            if self.dynamicBounceEnabled && headerNode.wantsScrollDynamics {
-                useScrollDynamics = true
-                
-                var distance: CGFloat
-                let itemFrame = headerNode.frame
-                if anchor < itemFrame.origin.y {
-                    distance = abs(itemFrame.origin.y - anchor)
-                } else if anchor > itemFrame.origin.y + itemFrame.size.height {
-                    distance = abs(anchor - (itemFrame.origin.y + itemFrame.size.height))
-                } else {
-                    distance = 0.0
-                }
-                
-                let factor: CGFloat = max(0.08, abs(distance) / self.visibleSize.height)
-                
-                let resistance: CGFloat = testSpringFreeResistance
-                
-                headerNode.addScrollingOffset(deltaY * factor * resistance)
-            }
-        }
-        
-        if useScrollDynamics {
-            self.setNeedsAnimations()
-        }
-        
         self.updateVisibleContentOffset()
         self.updateVisibleItemRange()
         self.updateItemNodesVisibilities(onlyPositive: false)
         self.onContentsUpdated?(.immediate)
-        
-        //CATransaction.commit()
     }
     
     private func calculateAdditionalTopInverseInset() -> CGFloat {
@@ -3914,6 +3857,8 @@ open class ListView: ASDisplayNode, ASScrollViewDelegate, ASGestureRecognizerDel
         
         let flashing = self.headerItemsAreFlashing()
         
+        var maxEdgeEffectExtension: CGFloat = 0.0
+        
         func addHeader(id: VisibleHeaderNodeId, upperBound: CGFloat, upperIndex: Int, upperBoundEdge: CGFloat, lowerBound: CGFloat, lowerIndex: Int, item: ListViewItemHeader, hasValidNodes: Bool) {
             let itemHeaderHeight: CGFloat = item.height
             
@@ -3928,7 +3873,11 @@ open class ListView: ASDisplayNode, ASScrollViewDelegate, ASGestureRecognizerDel
             switch item.stickDirection {
             case .top:
                 naturalY = lowerBound
-                headerFrame = CGRect(origin: CGPoint(x: 0.0, y: min(max(upperDisplayBound, upperBound), lowerBound - itemHeaderHeight)), size: CGSize(width: self.visibleSize.width, height: itemHeaderHeight))
+                if item.isSticky {
+                    headerFrame = CGRect(origin: CGPoint(x: 0.0, y: min(max(upperDisplayBound, upperBound), lowerBound - itemHeaderHeight)), size: CGSize(width: self.visibleSize.width, height: itemHeaderHeight))
+                } else {
+                    headerFrame = CGRect(origin: CGPoint(x: 0.0, y: min(upperBound, lowerBound - itemHeaderHeight)), size: CGSize(width: self.visibleSize.width, height: itemHeaderHeight))
+                }
                 stickLocationDistance = headerFrame.minY - upperBound
                 stickLocationDistanceFactor = max(0.0, min(1.0, stickLocationDistance / itemHeaderHeight))
             case .topEdge:
@@ -4096,6 +4045,11 @@ open class ListView: ASDisplayNode, ASScrollViewDelegate, ASGestureRecognizerDel
                 }
                 headerNode.updateStickDistanceFactor(stickLocationDistanceFactor, distance: stickLocationDistance, transition: .immediate)
             }
+            
+            if headerNode.contributesToEdgeEffect && stickLocationDistance > 0.0 {
+                maxEdgeEffectExtension = max(maxEdgeEffectExtension, upperDisplayBound + headerFrame.height + 8.0)
+            }
+            
             headerNode.offsetByHeaderNodeId = offsetByHeaderNodeId
             headerNode.naturalOriginY = naturalY
             var maxIntersectionHeight: (CGFloat, Int)?
@@ -4227,6 +4181,11 @@ open class ListView: ASDisplayNode, ASScrollViewDelegate, ASGestureRecognizerDel
                     headerNode.removeFromSupernode()
                 }
             }
+        }
+        
+        if self.edgeEffectExtension != maxEdgeEffectExtension {
+            self.edgeEffectExtension = maxEdgeEffectExtension
+            self.onEdgeEffectExtensionUpdated?(transition.0)
         }
     }
     

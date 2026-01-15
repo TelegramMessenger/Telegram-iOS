@@ -126,7 +126,7 @@ final class MentionChatInputPanelItemNode: ListViewItemNode {
         self.activateAreaNode = AccessibilityAreaNode()
         self.activateAreaNode.accessibilityTraits = [.button]
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.separatorNode)
         

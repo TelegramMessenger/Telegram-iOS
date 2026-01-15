@@ -132,7 +132,7 @@ public class ChatListFilterPresetListSuggestedItemNode: ListViewItemNode, ItemLi
         
         self.activateArea = AccessibilityAreaNode()
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.labelNode)

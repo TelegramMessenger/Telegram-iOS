@@ -170,7 +170,7 @@ public final class ChatUserInfoItemNode: ListViewItemNode, ASGestureRecognizerDe
         self.disclaimerTextNode.textNode.isUserInteractionEnabled = false
         self.disclaimerTextNode.textNode.displaysAsynchronously = false
         
-        super.init(layerBacked: false, dynamicBounce: true, rotated: true)
+        super.init(layerBacked: false, rotated: true)
         
         self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
         

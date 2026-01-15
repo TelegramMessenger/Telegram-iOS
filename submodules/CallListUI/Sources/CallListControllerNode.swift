@@ -15,6 +15,9 @@ import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import AppBundle
 import ItemListPeerActionItem
+import EdgeEffect
+import ComponentFlow
+import ComponentDisplayAdapters
 
 private struct CallListNodeListViewTransition {
     let callListView: CallListNodeView
@@ -185,7 +188,7 @@ final class CallListControllerNode: ASDisplayNode {
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
     private let _ready = ValuePromise<Bool>()
-    private var didSetReady = false
+    private(set) var didSetReady = false
     var ready: Signal<Bool, NoError> {
         return _ready.get()
     }
@@ -220,6 +223,8 @@ final class CallListControllerNode: ASDisplayNode {
     private let emptyButtonIconNode: ASImageNode
     private let emptyButtonTextNode: ImmediateTextNode
     
+    private let edgeEffectView: EdgeEffectView
+    
     private let call: (EngineMessage) -> Void
     private let joinGroupCall: (EnginePeer.Id, EngineGroupCallDescription) -> Void
     private let openNewCall: () -> Void
@@ -229,6 +234,10 @@ final class CallListControllerNode: ASDisplayNode {
     private let emptyStateDisposable = MetaDisposable()
     
     private let openGroupCallDisposable = MetaDisposable()
+    
+    var navigationEdgeEffectExtension: CGFloat {
+        return max(0.0, self.listNode.edgeEffectExtension)
+    }
     
     private var previousContentOffset: ListViewVisibleContentOffset?
     
@@ -277,6 +286,8 @@ final class CallListControllerNode: ASDisplayNode {
         self.emptyButtonIconNode.displaysAsynchronously = false
         self.emptyButtonIconNode.isUserInteractionEnabled = false
         
+        self.edgeEffectView = EdgeEffectView()
+        
         super.init()
         
         self.setViewBlock({
@@ -289,6 +300,8 @@ final class CallListControllerNode: ASDisplayNode {
         self.addSubnode(self.emptyButtonTextNode)
         self.addSubnode(self.emptyButtonIconNode)
         self.addSubnode(self.emptyButtonNode)
+        
+        self.view.addSubview(self.edgeEffectView)
                 
         switch self.mode {
             case .tab:
@@ -673,6 +686,13 @@ final class CallListControllerNode: ASDisplayNode {
                 }
             }
         }
+        
+        self.listNode.onEdgeEffectExtensionUpdated = { [weak self] transition in
+            guard let self else {
+                return
+            }
+            self.controller?.updateNavigationEdgeEffectExtension(transition: transition)
+        }
     }
     
     deinit {
@@ -945,5 +965,12 @@ final class CallListControllerNode: ASDisplayNode {
             self.dequeuedInitialTransitionOnLayout = true
             self.dequeueTransition()
         }
+        
+        let edgeEffectHeight: CGFloat = layout.intrinsicInsets.bottom
+        let edgeEffectFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - edgeEffectHeight), size: CGSize(width: layout.size.width, height: edgeEffectHeight))
+        transition.updateFrame(view: self.edgeEffectView, frame: edgeEffectFrame)
+        self.edgeEffectView.update(content: self.presentationData.theme.list.plainBackgroundColor, rect: edgeEffectFrame, edge: .bottom, edgeSize: edgeEffectFrame.height, transition: ComponentTransition(transition))
+        
+        self.controller?.updateNavigationEdgeEffectExtension(transition: transition)
     }
 }

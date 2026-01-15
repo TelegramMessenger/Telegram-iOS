@@ -94,6 +94,7 @@ swift_library(
         "//submodules/TelegramStringFormatting",
         "//submodules/AvatarNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageSuggestedPostInfoNode",
+        "//submodules/TelegramUI/Components/PremiumAlertController",
     ],
     visibility = [
         "//visibility:public",

@@ -149,7 +149,7 @@ public final class ChatTextInputActionButtonsNode: ASDisplayNode, ChatSendMessag
     public let textNode: ImmediateAnimatedCountLabelNode
     
     public let expandMediaInputButton: HighlightTrackingButton
-    private let expandMediaInputButtonBackgroundView: GlassBackgroundView
+    public let expandMediaInputButtonBackgroundView: GlassBackgroundView
     private let expandMediaInputButtonIcon: GlassBackgroundView.ContentImageView
     
     private var effectBadgeView: EffectBadgeView?
@@ -201,10 +201,9 @@ public final class ChatTextInputActionButtonsNode: ASDisplayNode, ChatSendMessag
         
         self.expandMediaInputButton = HighlightTrackingButton()
         self.expandMediaInputButtonBackgroundView = GlassBackgroundView()
-        self.expandMediaInputButtonBackgroundView.isUserInteractionEnabled = false
-        self.expandMediaInputButton.addSubview(self.expandMediaInputButtonBackgroundView)
         self.expandMediaInputButtonIcon = GlassBackgroundView.ContentImageView()
         self.expandMediaInputButtonBackgroundView.contentView.addSubview(self.expandMediaInputButtonIcon)
+        self.expandMediaInputButtonBackgroundView.contentView.addSubview(self.expandMediaInputButton)
         self.expandMediaInputButtonIcon.image = PresentationResourcesChat.chatInputPanelExpandButtonImage(presentationInterfaceState.theme)
         self.expandMediaInputButtonIcon.tintColor = theme.chat.inputPanel.panelControlColor
         self.expandMediaInputButtonIcon.setMonochromaticEffect(tintColor: theme.chat.inputPanel.panelControlColor)
@@ -242,7 +241,7 @@ public final class ChatTextInputActionButtonsNode: ASDisplayNode, ChatSendMessag
         self.sendContainerNode.view.addSubview(self.sendButtonBackgroundView)
         self.sendContainerNode.addSubnode(self.sendButton)
         self.sendContainerNode.addSubnode(self.textNode)
-        self.view.addSubview(self.expandMediaInputButton)
+        self.view.addSubview(self.expandMediaInputButtonBackgroundView)
         
         self.expandMediaInputButton.highligthedChanged = { [weak self] highlighted in
             guard let self else {
@@ -402,7 +401,7 @@ public final class ChatTextInputActionButtonsNode: ASDisplayNode, ChatSendMessag
         
         transition.updateFrame(view: self.expandMediaInputButton, frame: CGRect(origin: CGPoint(), size: size))
         transition.updateFrame(view: self.expandMediaInputButtonBackgroundView, frame: CGRect(origin: CGPoint(), size: size))
-        self.expandMediaInputButtonBackgroundView.update(size: size, cornerRadius: size.height * 0.5, isDark: interfaceState.theme.overallDarkAppearance, tintColor: .init(kind: .panel, color: interfaceState.theme.chat.inputPanel.inputBackgroundColor.withMultipliedAlpha(0.7)), transition: ComponentTransition(transition))
+        self.expandMediaInputButtonBackgroundView.update(size: size, cornerRadius: size.height * 0.5, isDark: interfaceState.theme.overallDarkAppearance, tintColor: .init(kind: .panel, color: interfaceState.theme.chat.inputPanel.inputBackgroundColor.withMultipliedAlpha(0.7)), isInteractive: true, transition: ComponentTransition(transition))
         if let image = self.expandMediaInputButtonIcon.image {
             let expandIconFrame = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) * 0.5), y: floor((size.height - image.size.height) * 0.5)), size: image.size)
             self.expandMediaInputButtonIcon.center = expandIconFrame.center

@@ -201,10 +201,9 @@ final class NavigationTransitionCoordinator {
                     position = progress
             }
             
-            transition.animateView {
-                topNavigationBar.transitionState = NavigationBarTransitionState(navigationBar: bottomNavigationBar, transition: self.transition, role: .top, progress: position)
-                bottomNavigationBar.transitionState = NavigationBarTransitionState(navigationBar: topNavigationBar, transition: self.transition, role: .bottom, progress: position)
-            }
+            let _ = position
+            let _ = topNavigationBar
+            let _ = bottomNavigationBar
         }
     }
     
@@ -218,15 +217,16 @@ final class NavigationTransitionCoordinator {
                     position = progress
             }
             
-            topNavigationBar.transitionState = NavigationBarTransitionState(navigationBar: bottomNavigationBar, transition: self.transition, role: .top, progress: position)
-            bottomNavigationBar.transitionState = NavigationBarTransitionState(navigationBar: topNavigationBar, transition: self.transition, role: .bottom, progress: position)
+            let _ = position
+            let _ = topNavigationBar
+            let _ = bottomNavigationBar
         }
     }
     
     func endNavigationBarTransition() {
         if let topNavigationBar = self.topNavigationBar, let bottomNavigationBar = self.bottomNavigationBar, self.inlineNavigationBarTransition {
-            topNavigationBar.transitionState = nil
-            bottomNavigationBar.transitionState = nil
+            let _ = topNavigationBar
+            let _ = bottomNavigationBar
         }
     }
     

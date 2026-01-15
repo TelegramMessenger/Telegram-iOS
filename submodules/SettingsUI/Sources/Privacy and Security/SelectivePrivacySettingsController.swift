@@ -1664,6 +1664,12 @@ public func selectivePrivacySettingsController(
                 } else {
                     updatedDisallowedGifts.remove(.premium)
                 }
+            case .channel:
+                if value {
+                    updatedDisallowedGifts.insert(.channel)
+                } else {
+                    updatedDisallowedGifts.remove(.channel)
+                }
             default:
                 break
             }

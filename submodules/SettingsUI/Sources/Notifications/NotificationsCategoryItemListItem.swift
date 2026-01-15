@@ -148,7 +148,7 @@ public class NotificationsCategoryItemListItemNode: ListViewItemNode, ItemListIt
         
         self.activateArea = AccessibilityAreaNode()
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.subtitleNode)

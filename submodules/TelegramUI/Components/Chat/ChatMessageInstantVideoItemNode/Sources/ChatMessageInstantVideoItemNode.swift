@@ -530,6 +530,7 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, ASGestureReco
                     quote: replyQuote,
                     todoItemId: replyTodoItemId,
                     story: replyStory,
+                    isSummarized: false,
                     parentMessage: item.message,
                     constrainedSize: CGSize(width: max(0, availableWidth), height: CGFloat.greatestFiniteMagnitude),
                     animationCache: item.controllerInteraction.presentationContext.animationCache,

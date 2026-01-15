@@ -6,6 +6,9 @@ import TelegramCore
 import TelegramPresentationData
 import AvatarNode
 import AccountContext
+import GlassBackgroundComponent
+import ComponentFlow
+import ComponentDisplayAdapters
 
 public struct EditableTokenListToken {
     public enum Subject {
@@ -26,23 +29,6 @@ public struct EditableTokenListToken {
     }
 }
 
-private let caretIndicatorImage = generateVerticallyStretchableFilledCircleImage(radius: 1.0, color: UIColor(rgb: 0x3350ee))
-
-private func caretAnimation() -> CAAnimation {
-    let animation = CAKeyframeAnimation(keyPath: "opacity")
-    animation.values = [1.0 as NSNumber, 0.0 as NSNumber, 1.0 as NSNumber, 1.0 as NSNumber]
-    let firstDuration = 0.3
-    let secondDuration = 0.25
-    let restDuration = 0.35
-    let duration = firstDuration + secondDuration + restDuration
-    let keyTimes: [NSNumber] = [0.0 as NSNumber, (firstDuration / duration) as NSNumber, ((firstDuration + secondDuration) / duration) as NSNumber, ((firstDuration + secondDuration + restDuration) / duration) as NSNumber]
-    
-    animation.keyTimes = keyTimes
-    animation.duration = duration
-    animation.repeatCount = Float.greatestFiniteMagnitude
-    return animation
-}
-
 private func generateRemoveIcon(_ color: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 22.0, height: 22.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: .zero, size: size))
@@ -61,35 +47,10 @@ private func generateRemoveIcon(_ color: UIColor) -> UIImage? {
     })
 }
 
-public final class EditableTokenListNodeTheme {
-    public let backgroundColor: UIColor
-    public let separatorColor: UIColor
-    public let placeholderTextColor: UIColor
-    public let primaryTextColor: UIColor
-    public let tokenBackgroundColor: UIColor
-    public let selectedTextColor: UIColor
-    public let selectedBackgroundColor: UIColor
-    public let accentColor: UIColor
-    public let keyboardColor: PresentationThemeKeyboardColor
-    
-    public init(backgroundColor: UIColor, separatorColor: UIColor, placeholderTextColor: UIColor, primaryTextColor: UIColor, tokenBackgroundColor: UIColor, selectedTextColor: UIColor, selectedBackgroundColor: UIColor, accentColor: UIColor, keyboardColor: PresentationThemeKeyboardColor) {
-        self.backgroundColor = backgroundColor
-        self.separatorColor = separatorColor
-        self.placeholderTextColor = placeholderTextColor
-        self.primaryTextColor = primaryTextColor
-        self.tokenBackgroundColor = tokenBackgroundColor
-        self.selectedTextColor = selectedTextColor
-        self.selectedBackgroundColor = selectedBackgroundColor
-        self.accentColor = accentColor
-        self.keyboardColor = keyboardColor
-    }
-}
-
 private final class TokenNode: ASDisplayNode {
     private let context: AccountContext
-    private let presentationTheme: PresentationTheme
+    private let theme: PresentationTheme
     
-    let theme: EditableTokenListNodeTheme
     let token: EditableTokenListToken
     let avatarNode: AvatarNode
     let categoryAvatarNode: ASImageNode
@@ -98,23 +59,9 @@ private final class TokenNode: ASDisplayNode {
     let backgroundNode: ASImageNode
     let selectedBackgroundNode: ASImageNode
     var isSelected: Bool = false
-    //        didSet {
-    //            if self.isSelected != oldValue {
-    //                self.titleNode.attributedText = NSAttributedString(string: token.title, font: Font.regular(14.0), textColor: self.isSelected ? self.theme.selectedTextColor : self.theme.primaryTextColor)
-    //                self.titleNode.redrawIfPossible()
-    //                self.backgroundNode.isHidden = self.isSelected
-    //                self.selectedBackgroundNode.isHidden = !self.isSelected
-    //
-    //                self.avatarNode.isHidden = self.isSelected
-    //                self.categoryAvatarNode.isHidden = self.isSelected
-    //                self.removeIconNode.isHidden = !self.isSelected
-    //            }
-    //        }
-    //    }
     
-    init(context: AccountContext, presentationTheme: PresentationTheme, theme: EditableTokenListNodeTheme, token: EditableTokenListToken, isSelected: Bool) {
+    init(context: AccountContext, theme: PresentationTheme, token: EditableTokenListToken, isSelected: Bool) {
         self.context = context
-        self.presentationTheme = presentationTheme
         self.theme = theme
         self.token = token
         self.titleNode = ASTextNode()
@@ -131,39 +78,39 @@ private final class TokenNode: ASDisplayNode {
         self.removeIconNode.alpha = 0.0
         self.removeIconNode.displaysAsynchronously = false
         self.removeIconNode.displayWithoutProcessing = true
-        self.removeIconNode.image = generateRemoveIcon(theme.selectedTextColor)
+        self.removeIconNode.image = generateRemoveIcon(theme.list.itemCheckColors.foregroundColor)
         
-        let cornerRadius: CGFloat
+        let cornerDiameter: CGFloat
         switch token.subject {
         case .peer:
-            cornerRadius = 24.0
+            cornerDiameter = 28.0
         case .category:
-            cornerRadius = 14.0
+            cornerDiameter = 14.0
         }
         
         self.backgroundNode = ASImageNode()
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.displayWithoutProcessing = true
-        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: cornerRadius, color: theme.tokenBackgroundColor)
+        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: cornerDiameter, color: theme.list.itemCheckColors.strokeColor.withAlphaComponent(0.25))
         
         self.selectedBackgroundNode = ASImageNode()
         self.selectedBackgroundNode.alpha = 0.0
         self.selectedBackgroundNode.displaysAsynchronously = false
         self.selectedBackgroundNode.displayWithoutProcessing = true
-        self.selectedBackgroundNode.image = generateStretchableFilledCircleImage(diameter: cornerRadius, color: theme.selectedBackgroundColor)
+        self.selectedBackgroundNode.image = generateStretchableFilledCircleImage(diameter: cornerDiameter, color: theme.list.itemCheckColors.fillColor)
                 
         super.init()
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.selectedBackgroundNode)
-        self.titleNode.attributedText = NSAttributedString(string: token.title, font: Font.regular(14.0), textColor: self.isSelected ? self.theme.selectedTextColor : self.theme.primaryTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: token.title, font: Font.regular(15.0), textColor: self.isSelected ? self.theme.list.itemCheckColors.foregroundColor : self.theme.list.itemPrimaryTextColor)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.removeIconNode)
         
         switch token.subject {
         case let .peer(peer):
             self.addSubnode(self.avatarNode)
-            self.avatarNode.setPeer(context: context, theme: presentationTheme, peer: peer)
+            self.avatarNode.setPeer(context: context, theme: theme, peer: peer)
         case let .category(image):
             self.addSubnode(self.categoryAvatarNode)
             self.categoryAvatarNode.image = image
@@ -182,9 +129,9 @@ private final class TokenNode: ASDisplayNode {
         if titleSize.width.isZero {
             return
         }
-        self.backgroundNode.frame = self.bounds.insetBy(dx: 2.0, dy: 2.0)
-        self.selectedBackgroundNode.frame = self.bounds.insetBy(dx: 2.0, dy: 2.0)
-        self.avatarNode.frame = CGRect(origin: CGPoint(x: 3.0, y: 3.0), size: CGSize(width: 22.0, height: 22.0))
+        self.backgroundNode.frame = self.bounds
+        self.selectedBackgroundNode.frame = self.bounds
+        self.avatarNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: self.bounds.height, height: self.bounds.height))
         self.categoryAvatarNode.frame = self.avatarNode.frame
         self.removeIconNode.frame = self.avatarNode.frame
         
@@ -243,91 +190,70 @@ private final class TokenNode: ASDisplayNode {
             }
         }
         
-        self.titleNode.attributedText = NSAttributedString(string: token.title, font: Font.regular(14.0), textColor: self.isSelected ? self.theme.selectedTextColor : self.theme.primaryTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: token.title, font: Font.regular(15.0), textColor: self.isSelected ? self.theme.list.itemCheckColors.foregroundColor : self.theme.list.itemPrimaryTextColor)
         self.titleNode.redrawIfPossible()
-    }
-}
-
-private final class CaretIndicatorNode: ASImageNode {
-    override func willEnterHierarchy() {
-        super.willEnterHierarchy()
-        
-        if self.layer.animation(forKey: "blink") == nil {
-            self.layer.add(caretAnimation(), forKey: "blink")
-        }
     }
 }
 
 public final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
     private let context: AccountContext
-    private let presentationTheme: PresentationTheme
+    private let theme: PresentationTheme
     
     private let placeholder: String
     private let shortPlaceholder: String?
     
-    private let theme: EditableTokenListNodeTheme
-    private let backgroundNode: NavigationBackgroundNode
+    private let backgroundContainer: GlassBackgroundContainerView
+    private let backgroundView: GlassBackgroundView
     private let scrollNode: ASScrollNode
     private let placeholderNode: ASTextNode
     private var tokenNodes: [TokenNode] = []
-    private let separatorNode: ASDisplayNode
     private let textFieldScrollNode: ASScrollNode
     private let textFieldNode: TextFieldNode
-    private let caretIndicatorNode: CaretIndicatorNode
     private var selectedTokenId: AnyHashable?
     
     public var textUpdated: ((String) -> Void)?
     public var deleteToken: ((AnyHashable) -> Void)?
     public var textReturned: (() -> Void)?
     
-    public init(context: AccountContext, presentationTheme: PresentationTheme, theme: EditableTokenListNodeTheme, placeholder: String, shortPlaceholder: String? = nil) {
+    public init(context: AccountContext, theme: PresentationTheme, placeholder: String, shortPlaceholder: String? = nil) {
         self.context = context
-        self.presentationTheme = presentationTheme
         self.theme = theme
         
         self.placeholder = placeholder
         self.shortPlaceholder = shortPlaceholder
 
-        self.backgroundNode = NavigationBackgroundNode(color: theme.backgroundColor)
+        self.backgroundContainer = GlassBackgroundContainerView()
+        self.backgroundView = GlassBackgroundView()
+        self.backgroundContainer.contentView.addSubview(self.backgroundView)
         
         self.scrollNode = ASScrollNode()
-        self.scrollNode.view.alwaysBounceVertical = true
+        self.scrollNode.view.alwaysBounceVertical = false
+        self.scrollNode.clipsToBounds = true
         
         self.placeholderNode = ASTextNode()
         self.placeholderNode.isUserInteractionEnabled = false
         self.placeholderNode.maximumNumberOfLines = 1
-        self.placeholderNode.attributedText = NSAttributedString(string: placeholder, font: Font.regular(15.0), textColor: theme.placeholderTextColor)
+        self.placeholderNode.attributedText = NSAttributedString(string: placeholder, font: Font.regular(15.0), textColor: theme.list.itemPlaceholderTextColor)
         
         self.textFieldScrollNode = ASScrollNode()
         
         self.textFieldNode = TextFieldNode()
         self.textFieldNode.textField.font = Font.regular(15.0)
-        self.textFieldNode.textField.textColor = theme.primaryTextColor
+        self.textFieldNode.textField.textColor = theme.list.itemPrimaryTextColor
         self.textFieldNode.textField.autocorrectionType = .no
         self.textFieldNode.textField.returnKeyType = .done
-        self.textFieldNode.textField.keyboardAppearance = theme.keyboardColor.keyboardAppearance
-        self.textFieldNode.textField.tintColor = theme.accentColor
-        
-        self.caretIndicatorNode = CaretIndicatorNode()
-        self.caretIndicatorNode.isLayerBacked = true
-        self.caretIndicatorNode.displayWithoutProcessing = true
-        self.caretIndicatorNode.displaysAsynchronously = false
-        self.caretIndicatorNode.image = caretIndicatorImage
-        
-        self.separatorNode = ASDisplayNode()
-        self.separatorNode.isLayerBacked = true
-        self.separatorNode.backgroundColor = theme.separatorColor
+        self.textFieldNode.textField.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
+        self.textFieldNode.textField.tintColor = theme.list.itemAccentColor
         
         super.init()
-        self.addSubnode(self.backgroundNode)
+        
+        self.view.addSubview(self.backgroundContainer)
+        
         self.addSubnode(self.scrollNode)
 
-        self.addSubnode(self.separatorNode)
         self.scrollNode.addSubnode(self.placeholderNode)
         self.scrollNode.addSubnode(self.textFieldScrollNode)
         self.textFieldScrollNode.addSubnode(self.textFieldNode)
-        //self.scrollNode.addSubnode(self.caretIndicatorNode)
-        self.clipsToBounds = true
         
         self.textFieldNode.textField.delegate = self
         self.textFieldNode.textField.addTarget(self, action: #selector(self.textFieldChanged(_:)), for: .editingChanged)
@@ -357,7 +283,7 @@ public final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
                 placeholderSnapshot = self.placeholderNode.layer.snapshotContentTreeAsView()
                 placeholderSnapshot?.frame = self.placeholderNode.frame
             }
-            self.placeholderNode.attributedText = NSAttributedString(string: placeholder, font: Font.regular(15.0), textColor: self.theme.placeholderTextColor)
+            self.placeholderNode.attributedText = NSAttributedString(string: placeholder, font: Font.regular(15.0), textColor: self.theme.list.itemPlaceholderTextColor)
         }
         
         for i in (0 ..< self.tokenNodes.count).reversed() {
@@ -380,8 +306,7 @@ public final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         }
         
         let sideInset: CGFloat = 12.0 + leftInset
-        let verticalInset: CGFloat = 6.0
-        
+        let verticalInset: CGFloat = 8.0
         
         var animationDelay = 0.0
         var currentOffset = CGPoint(x: sideInset, y: verticalInset)
@@ -398,7 +323,7 @@ public final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
             if let currentNode = currentNode {
                 tokenNode = currentNode
             } else {
-                tokenNode = TokenNode(context: self.context, presentationTheme: self.presentationTheme, theme: self.theme, token: token, isSelected: self.selectedTokenId != nil && token.id == self.selectedTokenId!)
+                tokenNode = TokenNode(context: self.context, theme: self.theme, token: token, isSelected: self.selectedTokenId != nil && token.id == self.selectedTokenId!)
                 self.tokenNodes.append(tokenNode)
                 self.scrollNode.addSubnode(tokenNode)
                 animateIn = true
@@ -407,10 +332,10 @@ public final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
             let tokenSize = tokenNode.measure(CGSize(width: max(1.0, width - sideInset - sideInset), height: CGFloat.greatestFiniteMagnitude))
             if tokenSize.width + currentOffset.x >= width - sideInset && !currentOffset.x.isEqual(to: sideInset) {
                 currentOffset.x = sideInset
-                currentOffset.y += tokenSize.height
+                currentOffset.y += tokenSize.height + 6.0
             }
             let tokenFrame = CGRect(origin: CGPoint(x: currentOffset.x, y: currentOffset.y), size: tokenSize)
-            currentOffset.x += ceil(tokenSize.width)
+            currentOffset.x += ceil(tokenSize.width) + 6.0
             
             if animateIn {
                 tokenNode.frame = tokenFrame
@@ -451,7 +376,7 @@ public final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         
         let placeholderSize = self.placeholderNode.measure(CGSize(width: max(1.0, width - sideInset - sideInset), height: CGFloat.greatestFiniteMagnitude))
         if width - currentOffset.x < placeholderSize.width {
-            currentOffset.y += 28.0
+            currentOffset.y += 28.0 + 6.0
             currentOffset.x = sideInset
         }
         
@@ -472,42 +397,45 @@ public final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         }
         
         let textNodeFrame = CGRect(origin: CGPoint(x: currentOffset.x + 4.0, y: currentOffset.y + UIScreenPixel), size: CGSize(width: width - currentOffset.x - sideInset - 8.0, height: 28.0))
-        let caretNodeFrame = CGRect(origin: CGPoint(x: textNodeFrame.minX, y: textNodeFrame.minY + 4.0 - UIScreenPixel), size: CGSize(width: 2.0, height: 19.0 + UIScreenPixel))
         if case .immediate = transition {
             transition.updateFrame(node: self.textFieldScrollNode, frame: textNodeFrame)
             transition.updateFrame(node: self.textFieldNode, frame: CGRect(origin: CGPoint(), size: textNodeFrame.size))
-            transition.updateFrame(node: self.caretIndicatorNode, frame: caretNodeFrame)
         } else {
             let previousFrame = self.textFieldScrollNode.frame
             self.textFieldScrollNode.frame = textNodeFrame
             self.textFieldScrollNode.layer.animateFrame(from: previousFrame, to: textNodeFrame, duration: 0.2 + animationDelay, timingFunction: kCAMediaTimingFunctionSpring)
             
             transition.updateFrame(node: self.textFieldNode, frame: CGRect(origin: CGPoint(), size: textNodeFrame.size))
-            
-            let previousCaretFrame = self.caretIndicatorNode.frame
-            self.caretIndicatorNode.frame = caretNodeFrame
-            self.caretIndicatorNode.layer.animateFrame(from: previousCaretFrame, to: caretNodeFrame, duration: 0.2 + animationDelay, timingFunction: kCAMediaTimingFunctionSpring)
         }
         
         let previousContentHeight = self.scrollNode.view.contentSize.height
-        let contentHeight = currentOffset.y + 29.0 + verticalInset
+        let contentHeight = currentOffset.y + 28.0 + verticalInset
         let nodeHeight = min(contentHeight, 110.0)
         
-        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: UIScreenPixel)))
         transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: nodeHeight)))
+        transition.updateCornerRadius(node: self.scrollNode, cornerRadius: min(44.0, nodeHeight) * 0.5)
+        self.scrollNode.view.scrollIndicatorInsets = UIEdgeInsets(top: 16.0, left: 0.0, bottom: 16.0, right: 0.0)
         
         if !abs(previousContentHeight - contentHeight).isLess(than: CGFloat.ulpOfOne) {
             let contentOffset = CGPoint(x: 0.0, y: max(0.0, contentHeight - nodeHeight))
-            if case .immediate = transition {
-                self.scrollNode.view.contentOffset = contentOffset
-            } else {
-                transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(x: 0.0, y: contentOffset.y), size: self.scrollNode.bounds.size))
+            if self.scrollNode.view.contentOffset != contentOffset {
+                if case .immediate = transition {
+                    self.scrollNode.view.contentOffset = contentOffset
+                } else {
+                    //transition.animateOffsetAdditive(node: self.scrollNode, offset: self.scrollNode.view.contentOffset.y - contentOffset.y)
+                }
             }
         }
-        self.scrollNode.view.contentSize = CGSize(width: width, height: contentHeight)
+        if self.scrollNode.view.contentSize != CGSize(width: width, height: contentHeight) {
+            self.scrollNode.view.contentSize = CGSize(width: width, height: contentHeight)
+        }
 
-        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: nodeHeight)))
-        self.backgroundNode.update(size: self.backgroundNode.bounds.size, transition: transition)
+        let backgroundFrame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: nodeHeight))
+        self.backgroundContainer.update(size: backgroundFrame.size, isDark: self.theme.overallDarkAppearance, transition: ComponentTransition(transition))
+        transition.updateFrame(view: self.backgroundContainer, frame: backgroundFrame)
+        
+        self.backgroundView.update(size: backgroundFrame.size, cornerRadius: min(44.0, backgroundFrame.height) * 0.5, isDark: self.theme.overallDarkAppearance, tintColor: .init(kind: .panel, color: UIColor(white: self.theme.overallDarkAppearance ? 0.0 : 1.0, alpha: 0.6)), isInteractive: true, transition: ComponentTransition(transition))
+        transition.updateFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
         
         return nodeHeight
     }
@@ -528,15 +456,9 @@ public final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
     }
     
     public func textFieldDidBeginEditing(_ textField: UITextField) {
-        /*if self.caretIndicatorNode.supernode == self {
-            self.caretIndicatorNode.removeFromSupernode()
-        }*/
     }
     
     public func textFieldDidEndEditing(_ textField: UITextField) {
-        /*if self.caretIndicatorNode.supernode != self.scrollNode {
-            self.scrollNode.addSubnode(self.caretIndicatorNode)
-        }*/
     }
     
     public func setText(_ text: String) {

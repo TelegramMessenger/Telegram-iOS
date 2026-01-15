@@ -103,7 +103,7 @@ class ChatUnrestrictBoostersItemNode: ListViewItemNode {
             return textNode
         }
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.iconNodes.forEach(self.addSubnode)
         self.textNodes.forEach(self.addSubnode)

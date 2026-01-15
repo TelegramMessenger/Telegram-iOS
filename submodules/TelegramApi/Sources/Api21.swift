@@ -147,12 +147,8 @@ public extension Api {
                 _1 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.PrivacyRule.privacyValueAllowChatParticipants(chats: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.PrivacyRule.privacyValueAllowChatParticipants(chats: _1!)
         }
         public static func parse_privacyValueAllowCloseFriends(_ reader: BufferReader) -> PrivacyRule? {
             return Api.PrivacyRule.privacyValueAllowCloseFriends
@@ -169,12 +165,8 @@ public extension Api {
                 _1 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.PrivacyRule.privacyValueAllowUsers(users: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.PrivacyRule.privacyValueAllowUsers(users: _1!)
         }
         public static func parse_privacyValueDisallowAll(_ reader: BufferReader) -> PrivacyRule? {
             return Api.PrivacyRule.privacyValueDisallowAll
@@ -188,12 +180,8 @@ public extension Api {
                 _1 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.PrivacyRule.privacyValueDisallowChatParticipants(chats: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.PrivacyRule.privacyValueDisallowChatParticipants(chats: _1!)
         }
         public static func parse_privacyValueDisallowContacts(_ reader: BufferReader) -> PrivacyRule? {
             return Api.PrivacyRule.privacyValueDisallowContacts
@@ -204,12 +192,8 @@ public extension Api {
                 _1 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.PrivacyRule.privacyValueDisallowUsers(users: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.PrivacyRule.privacyValueDisallowUsers(users: _1!)
         }
     
     }
@@ -364,12 +348,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.Message
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.PublicForward.publicForwardMessage(message: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.PublicForward.publicForwardMessage(message: _1!)
         }
         public static func parse_publicForwardStory(_ reader: BufferReader) -> PublicForward? {
             var _1: Api.Peer?
@@ -382,12 +362,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.PublicForward.publicForwardStory(peer: _1!, story: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.PublicForward.publicForwardStory(peer: _1!, story: _2!)
         }
     
     }
@@ -430,12 +407,11 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.QuickReply.quickReply(shortcutId: _1!, shortcut: _2!, topMessage: _3!, count: _4!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.QuickReply.quickReply(shortcutId: _1!, shortcut: _2!, topMessage: _3!, count: _4!)
         }
     
     }
@@ -493,23 +469,15 @@ public extension Api {
             var _1: Int64?
             _1 = reader.readInt64()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.Reaction.reactionCustomEmoji(documentId: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.Reaction.reactionCustomEmoji(documentId: _1!)
         }
         public static func parse_reactionEmoji(_ reader: BufferReader) -> Reaction? {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.Reaction.reactionEmoji(emoticon: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.Reaction.reactionEmoji(emoticon: _1!)
         }
         public static func parse_reactionEmpty(_ reader: BufferReader) -> Reaction? {
             return Api.Reaction.reactionEmpty
@@ -560,12 +528,11 @@ public extension Api {
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.ReactionCount.reactionCount(flags: _1!, chosenOrder: _2, reaction: _3!, count: _4!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.ReactionCount.reactionCount(flags: _1!, chosenOrder: _2, reaction: _3!, count: _4!)
         }
     
     }
@@ -660,12 +627,12 @@ public extension Api {
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.ReactionsNotifySettings.reactionsNotifySettings(flags: _1!, messagesNotifyFrom: _2, storiesNotifyFrom: _3, sound: _4!, showPreviews: _5!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.ReactionsNotifySettings.reactionsNotifySettings(flags: _1!, messagesNotifyFrom: _2, storiesNotifyFrom: _3, sound: _4!, showPreviews: _5!)
         }
     
     }
@@ -700,12 +667,9 @@ public extension Api {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ReadParticipantDate.readParticipantDate(userId: _1!, date: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.ReadParticipantDate.readParticipantDate(userId: _1!, date: _2!)
         }
     
     }

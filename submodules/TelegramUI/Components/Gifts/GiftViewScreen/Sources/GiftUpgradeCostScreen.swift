@@ -17,6 +17,7 @@ import LottieComponent
 import ProfileLevelRatingBarComponent
 import TextFormat
 import TelegramStringFormatting
+import TableComponent
 
 private final class GiftUpgradeCostScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment

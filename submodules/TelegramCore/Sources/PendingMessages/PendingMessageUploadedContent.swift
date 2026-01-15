@@ -343,8 +343,26 @@ func mediaContentToUpload(accountPeerId: PeerId, network: Network, postbox: Post
         let inputTodo = Api.InputMedia.inputMediaTodo(todo: .todoList(flags: flags, title: .textWithEntities(text: todo.text, entities: apiEntitiesFromMessageTextEntities(todo.textEntities, associatedPeers: SimpleDictionary())), list: todo.items.map { $0.apiItem }))
         return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(inputTodo, text), reuploadInfo: nil, cacheReferenceKey: nil)))
     } else if let dice = media as? TelegramMediaDice {
-        let inputDice = Api.InputMedia.inputMediaDice(emoticon: dice.emoji)
-        return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(inputDice, text), reuploadInfo: nil, cacheReferenceKey: nil)))
+        if let tonAmount = dice.tonAmount {
+            let seedBytes = malloc(32)!
+            let _ = SecRandomCopyBytes(nil, 32, seedBytes.assumingMemoryBound(to: UInt8.self))
+            let clientSeed = MemoryBuffer(memory: seedBytes, capacity: 32, length: 32, freeWhenDone: true)
+            
+            return postbox.transaction { transaction -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
+                let gameInfo = currentEmojiGameInfo(transaction: transaction)
+                if case let .available(info) = gameInfo {
+                    let inputStakeDice = Api.InputMedia.inputMediaStakeDice(gameHash: info.gameHash, tonAmount: tonAmount, clientSeed: Buffer(buffer: clientSeed))
+                    return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(inputStakeDice, text), reuploadInfo: nil, cacheReferenceKey: nil)))
+                } else {
+                    return .fail(.generic)
+                }
+            }
+            |> castError(PendingMessageUploadError.self)
+            |> switchToLatest
+        } else {
+            let inputDice = Api.InputMedia.inputMediaDice(emoticon: dice.emoji)
+            return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(inputDice, text), reuploadInfo: nil, cacheReferenceKey: nil)))
+        }
     } else if let webPage = media as? TelegramMediaWebpage, case let .Loaded(content) = webPage.content {
         var flags: Int32 = 0
         flags |= 1 << 2

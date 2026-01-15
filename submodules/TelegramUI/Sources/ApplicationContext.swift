@@ -499,7 +499,7 @@ final class AuthorizedApplicationContext {
                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                 var acceptImpl: ((String?) -> Void)?
                 var declineImpl: (() -> Void)?
-                let controller = TermsOfServiceController(presentationData: presentationData, text: termsOfServiceUpdate.text, entities: termsOfServiceUpdate.entities, ageConfirmation: termsOfServiceUpdate.ageConfirmation, signingUp: false, accept: { proccedBot in
+                let controller = TermsOfServiceController(context: strongSelf.context, presentationData: presentationData, text: termsOfServiceUpdate.text, entities: termsOfServiceUpdate.entities, ageConfirmation: termsOfServiceUpdate.ageConfirmation, signingUp: false, accept: { proccedBot in
                     acceptImpl?(proccedBot)
                 }, decline: {
                     declineImpl?()

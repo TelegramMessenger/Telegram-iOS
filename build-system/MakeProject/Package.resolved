@@ -1,0 +1,50 @@
+{
+  "pins" : [
+    {
+      "identity" : "aexml",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/tadija/AEXML.git",
+      "state" : {
+        "revision" : "38f7d00b23ecd891e1ee656fa6aeebd6ba04ecc3",
+        "version" : "4.6.1"
+      }
+    },
+    {
+      "identity" : "pathkit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/kylef/PathKit.git",
+      "state" : {
+        "revision" : "3bfd2737b700b9a36565a8c94f4ad2b050a5e574",
+        "version" : "1.0.1"
+      }
+    },
+    {
+      "identity" : "spectre",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/kylef/Spectre.git",
+      "state" : {
+        "revision" : "26cc5e9ae0947092c7139ef7ba612e34646086c7",
+        "version" : "0.10.1"
+      }
+    },
+    {
+      "identity" : "swift-argument-parser",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-argument-parser",
+      "state" : {
+        "revision" : "309a47b2b1d9b5e991f36961c983ecec72275be3",
+        "version" : "1.6.1"
+      }
+    },
+    {
+      "identity" : "xcodeproj",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/tuist/XcodeProj.git",
+      "state" : {
+        "revision" : "dc3b87a4e69f9cd06c6cb16199f5d0472e57ef6b",
+        "version" : "8.24.3"
+      }
+    }
+  ],
+  "version" : 2
+}

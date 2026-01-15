@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import TelegramPresentationData
 import ChatPresentationInterfaceState
+import LegacyChatHeaderPanelComponent
 
 final class ChatRequestInProgressTitlePanelNode: ChatTitleAccessoryPanelNode {
     private let separatorNode: ASDisplayNode

@@ -464,7 +464,7 @@ public final class ChatSideTopicsPanel: Component {
                 let titleSize = self.title.update(
                     transition: .immediate,
                     component: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: titleText, font: Font.regular(10.0), textColor: component.isSelected ? component.theme.rootController.navigationBar.accentTextColor : component.theme.rootController.navigationBar.secondaryTextColor)),
+                        text: .plain(NSAttributedString(string: titleText, font: Font.regular(10.0), textColor: component.isSelected ? component.theme.rootController.navigationBar.accentTextColor : component.theme.chat.inputPanel.panelControlColor)),
                         horizontalAlignment: .center,
                         maximumNumberOfLines: 2
                     )),
@@ -897,7 +897,7 @@ public final class ChatSideTopicsPanel: Component {
                 let titleSize = self.title.update(
                     transition: .immediate,
                     component: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: titleText, font: Font.medium(14.0), textColor: component.isSelected ? component.theme.rootController.navigationBar.accentTextColor : component.theme.rootController.navigationBar.secondaryTextColor)),
+                        text: .plain(NSAttributedString(string: titleText, font: Font.medium(14.0), textColor: component.isSelected ? component.theme.rootController.navigationBar.accentTextColor : component.theme.chat.inputPanel.panelControlColor)),
                         horizontalAlignment: .center,
                         maximumNumberOfLines: 2
                     )),
@@ -1109,7 +1109,7 @@ public final class ChatSideTopicsPanel: Component {
                 transition: .immediate,
                 component: AnyComponent(BundleIconComponent(
                     name: isReordering ? "Media Editor/Done" : "Chat/Title Panels/SidebarIcon",
-                    tintColor: location == .side ? theme.rootController.navigationBar.accentTextColor : theme.rootController.navigationBar.secondaryTextColor,
+                    tintColor: location == .side ? theme.rootController.navigationBar.accentTextColor : theme.chat.inputPanel.panelControlColor,
                     maxSize: CGSize(width: 24.0, height: 24.0),
                     scaleFactor: 1.0
                 )),
@@ -1242,7 +1242,7 @@ public final class ChatSideTopicsPanel: Component {
                     transition: .immediate,
                     component: AnyComponent(BundleIconComponent(
                         name: "Chat List/Tabs/IconChats",
-                        tintColor: component.isSelected ? component.theme.rootController.navigationBar.accentTextColor : component.theme.rootController.navigationBar.secondaryTextColor
+                        tintColor: component.isSelected ? component.theme.rootController.navigationBar.accentTextColor : component.theme.chat.inputPanel.panelControlColor
                     )),
                     environment: {},
                     containerSize: CGSize(width: 100.0, height: 100.0)
@@ -1257,7 +1257,7 @@ public final class ChatSideTopicsPanel: Component {
                 let titleSize = self.title.update(
                     transition: .immediate,
                     component: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: titleText, font: Font.regular(10.0), textColor: component.isSelected ? component.theme.rootController.navigationBar.accentTextColor : component.theme.rootController.navigationBar.secondaryTextColor)),
+                        text: .plain(NSAttributedString(string: titleText, font: Font.regular(10.0), textColor: component.isSelected ? component.theme.rootController.navigationBar.accentTextColor : component.theme.chat.inputPanel.panelControlColor)),
                         maximumNumberOfLines: 2
                     )),
                     environment: {},
@@ -1394,7 +1394,7 @@ public final class ChatSideTopicsPanel: Component {
                 let titleSize = self.title.update(
                     transition: .immediate,
                     component: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: titleText, font: Font.medium(14.0), textColor: component.isSelected ? component.theme.rootController.navigationBar.accentTextColor : component.theme.rootController.navigationBar.secondaryTextColor)),
+                        text: .plain(NSAttributedString(string: titleText, font: Font.medium(14.0), textColor: component.isSelected ? component.theme.rootController.navigationBar.accentTextColor : component.theme.chat.inputPanel.panelControlColor)),
                         maximumNumberOfLines: 2
                     )),
                     environment: {},

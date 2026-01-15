@@ -14,6 +14,7 @@ import TelegramCore
 import BundleIconComponent
 import ContextUI
 import SwiftSignalKit
+import LegacyChatHeaderPanelComponent
 
 private final class ChatManagingBotTitlePanelComponent: Component {
     let context: AccountContext

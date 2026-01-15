@@ -117,7 +117,7 @@ private final class WebBrowserItemNode: ListViewItemNode {
         
         self.activateArea = AccessibilityAreaNode()
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.iconNode)
         self.addSubnode(self.checkIconNode)

@@ -16,7 +16,12 @@ extension ChatControllerImpl {
                 break
             }
         }
-        let controller = factCheckAlertController(context: self.context, updatedPresentationData: self.updatedPresentationData, value: currentText, entities: currentEntities, apply: { [weak self] text, entities in
+        let controller = factCheckAlertController(
+            context: self.context,
+            updatedPresentationData: self.updatedPresentationData,
+            value: currentText,
+            entities: currentEntities,
+            apply: { [weak self] text, entities in
             guard let self else {
                 return
             }

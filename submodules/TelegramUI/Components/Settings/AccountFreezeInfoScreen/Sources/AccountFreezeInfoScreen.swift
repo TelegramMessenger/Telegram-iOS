@@ -49,7 +49,6 @@ private final class SheetContent: CombinedComponent {
     
     final class State: ComponentState {
         var cachedChevronImage: (UIImage, PresentationTheme)?
-        var cachedCloseImage: (UIImage, PresentationTheme)?
         
         let playOnce =  ActionSlot<Void>()
         private var didPlayAnimation = false
@@ -189,14 +188,15 @@ private final class SheetContent: CombinedComponent {
             contentSize.height += list.size.height
             contentSize.height += spacing + 2.0
             
+            let buttonInsets = ContainerViewLayout.concentricInsets(bottomInset: environment.safeInsets.bottom, innerDiameter: 52.0, sideInset: 30.0)
             let buttonAttributedString = NSMutableAttributedString(string: strings.FrozenAccount_SubmitAppeal, font: Font.semibold(17.0), textColor: environment.theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
             let actionButton = actionButton.update(
                 component: ButtonComponent(
                     background: ButtonComponent.Background(
+                        style: .glass,
                         color: environment.theme.list.itemCheckColors.fillColor,
                         foreground: environment.theme.list.itemCheckColors.foregroundColor,
                         pressedColor: environment.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9),
-                        cornerRadius: 10.0
                     ),
                     content: AnyComponentWithIdentity(
                         id: AnyHashable(0),
@@ -209,7 +209,7 @@ private final class SheetContent: CombinedComponent {
                         component.dismiss()
                     }
                 ),
-                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
+                availableSize: CGSize(width: context.availableSize.width - buttonInsets.left - buttonInsets.right, height: 52.0),
                 transition: context.transition
             )
             context.add(actionButton
@@ -223,10 +223,10 @@ private final class SheetContent: CombinedComponent {
             let closeButton = closeButton.update(
                 component: ButtonComponent(
                     background: ButtonComponent.Background(
-                        color: .clear,
-                        foreground: .clear,
-                        pressedColor: .clear,
-                        cornerRadius: 10.0
+                        style: .glass,
+                        color: theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.1),
+                        foreground: theme.list.itemCheckColors.fillColor,
+                        pressedColor: theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.8)
                     ),
                     content: AnyComponentWithIdentity(
                         id: AnyHashable(1),
@@ -238,19 +238,14 @@ private final class SheetContent: CombinedComponent {
                         component.dismiss()
                     }
                 ),
-                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
+                availableSize: CGSize(width: context.availableSize.width - buttonInsets.left - buttonInsets.right, height: 52.0),
                 transition: context.transition
             )
             context.add(closeButton
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + actionButton.size.height / 2.0))
             )
             contentSize.height += closeButton.size.height
-           
-            if environment.safeInsets.bottom > 0 {
-                contentSize.height += environment.safeInsets.bottom + 5.0
-            } else {
-                contentSize.height += 12.0
-            }
+            contentSize.height += buttonInsets.bottom
                         
             state.playAnimationIfNeeded()
             
@@ -312,6 +307,7 @@ private final class SheetContainerComponent: CombinedComponent {
                             })
                         }
                     )),
+                    style: .glass,
                     backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
                     followContentSizeChanges: true,
                     externalState: sheetExternalState,
@@ -507,8 +503,8 @@ private final class ParagraphComponent: CombinedComponent {
                         textColor: component.titleColor,
                         paragraphAlignment: .natural
                     )),
-                    horizontalAlignment: .center,
-                    maximumNumberOfLines: 1
+                    horizontalAlignment: .natural,
+                    maximumNumberOfLines: 2
                 ),
                 availableSize: CGSize(width: context.availableSize.width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude),
                 transition: .immediate
@@ -575,25 +571,4 @@ private final class ParagraphComponent: CombinedComponent {
             return CGSize(width: context.availableSize.width, height: textTopInset + title.size.height + text.size.height + 18.0)
         }
     }
-}
-
-private func generateCloseButtonImage(backgroundColor: UIColor, foregroundColor: UIColor) -> UIImage? {
-    return generateImage(CGSize(width: 30.0, height: 30.0), contextGenerator: { size, context in
-        context.clear(CGRect(origin: CGPoint(), size: size))
-        
-        context.setFillColor(backgroundColor.cgColor)
-        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-        
-        context.setLineWidth(2.0)
-        context.setLineCap(.round)
-        context.setStrokeColor(foregroundColor.cgColor)
-        
-        context.move(to: CGPoint(x: 10.0, y: 10.0))
-        context.addLine(to: CGPoint(x: 20.0, y: 20.0))
-        context.strokePath()
-        
-        context.move(to: CGPoint(x: 20.0, y: 10.0))
-        context.addLine(to: CGPoint(x: 10.0, y: 20.0))
-        context.strokePath()
-    })
 }

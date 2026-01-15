@@ -34,6 +34,9 @@ swift_library(
         "//submodules/InviteLinksUI",
         "//submodules/UndoUI",
         "//submodules/TelegramCallsUI",
+        "//submodules/TelegramUI/Components/EdgeEffect",
+        "//submodules/ComponentFlow",
+        "//submodules/Components/ComponentDisplayAdapters",
     ],
     visibility = [
         "//visibility:public",

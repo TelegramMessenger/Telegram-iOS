@@ -94,7 +94,7 @@ public class ChatUnreadItemNode: ListViewItemNode {
         self.activateArea = AccessibilityAreaNode()
         self.activateArea.accessibilityTraits = .staticText
         
-        super.init(layerBacked: false, dynamicBounce: true, rotated: true)
+        super.init(layerBacked: false, rotated: true)
         
         self.addSubnode(self.backgroundNode)
         

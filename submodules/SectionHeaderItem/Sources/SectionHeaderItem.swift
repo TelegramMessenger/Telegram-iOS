@@ -73,7 +73,7 @@ private class SectionHeaderItemNode: ListViewItemNode {
     private var layoutParams: ListViewItemLayoutParams?
     
     required init() {
-        super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
+        super.init(layerBacked: false, rotated: false, seeThrough: false)
     }
     
     override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {

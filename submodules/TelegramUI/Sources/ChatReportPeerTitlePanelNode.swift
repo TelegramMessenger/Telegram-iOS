@@ -16,6 +16,7 @@ import AnimationCache
 import MultiAnimationRenderer
 import AccountContext
 import PremiumUI
+import LegacyChatHeaderPanelComponent
 
 private enum ChatReportPeerTitleButton: Equatable {
     case block

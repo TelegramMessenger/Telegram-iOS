@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import ComponentFlow
+import ComponentDisplayAdapters
 
 public class EdgeEffectView: UIView {
     public enum Edge {
@@ -27,7 +28,13 @@ public class EdgeEffectView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
-    public func update(content: UIColor, blur: Bool = false, alpha: CGFloat = 0.65, rect: CGRect, edge: Edge, edgeSize: CGFloat, transition: ComponentTransition) {
+    public func update(content: UIColor, blur: Bool = false, alpha: CGFloat = 0.75, rect: CGRect, edge: Edge, edgeSize: CGFloat, transition: ComponentTransition) {
+        #if DEBUG && false
+        let content: UIColor = .blue
+        let blur: Bool = !"".isEmpty
+        self.backgroundColor = .blue
+        #endif
+        
         transition.setBackgroundColor(view: self.contentView, color: content)
         
         switch edge {
@@ -76,38 +83,39 @@ public class EdgeEffectView: UIView {
         }
         
         if blur {
-            let gradientMaskLayer = SimpleGradientLayer()
-            let baseGradientAlpha: CGFloat = 1.0
-            let numSteps = 8
-            let firstStep = 1
-            let firstLocation = 0.8
-            gradientMaskLayer.colors = (0 ..< numSteps).map { i in
-                if i < firstStep {
-                    return UIColor(white: 1.0, alpha: 1.0).cgColor
-                } else {
-                    let step: CGFloat = CGFloat(i - firstStep) / CGFloat(numSteps - firstStep - 1)
-                    let value: CGFloat = 1.0 - bezierPoint(0.42, 0.0, 0.58, 1.0, step)
-                    return UIColor(white: 1.0, alpha: baseGradientAlpha * value).cgColor
-                }
-            }
-            gradientMaskLayer.locations = (0 ..< numSteps).map { i -> NSNumber in
-                if i < firstStep {
-                    return 0.0 as NSNumber
-                } else {
-                    let step: CGFloat = CGFloat(i - firstStep) / CGFloat(numSteps - firstStep - 1)
-                    return (firstLocation + (1.0 - firstLocation) * step) as NSNumber
-                }
-            }
-            
             let blurView: VariableBlurView
             if let current = self.blurView {
                 blurView = current
             } else {
+                let gradientMaskLayer = SimpleGradientLayer()
+                let baseGradientAlpha: CGFloat = 1.0
+                let numSteps = 8
+                let firstStep = 1
+                let firstLocation = 0.8
+                gradientMaskLayer.colors = (0 ..< numSteps).map { i in
+                    if i < firstStep {
+                        return UIColor(white: 1.0, alpha: 1.0).cgColor
+                    } else {
+                        let step: CGFloat = CGFloat(i - firstStep) / CGFloat(numSteps - firstStep - 1)
+                        let value: CGFloat = 1.0 - bezierPoint(0.42, 0.0, 0.58, 1.0, step)
+                        return UIColor(white: 1.0, alpha: baseGradientAlpha * value).cgColor
+                    }
+                }
+                gradientMaskLayer.locations = (0 ..< numSteps).map { i -> NSNumber in
+                    if i < firstStep {
+                        return 0.0 as NSNumber
+                    } else {
+                        let step: CGFloat = CGFloat(i - firstStep) / CGFloat(numSteps - firstStep - 1)
+                        return (firstLocation + (1.0 - firstLocation) * step) as NSNumber
+                    }
+                }
+                
                 blurView = VariableBlurView(gradientMask: self.contentMaskView.image ?? UIImage(), maxBlurRadius: 8.0)
                 blurView.layer.mask = gradientMaskLayer
                 self.insertSubview(blurView, at: 0)
                 self.blurView = blurView
             }
+            blurView.update(size: bounds.size, transition: transition.containedViewLayoutTransition)
             transition.setFrame(view: blurView, frame: bounds)
             if let maskLayer = blurView.layer.mask {
                 transition.setFrame(layer: maskLayer, frame: bounds)
@@ -270,5 +278,11 @@ public final class VariableBlurView: UIVisualEffectView {
         let backdropLayer = self.subviews.first?.layer
         backdropLayer?.filters = [variableBlur]
         backdropLayer?.setValue(UIScreenScale, forKey: "scale")
+    }
+    
+    public func update(size: CGSize, transition: ContainedViewLayoutTransition) {
+        for layer in self.layer.sublayers ?? [] {
+            transition.updateFrame(layer: layer, frame: CGRect(origin: CGPoint(), size: size))
+        }
     }
 }

@@ -3494,20 +3494,20 @@ final class PostboxImpl {
         useRootInterfaceStateForThread: Bool
     ) -> Disposable {
         var topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?] = [:]
-        var mainPeerIdForTopTaggedMessages: PeerId?
-        switch peerIds {
+        var mainPeerIdForTopTaggedMessages: (peerId: PeerId, threadId: Int64?)?
+        if tag == nil {
+            switch peerIds {
             case let .single(id, threadId):
-                if threadId == nil {
-                    mainPeerIdForTopTaggedMessages = id
-                }
+                mainPeerIdForTopTaggedMessages = (id, threadId)
             case let .associated(id, _):
-                mainPeerIdForTopTaggedMessages = id
+                mainPeerIdForTopTaggedMessages = (id, nil)
             case .external:
                 mainPeerIdForTopTaggedMessages = nil
+            }
         }
         if let peerId = mainPeerIdForTopTaggedMessages {
             for namespace in topTaggedMessageIdNamespaces {
-                if let messageId = self.peerChatTopTaggedMessageIdsTable.get(peerId: peerId, namespace: namespace) {
+                if let messageId = self.peerChatTopTaggedMessageIdsTable.get(peerId: peerId.peerId, threadId: peerId.threadId, namespace: namespace) {
                     if let index = self.messageHistoryIndexTable.getIndex(messageId) {
                         if let message = self.messageHistoryTable.getMessage(index) {
                             topTaggedMessages[namespace] = MessageHistoryTopTaggedMessage.intermediate(message)

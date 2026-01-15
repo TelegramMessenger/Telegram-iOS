@@ -228,7 +228,6 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, ASScrollView
         }, openChatFolderUpdates: {}, hideChatFolderUpdates: {
         }, openStories: { _, _ in
         }, openStarsTopup: { _ in
-        }, dismissNotice: { _ in
         }, editPeer: { _ in
         }, openWebApp: { _ in
         }, openPhotoSetup: {
@@ -625,7 +624,8 @@ final class TextSizeSelectionController: ViewController {
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.presentationThemeSettings = presentationThemeSettings
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationTheme: self.presentationData.theme, presentationStrings: self.presentationData.strings))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationTheme: self.presentationData.theme, presentationStrings: self.presentationData.strings, style: .glass))
+        self._hasGlassStyle = true
         
         self.blocksBackgroundWhenInOverlay = true
         self.acceptsFocusWhenInOverlay = true

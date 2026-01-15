@@ -125,7 +125,7 @@ class PeerRemoveTimeoutItemNode: ListViewItemNode, ItemListItemNode {
             return TextNode()
         }
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.titleNodes.forEach(self.addSubnode)
         

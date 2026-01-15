@@ -99,7 +99,7 @@ final class EmojiPickerItemNode: ListViewItemNode {
         self.maskNode = ASImageNode()
         self.maskNode.isUserInteractionEnabled = false
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.clipsToBounds = true
     }

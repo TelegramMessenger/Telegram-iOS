@@ -43,7 +43,7 @@ private final class DeleteAllButtonNode: ASDisplayNode {
         self.buttonNode.addSubnode(self.titleNode)
         self.contentNode.contentNode.addSubnode(self.buttonNode)
         
-        self.titleNode.attributedText = NSAttributedString(string: presentationData.strings.CallList_DeleteAll, font: Font.regular(17.0), textColor: presentationData.theme.rootController.navigationBar.accentTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: presentationData.strings.CallList_DeleteAll, font: Font.medium(17.0), textColor: presentationData.theme.chat.inputPanel.panelControlColor)
         
         //self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
     }
@@ -54,9 +54,10 @@ private final class DeleteAllButtonNode: ASDisplayNode {
     
     override public func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
         let titleSize = self.titleNode.updateLayout(constrainedSize)
-        self.titleNode.frame = CGRect(origin: CGPoint(), size: titleSize)
-        self.buttonNode.frame = CGRect(origin: CGPoint(), size: titleSize)
-        return titleSize
+        let size = CGSize(width: 10.0 * 2.0 + titleSize.width, height: 44.0)
+        self.titleNode.frame = CGRect(origin: CGPoint(x: 10.0, y: floorToScreenPixels((size.height - titleSize.height) * 0.5)), size: titleSize)
+        self.buttonNode.frame = CGRect(origin: CGPoint(), size: size)
+        return size
     }
     
     override public func layout() {
@@ -102,7 +103,7 @@ public final class CallListController: TelegramBaseController {
         
         self.segmentedTitleView = ItemListControllerSegmentedTitleView(theme: self.presentationData.theme, segments: [self.presentationData.strings.Calls_All, self.presentationData.strings.Calls_Missed], selectedIndex: 0)
         
-        super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .none, locationBroadcastPanelSource: .none, groupCallPanelSource: .none)
+        super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData, style: .glass))
         
         self.tabBarItemContextActionType = .always
         
@@ -155,6 +156,8 @@ public final class CallListController: TelegramBaseController {
         if case .navigation = self.mode {
             self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         }
+
+        self.updateTabBarSearchState(ViewController.TabBarSearchState(isActive: false), transition: .immediate)
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -203,7 +206,7 @@ public final class CallListController: TelegramBaseController {
         }
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
-        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
+        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData, style: .glass), transition: .immediate)
         
         if self.isNodeLoaded {
             self.controllerNode.updateThemeAndStrings(presentationData: self.presentationData)
@@ -359,10 +362,10 @@ public final class CallListController: TelegramBaseController {
                     if empty {
                         switch strongSelf.mode {
                             case .tab:
-                                strongSelf.navigationItem.setLeftBarButton(nil, animated: true)
-                                strongSelf.navigationItem.setRightBarButton(nil, animated: true)
+                            strongSelf.navigationItem.setLeftBarButton(nil, animated: strongSelf.controllerNode.didSetReady)
+                                strongSelf.navigationItem.setRightBarButton(nil, animated: strongSelf.controllerNode.didSetReady)
                             case .navigation:
-                                strongSelf.navigationItem.setRightBarButton(nil, animated: true)
+                                strongSelf.navigationItem.setRightBarButton(nil, animated: strongSelf.controllerNode.didSetReady)
                         }
                     } else {
                         var pressedImpl: (() -> Void)?
@@ -379,25 +382,24 @@ public final class CallListController: TelegramBaseController {
                         switch strongSelf.mode {
                             case .tab:
                                 if strongSelf.editingMode {
-                                    strongSelf.navigationItem.setLeftBarButton(UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Done, style: .done, target: strongSelf, action: #selector(strongSelf.donePressed)), animated: true)
-                                    strongSelf.navigationItem.setRightBarButton(UIBarButtonItem(customDisplayNode: buttonNode), animated: true)
+                                    strongSelf.navigationItem.setLeftBarButton(UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Done, style: .done, target: strongSelf, action: #selector(strongSelf.donePressed)), animated: strongSelf.controllerNode.didSetReady)
+                                    strongSelf.navigationItem.setRightBarButton(UIBarButtonItem(customDisplayNode: buttonNode), animated: strongSelf.controllerNode.didSetReady)
                                     strongSelf.navigationItem.rightBarButtonItem?.setCustomAction({
                                         pressedImpl?()
                                     })
                                 } else {
-                                    strongSelf.navigationItem.setLeftBarButton(UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Edit, style: .plain, target: strongSelf, action: #selector(strongSelf.editPressed)), animated: true)
-                                    //strongSelf.navigationItem.setRightBarButton(UIBarButtonItem(image: PresentationResourcesRootController.navigationCallIcon(strongSelf.presentationData.theme), style: .plain, target: self, action: #selector(strongSelf.callPressed)), animated: true)
-                                    strongSelf.navigationItem.setRightBarButton(nil, animated: true)
+                                    strongSelf.navigationItem.setLeftBarButton(UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Edit, style: .plain, target: strongSelf, action: #selector(strongSelf.editPressed)), animated: strongSelf.controllerNode.didSetReady)
+                                    strongSelf.navigationItem.setRightBarButton(nil, animated: strongSelf.controllerNode.didSetReady)
                                 }
                             case .navigation:
                                 if strongSelf.editingMode {
-                                    strongSelf.navigationItem.setLeftBarButton(UIBarButtonItem(customDisplayNode: buttonNode), animated: true)
+                                    strongSelf.navigationItem.setLeftBarButton(UIBarButtonItem(customDisplayNode: buttonNode), animated: strongSelf.controllerNode.didSetReady)
                                     strongSelf.navigationItem.leftBarButtonItem?.setCustomAction({
                                         pressedImpl?()
                                     })
-                                    strongSelf.navigationItem.setRightBarButton(UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Done, style: .done, target: strongSelf, action: #selector(strongSelf.donePressed)), animated: true)
+                                    strongSelf.navigationItem.setRightBarButton(UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Done, style: .done, target: strongSelf, action: #selector(strongSelf.donePressed)), animated: strongSelf.controllerNode.didSetReady)
                                 } else {
-                                    strongSelf.navigationItem.setRightBarButton(UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Edit, style: .plain, target: strongSelf, action: #selector(strongSelf.editPressed)), animated: true)
+                                    strongSelf.navigationItem.setRightBarButton(UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Edit, style: .plain, target: strongSelf, action: #selector(strongSelf.editPressed)), animated: strongSelf.controllerNode.didSetReady)
                                 }
                         }
                     }
@@ -421,10 +423,15 @@ public final class CallListController: TelegramBaseController {
         self.displayNodeDidLoad()
     }
     
+    override public var navigationEdgeEffectExtension: CGFloat {
+        return self.controllerNode.navigationEdgeEffectExtension
+    }
+    
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
+        let navigationLayout = self.navigationLayout(layout: layout)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: navigationLayout.navigationFrame.maxY, transition: transition)
     }
     
     @objc func callPressed() {
@@ -777,6 +784,10 @@ public final class CallListController: TelegramBaseController {
         
         let controller = ContextController(presentationData: self.presentationData, source: .reference(CallListTabBarContextReferenceContentSource(controller: self, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), recognizer: nil, gesture: gesture)
         self.context.sharedContext.mainWindow?.presentInGlobalOverlay(controller)
+    }
+    
+    override public func tabBarActivateSearch() {
+        self.beginCallImpl()
     }
 }
 

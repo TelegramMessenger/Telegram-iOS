@@ -83,6 +83,7 @@ import TelegramAnimatedStickerNode
 import LottieMetal
 import AvatarNode
 import ChatMessageSuggestedPostInfoNode
+import PremiumAlertController
 
 private struct BubbleItemAttributes {
     var index: Int?
@@ -689,6 +690,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     private var unlockButtonNode: ChatMessageUnlockMediaNode?
     private var mediaInfoNode: ChatMessageStarsMediaInfoNode?
     
+    private var summarizeButtonNode: ChatMessageShareButton?
     private var shareButtonNode: ChatMessageShareButton?
     
     private let messageAccessibilityArea: AccessibilityAreaNode
@@ -1222,6 +1224,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     }
                 }
                 
+                if let summarizeButtonNode = strongSelf.summarizeButtonNode, summarizeButtonNode.frame.contains(point) {
+                    return .fail
+                }
+                
                 if let shareButtonNode = strongSelf.shareButtonNode, shareButtonNode.frame.contains(point) {
                     return .fail
                 }
@@ -1724,6 +1730,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         let isFailed = item.content.firstMessage.effectivelyFailed(timestamp: item.context.account.network.getApproximateRemoteTimestamp())
         
         var needsShareButton = false
+        var needsSummarizeButton = false
     
         if incoming, case let .customChatContents(contents) = item.associatedData.subject, case .hashTagSearch = contents.kind {
             needsShareButton = true
@@ -1749,6 +1756,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         } else if incoming {
             if let _ = sourceReference {
                 needsShareButton = true
+            }
+            
+            if let _ = item.message.attributes.first(where: { $0 is SummarizationMessageAttribute }) {
+                needsSummarizeButton = true
             }
             
             if let peer = item.message.peers[item.message.id.peerId] {
@@ -1789,6 +1800,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 loop: for media in item.message.media {
                     if media is TelegramMediaAction {
                         needsShareButton = false
+                        needsSummarizeButton = false
                         break loop
                     } else if let media = media as? TelegramMediaFile, media.isInstantVideo {
                         mayHaveSeparateCommentsButton = true
@@ -1801,12 +1813,14 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 if mayHaveSeparateCommentsButton && hasCommentButton(item: item) {
                 } else {
                     needsShareButton = false
+                    needsSummarizeButton = false
                 }
             }
         }
         
         if isPreview {
             needsShareButton = false
+            needsSummarizeButton = false
         }
         let isAd = item.content.firstMessage.adAttribute != nil
         if isAd {
@@ -1815,13 +1829,14 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         for attribute in item.content.firstMessage.attributes {
             if let attribute = attribute as? RestrictedContentMessageAttribute, attribute.platformText(platform: "ios", contentSettings: item.context.currentContentSettings.with { $0 }) != nil {
                 needsShareButton = false
+                needsSummarizeButton = false
             }
         }
         
         if let subject = item.associatedData.subject, case .messageOptions = subject {
             needsShareButton = false
         }
-                
+                        
         var tmpWidth: CGFloat
         if allowFullWidth {
             tmpWidth = baseWidth
@@ -2312,6 +2327,17 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
         }
         
+        let translateToLanguage = item.associatedData.translateToLanguage
+        var isSummarized = false
+        if item.controllerInteraction.summarizedMessageIds.contains(item.message.id) {
+            for attribute in item.message.attributes {
+                if let attribute = attribute as? SummarizationMessageAttribute, attribute.summaryForLang(translateToLanguage) != nil {
+                    initialDisplayHeader = true
+                    isSummarized = true
+                }
+            }
+        }
+        
         var displayHeader = false
         if initialDisplayHeader {
             if authorNameString != nil {
@@ -2338,6 +2364,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 } else {
                     displayHeader = true
                 }
+            }
+            if isSummarized {
+                displayHeader = true
             }
         }
         
@@ -2717,7 +2746,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 hasReply = false
             }
             
-            if !isInstantVideo, hasReply, (replyMessage != nil || replyForward != nil || replyStory != nil) {
+            if isSummarized {
+                hasReply = true
+            }
+                        
+            if !isInstantVideo, hasReply, (replyMessage != nil || replyForward != nil || replyStory != nil || isSummarized) {
                 if headerSize.height.isZero {
                     headerSize.height += 11.0
                 } else {
@@ -2733,6 +2766,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     quote: replyQuote,
                     todoItemId: replyTodoItemId,
                     story: replyStory,
+                    isSummarized: isSummarized,
                     parentMessage: item.message,
                     constrainedSize: CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right - 6.0, height: CGFloat.greatestFiniteMagnitude),
                     animationCache: item.controllerInteraction.presentationContext.animationCache,
@@ -3491,6 +3525,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 unlockButtonSizeAndApply: unlockButtonSizeApply,
                 mediaInfoOrigin: mediaInfoOrigin?.offsetBy(dx: 0.0, dy: layoutInsets.top),
                 mediaInfoSizeAndApply: mediaInfoSizeApply,
+                needsSummarizeButton: needsSummarizeButton,
                 needsShareButton: needsShareButton,
                 shareButtonOffset: shareButtonOffset,
                 avatarOffset: avatarOffset,
@@ -3556,6 +3591,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         unlockButtonSizeAndApply: (CGSize, (Bool) -> ChatMessageUnlockMediaNode?),
         mediaInfoOrigin: CGPoint?,
         mediaInfoSizeAndApply: (CGSize, (Bool) -> ChatMessageStarsMediaInfoNode?),
+        needsSummarizeButton: Bool,
         needsShareButton: Bool,
         shareButtonOffset: CGPoint?,
         avatarOffset: CGFloat?,
@@ -4787,6 +4823,20 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             })
         }
 
+        if needsSummarizeButton {
+            if strongSelf.summarizeButtonNode == nil {
+                let summarizeButtonNode = ChatMessageShareButton()
+                strongSelf.summarizeButtonNode = summarizeButtonNode
+                strongSelf.insertSubnode(summarizeButtonNode, belowSubnode: strongSelf.messageAccessibilityArea)
+                summarizeButtonNode.pressed = { [weak strongSelf] in
+                    strongSelf?.toggleSummarization()
+                }
+            }
+        } else if let summarizeButtonNode = strongSelf.summarizeButtonNode {
+            strongSelf.summarizeButtonNode = nil
+            summarizeButtonNode.removeFromSupernode()
+        }
+        
         if needsShareButton {
             if strongSelf.shareButtonNode == nil {
                 let shareButtonNode = ChatMessageShareButton()
@@ -4960,6 +5010,30 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
                 strongSelf.messageAccessibilityArea.frame = backgroundFrame
             }
+            if let summarizeButtonNode = strongSelf.summarizeButtonNode {
+                let buttonSize = summarizeButtonNode.update(presentationData: item.presentationData, controllerInteraction: item.controllerInteraction, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account, disableComments: disablesComments, isSummarize: true)
+                
+                var buttonFrame = CGRect(origin: CGPoint(x: !incoming ? backgroundFrame.minX - buttonSize.width - 8.0 : backgroundFrame.maxX + 8.0, y: backgroundFrame.minY + 1.0), size: buttonSize)
+                
+                if let shareButtonOffset = shareButtonOffset {
+                    if incoming {
+                        buttonFrame.origin.x = shareButtonOffset.x
+                    }
+                    buttonFrame.origin.y = buttonFrame.origin.y + shareButtonOffset.y - (buttonSize.height - 30.0)
+                } else if !disablesComments {
+                    buttonFrame.origin.y = buttonFrame.origin.y - (buttonSize.height - 30.0)
+                }
+                
+                if isSidePanelOpen {
+                    buttonFrame.origin.x -= buttonFrame.width * 0.5
+                    buttonFrame.origin.y += buttonFrame.height * 0.5
+                }
+                
+                animation.animator.updatePosition(layer: summarizeButtonNode.layer, position: buttonFrame.center, completion: nil)
+                animation.animator.updateBounds(layer: summarizeButtonNode.layer, bounds: CGRect(origin: CGPoint(), size: buttonFrame.size), completion: nil)
+                animation.animator.updateAlpha(layer: summarizeButtonNode.layer, alpha: (isCurrentlyPlayingMedia || isSidePanelOpen) ? 0.0 : 1.0, completion: nil)
+                animation.animator.updateScale(layer: summarizeButtonNode.layer, scale: (isCurrentlyPlayingMedia || isSidePanelOpen) ? 0.001 : 1.0, completion: nil)
+            }
             if let shareButtonNode = strongSelf.shareButtonNode {
                 let buttonSize = shareButtonNode.update(presentationData: item.presentationData, controllerInteraction: item.controllerInteraction, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account, disableComments: disablesComments)
                 
@@ -4994,6 +5068,30 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 strongSelf.backgroundFrameTransition = nil
             }*/
             strongSelf.messageAccessibilityArea.frame = backgroundFrame
+            if let summarizeButtonNode = strongSelf.summarizeButtonNode {
+                let buttonSize = summarizeButtonNode.update(presentationData: item.presentationData, controllerInteraction: item.controllerInteraction, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account, disableComments: disablesComments, isSummarize: true)
+                
+                var buttonFrame = CGRect(origin: CGPoint(x: !incoming ? backgroundFrame.minX - buttonSize.width - 8.0 : backgroundFrame.maxX + 8.0, y: backgroundFrame.minY + 1.0), size: buttonSize)
+                
+                if let shareButtonOffset = shareButtonOffset {
+                    if incoming {
+                        buttonFrame.origin.x = shareButtonOffset.x
+                    }
+                    buttonFrame.origin.y = buttonFrame.origin.y + shareButtonOffset.y - (buttonSize.height - 30.0)
+                } else if !disablesComments {
+                    buttonFrame.origin.y = buttonFrame.origin.y - (buttonSize.height - 30.0)
+                }
+                
+                if isSidePanelOpen {
+                    buttonFrame.origin.x -= buttonFrame.width * 0.5
+                    buttonFrame.origin.y += buttonFrame.height * 0.5
+                }
+                
+                animation.animator.updatePosition(layer: summarizeButtonNode.layer, position: buttonFrame.center, completion: nil)
+                animation.animator.updateBounds(layer: summarizeButtonNode.layer, bounds: CGRect(origin: CGPoint(), size: buttonFrame.size), completion: nil)
+                animation.animator.updateAlpha(layer: summarizeButtonNode.layer, alpha: (isCurrentlyPlayingMedia || isSidePanelOpen) ? 0.0 : 1.0, completion: nil)
+                animation.animator.updateScale(layer: summarizeButtonNode.layer, scale: (isCurrentlyPlayingMedia || isSidePanelOpen) ? 0.001 : 1.0, completion: nil)
+            }
             if let shareButtonNode = strongSelf.shareButtonNode {
                 let buttonSize = shareButtonNode.update(presentationData: item.presentationData, controllerInteraction: item.controllerInteraction, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account, disableComments: disablesComments)
                 
@@ -5275,6 +5373,15 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     }
                 } else if let replyInfoNode = self.replyInfoNode, self.item?.controllerInteraction.tapMessage == nil, replyInfoNode.frame.contains(location) {
                     if let item = self.item {
+                        if item.controllerInteraction.summarizedMessageIds.contains(item.message.id) {
+                            return .action(InternalBubbleTapAction.Action({ [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                self.toggleSummarization()
+                            }))
+                        }
+                        
                         for attribute in item.message.attributes {
                             if let attribute = attribute as? ReplyMessageAttribute {
                                 if let threadId = item.message.threadId, Int32(clamping: threadId) == attribute.messageId.id, let quotedReply = item.message.attributes.first(where: { $0 is QuotedReplyMessageAttribute }) as? QuotedReplyMessageAttribute {
@@ -5822,6 +5929,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         
         if let boostButtonNode = self.boostButtonNode, boostButtonNode.frame.contains(point) {
             return boostButtonNode.view
+        }
+        
+        if let summarizeButtonNode = self.summarizeButtonNode, summarizeButtonNode.frame.contains(point) {
+            return summarizeButtonNode.view.hitTest(self.view.convert(point, to: summarizeButtonNode.view), with: event)
         }
         
         if let shareButtonNode = self.shareButtonNode, shareButtonNode.frame.contains(point) {
@@ -6516,6 +6627,14 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             container.updateAbsoluteRect(containerFrame, within: containerSize)
         }
         
+        if let summarizeButtonNode = self.summarizeButtonNode {
+            var summarizeButtonNodeFrame = summarizeButtonNode.frame
+            summarizeButtonNodeFrame.origin.x += rect.minX
+            summarizeButtonNodeFrame.origin.y += rect.minY
+            
+            summarizeButtonNode.updateAbsoluteRect(summarizeButtonNodeFrame, within: containerSize)
+        }
+        
         if let shareButtonNode = self.shareButtonNode {
             var shareButtonNodeFrame = shareButtonNode.frame
             shareButtonNodeFrame.origin.x += rect.minX
@@ -6852,6 +6971,45 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     override public func updateStickerSettings(forceStopAnimations: Bool) {
         self.forceStopAnimations = forceStopAnimations
         self.updateVisibility(isScroll: false)
+    }
+    
+    private func toggleSummarization() {
+        guard let item = self.item else {
+            return
+        }
+        
+        if item.controllerInteraction.summarizedMessageIds.contains(item.message.id) {
+            item.controllerInteraction.summarizedMessageIds.remove(item.message.id)
+            let _ = item.controllerInteraction.requestMessageUpdate(item.message.id, false)
+        } else {
+            item.controllerInteraction.summarizedMessageIds.insert(item.message.id)
+            let _ = item.controllerInteraction.requestMessageUpdate(item.message.id, false)
+            
+            let translateToLanguage = item.associatedData.translateToLanguage
+            var requestSummary = true
+            for attribute in item.message.attributes {
+                if let attribute = attribute as? SummarizationMessageAttribute, attribute.summaryForLang(translateToLanguage) != nil {
+                    requestSummary = false
+                    break
+                }
+            }
+            if requestSummary {
+                let _ = (item.context.engine.messages.summarizeMessage(messageId: item.message.id, translateToLang: translateToLanguage)
+                |> deliverOnMainQueue).start(error: { error in
+                    if case .limitExceededPremium = error, let parentController = item.controllerInteraction.navigationController()?.topViewController as? ViewController {
+                        item.controllerInteraction.summarizedMessageIds.remove(item.message.id)
+                        let _ = item.controllerInteraction.requestMessageUpdate(item.message.id, false)
+                        let controller = premiumAlertController(
+                            context: item.context,
+                            parentController: parentController,
+                            title: item.presentationData.strings.Conversation_Summary_Limit_Title,
+                            text: item.presentationData.strings.Conversation_Summary_Limit_Text
+                        )
+                        parentController.present(controller, in: .window(.root))
+                    }
+                })
+            }
+        }
     }
     
     private func updateVisibility(isScroll: Bool) {

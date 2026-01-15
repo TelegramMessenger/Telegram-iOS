@@ -363,7 +363,7 @@ public final class AsyncListComponent: Component {
         init() {
             self.contentContainer = UIView()
             
-            super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
+            super.init(layerBacked: false, rotated: false, seeThrough: false)
             
             self.view.addSubview(self.contentContainer)
             

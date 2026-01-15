@@ -43,6 +43,7 @@ public final class MultilineTextWithEntitiesComponent: Component {
     public let handleSpoilers: Bool
     public let manualVisibilityControl: Bool
     public let resetAnimationsOnVisibilityChange: Bool
+    public let enableLooping: Bool
     public let displaysAsynchronously: Bool
     public let maxWidth: CGFloat?
     public let highlightAction: (([NSAttributedString.Key: Any]) -> NSAttributedString.Key?)?
@@ -71,6 +72,7 @@ public final class MultilineTextWithEntitiesComponent: Component {
         handleSpoilers: Bool = false,
         manualVisibilityControl: Bool = false,
         resetAnimationsOnVisibilityChange: Bool = false,
+        enableLooping: Bool = true,
         displaysAsynchronously: Bool = true,
         maxWidth: CGFloat? = nil,
         highlightAction: (([NSAttributedString.Key: Any]) -> NSAttributedString.Key?)? = nil,
@@ -99,6 +101,7 @@ public final class MultilineTextWithEntitiesComponent: Component {
         self.handleSpoilers = handleSpoilers
         self.manualVisibilityControl = manualVisibilityControl
         self.resetAnimationsOnVisibilityChange = resetAnimationsOnVisibilityChange
+        self.enableLooping = enableLooping
         self.displaysAsynchronously = displaysAsynchronously
         self.maxWidth = maxWidth
         self.tapAction = tapAction
@@ -140,6 +143,9 @@ public final class MultilineTextWithEntitiesComponent: Component {
             return false
         }
         if lhs.resetAnimationsOnVisibilityChange != rhs.resetAnimationsOnVisibilityChange {
+            return false
+        }
+        if lhs.enableLooping != rhs.enableLooping {
             return false
         }
         if lhs.displaysAsynchronously != rhs.displaysAsynchronously {
@@ -250,6 +256,7 @@ public final class MultilineTextWithEntitiesComponent: Component {
             self.textNode.tapAttributeAction = component.tapAction
             self.textNode.longTapAttributeAction = component.longTapAction
             self.textNode.spoilerColor = component.spoilerColor
+            self.textNode.enableLooping = component.enableLooping
             
             self.textNode.resetEmojiToFirstFrameAutomatically = component.resetAnimationsOnVisibilityChange
                                     

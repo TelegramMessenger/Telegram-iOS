@@ -16,309 +16,10 @@ import CheckNode
 import Markdown
 import TextFormat
 import StarsBalanceOverlayComponent
+import AlertComponent
+import AlertCheckComponent
 
-private let textFont = Font.regular(13.0)
-private let boldTextFont = Font.semibold(13.0)
-
-private func formattedText(_ text: String, fontSize: CGFloat, color: UIColor, linkColor: UIColor, textAlignment: NSTextAlignment = .natural) -> NSAttributedString {
-    return parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: Font.regular(fontSize), textColor: color), bold: MarkdownAttributeSet(font: Font.semibold(fontSize), textColor: color), link: MarkdownAttributeSet(font: Font.regular(fontSize), textColor: linkColor), linkAttribute: { _ in return (TelegramTextAttributes.URL, "") }), textAlignment: textAlignment)
-}
-
-private final class ChatMessagePaymentAlertContentNode: AlertContentNode, ASGestureRecognizerDelegate {
-    private let strings: PresentationStrings
-    private let title: String
-    private let text: String
-    private let optionText: String?
-    private let alignment: TextAlertContentActionLayout
-    
-    private let titleNode: ImmediateTextNode
-    private let textNode: ImmediateTextNode
-        
-    private let checkNode: InteractiveCheckNode
-    private let checkLabelNode: ImmediateTextNode
-    
-    private let actionNodesSeparator: ASDisplayNode
-    private let actionNodes: [TextAlertContentActionNode]
-    private let actionVerticalSeparators: [ASDisplayNode]
-    
-    private var validLayout: CGSize?
-        
-    override var dismissOnOutsideTap: Bool {
-        return self.isUserInteractionEnabled
-    }
-    
-    var dontAskAgain: Bool = false {
-        didSet {
-            self.checkNode.setSelected(self.dontAskAgain, animated: true)
-
-        }
-    }
-    
-    var openTerms: () -> Void = {}
-    
-    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, title: String, text: String, optionText: String?, actions: [TextAlertAction], alignment: TextAlertContentActionLayout) {
-        self.strings = strings
-        self.title = title
-        self.text = text
-        self.optionText = optionText
-        self.alignment = alignment
-        
-        self.titleNode = ImmediateTextNode()
-        self.titleNode.displaysAsynchronously = false
-        self.titleNode.maximumNumberOfLines = 1
-        self.titleNode.textAlignment = .center
-        
-        self.textNode = ImmediateTextNode()
-        self.textNode.maximumNumberOfLines = 0
-        self.textNode.displaysAsynchronously = false
-        self.textNode.lineSpacing = 0.1
-        self.textNode.textAlignment = .center
-        
-        self.checkNode = InteractiveCheckNode(theme: CheckNodeTheme(backgroundColor: theme.accentColor, strokeColor: theme.contrastColor, borderColor: theme.controlBorderColor, overlayBorder: false, hasInset: false, hasShadow: false))
-        self.checkLabelNode = ImmediateTextNode()
-        self.checkLabelNode.maximumNumberOfLines = 4
-       
-        self.actionNodesSeparator = ASDisplayNode()
-        self.actionNodesSeparator.isLayerBacked = true
-        
-        self.actionNodes = actions.map { action -> TextAlertContentActionNode in
-            return TextAlertContentActionNode(theme: theme, action: action)
-        }
-                
-        var actionVerticalSeparators: [ASDisplayNode] = []
-        if actions.count > 1 {
-            for _ in 0 ..< actions.count - 1 {
-                let separatorNode = ASDisplayNode()
-                separatorNode.isLayerBacked = true
-                actionVerticalSeparators.append(separatorNode)
-            }
-        }
-        self.actionVerticalSeparators = actionVerticalSeparators
-        
-        super.init()
-        
-        self.addSubnode(self.titleNode)
-        self.addSubnode(self.textNode)
-
-        if let _ = optionText {
-            self.addSubnode(self.checkNode)
-            self.addSubnode(self.checkLabelNode)
-        }
-        
-        self.addSubnode(self.actionNodesSeparator)
-        
-        for actionNode in self.actionNodes {
-            self.addSubnode(actionNode)
-        }
-        
-        for separatorNode in self.actionVerticalSeparators {
-            self.addSubnode(separatorNode)
-        }
-                
-        self.checkNode.valueChanged = { [weak self] value in
-            if let strongSelf = self {
-                strongSelf.dontAskAgain = !strongSelf.dontAskAgain
-            }
-        }
-        
-        self.checkLabelNode.highlightAttributeAction = { attributes in
-            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
-                return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
-            } else {
-                return nil
-            }
-        }
-        self.checkLabelNode.tapAttributeAction = { [weak self] attributes, _ in
-            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
-                self?.openTerms()
-            }
-        }
-        
-        self.updateTheme(theme)
-    }
-    
-    override func didLoad() {
-        super.didLoad()
-        
-        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(self.acceptTap(_:)))
-        tapGesture.delegate = self.wrappedGestureRecognizerDelegate
-        self.view.addGestureRecognizer(tapGesture)
-    }
-    
-    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        let location = gestureRecognizer.location(in: self.checkLabelNode.view)
-        if self.checkLabelNode.bounds.contains(location) {
-            return true
-        }
-        return false
-    }
-
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        if !self.bounds.contains(point) {
-            return nil
-        }
-        
-        if let (_, attributes) = self.checkLabelNode.attributesAtPoint(self.view.convert(point, to: self.checkLabelNode.view)) {
-            if attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] == nil {
-                return self.view
-            }
-        }
-        
-        return super.hitTest(point, with: event)
-    }
-    
-    @objc private func acceptTap(_ gestureRecognizer: UITapGestureRecognizer) {
-        self.dontAskAgain = !self.dontAskAgain
-    }
-    
-    override func updateTheme(_ theme: AlertControllerTheme) {
-        self.titleNode.attributedText = NSAttributedString(string: self.title, font: Font.semibold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
-        self.textNode.attributedText = formattedText(self.text, fontSize: 13.0, color: theme.primaryColor, linkColor: theme.accentColor, textAlignment: .center)
-
-        self.checkLabelNode.attributedText = parseMarkdownIntoAttributedString(
-            self.optionText ?? "",
-            attributes: MarkdownAttributes(
-                body: MarkdownAttributeSet(font: textFont, textColor: theme.primaryColor),
-                bold: MarkdownAttributeSet(font: boldTextFont, textColor: theme.primaryColor),
-                link: MarkdownAttributeSet(font: textFont, textColor: theme.primaryColor),
-                linkAttribute: { _ in
-                    return nil
-                }
-            )
-        )
-        self.actionNodesSeparator.backgroundColor = theme.separatorColor
-        for actionNode in self.actionNodes {
-            actionNode.updateTheme(theme)
-        }
-        for separatorNode in self.actionVerticalSeparators {
-            separatorNode.backgroundColor = theme.separatorColor
-        }
-        
-        if let size = self.validLayout {
-            _ = self.updateLayout(size: size, transition: .immediate)
-        }
-    }
-    
-    override func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
-        var size = size
-        size.width = min(size.width, 270.0)
-        
-        self.validLayout = size
-        
-        var origin: CGPoint = CGPoint(x: 0.0, y: 17.0)
-                
-        let titleSize = self.titleNode.updateLayout(CGSize(width: size.width - 32.0, height: size.height))
-        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - titleSize.width) / 2.0), y: origin.y), size: titleSize))
-        origin.y += titleSize.height + 4.0
-        
-        var entriesHeight: CGFloat = 0.0
-        
-        let textSize = self.textNode.updateLayout(CGSize(width: size.width - 32.0, height: size.height))
-        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: origin.y), size: textSize))
-        origin.y += textSize.height
-        
-        if self.checkLabelNode.supernode != nil {
-            origin.y += 21.0
-            entriesHeight += 21.0
-            
-            let checkSize = CGSize(width: 22.0, height: 22.0)
-            let condensedSize = CGSize(width: size.width - 76.0, height: size.height)
-            
-            let spacing: CGFloat = 12.0
-            let acceptTermsSize = self.checkLabelNode.updateLayout(condensedSize)
-            let acceptTermsTotalWidth = checkSize.width + spacing + acceptTermsSize.width
-            let acceptTermsOriginX = floorToScreenPixels((size.width - acceptTermsTotalWidth) / 2.0)
-            
-            transition.updateFrame(node: self.checkNode, frame: CGRect(origin: CGPoint(x: acceptTermsOriginX, y: origin.y - 3.0), size: checkSize))
-            transition.updateFrame(node: self.checkLabelNode, frame: CGRect(origin: CGPoint(x: acceptTermsOriginX + checkSize.width + spacing, y: origin.y), size: acceptTermsSize))
-            origin.y += acceptTermsSize.height
-            entriesHeight += acceptTermsSize.height
-            origin.y += 21.0
-        }
-        
-        let actionButtonHeight: CGFloat = 44.0
-        var minActionsWidth: CGFloat = 0.0
-        let maxActionWidth: CGFloat = floor(size.width / CGFloat(self.actionNodes.count))
-        let actionTitleInsets: CGFloat = 8.0
-        
-        var effectiveActionLayout = self.alignment
-        for actionNode in self.actionNodes {
-            let actionTitleSize = actionNode.titleNode.updateLayout(CGSize(width: maxActionWidth, height: actionButtonHeight))
-            if case .horizontal = effectiveActionLayout, actionTitleSize.height > actionButtonHeight * 0.6667 {
-                effectiveActionLayout = .vertical
-            }
-            switch effectiveActionLayout {
-                case .horizontal:
-                    minActionsWidth += actionTitleSize.width + actionTitleInsets
-                case .vertical:
-                    minActionsWidth = max(minActionsWidth, actionTitleSize.width + actionTitleInsets)
-            }
-        }
-        
-        let insets = UIEdgeInsets(top: 18.0, left: 18.0, bottom: 18.0, right: 18.0)
-        
-        let contentWidth = max(size.width, minActionsWidth)
-        
-        var actionsHeight: CGFloat = 0.0
-        switch effectiveActionLayout {
-            case .horizontal:
-                actionsHeight = actionButtonHeight
-            case .vertical:
-                actionsHeight = actionButtonHeight * CGFloat(self.actionNodes.count)
-        }
-        
-        let resultSize = CGSize(width: contentWidth, height: titleSize.height + textSize.height + entriesHeight + actionsHeight + 3.0 + insets.top + insets.bottom)
-        
-        transition.updateFrame(node: self.actionNodesSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight - UIScreenPixel), size: CGSize(width: resultSize.width, height: UIScreenPixel)))
-        
-        var actionOffset: CGFloat = 0.0
-        let actionWidth: CGFloat = floor(resultSize.width / CGFloat(self.actionNodes.count))
-        var separatorIndex = -1
-        var nodeIndex = 0
-        for actionNode in self.actionNodes {
-            if separatorIndex >= 0 {
-                let separatorNode = self.actionVerticalSeparators[separatorIndex]
-                switch effectiveActionLayout {
-                    case .horizontal:
-                        transition.updateFrame(node: separatorNode, frame: CGRect(origin: CGPoint(x: actionOffset - UIScreenPixel, y: resultSize.height - actionsHeight), size: CGSize(width: UIScreenPixel, height: actionsHeight - UIScreenPixel)))
-                    case .vertical:
-                        transition.updateFrame(node: separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight + actionOffset - UIScreenPixel), size: CGSize(width: resultSize.width, height: UIScreenPixel)))
-                }
-            }
-            separatorIndex += 1
-            
-            let currentActionWidth: CGFloat
-            switch effectiveActionLayout {
-                case .horizontal:
-                    if nodeIndex == self.actionNodes.count - 1 {
-                        currentActionWidth = resultSize.width - actionOffset
-                    } else {
-                        currentActionWidth = actionWidth
-                    }
-                case .vertical:
-                    currentActionWidth = resultSize.width
-            }
-            
-            let actionNodeFrame: CGRect
-            switch effectiveActionLayout {
-                case .horizontal:
-                    actionNodeFrame = CGRect(origin: CGPoint(x: actionOffset, y: resultSize.height - actionsHeight), size: CGSize(width: currentActionWidth, height: actionButtonHeight))
-                    actionOffset += currentActionWidth
-                case .vertical:
-                    actionNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight + actionOffset), size: CGSize(width: currentActionWidth, height: actionButtonHeight))
-                    actionOffset += actionButtonHeight
-            }
-            
-            transition.updateFrame(node: actionNode, frame: actionNodeFrame)
-            
-            nodeIndex += 1
-        }
-        
-        return resultSize
-    }
-}
-
-public class ChatMessagePaymentAlertController: AlertController {
+public class ChatMessagePaymentAlertController: AlertScreen {
     private let context: AccountContext?
     private let presentationData: PresentationData
     private weak var parentNavigationController: NavigationController?
@@ -327,29 +28,26 @@ public class ChatMessagePaymentAlertController: AlertController {
     private let animateBalanceOverlay: Bool
     
     private var didUpdateCurrency = false
-    public var currency: CurrencyAmount.Currency {
-        didSet {
-            self.didUpdateCurrency = true
-            if let layout = self.validLayout {
-                self.containerLayoutUpdated(layout, transition: .animated(duration: 0.25, curve: .easeInOut))
-            }
-        }
-    }
-       
+    
+    private var initialCurrency: CurrencyAmount.Currency?
+    public var currency: CurrencyAmount.Currency?
+    private var currencyDisposable: Disposable?
+    
     private let balance = ComponentView<Empty>()
     
     private var didAppear = false
-    
-    private var validLayout: ContainerViewLayout?
-    
+        
     public init(
         context: AccountContext?,
         presentationData: PresentationData,
-        contentNode: AlertContentNode,
+        updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
+        configuration: Configuration = AlertScreen.Configuration(),
+        contentSignal: Signal<[AnyComponentWithIdentity<AlertComponentEnvironment>], NoError>,
+        actionsSignal: Signal<[AlertScreen.Action], NoError>,
         navigationController: NavigationController?,
         chatPeerId: EnginePeer.Id,
         showBalance: Bool = true,
-        currency: CurrencyAmount.Currency = .stars,
+        currencySignal: Signal<CurrencyAmount.Currency, NoError> = .single(.stars),
         animateBalanceOverlay: Bool = true
     ) {
         self.context = context
@@ -357,31 +55,84 @@ public class ChatMessagePaymentAlertController: AlertController {
         self.parentNavigationController = navigationController
         self.chatPeerId = chatPeerId
         self.showBalance = showBalance
-        self.currency = currency
         self.animateBalanceOverlay = animateBalanceOverlay
         
-        super.init(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode)
+        var effectiveUpdatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)
+        if let updatedPresentationData {
+            effectiveUpdatedPresentationData = updatedPresentationData
+        } else {
+            effectiveUpdatedPresentationData = (initial: presentationData, signal: .single(presentationData))
+        }
+            
+        super.init(
+            configuration: configuration,
+            contentSignal: contentSignal,
+            actionsSignal: actionsSignal,
+            updatedPresentationData: effectiveUpdatedPresentationData
+        )
         
-        self.willDismiss = { [weak self] in
+        self.currencyDisposable = (currencySignal
+        |> distinctUntilChanged
+        |> deliverOnMainQueue).start(next: { [weak self] currency in
             guard let self else {
                 return
             }
-            self.animateOut()
-        }
+            if self.currency == nil {
+                self.initialCurrency = currency
+            }
+            self.currency = currency
+            if let layout = self.validLayout {
+                self.containerLayoutUpdated(layout, transition: .animated(duration: 0.25, curve: .easeInOut))
+            }
+        })
+    }
+    
+    public convenience init(
+        context: AccountContext?,
+        presentationData: PresentationData,
+        updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
+        configuration: Configuration = AlertScreen.Configuration(),
+        content: [AnyComponentWithIdentity<AlertComponentEnvironment>],
+        actions: [AlertScreen.Action],
+        navigationController: NavigationController?,
+        chatPeerId: EnginePeer.Id,
+        showBalance: Bool = true,
+        currency: CurrencyAmount.Currency = .stars,
+        animateBalanceOverlay: Bool = true
+    ) {
+        self.init(
+            context: context,
+            presentationData: presentationData,
+            updatedPresentationData: updatedPresentationData,
+            configuration: configuration,
+            contentSignal: .single(content),
+            actionsSignal: .single(actions),
+            navigationController: navigationController,
+            chatPeerId: chatPeerId,
+            showBalance: showBalance,
+            currencySignal: .single(currency),
+            animateBalanceOverlay: animateBalanceOverlay
+        )
     }
         
     required public init(coder aDecoder: NSCoder) {
         preconditionFailure()
     }
     
+    override public func dismiss(completion: (() -> Void)? = nil) {
+        super.dismiss(completion: completion)
+        
+        self.animateOut()
+    }
+    
     private func animateOut() {
         if !self.animateBalanceOverlay {
-            if self.currency == .ton && self.didUpdateCurrency {
+            if case .ton = self.currency, let initialCurrency, initialCurrency != self.currency {
                 self.currency = .stars
+                if let layout = self.validLayout {
+                    self.containerLayoutUpdated(layout, transition: .animated(duration: 0.25, curve: .easeInOut))
+                }
             }
-            Queue.mainQueue().after(0.39, {
-                
-            })
         } else {
             if let view = self.balance.view {
                 view.layer.animateScale(from: 1.0, to: 0.8, duration: 0.4, removeOnCompletion: false)
@@ -389,18 +140,10 @@ public class ChatMessagePaymentAlertController: AlertController {
             }
         }
     }
-    
-    public override func dismissAnimated() {
-        super.dismissAnimated()
         
-        self.animateOut()
-    }
-    
     public override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
-        
-        self.validLayout = layout
-        
+                
         if !self.didAppear {
             self.didAppear = true
             if !layout.metrics.isTablet && layout.size.width > layout.size.height {
@@ -410,7 +153,7 @@ public class ChatMessagePaymentAlertController: AlertController {
             }
         }
         
-        if let context = self.context, let _ = self.parentNavigationController, self.showBalance {
+        if let context = self.context, let _ = self.parentNavigationController, self.showBalance, let currency = self.currency {
             let insets = layout.insets(options: .statusBar)
             var balanceTransition = ComponentTransition(transition)
             if self.balance.view == nil {
@@ -424,12 +167,12 @@ public class ChatMessagePaymentAlertController: AlertController {
                         context: context,
                         peerId: self.chatPeerId.namespace == Namespaces.Peer.CloudChannel ? self.chatPeerId : context.account.peerId,
                         theme: self.presentationData.theme,
-                        currency: self.currency,
+                        currency: currency,
                         action: { [weak self] in
-                            guard let self, let starsContext = context.starsContext, let navigationController = self.parentNavigationController else {
+                            guard let self, let starsContext = context.starsContext, let navigationController = self.parentNavigationController, let currency = self.currency else {
                                 return
                             }
-                            switch self.currency {
+                            switch currency {
                             case .stars:
                                 let _ = (context.engine.payments.starsTopUpOptions()
                                 |> take(1)
@@ -452,7 +195,7 @@ public class ChatMessagePaymentAlertController: AlertController {
                                 }
                                 context.sharedContext.applicationBindings.openUrl(fragmentUrl)
                             }
-                            self.dismissAnimated()
+                            self.dismiss(completion: nil)
                         }
                     )
                 ),
@@ -486,57 +229,66 @@ public func chatMessagePaymentAlertController(
     hasCheck: Bool = true,
     navigationController: NavigationController?,
     completion: @escaping (Bool) -> Void
-) -> AlertController {
-    let theme = defaultDarkColorPresentationTheme
-    let presentationData = updatedPresentationData?.initial ?? presentationData
+) -> ViewController {
     let strings = presentationData.strings
     
-    var completionImpl: (() -> Void)?
-    var dismissImpl: (() -> Void)?
-    
-    let title = presentationData.strings.Chat_PaidMessage_Confirm_Title
-    let actionTitle = presentationData.strings.Chat_PaidMessage_Confirm_PayForMessage(count)
-    let messagesString = presentationData.strings.Chat_PaidMessage_Confirm_Text_Messages(count)
-    
-    let actions: [TextAlertAction] = [TextAlertAction(type: .defaultAction, title: actionTitle, action: {
-        completionImpl?()
-        dismissImpl?()
-    }), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
-        dismissImpl?()
-    })]
-
+    let messagesString = strings.Chat_PaidMessage_Confirm_Text_Messages(count)
     let text: String
     if peers.count == 1, let peer = peers.first {
-        let amountString = presentationData.strings.Chat_PaidMessage_Confirm_Text_Stars(Int32(clamping: amount.value))
-        let totalString = presentationData.strings.Chat_PaidMessage_Confirm_Text_Stars(Int32(clamping: amount.value * Int64(count)))
+        let amountString = strings.Chat_PaidMessage_Confirm_Text_Stars(Int32(clamping: amount.value))
+        let totalString = strings.Chat_PaidMessage_Confirm_Text_Stars(Int32(clamping: amount.value * Int64(count)))
         if case let .channel(channel) = peer.chatOrMonoforumMainPeer, case .broadcast = channel.info {
-            text = presentationData.strings.Chat_PaidMessage_Confirm_SingleComment_Text(EnginePeer(channel).compactDisplayTitle, amountString, totalString, messagesString).string
+            text = strings.Chat_PaidMessage_Confirm_SingleComment_Text(EnginePeer(channel).compactDisplayTitle, amountString, totalString, messagesString).string
         } else {
-            text = presentationData.strings.Chat_PaidMessage_Confirm_Single_Text(peer.chatOrMonoforumMainPeer?.compactDisplayTitle ?? " ", amountString, totalString, messagesString).string
+            text = strings.Chat_PaidMessage_Confirm_Single_Text(peer.chatOrMonoforumMainPeer?.compactDisplayTitle ?? " ", amountString, totalString, messagesString).string
         }
     } else {
         let amount = totalAmount ?? amount
-        let usersString = presentationData.strings.Chat_PaidMessage_Confirm_Text_Users(Int32(peers.count))
-        let totalString = presentationData.strings.Chat_PaidMessage_Confirm_Text_Stars(Int32(clamping: amount.value * Int64(count)))
-        text = presentationData.strings.Chat_PaidMessage_Confirm_Multiple_Text(usersString, totalString, messagesString).string
+        let usersString = strings.Chat_PaidMessage_Confirm_Text_Users(Int32(peers.count))
+        let totalString = strings.Chat_PaidMessage_Confirm_Text_Stars(Int32(clamping: amount.value * Int64(count)))
+        text = strings.Chat_PaidMessage_Confirm_Multiple_Text(usersString, totalString, messagesString).string
+    }
+        
+    let checkState = AlertCheckComponent.ExternalState()
+    
+    var content: [AnyComponentWithIdentity<AlertComponentEnvironment>] = []
+    content.append(AnyComponentWithIdentity(
+        id: "title",
+        component: AnyComponent(
+            AlertTitleComponent(title: strings.Chat_PaidMessage_Confirm_Title)
+        )
+    ))
+    content.append(AnyComponentWithIdentity(
+        id: "text",
+        component: AnyComponent(
+            AlertTextComponent(content: .plain(text))
+        )
+    ))
+    if hasCheck {
+        content.append(AnyComponentWithIdentity(
+            id: "check",
+            component: AnyComponent(
+                AlertCheckComponent(title: strings.Chat_PaidMessage_Confirm_DontAskAgain, initialValue: false, externalState: checkState)
+            )
+        ))
     }
     
-    let optionText = hasCheck ? presentationData.strings.Chat_PaidMessage_Confirm_DontAskAgain : nil
-    
-    let contentNode = ChatMessagePaymentAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: theme, strings: strings, title: title, text: text, optionText: optionText, actions: actions, alignment: .vertical)
-    
-    completionImpl = { [weak contentNode] in
-        guard let contentNode else {
-            return
-        }
-        completion(contentNode.dontAskAgain)
-    }
-    
-    let controller = ChatMessagePaymentAlertController(context: context, presentationData: presentationData, contentNode: contentNode, navigationController: navigationController, chatPeerId: context?.account.peerId ?? peers[0].peerId)
-    dismissImpl = { [weak controller]  in
-        controller?.dismissAnimated()
-    }
-    return controller
+    let alertController = ChatMessagePaymentAlertController(
+        context: context,
+        presentationData: presentationData,
+        updatedPresentationData: updatedPresentationData,
+        configuration: AlertScreen.Configuration(actionAlignment: .vertical, allowInputInset: true),
+        content: content,
+        actions: [
+            .init(title: strings.Chat_PaidMessage_Confirm_PayForMessage(count), type: .default, action: {
+                completion(checkState.value)
+            }),
+            .init(title: strings.Common_Cancel)
+        ],
+        navigationController: navigationController,
+        chatPeerId: context?.account.peerId ?? peers[0].peerId
+    )
+    return alertController
 }
 
 public func chatMessageRemovePaymentAlertController(
@@ -548,47 +300,55 @@ public func chatMessageRemovePaymentAlertController(
     amount: StarsAmount?,
     navigationController: NavigationController?,
     completion: @escaping (Bool) -> Void
-) -> AlertController {
-    let theme = defaultDarkColorPresentationTheme
-    let presentationData = updatedPresentationData?.initial ?? presentationData
+) -> ViewController {
     let strings = presentationData.strings
     
-    var completionImpl: (() -> Void)?
-    var dismissImpl: (() -> Void)?
-    
-    let actions: [TextAlertAction] = [
-        TextAlertAction(type: .genericAction, title: strings.Common_Cancel, action: {
-            dismissImpl?()
-        }),
-        TextAlertAction(type: .defaultAction, title: strings.Chat_PaidMessage_RemoveFee_Yes, action: {
-            completionImpl?()
-            dismissImpl?()
-        })
-    ]
-    
-    let title = strings.Chat_PaidMessage_RemoveFee_Title
-    
     let text: String
-    if let context, chatPeer.id != context.account.peerId {
+    if case .user = chatPeer {
+        text = strings.Chat_PaidMessage_RemoveFee_Text(peer.compactDisplayTitle).string
+    } else if let context, chatPeer.id != context.account.peerId {
         text = strings.Channel_RemoveFeeAlert_Text(peer.compactDisplayTitle).string
     } else {
         text = strings.Chat_PaidMessage_RemoveFee_Text(peer.compactDisplayTitle).string
     }
+        
+    let checkState = AlertCheckComponent.ExternalState()
     
-    let optionText = amount.flatMap { strings.Chat_PaidMessage_RemoveFee_Refund(strings.Chat_PaidMessage_RemoveFee_Refund_Stars(Int32(clamping: $0.value))).string }
-    
-    let contentNode = ChatMessagePaymentAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: theme, strings: strings, title: title, text: text, optionText: optionText, actions: actions, alignment: .horizontal)
-    
-    completionImpl = { [weak contentNode] in
-        guard let contentNode else {
-            return
-        }
-        completion(contentNode.dontAskAgain)
+    var content: [AnyComponentWithIdentity<AlertComponentEnvironment>] = []
+    content.append(AnyComponentWithIdentity(
+        id: "title",
+        component: AnyComponent(
+            AlertTitleComponent(title: strings.Chat_PaidMessage_RemoveFee_Title)
+        )
+    ))
+    content.append(AnyComponentWithIdentity(
+        id: "text",
+        component: AnyComponent(
+            AlertTextComponent(content: .plain(text))
+        )
+    ))
+    if let amount {
+        content.append(AnyComponentWithIdentity(
+            id: "check",
+            component: AnyComponent(
+                AlertCheckComponent(title: strings.Chat_PaidMessage_RemoveFee_Refund(strings.Chat_PaidMessage_RemoveFee_Refund_Stars(Int32(clamping: amount.value))).string, initialValue: false, externalState: checkState)
+            )
+        ))
     }
     
-    let controller = ChatMessagePaymentAlertController(context: context, presentationData: presentationData, contentNode: contentNode, navigationController: navigationController, chatPeerId: chatPeer.id)
-    dismissImpl = { [weak controller]  in
-        controller?.dismissAnimated()
-    }
-    return controller
+    let alertController = ChatMessagePaymentAlertController(
+        context: context,
+        presentationData: presentationData,
+        updatedPresentationData: updatedPresentationData,
+        content: content,
+        actions: [
+            .init(title: strings.Common_Cancel),
+            .init(title: strings.Chat_PaidMessage_RemoveFee_Yes, type: .default, action: {
+                completion(checkState.value)
+            })
+        ],
+        navigationController: navigationController,
+        chatPeerId: chatPeer.id
+    )
+    return alertController
 }

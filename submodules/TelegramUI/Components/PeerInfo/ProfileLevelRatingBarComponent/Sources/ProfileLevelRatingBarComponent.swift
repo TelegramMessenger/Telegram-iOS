@@ -483,7 +483,7 @@ public final class ProfileLevelRatingBarComponent: Component {
             self.state = state
             
             if self.barBackground.image == nil {
-                self.barBackground.image = generateStretchableFilledCircleImage(diameter: 12.0, color: .white)?.withRenderingMode(.alwaysTemplate)
+                self.barBackground.image = generateStretchableFilledCircleImage(diameter: 30.0, color: .white)?.withRenderingMode(.alwaysTemplate)
                 self.barForeground.image = self.barBackground.image
             }
             

@@ -21,8 +21,9 @@ swift_library(
         "//submodules/Components/MultilineTextComponent",
         "//submodules/Components/BalancedTextComponent",
         "//submodules/Components/ComponentDisplayAdapters",
-        "//submodules/TelegramUI/Components/TextFieldComponent",
         "//submodules/TextFormat",
+        "//submodules/TelegramUI/Components/AlertComponent",
+        "//submodules/TelegramUI/Components/AlertComponent/AlertMultilineInputFieldComponent",
     ],
     visibility = [
         "//visibility:public",

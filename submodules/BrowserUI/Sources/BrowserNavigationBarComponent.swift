@@ -2,8 +2,10 @@ import Foundation
 import UIKit
 import Display
 import ComponentFlow
-import BlurredBackgroundComponent
+import TelegramPresentationData
 import ContextUI
+import GlassBackgroundComponent
+import EdgeEffect
 
 final class BrowserNavigationBarEnvironment: Equatable {
     public let fraction: CGFloat
@@ -20,7 +22,7 @@ final class BrowserNavigationBarEnvironment: Equatable {
     }
 }
 
-final class BrowserNavigationBarComponent: CombinedComponent {
+final class BrowserNavigationBarComponent: Component {
     public class ExternalState {
         public fileprivate(set) var centerItemFrame: CGRect
         
@@ -29,11 +31,7 @@ final class BrowserNavigationBarComponent: CombinedComponent {
         }
     }
     
-    let backgroundColor: UIColor
-    let separatorColor: UIColor
-    let textColor: UIColor
-    let progressColor: UIColor
-    let accentColor: UIColor
+    let theme: PresentationTheme
     let topInset: CGFloat
     let height: CGFloat
     let sideInset: CGFloat
@@ -42,17 +40,11 @@ final class BrowserNavigationBarComponent: CombinedComponent {
     let leftItems: [AnyComponentWithIdentity<Empty>]
     let rightItems: [AnyComponentWithIdentity<Empty>]
     let centerItem: AnyComponentWithIdentity<BrowserNavigationBarEnvironment>?
-    let readingProgress: CGFloat
-    let loadingProgress: Double?
     let collapseFraction: CGFloat
     let activate: () -> Void
     
     init(
-        backgroundColor: UIColor,
-        separatorColor: UIColor,
-        textColor: UIColor,
-        progressColor: UIColor,
-        accentColor: UIColor,
+        theme: PresentationTheme,
         topInset: CGFloat,
         height: CGFloat,
         sideInset: CGFloat,
@@ -61,16 +53,10 @@ final class BrowserNavigationBarComponent: CombinedComponent {
         leftItems: [AnyComponentWithIdentity<Empty>],
         rightItems: [AnyComponentWithIdentity<Empty>],
         centerItem: AnyComponentWithIdentity<BrowserNavigationBarEnvironment>?,
-        readingProgress: CGFloat,
-        loadingProgress: Double?,
         collapseFraction: CGFloat,
         activate: @escaping () -> Void
     ) {
-        self.backgroundColor = backgroundColor
-        self.separatorColor = separatorColor
-        self.textColor = textColor
-        self.progressColor = progressColor
-        self.accentColor = accentColor
+        self.theme = theme
         self.topInset = topInset
         self.height = height
         self.sideInset = sideInset
@@ -79,26 +65,12 @@ final class BrowserNavigationBarComponent: CombinedComponent {
         self.leftItems = leftItems
         self.rightItems = rightItems
         self.centerItem = centerItem
-        self.readingProgress = readingProgress
-        self.loadingProgress = loadingProgress
         self.collapseFraction = collapseFraction
         self.activate = activate
     }
     
     static func ==(lhs: BrowserNavigationBarComponent, rhs: BrowserNavigationBarComponent) -> Bool {
-        if lhs.backgroundColor != rhs.backgroundColor {
-            return false
-        }
-        if lhs.separatorColor != rhs.separatorColor {
-            return false
-        }
-        if lhs.textColor != rhs.textColor {
-            return false
-        }
-        if lhs.progressColor != rhs.progressColor {
-            return false
-        }
-        if lhs.accentColor != rhs.accentColor {
+        if lhs.theme !== rhs.theme {
             return false
         }
         if lhs.topInset != rhs.topInset {
@@ -122,203 +94,353 @@ final class BrowserNavigationBarComponent: CombinedComponent {
         if lhs.centerItem != rhs.centerItem {
             return false
         }
-        if lhs.readingProgress != rhs.readingProgress {
-            return false
-        }
-        if lhs.loadingProgress != rhs.loadingProgress {
-            return false
-        }
         if lhs.collapseFraction != rhs.collapseFraction {
             return false
         }
         return true
     }
     
-    static var body: Body {
-        let background = Child(Rectangle.self)
-        let readingProgress = Child(Rectangle.self)
-        let separator = Child(Rectangle.self)
-        let loadingProgress = Child(LoadingProgressComponent.self)
-        let leftItems = ChildMap(environment: Empty.self, keyedBy: AnyHashable.self)
-        let rightItems = ChildMap(environment: Empty.self, keyedBy: AnyHashable.self)
-        let centerItems = ChildMap(environment: BrowserNavigationBarEnvironment.self, keyedBy: AnyHashable.self)
-        let activate = Child(Button.self)
+    final class View: UIView {
+        private var edgeEffectView = EdgeEffectView()
+        private let containerView = GlassBackgroundContainerView()
+      
+        private var leftItemsBackground: GlassBackgroundView?
+        private var leftItems: [AnyHashable: ComponentView<Empty>] = [:]
         
-        return { context in
-            var availableWidth = context.availableSize.width
-            let sideInset: CGFloat = (context.component.metrics.isTablet ? 20.0 : 16.0) + context.component.sideInset
+        private var rightItemsBackground: GlassBackgroundView?
+        private var rightItems: [AnyHashable: ComponentView<Empty>] = [:]
+       
+        private var centerItems: [AnyHashable: ComponentView<BrowserNavigationBarEnvironment>] = [:]
+        
+        private let activateButton = HighlightTrackingButton()
+                
+        private var component: BrowserNavigationBarComponent?
+        private weak var state: EmptyComponentState?
+        
+        override init(frame: CGRect) {
+            super.init(frame: frame)
             
-            let collapsedHeight: CGFloat = 24.0
-            let expandedHeight = context.component.height
-            let contentHeight: CGFloat = expandedHeight * (1.0 - context.component.collapseFraction) + collapsedHeight * context.component.collapseFraction
-            let size = CGSize(width: context.availableSize.width, height: context.component.topInset + contentHeight)
-            let verticalOffset: CGFloat = context.component.metrics.isTablet ? -2.0 : 0.0
-            let itemSpacing: CGFloat = context.component.metrics.isTablet ? 26.0 : 8.0
+            self.addSubview(self.edgeEffectView)
             
-            let background = background.update(
-                component: Rectangle(color: context.component.backgroundColor.withAlphaComponent(1.0)),
-                availableSize: CGSize(width: size.width, height: size.height),
-                transition: context.transition
-            )
-            
-            let readingProgress = readingProgress.update(
-                component: Rectangle(color: context.component.progressColor),
-                availableSize: CGSize(width: size.width * context.component.readingProgress, height: size.height),
-                transition: context.transition
-            )
-            
-            let separator = separator.update(
-                component: Rectangle(color: context.component.separatorColor, height: UIScreenPixel),
-                availableSize: CGSize(width: size.width, height: size.height),
-                transition: context.transition
-            )
-            
-            let loadingProgressHeight: CGFloat = 2.0
-            let loadingProgress = loadingProgress.update(
-                component: LoadingProgressComponent(
-                    color: context.component.accentColor,
-                    height: loadingProgressHeight,
-                    value: context.component.loadingProgress ?? 0.0
-                ),
-                availableSize: CGSize(width: size.width, height: size.height),
-                transition: context.transition
-            )
-                        
-            var leftItemList: [_UpdatedChildComponent] = []
-            for item in context.component.leftItems {
-                let item = leftItems[item.id].update(
-                    component: item.component,
-                    availableSize: CGSize(width: availableWidth, height: expandedHeight),
-                    transition: context.transition
-                )
-                leftItemList.append(item)
-                availableWidth -= item.size.width
+            self.addSubview(self.containerView)
+            self.activateButton.addTarget(self, action: #selector(self.activatePressed), for: .touchUpInside)
+        }
+        
+        required init?(coder: NSCoder) {
+            preconditionFailure()
+        }
+        
+        @objc private func activatePressed() {
+            guard let component = self.component else {
+                return
             }
-                        
-            var rightItemList: [_UpdatedChildComponent] = []
-            for item in context.component.rightItems {
-                let item = rightItems[item.id].update(
-                    component: item.component,
-                    availableSize: CGSize(width: availableWidth, height: expandedHeight),
-                    transition: context.transition
-                )
-                rightItemList.append(item)
-                availableWidth -= item.size.width
-            }
+            component.activate()
+        }
+        
+        func update(component: BrowserNavigationBarComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+            self.component = component
+            self.state = state
+            
+            var availableWidth = availableSize.width
+            let sideInset: CGFloat = (component.metrics.isTablet ? 20.0 : 16.0) + component.sideInset
+            
+            let collapsedHeight: CGFloat = 54.0
+            let expandedHeight = component.height
+            let contentHeight: CGFloat = expandedHeight * (1.0 - component.collapseFraction) + collapsedHeight * component.collapseFraction
+            let size = CGSize(width: availableSize.width, height: component.topInset + contentHeight)
+            let verticalOffset: CGFloat = component.metrics.isTablet ? -2.0 : 0.0
+            let itemSpacing: CGFloat = 0.0 //component.metrics.isTablet ? 26.0 : 8.0
+            let panelHeight: CGFloat = 44.0
+            
+            var leftItemsBackground: GlassBackgroundView?
+            var leftItemsBackgroundTransition = transition
+            if !component.leftItems.isEmpty {
+                if let current = self.leftItemsBackground {
+                    leftItemsBackground = current
+                } else {
+                    leftItemsBackgroundTransition = .immediate
+                    leftItemsBackground = GlassBackgroundView()
+                    self.containerView.contentView.addSubview(leftItemsBackground!)
+                    self.leftItemsBackground = leftItemsBackground
                     
-            context.add(background
-                .position(CGPoint(x: size.width / 2.0, y: size.height / 2.0))
-            )
-            
-            var readingProgressAlpha = context.component.collapseFraction
-            if leftItemList.isEmpty && rightItemList.isEmpty {
-                readingProgressAlpha = 0.0
+                    transition.animateScale(view: leftItemsBackground!, from: 0.1, to: 1.0)
+                    transition.animateAlpha(view: leftItemsBackground!, from: 0.0, to: 1.0)
+                }
             }
-            context.add(readingProgress
-                .position(CGPoint(x: readingProgress.size.width / 2.0, y: size.height / 2.0))
-                .opacity(readingProgressAlpha)
-            )
             
-            context.add(separator
-                .position(CGPoint(x: size.width / 2.0, y: size.height))
-            )
-            
-            context.add(loadingProgress
-                .position(CGPoint(x: size.width / 2.0, y: size.height - loadingProgressHeight / 2.0))
-            )
+            var rightItemsBackground: GlassBackgroundView?
+            var rightItemsBackgroundTransition = transition
+            if !component.rightItems.isEmpty {
+                if let current = self.rightItemsBackground {
+                    rightItemsBackground = current
+                } else {
+                    rightItemsBackgroundTransition = .immediate
+                    rightItemsBackground = GlassBackgroundView()
+                    self.containerView.contentView.addSubview(rightItemsBackground!)
+                    self.rightItemsBackground = rightItemsBackground
+                    
+                    transition.animateScale(view: rightItemsBackground!, from: 0.1, to: 1.0)
+                    transition.animateAlpha(view: rightItemsBackground!, from: 0.0, to: 1.0)
+                }
+            }
+                        
+            var validLeftItemIds: Set<AnyHashable> = Set()
+            var leftItemTransitions: [AnyHashable: (CGSize, ComponentTransition)] = [:]
+            var leftItemsWidth: CGFloat = 0.0
+            for item in component.leftItems {
+                validLeftItemIds.insert(item.id)
+                var itemTransition = transition
+                let itemView: ComponentView<Empty>
+                if let current = self.leftItems[item.id] {
+                    itemView = current
+                } else {
+                    itemTransition = .immediate
+                    itemView = ComponentView<Empty>()
+                    self.leftItems[item.id] = itemView
+                }
+                
+                let itemSize = itemView.update(
+                    transition: itemTransition,
+                    component: item.component,
+                    environment: {},
+                    containerSize: CGSize(width: availableWidth, height: expandedHeight)
+                )
+                leftItemTransitions[item.id] = (itemSize, itemTransition)
+                availableWidth -= itemSize.width
+                leftItemsWidth += itemSize.width
+            }
+                        
+            var validRightItemIds: Set<AnyHashable> = Set()
+            var rightItemTransitions: [AnyHashable: (CGSize, ComponentTransition)] = [:]
+            var rightItemsWidth: CGFloat = 0.0
+            for item in component.rightItems {
+                validRightItemIds.insert(item.id)
+                var itemTransition = transition
+                let itemView: ComponentView<Empty>
+                if let current = self.rightItems[item.id] {
+                    itemView = current
+                } else {
+                    itemTransition = .immediate
+                    itemView = ComponentView<Empty>()
+                    self.rightItems[item.id] = itemView
+                }
+                
+                let itemSize = itemView.update(
+                    transition: itemTransition,
+                    component: item.component,
+                    environment: {},
+                    containerSize: CGSize(width: availableWidth, height: expandedHeight)
+                )
+                rightItemTransitions[item.id] = (itemSize, itemTransition)
+                availableWidth -= itemSize.width
+                rightItemsWidth += itemSize.width
+            }
             
             var centerLeftInset = sideInset
-            var leftItemX = sideInset
-            for item in leftItemList {
-                context.add(item
-                    .position(CGPoint(x: leftItemX + item.size.width / 2.0 - (item.size.width / 2.0 * 0.35 * context.component.collapseFraction), y: context.component.topInset + contentHeight / 2.0 + verticalOffset))
-                    .scale(1.0 - 0.35 * context.component.collapseFraction)
-                    .opacity(1.0 - context.component.collapseFraction)
-                    .appear(.default(scale: true, alpha: true))
-                    .disappear(.default(scale: true, alpha: true))
-                )
-                leftItemX += item.size.width + itemSpacing
-                centerLeftInset += item.size.width + itemSpacing
+            var leftItemX = 0.0
+            for item in component.leftItems {
+                guard let (itemSize, itemTransition) = leftItemTransitions[item.id], let itemView = self.leftItems[item.id]?.view else {
+                    continue
+                }
+                let itemPosition = CGPoint(x: leftItemX + itemSize.width / 2.0, y: panelHeight * 0.5)
+                let itemFrame = CGRect(origin: CGPoint(x: itemPosition.x - itemSize.width * 0.5, y: itemPosition.y - itemSize.height * 0.5), size: itemSize)
+                if itemView.superview == nil {
+                    leftItemsBackground?.contentView.addSubview(itemView)
+                    transition.animateAlpha(view: itemView, from: 0.0, to: 1.0)
+                    transition.animateScale(view: itemView, from: 0.01, to: 1.0)
+                }
+                itemTransition.setBounds(view: itemView, bounds: CGRect(origin: .zero, size: itemFrame.size))
+                itemTransition.setPosition(view: itemView, position: itemFrame.center)
+                
+                leftItemX += itemSize.width + itemSpacing
+                centerLeftInset += itemSize.width + itemSpacing
             }
-    
-            var centerRightInset = sideInset - 5.0
-            var rightItemX = context.availableSize.width - (sideInset - 5.0)
-            for item in rightItemList.reversed() {
-                context.add(item
-                    .position(CGPoint(x: rightItemX - item.size.width / 2.0 + (item.size.width / 2.0 * 0.35 * context.component.collapseFraction), y: context.component.topInset + contentHeight / 2.0 + verticalOffset))
-                    .scale(1.0 - 0.35 * context.component.collapseFraction)
-                    .opacity(1.0 - context.component.collapseFraction)
-                    .appear(.default(scale: true, alpha: true))
-                    .disappear(.default(scale: true, alpha: true))
-                )
-                rightItemX -= item.size.width + itemSpacing
-                centerRightInset += item.size.width + itemSpacing
+            
+            var centerRightInset = sideInset
+            var rightItemX = rightItemsWidth
+            for item in component.rightItems.reversed() {
+                guard let (itemSize, itemTransition) = rightItemTransitions[item.id], let itemView = self.rightItems[item.id]?.view else {
+                    continue
+                }
+                let itemPosition = CGPoint(x: rightItemX - itemSize.width / 2.0, y: panelHeight * 0.5)
+                let itemFrame = CGRect(origin: CGPoint(x: itemPosition.x - itemSize.width * 0.5, y: itemPosition.y - itemSize.height * 0.5), size: itemSize)
+                if itemView.superview == nil {
+                    rightItemsBackground?.contentView.addSubview(itemView)
+                    transition.animateAlpha(view: itemView, from: 0.0, to: 1.0)
+                    transition.animateScale(view: itemView, from: 0.01, to: 1.0)
+                }
+                itemTransition.setBounds(view: itemView, bounds: CGRect(origin: .zero, size: itemFrame.size))
+                itemTransition.setPosition(view: itemView, position: itemFrame.center)
+                itemTransition.setScale(view: itemView, scale: 1.0 - 0.35 * component.collapseFraction)
+                itemTransition.setAlpha(view: itemView, alpha: 1.0 - component.collapseFraction)
+                
+                rightItemX -= itemSize.width + itemSpacing
+                centerRightInset += itemSize.width + itemSpacing
+            }
+            
+            if let leftItemsBackground {
+                let leftItemsFrame = CGRect(origin: CGPoint(x: sideInset - (leftItemsWidth / 2.0 * 0.35 * component.collapseFraction), y: component.topInset + contentHeight / 2.0 + verticalOffset - panelHeight / 2.0), size: CGSize(width: leftItemsWidth, height: panelHeight))
+                leftItemsBackgroundTransition.setFrame(view: leftItemsBackground, frame: leftItemsFrame)
+                leftItemsBackground.update(size: leftItemsFrame.size, shape: .roundedRect(cornerRadius: leftItemsFrame.height * 0.5), isDark: component.theme.overallDarkAppearance, tintColor: .init(kind: .panel, color: UIColor(white: component.theme.overallDarkAppearance ? 0.0 : 1.0, alpha: 0.6)), isInteractive: true, transition: leftItemsBackgroundTransition)
+                
+                leftItemsBackgroundTransition.setScale(view: leftItemsBackground, scale: 1.0 - 0.999 * component.collapseFraction)
+                leftItemsBackgroundTransition.setAlpha(view: leftItemsBackground.contentView, alpha: 1.0 - component.collapseFraction)
+            } else if let leftItemsBackground = self.leftItemsBackground {
+                self.leftItemsBackground = nil
+                leftItemsBackground.removeFromSuperview()
+            }
+
+            if let rightItemsBackground {
+                let rightItemsFrame = CGRect(origin: CGPoint(x: availableSize.width - sideInset - rightItemsWidth * (1.0 - component.collapseFraction) + (rightItemsWidth / 2.0 * 0.35 * component.collapseFraction), y: component.topInset + contentHeight / 2.0 + verticalOffset - panelHeight / 2.0), size: CGSize(width: rightItemsWidth, height: panelHeight))
+                rightItemsBackgroundTransition.setFrame(view: rightItemsBackground, frame: rightItemsFrame)
+                rightItemsBackground.update(size: rightItemsFrame.size, shape: .roundedRect(cornerRadius: rightItemsFrame.height * 0.5), isDark: component.theme.overallDarkAppearance, tintColor: .init(kind: .panel, color: UIColor(white: component.theme.overallDarkAppearance ? 0.0 : 1.0, alpha: 0.6)), isInteractive: true, transition: rightItemsBackgroundTransition)
+                
+                rightItemsBackgroundTransition.setScale(view: rightItemsBackground, scale: 1.0 - 0.999 * component.collapseFraction)
+                rightItemsBackgroundTransition.setAlpha(view: rightItemsBackground.contentView, alpha: 1.0 - component.collapseFraction)
+            } else if let rightItemsBackground = self.rightItemsBackground {
+                self.rightItemsBackground = nil
+                rightItemsBackground.removeFromSuperview()
+            }
+            
+            var removeLeftItemIds: [AnyHashable] = []
+            for (id, item) in self.leftItems {
+                if !validLeftItemIds.contains(id) {
+                    removeLeftItemIds.append(id)
+                    if let itemView = item.view {
+                        transition.setScale(view: itemView, scale: 0.01)
+                        transition.setAlpha(view: itemView, alpha: 0.0, completion: { _ in
+                            itemView.removeFromSuperview()
+                        })
+                    }
+                }
+            }
+            for id in removeLeftItemIds {
+                self.leftItems.removeValue(forKey: id)
+            }
+            
+            var removeRightItemIds: [AnyHashable] = []
+            for (id, item) in self.rightItems {
+                if !validRightItemIds.contains(id) {
+                    removeRightItemIds.append(id)
+                    if let itemView = item.view {
+                        transition.setScale(view: itemView, scale: 0.01)
+                        transition.setAlpha(view: itemView, alpha: 0.0, completion: { _ in
+                            itemView.removeFromSuperview()
+                        })
+                    }
+                }
+            }
+            for id in removeRightItemIds {
+                self.rightItems.removeValue(forKey: id)
             }
             
             let maxCenterInset = max(centerLeftInset, centerRightInset)
             
-            if !leftItemList.isEmpty || !rightItemList.isEmpty {
-                availableWidth -= itemSpacing * CGFloat(max(0, leftItemList.count - 1)) + itemSpacing * CGFloat(max(0, rightItemList.count - 1)) + 30.0
+            if !component.leftItems.isEmpty || !component.rightItems.isEmpty {
+                availableWidth -= itemSpacing * CGFloat(max(0, component.leftItems.count - 1)) + itemSpacing * CGFloat(max(0, component.rightItems.count - 1)) + 30.0
             }
-            availableWidth -= context.component.sideInset * 2.0
+            availableWidth -= component.sideInset * 2.0
             
-            let canCenter = availableWidth > 660.0
-            availableWidth = min(660.0, availableWidth)
+            let canCenter = availableWidth > 390.0
+            availableWidth = min(390.0, availableWidth)
             
-            let environment = BrowserNavigationBarEnvironment(fraction: context.component.collapseFraction)
+            let environment = BrowserNavigationBarEnvironment(fraction: component.collapseFraction)
             
-            let centerItem = context.component.centerItem.flatMap { item in
-                centerItems[item.id].update(
+            var centerX = maxCenterInset + (availableSize.width - maxCenterInset * 2.0) / 2.0
+            if canCenter {
+                centerX = availableSize.width / 2.0
+            } else {
+                centerX = centerLeftInset + (availableSize.width - centerLeftInset - centerRightInset) / 2.0
+            }
+            
+            var validCenterItemIds: Set<AnyHashable> = Set()
+            if let item = component.centerItem {
+                validCenterItemIds.insert(item.id)
+                
+                var itemTransition = transition
+                let itemView: ComponentView<BrowserNavigationBarEnvironment>
+                if let current = self.centerItems[item.id] {
+                    itemView = current
+                } else {
+                    itemTransition = .immediate
+                    itemView = ComponentView<BrowserNavigationBarEnvironment>()
+                    self.centerItems[item.id] = itemView
+                }
+                
+                let itemSize = itemView.update(
+                    transition: itemTransition,
                     component: item.component,
                     environment: { environment },
-                    availableSize: CGSize(width: availableWidth, height: expandedHeight),
-                    transition: context.transition
-                )
-            }
-            
-            var centerX = maxCenterInset + (context.availableSize.width - maxCenterInset * 2.0) / 2.0
-            if "".isEmpty {
-                if canCenter {
-                    centerX = context.availableSize.width / 2.0
-                } else {
-                    centerX = centerLeftInset + (context.availableSize.width - centerLeftInset - centerRightInset) / 2.0
-                }
-            }
-            if let centerItem = centerItem {
-                let centerItemPosition = CGPoint(x: centerX, y: context.component.topInset + contentHeight / 2.0 + verticalOffset)
-                context.add(centerItem
-                    .position(centerItemPosition)
-                    .scale(1.0 - 0.35 * context.component.collapseFraction)
-                    .appear(.default(scale: false, alpha: true))
-                    .disappear(.default(scale: false, alpha: true))
+                    containerSize: CGSize(width: availableWidth, height: expandedHeight)
                 )
                 
-                context.component.externalState?.centerItemFrame = centerItem.size.centered(around: centerItemPosition)
+                let itemPosition = CGPoint(x: centerX, y: component.topInset + contentHeight / 2.0 + verticalOffset)
+                let itemFrame = CGRect(origin: CGPoint(x: itemPosition.x - itemSize.width * 0.5, y: itemPosition.y - itemSize.height * 0.5), size: itemSize)
+                if let itemView = itemView.view {
+                    if itemView.superview == nil {
+                        self.containerView.contentView.addSubview(itemView)
+                        transition.animateAlpha(view: itemView, from: 0.0, to: 1.0)
+                    }
+                    itemTransition.setBounds(view: itemView, bounds: CGRect(origin: .zero, size: itemFrame.size))
+                    itemTransition.setPosition(view: itemView, position: itemFrame.center)
+                    itemTransition.setScale(view: itemView, scale: 1.0 - 0.25 * component.collapseFraction)
+                }
+                component.externalState?.centerItemFrame = itemFrame
             }
             
-            if context.component.collapseFraction == 1.0 {
-                let activateAction = context.component.activate
-                let activate = activate.update(
-                    component: Button(
-                        content: AnyComponent(Rectangle(color: UIColor(rgb: 0x000000, alpha: 0.001))),
-                        action: {
-                            activateAction()
-                        }
-                    ),
-                    availableSize: size,
-                    transition: .immediate
-                )
-                context.add(activate
-                    .position(CGPoint(x: size.width / 2.0, y: size.height / 2.0))
-                )
+            var removeCenterItemIds: [AnyHashable] = []
+            for (id, item) in self.centerItems {
+                if !validCenterItemIds.contains(id) {
+                    removeCenterItemIds.append(id)
+                    if let itemView = item.view {
+                        transition.setAlpha(view: itemView, alpha: 0.0, completion: { _ in
+                            itemView.removeFromSuperview()
+                        })
+                    }
+                }
             }
+            for id in removeCenterItemIds {
+                self.centerItems.removeValue(forKey: id)
+            }
+            
+            if component.collapseFraction == 1.0 {
+                if self.activateButton.superview == nil {
+                    self.addSubview(self.activateButton)
+                }
+                self.activateButton.frame = CGRect(origin: .zero, size: size)
+            } else {
+                self.activateButton.removeFromSuperview()
+            }
+
+            self.containerView.update(size: size, isDark: component.theme.overallDarkAppearance, transition: transition)
+            transition.setFrame(view: self.containerView, frame: CGRect(origin: .zero, size: size))
+            
+            let edgeEffectHeight: CGFloat = 80.0
+            let edgeEffectFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: edgeEffectHeight))
+            transition.setFrame(view: self.edgeEffectView, frame: edgeEffectFrame)
+            self.edgeEffectView.update(
+                content: .clear,
+                blur: true,
+                rect: edgeEffectFrame,
+                edge: .top,
+                edgeSize: edgeEffectFrame.height,
+                transition: transition
+            )
             
             return size
         }
     }
+    
+    public func makeView() -> View {
+        return View(frame: CGRect())
+    }
+    
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
 }
 
-private final class LoadingProgressComponent: Component {
+final class LoadingProgressComponent: Component {
     let color: UIColor
     let height: CGFloat
     let value: CGFloat
@@ -403,114 +525,6 @@ private final class LoadingProgressComponent: Component {
             alphaTransition.setAlpha(view: self.lineView, alpha: alpha)
          
             return CGSize(width: availableSize.width, height: component.height)
-        }
-    }
-
-    func makeView() -> View {
-        return View()
-    }
-
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
-        return view.update(component: self, availableSize: availableSize, transition: transition)
-    }
-}
-
-final class ReferenceButtonComponent: Component {
-    let content: AnyComponent<Empty>
-    let tag: AnyObject?
-    let action: () -> Void
-    
-    init(
-        content: AnyComponent<Empty>,
-        tag: AnyObject? = nil,
-        action: @escaping () -> Void
-    ) {
-        self.content = content
-        self.tag = tag
-        self.action = action
-    }
-    
-    static func ==(lhs: ReferenceButtonComponent, rhs: ReferenceButtonComponent) -> Bool {
-        if lhs.content != rhs.content {
-            return false
-        }
-        if lhs.tag !== rhs.tag {
-            return false
-        }
-        return true
-    }
-
-    final class View: HighlightTrackingButton, ComponentTaggedView {
-        private let sourceView: ContextControllerSourceView
-        let referenceNode: ContextReferenceContentNode
-        let componentView: ComponentView<Empty>
-        
-        private var component: ReferenceButtonComponent?
-        
-        public func matches(tag: Any) -> Bool {
-            if let component = self.component, let componentTag = component.tag {
-                let tag = tag as AnyObject
-                if componentTag === tag {
-                    return true
-                }
-            }
-            return false
-        }
-        
-        init() {
-            self.componentView = ComponentView()
-            self.sourceView = ContextControllerSourceView()
-            self.sourceView.animateScale = false
-            self.referenceNode = ContextReferenceContentNode()
-         
-            super.init(frame: CGRect())
-            
-            self.sourceView.isUserInteractionEnabled = false
-            self.addSubview(self.sourceView)
-            self.sourceView.addSubnode(self.referenceNode)
-            
-            self.highligthedChanged = { [weak self] highlighted in
-                if let strongSelf = self, let contentView = strongSelf.componentView.view {
-                    if highlighted {
-                        contentView.layer.removeAnimation(forKey: "opacity")
-                        contentView.alpha = 0.4
-                    } else {
-                        contentView.alpha = 1.0
-                        contentView.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
-                    }
-                }
-            }
-            self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
-        }
-
-        required init?(coder aDecoder: NSCoder) {
-            preconditionFailure()
-        }
-        
-        @objc private func pressed() {
-            self.component?.action()
-        }
-
-        func update(component: ReferenceButtonComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
-            self.component = component
-            
-            let componentSize = self.componentView.update(
-                transition: transition,
-                component: component.content,
-                environment: {},
-                containerSize: availableSize
-            )
-            if let componentView = self.componentView.view {
-                if componentView.superview == nil {
-                    self.referenceNode.view.addSubview(componentView)
-                }
-                transition.setFrame(view: componentView, frame: CGRect(origin: .zero, size: componentSize))
-            }
-            
-            transition.setFrame(view: self.sourceView, frame: CGRect(origin: .zero, size: componentSize))
-            self.referenceNode.frame = CGRect(origin: .zero, size: componentSize)
-         
-            return componentSize
         }
     }
 

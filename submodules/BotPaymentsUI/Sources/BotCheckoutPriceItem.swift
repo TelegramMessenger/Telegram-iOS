@@ -113,7 +113,7 @@ class BotCheckoutPriceItemNode: ListViewItemNode {
         self.maskNode = ASImageNode()
         self.maskNode.isUserInteractionEnabled = false
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
 
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.titleNode)

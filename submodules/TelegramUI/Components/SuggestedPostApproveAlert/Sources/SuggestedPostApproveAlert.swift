@@ -410,7 +410,18 @@ private final class SuggestedPostAlertImpl: AlertController {
     }
 }
 
-public func SuggestedPostApproveAlert(presentationData: PresentationData, title: String?, text: String, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal, allowInputInset: Bool = true, parseMarkdown: Bool = false, dismissOnOutsideTap: Bool = true, linkAction: (([NSAttributedString.Key: Any], Int) -> Void)? = nil, toastText: String?) -> AlertController {
+public func SuggestedPostApproveAlert(
+    presentationData: PresentationData,
+    title: String?,
+    text: String,
+    actions: [TextAlertAction],
+    actionLayout: TextAlertContentActionLayout = .horizontal,
+    allowInputInset: Bool = true,
+    parseMarkdown: Bool = false,
+    dismissOnOutsideTap: Bool = true,
+    linkAction : (([NSAttributedString.Key: Any], Int) -> Void)? = nil,
+    toastText: String?
+) -> AlertController {
     let theme = AlertControllerTheme(presentationData: presentationData)
 
     var dismissImpl: (() -> Void)?

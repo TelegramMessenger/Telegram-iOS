@@ -133,7 +133,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
         CMTimebaseSetRate(timebase!, rate: 0.0)
         self.timebase = timebase!
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.imageNodeBackground)
         

@@ -1174,6 +1174,18 @@ public struct PresentationResourcesChat {
         })
     }
     
+    public static func chatFreeExpandButtonIcon(_ theme: PresentationTheme, wallpaper: TelegramWallpaper) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatFreeExpandButtonIcon.rawValue, { _ in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/ExpandIcon"), color: bubbleVariableColor(variableColor: theme.chat.message.shareButtonForegroundColor, wallpaper: wallpaper))
+        })
+    }
+    
+    public static func chatFreeCollapseButtonIcon(_ theme: PresentationTheme, wallpaper: TelegramWallpaper) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatFreeCollapseButtonIcon.rawValue, { _ in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/CollapseIcon"), color: bubbleVariableColor(variableColor: theme.chat.message.shareButtonForegroundColor, wallpaper: wallpaper))
+        })
+    }
+    
     public static func chatKeyboardActionButtonMessageIconImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatKeyboardActionButtonMessageIcon.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotMessage"), color: theme.chat.inputButtonPanel.buttonTextColor)

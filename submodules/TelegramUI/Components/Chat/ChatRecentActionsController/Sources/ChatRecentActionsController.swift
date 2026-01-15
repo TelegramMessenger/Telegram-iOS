@@ -49,7 +49,7 @@ public final class ChatRecentActionsController: TelegramBaseController {
         
         self.titleView = CounterControllerTitleView(theme: self.presentationData.theme)
         
-        super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .specific(size: .compact), locationBroadcastPanelSource: .none, groupCallPanelSource: .none)
+        super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
         self.automaticallyControlPresentationContextLayout = false
         
@@ -263,7 +263,7 @@ public final class ChatRecentActionsController: TelegramBaseController {
         self.navigationItem.setRightBarButton(rightButton.buttonItem, animated: false)
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
-        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
+        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData), transition: .immediate)
         
         self.controllerNode.updatePresentationData(self.presentationData)
     }

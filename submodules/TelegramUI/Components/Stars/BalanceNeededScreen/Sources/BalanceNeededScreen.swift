@@ -14,6 +14,7 @@ import TelegramStringFormatting
 import BundleIconComponent
 import TelegramCore
 import TelegramPresentationData
+import GlassBarButtonComponent
 
 private final class BalanceNeededSheetContentComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -49,9 +50,7 @@ private final class BalanceNeededSheetContentComponent: Component {
         
         private var component: BalanceNeededSheetContentComponent?
         private weak var state: EmptyComponentState?
-        
-        private var cachedCloseImage: (UIImage, PresentationTheme)?
-        
+                
         override init(frame: CGRect) {
             super.init(frame: frame)
         }
@@ -71,28 +70,27 @@ private final class BalanceNeededSheetContentComponent: Component {
             
             let sideInset: CGFloat = 16.0
             
-            let closeImage: UIImage
-            if let (image, theme) = self.cachedCloseImage, theme === environment.theme {
-                closeImage = image
-            } else {
-                closeImage = generateCloseButtonImage(backgroundColor: UIColor(rgb: 0x808084, alpha: 0.1), foregroundColor: environment.theme.actionSheet.inputClearButtonColor)!
-                self.cachedCloseImage = (closeImage, environment.theme)
-            }
             let closeButtonSize = self.closeButton.update(
                 transition: .immediate,
-                component: AnyComponent(Button(
-                    content: AnyComponent(Image(image: closeImage)),
-                    action: { [weak self] in
-                        guard let self, let component = self.component else {
-                            return
-                        }
+                component: AnyComponent(GlassBarButtonComponent(
+                    size: CGSize(width: 40.0, height: 40.0),
+                    backgroundColor: environment.theme.rootController.navigationBar.glassBarButtonBackgroundColor,
+                    isDark: environment.theme.overallDarkAppearance,
+                    state: .generic,
+                    component: AnyComponentWithIdentity(id: "close", component: AnyComponent(
+                        BundleIconComponent(
+                            name: "Navigation/Close",
+                            tintColor: environment.theme.chat.inputPanel.panelControlColor
+                        )
+                    )),
+                    action: { _ in
                         component.dismiss()
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: 30.0, height: 30.0)
+                containerSize: CGSize(width: 40.0, height: 40.0)
             )
-            let closeButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - closeButtonSize.width - 16.0, y: 12.0), size: closeButtonSize)
+            let closeButtonFrame = CGRect(origin: CGPoint(x: 16.0, y: 16.0), size: closeButtonSize)
             if let closeButtonView = self.closeButton.view {
                 if closeButtonView.superview == nil {
                     self.addSubview(closeButtonView)
@@ -164,10 +162,12 @@ private final class BalanceNeededSheetContentComponent: Component {
             contentHeight += textSize.height
             contentHeight += 24.0
             
+            let buttonInsets = ContainerViewLayout.concentricInsets(bottomInset: environment.safeInsets.bottom, innerDiameter: 52.0, sideInset: 30.0)
             let buttonSize = self.button.update(
                 transition: transition,
                 component: AnyComponent(ButtonComponent(
                     background: ButtonComponent.Background(
+                        style: .glass,
                         color: environment.theme.list.itemCheckColors.fillColor,
                         foreground: environment.theme.list.itemCheckColors.foregroundColor,
                         pressedColor: environment.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.8)
@@ -187,9 +187,9 @@ private final class BalanceNeededSheetContentComponent: Component {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 50.0)
+                containerSize: CGSize(width: availableSize.width - buttonInsets.left - buttonInsets.right, height: 52.0)
             )
-            let buttonFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: buttonSize)
+            let buttonFrame = CGRect(origin: CGPoint(x: buttonInsets.left, y: contentHeight), size: buttonSize)
             if let buttonView = self.button.view {
                 if buttonView.superview == nil {
                     self.addSubview(buttonView)
@@ -197,13 +197,8 @@ private final class BalanceNeededSheetContentComponent: Component {
                 transition.setFrame(view: buttonView, frame: buttonFrame)
             }
             contentHeight += buttonSize.height
-            
-            if environment.safeInsets.bottom.isZero {
-                contentHeight += 16.0
-            } else {
-                contentHeight += environment.safeInsets.bottom + 8.0
-            }
-            
+            contentHeight += buttonInsets.bottom
+
             return CGSize(width: availableSize.width, height: contentHeight)
         }
     }
@@ -307,6 +302,7 @@ private final class BalanceNeededScreenComponent: Component {
                             })
                         }
                     )),
+                    style: .glass,
                     backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
                     animateOut: self.sheetAnimateOut
                 )),

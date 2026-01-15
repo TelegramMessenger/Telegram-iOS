@@ -168,7 +168,7 @@ public class ItemListReactionItemNode: ListViewItemNode, ItemListItemNode {
         
         self.activateArea = AccessibilityAreaNode()
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.switchNode)

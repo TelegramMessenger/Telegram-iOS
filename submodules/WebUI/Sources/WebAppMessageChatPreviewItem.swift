@@ -160,7 +160,7 @@ final class PeerNameColorChatPreviewItemNode: ListViewItemNode {
         self.containerNode = ASDisplayNode()
         self.containerNode.subnodeTransform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.clipsToBounds = true
         self.isUserInteractionEnabled = false

@@ -111,7 +111,7 @@ private final class BoostsTabsItemNode: ListViewItemNode {
         self.selectionNode = ASImageNode()
         self.selectionNode.displaysAsynchronously = false
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.boostsTextNode)
         self.addSubnode(self.giftsTextNode)

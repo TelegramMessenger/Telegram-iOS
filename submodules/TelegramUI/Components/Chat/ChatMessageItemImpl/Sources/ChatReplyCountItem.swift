@@ -81,7 +81,7 @@ public class ChatReplyCountItemNode: ListViewItemNode {
 
         self.backgroundColorNode = ASDisplayNode()
         
-        super.init(layerBacked: false, dynamicBounce: true, rotated: true)
+        super.init(layerBacked: false, rotated: true)
 
         self.addSubnode(self.labelNode)
         

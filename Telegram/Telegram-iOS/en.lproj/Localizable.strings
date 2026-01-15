@@ -4856,12 +4856,9 @@ Sorry for the inconvenience.";
 
 "Conversation.SendMessage.SetReminder" = "Set a Reminder";
 
-"Conversation.SelectedMessages_1" = "%@ Selected";
-"Conversation.SelectedMessages_2" = "%@ Selected";
-"Conversation.SelectedMessages_3_10" = "%@ Selected";
-"Conversation.SelectedMessages_any" = "%@ Selected";
-"Conversation.SelectedMessages_many" = "%@ Selected";
-"Conversation.SelectedMessages_0" = "%@ Selected";
+"Conversation.SelectedMessagesFormat_1" = "{} Selected";
+"Conversation.SelectedMessagesFormat_any" = "{} Selected";
+
 
 "AccentColor.Title" = "Accent Color";
 
@@ -15459,6 +15456,8 @@ Error: %8$@";
 "Notification.StarsGiftOffer.Expired" = "%1$@ didn't respond to your offer for %2$@ within %3$@ – your %4$@ have been refunded";
 "Notification.StarsGiftOffer.Expired.Stars_1" = "%@ Star";
 "Notification.StarsGiftOffer.Expired.Stars_any" = "%@ Stars";
+"Notification.StarsGiftOffer.Expired.Hours_1" = "%@ hours";
+"Notification.StarsGiftOffer.Expired.Hours_any" = "%@ hours";
 "Notification.StarsGiftOffer.ExpiredYou" = "The offer from %1$@ to buy your %2$@ for %3$@ has expired";
 "Notification.StarsGiftOffer.ExpiredYou.Stars_1" = "%@ Star";
 "Notification.StarsGiftOffer.ExpiredYou.Stars_any" = "%@ Stars";
@@ -15623,3 +15622,50 @@ Error: %8$@";
 "Chat.GiftPurchaseOffer.AcceptConfirmation.BadValue" = "The value of this gift is **%@** higher than the offer.";
 "Chat.GiftPurchaseOffer.AcceptConfirmation.Confirm" = "Confirm Sale";
 
+"Notification.PremiumGift.DaysTitle_1" = "%@ Day Premium";
+"Notification.PremiumGift.DaysTitle_any" = "%@ Days Premium";
+
+"MediaEditor.Audio.Title" = "Audio";
+"MediaEditor.Audio.SavedMusic" = "SAVED MUSIC";
+"MediaEditor.Audio.ShowMore" = "Show More";
+
+"WebApp.AddToAttachmentTitle" = "Add to Attachment Menu";
+
+"Gift.Upgrade.Wearable.Title" = "Wearable";
+"Gift.Upgrade.Wearable.Text" = "Display gifts on your page and set them as profile covers or statuses.";
+"Gift.Upgrade.ViewAllVariants" = "View all variants";
+
+"CocoonInfo.Title" = "COCOON";
+"CocoonInfo.Description" = "**Cocoon** (**Co**nfidential **Co**mpute **O**pen **N**etwork) handles AI tasks **safely** and **efficiently**.";
+"CocoonInfo.Private.Title" = "Private";
+"CocoonInfo.Private.Text" = "No third party can access any data, such as translations, inside Cocoon.";
+"CocoonInfo.Efficient.Title" = "Efficient";
+"CocoonInfo.Efficient.Text" = "Cocoon has allowed Telegram to reduce translation costs by 6x.";
+"CocoonInfo.ForEveryone.Title" = "For Everyone";
+"CocoonInfo.ForEveryone.Text" = "Any developer can use Cocoon for AI features. Learn more at [@cocoon](telegram) or [cocoon.org](web).";
+"CocoonInfo.IntergrateInfo" = "Want to integrate Cocoon into your projects?\nReach out at [t.me/cocoon?direct]()";
+"CocoonInfo.Understood" = "Understood";
+
+"Conversation.Translation.CocoonInfo" = "Translations are powered by\n**#Cocoon**. [How does it work?]()";
+
+"Conversation.EmojiStake.Won" = "%1$@ won %2$@";
+"Conversation.EmojiStake.WonYou" = "You won %@";
+"Conversation.EmojiStake.Lost" = "%1$@ lost %2$@";
+"Conversation.EmojiStake.LostYou" = "You lost %@";
+
+"Conversation.Dice.Stake" = "Stake:";
+"Conversation.Dice.Change" = "change";
+
+"EmojiStake.Title" = "Emoji Stake";
+"EmojiStake.Description" = "An experimental feature for Telegram Premium users.";
+"EmojiStake.ResultsTitle" = "RESULTS AND RETURNS";
+"EmojiStake.StreakInfo" = "A streak resets after 3 # or a stake change.";
+"EmojiStake.StakeTitle" = "STAKE";
+"EmojiStake.StakePlaceholder" = "Amount";
+"EmojiStake.Roll" = "Save and Roll";
+
+"Conversation.Summary.Title" = "AI Summary";
+"Conversation.Summary.Text" = "Tap to see original text";
+
+"Conversation.Summary.Limit.Title" = "AI Summary";
+"Conversation.Summary.Limit.Text" = "Summarize large messages with AI – unlimited with Telegram Premium.";

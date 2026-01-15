@@ -263,7 +263,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
         
         self.activateArea = AccessibilityAreaNode()
         
-        super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
+        super.init(layerBacked: false, rotated: false, seeThrough: false)
         
         self.addSubnode(self.containerNode)
         

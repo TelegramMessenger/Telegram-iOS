@@ -14,6 +14,8 @@ final class GalleryTitleView: UIView, NavigationBarTitleView {
     private let authorNameNode: ASTextNode
     private let dateNode: ASTextNode
     
+    var requestUpdate: ((ContainedViewLayoutTransition) -> Void)?
+    
     override init(frame: CGRect) {
         self.authorNameNode = ASTextNode()
         self.authorNameNode.displaysAsynchronously = false
@@ -41,7 +43,9 @@ final class GalleryTitleView: UIView, NavigationBarTitleView {
         self.dateNode.attributedText = NSAttributedString(string: dateText, font: dateFont, textColor: .white)
     }
     
-    func updateLayout(size: CGSize, clearBounds: CGRect, transition: ContainedViewLayoutTransition) -> CGRect {
+    func updateLayout(availableSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+        let size = availableSize
+        
         let leftInset: CGFloat = 0.0
         let rightInset: CGFloat = 0.0
         
@@ -56,7 +60,7 @@ final class GalleryTitleView: UIView, NavigationBarTitleView {
             self.dateNode.frame = CGRect(origin: CGPoint(x: floor((size.width - dateSize.width) / 2.0), y: floor((size.height - dateSize.height - authorNameSize.height - labelsSpacing) / 2.0) + authorNameSize.height + labelsSpacing), size: dateSize)
         }
         
-        return CGRect()
+        return availableSize
     }
     
     func animateLayoutTransition() {

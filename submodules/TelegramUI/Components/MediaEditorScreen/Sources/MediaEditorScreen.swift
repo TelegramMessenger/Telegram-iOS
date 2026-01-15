@@ -1259,7 +1259,6 @@ final class MediaEditorScreenComponent: Component {
                     pendingUnpinnedAllMessages: false,
                     activeGroupCallInfo: nil,
                     hasActiveGroupCall: false,
-                    importState: nil,
                     threadData: nil,
                     isGeneralThreadClosed: nil,
                     replyMessage: nil,

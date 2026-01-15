@@ -1,4 +1,141 @@
 public extension Api.stories {
+    enum PeerStories: TypeConstructorDescription {
+        case peerStories(stories: Api.PeerStories, chats: [Api.Chat], users: [Api.User])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .peerStories(let stories, let chats, let users):
+                    if boxed {
+                        buffer.appendInt32(-890861720)
+                    }
+                    stories.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(chats.count))
+                    for item in chats {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .peerStories(let stories, let chats, let users):
+                return ("peerStories", [("stories", stories as Any), ("chats", chats as Any), ("users", users as Any)])
+    }
+    }
+    
+        public static func parse_peerStories(_ reader: BufferReader) -> PeerStories? {
+            var _1: Api.PeerStories?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.PeerStories
+            }
+            var _2: [Api.Chat]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+            }
+            var _3: [Api.User]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.stories.PeerStories.peerStories(stories: _1!, chats: _2!, users: _3!)
+        }
+    
+    }
+}
+public extension Api.stories {
+    enum Stories: TypeConstructorDescription {
+        case stories(flags: Int32, count: Int32, stories: [Api.StoryItem], pinnedToTop: [Int32]?, chats: [Api.Chat], users: [Api.User])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .stories(let flags, let count, let stories, let pinnedToTop, let chats, let users):
+                    if boxed {
+                        buffer.appendInt32(1673780490)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(count, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(stories.count))
+                    for item in stories {
+                        item.serialize(buffer, true)
+                    }
+                    if Int(flags) & Int(1 << 0) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(pinnedToTop!.count))
+                    for item in pinnedToTop! {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }}
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(chats.count))
+                    for item in chats {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .stories(let flags, let count, let stories, let pinnedToTop, let chats, let users):
+                return ("stories", [("flags", flags as Any), ("count", count as Any), ("stories", stories as Any), ("pinnedToTop", pinnedToTop as Any), ("chats", chats as Any), ("users", users as Any)])
+    }
+    }
+    
+        public static func parse_stories(_ reader: BufferReader) -> Stories? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: [Api.StoryItem]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StoryItem.self)
+            }
+            var _4: [Int32]?
+            if Int(_1!) & Int(1 << 0) != 0 {if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            } }
+            var _5: [Api.Chat]?
+            if let _ = reader.readInt32() {
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+            }
+            var _6: [Api.User]?
+            if let _ = reader.readInt32() {
+                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            return Api.stories.Stories.stories(flags: _1!, count: _2!, stories: _3!, pinnedToTop: _4, chats: _5!, users: _6!)
+        }
+    
+    }
+}
+public extension Api.stories {
     enum StoryReactionsList: TypeConstructorDescription {
         case storyReactionsList(flags: Int32, count: Int32, reactions: [Api.StoryReaction], chats: [Api.Chat], users: [Api.User], nextOffset: String?)
     
@@ -62,12 +199,13 @@ public extension Api.stories {
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.stories.StoryReactionsList.storyReactionsList(flags: _1!, count: _2!, reactions: _3!, chats: _4!, users: _5!, nextOffset: _6)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            return Api.stories.StoryReactionsList.storyReactionsList(flags: _1!, count: _2!, reactions: _3!, chats: _4!, users: _5!, nextOffset: _6)
         }
     
     }
@@ -114,12 +252,9 @@ public extension Api.stories {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.stories.StoryViews.storyViews(views: _1!, users: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.stories.StoryViews.storyViews(views: _1!, users: _2!)
         }
     
     }
@@ -200,12 +335,16 @@ public extension Api.stories {
             let _c7 = _7 != nil
             let _c8 = _8 != nil
             let _c9 = (Int(_1!) & Int(1 << 0) == 0) || _9 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
-                return Api.stories.StoryViewsList.storyViewsList(flags: _1!, count: _2!, viewsCount: _3!, forwardsCount: _4!, reactionsCount: _5!, views: _6!, chats: _7!, users: _8!, nextOffset: _9)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            if !_c9 { return nil }
+            return Api.stories.StoryViewsList.storyViewsList(flags: _1!, count: _2!, viewsCount: _3!, forwardsCount: _4!, reactionsCount: _5!, views: _6!, chats: _7!, users: _8!, nextOffset: _9)
         }
     
     }
@@ -321,12 +460,14 @@ public extension Api.updates {
             let _c5 = _5 != nil
             let _c6 = _6 != nil
             let _c7 = _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.updates.ChannelDifference.channelDifference(flags: _1!, pts: _2!, timeout: _3, newMessages: _4!, otherUpdates: _5!, chats: _6!, users: _7!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            return Api.updates.ChannelDifference.channelDifference(flags: _1!, pts: _2!, timeout: _3, newMessages: _4!, otherUpdates: _5!, chats: _6!, users: _7!)
         }
         public static func parse_channelDifferenceEmpty(_ reader: BufferReader) -> ChannelDifference? {
             var _1: Int32?
@@ -338,12 +479,10 @@ public extension Api.updates {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.updates.ChannelDifference.channelDifferenceEmpty(flags: _1!, pts: _2!, timeout: _3)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.updates.ChannelDifference.channelDifferenceEmpty(flags: _1!, pts: _2!, timeout: _3)
         }
         public static func parse_channelDifferenceTooLong(_ reader: BufferReader) -> ChannelDifference? {
             var _1: Int32?
@@ -372,12 +511,13 @@ public extension Api.updates {
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             let _c6 = _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.updates.ChannelDifference.channelDifferenceTooLong(flags: _1!, timeout: _2, dialog: _3!, messages: _4!, chats: _5!, users: _6!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            return Api.updates.ChannelDifference.channelDifferenceTooLong(flags: _1!, timeout: _2, dialog: _3!, messages: _4!, chats: _5!, users: _6!)
         }
     
     }
@@ -513,12 +653,13 @@ public extension Api.updates {
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             let _c6 = _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.updates.Difference.difference(newMessages: _1!, newEncryptedMessages: _2!, otherUpdates: _3!, chats: _4!, users: _5!, state: _6!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            return Api.updates.Difference.difference(newMessages: _1!, newEncryptedMessages: _2!, otherUpdates: _3!, chats: _4!, users: _5!, state: _6!)
         }
         public static func parse_differenceEmpty(_ reader: BufferReader) -> Difference? {
             var _1: Int32?
@@ -527,12 +668,9 @@ public extension Api.updates {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.updates.Difference.differenceEmpty(date: _1!, seq: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.updates.Difference.differenceEmpty(date: _1!, seq: _2!)
         }
         public static func parse_differenceSlice(_ reader: BufferReader) -> Difference? {
             var _1: [Api.Message]?
@@ -565,23 +703,20 @@ public extension Api.updates {
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             let _c6 = _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.updates.Difference.differenceSlice(newMessages: _1!, newEncryptedMessages: _2!, otherUpdates: _3!, chats: _4!, users: _5!, intermediateState: _6!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            return Api.updates.Difference.differenceSlice(newMessages: _1!, newEncryptedMessages: _2!, otherUpdates: _3!, chats: _4!, users: _5!, intermediateState: _6!)
         }
         public static func parse_differenceTooLong(_ reader: BufferReader) -> Difference? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.updates.Difference.differenceTooLong(pts: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.updates.Difference.differenceTooLong(pts: _1!)
         }
     
     }
@@ -628,12 +763,12 @@ public extension Api.updates {
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.updates.State.state(pts: _1!, qts: _2!, date: _3!, seq: _4!, unreadCount: _5!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.updates.State.state(pts: _1!, qts: _2!, date: _3!, seq: _4!, unreadCount: _5!)
         }
     
     }
@@ -673,23 +808,15 @@ public extension Api.upload {
             var _1: Buffer?
             _1 = parseBytes(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.upload.CdnFile.cdnFile(bytes: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.upload.CdnFile.cdnFile(bytes: _1!)
         }
         public static func parse_cdnFileReuploadNeeded(_ reader: BufferReader) -> CdnFile? {
             var _1: Buffer?
             _1 = parseBytes(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.upload.CdnFile.cdnFileReuploadNeeded(requestToken: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.upload.CdnFile.cdnFileReuploadNeeded(requestToken: _1!)
         }
     
     }
@@ -747,12 +874,10 @@ public extension Api.upload {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.upload.File.file(type: _1!, mtime: _2!, bytes: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.upload.File.file(type: _1!, mtime: _2!, bytes: _3!)
         }
         public static func parse_fileCdnRedirect(_ reader: BufferReader) -> File? {
             var _1: Int32?
@@ -772,12 +897,12 @@ public extension Api.upload {
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.upload.File.fileCdnRedirect(dcId: _1!, fileToken: _2!, encryptionKey: _3!, encryptionIv: _4!, fileHashes: _5!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.upload.File.fileCdnRedirect(dcId: _1!, fileToken: _2!, encryptionKey: _3!, encryptionIv: _4!, fileHashes: _5!)
         }
     
     }
@@ -826,12 +951,12 @@ public extension Api.upload {
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.upload.WebFile.webFile(size: _1!, mimeType: _2!, fileType: _3!, mtime: _4!, bytes: _5!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.upload.WebFile.webFile(size: _1!, mimeType: _2!, fileType: _3!, mtime: _4!, bytes: _5!)
         }
     
     }
@@ -881,23 +1006,16 @@ public extension Api.users {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.users.SavedMusic.savedMusic(count: _1!, documents: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.users.SavedMusic.savedMusic(count: _1!, documents: _2!)
         }
         public static func parse_savedMusicNotModified(_ reader: BufferReader) -> SavedMusic? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.users.SavedMusic.savedMusicNotModified(count: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.users.SavedMusic.savedMusicNotModified(count: _1!)
         }
     
     }
@@ -950,12 +1068,10 @@ public extension Api.users {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.users.UserFull.userFull(fullUser: _1!, chats: _2!, users: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.users.UserFull.userFull(fullUser: _1!, chats: _2!, users: _3!)
         }
     
     }
@@ -1006,12 +1122,8 @@ public extension Api.users {
                 _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.users.Users.users(users: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.users.Users.users(users: _1!)
         }
         public static func parse_usersSlice(_ reader: BufferReader) -> Users? {
             var _1: Int32?
@@ -1022,12 +1134,9 @@ public extension Api.users {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.users.Users.usersSlice(count: _1!, users: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.users.Users.usersSlice(count: _1!, users: _2!)
         }
     
     }

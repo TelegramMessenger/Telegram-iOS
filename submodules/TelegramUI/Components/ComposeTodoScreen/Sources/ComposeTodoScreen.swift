@@ -29,24 +29,26 @@ import TextFieldComponent
 import ListComposePollOptionComponent
 import Markdown
 import PresentationDataUtils
-import EdgeEffect
 import GlassBarButtonComponent
 
 final class ComposeTodoScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let overNavigationContainer: UIView
     let peer: EnginePeer
     let initialData: ComposeTodoScreen.InitialData
     let completion: (TelegramMediaTodo) -> Void
 
     init(
         context: AccountContext,
+        overNavigationContainer: UIView,
         peer: EnginePeer,
         initialData: ComposeTodoScreen.InitialData,
         completion: @escaping (TelegramMediaTodo) -> Void
     ) {
         self.context = context
+        self.overNavigationContainer = overNavigationContainer
         self.peer = peer
         self.initialData = initialData
         self.completion = completion
@@ -69,7 +71,6 @@ final class ComposeTodoScreenComponent: Component {
     
     final class View: UIView, UIScrollViewDelegate {
         private let scrollView: UIScrollView
-        private let edgeEffectView: EdgeEffectView
         
         private let todoTextSection = ComponentView<Empty>()
         
@@ -131,8 +132,6 @@ final class ComposeTodoScreenComponent: Component {
             self.scrollView.contentInsetAdjustmentBehavior = .never
             self.scrollView.alwaysBounceVertical = true
             
-            self.edgeEffectView = EdgeEffectView()
-            
             self.todoItemsSectionContainer = ListSectionContentView(frame: CGRect())
             self.todoItemsSectionContainer.automaticallyLayoutExternalContentBackgroundView = false
             
@@ -140,8 +139,6 @@ final class ComposeTodoScreenComponent: Component {
             
             self.scrollView.delegate = self
             self.addSubview(self.scrollView)
-            
-            self.addSubview(self.edgeEffectView)
             
             let reorderRecognizer = ReorderGestureRecognizer(
                 shouldBegin: { [weak self] point in
@@ -468,7 +465,6 @@ final class ComposeTodoScreenComponent: Component {
                     pendingUnpinnedAllMessages: false,
                     activeGroupCallInfo: nil,
                     hasActiveGroupCall: false,
-                    importState: nil,
                     threadData: nil,
                     isGeneralThreadClosed: nil,
                     replyMessage: nil,
@@ -1539,11 +1535,6 @@ final class ComposeTodoScreenComponent: Component {
                     }
                 }
             }
-                        
-            let edgeEffectHeight: CGFloat = 80.0
-            let edgeEffectFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: availableSize.width, height: edgeEffectHeight))
-            transition.setFrame(view: self.edgeEffectView, frame: edgeEffectFrame)
-            self.edgeEffectView.update(content: theme.list.blocksBackgroundColor, blur: true, alpha: 1.0, rect: edgeEffectFrame, edge: .top, edgeSize: edgeEffectFrame.height, transition: transition)
             
             let title: String
             if !component.initialData.canEdit && component.initialData.existingTodo != nil {
@@ -1571,23 +1562,23 @@ final class ComposeTodoScreenComponent: Component {
             let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - titleSize.width) / 2.0), y: floorToScreenPixels((environment.navigationHeight - titleSize.height) / 2.0) + 3.0), size: titleSize)
             if let titleView = self.title.view {
                 if titleView.superview == nil {
-                    self.addSubview(titleView)
+                    component.overNavigationContainer.addSubview(titleView)
                 }
                 transition.setFrame(view: titleView, frame: titleFrame)
             }
             
-            let barButtonSize = CGSize(width: 40.0, height: 40.0)
+            let barButtonSize = CGSize(width: 44.0, height: 44.0)
             let cancelButtonSize = self.cancelButton.update(
                 transition: transition,
                 component: AnyComponent(GlassBarButtonComponent(
                     size: barButtonSize,
-                    backgroundColor: environment.theme.rootController.navigationBar.glassBarButtonBackgroundColor,
+                    backgroundColor: nil,
                     isDark: environment.theme.overallDarkAppearance,
-                    state: .generic,
+                    state: .glass,
                     component: AnyComponentWithIdentity(id: "close", component: AnyComponent(
                         BundleIconComponent(
                             name: "Navigation/Close",
-                            tintColor: environment.theme.rootController.navigationBar.glassBarButtonForegroundColor
+                            tintColor: environment.theme.chat.inputPanel.panelControlColor
                         )
                     )),
                     action: { [weak self] _ in
@@ -1603,7 +1594,7 @@ final class ComposeTodoScreenComponent: Component {
             let cancelButtonFrame = CGRect(origin: CGPoint(x: environment.safeInsets.left + 16.0, y: 16.0), size: cancelButtonSize)
             if let cancelButtonView = self.cancelButton.view {
                 if cancelButtonView.superview == nil {
-                    self.addSubview(cancelButtonView)
+                    component.overNavigationContainer.addSubview(cancelButtonView)
                 }
                 transition.setFrame(view: cancelButtonView, frame: cancelButtonFrame)
             }
@@ -1639,7 +1630,7 @@ final class ComposeTodoScreenComponent: Component {
             let doneButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - environment.safeInsets.right - 16.0 - doneButtonSize.width, y: 16.0), size: doneButtonSize)
             if let doneButtonView = self.doneButton.view {
                 if doneButtonView.superview == nil {
-                    self.addSubview(doneButtonView)
+                    component.overNavigationContainer.addSubview(doneButtonView)
                 }
                 transition.setFrame(view: doneButtonView, frame: doneButtonFrame)
             }
@@ -1704,6 +1695,8 @@ public class ComposeTodoScreen: ViewControllerComponentContainer, AttachmentCont
     fileprivate let completion: (TelegramMediaTodo) -> Void
     private var isDismissed: Bool = false
     
+    private let overNavigationContainer: UIView
+    
     fileprivate private(set) var sendButtonItem: UIBarButtonItem?
     
     public var isMinimized: Bool = false
@@ -1747,12 +1740,15 @@ public class ComposeTodoScreen: ViewControllerComponentContainer, AttachmentCont
         self.context = context
         self.completion = completion
         
+        self.overNavigationContainer = SparseContainerView()
+        
         super.init(context: context, component: ComposeTodoScreenComponent(
             context: context,
+            overNavigationContainer: self.overNavigationContainer,
             peer: peer,
             initialData: initialData,
             completion: completion
-        ), navigationBarAppearance: .transparent, theme: .default)
+        ), navigationBarAppearance: .default, theme: .default)
         
         self._hasGlassStyle = true
         
@@ -1786,6 +1782,10 @@ public class ComposeTodoScreen: ViewControllerComponentContainer, AttachmentCont
             }
             
             return componentView.attemptNavigation(complete: complete)
+        }
+        
+        if let navigationBar = self.navigationBar {
+            navigationBar.customOverBackgroundContentView.insertSubview(self.overNavigationContainer, at: 0)
         }
     }
     

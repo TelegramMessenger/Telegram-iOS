@@ -247,7 +247,7 @@ final class MutablePeerView: MutablePostboxView {
                             break outer
                         }
                     case let .Remove(indicesWithTags):
-                        for (index, _) in indicesWithTags {
+                        for (index, _, _) in indicesWithTags {
                             if cachedData.messageIds.contains(index.id) {
                                 updateMessages = true
                                 break outer

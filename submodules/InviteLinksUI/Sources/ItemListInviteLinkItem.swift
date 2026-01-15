@@ -235,7 +235,7 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
         
-        super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
+        super.init(layerBacked: false, rotated: false, seeThrough: false)
         
         self.isAccessibilityElement = true
         

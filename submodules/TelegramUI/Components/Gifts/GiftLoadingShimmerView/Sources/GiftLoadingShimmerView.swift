@@ -164,7 +164,7 @@ public final class GiftLoadingShimmerView: UIView {
                     }
                 }
                 
-                var currentY: CGFloat = 39.0 + 7.0
+                var currentY: CGFloat = 52.0 + 7.0
                 var rowIndex: Int = 0
                 
                 let optionSpacing: CGFloat = 10.0

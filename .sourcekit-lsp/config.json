@@ -1,6 +1,8 @@
 {
   "backgroundIndexing": true,
   "backgroundPreparationMode": "build",
+  "buildServerWorkspaceRequestsTimeout": 999,
+  "buildSettingsTimeout": 999,
   "defaultWorkspaceType": "buildServer",
   "logging": {
     "level": "error",

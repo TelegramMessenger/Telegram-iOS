@@ -901,8 +901,6 @@ public final class ChatInlineSearchResultsListComponent: Component {
                         },
                         openStarsTopup: { _ in
                         },
-                        dismissNotice: { _ in
-                        },
                         editPeer: { _ in
                         },
                         openWebApp: { _ in

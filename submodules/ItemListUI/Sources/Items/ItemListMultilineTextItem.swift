@@ -127,7 +127,7 @@ public class ItemListMultilineTextItemNode: ListViewItemNode {
         
         self.activateArea = AccessibilityAreaNode()
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.textNode)
         self.addSubnode(self.activateArea)

@@ -522,7 +522,7 @@ private final class CollectibleItemInfoScreenContentComponent: Component {
             if environment.safeInsets.bottom.isZero {
                 contentHeight += 16.0
             } else {
-                contentHeight += environment.safeInsets.bottom + 14.0
+                contentHeight += environment.safeInsets.bottom + 1.0
             }
             
             return CGSize(width: availableSize.width, height: contentHeight)

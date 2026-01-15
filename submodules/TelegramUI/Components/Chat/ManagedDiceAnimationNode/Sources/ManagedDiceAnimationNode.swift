@@ -100,7 +100,7 @@ public struct InteractiveEmojiConfiguration {
     }
     
     public static func with(appConfiguration: AppConfiguration) -> InteractiveEmojiConfiguration {
-        if let data = appConfiguration.data, let emojis = data["emojies_send_dice"] as? [String] {
+        if let data = appConfiguration.data, var emojis = data["emojies_send_dice"] as? [String] {
             var successParameters: [String: InteractiveEmojiSuccessParameters] = [:]
             if let success = data["emojies_send_dice_success"] as? [String: [String: Double]] {
                 for (key, dict) in success {
@@ -109,6 +109,11 @@ public struct InteractiveEmojiConfiguration {
                     }
                 }
             }
+            #if DEBUG
+            if !emojis.contains("🎲") {
+                emojis.append("🎲")
+            }
+            #endif
             return InteractiveEmojiConfiguration(emojis: emojis, successParameters: successParameters)
         } else {
             return .defaultValue
@@ -125,6 +130,10 @@ public final class ManagedDiceAnimationNode: ManagedAnimationNode {
     
     private let configuration = Promise<InteractiveEmojiConfiguration?>()
     private let emojis = Promise<[TelegramMediaFile]>()
+    
+    public var isRolling: Bool {
+        return self.diceState == .rolling
+    }
     
     public var success: (() -> Void)?
     

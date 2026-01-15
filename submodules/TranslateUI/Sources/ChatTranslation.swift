@@ -270,47 +270,55 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id,
                             var count = 0
                             for message in messages {
                                 if message.effectivelyIncoming(context.account.peerId), message.text.count >= 10 {
-                                    var text = String(message.text.prefix(256))
-                                    if var entities = message.textEntitiesAttribute?.entities.filter({ entity in
-                                        switch entity.type {
-                                        case .Pre, .Code, .Url, .Email, .Mention, .Hashtag, .BotCommand:
-                                            return true
-                                        default:
-                                            return false
+                                    if let summaryAttribute = message.attributes.first(where: { $0 is SummarizationMessageAttribute }) as? SummarizationMessageAttribute, !summaryAttribute.fromLang.isEmpty {
+                                        let fromLang = normalizeTranslationLanguage(summaryAttribute.fromLang)
+                                        if supportedTranslationLanguages.contains(fromLang) {
+                                            fromLangs[fromLang] = (fromLangs[fromLang] ?? 0) + message.text.count
+                                            count += 1
                                         }
-                                    }) {
-                                        entities = entities.sorted(by: { $0.range.lowerBound > $1.range.lowerBound })
-                                        var ranges: [Range<String.Index>] = []
-                                        for entity in entities {
-                                            if entity.range.lowerBound > text.count || entity.range.upperBound > text.count {
-                                                continue
+                                    } else {
+                                        var text = String(message.text.prefix(256))
+                                        if var entities = message.textEntitiesAttribute?.entities.filter({ entity in
+                                            switch entity.type {
+                                            case .Pre, .Code, .Url, .Email, .Mention, .Hashtag, .BotCommand:
+                                                return true
+                                            default:
+                                                return false
                                             }
-                                            ranges.append(text.index(text.startIndex, offsetBy: entity.range.lowerBound) ..< text.index(text.startIndex, offsetBy: entity.range.upperBound))
-                                        }
-                                        for range in ranges {
-                                            if range.upperBound < text.endIndex {
-                                                text.removeSubrange(range)
+                                        }) {
+                                            entities = entities.sorted(by: { $0.range.lowerBound > $1.range.lowerBound })
+                                            var ranges: [Range<String.Index>] = []
+                                            for entity in entities {
+                                                if entity.range.lowerBound > text.count || entity.range.upperBound > text.count {
+                                                    continue
+                                                }
+                                                ranges.append(text.index(text.startIndex, offsetBy: entity.range.lowerBound) ..< text.index(text.startIndex, offsetBy: entity.range.upperBound))
+                                            }
+                                            for range in ranges {
+                                                if range.upperBound < text.endIndex {
+                                                    text.removeSubrange(range)
+                                                }
                                             }
                                         }
-                                    }
-                                    
-                                    if message.text.count < 10 {
-                                        continue
-                                    }
-                                    
-                                    languageRecognizer.processString(text)
-                                    let hypotheses = languageRecognizer.languageHypotheses(withMaximum: 4)
-                                    languageRecognizer.reset()
-                                                                        
-                                    let filteredLanguages = hypotheses.filter { supportedTranslationLanguages.contains(normalizeTranslationLanguage($0.key.rawValue)) }.sorted(by: { $0.value > $1.value })
-                                    if let language = filteredLanguages.first {
-                                        let fromLang = normalizeTranslationLanguage(language.key.rawValue)
-                                        if loggingEnabled && !["en", "ru"].contains(fromLang) && !dontTranslateLanguages.contains(fromLang) {
-                                            Logger.shared.log("ChatTranslation", "\(text)")
-                                            Logger.shared.log("ChatTranslation", "Recognized as: \(fromLang), other hypotheses: \(hypotheses.map { $0.key.rawValue }.joined(separator: ",")) ")
+                                        
+                                        if message.text.count < 10 {
+                                            continue
                                         }
-                                        fromLangs[fromLang] = (fromLangs[fromLang] ?? 0) + message.text.count
-                                        count += 1
+                                        
+                                        languageRecognizer.processString(text)
+                                        let hypotheses = languageRecognizer.languageHypotheses(withMaximum: 4)
+                                        languageRecognizer.reset()
+                                        
+                                        let filteredLanguages = hypotheses.filter { supportedTranslationLanguages.contains(normalizeTranslationLanguage($0.key.rawValue)) }.sorted(by: { $0.value > $1.value })
+                                        if let language = filteredLanguages.first {
+                                            let fromLang = normalizeTranslationLanguage(language.key.rawValue)
+                                            if loggingEnabled && !["en", "ru"].contains(fromLang) && !dontTranslateLanguages.contains(fromLang) {
+                                                Logger.shared.log("ChatTranslation", "\(text)")
+                                                Logger.shared.log("ChatTranslation", "Recognized as: \(fromLang), other hypotheses: \(hypotheses.map { $0.key.rawValue }.joined(separator: ",")) ")
+                                            }
+                                            fromLangs[fromLang] = (fromLangs[fromLang] ?? 0) + message.text.count
+                                            count += 1
+                                        }
                                     }
                                 }
                                 if count >= 16 {

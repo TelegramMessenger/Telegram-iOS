@@ -518,7 +518,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
             if let requestDeactivateSearch = self?.requestDeactivateSearch {
                 requestDeactivateSearch()
             }
-        })
+        }, fieldStyle: placeholderNode.fieldStyle)
         
         self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: navigationBarHeight, transition: .immediate)
         self.searchDisplayController?.activate(insertSubnode: { [weak self, weak placeholderNode] subnode, isSearchBar in

@@ -126,7 +126,7 @@ public class ItemListFilterTitleInputItemNode: ListViewItemNode, UITextFieldDele
         
         self.maskNode = ASImageNode()
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
     }
     
     override public func didLoad() {

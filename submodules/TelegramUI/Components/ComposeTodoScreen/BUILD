@@ -44,7 +44,6 @@ swift_library(
         "//submodules/TelegramUI/Components/ListComposePollOptionComponent",
         "//submodules/ComposePollUI",
         "//submodules/Markdown",
-        "//submodules/TelegramUI/Components/EdgeEffect",
         "//submodules/TelegramUI/Components/GlassBarButtonComponent",
     ],
     visibility = [

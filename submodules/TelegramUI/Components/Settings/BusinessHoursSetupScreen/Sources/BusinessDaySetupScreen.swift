@@ -127,8 +127,7 @@ final class BusinessDaySetupScreenComponent: Component {
                 }
             }
             
-            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-            self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: enviroment.strings.BusinessHoursSetup_ErrorIntersectingHours_Text, actions: [
+            self.environment?.controller()?.present(textAlertController(context: component.context, title: nil, text: enviroment.strings.BusinessHoursSetup_ErrorIntersectingHours_Text, actions: [
                 TextAlertAction(type: .genericAction, title: enviroment.strings.Common_Cancel, action: {
                 }),
                 TextAlertAction(type: .defaultAction, title: enviroment.strings.BusinessHoursSetup_ErrorIntersectingHours_ResetAction, action: {

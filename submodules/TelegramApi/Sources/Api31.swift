@@ -32,12 +32,10 @@ public extension Api.bots {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.bots.BotInfo.botInfo(name: _1!, about: _2!, description: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.bots.BotInfo.botInfo(name: _1!, about: _2!, description: _3!)
         }
     
     }
@@ -82,12 +80,10 @@ public extension Api.bots {
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.bots.PopularAppBots.popularAppBots(flags: _1!, nextOffset: _2, users: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.bots.PopularAppBots.popularAppBots(flags: _1!, nextOffset: _2, users: _3!)
         }
     
     }
@@ -134,12 +130,9 @@ public extension Api.bots {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.bots.PreviewInfo.previewInfo(media: _1!, langCodes: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.bots.PreviewInfo.previewInfo(media: _1!, langCodes: _2!)
         }
     
     }
@@ -196,12 +189,10 @@ public extension Api.channels {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.channels.AdminLogResults.adminLogResults(events: _1!, chats: _2!, users: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.channels.AdminLogResults.adminLogResults(events: _1!, chats: _2!, users: _3!)
         }
     
     }
@@ -254,12 +245,10 @@ public extension Api.channels {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.channels.ChannelParticipant.channelParticipant(participant: _1!, chats: _2!, users: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.channels.ChannelParticipant.channelParticipant(participant: _1!, chats: _2!, users: _3!)
         }
     
     }
@@ -329,12 +318,11 @@ public extension Api.channels {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.channels.ChannelParticipants.channelParticipants(count: _1!, participants: _2!, chats: _3!, users: _4!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.channels.ChannelParticipants.channelParticipants(count: _1!, participants: _2!, chats: _3!, users: _4!)
         }
         public static func parse_channelParticipantsNotModified(_ reader: BufferReader) -> ChannelParticipants? {
             return Api.channels.ChannelParticipants.channelParticipantsNotModified
@@ -394,12 +382,10 @@ public extension Api.channels {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.channels.SendAsPeers.sendAsPeers(peers: _1!, chats: _2!, users: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.channels.SendAsPeers.sendAsPeers(peers: _1!, chats: _2!, users: _3!)
         }
     
     }
@@ -461,12 +447,9 @@ public extension Api.channels {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.channels.SponsoredMessageReportResult.sponsoredMessageReportResultChooseOption(title: _1!, options: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.channels.SponsoredMessageReportResult.sponsoredMessageReportResultChooseOption(title: _1!, options: _2!)
         }
         public static func parse_sponsoredMessageReportResultReported(_ reader: BufferReader) -> SponsoredMessageReportResult? {
             return Api.channels.SponsoredMessageReportResult.sponsoredMessageReportResultReported
@@ -569,12 +552,13 @@ public extension Api.chatlists {
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             let _c6 = _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.chatlists.ChatlistInvite.chatlistInvite(flags: _1!, title: _2!, emoticon: _3, peers: _4!, chats: _5!, users: _6!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            return Api.chatlists.ChatlistInvite.chatlistInvite(flags: _1!, title: _2!, emoticon: _3, peers: _4!, chats: _5!, users: _6!)
         }
         public static func parse_chatlistInviteAlready(_ reader: BufferReader) -> ChatlistInvite? {
             var _1: Int32?
@@ -600,12 +584,12 @@ public extension Api.chatlists {
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.chatlists.ChatlistInvite.chatlistInviteAlready(filterId: _1!, missingPeers: _2!, alreadyPeers: _3!, chats: _4!, users: _5!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.chatlists.ChatlistInvite.chatlistInviteAlready(filterId: _1!, missingPeers: _2!, alreadyPeers: _3!, chats: _4!, users: _5!)
         }
     
     }
@@ -662,12 +646,10 @@ public extension Api.chatlists {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.chatlists.ChatlistUpdates.chatlistUpdates(missingPeers: _1!, chats: _2!, users: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.chatlists.ChatlistUpdates.chatlistUpdates(missingPeers: _1!, chats: _2!, users: _3!)
         }
     
     }
@@ -706,12 +688,9 @@ public extension Api.chatlists {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.chatlists.ExportedChatlistInvite.exportedChatlistInvite(filter: _1!, invite: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.chatlists.ExportedChatlistInvite.exportedChatlistInvite(filter: _1!, invite: _2!)
         }
     
     }
@@ -768,12 +747,10 @@ public extension Api.chatlists {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.chatlists.ExportedInvites.exportedInvites(invites: _1!, chats: _2!, users: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.chatlists.ExportedInvites.exportedInvites(invites: _1!, chats: _2!, users: _3!)
         }
     
     }
@@ -854,12 +831,10 @@ public extension Api.contacts {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.contacts.Blocked.blocked(blocked: _1!, chats: _2!, users: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.contacts.Blocked.blocked(blocked: _1!, chats: _2!, users: _3!)
         }
         public static func parse_blockedSlice(_ reader: BufferReader) -> Blocked? {
             var _1: Int32?
@@ -880,12 +855,11 @@ public extension Api.contacts {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.contacts.Blocked.blockedSlice(count: _1!, blocked: _2!, chats: _3!, users: _4!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.contacts.Blocked.blockedSlice(count: _1!, blocked: _2!, chats: _3!, users: _4!)
         }
     
     }
@@ -932,12 +906,9 @@ public extension Api.contacts {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.contacts.ContactBirthdays.contactBirthdays(contacts: _1!, users: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.contacts.ContactBirthdays.contactBirthdays(contacts: _1!, users: _2!)
         }
     
     }
@@ -997,12 +968,10 @@ public extension Api.contacts {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.contacts.Contacts.contacts(contacts: _1!, savedCount: _2!, users: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.contacts.Contacts.contacts(contacts: _1!, savedCount: _2!, users: _3!)
         }
         public static func parse_contactsNotModified(_ reader: BufferReader) -> Contacts? {
             return Api.contacts.Contacts.contactsNotModified
@@ -1072,12 +1041,11 @@ public extension Api.contacts {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.contacts.Found.found(myResults: _1!, results: _2!, chats: _3!, users: _4!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.contacts.Found.found(myResults: _1!, results: _2!, chats: _3!, users: _4!)
         }
     
     }
@@ -1144,12 +1112,11 @@ public extension Api.contacts {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.contacts.ImportedContacts.importedContacts(imported: _1!, popularInvites: _2!, retryContacts: _3!, users: _4!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.contacts.ImportedContacts.importedContacts(imported: _1!, popularInvites: _2!, retryContacts: _3!, users: _4!)
         }
     
     }
@@ -1202,12 +1169,10 @@ public extension Api.contacts {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.contacts.ResolvedPeer.resolvedPeer(peer: _1!, chats: _2!, users: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.contacts.ResolvedPeer.resolvedPeer(peer: _1!, chats: _2!, users: _3!)
         }
     
     }
@@ -1273,12 +1238,10 @@ public extension Api.contacts {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.contacts.SponsoredPeers.sponsoredPeers(peers: _1!, chats: _2!, users: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.contacts.SponsoredPeers.sponsoredPeers(peers: _1!, chats: _2!, users: _3!)
         }
         public static func parse_sponsoredPeersEmpty(_ reader: BufferReader) -> SponsoredPeers? {
             return Api.contacts.SponsoredPeers.sponsoredPeersEmpty
@@ -1356,12 +1319,10 @@ public extension Api.contacts {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.contacts.TopPeers.topPeers(categories: _1!, chats: _2!, users: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.contacts.TopPeers.topPeers(categories: _1!, chats: _2!, users: _3!)
         }
         public static func parse_topPeersDisabled(_ reader: BufferReader) -> TopPeers? {
             return Api.contacts.TopPeers.topPeersDisabled
@@ -1418,12 +1379,13 @@ public extension Api.fragment {
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             let _c6 = _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.fragment.CollectibleInfo.collectibleInfo(purchaseDate: _1!, currency: _2!, amount: _3!, cryptoCurrency: _4!, cryptoAmount: _5!, url: _6!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            return Api.fragment.CollectibleInfo.collectibleInfo(purchaseDate: _1!, currency: _2!, amount: _3!, cryptoCurrency: _4!, cryptoAmount: _5!, url: _6!)
         }
     
     }
@@ -1469,12 +1431,9 @@ public extension Api.help {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.help.AppConfig.appConfig(hash: _1!, config: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.help.AppConfig.appConfig(hash: _1!, config: _2!)
         }
         public static func parse_appConfigNotModified(_ reader: BufferReader) -> AppConfig? {
             return Api.help.AppConfig.appConfigNotModified

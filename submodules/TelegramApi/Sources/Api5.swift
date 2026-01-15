@@ -40,12 +40,12 @@ public extension Api {
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.ChatInviteImporter.chatInviteImporter(flags: _1!, userId: _2!, date: _3!, about: _4, approvedBy: _5)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.ChatInviteImporter.chatInviteImporter(flags: _1!, userId: _2!, date: _3!, about: _4, approvedBy: _5)
         }
     
     }
@@ -76,12 +76,8 @@ public extension Api {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ChatOnlines.chatOnlines(onlines: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.ChatOnlines.chatOnlines(onlines: _1!)
         }
     
     }
@@ -140,12 +136,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.ChatParticipant.chatParticipant(userId: _1!, inviterId: _2!, date: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.ChatParticipant.chatParticipant(userId: _1!, inviterId: _2!, date: _3!)
         }
         public static func parse_chatParticipantAdmin(_ reader: BufferReader) -> ChatParticipant? {
             var _1: Int64?
@@ -157,23 +151,17 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.ChatParticipant.chatParticipantAdmin(userId: _1!, inviterId: _2!, date: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.ChatParticipant.chatParticipantAdmin(userId: _1!, inviterId: _2!, date: _3!)
         }
         public static func parse_chatParticipantCreator(_ reader: BufferReader) -> ChatParticipant? {
             var _1: Int64?
             _1 = reader.readInt64()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ChatParticipant.chatParticipantCreator(userId: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.ChatParticipant.chatParticipantCreator(userId: _1!)
         }
     
     }
@@ -229,12 +217,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.ChatParticipants.chatParticipants(chatId: _1!, participants: _2!, version: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.ChatParticipants.chatParticipants(chatId: _1!, participants: _2!, version: _3!)
         }
         public static func parse_chatParticipantsForbidden(_ reader: BufferReader) -> ChatParticipants? {
             var _1: Int32?
@@ -248,12 +234,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.ChatParticipants.chatParticipantsForbidden(flags: _1!, chatId: _2!, selfParticipant: _3)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.ChatParticipants.chatParticipantsForbidden(flags: _1!, chatId: _2!, selfParticipant: _3)
         }
     
     }
@@ -305,12 +289,11 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.ChatPhoto.chatPhoto(flags: _1!, photoId: _2!, strippedThumb: _3, dcId: _4!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.ChatPhoto.chatPhoto(flags: _1!, photoId: _2!, strippedThumb: _3, dcId: _4!)
         }
         public static func parse_chatPhotoEmpty(_ reader: BufferReader) -> ChatPhoto? {
             return Api.ChatPhoto.chatPhotoEmpty
@@ -366,12 +349,8 @@ public extension Api {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ChatReactions.chatReactionsAll(flags: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.ChatReactions.chatReactionsAll(flags: _1!)
         }
         public static func parse_chatReactionsNone(_ reader: BufferReader) -> ChatReactions? {
             return Api.ChatReactions.chatReactionsNone
@@ -382,12 +361,8 @@ public extension Api {
                 _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Reaction.self)
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ChatReactions.chatReactionsSome(reactions: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.ChatReactions.chatReactionsSome(reactions: _1!)
         }
     
     }
@@ -432,12 +407,8 @@ public extension Api {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ChatTheme.chatTheme(emoticon: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.ChatTheme.chatTheme(emoticon: _1!)
         }
         public static func parse_chatThemeUniqueGift(_ reader: BufferReader) -> ChatTheme? {
             var _1: Api.StarGift?
@@ -450,12 +421,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ChatTheme.chatThemeUniqueGift(gift: _1!, themeSettings: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.ChatTheme.chatThemeUniqueGift(gift: _1!, themeSettings: _2!)
         }
     
     }
@@ -506,12 +474,11 @@ public extension Api {
             let _c2 = (Int(_1!) & Int(1 << 6) == 0) || _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 8) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 8) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.CodeSettings.codeSettings(flags: _1!, logoutTokens: _2, token: _3, appSandbox: _4)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.CodeSettings.codeSettings(flags: _1!, logoutTokens: _2, token: _3, appSandbox: _4)
         }
     
     }
@@ -720,12 +687,50 @@ public extension Api {
             let _c41 = (Int(_1!) & Int(1 << 2) == 0) || _41 != nil
             let _c42 = (Int(_1!) & Int(1 << 15) == 0) || _42 != nil
             let _c43 = (Int(_1!) & Int(1 << 16) == 0) || _43 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 && _c22 && _c23 && _c24 && _c25 && _c26 && _c27 && _c28 && _c29 && _c30 && _c31 && _c32 && _c33 && _c34 && _c35 && _c36 && _c37 && _c38 && _c39 && _c40 && _c41 && _c42 && _c43 {
-                return Api.Config.config(flags: _1!, date: _2!, expires: _3!, testMode: _4!, thisDc: _5!, dcOptions: _6!, dcTxtDomainName: _7!, chatSizeMax: _8!, megagroupSizeMax: _9!, forwardedCountMax: _10!, onlineUpdatePeriodMs: _11!, offlineBlurTimeoutMs: _12!, offlineIdleTimeoutMs: _13!, onlineCloudTimeoutMs: _14!, notifyCloudDelayMs: _15!, notifyDefaultDelayMs: _16!, pushChatPeriodMs: _17!, pushChatLimit: _18!, editTimeLimit: _19!, revokeTimeLimit: _20!, revokePmTimeLimit: _21!, ratingEDecay: _22!, stickersRecentLimit: _23!, channelsReadMediaPeriod: _24!, tmpSessions: _25, callReceiveTimeoutMs: _26!, callRingTimeoutMs: _27!, callConnectTimeoutMs: _28!, callPacketTimeoutMs: _29!, meUrlPrefix: _30!, autoupdateUrlPrefix: _31, gifSearchUsername: _32, venueSearchUsername: _33, imgSearchUsername: _34, staticMapsProvider: _35, captionLengthMax: _36!, messageLengthMax: _37!, webfileDcId: _38!, suggestedLangCode: _39, langPackVersion: _40, baseLangPackVersion: _41, reactionsDefault: _42, autologinToken: _43)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            if !_c9 { return nil }
+            if !_c10 { return nil }
+            if !_c11 { return nil }
+            if !_c12 { return nil }
+            if !_c13 { return nil }
+            if !_c14 { return nil }
+            if !_c15 { return nil }
+            if !_c16 { return nil }
+            if !_c17 { return nil }
+            if !_c18 { return nil }
+            if !_c19 { return nil }
+            if !_c20 { return nil }
+            if !_c21 { return nil }
+            if !_c22 { return nil }
+            if !_c23 { return nil }
+            if !_c24 { return nil }
+            if !_c25 { return nil }
+            if !_c26 { return nil }
+            if !_c27 { return nil }
+            if !_c28 { return nil }
+            if !_c29 { return nil }
+            if !_c30 { return nil }
+            if !_c31 { return nil }
+            if !_c32 { return nil }
+            if !_c33 { return nil }
+            if !_c34 { return nil }
+            if !_c35 { return nil }
+            if !_c36 { return nil }
+            if !_c37 { return nil }
+            if !_c38 { return nil }
+            if !_c39 { return nil }
+            if !_c40 { return nil }
+            if !_c41 { return nil }
+            if !_c42 { return nil }
+            if !_c43 { return nil }
+            return Api.Config.config(flags: _1!, date: _2!, expires: _3!, testMode: _4!, thisDc: _5!, dcOptions: _6!, dcTxtDomainName: _7!, chatSizeMax: _8!, megagroupSizeMax: _9!, forwardedCountMax: _10!, onlineUpdatePeriodMs: _11!, offlineBlurTimeoutMs: _12!, offlineIdleTimeoutMs: _13!, onlineCloudTimeoutMs: _14!, notifyCloudDelayMs: _15!, notifyDefaultDelayMs: _16!, pushChatPeriodMs: _17!, pushChatLimit: _18!, editTimeLimit: _19!, revokeTimeLimit: _20!, revokePmTimeLimit: _21!, ratingEDecay: _22!, stickersRecentLimit: _23!, channelsReadMediaPeriod: _24!, tmpSessions: _25, callReceiveTimeoutMs: _26!, callRingTimeoutMs: _27!, callConnectTimeoutMs: _28!, callPacketTimeoutMs: _29!, meUrlPrefix: _30!, autoupdateUrlPrefix: _31, gifSearchUsername: _32, venueSearchUsername: _33, imgSearchUsername: _34, staticMapsProvider: _35, captionLengthMax: _36!, messageLengthMax: _37!, webfileDcId: _38!, suggestedLangCode: _39, langPackVersion: _40, baseLangPackVersion: _41, reactionsDefault: _42, autologinToken: _43)
         }
     
     }
@@ -772,12 +777,11 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.ConnectedBot.connectedBot(flags: _1!, botId: _2!, recipients: _3!, rights: _4!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.ConnectedBot.connectedBot(flags: _1!, botId: _2!, recipients: _3!, rights: _4!)
         }
     
     }
@@ -836,12 +840,15 @@ public extension Api {
             let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
             let _c7 = _7 != nil
             let _c8 = _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.ConnectedBotStarRef.connectedBotStarRef(flags: _1!, url: _2!, date: _3!, botId: _4!, commissionPermille: _5!, durationMonths: _6, participants: _7!, revenue: _8!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            return Api.ConnectedBotStarRef.connectedBotStarRef(flags: _1!, url: _2!, date: _3!, botId: _4!, commissionPermille: _5!, durationMonths: _6, participants: _7!, revenue: _8!)
         }
     
     }
@@ -878,12 +885,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.Contact.contact(userId: _1!, mutual: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.Contact.contact(userId: _1!, mutual: _2!)
         }
     
     }
@@ -920,12 +924,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ContactBirthday.contactBirthday(contactId: _1!, birthday: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.ContactBirthday.contactBirthday(contactId: _1!, birthday: _2!)
         }
     
     }
@@ -962,12 +963,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ContactStatus.contactStatus(userId: _1!, status: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.ContactStatus.contactStatus(userId: _1!, status: _2!)
         }
     
     }
@@ -998,12 +996,8 @@ public extension Api {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.DataJSON.dataJSON(data: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.DataJSON.dataJSON(data: _1!)
         }
     
     }
@@ -1050,12 +1044,12 @@ public extension Api {
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 10) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.DcOption.dcOption(flags: _1!, id: _2!, ipAddress: _3!, port: _4!, secret: _5)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.DcOption.dcOption(flags: _1!, id: _2!, ipAddress: _3!, port: _4!, secret: _5)
         }
     
     }
@@ -1086,12 +1080,8 @@ public extension Api {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.DefaultHistoryTTL.defaultHistoryTTL(period: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.DefaultHistoryTTL.defaultHistoryTTL(period: _1!)
         }
     
     }
@@ -1192,12 +1182,20 @@ public extension Api {
             let _c11 = (Int(_1!) & Int(1 << 1) == 0) || _11 != nil
             let _c12 = (Int(_1!) & Int(1 << 4) == 0) || _12 != nil
             let _c13 = (Int(_1!) & Int(1 << 5) == 0) || _13 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 {
-                return Api.Dialog.dialog(flags: _1!, peer: _2!, topMessage: _3!, readInboxMaxId: _4!, readOutboxMaxId: _5!, unreadCount: _6!, unreadMentionsCount: _7!, unreadReactionsCount: _8!, notifySettings: _9!, pts: _10, draft: _11, folderId: _12, ttlPeriod: _13)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            if !_c9 { return nil }
+            if !_c10 { return nil }
+            if !_c11 { return nil }
+            if !_c12 { return nil }
+            if !_c13 { return nil }
+            return Api.Dialog.dialog(flags: _1!, peer: _2!, topMessage: _3!, readInboxMaxId: _4!, readOutboxMaxId: _5!, unreadCount: _6!, unreadMentionsCount: _7!, unreadReactionsCount: _8!, notifySettings: _9!, pts: _10, draft: _11, folderId: _12, ttlPeriod: _13)
         }
         public static func parse_dialogFolder(_ reader: BufferReader) -> Dialog? {
             var _1: Int32?
@@ -1228,12 +1226,15 @@ public extension Api {
             let _c6 = _6 != nil
             let _c7 = _7 != nil
             let _c8 = _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.Dialog.dialogFolder(flags: _1!, folder: _2!, peer: _3!, topMessage: _4!, unreadMutedPeersCount: _5!, unreadUnmutedPeersCount: _6!, unreadMutedMessagesCount: _7!, unreadUnmutedMessagesCount: _8!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            return Api.Dialog.dialogFolder(flags: _1!, folder: _2!, peer: _3!, topMessage: _4!, unreadMutedPeersCount: _5!, unreadUnmutedPeersCount: _6!, unreadMutedMessagesCount: _7!, unreadUnmutedMessagesCount: _8!)
         }
     
     }
@@ -1344,12 +1345,15 @@ public extension Api {
             let _c6 = _6 != nil
             let _c7 = _7 != nil
             let _c8 = _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.DialogFilter.dialogFilter(flags: _1!, id: _2!, title: _3!, emoticon: _4, color: _5, pinnedPeers: _6!, includePeers: _7!, excludePeers: _8!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            return Api.DialogFilter.dialogFilter(flags: _1!, id: _2!, title: _3!, emoticon: _4, color: _5, pinnedPeers: _6!, includePeers: _7!, excludePeers: _8!)
         }
         public static func parse_dialogFilterChatlist(_ reader: BufferReader) -> DialogFilter? {
             var _1: Int32?
@@ -1379,12 +1383,14 @@ public extension Api {
             let _c5 = (Int(_1!) & Int(1 << 27) == 0) || _5 != nil
             let _c6 = _6 != nil
             let _c7 = _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.DialogFilter.dialogFilterChatlist(flags: _1!, id: _2!, title: _3!, emoticon: _4, color: _5, pinnedPeers: _6!, includePeers: _7!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            return Api.DialogFilter.dialogFilterChatlist(flags: _1!, id: _2!, title: _3!, emoticon: _4, color: _5, pinnedPeers: _6!, includePeers: _7!)
         }
         public static func parse_dialogFilterDefault(_ reader: BufferReader) -> DialogFilter? {
             return Api.DialogFilter.dialogFilterDefault
@@ -1424,12 +1430,9 @@ public extension Api {
             _2 = parseString(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.DialogFilterSuggested.dialogFilterSuggested(filter: _1!, description: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.DialogFilterSuggested.dialogFilterSuggested(filter: _1!, description: _2!)
         }
     
     }
@@ -1471,23 +1474,15 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.Peer
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.DialogPeer.dialogPeer(peer: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.DialogPeer.dialogPeer(peer: _1!)
         }
         public static func parse_dialogPeerFolder(_ reader: BufferReader) -> DialogPeer? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.DialogPeer.dialogPeerFolder(folderId: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.DialogPeer.dialogPeerFolder(folderId: _1!)
         }
     
     }

@@ -34,12 +34,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.BusinessGreetingMessage.businessGreetingMessage(shortcutId: _1!, recipients: _2!, noActivityDays: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.BusinessGreetingMessage.businessGreetingMessage(shortcutId: _1!, recipients: _2!, noActivityDays: _3!)
         }
     
     }
@@ -84,12 +82,11 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.BusinessIntro.businessIntro(flags: _1!, title: _2!, description: _3!, sticker: _4)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.BusinessIntro.businessIntro(flags: _1!, title: _2!, description: _3!, sticker: _4)
         }
     
     }
@@ -130,12 +127,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.BusinessLocation.businessLocation(flags: _1!, geoPoint: _2, address: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.BusinessLocation.businessLocation(flags: _1!, geoPoint: _2, address: _3!)
         }
     
     }
@@ -176,12 +171,9 @@ public extension Api {
             } }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 4) == 0) || _2 != nil
-            if _c1 && _c2 {
-                return Api.BusinessRecipients.businessRecipients(flags: _1!, users: _2)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.BusinessRecipients.businessRecipients(flags: _1!, users: _2)
         }
     
     }
@@ -216,12 +208,9 @@ public extension Api {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.BusinessWeeklyOpen.businessWeeklyOpen(startMinute: _1!, endMinute: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.BusinessWeeklyOpen.businessWeeklyOpen(startMinute: _1!, endMinute: _2!)
         }
     
     }
@@ -266,12 +255,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.BusinessWorkHours.businessWorkHours(flags: _1!, timezoneId: _2!, weeklyOpen: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.BusinessWorkHours.businessWorkHours(flags: _1!, timezoneId: _2!, weeklyOpen: _3!)
         }
     
     }
@@ -308,12 +295,8 @@ public extension Api {
                 _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.CdnPublicKey.self)
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.CdnConfig.cdnConfig(publicKeys: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.CdnConfig.cdnConfig(publicKeys: _1!)
         }
     
     }
@@ -348,12 +331,9 @@ public extension Api {
             _2 = parseString(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.CdnPublicKey.cdnPublicKey(dcId: _1!, publicKey: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.CdnPublicKey.cdnPublicKey(dcId: _1!, publicKey: _2!)
         }
     
     }
@@ -398,12 +378,11 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.ChannelAdminLogEvent.channelAdminLogEvent(id: _1!, date: _2!, userId: _3!, action: _4!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.ChannelAdminLogEvent.channelAdminLogEvent(id: _1!, date: _2!, userId: _3!, action: _4!)
         }
     
     }
@@ -922,12 +901,9 @@ public extension Api {
             _2 = parseString(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeAbout(prevValue: _1!, newValue: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeAbout(prevValue: _1!, newValue: _2!)
         }
         public static func parse_channelAdminLogEventActionChangeAvailableReactions(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.ChatReactions?
@@ -940,12 +916,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeAvailableReactions(prevValue: _1!, newValue: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeAvailableReactions(prevValue: _1!, newValue: _2!)
         }
         public static func parse_channelAdminLogEventActionChangeEmojiStatus(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.EmojiStatus?
@@ -958,12 +931,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeEmojiStatus(prevValue: _1!, newValue: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeEmojiStatus(prevValue: _1!, newValue: _2!)
         }
         public static func parse_channelAdminLogEventActionChangeEmojiStickerSet(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.InputStickerSet?
@@ -976,12 +946,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeEmojiStickerSet(prevStickerset: _1!, newStickerset: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeEmojiStickerSet(prevStickerset: _1!, newStickerset: _2!)
         }
         public static func parse_channelAdminLogEventActionChangeHistoryTTL(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Int32?
@@ -990,12 +957,9 @@ public extension Api {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeHistoryTTL(prevValue: _1!, newValue: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeHistoryTTL(prevValue: _1!, newValue: _2!)
         }
         public static func parse_channelAdminLogEventActionChangeLinkedChat(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Int64?
@@ -1004,12 +968,9 @@ public extension Api {
             _2 = reader.readInt64()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeLinkedChat(prevValue: _1!, newValue: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeLinkedChat(prevValue: _1!, newValue: _2!)
         }
         public static func parse_channelAdminLogEventActionChangeLocation(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.ChannelLocation?
@@ -1022,12 +983,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeLocation(prevValue: _1!, newValue: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeLocation(prevValue: _1!, newValue: _2!)
         }
         public static func parse_channelAdminLogEventActionChangePeerColor(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.PeerColor?
@@ -1040,12 +998,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangePeerColor(prevValue: _1!, newValue: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangePeerColor(prevValue: _1!, newValue: _2!)
         }
         public static func parse_channelAdminLogEventActionChangePhoto(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.Photo?
@@ -1058,12 +1013,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangePhoto(prevPhoto: _1!, newPhoto: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangePhoto(prevPhoto: _1!, newPhoto: _2!)
         }
         public static func parse_channelAdminLogEventActionChangeProfilePeerColor(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.PeerColor?
@@ -1076,12 +1028,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeProfilePeerColor(prevValue: _1!, newValue: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeProfilePeerColor(prevValue: _1!, newValue: _2!)
         }
         public static func parse_channelAdminLogEventActionChangeStickerSet(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.InputStickerSet?
@@ -1094,12 +1043,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeStickerSet(prevStickerset: _1!, newStickerset: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeStickerSet(prevStickerset: _1!, newStickerset: _2!)
         }
         public static func parse_channelAdminLogEventActionChangeTitle(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: String?
@@ -1108,12 +1054,9 @@ public extension Api {
             _2 = parseString(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeTitle(prevValue: _1!, newValue: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeTitle(prevValue: _1!, newValue: _2!)
         }
         public static func parse_channelAdminLogEventActionChangeUsername(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: String?
@@ -1122,12 +1065,9 @@ public extension Api {
             _2 = parseString(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeUsername(prevValue: _1!, newValue: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeUsername(prevValue: _1!, newValue: _2!)
         }
         public static func parse_channelAdminLogEventActionChangeUsernames(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: [String]?
@@ -1140,12 +1080,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeUsernames(prevValue: _1!, newValue: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeUsernames(prevValue: _1!, newValue: _2!)
         }
         public static func parse_channelAdminLogEventActionChangeWallpaper(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.WallPaper?
@@ -1158,12 +1095,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeWallpaper(prevValue: _1!, newValue: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeWallpaper(prevValue: _1!, newValue: _2!)
         }
         public static func parse_channelAdminLogEventActionCreateTopic(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.ForumTopic?
@@ -1171,12 +1105,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.ForumTopic
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionCreateTopic(topic: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionCreateTopic(topic: _1!)
         }
         public static func parse_channelAdminLogEventActionDefaultBannedRights(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.ChatBannedRights?
@@ -1189,12 +1119,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionDefaultBannedRights(prevBannedRights: _1!, newBannedRights: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionDefaultBannedRights(prevBannedRights: _1!, newBannedRights: _2!)
         }
         public static func parse_channelAdminLogEventActionDeleteMessage(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.Message?
@@ -1202,12 +1129,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.Message
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionDeleteMessage(message: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionDeleteMessage(message: _1!)
         }
         public static func parse_channelAdminLogEventActionDeleteTopic(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.ForumTopic?
@@ -1215,12 +1138,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.ForumTopic
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionDeleteTopic(topic: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionDeleteTopic(topic: _1!)
         }
         public static func parse_channelAdminLogEventActionDiscardGroupCall(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.InputGroupCall?
@@ -1228,12 +1147,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.InputGroupCall
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionDiscardGroupCall(call: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionDiscardGroupCall(call: _1!)
         }
         public static func parse_channelAdminLogEventActionEditMessage(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.Message?
@@ -1246,12 +1161,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionEditMessage(prevMessage: _1!, newMessage: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionEditMessage(prevMessage: _1!, newMessage: _2!)
         }
         public static func parse_channelAdminLogEventActionEditTopic(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.ForumTopic?
@@ -1264,12 +1176,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionEditTopic(prevTopic: _1!, newTopic: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionEditTopic(prevTopic: _1!, newTopic: _2!)
         }
         public static func parse_channelAdminLogEventActionExportedInviteDelete(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.ExportedChatInvite?
@@ -1277,12 +1186,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.ExportedChatInvite
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionExportedInviteDelete(invite: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionExportedInviteDelete(invite: _1!)
         }
         public static func parse_channelAdminLogEventActionExportedInviteEdit(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.ExportedChatInvite?
@@ -1295,12 +1200,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionExportedInviteEdit(prevInvite: _1!, newInvite: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionExportedInviteEdit(prevInvite: _1!, newInvite: _2!)
         }
         public static func parse_channelAdminLogEventActionExportedInviteRevoke(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.ExportedChatInvite?
@@ -1308,12 +1210,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.ExportedChatInvite
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionExportedInviteRevoke(invite: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionExportedInviteRevoke(invite: _1!)
         }
         public static func parse_channelAdminLogEventActionParticipantInvite(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.ChannelParticipant?
@@ -1321,12 +1219,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.ChannelParticipant
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantInvite(participant: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantInvite(participant: _1!)
         }
         public static func parse_channelAdminLogEventActionParticipantJoin(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantJoin
@@ -1340,12 +1234,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantJoinByInvite(flags: _1!, invite: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantJoinByInvite(flags: _1!, invite: _2!)
         }
         public static func parse_channelAdminLogEventActionParticipantJoinByRequest(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.ExportedChatInvite?
@@ -1356,12 +1247,9 @@ public extension Api {
             _2 = reader.readInt64()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantJoinByRequest(invite: _1!, approvedBy: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantJoinByRequest(invite: _1!, approvedBy: _2!)
         }
         public static func parse_channelAdminLogEventActionParticipantLeave(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantLeave
@@ -1372,12 +1260,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.GroupCallParticipant
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantMute(participant: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantMute(participant: _1!)
         }
         public static func parse_channelAdminLogEventActionParticipantSubExtend(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.ChannelParticipant?
@@ -1390,12 +1274,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantSubExtend(prevParticipant: _1!, newParticipant: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantSubExtend(prevParticipant: _1!, newParticipant: _2!)
         }
         public static func parse_channelAdminLogEventActionParticipantToggleAdmin(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.ChannelParticipant?
@@ -1408,12 +1289,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantToggleAdmin(prevParticipant: _1!, newParticipant: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantToggleAdmin(prevParticipant: _1!, newParticipant: _2!)
         }
         public static func parse_channelAdminLogEventActionParticipantToggleBan(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.ChannelParticipant?
@@ -1426,12 +1304,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantToggleBan(prevParticipant: _1!, newParticipant: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantToggleBan(prevParticipant: _1!, newParticipant: _2!)
         }
         public static func parse_channelAdminLogEventActionParticipantUnmute(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.GroupCallParticipant?
@@ -1439,12 +1314,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.GroupCallParticipant
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantUnmute(participant: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantUnmute(participant: _1!)
         }
         public static func parse_channelAdminLogEventActionParticipantVolume(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.GroupCallParticipant?
@@ -1452,12 +1323,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.GroupCallParticipant
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantVolume(participant: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantVolume(participant: _1!)
         }
         public static func parse_channelAdminLogEventActionPinTopic(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Int32?
@@ -1473,12 +1340,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionPinTopic(flags: _1!, prevTopic: _2, newTopic: _3)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionPinTopic(flags: _1!, prevTopic: _2, newTopic: _3)
         }
         public static func parse_channelAdminLogEventActionSendMessage(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.Message?
@@ -1486,12 +1351,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.Message
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionSendMessage(message: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionSendMessage(message: _1!)
         }
         public static func parse_channelAdminLogEventActionStartGroupCall(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.InputGroupCall?
@@ -1499,12 +1360,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.InputGroupCall
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionStartGroupCall(call: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionStartGroupCall(call: _1!)
         }
         public static func parse_channelAdminLogEventActionStopPoll(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.Message?
@@ -1512,12 +1369,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.Message
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionStopPoll(message: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionStopPoll(message: _1!)
         }
         public static func parse_channelAdminLogEventActionToggleAntiSpam(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.Bool?
@@ -1525,12 +1378,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.Bool
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionToggleAntiSpam(newValue: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionToggleAntiSpam(newValue: _1!)
         }
         public static func parse_channelAdminLogEventActionToggleAutotranslation(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.Bool?
@@ -1538,12 +1387,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.Bool
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionToggleAutotranslation(newValue: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionToggleAutotranslation(newValue: _1!)
         }
         public static func parse_channelAdminLogEventActionToggleForum(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.Bool?
@@ -1551,12 +1396,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.Bool
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionToggleForum(newValue: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionToggleForum(newValue: _1!)
         }
         public static func parse_channelAdminLogEventActionToggleGroupCallSetting(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.Bool?
@@ -1564,12 +1405,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.Bool
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionToggleGroupCallSetting(joinMuted: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionToggleGroupCallSetting(joinMuted: _1!)
         }
         public static func parse_channelAdminLogEventActionToggleInvites(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.Bool?
@@ -1577,12 +1414,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.Bool
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionToggleInvites(newValue: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionToggleInvites(newValue: _1!)
         }
         public static func parse_channelAdminLogEventActionToggleNoForwards(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.Bool?
@@ -1590,12 +1423,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.Bool
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionToggleNoForwards(newValue: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionToggleNoForwards(newValue: _1!)
         }
         public static func parse_channelAdminLogEventActionTogglePreHistoryHidden(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.Bool?
@@ -1603,12 +1432,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.Bool
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionTogglePreHistoryHidden(newValue: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionTogglePreHistoryHidden(newValue: _1!)
         }
         public static func parse_channelAdminLogEventActionToggleSignatureProfiles(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.Bool?
@@ -1616,12 +1441,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.Bool
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionToggleSignatureProfiles(newValue: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionToggleSignatureProfiles(newValue: _1!)
         }
         public static func parse_channelAdminLogEventActionToggleSignatures(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.Bool?
@@ -1629,12 +1450,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.Bool
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionToggleSignatures(newValue: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionToggleSignatures(newValue: _1!)
         }
         public static func parse_channelAdminLogEventActionToggleSlowMode(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Int32?
@@ -1643,12 +1460,9 @@ public extension Api {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionToggleSlowMode(prevValue: _1!, newValue: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionToggleSlowMode(prevValue: _1!, newValue: _2!)
         }
         public static func parse_channelAdminLogEventActionUpdatePinned(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.Message?
@@ -1656,12 +1470,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.Message
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionUpdatePinned(message: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.ChannelAdminLogEventAction.channelAdminLogEventActionUpdatePinned(message: _1!)
         }
     
     }

@@ -761,7 +761,7 @@ public final class StoryPeerListComponent: Component {
             
             let collapsedItemWidth: CGFloat = 24.0
             let collapsedItemDistance: CGFloat = 14.0
-            let collapsedItemOffsetY: CGFloat = -54.0
+            let collapsedItemOffsetY: CGFloat = -66.0
             let titleContentSpacing: CGFloat = 8.0
             
             let collapsedItemCount: CGFloat = CGFloat(min(self.sortedItems.count - collapseStartIndex, 3))
@@ -1409,7 +1409,7 @@ public final class StoryPeerListComponent: Component {
             }
             
             if let titleIndicatorSize, let titleIndicatorView = self.titleIndicatorView?.view {
-                let titleIndicatorFrame = CGRect(origin: CGPoint(x: titleContentOffset - titleIndicatorSize.width - 9.0, y: collapsedItemOffsetY + 2.0 + floor((56.0 - titleIndicatorSize.height) * 0.5)), size: titleIndicatorSize)
+                let titleIndicatorFrame = CGRect(origin: CGPoint(x: titleContentOffset - titleIndicatorSize.width - 9.0, y: collapsedItemOffsetY + 14.0 + floor((56.0 - titleIndicatorSize.height) * 0.5)), size: titleIndicatorSize)
                 if titleIndicatorView.superview == nil {
                     self.addSubview(titleIndicatorView)
                 }
@@ -1427,7 +1427,7 @@ public final class StoryPeerListComponent: Component {
                 titleIndicatorView.alpha = indicatorAlpha
             }
             
-            let titleFrame = CGRect(origin: CGPoint(x: titleContentOffset + titleLockOffset, y: collapsedItemOffsetY + 2.0 + floor((56.0 - titleSize.height) * 0.5)), size: titleSize)
+            let titleFrame = CGRect(origin: CGPoint(x: titleContentOffset + titleLockOffset, y: collapsedItemOffsetY + 14.0 + floor((56.0 - titleSize.height) * 0.5)), size: titleSize)
             if let image = self.titleView.image {
                 self.titleView.center = CGPoint(x: titleFrame.minX, y: titleFrame.midY)
                 self.titleView.bounds = CGRect(origin: CGPoint(), size: image.size)
@@ -1494,7 +1494,7 @@ public final class StoryPeerListComponent: Component {
             if let titleIconSize, let titleIconView = self.titleIconView?.view {
                 titleContentOffset += titleIconSpacing
                 
-                let titleIconFrame = CGRect(origin: CGPoint(x: titleContentOffset - 3.0 + titleIconSpacing + (collapsedState.titleWidth - (titleIconSpacing + titleIconSize.width)) * (1.0 - collapsedState.activityFraction), y: collapsedItemOffsetY + 2.0 + floor((56.0 - titleIconSize.height) * 0.5)), size: titleIconSize)
+                let titleIconFrame = CGRect(origin: CGPoint(x: titleContentOffset - 3.0 + titleIconSpacing + (collapsedState.titleWidth - (titleIconSpacing + titleIconSize.width)) * (1.0 - collapsedState.activityFraction), y: collapsedItemOffsetY + 14.0 + floor((56.0 - titleIconSize.height) * 0.5)), size: titleIconSize)
                 
                 if titleIconView.superview == nil {
                     self.addSubview(titleIconView)
@@ -1729,7 +1729,7 @@ public final class StoryPeerListComponent: Component {
             
             let itemLayout = ItemLayout(
                 containerSize: availableSize,
-                containerInsets: UIEdgeInsets(top: 4.0, left: component.sideInset - 4.0, bottom: 0.0, right: component.sideInset - 4.0),
+                containerInsets: UIEdgeInsets(top: 16.0, left: component.sideInset - 4.0, bottom: 0.0, right: component.sideInset - 4.0),
                 itemSize: CGSize(width: 60.0, height: 77.0),
                 itemSpacing: 14.0,
                 itemCount: self.sortedItems.count

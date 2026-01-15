@@ -9,21 +9,27 @@ import Postbox
 
 public final class EntityKeyboardTopContainerPanelEnvironment: Equatable {
     let isContentInFocus: Bool
+    let height: CGFloat
     let visibilityFractionUpdated: ActionSlot<(CGFloat, ComponentTransition)>
     let isExpandedUpdated: (Bool, ComponentTransition) -> Void
     
     init(
         isContentInFocus: Bool,
+        height: CGFloat,
         visibilityFractionUpdated: ActionSlot<(CGFloat, ComponentTransition)>,
         isExpandedUpdated: @escaping (Bool, ComponentTransition) -> Void
     ) {
         self.isContentInFocus = isContentInFocus
+        self.height = height
         self.visibilityFractionUpdated = visibilityFractionUpdated
         self.isExpandedUpdated = isExpandedUpdated
     }
     
     public static func ==(lhs: EntityKeyboardTopContainerPanelEnvironment, rhs: EntityKeyboardTopContainerPanelEnvironment) -> Bool {
         if lhs.isContentInFocus != rhs.isContentInFocus {
+            return false
+        }
+        if lhs.height != rhs.height {
             return false
         }
         if lhs.visibilityFractionUpdated !== rhs.visibilityFractionUpdated {
@@ -39,17 +45,20 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
     let theme: PresentationTheme
     let overflowHeight: CGFloat
     let topInset: CGFloat
+    let height: CGFloat
     let displayBackground: EntityKeyboardComponent.DisplayTopPanelBackground
     
     init(
         theme: PresentationTheme,
         overflowHeight: CGFloat,
         topInset: CGFloat,
+        height: CGFloat,
         displayBackground: EntityKeyboardComponent.DisplayTopPanelBackground
     ) {
         self.theme = theme
         self.overflowHeight = overflowHeight
         self.topInset = topInset
+        self.height = height
         self.displayBackground = displayBackground
     }
     
@@ -58,6 +67,9 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
             return false
         }
         if lhs.overflowHeight != rhs.overflowHeight {
+            return false
+        }
+        if lhs.height != rhs.height {
             return false
         }
         if lhs.topInset != rhs.topInset {
@@ -105,7 +117,7 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
         }
         
         func update(component: EntityKeyboardTopContainerPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
-            let intrinsicHeight: CGFloat = 34.0
+            let intrinsicHeight: CGFloat = component.height
             let height = intrinsicHeight + component.topInset
             
             let panelEnvironment = environment[PagerComponentPanelEnvironment.self].value
@@ -165,6 +177,7 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
                             environment: {
                                 EntityKeyboardTopContainerPanelEnvironment(
                                     isContentInFocus: panelEnvironment.isContentInFocus,
+                                    height: intrinsicHeight,
                                     visibilityFractionUpdated: panelView.visibilityFractionUpdated,
                                     isExpandedUpdated: { [weak self] isExpanded, transition in
                                         guard let strongSelf = self else {

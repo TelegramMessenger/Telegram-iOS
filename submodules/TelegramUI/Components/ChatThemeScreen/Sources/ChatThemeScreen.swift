@@ -22,6 +22,7 @@ import TelegramAnimatedStickerNode
 import ShimmerEffect
 import AttachmentUI
 import AvatarNode
+import AlertComponent
 
 private struct ThemeSettingsThemeEntry: Comparable, Identifiable {
     let index: Int
@@ -308,7 +309,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
         
         self.placeholderNode = StickerShimmerEffectNode()
 
-        super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
+        super.init(layerBacked: false, rotated: false, seeThrough: false)
         
         self.addSubnode(self.containerNode)
         self.containerNode.addSubnode(self.imageNode)
@@ -925,7 +926,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, ASScrollViewDelega
         self.animationNode = AnimationNode(animation: self.isDarkAppearance ? "anim_sun_reverse" : "anim_sun", colors: iconColors(theme: self.presentationData.theme), scale: 1.0)
         self.animationNode.isUserInteractionEnabled = false
         
-        self.doneButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(theme: self.presentationData.theme), height: 50.0, cornerRadius: 11.0)
+        self.doneButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(theme: self.presentationData.theme), glass: true, height: 52.0, cornerRadius: 26.0)
         
         self.otherButton = HighlightableButtonNode()
         
@@ -1530,7 +1531,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, ASScrollViewDelega
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         var presentingAlertController = false
         self.controller?.forEachController({ c in
-            if c is AlertController {
+            if c is AlertScreen {
                 presentingAlertController = true
             }
             return true
@@ -1605,13 +1606,14 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, ASScrollViewDelega
         let cancelFrame = CGRect(origin: CGPoint(x: 16.0, y: 0.0), size: cancelSize)
         transition.updateFrame(node: self.cancelButtonNode, frame: cancelFrame)
 
+        let buttonInsets = ContainerViewLayout.concentricInsets(bottomInset: layout.intrinsicInsets.bottom, innerDiameter: 52.0, sideInset: 30.0)
         let buttonInset: CGFloat = 16.0
-        let doneButtonHeight = self.doneButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
+        let doneButtonHeight = self.doneButton.updateLayout(width: contentFrame.width - buttonInsets.left - buttonInsets.right, transition: transition)
         var doneY = contentHeight - doneButtonHeight - 2.0 - insets.bottom
         if self.controller?.canResetWallpaper == true {
             doneY = contentHeight - doneButtonHeight - 52.0 - insets.bottom
         }
-        transition.updateFrame(node: self.doneButton, frame: CGRect(x: buttonInset, y: doneY, width: contentFrame.width, height: doneButtonHeight))
+        transition.updateFrame(node: self.doneButton, frame: CGRect(x: buttonInsets.left, y: doneY, width: contentFrame.width, height: doneButtonHeight))
         
         let otherButtonSize = self.otherButton.measure(CGSize(width: contentFrame.width - buttonInset * 2.0, height: .greatestFiniteMagnitude))
         self.otherButton.frame = CGRect(origin: CGPoint(x: floor((contentFrame.width - otherButtonSize.width) / 2.0), y: contentHeight - otherButtonSize.height - insets.bottom - 15.0), size: otherButtonSize)

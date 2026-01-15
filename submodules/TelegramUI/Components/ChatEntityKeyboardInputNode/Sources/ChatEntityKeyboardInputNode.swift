@@ -33,6 +33,8 @@ import LegacyMessageInputPanelInputView
 import AttachmentTextInputPanelNode
 import GlassBackgroundComponent
 
+private let keyboardCornerRadius: CGFloat = 30.0
+
 public final class EmptyInputView: UIView, UIInputViewAudioFeedback {
     public var enableInputClicksWhenVisible: Bool {
         return true
@@ -490,7 +492,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         
         self.clippingView = UIView()
         self.clippingView.clipsToBounds = true
-        self.clippingView.layer.cornerRadius = 20.0
+        self.clippingView.layer.cornerRadius = keyboardCornerRadius
         
         self.entityKeyboardView = ComponentHostView<Empty>()
         
@@ -1904,8 +1906,8 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 theme: interfaceState.theme,
                 strings: interfaceState.strings,
                 isContentInFocus: isVisible,
-                containerInsets: UIEdgeInsets(top: self.isEmojiSearchActive ? -34.0 : 0.0, left: leftInset, bottom: keyboardBottomInset, right: rightInset),
-                topPanelInsets: UIEdgeInsets(),
+                containerInsets: UIEdgeInsets(top: self.isEmojiSearchActive ? -42.0 : 0.0, left: leftInset, bottom: keyboardBottomInset, right: rightInset),
+                topPanelInsets: UIEdgeInsets(top: 0.0, left: 5.0, bottom: 0.0, right: 5.0),
                 emojiContent: emojiContent,
                 stickerContent: stickerContent,
                 maskContent: nil,
@@ -2030,16 +2032,16 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             backgroundFrame.size.height += 32.0
             
             if backgroundChromeView.image == nil {
-                backgroundChromeView.image = GlassBackgroundView.generateForegroundImage(size: CGSize(width: 20.0 * 2.0, height: 20.0 * 2.0), isDark: interfaceState.theme.overallDarkAppearance, fillColor: .clear)
+                backgroundChromeView.image = GlassBackgroundView.generateForegroundImage(size: CGSize(width: keyboardCornerRadius * 2.0, height: keyboardCornerRadius * 2.0), isDark: interfaceState.theme.overallDarkAppearance, fillColor: .clear)
             }
             if backgroundTintView.image == nil {
-                backgroundTintView.image = generateStretchableFilledCircleImage(diameter: 20.0 * 2.0, color: .white)?.withRenderingMode(.alwaysTemplate)
+                backgroundTintView.image = generateStretchableFilledCircleImage(diameter: keyboardCornerRadius * 2.0, color: .white)?.withRenderingMode(.alwaysTemplate)
             }
             backgroundTintView.tintColor = interfaceState.theme.chat.inputMediaPanel.backgroundColor
             
             transition.updateFrame(view: backgroundView, frame: backgroundFrame)
             backgroundView.updateColor(color: .clear, forceKeepBlur: true, transition: .immediate)
-            backgroundView.update(size: backgroundFrame.size, cornerRadius: 20.0, maskedCorners: [.layerMinXMinYCorner, .layerMaxXMinYCorner], transition: transition)
+            backgroundView.update(size: backgroundFrame.size, cornerRadius: keyboardCornerRadius, maskedCorners: [.layerMinXMinYCorner, .layerMaxXMinYCorner], transition: transition)
             
             transition.updateFrame(view: backgroundChromeView, frame: backgroundFrame.insetBy(dx: -1.0, dy: 0.0))
             
@@ -2666,7 +2668,6 @@ public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputVi
             pendingUnpinnedAllMessages: false,
             activeGroupCallInfo: nil,
             hasActiveGroupCall: false,
-            importState: nil,
             threadData: nil,
             isGeneralThreadClosed: nil,
             replyMessage: nil,

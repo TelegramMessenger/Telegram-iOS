@@ -109,7 +109,7 @@ public final class NavigationModalFrame: ASDisplayNode {
         let contentScale = (layout.size.width - sideInset * 2.0) / layout.size.width
         let bottomInset: CGFloat = layout.size.height - contentScale * layout.size.height - topInset
         
-        let cornerRadius: CGFloat = 28.0
+        let cornerRadius: CGFloat = 38.0
         let initialCornerRadius: CGFloat
         if !layout.safeInsets.top.isZero {
             initialCornerRadius = layout.deviceMetrics.screenCornerRadius

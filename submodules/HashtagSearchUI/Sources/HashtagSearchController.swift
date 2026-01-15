@@ -59,7 +59,7 @@ public final class HashtagSearchController: TelegramBaseController {
         }
         self.presentationData = presentationData
         
-        super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .specific(size: .compact), locationBroadcastPanelSource: .none, groupCallPanelSource: .none)
+        super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData, style: .glass))
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
@@ -87,7 +87,7 @@ public final class HashtagSearchController: TelegramBaseController {
                 if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
                     self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
                     
-                    self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
+                    self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData, style: .glass), transition: .immediate)
                     self.controllerNode.updatePresentationData(self.presentationData)
                 }
             }

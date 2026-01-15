@@ -540,7 +540,8 @@ final class LanguageSelectionScreenNode: ViewControllerTracingNode {
             inline: true,
             cancel: { [weak self] in
                 self?.requestDeactivateSearch()
-            }
+            },
+            fieldStyle: placeholderNode.fieldStyle
         )
         
         self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: navigationBarHeight, transition: .immediate)

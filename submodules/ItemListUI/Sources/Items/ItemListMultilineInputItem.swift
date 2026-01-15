@@ -152,7 +152,7 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
         self.limitTextNode = TextNode()
         self.limitTextNode.displaysAsynchronously = false
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.textClippingNode.addSubnode(self.textNode)
         self.addSubnode(self.textClippingNode)

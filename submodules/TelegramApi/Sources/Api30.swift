@@ -39,12 +39,8 @@ public extension Api.account {
                 _1 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.account.SavedMusicIds.savedMusicIds(ids: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.account.SavedMusicIds.savedMusicIds(ids: _1!)
         }
         public static func parse_savedMusicIdsNotModified(_ reader: BufferReader) -> SavedMusicIds? {
             return Api.account.SavedMusicIds.savedMusicIdsNotModified
@@ -92,12 +88,8 @@ public extension Api.account {
                 _1 = Api.parse(reader, signature: signature) as? Api.Document
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.account.SavedRingtone.savedRingtoneConverted(document: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.account.SavedRingtone.savedRingtoneConverted(document: _1!)
         }
     
     }
@@ -147,12 +139,9 @@ public extension Api.account {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.account.SavedRingtones.savedRingtones(hash: _1!, ringtones: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.account.SavedRingtones.savedRingtones(hash: _1!, ringtones: _2!)
         }
         public static func parse_savedRingtonesNotModified(_ reader: BufferReader) -> SavedRingtones? {
             return Api.account.SavedRingtones.savedRingtonesNotModified
@@ -190,12 +179,9 @@ public extension Api.account {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.account.SentEmailCode.sentEmailCode(emailPattern: _1!, length: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.account.SentEmailCode.sentEmailCode(emailPattern: _1!, length: _2!)
         }
     
     }
@@ -226,12 +212,8 @@ public extension Api.account {
             var _1: Int64?
             _1 = reader.readInt64()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.account.Takeout.takeout(id: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.account.Takeout.takeout(id: _1!)
         }
     
     }
@@ -281,12 +263,9 @@ public extension Api.account {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.account.Themes.themes(hash: _1!, themes: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.account.Themes.themes(hash: _1!, themes: _2!)
         }
         public static func parse_themesNotModified(_ reader: BufferReader) -> Themes? {
             return Api.account.Themes.themesNotModified
@@ -324,12 +303,9 @@ public extension Api.account {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.account.TmpPassword.tmpPassword(tmpPassword: _1!, validUntil: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.account.TmpPassword.tmpPassword(tmpPassword: _1!, validUntil: _2!)
         }
     
     }
@@ -379,12 +355,9 @@ public extension Api.account {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.account.WallPapers.wallPapers(hash: _1!, wallpapers: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.account.WallPapers.wallPapers(hash: _1!, wallpapers: _2!)
         }
         public static func parse_wallPapersNotModified(_ reader: BufferReader) -> WallPapers? {
             return Api.account.WallPapers.wallPapersNotModified
@@ -434,12 +407,9 @@ public extension Api.account {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.account.WebAuthorizations.webAuthorizations(authorizations: _1!, users: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.account.WebAuthorizations.webAuthorizations(authorizations: _1!, users: _2!)
         }
     
     }
@@ -498,12 +468,12 @@ public extension Api.auth {
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
             let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.auth.Authorization.authorization(flags: _1!, otherwiseReloginDays: _2, tmpSessions: _3, futureAuthToken: _4, user: _5!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.auth.Authorization.authorization(flags: _1!, otherwiseReloginDays: _2, tmpSessions: _3, futureAuthToken: _4, user: _5!)
         }
         public static func parse_authorizationSignUpRequired(_ reader: BufferReader) -> Authorization? {
             var _1: Int32?
@@ -514,12 +484,9 @@ public extension Api.auth {
             } }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
-            if _c1 && _c2 {
-                return Api.auth.Authorization.authorizationSignUpRequired(flags: _1!, termsOfService: _2)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.auth.Authorization.authorizationSignUpRequired(flags: _1!, termsOfService: _2)
         }
     
     }
@@ -630,12 +597,9 @@ public extension Api.auth {
             _2 = parseBytes(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.auth.ExportedAuthorization.exportedAuthorization(id: _1!, bytes: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.auth.ExportedAuthorization.exportedAuthorization(id: _1!, bytes: _2!)
         }
     
     }
@@ -670,12 +634,9 @@ public extension Api.auth {
             if Int(_1!) & Int(1 << 0) != 0 {_2 = parseBytes(reader) }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
-            if _c1 && _c2 {
-                return Api.auth.LoggedOut.loggedOut(flags: _1!, futureAuthToken: _2)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.auth.LoggedOut.loggedOut(flags: _1!, futureAuthToken: _2)
         }
     
     }
@@ -729,12 +690,9 @@ public extension Api.auth {
             _2 = parseBytes(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.auth.LoginToken.loginToken(expires: _1!, token: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.auth.LoginToken.loginToken(expires: _1!, token: _2!)
         }
         public static func parse_loginTokenMigrateTo(_ reader: BufferReader) -> LoginToken? {
             var _1: Int32?
@@ -743,12 +701,9 @@ public extension Api.auth {
             _2 = parseBytes(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.auth.LoginToken.loginTokenMigrateTo(dcId: _1!, token: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.auth.LoginToken.loginTokenMigrateTo(dcId: _1!, token: _2!)
         }
         public static func parse_loginTokenSuccess(_ reader: BufferReader) -> LoginToken? {
             var _1: Api.auth.Authorization?
@@ -756,12 +711,8 @@ public extension Api.auth {
                 _1 = Api.parse(reader, signature: signature) as? Api.auth.Authorization
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.auth.LoginToken.loginTokenSuccess(authorization: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.auth.LoginToken.loginTokenSuccess(authorization: _1!)
         }
     
     }
@@ -794,12 +745,8 @@ public extension Api.auth {
                 _1 = Api.parse(reader, signature: signature) as? Api.DataJSON
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.auth.PasskeyLoginOptions.passkeyLoginOptions(options: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.auth.PasskeyLoginOptions.passkeyLoginOptions(options: _1!)
         }
     
     }
@@ -830,12 +777,8 @@ public extension Api.auth {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.auth.PasswordRecovery.passwordRecovery(emailPattern: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.auth.PasswordRecovery.passwordRecovery(emailPattern: _1!)
         }
     
     }
@@ -909,12 +852,12 @@ public extension Api.auth {
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.auth.SentCode.sentCode(flags: _1!, type: _2!, phoneCodeHash: _3!, nextType: _4, timeout: _5)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.auth.SentCode.sentCode(flags: _1!, type: _2!, phoneCodeHash: _3!, nextType: _4, timeout: _5)
         }
         public static func parse_sentCodePaymentRequired(_ reader: BufferReader) -> SentCode? {
             var _1: String?
@@ -935,12 +878,13 @@ public extension Api.auth {
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             let _c6 = _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.auth.SentCode.sentCodePaymentRequired(storeProduct: _1!, phoneCodeHash: _2!, supportEmailAddress: _3!, supportEmailSubject: _4!, currency: _5!, amount: _6!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            return Api.auth.SentCode.sentCodePaymentRequired(storeProduct: _1!, phoneCodeHash: _2!, supportEmailAddress: _3!, supportEmailSubject: _4!, currency: _5!, amount: _6!)
         }
         public static func parse_sentCodeSuccess(_ reader: BufferReader) -> SentCode? {
             var _1: Api.auth.Authorization?
@@ -948,12 +892,8 @@ public extension Api.auth {
                 _1 = Api.parse(reader, signature: signature) as? Api.auth.Authorization
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.auth.SentCode.sentCodeSuccess(authorization: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.auth.SentCode.sentCodeSuccess(authorization: _1!)
         }
     
     }
@@ -1088,23 +1028,15 @@ public extension Api.auth {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.auth.SentCodeType.sentCodeTypeApp(length: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.auth.SentCodeType.sentCodeTypeApp(length: _1!)
         }
         public static func parse_sentCodeTypeCall(_ reader: BufferReader) -> SentCodeType? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.auth.SentCodeType.sentCodeTypeCall(length: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.auth.SentCodeType.sentCodeTypeCall(length: _1!)
         }
         public static func parse_sentCodeTypeEmailCode(_ reader: BufferReader) -> SentCodeType? {
             var _1: Int32?
@@ -1122,12 +1054,12 @@ public extension Api.auth {
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 3) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 4) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.auth.SentCodeType.sentCodeTypeEmailCode(flags: _1!, emailPattern: _2!, length: _3!, resetAvailablePeriod: _4, resetPendingDate: _5)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.auth.SentCodeType.sentCodeTypeEmailCode(flags: _1!, emailPattern: _2!, length: _3!, resetAvailablePeriod: _4, resetPendingDate: _5)
         }
         public static func parse_sentCodeTypeFirebaseSms(_ reader: BufferReader) -> SentCodeType? {
             var _1: Int32?
@@ -1151,23 +1083,21 @@ public extension Api.auth {
             let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
             let _c7 = _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.auth.SentCodeType.sentCodeTypeFirebaseSms(flags: _1!, nonce: _2, playIntegrityProjectId: _3, playIntegrityNonce: _4, receipt: _5, pushTimeout: _6, length: _7!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            return Api.auth.SentCodeType.sentCodeTypeFirebaseSms(flags: _1!, nonce: _2, playIntegrityProjectId: _3, playIntegrityNonce: _4, receipt: _5, pushTimeout: _6, length: _7!)
         }
         public static func parse_sentCodeTypeFlashCall(_ reader: BufferReader) -> SentCodeType? {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.auth.SentCodeType.sentCodeTypeFlashCall(pattern: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.auth.SentCodeType.sentCodeTypeFlashCall(pattern: _1!)
         }
         public static func parse_sentCodeTypeFragmentSms(_ reader: BufferReader) -> SentCodeType? {
             var _1: String?
@@ -1176,12 +1106,9 @@ public extension Api.auth {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.auth.SentCodeType.sentCodeTypeFragmentSms(url: _1!, length: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.auth.SentCodeType.sentCodeTypeFragmentSms(url: _1!, length: _2!)
         }
         public static func parse_sentCodeTypeMissedCall(_ reader: BufferReader) -> SentCodeType? {
             var _1: String?
@@ -1190,34 +1117,23 @@ public extension Api.auth {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.auth.SentCodeType.sentCodeTypeMissedCall(prefix: _1!, length: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.auth.SentCodeType.sentCodeTypeMissedCall(prefix: _1!, length: _2!)
         }
         public static func parse_sentCodeTypeSetUpEmailRequired(_ reader: BufferReader) -> SentCodeType? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.auth.SentCodeType.sentCodeTypeSetUpEmailRequired(flags: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.auth.SentCodeType.sentCodeTypeSetUpEmailRequired(flags: _1!)
         }
         public static func parse_sentCodeTypeSms(_ reader: BufferReader) -> SentCodeType? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.auth.SentCodeType.sentCodeTypeSms(length: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.auth.SentCodeType.sentCodeTypeSms(length: _1!)
         }
         public static func parse_sentCodeTypeSmsPhrase(_ reader: BufferReader) -> SentCodeType? {
             var _1: Int32?
@@ -1226,12 +1142,9 @@ public extension Api.auth {
             if Int(_1!) & Int(1 << 0) != 0 {_2 = parseString(reader) }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
-            if _c1 && _c2 {
-                return Api.auth.SentCodeType.sentCodeTypeSmsPhrase(flags: _1!, beginning: _2)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.auth.SentCodeType.sentCodeTypeSmsPhrase(flags: _1!, beginning: _2)
         }
         public static func parse_sentCodeTypeSmsWord(_ reader: BufferReader) -> SentCodeType? {
             var _1: Int32?
@@ -1240,12 +1153,9 @@ public extension Api.auth {
             if Int(_1!) & Int(1 << 0) != 0 {_2 = parseString(reader) }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
-            if _c1 && _c2 {
-                return Api.auth.SentCodeType.sentCodeTypeSmsWord(flags: _1!, beginning: _2)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.auth.SentCodeType.sentCodeTypeSmsWord(flags: _1!, beginning: _2)
         }
     
     }

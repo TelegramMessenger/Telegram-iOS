@@ -56,53 +56,53 @@ public enum ChatHistoryEntry: Identifiable, Comparable {
     case UnreadEntry(MessageIndex, ChatPresentationData)
     case ReplyCountEntry(MessageIndex, Bool, Int, ChatPresentationData)
     case ChatInfoEntry(ChatInfoData, ChatPresentationData)
-    case SearchEntry(PresentationTheme, PresentationStrings)
     
     public var stableId: UInt64 {
         switch self {
-            case let .MessageEntry(message, _, _, _, _, attributes):
-                let type: UInt64
-                switch attributes.contentTypeHint {
-                    case .generic:
-                        type = 2
-                    case .largeEmoji:
-                        type = 3
-                    case .animatedEmoji:
-                        type = 4
-                }
-                return UInt64(message.stableId) | ((type << 40))
-            case let .MessageGroupEntry(groupInfo, _, _):
-                return UInt64(bitPattern: groupInfo) | ((UInt64(2) << 40))
-            case .UnreadEntry:
-                return UInt64(4) << 40
-            case .ReplyCountEntry:
-                return UInt64(5) << 40
-            case .ChatInfoEntry:
-                return UInt64(6) << 40
-            case .SearchEntry:
+        case let .MessageEntry(message, _, _, _, _, attributes):
+            let type: UInt64
+            switch attributes.contentTypeHint {
+            case .generic:
+                type = 2
+            case .largeEmoji:
+                type = 3
+            case .animatedEmoji:
+                type = 4
+            }
+            return UInt64(message.stableId) | ((type << 40))
+        case let .MessageGroupEntry(groupInfo, _, _):
+            return UInt64(bitPattern: groupInfo) | ((UInt64(2) << 40))
+        case .UnreadEntry:
+            return UInt64(4) << 40
+        case .ReplyCountEntry:
+            return UInt64(5) << 40
+        case let .ChatInfoEntry(infoData, _):
+            switch infoData {
+            case .newThreadInfo:
                 return UInt64(7) << 40
+            default:
+                return UInt64(6) << 40
+            }   
         }
     }
     
     public var index: MessageIndex {
         switch self {
-            case let .MessageEntry(message, _, _, _, _, _):
-                return message.index
-            case let .MessageGroupEntry(_, messages, _):
-                return messages[messages.count - 1].0.index
-            case let .UnreadEntry(index, _):
-                return index
-            case let .ReplyCountEntry(index, _, _, _):
-                return index
-            case let .ChatInfoEntry(infoData, _):
-                switch infoData {
-                case .newThreadInfo:
-                    return MessageIndex.absoluteUpperBound()
-                default:
-                    return MessageIndex.absoluteLowerBound()
-                }
-            case .SearchEntry:
+        case let .MessageEntry(message, _, _, _, _, _):
+            return message.index
+        case let .MessageGroupEntry(_, messages, _):
+            return messages[messages.count - 1].0.index
+        case let .UnreadEntry(index, _):
+            return index
+        case let .ReplyCountEntry(index, _, _, _):
+            return index
+        case let .ChatInfoEntry(infoData, _):
+            switch infoData {
+            case .newThreadInfo:
+                return MessageIndex.absoluteUpperBound()
+            default:
                 return MessageIndex.absoluteLowerBound()
+            }
         }
     }
     
@@ -123,8 +123,6 @@ public enum ChatHistoryEntry: Identifiable, Comparable {
                 default:
                     return MessageIndex.absoluteLowerBound()
                 }
-            case .SearchEntry:
-                return MessageIndex.absoluteLowerBound()
         }
     }
     
@@ -293,12 +291,6 @@ public enum ChatHistoryEntry: Identifiable, Comparable {
                 }
             case let .ChatInfoEntry(lhsData, lhsPresentationData):
                 if case let .ChatInfoEntry(rhsData, rhsPresentationData) = rhs, lhsData == rhsData, lhsPresentationData === rhsPresentationData {
-                    return true
-                } else {
-                    return false
-                }
-            case let .SearchEntry(lhsTheme, lhsStrings):
-                if case let .SearchEntry(rhsTheme, rhsStrings) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings {
                     return true
                 } else {
                     return false

@@ -90,7 +90,7 @@ class ThemeSettingsBrightnessItemNode: ListViewItemNode {
         self.rightIconNode.displaysAsynchronously = false
         self.rightIconNode.displayWithoutProcessing = true
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.leftIconNode)
         self.addSubnode(self.rightIconNode)

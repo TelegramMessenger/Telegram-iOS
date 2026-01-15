@@ -153,35 +153,8 @@ func textInputContextPanel(context: AccountContext, chatPresentationInterfaceSta
         } else {
             return nil
         }
-    case let .contextRequestResult(_, results):
-        let _ = results
+    case .contextRequestResult:
         return nil
-        /*if let results = results, (!results.results.isEmpty || results.switchPeer != nil || results.webView != nil) {
-            switch results.presentation {
-                case .list:
-                    if let currentPanel = currentPanel as? VerticalListContextResultsChatInputContextPanelNode {
-                        currentPanel.updateResults(results)
-                        return currentPanel
-                    } else {
-                        let panel = VerticalListContextResultsChatInputContextPanelNode(context: context, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize, chatPresentationContext: controllerInteraction.presentationContext)
-                        panel.interfaceInteraction = interfaceInteraction
-                        panel.updateResults(results)
-                        return panel
-                    }
-                case .media:
-                    if let currentPanel = currentPanel as? HorizontalListContextResultsChatInputContextPanelNode {
-                        currentPanel.updateResults(results)
-                        return currentPanel
-                    } else {
-                        let panel = HorizontalListContextResultsChatInputContextPanelNode(context: context, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize, chatPresentationContext: controllerInteraction.presentationContext)
-                        panel.interfaceInteraction = interfaceInteraction
-                        panel.updateResults(results)
-                        return panel
-                    }
-            }
-        } else {
-            return nil
-        }*/
     }
 }
 

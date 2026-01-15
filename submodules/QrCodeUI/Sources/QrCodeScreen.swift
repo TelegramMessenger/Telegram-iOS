@@ -1,17 +1,23 @@
 import Foundation
 import UIKit
-import AsyncDisplayKit
 import Display
+import ComponentFlow
 import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
-import AppBundle
-import QrCode
+import ViewControllerComponent
+import SheetComponent
+import BalancedTextComponent
+import MultilineTextComponent
+import BundleIconComponent
+import ButtonComponent
+import GlassBarButtonComponent
+import PlainButtonComponent
 import AccountContext
-import SolidRoundedButtonNode
-import AnimatedStickerNode
-import TelegramAnimatedStickerNode
-import PresentationDataUtils
+import Markdown
+import TextFormat
+import QrCode
+import LottieComponent
 
 private func shareQrCode(context: AccountContext, link: String, ecl: String, view: UIView) {
     let _ = (qrCode(string: link, color: .black, backgroundColor: .white, icon: .custom(UIImage(bundleImageName: "Chat/Links/QrLogo")), ecl: ecl)
@@ -24,7 +30,7 @@ private func shareQrCode(context: AccountContext, link: String, ecl: String, vie
         guard let image = image else {
             return
         }
-        
+
         let activityController = UIActivityViewController(activityItems: [image], applicationActivities: nil)
         if let window = view.window {
             activityController.popoverPresentationController?.sourceView = window
@@ -34,13 +40,336 @@ private func shareQrCode(context: AccountContext, link: String, ecl: String, vie
     })
 }
 
-public final class QrCodeScreen: ViewController {
+private final class SheetContent: CombinedComponent {
+    typealias EnvironmentType = ViewControllerComponentContainer.Environment
+    
+    let context: AccountContext
+    let subject: QrCodeScreen.Subject
+    let dismiss: () -> Void
+    
+    init(
+        context: AccountContext,
+        subject: QrCodeScreen.Subject,
+        dismiss: @escaping () -> Void
+    ) {
+        self.context = context
+        self.subject = subject
+        self.dismiss = dismiss
+    }
+    
+    static func ==(lhs: SheetContent, rhs: SheetContent) -> Bool {
+        if lhs.context !== rhs.context {
+            return false
+        }
+        return true
+    }
+    
+    final class State: ComponentState {
+        private let idleTimerExtensionDisposable = MetaDisposable()
+        
+        private var initialBrightness: CGFloat?
+        private var brightnessArguments: (Double, Double, CGFloat, CGFloat)?
+        private var animator: ConstantDisplayLinkAnimator?
+        
+        init(context: AccountContext) {
+            super.init()
+            
+            self.idleTimerExtensionDisposable.set(context.sharedContext.applicationBindings.pushIdleTimerExtension())
+            
+            self.animator = ConstantDisplayLinkAnimator(update: { [weak self] in
+                self?.updateBrightness()
+            })
+            self.animator?.isPaused = true
+            
+            self.initialBrightness = UIScreen.main.brightness
+            self.brightnessArguments = (CACurrentMediaTime(), 0.3, UIScreen.main.brightness, 1.0)
+            self.updateBrightness()
+        }
+        
+        deinit {
+            self.idleTimerExtensionDisposable.dispose()
+            self.animator?.invalidate()
+            
+            if UIScreen.main.brightness > 0.99, let initialBrightness = self.initialBrightness {
+                self.brightnessArguments = (CACurrentMediaTime(), 0.3, UIScreen.main.brightness, initialBrightness)
+                self.updateBrightness()
+            }
+        }
+        
+        private func updateBrightness() {
+            if let (startTime, duration, initial, target) = self.brightnessArguments {
+                self.animator?.isPaused = false
+                
+                let t = CGFloat(max(0.0, min(1.0, (CACurrentMediaTime() - startTime) / duration)))
+                let value = initial + (target - initial) * t
+                
+                UIScreen.main.brightness = value
+                
+                if t >= 1.0 {
+                    self.brightnessArguments = nil
+                    self.animator?.isPaused = true
+                }
+            } else {
+                self.animator?.isPaused = true
+            }
+        }
+    }
+    
+    func makeState() -> State {
+        return State(context: self.context)
+    }
+        
+    static var body: Body {
+        let qrCode = Child(PlainButtonComponent.self)
+        let closeButton = Child(GlassBarButtonComponent.self)
+        let title = Child(Text.self)
+        let text = Child(BalancedTextComponent.self)
+        
+        let button = Child(ButtonComponent.self)
+        
+        return { context in
+            let environment = context.environment[EnvironmentType.self]
+            let component = context.component
+            let controller = environment.controller()
+            
+            let theme = environment.theme
+            let strings = environment.strings
+                        
+            let link = component.subject.link
+            let ecl = component.subject.ecl
+            
+            let titleString: String
+            let textString: String
+            switch component.subject {
+            case let .invite(_, type):
+                titleString = strings.InviteLink_QRCode_Title
+                switch type {
+                case .group:
+                    textString = strings.InviteLink_QRCode_Info
+                case .channel:
+                    textString = strings.InviteLink_QRCode_InfoChannel
+                case .groupCall:
+                    textString = strings.InviteLink_QRCode_InfoGroupCall
+                }
+            case .chatFolder:
+                titleString = strings.InviteLink_QRCodeFolder_Title
+                textString = strings.InviteLink_QRCodeFolder_Text
+            default:
+                titleString = ""
+                textString = ""
+            }
+            
+            var contentSize = CGSize(width: context.availableSize.width, height: 36.0)
+                             
+            let closeButton = closeButton.update(
+                component: GlassBarButtonComponent(
+                    size: CGSize(width: 40.0, height: 40.0),
+                    backgroundColor: theme.rootController.navigationBar.glassBarButtonBackgroundColor,
+                    isDark: theme.overallDarkAppearance,
+                    state: .generic,
+                    component: AnyComponentWithIdentity(id: "close", component: AnyComponent(
+                        BundleIconComponent(
+                            name: "Navigation/Close",
+                            tintColor: theme.rootController.navigationBar.glassBarButtonForegroundColor
+                        )
+                    )),
+                    action: { _ in
+                        component.dismiss()
+                    }
+                ),
+                availableSize: CGSize(width: 40.0, height: 40.0),
+                transition: .immediate
+            )
+            context.add(closeButton
+                .position(CGPoint(x: 16.0 + closeButton.size.width / 2.0, y: 16.0 + closeButton.size.height / 2.0))
+            )
+            
+            let constrainedTitleWidth = context.availableSize.width - 16.0 * 2.0
+                        
+            let title = title.update(
+                component: Text(text: titleString, font: Font.semibold(17.0), color: theme.list.itemPrimaryTextColor),
+                availableSize: CGSize(width: constrainedTitleWidth, height: context.availableSize.height),
+                transition: .immediate
+            )
+            context.add(title
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height))
+            )
+            contentSize.height += title.size.height
+            contentSize.height += 13.0
+            
+            let qrCode = qrCode.update(
+                component: PlainButtonComponent(
+                    content: AnyComponent(QrCodeComponent(context: component.context, link: link, ecl: ecl)),
+                    action: { [weak controller] in
+                        if let view = controller?.view {
+                            shareQrCode(context: component.context, link: link, ecl: ecl, view: view)
+                        }
+                    },
+                    animateScale: false
+                ),
+                availableSize: CGSize(width: 260.0, height: 260.0),
+                transition: .immediate
+            )
+            context.add(qrCode
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + qrCode.size.height / 2.0))
+            )
+            contentSize.height += qrCode.size.height
+            contentSize.height += 17.0
+            
+            let textFont = Font.regular(15.0)
+            let boldTextFont = Font.semibold(15.0)
+            let textColor = theme.actionSheet.primaryTextColor
+            let linkColor = theme.actionSheet.controlAccentColor
+            let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: linkColor), linkAttribute: { contents in
+                return (TelegramTextAttributes.URL, contents)
+            })
+                        
+            let text = text.update(
+                component: BalancedTextComponent(
+                    text: .markdown(
+                        text: textString,
+                        attributes: markdownAttributes
+                    ),
+                    horizontalAlignment: .center,
+                    maximumNumberOfLines: 0,
+                    lineSpacing: 0.2
+                ),
+                availableSize: CGSize(width: constrainedTitleWidth, height: context.availableSize.height),
+                transition: .immediate
+            )
+            context.add(text
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + text.size.height / 2.0))
+            )
+            contentSize.height += text.size.height
+            contentSize.height += 23.0
+                                                
+            let buttonInsets = ContainerViewLayout.concentricInsets(bottomInset: environment.safeInsets.bottom, innerDiameter: 52.0, sideInset: 30.0)
+            let button = button.update(
+                component: ButtonComponent(
+                    background: ButtonComponent.Background(
+                        style: .glass,
+                        color: theme.list.itemCheckColors.fillColor,
+                        foreground: theme.list.itemCheckColors.foregroundColor,
+                        pressedColor: theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9),
+                        cornerRadius: 10.0,
+                    ),
+                    content: AnyComponentWithIdentity(
+                        id: AnyHashable(0),
+                        component: AnyComponent(MultilineTextComponent(text: .plain(NSMutableAttributedString(string: strings.InviteLink_QRCode_Share, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center))))
+                    ),
+                    isEnabled: true,
+                    displaysProgress: false,
+                    action: { [weak controller] in
+                        if let view = controller?.view {
+                            shareQrCode(context: component.context, link: link, ecl: ecl, view: view)
+                        }
+                    }
+                ),
+                availableSize: CGSize(width: context.availableSize.width - buttonInsets.left - buttonInsets.right, height: 52.0),
+                transition: .immediate
+            )
+            context.add(button
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + button.size.height / 2.0))
+            )
+            contentSize.height += button.size.height
+            contentSize.height += buttonInsets.bottom
+            
+            return contentSize
+        }
+    }
+}
+
+private final class QrCodeSheetComponent: CombinedComponent {
+    typealias EnvironmentType = ViewControllerComponentContainer.Environment
+    
+    private let context: AccountContext
+    private let subject: QrCodeScreen.Subject
+    
+    init(
+        context: AccountContext,
+        subject: QrCodeScreen.Subject
+    ) {
+        self.context = context
+        self.subject = subject
+    }
+    
+    static func ==(lhs: QrCodeSheetComponent, rhs: QrCodeSheetComponent) -> Bool {
+        if lhs.context !== rhs.context {
+            return false
+        }
+        return true
+    }
+    
+    static var body: Body {
+        let sheet = Child(SheetComponent<(EnvironmentType)>.self)
+        let animateOut = StoredActionSlot(Action<Void>.self)
+        
+        return { context in
+            let environment = context.environment[EnvironmentType.self]
+            
+            let controller = environment.controller
+            
+            let sheet = sheet.update(
+                component: SheetComponent<EnvironmentType>(
+                    content: AnyComponent<EnvironmentType>(SheetContent(
+                        context: context.component.context,
+                        subject: context.component.subject,
+                        dismiss: {
+                            animateOut.invoke(Action { _ in
+                                if let controller = controller() as? QrCodeScreen {
+                                    controller.dismiss(completion: nil)
+                                }
+                            })
+                        }
+                    )),
+                    style: .glass,
+                    backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
+                    followContentSizeChanges: true,
+                    clipsContent: true,
+                    animateOut: animateOut
+                ),
+                environment: {
+                    environment
+                    SheetComponentEnvironment(
+                        isDisplaying: environment.value.isVisible,
+                        isCentered: environment.metrics.widthClass == .regular,
+                        hasInputHeight: !environment.inputHeight.isZero,
+                        regularMetricsSize: CGSize(width: 430.0, height: 900.0),
+                        dismiss: { animated in
+                            if animated {
+                                animateOut.invoke(Action { _ in
+                                    if let controller = controller() as? QrCodeScreen {
+                                        controller.dismiss(completion: nil)
+                                    }
+                                })
+                            } else {
+                                if let controller = controller() as? QrCodeScreen {
+                                    controller.dismiss(completion: nil)
+                                }
+                            }
+                        }
+                    )
+                },
+                availableSize: context.availableSize,
+                transition: context.transition
+            )
+            
+            context.add(sheet
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0))
+            )
+            
+            return context.availableSize
+        }
+    }
+}
+
+public final class QrCodeScreen: ViewControllerComponentContainer {
     public enum SubjectType {
         case group
         case channel
         case groupCall
     }
-
+    
     public enum Subject {
         case peer(peer: EnginePeer)
         case invite(invite: ExportedInvitation, type: SubjectType)
@@ -48,471 +377,181 @@ public final class QrCodeScreen: ViewController {
         
         var link: String {
             switch self {
-                case let .peer(peer):
-                    return "https://t.me/\(peer.addressName ?? "")"
-                case let .invite(invite, _):
-                    return invite.link ?? ""
-                case let .chatFolder(slug):
-                    if slug.hasPrefix("https://") {
-                        return slug
-                    } else {
-                        return "https://t.me/addlist/\(slug)"
-                    }
+            case let .peer(peer):
+                return "https://t.me/\(peer.addressName ?? "")"
+            case let .invite(invite, _):
+                return invite.link ?? ""
+            case let .chatFolder(slug):
+                if slug.hasPrefix("https://") {
+                    return slug
+                } else {
+                    return "https://t.me/addlist/\(slug)"
+                }
             }
         }
         
         var ecl: String {
             switch self {
-                case .peer:
-                    return "Q"
-                case .invite:
-                    return "Q"
-                case .chatFolder:
-                    return "Q"
+            case .peer:
+                return "Q"
+            case .invite:
+                return "Q"
+            case .chatFolder:
+                return "Q"
             }
         }
     }
     
-    private var controllerNode: Node {
-        return self.displayNode as! Node
-    }
-    
-    private var animatedIn = false
-    
     private let context: AccountContext
-    private let subject: QrCodeScreen.Subject
     
-    private var presentationData: PresentationData
-    private var presentationDataDisposable: Disposable?
-    
-    private var initialBrightness: CGFloat?
-    private var brightnessArguments: (Double, Double, CGFloat, CGFloat)?
-    
-    private var animator: ConstantDisplayLinkAnimator?
-    
-    private let idleTimerExtensionDisposable = MetaDisposable()
-    
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, subject: QrCodeScreen.Subject) {
+    public init(
+        context: AccountContext,
+        updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
+        subject: QrCodeScreen.Subject
+    ) {
         self.context = context
-        self.subject = subject
         
-        self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
+        super.init(
+            context: context,
+            component: QrCodeSheetComponent(
+                context: context,
+                subject: subject
+            ),
+            navigationBarAppearance: .none,
+            statusBarStyle: .ignore,
+            theme: .default //
+        )
         
-        super.init(navigationBarPresentationData: nil)
-        
-        self.statusBar.statusBarStyle = .Ignore
-        
-        self.blocksBackgroundWhenInOverlay = true
-        
-        self.presentationDataDisposable = ((updatedPresentationData?.signal ?? context.sharedContext.presentationData)
-        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
-            if let strongSelf = self {
-                strongSelf.presentationData = presentationData
-                strongSelf.controllerNode.updatePresentationData(presentationData)
-            }
-        })
-        
-        self.idleTimerExtensionDisposable.set(self.context.sharedContext.applicationBindings.pushIdleTimerExtension())
-        
-        self.statusBar.statusBarStyle = .Ignore
-        
-        self.animator = ConstantDisplayLinkAnimator(update: { [weak self] in
-            self?.updateBrightness()
-        })
-        self.animator?.isPaused = true
+        self.navigationPresentation = .flatModal
     }
-    
-    required init(coder aDecoder: NSCoder) {
+        
+    required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    deinit {
-        self.presentationDataDisposable?.dispose()
-        self.idleTimerExtensionDisposable.dispose()
-        self.animator?.invalidate()
-    }
-    
-    override public func loadDisplayNode() {
-        self.displayNode = Node(context: self.context, presentationData: self.presentationData, subject: self.subject)
-        self.controllerNode.dismiss = { [weak self] in
-            self?.presentingViewController?.dismiss(animated: false, completion: nil)
-        }
-        self.controllerNode.cancel = { [weak self] in
-            self?.dismiss()
+    public func dismissAnimated() {
+        if let view = self.node.hostView.findTaggedView(tag: SheetComponent<ViewControllerComponentContainer.Environment>.View.Tag()) as? SheetComponent<ViewControllerComponentContainer.Environment>.View {
+            view.dismissAnimated()
         }
     }
+}
+
+private final class QrCodeComponent: Component {
+    let context: AccountContext
+    let link: String
+    let ecl: String
     
-    override public func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        
-        if !self.animatedIn {
-            self.animatedIn = true
-            self.controllerNode.animateIn()
-            
-            self.initialBrightness = UIScreen.main.brightness
-            self.brightnessArguments = (CACurrentMediaTime(), 0.3, UIScreen.main.brightness, 1.0)
-            self.updateBrightness()
-        }
-    }
-    
-    private func updateBrightness() {
-        if let (startTime, duration, initial, target) = self.brightnessArguments {
-            self.animator?.isPaused = false
-            
-            let t = CGFloat(max(0.0, min(1.0, (CACurrentMediaTime() - startTime) / duration)))
-            let value = initial + (target - initial) * t
-            
-            UIScreen.main.brightness = value
-            
-            if t >= 1.0 {
-                self.brightnessArguments = nil
-                self.animator?.isPaused = true
-            }
-        } else {
-            self.animator?.isPaused = true
-        }
-    }
-    
-    override public func dismiss(completion: (() -> Void)? = nil) {
-        if UIScreen.main.brightness > 0.99, let initialBrightness = self.initialBrightness {
-            self.brightnessArguments = (CACurrentMediaTime(), 0.3, UIScreen.main.brightness, initialBrightness)
-            self.updateBrightness()
-        }
-        
-        self.controllerNode.animateOut(completion: completion)
-    }
-    
-    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
-        super.containerLayoutUpdated(layout, transition: transition)
-        
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
+    init(
+        context: AccountContext,
+        link: String,
+        ecl: String
+    ) {
+        self.context = context
+        self.link = link
+        self.ecl = ecl
     }
 
-    class Node: ViewControllerTracingNode, ASScrollViewDelegate {
-        private let context: AccountContext
-        private let subject: QrCodeScreen.Subject
-        private var presentationData: PresentationData
-    
-        private let dimNode: ASDisplayNode
-        private let wrappingScrollNode: ASScrollNode
-        private let contentContainerNode: ASDisplayNode
-        private let backgroundNode: ASDisplayNode
-        private let contentBackgroundNode: ASDisplayNode
-        private let titleNode: ASTextNode
-        private let cancelButton: HighlightableButtonNode
+    static func ==(lhs: QrCodeComponent, rhs: QrCodeComponent) -> Bool {
+        if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.link != rhs.link {
+            return false
+        }
+        if lhs.ecl != rhs.ecl {
+            return false
+        }
+        return true
+    }
+
+    final class View: UIView {
+        private var component: QrCodeComponent?
+        private var state: EmptyComponentState?
         
-        private let textNode: ImmediateTextNode
-        private let qrButtonNode: HighlightTrackingButtonNode
-        private let qrImageNode: TransformImageNode
-        private let qrIconNode: AnimatedStickerNode
+        private let imageNode: TransformImageNode
+        private let icon = ComponentView<Empty>()
+        
         private var qrCodeSize: Int?
-        private let buttonNode: SolidRoundedButtonNode
                 
-        private var containerLayout: (ContainerViewLayout, CGFloat)?
+        private var isUpdating = false
         
-        var completion: ((Int32) -> Void)?
-        var dismiss: (() -> Void)?
-        var cancel: (() -> Void)?
+        override init(frame: CGRect) {
+            self.imageNode = TransformImageNode()
+            
+            super.init(frame: frame)
+            
+            self.backgroundColor = UIColor.white
+            self.clipsToBounds = true
+            self.layer.cornerRadius = 24.0
+            self.layer.allowsGroupOpacity = true
+            
+            self.addSubview(self.imageNode.view)
+        }
         
-        init(context: AccountContext, presentationData: PresentationData, subject: QrCodeScreen.Subject) {
-            self.context = context
-            self.subject = subject
-            self.presentationData = presentationData
-
-            self.wrappingScrollNode = ASScrollNode()
-            self.wrappingScrollNode.view.alwaysBounceVertical = true
-            self.wrappingScrollNode.view.delaysContentTouches = false
-            self.wrappingScrollNode.view.canCancelContentTouches = true
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        func update(component: QrCodeComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+            self.isUpdating = true
+            defer {
+                self.isUpdating = false
+            }
+            let previousComponent = self.component
+            self.component = component
+            self.state = state
             
-            self.dimNode = ASDisplayNode()
-            self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
-            
-            self.contentContainerNode = ASDisplayNode()
-            self.contentContainerNode.isOpaque = false
-
-            self.backgroundNode = ASDisplayNode()
-            self.backgroundNode.clipsToBounds = true
-            self.backgroundNode.cornerRadius = 16.0
-            
-            let backgroundColor = self.presentationData.theme.actionSheet.opaqueItemBackgroundColor
-            let textColor = self.presentationData.theme.actionSheet.primaryTextColor
-            let secondaryTextColor = self.presentationData.theme.actionSheet.secondaryTextColor
-            let accentColor = self.presentationData.theme.actionSheet.controlAccentColor
-            
-            self.contentBackgroundNode = ASDisplayNode()
-            self.contentBackgroundNode.backgroundColor = backgroundColor
-            
-            let title: String
-            let text: String
-            switch subject {
-                case let .invite(_, type):
-                    title = self.presentationData.strings.InviteLink_QRCode_Title
-                    switch type {
-                        case .group:
-                            text = self.presentationData.strings.InviteLink_QRCode_Info
-                        case .channel:
-                            text = self.presentationData.strings.InviteLink_QRCode_InfoChannel
-                        case .groupCall:
-                            text = self.presentationData.strings.InviteLink_QRCode_InfoGroupCall
+            if previousComponent?.link != component.link {
+                self.imageNode.setSignal(qrCode(string: component.link, color: .black, backgroundColor: .white, icon: .cutout, ecl: component.ecl) |> beforeNext { [weak self] size, _ in
+                    guard let self else {
+                        return
                     }
-                case .chatFolder:
-                    title = self.presentationData.strings.InviteLink_QRCodeFolder_Title
-                    text = self.presentationData.strings.InviteLink_QRCodeFolder_Text
-                default:
-                    title = ""
-                    text = ""
+                    self.qrCodeSize = size
+                    if !self.isUpdating {
+                        self.state?.updated()
+                    }
+                } |> map { $0.1 }, attemptSynchronously: true)
             }
-            
-            self.titleNode = ASTextNode()
-            self.titleNode.attributedText = NSAttributedString(string: title, font: Font.bold(17.0), textColor: textColor)
-            
-            self.cancelButton = HighlightableButtonNode()
-            self.cancelButton.setTitle(self.presentationData.strings.Common_Done, with: Font.bold(17.0), with: accentColor, for: .normal)
-            
-            self.buttonNode = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(theme: self.presentationData.theme), height: 52.0, cornerRadius: 11.0, isShimmering: false)
-            
-            self.textNode = ImmediateTextNode()
-            self.textNode.maximumNumberOfLines = 3
-            self.textNode.textAlignment = .center
-            
-            self.qrButtonNode = HighlightTrackingButtonNode()
-            self.qrImageNode = TransformImageNode()
-            self.qrImageNode.clipsToBounds = true
-            self.qrImageNode.cornerRadius = 16.0
-            
-            self.qrIconNode = DefaultAnimatedStickerNodeImpl()   
-            self.qrIconNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "PlaneLogo"), width: 240, height: 240, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
-            self.qrIconNode.visibility = true
-            
-            super.init()
-            
-            self.backgroundColor = nil
-            self.isOpaque = false
-            
-            self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
-            self.addSubnode(self.dimNode)
-            
-            self.wrappingScrollNode.view.delegate = self.wrappedScrollViewDelegate
-            self.addSubnode(self.wrappingScrollNode)
-            
-            self.wrappingScrollNode.addSubnode(self.backgroundNode)
-            self.wrappingScrollNode.addSubnode(self.contentContainerNode)
-            
-            self.backgroundNode.addSubnode(self.contentBackgroundNode)
-            self.contentContainerNode.addSubnode(self.titleNode)
-            self.contentContainerNode.addSubnode(self.cancelButton)
-            self.contentContainerNode.addSubnode(self.buttonNode)
-
-            self.contentContainerNode.addSubnode(self.textNode)
-            self.contentContainerNode.addSubnode(self.qrImageNode)
-            self.contentContainerNode.addSubnode(self.qrIconNode)
-            self.contentContainerNode.addSubnode(self.qrButtonNode)
                         
-            self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: secondaryTextColor)
-            self.buttonNode.title = self.presentationData.strings.InviteLink_QRCode_Share
-            
-            self.cancelButton.addTarget(self, action: #selector(self.cancelButtonPressed), forControlEvents: .touchUpInside)
-            self.buttonNode.pressed = { [weak self] in
-                if let strongSelf = self{
-                    shareQrCode(context: strongSelf.context, link: subject.link, ecl: subject.ecl, view: strongSelf.view)
-                }
-            }
-            
-            self.qrImageNode.setSignal(qrCode(string: subject.link, color: .black, backgroundColor: .white, icon: .cutout, ecl: subject.ecl) |> beforeNext { [weak self] size, _ in
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.qrCodeSize = size
-                if let (layout, navigationHeight) = strongSelf.containerLayout {
-                    strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)
-                }
-            } |> map { $0.1 }, attemptSynchronously: true)
-            
-            self.qrButtonNode.addTarget(self, action: #selector(self.qrPressed), forControlEvents: .touchUpInside)
-            self.qrButtonNode.highligthedChanged = { [weak self] highlighted in
-                guard let strongSelf = self else {
-                    return
-                }
-                if highlighted {
-                    strongSelf.qrImageNode.alpha = 0.4
-                    strongSelf.qrIconNode.alpha = 0.4
-                } else {
-                    strongSelf.qrImageNode.layer.animateAlpha(from: strongSelf.qrImageNode.alpha, to: 1.0, duration: 0.2)
-                    strongSelf.qrImageNode.alpha = 1.0
-                    strongSelf.qrIconNode.layer.animateAlpha(from: strongSelf.qrIconNode.alpha, to: 1.0, duration: 0.2)
-                    strongSelf.qrIconNode.alpha = 1.0
-                }
-            }
-        }
-        
-        @objc private func qrPressed() {
-            self.buttonNode.pressed?()
-        }
-        
-        func updatePresentationData(_ presentationData: PresentationData) {
-            let previousTheme = self.presentationData.theme
-            self.presentationData = presentationData
-            
-            self.contentBackgroundNode.backgroundColor = self.presentationData.theme.actionSheet.opaqueItemBackgroundColor
-            self.titleNode.attributedText = NSAttributedString(string: self.titleNode.attributedText?.string ?? "", font: Font.bold(17.0), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
-            self.textNode.attributedText = NSAttributedString(string: self.textNode.attributedText?.string ?? "", font: Font.regular(13.0), textColor: self.presentationData.theme.actionSheet.secondaryTextColor)
-            
-            if previousTheme !== presentationData.theme, let (layout, navigationBarHeight) = self.containerLayout {
-                self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
-            }
-            
-            self.cancelButton.setTitle(self.presentationData.strings.Common_Done, with: Font.bold(17.0), with: self.presentationData.theme.actionSheet.controlAccentColor, for: .normal)
-            self.buttonNode.updateTheme(SolidRoundedButtonTheme(theme: self.presentationData.theme))
-        }
-        
-        override func didLoad() {
-            super.didLoad()
-            
-            if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
-                self.wrappingScrollNode.view.contentInsetAdjustmentBehavior = .never
-            }
-        }
-        
-        @objc func cancelButtonPressed() {
-            self.cancel?()
-        }
-        
-        @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
-            if case .ended = recognizer.state {
-                self.cancelButtonPressed()
-            }
-        }
-        
-        func animateIn() {
-            self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
-            
-            let offset = self.bounds.size.height - self.contentBackgroundNode.frame.minY
-            
-            let dimPosition = self.dimNode.layer.position
-            self.dimNode.layer.animatePosition(from: CGPoint(x: dimPosition.x, y: dimPosition.y - offset), to: dimPosition, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-            self.layer.animateBoundsOriginYAdditive(from: -offset, to: 0.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-        }
-        
-        func animateOut(completion: (() -> Void)? = nil) {
-            var dimCompleted = false
-            var offsetCompleted = false
-            
-            let internalCompletion: () -> Void = { [weak self] in
-                if let strongSelf = self, dimCompleted && offsetCompleted {
-                    strongSelf.dismiss?()
-                }
-                completion?()
-            }
-            
-            self.dimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { _ in
-                dimCompleted = true
-                internalCompletion()
-            })
-            
-            let offset = self.bounds.size.height - self.contentBackgroundNode.frame.minY
-            let dimPosition = self.dimNode.layer.position
-            self.dimNode.layer.animatePosition(from: dimPosition, to: CGPoint(x: dimPosition.x, y: dimPosition.y - offset), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-            self.layer.animateBoundsOriginYAdditive(from: 0.0, to: -offset, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
-                offsetCompleted = true
-                internalCompletion()
-            })
-        }
-        
-        override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-            if self.bounds.contains(point) {
-                if !self.contentBackgroundNode.bounds.contains(self.convert(point, to: self.contentBackgroundNode)) {
-                    return self.dimNode.view
-                }
-            }
-            return super.hitTest(point, with: event)
-        }
-        
-        func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
-            let contentOffset = scrollView.contentOffset
-            let additionalTopHeight = max(0.0, -contentOffset.y)
-            
-            if additionalTopHeight >= 30.0 {
-                self.cancelButtonPressed()
-            }
-        }
-        
-        func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
-            self.containerLayout = (layout, navigationBarHeight)
-            
-            var insets = layout.insets(options: [.statusBar, .input])
-            insets.top = 32.0
-            
-            let makeImageLayout = self.qrImageNode.asyncLayout()
-            let imageSide: CGFloat = 240.0
-            let imageSize = CGSize(width: imageSide, height: imageSide)
+            let size = CGSize(width: 256.0, height: 256.0)
+            let imageSize = CGSize(width: 240.0, height: 240.0)
+                        
+            let makeImageLayout = self.imageNode.asyncLayout()
             let imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: nil))
             let _ = imageApply()
-            
-            let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
-            
-            let imageFrame = CGRect(origin: CGPoint(x: floor((width - imageSize.width) / 2.0), y: insets.top + 16.0), size: imageSize)
-            transition.updateFrame(node: self.qrImageNode, frame: imageFrame)
-            transition.updateFrame(node: self.qrButtonNode, frame: imageFrame)
+            let imageFrame = CGRect(origin: CGPoint(x: (size.width - imageSize.width) / 2.0, y: (size.height - imageSize.height) / 2.0), size: imageSize)
+            self.imageNode.frame = imageFrame
             
             if let qrCodeSize = self.qrCodeSize {
                 let (_, cutoutFrame, _) = qrCodeCutout(size: qrCodeSize, dimensions: imageSize, scale: nil)
-                self.qrIconNode.updateLayout(size: cutoutFrame.size)
-                transition.updateBounds(node: self.qrIconNode, bounds: CGRect(origin: CGPoint(), size: cutoutFrame.size))
-                transition.updatePosition(node: self.qrIconNode, position: imageFrame.center.offsetBy(dx: 0.0, dy: -1.0))
+                
+                let _ = self.icon.update(
+                    transition: .immediate,
+                    component: AnyComponent(LottieComponent(
+                        content: LottieComponent.AppBundleContent(name: "PlaneLogo"),
+                        loop: true
+                    )),
+                    environment: {},
+                    containerSize: cutoutFrame.size
+                )
+                if let iconView = self.icon.view {
+                    if iconView.superview == nil {
+                        self.addSubview(iconView)
+                    }
+                    iconView.bounds = CGRect(origin: CGPoint(), size: cutoutFrame.size)
+                    iconView.center = imageFrame.center.offsetBy(dx: 0.0, dy: -1.0)
+                }
             }
             
-            let inset: CGFloat = 32.0
-            var textSize = self.textNode.updateLayout(CGSize(width: width - inset * 3.0, height: CGFloat.greatestFiniteMagnitude))
-            let textFrame = CGRect(origin: CGPoint(x: floor((width - textSize.width) / 2.0), y: imageFrame.maxY + 20.0), size: textSize)
-            transition.updateFrame(node: self.textNode, frame: textFrame)
-            
-            var textSpacing: CGFloat = 111.0
-            if case .compact = layout.metrics.widthClass, layout.size.width > layout.size.height {
-                textSize = CGSize()
-                self.textNode.isHidden = true
-                textSpacing = 52.0
-            } else {
-                self.textNode.isHidden = false
-            }
-            
-            let buttonSideInset: CGFloat = 16.0
-            let bottomInset = insets.bottom + 10.0
-            let buttonWidth = layout.size.width - buttonSideInset * 2.0
-            let buttonHeight: CGFloat = 50.0
-            
-            let buttonFrame = CGRect(origin: CGPoint(x: floor((width - buttonWidth) / 2.0), y: layout.size.height - bottomInset - buttonHeight), size: CGSize(width: buttonWidth, height: buttonHeight))
-            transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
-            let _ = self.buttonNode.updateLayout(width: buttonFrame.width, transition: transition)
-            
-            let titleHeight: CGFloat = 54.0
-            let contentHeight = titleHeight + textSize.height + imageSize.height + bottomInset + textSpacing
-                        
-            let sideInset = floor((layout.size.width - width) / 2.0)
-            let contentContainerFrame = CGRect(origin: CGPoint(x: sideInset, y: layout.size.height - contentHeight), size: CGSize(width: width, height: contentHeight))
-            let contentFrame = contentContainerFrame
-            
-            var backgroundFrame = CGRect(origin: CGPoint(x: contentFrame.minX, y: contentFrame.minY), size: CGSize(width: contentFrame.width, height: contentFrame.height + 2000.0))
-            if backgroundFrame.minY < contentFrame.minY {
-                backgroundFrame.origin.y = contentFrame.minY
-            }
-            transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
-            transition.updateFrame(node: self.contentBackgroundNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
-            transition.updateFrame(node: self.wrappingScrollNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-            transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-            
-            let titleSize = self.titleNode.measure(CGSize(width: width, height: titleHeight))
-            let titleFrame = CGRect(origin: CGPoint(x: floor((contentFrame.width - titleSize.width) / 2.0), y: 16.0), size: titleSize)
-            transition.updateFrame(node: self.titleNode, frame: titleFrame)
-            
-            let cancelSize = self.cancelButton.measure(CGSize(width: width, height: titleHeight))
-            let cancelFrame = CGRect(origin: CGPoint(x: width - cancelSize.width - 16.0, y: 16.0), size: cancelSize)
-            transition.updateFrame(node: self.cancelButton, frame: cancelFrame)
-            
-            let buttonInset: CGFloat = 16.0
-            let doneButtonHeight = self.buttonNode.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
-            transition.updateFrame(node: self.buttonNode, frame: CGRect(x: buttonInset, y: contentHeight - doneButtonHeight - insets.bottom - 16.0, width: contentFrame.width, height: doneButtonHeight))
-            
-            transition.updateFrame(node: self.contentContainerNode, frame: contentContainerFrame)
+            return size
         }
+    }
+
+    func makeView() -> View {
+        return View(frame: CGRect())
+    }
+
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

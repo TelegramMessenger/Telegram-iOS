@@ -217,6 +217,18 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
     open var navigationBarRequiresEntireLayoutUpdate: Bool {
         return true
     }
+
+    public struct TabBarSearchState: Equatable {
+        public var isActive: Bool
+
+        public init(isActive: Bool) {
+            self.isActive = isActive
+        }
+    }
+
+    public private(set) var tabBarSearchState: TabBarSearchState?
+    public var tabBarSearchStateUpdated: ((ContainedViewLayoutTransition) -> Void)?
+    public var currentTabBarSearchNode: (() -> ASDisplayNode?)?
     
     private weak var activeInputViewCandidate: UIResponder?
     private weak var activeInputView: UIResponder?
@@ -237,16 +249,24 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
     open var interactiveNavivationGestureEdgeWidth: InteractiveTransitionGestureRecognizerEdgeWidth? {
         return nil
     }
+    
+    open var navigationEdgeEffectExtension: CGFloat {
+        return 0.0
+    }
+    
+    public func updateNavigationEdgeEffectExtension(transition: ContainedViewLayoutTransition) {
+        if let navigationBar = self.navigationBar {
+            navigationBar.updateEdgeEffectExtension(value: max(0.0, self.navigationEdgeEffectExtension - navigationBar.frame.maxY), transition: transition)
+        }
+    }
 
     open func navigationLayout(layout: ContainerViewLayout) -> NavigationLayout {
         let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0
         var defaultNavigationBarHeight: CGFloat
         if self._presentedInModal && self._hasGlassStyle {
-            defaultNavigationBarHeight = 66.0
-        } else if self._presentedInModal && layout.orientation == .portrait {
-            defaultNavigationBarHeight = 56.0
+            defaultNavigationBarHeight = 68.0
         } else {
-            defaultNavigationBarHeight = 44.0
+            defaultNavigationBarHeight = 60.0
         }
         let navigationBarHeight: CGFloat = statusBarHeight + (self.navigationBar?.contentHeight(defaultHeight: defaultNavigationBarHeight) ?? defaultNavigationBarHeight)
 
@@ -375,7 +395,7 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
     public init(navigationBarPresentationData: NavigationBarPresentationData?) {
         self.statusBar = StatusBar()
         if let navigationBarPresentationData = navigationBarPresentationData {
-            self.navigationBar = NavigationBar(presentationData: navigationBarPresentationData)
+            self.navigationBar = defaultNavigationBarImpl!(navigationBarPresentationData)
         } else {
             self.navigationBar = nil
         }
@@ -447,14 +467,29 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
         }
         if let navigationBar = self.navigationBar {
             if let contentNode = navigationBar.contentNode, case .expansion = contentNode.mode, !self.displayNavigationBar {
-                navigationBarFrame.origin.y -= navigationLayout.defaultContentHeight
-                navigationBarFrame.size.height += contentNode.height + navigationLayout.defaultContentHeight + statusBarHeight
+                navigationBarFrame.origin.y -= navigationLayout.defaultContentHeight + statusBarHeight
+                navigationBarFrame.size.height += contentNode.height + navigationLayout.defaultContentHeight + statusBarHeight * 2.0
+                if self._presentedInModal && self._hasGlassStyle {
+                    navigationBarFrame.size.height += 8.0
+                }
             }
+            //navigationBar.backgroundColor = .blue
             if let _ = navigationBar.contentNode, let _ = navigationBar.secondaryContentNode, !self.displayNavigationBar {
                 navigationBarFrame.size.height += navigationBar.secondaryContentHeight
             }
             
-            navigationBar.updateLayout(size: navigationBarFrame.size, defaultHeight: navigationLayout.defaultContentHeight, additionalTopHeight: statusBarHeight, additionalContentHeight: self.additionalNavigationBarHeight, additionalBackgroundHeight: additionalBackgroundHeight, additionalCutout: additionalCutout, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, appearsHidden: !self.displayNavigationBar, isLandscape: isLandscape, transition: transition)
+            var additionalTopHeight = statusBarHeight
+            if !self.displayNavigationBar {
+                additionalTopHeight -= statusBarHeight
+                if statusBarHeight != 0.0 {
+                    additionalTopHeight += 6.0
+                }
+            }
+            if self._presentedInModal && self._hasGlassStyle {
+                additionalTopHeight += 8.0
+            }
+            
+            navigationBar.updateLayout(size: navigationBarFrame.size, defaultHeight: navigationLayout.defaultContentHeight, additionalTopHeight: additionalTopHeight, additionalContentHeight: self.additionalNavigationBarHeight, additionalBackgroundHeight: additionalBackgroundHeight, additionalCutout: additionalCutout, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, appearsHidden: !self.displayNavigationBar, isLandscape: isLandscape, transition: transition)
             if !transition.isAnimated {
                 navigationBar.layer.removeAnimation(forKey: "bounds")
                 navigationBar.layer.removeAnimation(forKey: "position")
@@ -542,14 +577,14 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
             UIView.transition(with: navigationBar.view, duration: 0.3, options: [.transitionCrossDissolve], animations: {
             }, completion: nil)
         }
-        self.navigationBar?.updatePresentationData(presentationData)
+        self.navigationBar?.updatePresentationData(presentationData, transition: .immediate)
         if let parent = self.parent as? TabBarController {
             if parent.currentController === self {
                 if animated, let navigationBar = parent.navigationBar {
                     UIView.transition(with: navigationBar.view, duration: 0.3, options: [.transitionCrossDissolve], animations: {
                     }, completion: nil)
                 }
-                parent.navigationBar?.updatePresentationData(presentationData)
+                parent.navigationBar?.updatePresentationData(presentationData, transition: .immediate)
             }
         }
     }
@@ -705,8 +740,21 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
     
     open func tabBarDisabledAction() {
     }
+
+    open func tabBarActivateSearch() {
+    }
+
+    open func tabBarDeactivateSearch() {
+    }
     
     open func tabBarItemSwipeAction(direction: TabBarItemSwipeDirection) {
+    }
+
+    public func updateTabBarSearchState(_ tabBarSearchState: TabBarSearchState?, transition: ContainedViewLayoutTransition) {
+        if self.tabBarSearchState != tabBarSearchState {
+            self.tabBarSearchState = tabBarSearchState
+            self.tabBarSearchStateUpdated?(transition)
+        }
     }
     
     open func updatePossibleControllerDropContent(content: NavigationControllerDropContent?) {

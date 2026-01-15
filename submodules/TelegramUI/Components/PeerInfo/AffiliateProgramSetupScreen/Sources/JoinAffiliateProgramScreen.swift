@@ -1130,11 +1130,11 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                         )),
                         background: AnyComponent(FilledRoundedRectangleComponent(
                             color: environment.theme.list.itemInputField.backgroundColor,
-                            cornerRadius: .value(8.0),
+                            cornerRadius: .minEdge,
                             smoothCorners: true
                         )),
                         effectAlignment: .center,
-                        minSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 50.0),
+                        minSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 52.0),
                         contentInsets: UIEdgeInsets(top: 0.0, left: 10.0, bottom: 0.0, right: 10.0),
                         action: { [weak self] in
                             guard let self, case let .active(active) = self.currentMode else {
@@ -1148,7 +1148,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                         animateContents: false
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 50.0)
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 52.0)
                 )
                 let linkTextFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - linkTextSize.width) * 0.5), y: contentHeight), size: linkTextSize)
                 if let linkTextView = self.linkText.view {
@@ -1170,6 +1170,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                 actionButtonTitle = environment.strings.AffiliateProgram_ActionCopyLink
             }
             
+            let buttonSideInset: CGFloat = 30.0
             let actionButtonSize = self.actionButton.update(
                 transition: transition,
                 component: AnyComponent(ButtonComponent(
@@ -1208,7 +1209,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - 30.0 * 2.0, height: 52.0)
+                containerSize: CGSize(width: availableSize.width - buttonSideInset * 2.0, height: 52.0)
             )
             
             let bottomTextSize = self.bottomText.update(
@@ -1238,7 +1239,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
             let bottomPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - bottomPanelHeight), size: CGSize(width: availableSize.width, height: bottomPanelHeight))
             transition.setFrame(view: self.bottomPanelContainer, frame: bottomPanelFrame)
             
-            let actionButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: 0.0), size: actionButtonSize)
+            let actionButtonFrame = CGRect(origin: CGPoint(x: buttonSideInset, y: 0.0), size: actionButtonSize)
             if let actionButtonView = self.actionButton.view {
                 if actionButtonView.superview == nil {
                     self.bottomPanelContainer.addSubview(actionButtonView)

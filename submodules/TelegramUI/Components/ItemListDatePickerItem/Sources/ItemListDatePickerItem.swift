@@ -131,7 +131,7 @@ public class ItemListDatePickerItemNode: ListViewItemNode, ItemListItemNode {
         self.containerNode = ASDisplayNode()
         self.containerNode.clipsToBounds = true
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.containerNode)
                 

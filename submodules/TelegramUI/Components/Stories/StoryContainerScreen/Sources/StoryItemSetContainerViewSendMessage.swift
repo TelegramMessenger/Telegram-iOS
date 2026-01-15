@@ -54,6 +54,7 @@ import ChatSendStarsScreen
 import AnimatedTextComponent
 import ChatSendAsContextMenu
 import ShareWithPeersScreen
+import AlertComponent
 
 private var ObjCKey_DeinitWatcher: Int?
 
@@ -359,7 +360,6 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
                 pendingUnpinnedAllMessages: false,
                 activeGroupCallInfo: nil,
                 hasActiveGroupCall: false,
-                importState: nil,
                 threadData: nil,
                 isGeneralThreadClosed: nil,
                 replyMessage: nil,
@@ -637,17 +637,16 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
                 let theme = component.theme
                 let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>) = (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) })
                 
-                let alertController = textAlertController(
-                    context: component.context,
-                    updatedPresentationData: updatedPresentationData,
+                let alertController = AlertScreen(
                     title: component.strings.Story_AlertStealthModeActiveTitle,
                     text: component.strings.Story_AlertStealthModeActiveText,
                     actions: [
-                        TextAlertAction(type: .defaultAction, title: component.strings.Common_Cancel, action: {}),
-                        TextAlertAction(type: .genericAction, title: component.strings.Story_AlertStealthModeActiveAction, action: {
+                        .init(title: component.strings.Common_Cancel, type: .default),
+                        .init(title: component.strings.Story_AlertStealthModeActiveAction, type: .generic, action: {
                             action()
                         })
-                    ]
+                    ],
+                    updatedPresentationData: updatedPresentationData
                 )
                 alertController.dismissed = { [weak self, weak view] _ in
                     guard let self, let view else {
@@ -761,7 +760,7 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
                                     let absMaxEmojiCount = paramSets.paramSets.max(by: { $0.minStars < $1.minStars })?.maxEmojiCount ?? 10
                                     if emojiCount > absMaxEmojiCount {
                                         let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
-                                        view.component?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.LiveStream_ErrorMaxAllowedEmoji_Text(Int32(absMaxEmojiCount)), actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                        view.component?.controller()?.present(textAlertController(context: component.context, updatedPresentationData: (presentationData, .single(presentationData)), title: nil, text: presentationData.strings.LiveStream_ErrorMaxAllowedEmoji_Text(Int32(absMaxEmojiCount)), actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                         
                                         return
                                     }
@@ -2410,18 +2409,16 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
                             component.controller()?.push(controller)
                         }
                     }, presentSelectionLimitExceeded: { [weak view] in
-                        guard let view else {
+                        guard let view, let component = view.component else {
                             return
                         }
-                        
                         let text: String
                         if slowModeEnabled {
                             text = presentationData.strings.Chat_SlowmodeAttachmentLimitReached
                         } else {
                             text = presentationData.strings.Chat_AttachmentLimitReached
                         }
-                        
-                        view.component?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                        component.controller()?.present(textAlertController(context: component.context, updatedPresentationData: (presentationData, .single(presentationData)), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     }, presentSchedulePicker: { [weak view] media, done in
                         if let strongSelf = self, let view {
                             strongSelf.presentScheduleTimePicker(view: view, peer: peer, style: media ? .media : .default, completion: { time, repeatPeriod in

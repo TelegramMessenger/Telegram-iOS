@@ -77,20 +77,21 @@ private func paidContentGroupType(paidContent: TelegramMediaPaidContent) -> Mess
     return currentType
 }
 
-public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, contentSettings: ContentSettings, messages: [EngineMessage], chatPeer: EngineRenderedPeer, accountPeerId: EnginePeer.Id, enableMediaEmoji: Bool = true, isPeerGroup: Bool = false) -> (peer: EnginePeer?, hideAuthor: Bool, messageText: String, spoilers: [NSRange]?, customEmojiRanges: [(NSRange, ChatTextInputTextCustomEmojiAttribute)]?) {
+public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, contentSettings: ContentSettings, messages: [EngineMessage], chatPeer: EngineRenderedPeer, accountPeerId: EnginePeer.Id, enableMediaEmoji: Bool = true, isPeerGroup: Bool = false) -> (peer: EnginePeer?, hideAuthor: Bool, messageText: String, messageEntities: [MessageTextEntity], spoilers: [NSRange]?, customEmojiRanges: [(NSRange, ChatTextInputTextCustomEmojiAttribute)]?) {
     let peer: EnginePeer?
     
     let message = messages.last
     
     if let restrictionReason = message?._asMessage().restrictionReason(platform: "ios", contentSettings: contentSettings) {
-        return (nil, false, restrictionReason, nil, nil)
+        return (nil, false, restrictionReason, [], nil, nil)
     }
     if let restrictionReason = chatPeer.chatMainPeer?.restrictionText(platform: "ios", contentSettings: contentSettings) {
-        return (nil, false, restrictionReason, nil, nil)
+        return (nil, false, restrictionReason, [], nil, nil)
     }
     
     var hideAuthor = false
     var messageText: String
+    var messageEntities: [MessageTextEntity] = []
     var spoilers: [NSRange]?
     var customEmojiRanges: [(NSRange, ChatTextInputTextCustomEmojiAttribute)]?
     if let message = message {
@@ -104,6 +105,7 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
         for message in messages {
             if !message.text.isEmpty {
                 messageText = message.text
+                messageEntities = message._asMessage().textEntitiesAttribute?.entities ?? []
                 break
             }
         }
@@ -469,5 +471,5 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
         }
     }
     
-    return (peer, hideAuthor, messageText, spoilers, customEmojiRanges)
+    return (peer, hideAuthor, messageText, messageEntities, spoilers, customEmojiRanges)
 }

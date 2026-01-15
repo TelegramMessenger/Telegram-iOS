@@ -142,7 +142,7 @@ public class ItemListAddressItemNode: ListViewItemNode {
         
         self.iconNode = ASImageNode()
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.labelNode)
         self.addSubnode(self.textNode)

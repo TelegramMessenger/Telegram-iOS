@@ -23,15 +23,15 @@ private final class VoiceChatMicrophoneNodeDrawingState: NSObject {
     }
 }
 
-final class VoiceChatMicrophoneNode: ASDisplayNode {
-    class State: Equatable {
-        let muted: Bool
-        let color: UIColor
-        let filled: Bool
-        let shadowColor: UIColor?
-        let shadowBlur: CGFloat
+public final class VoiceChatMicrophoneNode: ASDisplayNode {
+    public class State: Equatable {
+        public let muted: Bool
+        public let color: UIColor
+        public let filled: Bool
+        public let shadowColor: UIColor?
+        public let shadowBlur: CGFloat
         
-        init(muted: Bool, filled: Bool, color: UIColor, shadowColor: UIColor? = nil, shadowBlur: CGFloat = 0.0) {
+        public init(muted: Bool, filled: Bool, color: UIColor, shadowColor: UIColor? = nil, shadowBlur: CGFloat = 0.0) {
             self.muted = muted
             self.filled = filled
             self.color = color
@@ -39,7 +39,7 @@ final class VoiceChatMicrophoneNode: ASDisplayNode {
             self.shadowBlur = shadowBlur
         }
         
-        static func ==(lhs: State, rhs: State) -> Bool {
+        public static func ==(lhs: State, rhs: State) -> Bool {
             if lhs.muted != rhs.muted {
                 return false
             }
@@ -77,13 +77,13 @@ final class VoiceChatMicrophoneNode: ASDisplayNode {
     private var state: State = State(muted: false, filled: false, color: .black)
     private var transitionContext: TransitionContext?
     
-    override init() {
+    override public init() {
         super.init()
         
         self.isOpaque = false
     }
     
-    func update(state: State, animated: Bool) {
+    public func update(state: State, animated: Bool) {
         var animated = animated
         if !self.hasState {
             self.hasState = true

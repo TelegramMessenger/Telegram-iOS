@@ -864,7 +864,7 @@ private final class LimitSheetContent: CombinedComponent {
                     component: AnyComponentWithIdentity(id: "close", component: AnyComponent(
                         BundleIconComponent(
                             name: "Navigation/Close",
-                            tintColor: theme.rootController.navigationBar.glassBarButtonForegroundColor
+                            tintColor: theme.chat.inputPanel.panelControlColor
                         )
                     )),
                     action: { _ in

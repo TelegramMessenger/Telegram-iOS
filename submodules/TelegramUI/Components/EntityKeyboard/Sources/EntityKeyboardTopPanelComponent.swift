@@ -2009,7 +2009,7 @@ public final class EntityKeyboardTopPanelComponent: Component {
             let panelEnvironment = environment[EntityKeyboardTopContainerPanelEnvironment.self].value
             self.environment = panelEnvironment
             
-            let isExpanded = availableSize.height > 34.0
+            let isExpanded = availableSize.height > panelEnvironment.height
             let wasExpanded = self.isExpanded
             self.isExpanded = isExpanded
             

@@ -48,7 +48,7 @@ public func ChangePhoneNumberController(context: AccountContext) -> ViewControll
             controller?.inProgress = false
             
             var dismissImpl: (() -> Void)?
-            let codeController = AuthorizationSequenceCodeEntryController(presentationData: presentationData, back: {
+            let codeController = AuthorizationSequenceCodeEntryController(sharedContext: context.sharedContext, presentationData: presentationData, back: {
                 dismissImpl?()
             })
             codeController.loginWithCode = { [weak codeController] code in
@@ -109,7 +109,7 @@ public func ChangePhoneNumberController(context: AccountContext) -> ViewControll
                 let mnc = carrier.mobileNetworkCode ?? "none"
                 let _ = context.engine.auth.reportMissingCode(phoneNumber: phoneNumber, phoneCodeHash: next.hash, mnc: mnc).start()
                 
-                AuthorizationSequenceController.presentDidNotGetCodeUI(controller: codeController, presentationData: context.sharedContext.currentPresentationData.with({ $0 }), phoneNumber: phoneNumber, mnc: mnc)
+                AuthorizationSequenceController.presentDidNotGetCodeUI(sharedContext: context.sharedContext, controller: codeController, presentationData: context.sharedContext.currentPresentationData.with({ $0 }), phoneNumber: phoneNumber, mnc: mnc)
             }
             codeController.openFragment = { url in
                 context.sharedContext.applicationBindings.openUrl(url)
@@ -154,7 +154,15 @@ public func ChangePhoneNumberController(context: AccountContext) -> ViewControll
                         
                         controller?.view.window?.rootViewController?.present(composeController, animated: true, completion: nil)
                     } else {
-                        controller?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.Login_EmailNotConfiguredError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                        let alertController = textAlertController(
+                            context: context,
+                            title: nil,
+                            text: presentationData.strings.Login_EmailNotConfiguredError,
+                            actions: [
+                                TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
+                            ]
+                        )
+                        controller?.present(alertController, in: .window(.root))
                     }
                 }))
             case .generic:

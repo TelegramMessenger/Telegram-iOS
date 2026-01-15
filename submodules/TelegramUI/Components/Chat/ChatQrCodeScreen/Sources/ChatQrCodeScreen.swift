@@ -333,7 +333,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
         
         self.placeholderNode = StickerShimmerEffectNode()
 
-        super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
+        super.init(layerBacked: false, rotated: false, seeThrough: false)
         
         self.addSubnode(self.containerNode)
         self.containerNode.addSubnode(self.imageNode)
@@ -721,7 +721,7 @@ public final class ChatQrCodeScreenImpl: ViewController, ChatQrCodeScreen {
 }
 
 private func iconColors(theme: PresentationTheme) -> [String: UIColor] {
-    let accentColor = theme.rootController.navigationBar.glassBarButtonForegroundColor
+    let accentColor = theme.chat.inputPanel.panelControlColor
     var colors: [String: UIColor] = [:]
     colors["Sunny.Path 14.Path.Stroke 1"] = accentColor
     colors["Sunny.Path 15.Path.Stroke 1"] = accentColor
@@ -1470,7 +1470,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, ASScrollViewDeleg
                 component: AnyComponentWithIdentity(id: "close", component: AnyComponent(
                     BundleIconComponent(
                         name: "Navigation/Close",
-                        tintColor: self.presentationData.theme.rootController.navigationBar.glassBarButtonForegroundColor
+                        tintColor: self.presentationData.theme.chat.inputPanel.panelControlColor
                     )
                 )),
                 action: { [weak self] _ in

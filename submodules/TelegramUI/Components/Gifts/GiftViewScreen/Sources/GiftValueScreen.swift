@@ -25,6 +25,7 @@ import GiftAnimationComponent
 import ContextUI
 import GiftItemComponent
 import GlassBarButtonComponent
+import TableComponent
 
 private final class GiftValueSheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -640,7 +641,7 @@ private final class GiftValueSheetContent: CombinedComponent {
                     component: AnyComponentWithIdentity(id: "close", component: AnyComponent(
                         BundleIconComponent(
                             name: "Navigation/Close",
-                            tintColor: theme.rootController.navigationBar.glassBarButtonForegroundColor
+                            tintColor: theme.chat.inputPanel.panelControlColor
                         )
                     )),
                     action: { [weak state] _ in

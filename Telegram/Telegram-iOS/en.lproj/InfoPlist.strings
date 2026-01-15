@@ -5,8 +5,8 @@
 "NSLocationAlwaysAndWhenInUseUsageDescription" = "When you choose to share your Live Location with friends in a chat, Telegram needs background access to your location to keep them updated for the duration of the live sharing.";
 "NSLocationAlwaysUsageDescription" = "When you choose to share your live location with friends in a chat, Telegram needs background access to your location to keep them updated for the duration of the live sharing. You also need this to send locations from an Apple Watch.";
 "NSCameraUsageDescription" = "We need this so that you can take and share photos and videos, as well as make video calls.";
-"NSPhotoLibraryUsageDescription" = "We need this so that you can share photos and videos from your photo library.";
-"NSPhotoLibraryAddUsageDescription" = "We need this so that you can save photos and videos to your photo library.";
+"NSPhotoLibraryUsageDescription" = "We need this so that you can share photos and videos from your photo library and save the ones you capture.";
+"NSPhotoLibraryAddUsageDescription" = "We need this so that you can save photos and videos to your photo library and save the ones you capture.";
 "NSMicrophoneUsageDescription" = "We need this so that you can record and share voice messages and videos with sound.";
 "NSSiriUsageDescription" = "You can use Siri to send messages.";
 "NSFaceIDUsageDescription" = "You can use Face ID to unlock the app.";

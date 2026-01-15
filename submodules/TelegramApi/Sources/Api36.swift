@@ -1,4 +1,196 @@
 public extension Api.payments {
+    enum PaymentReceipt: TypeConstructorDescription {
+        case paymentReceipt(flags: Int32, date: Int32, botId: Int64, providerId: Int64, title: String, description: String, photo: Api.WebDocument?, invoice: Api.Invoice, info: Api.PaymentRequestedInfo?, shipping: Api.ShippingOption?, tipAmount: Int64?, currency: String, totalAmount: Int64, credentialsTitle: String, users: [Api.User])
+        case paymentReceiptStars(flags: Int32, date: Int32, botId: Int64, title: String, description: String, photo: Api.WebDocument?, invoice: Api.Invoice, currency: String, totalAmount: Int64, transactionId: String, users: [Api.User])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .paymentReceipt(let flags, let date, let botId, let providerId, let title, let description, let photo, let invoice, let info, let shipping, let tipAmount, let currency, let totalAmount, let credentialsTitle, let users):
+                    if boxed {
+                        buffer.appendInt32(1891958275)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    serializeInt64(botId, buffer: buffer, boxed: false)
+                    serializeInt64(providerId, buffer: buffer, boxed: false)
+                    serializeString(title, buffer: buffer, boxed: false)
+                    serializeString(description, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 2) != 0 {photo!.serialize(buffer, true)}
+                    invoice.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 0) != 0 {info!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {shipping!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 3) != 0 {serializeInt64(tipAmount!, buffer: buffer, boxed: false)}
+                    serializeString(currency, buffer: buffer, boxed: false)
+                    serializeInt64(totalAmount, buffer: buffer, boxed: false)
+                    serializeString(credentialsTitle, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+                case .paymentReceiptStars(let flags, let date, let botId, let title, let description, let photo, let invoice, let currency, let totalAmount, let transactionId, let users):
+                    if boxed {
+                        buffer.appendInt32(-625215430)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    serializeInt64(botId, buffer: buffer, boxed: false)
+                    serializeString(title, buffer: buffer, boxed: false)
+                    serializeString(description, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 2) != 0 {photo!.serialize(buffer, true)}
+                    invoice.serialize(buffer, true)
+                    serializeString(currency, buffer: buffer, boxed: false)
+                    serializeInt64(totalAmount, buffer: buffer, boxed: false)
+                    serializeString(transactionId, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .paymentReceipt(let flags, let date, let botId, let providerId, let title, let description, let photo, let invoice, let info, let shipping, let tipAmount, let currency, let totalAmount, let credentialsTitle, let users):
+                return ("paymentReceipt", [("flags", flags as Any), ("date", date as Any), ("botId", botId as Any), ("providerId", providerId as Any), ("title", title as Any), ("description", description as Any), ("photo", photo as Any), ("invoice", invoice as Any), ("info", info as Any), ("shipping", shipping as Any), ("tipAmount", tipAmount as Any), ("currency", currency as Any), ("totalAmount", totalAmount as Any), ("credentialsTitle", credentialsTitle as Any), ("users", users as Any)])
+                case .paymentReceiptStars(let flags, let date, let botId, let title, let description, let photo, let invoice, let currency, let totalAmount, let transactionId, let users):
+                return ("paymentReceiptStars", [("flags", flags as Any), ("date", date as Any), ("botId", botId as Any), ("title", title as Any), ("description", description as Any), ("photo", photo as Any), ("invoice", invoice as Any), ("currency", currency as Any), ("totalAmount", totalAmount as Any), ("transactionId", transactionId as Any), ("users", users as Any)])
+    }
+    }
+    
+        public static func parse_paymentReceipt(_ reader: BufferReader) -> PaymentReceipt? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: Int64?
+            _4 = reader.readInt64()
+            var _5: String?
+            _5 = parseString(reader)
+            var _6: String?
+            _6 = parseString(reader)
+            var _7: Api.WebDocument?
+            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
+                _7 = Api.parse(reader, signature: signature) as? Api.WebDocument
+            } }
+            var _8: Api.Invoice?
+            if let signature = reader.readInt32() {
+                _8 = Api.parse(reader, signature: signature) as? Api.Invoice
+            }
+            var _9: Api.PaymentRequestedInfo?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _9 = Api.parse(reader, signature: signature) as? Api.PaymentRequestedInfo
+            } }
+            var _10: Api.ShippingOption?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _10 = Api.parse(reader, signature: signature) as? Api.ShippingOption
+            } }
+            var _11: Int64?
+            if Int(_1!) & Int(1 << 3) != 0 {_11 = reader.readInt64() }
+            var _12: String?
+            _12 = parseString(reader)
+            var _13: Int64?
+            _13 = reader.readInt64()
+            var _14: String?
+            _14 = parseString(reader)
+            var _15: [Api.User]?
+            if let _ = reader.readInt32() {
+                _15 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            let _c7 = (Int(_1!) & Int(1 << 2) == 0) || _7 != nil
+            let _c8 = _8 != nil
+            let _c9 = (Int(_1!) & Int(1 << 0) == 0) || _9 != nil
+            let _c10 = (Int(_1!) & Int(1 << 1) == 0) || _10 != nil
+            let _c11 = (Int(_1!) & Int(1 << 3) == 0) || _11 != nil
+            let _c12 = _12 != nil
+            let _c13 = _13 != nil
+            let _c14 = _14 != nil
+            let _c15 = _15 != nil
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            if !_c9 { return nil }
+            if !_c10 { return nil }
+            if !_c11 { return nil }
+            if !_c12 { return nil }
+            if !_c13 { return nil }
+            if !_c14 { return nil }
+            if !_c15 { return nil }
+            return Api.payments.PaymentReceipt.paymentReceipt(flags: _1!, date: _2!, botId: _3!, providerId: _4!, title: _5!, description: _6!, photo: _7, invoice: _8!, info: _9, shipping: _10, tipAmount: _11, currency: _12!, totalAmount: _13!, credentialsTitle: _14!, users: _15!)
+        }
+        public static func parse_paymentReceiptStars(_ reader: BufferReader) -> PaymentReceipt? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: String?
+            _5 = parseString(reader)
+            var _6: Api.WebDocument?
+            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.WebDocument
+            } }
+            var _7: Api.Invoice?
+            if let signature = reader.readInt32() {
+                _7 = Api.parse(reader, signature: signature) as? Api.Invoice
+            }
+            var _8: String?
+            _8 = parseString(reader)
+            var _9: Int64?
+            _9 = reader.readInt64()
+            var _10: String?
+            _10 = parseString(reader)
+            var _11: [Api.User]?
+            if let _ = reader.readInt32() {
+                _11 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
+            let _c7 = _7 != nil
+            let _c8 = _8 != nil
+            let _c9 = _9 != nil
+            let _c10 = _10 != nil
+            let _c11 = _11 != nil
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            if !_c9 { return nil }
+            if !_c10 { return nil }
+            if !_c11 { return nil }
+            return Api.payments.PaymentReceipt.paymentReceiptStars(flags: _1!, date: _2!, botId: _3!, title: _4!, description: _5!, photo: _6, invoice: _7!, currency: _8!, totalAmount: _9!, transactionId: _10!, users: _11!)
+        }
+    
+    }
+}
+public extension Api.payments {
     indirect enum PaymentResult: TypeConstructorDescription {
         case paymentResult(updates: Api.Updates)
         case paymentVerificationNeeded(url: String)
@@ -35,23 +227,15 @@ public extension Api.payments {
                 _1 = Api.parse(reader, signature: signature) as? Api.Updates
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.payments.PaymentResult.paymentResult(updates: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.payments.PaymentResult.paymentResult(updates: _1!)
         }
         public static func parse_paymentVerificationNeeded(_ reader: BufferReader) -> PaymentResult? {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.payments.PaymentResult.paymentVerificationNeeded(url: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.payments.PaymentResult.paymentVerificationNeeded(url: _1!)
         }
     
     }
@@ -144,12 +328,16 @@ public extension Api.payments {
             let _c7 = _7 != nil
             let _c8 = (Int(_1!) & Int(1 << 2) == 0) || _8 != nil
             let _c9 = _9 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
-                return Api.payments.ResaleStarGifts.resaleStarGifts(flags: _1!, count: _2!, gifts: _3!, nextOffset: _4, attributes: _5, attributesHash: _6, chats: _7!, counters: _8, users: _9!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            if !_c9 { return nil }
+            return Api.payments.ResaleStarGifts.resaleStarGifts(flags: _1!, count: _2!, gifts: _3!, nextOffset: _4, attributes: _5, attributesHash: _6, chats: _7!, counters: _8, users: _9!)
         }
     
     }
@@ -186,12 +374,9 @@ public extension Api.payments {
             } }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
-            if _c1 && _c2 {
-                return Api.payments.SavedInfo.savedInfo(flags: _1!, savedInfo: _2)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.payments.SavedInfo.savedInfo(flags: _1!, savedInfo: _2)
         }
     
     }
@@ -266,12 +451,14 @@ public extension Api.payments {
             let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
             let _c6 = _6 != nil
             let _c7 = _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.payments.SavedStarGifts.savedStarGifts(flags: _1!, count: _2!, chatNotificationsEnabled: _3, gifts: _4!, nextOffset: _5, chats: _6!, users: _7!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            return Api.payments.SavedStarGifts.savedStarGifts(flags: _1!, count: _2!, chatNotificationsEnabled: _3, gifts: _4!, nextOffset: _5, chats: _6!, users: _7!)
         }
     
     }
@@ -337,12 +524,10 @@ public extension Api.payments {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.payments.StarGiftActiveAuctions.starGiftActiveAuctions(auctions: _1!, users: _2!, chats: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.payments.StarGiftActiveAuctions.starGiftActiveAuctions(auctions: _1!, users: _2!, chats: _3!)
         }
         public static func parse_starGiftActiveAuctionsNotModified(_ reader: BufferReader) -> StarGiftActiveAuctions? {
             return Api.payments.StarGiftActiveAuctions.starGiftActiveAuctionsNotModified
@@ -402,12 +587,10 @@ public extension Api.payments {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.payments.StarGiftAuctionAcquiredGifts.starGiftAuctionAcquiredGifts(gifts: _1!, users: _2!, chats: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.payments.StarGiftAuctionAcquiredGifts.starGiftAuctionAcquiredGifts(gifts: _1!, users: _2!, chats: _3!)
         }
     
     }
@@ -476,12 +659,13 @@ public extension Api.payments {
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             let _c6 = _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.payments.StarGiftAuctionState.starGiftAuctionState(gift: _1!, state: _2!, userState: _3!, timeout: _4!, users: _5!, chats: _6!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            return Api.payments.StarGiftAuctionState.starGiftAuctionState(gift: _1!, state: _2!, userState: _3!, timeout: _4!, users: _5!, chats: _6!)
         }
     
     }
@@ -527,12 +711,8 @@ public extension Api.payments {
                 _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StarGiftCollection.self)
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.payments.StarGiftCollections.starGiftCollections(collections: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.payments.StarGiftCollections.starGiftCollections(collections: _1!)
         }
         public static func parse_starGiftCollectionsNotModified(_ reader: BufferReader) -> StarGiftCollections? {
             return Api.payments.StarGiftCollections.starGiftCollectionsNotModified
@@ -572,12 +752,8 @@ public extension Api.payments {
                 _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StarGiftAttribute.self)
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.payments.StarGiftUpgradeAttributes.starGiftUpgradeAttributes(attributes: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.payments.StarGiftUpgradeAttributes.starGiftUpgradeAttributes(attributes: _1!)
         }
     
     }
@@ -634,12 +810,10 @@ public extension Api.payments {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.payments.StarGiftUpgradePreview.starGiftUpgradePreview(sampleAttributes: _1!, prices: _2!, nextPrices: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.payments.StarGiftUpgradePreview.starGiftUpgradePreview(sampleAttributes: _1!, prices: _2!, nextPrices: _3!)
         }
     
     }
@@ -670,12 +844,8 @@ public extension Api.payments {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.payments.StarGiftWithdrawalUrl.starGiftWithdrawalUrl(url: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.payments.StarGiftWithdrawalUrl.starGiftWithdrawalUrl(url: _1!)
         }
     
     }
@@ -745,12 +915,11 @@ public extension Api.payments {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.payments.StarGifts.starGifts(hash: _1!, gifts: _2!, chats: _3!, users: _4!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.payments.StarGifts.starGifts(hash: _1!, gifts: _2!, chats: _3!, users: _4!)
         }
         public static func parse_starGiftsNotModified(_ reader: BufferReader) -> StarGifts? {
             return Api.payments.StarGifts.starGiftsNotModified
@@ -784,12 +953,8 @@ public extension Api.payments {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.payments.StarsRevenueAdsAccountUrl.starsRevenueAdsAccountUrl(url: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.payments.StarsRevenueAdsAccountUrl.starsRevenueAdsAccountUrl(url: _1!)
         }
     
     }
@@ -842,12 +1007,12 @@ public extension Api.payments {
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.payments.StarsRevenueStats.starsRevenueStats(flags: _1!, topHoursGraph: _2, revenueGraph: _3!, status: _4!, usdRate: _5!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.payments.StarsRevenueStats.starsRevenueStats(flags: _1!, topHoursGraph: _2, revenueGraph: _3!, status: _4!, usdRate: _5!)
         }
     
     }
@@ -878,12 +1043,8 @@ public extension Api.payments {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.payments.StarsRevenueWithdrawalUrl.starsRevenueWithdrawalUrl(url: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.payments.StarsRevenueWithdrawalUrl.starsRevenueWithdrawalUrl(url: _1!)
         }
     
     }
@@ -972,12 +1133,16 @@ public extension Api.payments {
             let _c7 = (Int(_1!) & Int(1 << 0) == 0) || _7 != nil
             let _c8 = _8 != nil
             let _c9 = _9 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
-                return Api.payments.StarsStatus.starsStatus(flags: _1!, balance: _2!, subscriptions: _3, subscriptionsNextOffset: _4, subscriptionsMissingBalance: _5, history: _6, nextOffset: _7, chats: _8!, users: _9!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            if !_c9 { return nil }
+            return Api.payments.StarsStatus.starsStatus(flags: _1!, balance: _2!, subscriptions: _3, subscriptionsNextOffset: _4, subscriptionsMissingBalance: _5, history: _6, nextOffset: _7, chats: _8!, users: _9!)
         }
     
     }
@@ -1036,12 +1201,12 @@ public extension Api.payments {
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.payments.SuggestedStarRefBots.suggestedStarRefBots(flags: _1!, count: _2!, suggestedBots: _3!, users: _4!, nextOffset: _5)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.payments.SuggestedStarRefBots.suggestedStarRefBots(flags: _1!, count: _2!, suggestedBots: _3!, users: _4!, nextOffset: _5)
         }
     
     }
@@ -1094,12 +1259,10 @@ public extension Api.payments {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.payments.UniqueStarGift.uniqueStarGift(gift: _1!, chats: _2!, users: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.payments.UniqueStarGift.uniqueStarGift(gift: _1!, chats: _2!, users: _3!)
         }
     
     }
@@ -1178,12 +1341,20 @@ public extension Api.payments {
             let _c11 = (Int(_1!) & Int(1 << 4) == 0) || _11 != nil
             let _c12 = (Int(_1!) & Int(1 << 5) == 0) || _12 != nil
             let _c13 = (Int(_1!) & Int(1 << 5) == 0) || _13 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 {
-                return Api.payments.UniqueStarGiftValueInfo.uniqueStarGiftValueInfo(flags: _1!, currency: _2!, value: _3!, initialSaleDate: _4!, initialSaleStars: _5!, initialSalePrice: _6!, lastSaleDate: _7, lastSalePrice: _8, floorPrice: _9, averagePrice: _10, listedCount: _11, fragmentListedCount: _12, fragmentListedUrl: _13)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            if !_c9 { return nil }
+            if !_c10 { return nil }
+            if !_c11 { return nil }
+            if !_c12 { return nil }
+            if !_c13 { return nil }
+            return Api.payments.UniqueStarGiftValueInfo.uniqueStarGiftValueInfo(flags: _1!, currency: _2!, value: _3!, initialSaleDate: _4!, initialSaleStars: _5!, initialSalePrice: _6!, lastSaleDate: _7, lastSalePrice: _8, floorPrice: _9, averagePrice: _10, listedCount: _11, fragmentListedCount: _12, fragmentListedUrl: _13)
         }
     
     }
@@ -1228,12 +1399,10 @@ public extension Api.payments {
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.payments.ValidatedRequestedInfo.validatedRequestedInfo(flags: _1!, id: _2, shippingOptions: _3)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.payments.ValidatedRequestedInfo.validatedRequestedInfo(flags: _1!, id: _2, shippingOptions: _3)
         }
     
     }
@@ -1264,12 +1433,8 @@ public extension Api.phone {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.phone.ExportedGroupCallInvite.exportedGroupCallInvite(link: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.phone.ExportedGroupCallInvite.exportedGroupCallInvite(link: _1!)
         }
     
     }
@@ -1336,12 +1501,12 @@ public extension Api.phone {
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.phone.GroupCall.groupCall(call: _1!, participants: _2!, participantsNextOffset: _3!, chats: _4!, users: _5!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.phone.GroupCall.groupCall(call: _1!, participants: _2!, participantsNextOffset: _3!, chats: _4!, users: _5!)
         }
     
     }
@@ -1402,12 +1567,11 @@ public extension Api.phone {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.phone.GroupCallStars.groupCallStars(totalStars: _1!, topDonors: _2!, chats: _3!, users: _4!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.phone.GroupCallStars.groupCallStars(totalStars: _1!, topDonors: _2!, chats: _3!, users: _4!)
         }
     
     }
@@ -1444,12 +1608,8 @@ public extension Api.phone {
                 _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.GroupCallStreamChannel.self)
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.phone.GroupCallStreamChannels.groupCallStreamChannels(channels: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.phone.GroupCallStreamChannels.groupCallStreamChannels(channels: _1!)
         }
     
     }
@@ -1484,12 +1644,9 @@ public extension Api.phone {
             _2 = parseString(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.phone.GroupCallStreamRtmpUrl.groupCallStreamRtmpUrl(url: _1!, key: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.phone.GroupCallStreamRtmpUrl.groupCallStreamRtmpUrl(url: _1!, key: _2!)
         }
     
     }
@@ -1558,122 +1715,13 @@ public extension Api.phone {
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             let _c6 = _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.phone.GroupParticipants.groupParticipants(count: _1!, participants: _2!, nextOffset: _3!, chats: _4!, users: _5!, version: _6!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.phone {
-    enum JoinAsPeers: TypeConstructorDescription {
-        case joinAsPeers(peers: [Api.Peer], chats: [Api.Chat], users: [Api.User])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .joinAsPeers(let peers, let chats, let users):
-                    if boxed {
-                        buffer.appendInt32(-1343921601)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(peers.count))
-                    for item in peers {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(chats.count))
-                    for item in chats {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users.count))
-                    for item in users {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .joinAsPeers(let peers, let chats, let users):
-                return ("joinAsPeers", [("peers", peers as Any), ("chats", chats as Any), ("users", users as Any)])
-    }
-    }
-    
-        public static func parse_joinAsPeers(_ reader: BufferReader) -> JoinAsPeers? {
-            var _1: [Api.Peer]?
-            if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Peer.self)
-            }
-            var _2: [Api.Chat]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
-            }
-            var _3: [Api.User]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.phone.JoinAsPeers.joinAsPeers(peers: _1!, chats: _2!, users: _3!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.phone {
-    enum PhoneCall: TypeConstructorDescription {
-        case phoneCall(phoneCall: Api.PhoneCall, users: [Api.User])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .phoneCall(let phoneCall, let users):
-                    if boxed {
-                        buffer.appendInt32(-326966976)
-                    }
-                    phoneCall.serialize(buffer, true)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users.count))
-                    for item in users {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .phoneCall(let phoneCall, let users):
-                return ("phoneCall", [("phoneCall", phoneCall as Any), ("users", users as Any)])
-    }
-    }
-    
-        public static func parse_phoneCall(_ reader: BufferReader) -> PhoneCall? {
-            var _1: Api.PhoneCall?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.PhoneCall
-            }
-            var _2: [Api.User]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.phone.PhoneCall.phoneCall(phoneCall: _1!, users: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            return Api.phone.GroupParticipants.groupParticipants(count: _1!, participants: _2!, nextOffset: _3!, chats: _4!, users: _5!, version: _6!)
         }
     
     }

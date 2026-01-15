@@ -114,7 +114,7 @@ private final class ProxySettingsActionItemNode: ListViewItemNode {
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.isAccessibilityElement = true
         

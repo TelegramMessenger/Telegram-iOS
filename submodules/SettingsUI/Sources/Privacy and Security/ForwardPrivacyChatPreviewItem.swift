@@ -115,7 +115,7 @@ class ForwardPrivacyChatPreviewItemNode: ListViewItemNode {
         
         self.measureTextNode = TextNode()
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.clipsToBounds = true
         

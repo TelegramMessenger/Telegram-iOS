@@ -131,7 +131,7 @@ final class ComposeControllerNode: ASDisplayNode {
             self.requestOpenDisabledPeerFromSearch?(peer, reason)
         }, contextAction: nil), cancel: { [weak self] in
             self?.requestDeactivateSearch?()
-        })
+        }, fieldStyle: placeholderNode.fieldStyle)
         
         self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: navigationBarHeight, transition: .immediate)
         self.searchDisplayController?.activate(insertSubnode: { [weak self, weak placeholderNode] subnode, isSearchBar in

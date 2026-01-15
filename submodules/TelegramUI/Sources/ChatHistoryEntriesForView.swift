@@ -37,11 +37,11 @@ func chatHistoryEntriesForView(
     currentState: ChatHistoryEntriesForViewState,
     context: AccountContext,
     location: ChatLocation,
+    subject: ChatControllerSubject?,
     view: MessageHistoryView,
     includeUnreadEntry: Bool,
     includeEmptyEntry: Bool,
     includeChatInfoEntry: Bool,
-    includeSearchEntry: Bool,
     includeEmbeddedSavedChatInfo: Bool,
     reverse: Bool,
     groupMessages: Bool,
@@ -332,7 +332,10 @@ func chatHistoryEntriesForView(
                     }
                 }
                 var attributes = attributes
-                attributes.displayContinueThreadFooter = true
+                if let subject, case .pinnedMessages = subject {
+                } else {
+                    attributes.displayContinueThreadFooter = true
+                }
                 entries[i] = .MessageEntry(message, presentationData, isRead, location, selection, attributes)
                 break outer
             default:
@@ -508,7 +511,12 @@ func chatHistoryEntriesForView(
                 entries.insert(.ChatInfoEntry(.botInfo(title: "", text: presentationData.strings.VerificationCodes_DescriptionText, photo: nil, video: nil), presentationData), at: 0)
             } else if let cachedPeerData = cachedPeerData as? CachedUserData {
                 if let botInfo = cachedPeerData.botInfo, !botInfo.description.isEmpty {
-                    entries.insert(.ChatInfoEntry(.botInfo(title: presentationData.strings.Bot_DescriptionTitle, text: botInfo.description, photo: botInfo.photo, video: botInfo.video), presentationData), at: 0)
+                    if location.threadId == nil {
+                        if let subject, case .pinnedMessages = subject {
+                        } else {
+                            entries.insert(.ChatInfoEntry(.botInfo(title: presentationData.strings.Bot_DescriptionTitle, text: botInfo.description, photo: botInfo.photo, video: botInfo.video), presentationData), at: 0)
+                        }
+                    }
                 } else if let peerStatusSettings = cachedPeerData.peerStatusSettings, peerStatusSettings.registrationDate != nil || peerStatusSettings.phoneCountry != nil {
                     if peerStatusSettings.flags.contains(.canAddContact) || peerStatusSettings.flags.contains(.canReport) || peerStatusSettings.flags.contains(.canBlock) {
                         
@@ -680,15 +688,12 @@ func chatHistoryEntriesForView(
                 entries.append(.MessageEntry(updatedMessage, presentationData, false, nil, .none, ChatMessageEntryAttributes(rank: nil, isContact: false, contentTypeHint: .generic, updatingMedia: nil, isPlaying: false, isCentered: false, authorStoryStats: nil, displayContinueThreadFooter: false)))
             }
         }
-    } else if includeSearchEntry {
-        if view.laterId == nil {
-            if !view.entries.isEmpty {
-                entries.append(.SearchEntry(presentationData.theme.theme, presentationData.strings))
-            }
-        }
     }
     if addBotForumHeader {
-        entries.append(.ChatInfoEntry(.newThreadInfo, presentationData))
+        if let subject, case .pinnedMessages = subject {
+        } else {
+            entries.append(.ChatInfoEntry(.newThreadInfo, presentationData))
+        }
     }
     if includeEmbeddedSavedChatInfo, let peerId = location.peerId {
         if !view.isLoading && view.laterId == nil {

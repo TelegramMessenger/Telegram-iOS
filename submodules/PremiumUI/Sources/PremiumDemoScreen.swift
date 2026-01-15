@@ -1133,7 +1133,7 @@ private final class DemoSheetContent: CombinedComponent {
             
             let closeButton = closeButton.update(
                 component: GlassBarButtonComponent(
-                    size: CGSize(width: 40.0, height: 40.0),
+                    size: CGSize(width: 44.0, height: 44.0),
                     backgroundColor: UIColor(rgb: 0x7f76f4),
                     isDark: false,
                     state: .tintedGlass,
@@ -1147,7 +1147,7 @@ private final class DemoSheetContent: CombinedComponent {
                         component.dismiss()
                     }
                 ),
-                availableSize: CGSize(width: 40.0, height: 40.0),
+                availableSize: CGSize(width: 44.0, height: 44.0),
                 transition: .immediate
             )
             context.add(closeButton

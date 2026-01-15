@@ -992,7 +992,7 @@ final class ShareWithPeersScreenComponent: Component {
             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
             
             let promptController = promptController(
-                sharedContext: component.context.sharedContext,
+                context: component.context,
                 updatedPresentationData: (initial: presentationData, signal: .single(presentationData)),
                 text: presentationData.strings.Stories_CreateAlbum_Title,
                 titleFont: .bold,
@@ -2772,7 +2772,7 @@ final class ShareWithPeersScreenComponent: Component {
                     component: AnyComponentWithIdentity(id: "close", component: AnyComponent(
                         BundleIconComponent(
                             name: "Navigation/Close",
-                            tintColor: environment.theme.rootController.navigationBar.glassBarButtonForegroundColor
+                            tintColor: environment.theme.chat.inputPanel.panelControlColor
                         )
                     )),
                     action: { [weak self] _ in

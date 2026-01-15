@@ -16,6 +16,7 @@ import AppBundle
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import HierarchyTrackingLayer
+import EdgeEffect
 
 private let motionAmount: CGFloat = 32.0
 
@@ -32,7 +33,7 @@ private func generateBlurredContents(image: UIImage, dimColor: UIColor?) -> UIIm
     telegramFastBlurMore(Int32(context.size.width), Int32(context.size.height), Int32(context.bytesPerRow), context.bytes)
 
     adjustSaturationInContext(context: context, saturation: 1.7)
-    
+
     if let dimColor {
         context.withFlippedContext { c in
             c.setFillColor(dimColor.cgColor)
@@ -41,6 +42,64 @@ private func generateBlurredContents(image: UIImage, dimColor: UIColor?) -> UIIm
     }
 
     return context.generateImage()
+}
+
+private func calculateWallpaperBrightness(from colors: [UInt32]) -> CGFloat {
+    guard !colors.isEmpty else {
+        return 1.0
+    }
+    return UIColor.average(of: colors.map(UIColor.init(rgb:))).hsb.b
+}
+
+private func calculateWallpaperBrightness(from image: UIImage) -> CGFloat {
+    guard let cgImage = image.cgImage else {
+        return 1.0
+    }
+
+    let sourceWidth = cgImage.width
+    let sourceHeight = cgImage.height
+    let topRegionHeight = max(1, Int(CGFloat(sourceHeight) * 0.1))
+    let cropRect = CGRect(x: 0, y: 0, width: sourceWidth, height: topRegionHeight)
+
+    guard let croppedImage = cgImage.cropping(to: cropRect) else {
+        return 1.0
+    }
+
+    let targetSize = CGSize(width: 10.0, height: 10.0)
+    let width = Int(targetSize.width)
+    let height = Int(targetSize.height)
+    let bytesPerPixel = 4
+    let bytesPerRow = bytesPerPixel * width
+    let bitsPerComponent = 8
+
+    var pixelData = [UInt8](repeating: 0, count: width * height * bytesPerPixel)
+
+    guard let context = CGContext(
+        data: &pixelData,
+        width: width,
+        height: height,
+        bitsPerComponent: bitsPerComponent,
+        bytesPerRow: bytesPerRow,
+        space: CGColorSpaceCreateDeviceRGB(),
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+    ) else {
+        return 1.0
+    }
+
+    context.draw(croppedImage, in: CGRect(origin: .zero, size: targetSize))
+
+    var totalLuminance: CGFloat = 0.0
+    let pixelCount = width * height
+
+    for i in 0 ..< pixelCount {
+        let offset = i * bytesPerPixel
+        let r = CGFloat(pixelData[offset]) / 255.0
+        let g = CGFloat(pixelData[offset + 1]) / 255.0
+        let b = CGFloat(pixelData[offset + 2]) / 255.0
+        totalLuminance += 0.299 * r + 0.587 * g + 0.114 * b
+    }
+
+    return totalLuminance / CGFloat(pixelCount)
 }
 
 public enum WallpaperBubbleType {
@@ -97,12 +156,14 @@ public struct WallpaperEdgeEffectEdge: Equatable {
 }
 
 public protocol WallpaperEdgeEffectNode: ASDisplayNode {
-    func update(rect: CGRect, edge: WallpaperEdgeEffectEdge, containerSize: CGSize, transition: ContainedViewLayoutTransition)
+    func update(rect: CGRect, edge: WallpaperEdgeEffectEdge, blur: Bool, containerSize: CGSize, transition: ContainedViewLayoutTransition)
 }
 
 public protocol WallpaperBackgroundNode: ASDisplayNode {
     var isReady: Signal<Bool, NoError> { get }
     var rotation: CGFloat { get set }
+    var isDark: Bool? { get }
+    var isDarkUpdated: (() -> Void)? { get set }
 
     func update(wallpaper: TelegramWallpaper, animated: Bool)
     func update(wallpaper: TelegramWallpaper, starGift: StarGift?, animated: Bool)
@@ -122,7 +183,7 @@ public protocol WallpaperBackgroundNode: ASDisplayNode {
     func makeEdgeEffectNode() -> WallpaperEdgeEffectNode?
 }
 
-private final class EffectImageLayer: SimpleLayer, GradientBackgroundPatternOverlayLayer {
+final class EffectImageLayer: SimpleLayer, GradientBackgroundPatternOverlayLayer {
     final class CloneLayer: SimpleLayer {
         private weak var parentLayer: EffectImageLayer?
         private var index: SparseBag<Weak<CloneLayer>>.Index?
@@ -785,9 +846,9 @@ public final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgrou
     private let context: AccountContext
     private let useSharedAnimationPhase: Bool
     
-    private let contentNode: ASDisplayNode
+    let contentNode: ASDisplayNode
     
-    fileprivate let edgeEffectNodes = SparseBag<Weak<WallpaperEdgeEffectNodeImpl>>()
+    let edgeEffectNodes = SparseBag<Weak<WallpaperEdgeEffectNodeImpl>>()
     
     private var blurredBackgroundContents: UIImage?
     
@@ -836,9 +897,9 @@ public final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgrou
         }
     }
 
-    fileprivate var gradientBackgroundNode: GradientBackgroundNode?
+    var gradientBackgroundNode: GradientBackgroundNode?
     private var outgoingBubbleGradientBackgroundNode: GradientBackgroundNode?
-    fileprivate let patternImageLayer: EffectImageLayer
+    let patternImageLayer: EffectImageLayer
     private let dimLayer: SimpleLayer
     private var isGeneratingPatternImage: Bool = false
 
@@ -980,11 +1041,21 @@ public final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgrou
     }
     private static var cachedSharedPattern: (PatternKey, UIImage)?
     
+    public private(set) var isDark: Bool?
+    public var isDarkUpdated: (() -> Void)?
+
+    private func updateIsDark(_ isDark: Bool?) {
+        if self.isDark != isDark {
+            self.isDark = isDark
+            self.isDarkUpdated?()
+        }
+    }
+
     private let _isReady = ValuePromise<Bool>(false, ignoreRepeated: true)
     public var isReady: Signal<Bool, NoError> {
         return self._isReady.get()
     }
-        
+
     init(context: AccountContext, useSharedAnimationPhase: Bool) {
         self.context = context
         self.useSharedAnimationPhase = useSharedAnimationPhase
@@ -1132,6 +1203,12 @@ public final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgrou
             self.blurredBackgroundContents = nil
             self.motionEnabled = false
             self.wallpaperDisposable.set(nil)
+            
+            if case let .file(file) = wallpaper, file.isPattern {
+                self.updateIsDark(nil)
+            } else {
+                self.updateIsDark(calculateWallpaperBrightness(from: gradientColors) <= 0.3)
+            }
         } else {
             if let gradientBackgroundNode = self.gradientBackgroundNode {
                 self.gradientBackgroundNode = nil
@@ -1160,17 +1237,20 @@ public final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgrou
                 self.contentNode.contents = image?.cgImage
                 self.blurredBackgroundContents = image
                 self.wallpaperDisposable.set(nil)
+                self.updateIsDark(calculateWallpaperBrightness(from: gradientColors) <= 0.3)
             } else if gradientColors.count >= 1 {
                 self.contentNode.backgroundColor = UIColor(rgb: gradientColors[0])
                 self.contentNode.contents = nil
                 self.blurredBackgroundContents = nil
                 self.wallpaperDisposable.set(nil)
+                self.updateIsDark(calculateWallpaperBrightness(from: gradientColors) <= 0.3)
             } else {
                 self.contentNode.backgroundColor = .white
                 if let image = chatControllerBackgroundImage(theme: nil, wallpaper: wallpaper, mediaBox: self.context.sharedContext.accountManager.mediaBox, knockoutMode: false) {
                     self.contentNode.contents = image.cgImage
                     self.blurredBackgroundContents = generateBlurredContents(image: image, dimColor: wallpaperDimColor)
                     self.wallpaperDisposable.set(nil)
+                    self.updateIsDark(calculateWallpaperBrightness(from: image) <= 0.55)
                     Queue.mainQueue().justDispatch {
                         self._isReady.set(true)
                     }
@@ -1178,6 +1258,7 @@ public final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgrou
                     self.contentNode.contents = image.cgImage
                     self.blurredBackgroundContents = generateBlurredContents(image: image, dimColor: wallpaperDimColor)
                     self.wallpaperDisposable.set(nil)
+                    self.updateIsDark(calculateWallpaperBrightness(from: image) <= 0.55)
                     Queue.mainQueue().justDispatch {
                         self._isReady.set(true)
                     }
@@ -1190,10 +1271,16 @@ public final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgrou
                         strongSelf.contentNode.contents = image?.0?.cgImage
                         if let image = image?.0 {
                             strongSelf.blurredBackgroundContents = generateBlurredContents(image: image, dimColor: wallpaperDimColor)
+                            strongSelf.updateIsDark(calculateWallpaperBrightness(from: image) <= 0.55)
                         } else {
                             strongSelf.blurredBackgroundContents = nil
                         }
                         strongSelf.updateBubbles()
+                        for edgeEffectNode in strongSelf.edgeEffectNodes {
+                            if let edgeEffectNode = edgeEffectNode.value {
+                                edgeEffectNode.updateContents()
+                            }
+                        }
                         strongSelf._isReady.set(true)
                     }))
                 }
@@ -1227,8 +1314,13 @@ public final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgrou
             }
         }
         self.updateBubbles()
-        
         self.updateDimming()
+        
+        for edgeEffectNode in self.edgeEffectNodes {
+            if let edgeEffectNode = edgeEffectNode.value {
+                edgeEffectNode.updateContents()
+            }
+        }
     }
 
     public func _internalUpdateIsSettingUpWallpaper() {
@@ -1789,156 +1881,6 @@ public final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgrou
     public func makeEdgeEffectNode() -> WallpaperEdgeEffectNode? {
         let node = WallpaperEdgeEffectNodeImpl(parentNode: self)
         return node
-    }
-}
-
-private final class WallpaperEdgeEffectNodeImpl: ASDisplayNode, WallpaperEdgeEffectNode {
-    private struct Params: Equatable {
-        let rect: CGRect
-        let edge: WallpaperEdgeEffectEdge
-        let containerSize: CGSize
-        
-        init(rect: CGRect, edge: WallpaperEdgeEffectEdge, containerSize: CGSize) {
-            self.rect = rect
-            self.edge = edge
-            self.containerSize = containerSize
-        }
-    }
-    
-    private var gradientNode: GradientBackgroundNode.CloneNode?
-    private let patternImageLayer: EffectImageLayer.CloneLayer
-    
-    private let containerNode: ASDisplayNode
-    private let containerMaskingNode: ASDisplayNode
-    private let overlayNode: ASDisplayNode
-    private let maskView: UIImageView
-    
-    private weak var parentNode: WallpaperBackgroundNodeImpl?
-    private var index: Int?
-    private var params: Params?
-    
-    private var isInverted: Bool = false
-    
-    init(parentNode: WallpaperBackgroundNodeImpl) {
-        self.parentNode = parentNode
-        
-        if let gradientBackgroundNode = parentNode.gradientBackgroundNode {
-            self.gradientNode = GradientBackgroundNode.CloneNode(parentNode: gradientBackgroundNode, isDimmed: false)
-        } else {
-            self.gradientNode = nil
-        }
-        
-        self.patternImageLayer = EffectImageLayer.CloneLayer(parentLayer: parentNode.patternImageLayer)
-        
-        self.containerNode = ASDisplayNode()
-        self.containerNode.anchorPoint = CGPoint()
-        self.containerNode.clipsToBounds = true
-        
-        self.containerMaskingNode = ASDisplayNode()
-        self.containerMaskingNode.addSubnode(self.containerNode)
-        
-        self.overlayNode = ASDisplayNode()
-        
-        self.maskView = UIImageView()
-        
-        super.init()
-        
-        if let gradientNode = self.gradientNode {
-            self.containerNode.addSubnode(gradientNode)
-        }
-        //self.layer.addSublayer(self.patternImageLayer)
-        
-        self.addSubnode(self.containerMaskingNode)
-        self.containerMaskingNode.view.mask = self.maskView
-        
-        self.containerNode.addSubnode(self.overlayNode)
-        
-        self.index = parentNode.edgeEffectNodes.add(Weak(self))
-    }
-    
-    deinit {
-        if let index = self.index, let parentNode = self.parentNode {
-            parentNode.edgeEffectNodes.remove(index)
-        }
-    }
-    
-    func updateGradientNode() {
-        if let gradientBackgroundNode = self.parentNode?.gradientBackgroundNode {
-            if self.gradientNode == nil {
-                let gradientNode = GradientBackgroundNode.CloneNode(parentNode: gradientBackgroundNode, isDimmed: false)
-                self.gradientNode = gradientNode
-                self.containerNode.insertSubnode(gradientNode, at: 0)
-                
-                if let params = self.params {
-                    self.updateImpl(rect: params.rect, edge: params.edge, containerSize: params.containerSize, transition: .immediate)
-                }
-            }
-        } else {
-            if let gradientNode = self.gradientNode {
-                self.gradientNode = nil
-                gradientNode.removeFromSupernode()
-            }
-        }
-    }
-    
-    func updatePattern(isInverted: Bool) {
-        if self.isInverted != isInverted {
-            self.isInverted = isInverted
-            
-            self.overlayNode.backgroundColor = isInverted ? .black : .clear
-        }
-    }
-    
-    func update(rect: CGRect, edge: WallpaperEdgeEffectEdge, containerSize: CGSize, transition: ContainedViewLayoutTransition) {
-        let params = Params(rect: rect, edge: edge, containerSize: containerSize)
-        if self.params != params {
-            self.params = params
-            self.updateImpl(rect: params.rect, edge: params.edge, containerSize: params.containerSize, transition: transition)
-        }
-    }
-    
-    private func updateImpl(rect: CGRect, edge: WallpaperEdgeEffectEdge, containerSize: CGSize, transition: ContainedViewLayoutTransition) {
-        transition.updateFrame(node: self.containerMaskingNode, frame: CGRect(origin: CGPoint(), size: rect.size))
-        transition.updateBounds(node: self.containerNode, bounds: CGRect(origin: CGPoint(x: rect.minX, y: rect.minY), size: rect.size))
-        
-        if self.maskView.image?.size.height != edge.size {
-            let baseGradientAlpha: CGFloat = 0.75
-            let numSteps = 8
-            let firstStep = 1
-            let firstLocation = 0.0
-            let colors: [UIColor] = (0 ..< numSteps).map { i in
-                if i < firstStep {
-                    return UIColor(white: 1.0, alpha: 1.0)
-                } else {
-                    let step: CGFloat = CGFloat(i - firstStep) / CGFloat(numSteps - firstStep - 1)
-                    let value: CGFloat = bezierPoint(0.42, 0.0, 0.58, 1.0, step)
-                    return UIColor(white: 1.0, alpha: baseGradientAlpha * value)
-                }
-            }
-            let locations: [CGFloat] = (0 ..< numSteps).map { i in
-                if i < firstStep {
-                    return 0.0
-                } else {
-                    let step: CGFloat = CGFloat(i - firstStep) / CGFloat(numSteps - firstStep - 1)
-                    return (firstLocation + (1.0 - firstLocation) * step)
-                }
-            }
-            
-            self.maskView.image = generateGradientImage(
-                size: CGSize(width: 8.0, height: edge.size),
-                colors: colors,
-                locations: locations
-            )?.stretchableImage(withLeftCapWidth: 0, topCapHeight: Int(edge.size))
-        }
-        
-        transition.updateFrame(view: self.maskView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: rect.size))
-        
-        transition.updateFrame(node: self.overlayNode, frame: CGRect(origin: CGPoint(), size: containerSize))
-        
-        if let gradientNode = self.gradientNode {
-            transition.updateFrame(node: gradientNode, frame: CGRect(origin: CGPoint(), size: containerSize))
-        }
-        transition.updateFrame(layer: self.patternImageLayer, frame: CGRect(origin: CGPoint(), size: containerSize))
     }
 }
 

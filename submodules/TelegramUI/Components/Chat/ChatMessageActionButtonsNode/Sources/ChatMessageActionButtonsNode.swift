@@ -440,6 +440,7 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                         if node.iconNode == nil {
                             let iconNode = ASImageNode()
                             iconNode.contentMode = .center
+                            iconNode.isUserInteractionEnabled = false
                             node.iconNode = iconNode
                             node.addSubnode(iconNode)
                         }

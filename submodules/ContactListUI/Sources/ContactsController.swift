@@ -24,6 +24,7 @@ import ChatListHeaderComponent
 import TelegramIntents
 import UndoUI
 import ShareController
+import SearchBarNode
 
 private final class HeaderContextReferenceContentSource: ContextReferenceContentSource {
     private let controller: ViewController
@@ -141,7 +142,6 @@ public class ContactsController: ViewController {
         
         self.sortButton = SortHeaderButton(presentationData: self.presentationData)
         
-        //super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         super.init(navigationBarPresentationData: nil)
         
         self.tabBarItemContextActionType = .always
@@ -226,6 +226,8 @@ public class ContactsController: ViewController {
         }
         
         self.sortButton.addTarget(self, action: #selector(self.sortPressed), forControlEvents: .touchUpInside)
+
+        self.updateTabBarSearchState(ViewController.TabBarSearchState(isActive: false), transition: .immediate)
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -242,7 +244,6 @@ public class ContactsController: ViewController {
     private func updateThemeAndStrings() {
         self.sortButton.update(theme: self.presentationData.theme, strings: self.presentationData.strings)
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
-        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
         
         self.title = self.presentationData.strings.Contacts_Title
         self.tabBarItem.title = self.presentationData.strings.Contacts_Title
@@ -279,8 +280,6 @@ public class ContactsController: ViewController {
         }
         |> take(1)
         |> map { _ -> Bool in true })
-        
-        self.contactsNode.navigationBar = self.navigationBar
         
         let openPeer: (ContactListPeer, Bool) -> Void = { [weak self] peer, fromSearch in
             if let strongSelf = self {
@@ -343,7 +342,7 @@ public class ContactsController: ViewController {
         }
         
         self.contactsNode.contactListNode.activateSearch = { [weak self] in
-            self?.activateSearch()
+            self?.activateSearch(isFromTabBar: false)
         }
         
         self.contactsNode.contactListNode.openPeer = { [weak self] peer, _, _, _ in
@@ -580,18 +579,26 @@ public class ContactsController: ViewController {
         self.sortButton.contextAction?(self.sortButton.containerNode, nil)
     }
     
-    private func activateSearch() {
-        if let searchContentNode = self.searchContentNode() {
-            self.contactsNode.activateSearch(placeholderNode: searchContentNode.placeholderNode)
+    private func activateSearch(isFromTabBar: Bool) {
+        let placeholderNode = isFromTabBar ? nil : self.searchContentNode()?.placeholderNode
+        self.contactsNode.activateSearch(placeholderNode: placeholderNode)
+        if placeholderNode != nil {
+            (self.parent as? TabBarController)?.updateIsTabBarHidden(true, transition: .animated(duration: 0.5, curve: .spring))
+        } else {
+            self.updateTabBarSearchState(ViewController.TabBarSearchState(isActive: true), transition: .animated(duration: 0.5, curve: .spring))
+            if let searchBarNode = self.currentTabBarSearchNode?() as? SearchBarNode {
+                self.contactsNode.searchDisplayController?.setSearchBar(searchBarNode)
+                searchBarNode.activate()
+            }
         }
         self.requestLayout(transition: .animated(duration: 0.5, curve: .spring))
     }
     
     private func deactivateSearch(animated: Bool) {
-        if let searchContentNode = self.searchContentNode() {
-            self.contactsNode.deactivateSearch(placeholderNode: searchContentNode.placeholderNode, animated: animated)
-            self.requestLayout(transition: .animated(duration: 0.5, curve: .spring))
-        }
+        self.contactsNode.deactivateSearch(placeholderNode: self.searchContentNode()?.placeholderNode, animated: animated)
+        self.updateTabBarSearchState(ViewController.TabBarSearchState(isActive: false), transition: .animated(duration: 0.5, curve: .spring))
+        (self.parent as? TabBarController)?.updateIsTabBarHidden(false, transition: .animated(duration: 0.5, curve: .spring))
+        self.requestLayout(transition: .animated(duration: 0.5, curve: .spring))
     }
     
     func presentSortMenu(sourceView: UIView, gesture: ContextGesture?) {
@@ -795,6 +802,14 @@ public class ContactsController: ViewController {
         
         let controller = ContextController(presentationData: self.presentationData, source: .reference(ContactsTabBarContextReferenceContentSource(controller: self, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), recognizer: nil, gesture: gesture)
         self.context.sharedContext.mainWindow?.presentInGlobalOverlay(controller)
+    }
+    
+    override public func tabBarActivateSearch() {
+        self.activateSearch(isFromTabBar: true)
+    }
+
+    override public func tabBarDeactivateSearch() {
+        self.deactivateSearch(animated: true)
     }
 }
 

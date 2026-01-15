@@ -2173,7 +2173,7 @@ public final class AccountViewTracker {
                             fixedCombinedReadStates: .peer([peerId: CombinedPeerReadState(states: [
                                 (Namespaces.Message.Cloud, PeerReadState.idBased(maxIncomingReadId: Int32.max - 1, maxOutgoingReadId: Int32.max - 1, maxKnownId: Int32.max - 1, count: 0, markedUnread: false))
                             ])]),
-                            topTaggedMessageIdNamespaces: [],
+                            topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud],
                             tag: tag,
                             appendMessagesFromTheSameGroup: false,
                             namespaces: .not(Namespaces.Message.allNonRegular),
@@ -2201,7 +2201,7 @@ public final class AccountViewTracker {
                                 count: count,
                                 trackHoles: trackHoles,
                                 fixedCombinedReadStates: nil,
-                                topTaggedMessageIdNamespaces: [],
+                                topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud],
                                 tag: tag,
                                 appendMessagesFromTheSameGroup: false,
                                 namespaces: .not(Namespaces.Message.allNonRegular),

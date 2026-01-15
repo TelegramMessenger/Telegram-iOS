@@ -19,6 +19,7 @@ final class BrowserAddressListComponent: Component {
     let insets: UIEdgeInsets
     let metrics: LayoutMetrics
     let addressBarFrame: CGRect
+    let navigationBarHeight: CGFloat
     let performAction: ActionSlot<BrowserScreen.Action>
     let presentInGlobalOverlay: (ViewController) -> Void
     
@@ -29,6 +30,7 @@ final class BrowserAddressListComponent: Component {
         insets: UIEdgeInsets,
         metrics: LayoutMetrics,
         addressBarFrame: CGRect,
+        navigationBarHeight: CGFloat,
         performAction: ActionSlot<BrowserScreen.Action>,
         presentInGlobalOverlay: @escaping (ViewController) -> Void
     ) {
@@ -38,6 +40,7 @@ final class BrowserAddressListComponent: Component {
         self.insets = insets
         self.metrics = metrics
         self.addressBarFrame = addressBarFrame
+        self.navigationBarHeight = navigationBarHeight
         self.performAction = performAction
         self.presentInGlobalOverlay = presentInGlobalOverlay
     }
@@ -59,6 +62,9 @@ final class BrowserAddressListComponent: Component {
             return false
         }
         if lhs.addressBarFrame != rhs.addressBarFrame {
+            return false
+        }
+        if lhs.navigationBarHeight != rhs.navigationBarHeight {
             return false
         }
         return true
@@ -214,15 +220,16 @@ final class BrowserAddressListComponent: Component {
             var validIds: [AnyHashable] = []
             var validSectionHeaders: [AnyHashable] = []
             var sectionOffset: CGFloat = 0.0
+            let headerOffset: CGFloat = self.scrollView.frame.minY
             
             let sideInset: CGFloat = 0.0
-            let containerInset: CGFloat = 0.0
+            let containerInset: CGFloat = self.scrollView.frame.minY
             
             for sectionIndex in 0 ..< itemLayout.sections.count {
                 let section = itemLayout.sections[sectionIndex]
                 
                 do {
-                    var sectionHeaderFrame = CGRect(origin: CGPoint(x: sideInset, y: sectionOffset - self.scrollView.bounds.minY), size: CGSize(width: itemLayout.containerSize.width, height: section.insets.top))
+                    var sectionHeaderFrame = CGRect(origin: CGPoint(x: sideInset, y: headerOffset + sectionOffset - self.scrollView.bounds.minY), size: CGSize(width: itemLayout.containerSize.width, height: section.insets.top))
 
                     let sectionHeaderMinY = topOffset + containerInset
                     let sectionHeaderMaxY = containerInset + sectionOffset - self.scrollView.bounds.minY + section.totalHeight - 28.0
@@ -540,7 +547,7 @@ final class BrowserAddressListComponent: Component {
             let containerFrame: CGRect
             if component.metrics.isTablet {
                 let containerSize = CGSize(width: component.addressBarFrame.width + 32.0, height: 540.0)
-                containerFrame = CGRect(origin: CGPoint(x: floor(component.addressBarFrame.center.x - containerSize.width / 2.0), y: 72.0), size: containerSize)
+                containerFrame = CGRect(origin: CGPoint(x: floor(component.addressBarFrame.center.x - containerSize.width / 2.0), y: 100.0), size: containerSize)
                 
                 self.backgroundView.layer.cornerRadius = 10.0
             } else {
@@ -602,23 +609,28 @@ final class BrowserAddressListComponent: Component {
             let itemLayout = ItemLayout(containerSize: containerFrame.size, insets: .zero, sections: sections)
             self.itemLayout = itemLayout
             
-            let containerWidth = containerFrame.size.width
             let scrollContentHeight = max(itemLayout.contentHeight, containerFrame.size.height)
             
             self.ignoreScrolling = true
-            transition.setFrame(view: self.scrollView, frame: CGRect(origin: .zero, size: containerFrame.size))
-            let contentSize = CGSize(width: containerWidth, height: scrollContentHeight)
+            let scrollFrame: CGRect
+            if component.metrics.isTablet {
+                scrollFrame = CGRect(origin: .zero, size: containerFrame.size)
+            } else {
+                scrollFrame = CGRect(origin: CGPoint(x: 0.0, y: component.navigationBarHeight), size: CGSize(width: containerFrame.size.width, height: containerFrame.size.height - component.navigationBarHeight))
+            }
+            transition.setFrame(view: self.scrollView, frame: scrollFrame)
+            let contentSize = CGSize(width: scrollFrame.width, height: scrollContentHeight)
             if contentSize != self.scrollView.contentSize {
                 self.scrollView.contentSize = contentSize
             }
             if resetScrolling {
-                self.scrollView.bounds = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: containerWidth, height: containerFrame.size.height))
+                self.scrollView.bounds = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: scrollFrame.size)
             }
             self.ignoreScrolling = false
             self.updateScrolling(transition: transition)
             
             transition.setFrame(view: self.backgroundView, frame: containerFrame)
-            transition.setFrame(view: self.itemContainerView, frame: CGRect(origin: .zero, size: CGSize(width: containerWidth, height: scrollContentHeight)))
+            transition.setFrame(view: self.itemContainerView, frame: CGRect(origin: .zero, size: CGSize(width: scrollFrame.width, height: scrollContentHeight)))
             
             if component.metrics.isTablet {
                 transition.setFrame(view: self.shadowView, frame: containerFrame.insetBy(dx: -60.0, dy: -60.0))

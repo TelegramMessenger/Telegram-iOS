@@ -12,7 +12,7 @@ public final class NavigationBarBadgeNode: ASDisplayNode {
     
     private let font: UIFont = Font.regular(13.0)
     
-    var text: String = "" {
+    public var text: String = "" {
         didSet {
             self.textNode.attributedText = NSAttributedString(string: self.text, font: self.font, textColor: self.textColor)
             self.invalidateCalculatedLayout()
@@ -39,7 +39,7 @@ public final class NavigationBarBadgeNode: ASDisplayNode {
         self.addSubnode(self.textNode)
     }
     
-    func updateTheme(fillColor: UIColor, strokeColor: UIColor, textColor: UIColor) {
+    public func updateTheme(fillColor: UIColor, strokeColor: UIColor, textColor: UIColor) {
         self.fillColor = fillColor
         self.strokeColor = strokeColor
         self.textColor = textColor

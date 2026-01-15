@@ -46,6 +46,7 @@ class BazelCommandLine:
         self.show_actions = False
         self.enable_sandbox = False
         self.disable_provisioning_profiles = False
+        self.profile_swift = False
 
         self.common_args = [
             # https://docs.bazel.build/versions/master/command-line-reference.html
@@ -142,6 +143,9 @@ class BazelCommandLine:
 
     def set_disable_provisioning_profiles(self):
         self.disable_provisioning_profiles = True
+
+    def set_profile_swift(self, value):
+        self.profile_swift = value
 
     def set_configuration(self, configuration):
         if configuration == 'debug_arm64':
@@ -300,6 +304,8 @@ class BazelCommandLine:
             ]
 
         combined_arguments += self.configuration_args
+        if self.profile_swift:
+            combined_arguments += ['--config=swift_profile']
 
         print('TelegramBuild: running')
         print(subprocess.list2cmdline(combined_arguments))
@@ -369,17 +375,15 @@ class BazelCommandLine:
         print(subprocess.list2cmdline(combined_arguments))
         call_executable(combined_arguments)
 
-    def get_spm_aspect_invocation(self):
+    def invoke_spm_build(self):
         combined_arguments = [
             self.build_environment.bazel_path
         ]
         combined_arguments += self.get_startup_bazel_arguments()
         combined_arguments += ['build']
 
-        if self.custom_target is not None:
-            combined_arguments += [self.custom_target]
-        else:
-            combined_arguments += ['Telegram/Telegram']
+        # Build the generate_spm target directly to get the dependency tree JSON
+        combined_arguments += ['//Telegram:spm_build_root']
 
         if self.continue_on_error:
             combined_arguments += ['--keep_going']
@@ -409,8 +413,6 @@ class BazelCommandLine:
 
         combined_arguments += self.configuration_args
 
-        combined_arguments += ['--aspects', '//build-system/bazel-utils:spm.bzl%spm_text_aspect']
-        
         print(subprocess.list2cmdline(combined_arguments))
         call_executable(combined_arguments)
 
@@ -624,6 +626,7 @@ def build(bazel, arguments):
     bazel_command_line.set_continue_on_error(arguments.continueOnError)
     bazel_command_line.set_show_actions(arguments.showActions)
     bazel_command_line.set_enable_sandbox(arguments.sandbox)
+    bazel_command_line.set_profile_swift(arguments.profileSwift)
 
     bazel_command_line.set_split_swiftmodules(arguments.enableParallelSwiftmoduleGeneration)
 
@@ -719,7 +722,7 @@ def query(bazel, arguments):
     bazel_command_line.invoke_query(query_args)
 
 
-def get_spm_aspect_invocation(bazel, arguments):
+def build_spm(bazel, arguments):
     bazel_command_line = BazelCommandLine(
         bazel=bazel,
         override_bazel_version=arguments.overrideBazelVersion,
@@ -741,13 +744,12 @@ def get_spm_aspect_invocation(bazel, arguments):
 
     bazel_command_line.set_configuration(arguments.configuration)
     bazel_command_line.set_build_number(arguments.buildNumber)
-    bazel_command_line.set_custom_target(arguments.target)
     bazel_command_line.set_continue_on_error(False)
     bazel_command_line.set_show_actions(False)
     bazel_command_line.set_enable_sandbox(False)
     bazel_command_line.set_split_swiftmodules(False)
 
-    bazel_command_line.get_spm_aspect_invocation()
+    bazel_command_line.invoke_spm_build()
 
 def add_codesigning_common_arguments(current_parser: argparse.ArgumentParser):
     configuration_group = current_parser.add_mutually_exclusive_group(required=True)
@@ -978,6 +980,12 @@ if __name__ == '__main__':
              'systems. '
     )
     buildParser.add_argument(
+        '--profileSwift',
+        action='store_true',
+        default=False,
+        help='Enable single-core Swift compile profiling flags.'
+    )
+    buildParser.add_argument(
         '--target',
         type=str,
         help='A custom bazel target name to build.',
@@ -1067,6 +1075,13 @@ if __name__ == '__main__':
         required=True,
         type=str,
         help='Path to the destination directory.'
+    )
+    generate_profiles_build_parser.add_argument(
+        '--certsPath',
+        required=False,
+        type=str,
+        default='build-system/fake-codesigning/certs',
+        help='Path to the directory containing SelfSigned.p12 certificate.'
     )
 
     remote_upload_testflight_parser = subparsers.add_parser('remote-deploy-testflight', help='Build the app using a remote environment.')
@@ -1188,13 +1203,7 @@ if __name__ == '__main__':
         metavar='query_string'
     )
 
-    spm_parser = subparsers.add_parser('spm', help='Generate SPM package')
-    spm_parser.add_argument(
-        '--target',
-        type=str,
-        help='A custom bazel target name to build.',
-        metavar='target_name'
-    )
+    spm_parser = subparsers.add_parser('spm', help='Generate SPM package (outputs bazel-bin/Telegram/spm_build_root_modules.json)')
     spm_parser.add_argument(
         '--buildNumber',
         required=False,
@@ -1315,7 +1324,7 @@ if __name__ == '__main__':
                 additional_codesigning_output_path=remote_input_path
             )
 
-            GenerateProfiles.generate_provisioning_profiles(source_path=remote_input_path + '/profiles', destination_path=args.destination)
+            GenerateProfiles.generate_provisioning_profiles(source_path=remote_input_path + '/profiles', destination_path=args.destination, certs_path=args.certsPath)
         elif args.commandName == 'remote-deploy-testflight':
             env = os.environ
             if 'APPSTORE_CONNECT_USERNAME' not in env:
@@ -1351,7 +1360,7 @@ if __name__ == '__main__':
         elif args.commandName == 'query':
             query(bazel=bazel_path, arguments=args)
         elif args.commandName == 'spm':
-            get_spm_aspect_invocation(bazel=bazel_path, arguments=args)
+            build_spm(bazel=bazel_path, arguments=args)
         else:
             raise Exception('Unknown command')
     except KeyboardInterrupt:

@@ -132,7 +132,7 @@ final class WebBrowserDomainExceptionItemNode: ItemListRevealOptionsItemNode, It
         
         self.activateArea = AccessibilityAreaNode()
         
-        super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
+        super.init(layerBacked: false, rotated: false, seeThrough: false)
         
         self.addSubnode(self.iconNode)
         self.addSubnode(self.titleNode)

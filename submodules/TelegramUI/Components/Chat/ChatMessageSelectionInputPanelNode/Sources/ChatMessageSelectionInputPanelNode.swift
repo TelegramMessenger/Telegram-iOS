@@ -121,7 +121,6 @@ private final class GlassButtonView: UIView {
     
     override init(frame: CGRect) {
         self.backgroundView = GlassBackgroundView()
-        self.backgroundView.isUserInteractionEnabled = false
         
         self.iconView = GlassBackgroundView.ContentImageView()
         self.backgroundView.contentView.addSubview(self.iconView)
@@ -460,11 +459,13 @@ public final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
     override public func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, maxOverlayHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics, isMediaInputExpanded: Bool) -> CGFloat {
         self.validLayout = (width, leftInset, rightInset, bottomInset, additionalSideInsets, maxHeight, maxOverlayHeight, metrics, isSecondary, isMediaInputExpanded)
         
-        var leftInset = leftInset
-        leftInset += 16.0
+        var leftInset = leftInset + 8.0
+        var rightInset = rightInset + 8.0
         
-        var rightInset = rightInset
-        rightInset += 16.0
+        if bottomInset <= 32.0 {
+            leftInset += 18.0
+            rightInset += 18.0
+        }
         
         let panelHeight = defaultHeight(metrics: metrics)
         

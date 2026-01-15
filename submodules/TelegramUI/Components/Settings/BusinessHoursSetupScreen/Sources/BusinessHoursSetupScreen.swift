@@ -307,8 +307,7 @@ final class BusinessHoursSetupScreenComponent: Component {
                     let _ = component.context.engine.accountData.updateAccountBusinessHours(businessHours: businessHours).startStandalone()
                     return true
                 } catch _ {
-                    let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                    self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: environment.strings.BusinessHoursSetup_ErrorIntersectingDays_Text, actions: [
+                    self.environment?.controller()?.present(textAlertController(context: component.context, title: nil, text: environment.strings.BusinessHoursSetup_ErrorIntersectingDays_Text, actions: [
                         TextAlertAction(type: .genericAction, title: environment.strings.Common_Cancel, action: {
                         }),
                         TextAlertAction(type: .defaultAction, title: environment.strings.BusinessHoursSetup_ErrorIntersectingDays_ResetAction, action: { [weak self] in

@@ -103,7 +103,7 @@ public class LimitedPermissionItemNode: ListViewItemNode {
         self.actionButtonTitleNode = TextNode()
         self.actionButtonTitleNode.isUserInteractionEnabled = false
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.textNode)
         self.addSubnode(self.activateArea)

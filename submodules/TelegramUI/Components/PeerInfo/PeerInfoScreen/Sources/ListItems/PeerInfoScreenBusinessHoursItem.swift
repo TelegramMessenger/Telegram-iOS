@@ -308,7 +308,7 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
         
         let labelSize = self.labelNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: .greatestFiniteMagnitude))
         
-        var topOffset = 10.0
+        var topOffset = 15.0
         let labelFrame = CGRect(origin: CGPoint(x: sideInset, y: topOffset), size: labelSize)
         if labelSize.height > 0.0 {
             topOffset += labelSize.height
@@ -632,7 +632,7 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
             topOffset += dayHeights
         }
         
-        topOffset += 11.0
+        topOffset += 15.0
         
         transition.updateFrame(node: self.labelNode, frame: labelFrame)
         

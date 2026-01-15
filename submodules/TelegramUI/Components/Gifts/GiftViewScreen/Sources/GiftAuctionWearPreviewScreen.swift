@@ -26,6 +26,7 @@ import GiftAnimationComponent
 import GlassBarButtonComponent
 import GiftRemainingCountComponent
 import AnimatedTextComponent
+import AvatarComponent
 
 private final class GiftAuctionWearPreviewSheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -199,7 +200,7 @@ private final class GiftAuctionWearPreviewSheetContent: CombinedComponent {
         return { context in
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
             let component = context.component
-            let theme = environment.theme
+            let theme = environment.theme.withModalBlocksBackground()
             let strings = environment.strings
             let nameDisplayOrder = component.context.sharedContext.currentPresentationData.with { $0 }.nameDisplayOrder
             let controller = environment.controller

@@ -2097,7 +2097,7 @@ private final class CameraScreenComponent: CombinedComponent {
             if !isSticker, case .none = component.cameraState.recording, component.cameraState.isStreaming == .none && !state.isTransitioning && hasAllRequiredAccess && component.cameraState.collageProgress < 1.0 - .ulpOfOne {
                 let availableModeControlSize: CGSize
                 if isTablet {
-                    availableModeControlSize = CGSize(width: panelWidth, height: 120.0)
+                    availableModeControlSize = CGSize(width: floor(panelWidth), height: 120.0)
                 } else {
                     availableModeControlSize = availableSize
                 }
@@ -2131,7 +2131,6 @@ private final class CameraScreenComponent: CombinedComponent {
                     modeControlPosition = CGPoint(x: availableSize.width / 2.0, y: availableSize.height - environment.safeInsets.bottom + modeControl.size.height / 2.0 + controlsBottomInset + 16.0)
                 }
                 context.add(modeControl
-                    .clipsToBounds(true)
                     .position(modeControlPosition)
                     .appear(.default(alpha: true))
                     .disappear(.default(alpha: true))

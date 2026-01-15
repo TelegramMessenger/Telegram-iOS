@@ -93,12 +93,9 @@ public extension Api {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.WebPageAttribute.webPageAttributeStarGiftAuction(gift: _1!, endDate: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.WebPageAttribute.webPageAttributeStarGiftAuction(gift: _1!, endDate: _2!)
         }
         public static func parse_webPageAttributeStarGiftCollection(_ reader: BufferReader) -> WebPageAttribute? {
             var _1: [Api.Document]?
@@ -106,12 +103,8 @@ public extension Api {
                 _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.WebPageAttribute.webPageAttributeStarGiftCollection(icons: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.WebPageAttribute.webPageAttributeStarGiftCollection(icons: _1!)
         }
         public static func parse_webPageAttributeStickerSet(_ reader: BufferReader) -> WebPageAttribute? {
             var _1: Int32?
@@ -122,12 +115,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.WebPageAttribute.webPageAttributeStickerSet(flags: _1!, stickers: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.WebPageAttribute.webPageAttributeStickerSet(flags: _1!, stickers: _2!)
         }
         public static func parse_webPageAttributeStory(_ reader: BufferReader) -> WebPageAttribute? {
             var _1: Int32?
@@ -146,12 +136,11 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.WebPageAttribute.webPageAttributeStory(flags: _1!, peer: _2!, id: _3!, story: _4)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.WebPageAttribute.webPageAttributeStory(flags: _1!, peer: _2!, id: _3!, story: _4)
         }
         public static func parse_webPageAttributeTheme(_ reader: BufferReader) -> WebPageAttribute? {
             var _1: Int32?
@@ -167,12 +156,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.WebPageAttribute.webPageAttributeTheme(flags: _1!, documents: _2, settings: _3)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.WebPageAttribute.webPageAttributeTheme(flags: _1!, documents: _2, settings: _3)
         }
         public static func parse_webPageAttributeUniqueStarGift(_ reader: BufferReader) -> WebPageAttribute? {
             var _1: Api.StarGift?
@@ -180,12 +167,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.StarGift
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.WebPageAttribute.webPageAttributeUniqueStarGift(gift: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.WebPageAttribute.webPageAttributeUniqueStarGift(gift: _1!)
         }
     
     }
@@ -222,12 +205,9 @@ public extension Api {
             } }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
-            if _c1 && _c2 {
-                return Api.WebViewMessageSent.webViewMessageSent(flags: _1!, msgId: _2)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.WebViewMessageSent.webViewMessageSent(flags: _1!, msgId: _2)
         }
     
     }
@@ -266,12 +246,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.WebViewResult.webViewResultUrl(flags: _1!, queryId: _2, url: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.WebViewResult.webViewResultUrl(flags: _1!, queryId: _2, url: _3!)
         }
     
     }
@@ -346,12 +324,13 @@ public extension Api.account {
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.account.AuthorizationForm.authorizationForm(flags: _1!, requiredTypes: _2!, values: _3!, errors: _4!, users: _5!, privacyPolicyUrl: _6)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            return Api.account.AuthorizationForm.authorizationForm(flags: _1!, requiredTypes: _2!, values: _3!, errors: _4!, users: _5!, privacyPolicyUrl: _6)
         }
     
     }
@@ -392,12 +371,9 @@ public extension Api.account {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.account.Authorizations.authorizations(authorizationTtlDays: _1!, authorizations: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.account.Authorizations.authorizations(authorizationTtlDays: _1!, authorizations: _2!)
         }
     
     }
@@ -442,12 +418,10 @@ public extension Api.account {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.account.AutoDownloadSettings.autoDownloadSettings(low: _1!, medium: _2!, high: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.account.AutoDownloadSettings.autoDownloadSettings(low: _1!, medium: _2!, high: _3!)
         }
     
     }
@@ -522,12 +496,13 @@ public extension Api.account {
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             let _c6 = _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.account.AutoSaveSettings.autoSaveSettings(usersSettings: _1!, chatsSettings: _2!, broadcastsSettings: _3!, exceptions: _4!, chats: _5!, users: _6!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            return Api.account.AutoSaveSettings.autoSaveSettings(usersSettings: _1!, chatsSettings: _2!, broadcastsSettings: _3!, exceptions: _4!, chats: _5!, users: _6!)
         }
     
     }
@@ -584,12 +559,10 @@ public extension Api.account {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.account.BusinessChatLinks.businessChatLinks(links: _1!, chats: _2!, users: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.account.BusinessChatLinks.businessChatLinks(links: _1!, chats: _2!, users: _3!)
         }
     
     }
@@ -667,12 +640,13 @@ public extension Api.account {
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.account.ChatThemes.chatThemes(flags: _1!, hash: _2!, themes: _3!, chats: _4!, users: _5!, nextOffset: _6)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            return Api.account.ChatThemes.chatThemes(flags: _1!, hash: _2!, themes: _3!, chats: _4!, users: _5!, nextOffset: _6)
         }
         public static func parse_chatThemesNotModified(_ reader: BufferReader) -> ChatThemes? {
             return Api.account.ChatThemes.chatThemesNotModified
@@ -722,12 +696,9 @@ public extension Api.account {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.account.ConnectedBots.connectedBots(connectedBots: _1!, users: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.account.ConnectedBots.connectedBots(connectedBots: _1!, users: _2!)
         }
     
     }
@@ -758,12 +729,8 @@ public extension Api.account {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.account.ContentSettings.contentSettings(flags: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.account.ContentSettings.contentSettings(flags: _1!)
         }
     
     }
@@ -804,12 +771,8 @@ public extension Api.account {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.account.EmailVerified.emailVerified(email: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.account.EmailVerified.emailVerified(email: _1!)
         }
         public static func parse_emailVerifiedLogin(_ reader: BufferReader) -> EmailVerified? {
             var _1: String?
@@ -820,12 +783,9 @@ public extension Api.account {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.account.EmailVerified.emailVerifiedLogin(email: _1!, sentCode: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.account.EmailVerified.emailVerifiedLogin(email: _1!, sentCode: _2!)
         }
     
     }
@@ -875,12 +835,9 @@ public extension Api.account {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.account.EmojiStatuses.emojiStatuses(hash: _1!, statuses: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.account.EmojiStatuses.emojiStatuses(hash: _1!, statuses: _2!)
         }
         public static func parse_emojiStatusesNotModified(_ reader: BufferReader) -> EmojiStatuses? {
             return Api.account.EmojiStatuses.emojiStatusesNotModified
@@ -914,12 +871,8 @@ public extension Api.account {
             var _1: Int64?
             _1 = reader.readInt64()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.account.PaidMessagesRevenue.paidMessagesRevenue(starsAmount: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.account.PaidMessagesRevenue.paidMessagesRevenue(starsAmount: _1!)
         }
     
     }
@@ -952,12 +905,8 @@ public extension Api.account {
                 _1 = Api.parse(reader, signature: signature) as? Api.DataJSON
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.account.PasskeyRegistrationOptions.passkeyRegistrationOptions(options: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.account.PasskeyRegistrationOptions.passkeyRegistrationOptions(options: _1!)
         }
     
     }
@@ -994,12 +943,8 @@ public extension Api.account {
                 _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Passkey.self)
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.account.Passkeys.passkeys(passkeys: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.account.Passkeys.passkeys(passkeys: _1!)
         }
     
     }
@@ -1076,12 +1021,18 @@ public extension Api.account {
             let _c9 = _9 != nil
             let _c10 = (Int(_1!) & Int(1 << 5) == 0) || _10 != nil
             let _c11 = (Int(_1!) & Int(1 << 6) == 0) || _11 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
-                return Api.account.Password.password(flags: _1!, currentAlgo: _2, srpB: _3, srpId: _4, hint: _5, emailUnconfirmedPattern: _6, newAlgo: _7!, newSecureAlgo: _8!, secureRandom: _9!, pendingResetDate: _10, loginEmailPattern: _11)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            if !_c9 { return nil }
+            if !_c10 { return nil }
+            if !_c11 { return nil }
+            return Api.account.Password.password(flags: _1!, currentAlgo: _2, srpB: _3, srpId: _4, hint: _5, emailUnconfirmedPattern: _6, newAlgo: _7!, newSecureAlgo: _8!, secureRandom: _9!, pendingResetDate: _10, loginEmailPattern: _11)
         }
     
     }
@@ -1136,12 +1087,13 @@ public extension Api.account {
             let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.account.PasswordInputSettings.passwordInputSettings(flags: _1!, newAlgo: _2, newPasswordHash: _3, hint: _4, email: _5, newSecureSettings: _6)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            return Api.account.PasswordInputSettings.passwordInputSettings(flags: _1!, newAlgo: _2, newPasswordHash: _3, hint: _4, email: _5, newSecureSettings: _6)
         }
     
     }
@@ -1182,12 +1134,10 @@ public extension Api.account {
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.account.PasswordSettings.passwordSettings(flags: _1!, email: _2, secureSettings: _3)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.account.PasswordSettings.passwordSettings(flags: _1!, email: _2, secureSettings: _3)
         }
     
     }
@@ -1244,12 +1194,10 @@ public extension Api.account {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.account.PrivacyRules.privacyRules(rules: _1!, chats: _2!, users: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.account.PrivacyRules.privacyRules(rules: _1!, chats: _2!, users: _3!)
         }
     
     }
@@ -1298,12 +1246,8 @@ public extension Api.account {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.account.ResetPasswordResult.resetPasswordFailedWait(retryDate: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.account.ResetPasswordResult.resetPasswordFailedWait(retryDate: _1!)
         }
         public static func parse_resetPasswordOk(_ reader: BufferReader) -> ResetPasswordResult? {
             return Api.account.ResetPasswordResult.resetPasswordOk
@@ -1312,12 +1256,8 @@ public extension Api.account {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.account.ResetPasswordResult.resetPasswordRequestedWait(untilDate: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.account.ResetPasswordResult.resetPasswordRequestedWait(untilDate: _1!)
         }
     
     }
@@ -1388,12 +1328,13 @@ public extension Api.account {
             let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
             let _c5 = _5 != nil
             let _c6 = _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.account.ResolvedBusinessChatLinks.resolvedBusinessChatLinks(flags: _1!, peer: _2!, message: _3!, entities: _4, chats: _5!, users: _6!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            return Api.account.ResolvedBusinessChatLinks.resolvedBusinessChatLinks(flags: _1!, peer: _2!, message: _3!, entities: _4, chats: _5!, users: _6!)
         }
     
     }

@@ -20,6 +20,7 @@ import ChatMessageItemCommon
 import ChatMessageItemView
 import ReactionSelectionNode
 import AnimatedTextComponent
+import PresentationDataUtils
 
 extension ChatControllerImpl {
     func presentTagPremiumPaywall() {
@@ -392,7 +393,7 @@ extension ChatControllerImpl {
                 
                 if case let .known(reactionSettings) = reactionSettings, let starsAllowed = reactionSettings.starsAllowed, !starsAllowed {
                     if let peer = self.presentationInterfaceState.renderedPeer?.chatMainPeer {
-                        self.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: nil, text: self.presentationData.strings.Chat_ToastStarsReactionsDisabled(peer.debugDisplayTitle).string, actions: [
+                        self.present(textAlertController(context: self.context, updatedPresentationData: self.updatedPresentationData, title: nil, text: self.presentationData.strings.Chat_ToastStarsReactionsDisabled(peer.debugDisplayTitle).string, actions: [
                             TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_OK, action: {})
                         ]), in: .window(.root))
                     }

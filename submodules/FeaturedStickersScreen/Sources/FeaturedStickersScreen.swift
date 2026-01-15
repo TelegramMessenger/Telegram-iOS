@@ -919,7 +919,7 @@ public final class FeaturedStickersScreen: ViewController {
     private func updatePresentationData() {
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
-        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
+        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData), transition: .immediate)
         
         self.searchNavigationNode?.updatePresentationData(theme: self.presentationData.theme, strings: self.presentationData.strings)
         
@@ -980,7 +980,7 @@ private final class SearchNavigationContentNode: NavigationBarContentNode {
         
         self.cancel = cancel
         
-        self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: theme), strings: strings, fieldStyle: .modern, cancelText: strings.Common_Done)
+        self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: theme), presentationTheme: theme, strings: strings, fieldStyle: .modern, cancelText: strings.Common_Done)
         let placeholderText = placeholder?(strings) ?? strings.Common_Search
         let searchBarFont = Font.regular(17.0)
         
@@ -1004,7 +1004,7 @@ private final class SearchNavigationContentNode: NavigationBarContentNode {
         self.theme = theme
         self.strings = strings
         
-        self.searchBar.updateThemeAndStrings(theme: SearchBarNodeTheme(theme: theme), strings: strings)
+        self.searchBar.updateThemeAndStrings(theme: SearchBarNodeTheme(theme: theme), presentationTheme: theme, strings: strings)
     }
     
     func setQueryUpdated(_ f: @escaping (String, String?) -> Void) {
@@ -1019,10 +1019,12 @@ private final class SearchNavigationContentNode: NavigationBarContentNode {
         return 54.0
     }
     
-    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
+    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
         let searchBarFrame = CGRect(origin: CGPoint(x: 0.0, y: 1.0 + size.height - self.nominalHeight), size: CGSize(width: size.width, height: 54.0))
         self.searchBar.frame = searchBarFrame
         self.searchBar.updateLayout(boundingSize: searchBarFrame.size, leftInset: leftInset, rightInset: rightInset, transition: transition)
+        
+        return size
     }
     
     func activate() {

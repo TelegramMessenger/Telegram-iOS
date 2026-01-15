@@ -1564,8 +1564,15 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
         
         if isTranslating, !rects.isEmpty {
             if self.shimmeringNodes.isEmpty {
+                let color: UIColor
+                let isIncoming = arguments.message.effectivelyIncoming(arguments.context.account.peerId)
+                if arguments.presentationData.theme.theme.overallDarkAppearance {
+                    color = isIncoming ? arguments.presentationData.theme.theme.chat.message.incoming.primaryTextColor.withAlphaComponent(0.1) : arguments.presentationData.theme.theme.chat.message.outgoing.primaryTextColor.withAlphaComponent(0.1)
+                } else {
+                    color = isIncoming ? arguments.presentationData.theme.theme.chat.message.incoming.accentTextColor.withAlphaComponent(0.1) : arguments.presentationData.theme.theme.chat.message.outgoing.secondaryTextColor.withAlphaComponent(0.1)
+                }
                 for rects in rects {
-                    let shimmeringNode = ShimmeringLinkNode(color: arguments.message.effectivelyIncoming(arguments.context.account.peerId) ? arguments.presentationData.theme.theme.chat.message.incoming.secondaryTextColor.withAlphaComponent(0.1) : arguments.presentationData.theme.theme.chat.message.outgoing.secondaryTextColor.withAlphaComponent(0.1))
+                    let shimmeringNode = ShimmeringLinkNode(color: color)
                     shimmeringNode.updateRects(rects)
                     shimmeringNode.frame = self.bounds
                     shimmeringNode.updateLayout(self.bounds.size)

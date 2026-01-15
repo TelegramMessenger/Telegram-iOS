@@ -25,12 +25,14 @@ public final class SearchDisplayController {
         }
     }
     
-    private let searchBar: SearchBarNode
+    private var searchBar: SearchBarNode?
+    private let searchBarIsExternal: Bool
     private let mode: SearchDisplayControllerMode
     private let backgroundNode: BackgroundNode
     public let contentNode: SearchDisplayControllerContentNode
     private var hasSeparator: Bool
     private let inline: Bool
+    private let cancel: () -> Void
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
@@ -38,71 +40,75 @@ public final class SearchDisplayController {
     
     private var isSearchingDisposable: Disposable?
     
-    public init(presentationData: PresentationData, mode: SearchDisplayControllerMode = .navigation, placeholder: String? = nil, hasBackground: Bool = false, hasSeparator: Bool = false, contentNode: SearchDisplayControllerContentNode, inline: Bool = false, cancel: @escaping () -> Void) {
+    public init(
+        presentationData: PresentationData,
+        mode: SearchDisplayControllerMode = .navigation,
+        placeholder: String? = nil,
+        hasBackground: Bool = false,
+        hasSeparator: Bool = false,
+        contentNode: SearchDisplayControllerContentNode,
+        inline: Bool = false,
+        cancel: @escaping () -> Void,
+        fieldStyle: SearchBarStyle = .modern,
+        searchBarIsExternal: Bool = false
+    ) {
         self.inline = inline
-        self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: presentationData.theme, hasBackground: hasBackground, hasSeparator: hasSeparator, inline: inline), strings: presentationData.strings, fieldStyle: .modern, forceSeparator: hasSeparator, displayBackground: hasBackground)
+        self.cancel = cancel
+        self.searchBarIsExternal = searchBarIsExternal
+
+        if !searchBarIsExternal {
+            self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: presentationData.theme, hasBackground: hasBackground, hasSeparator: hasSeparator, inline: inline), presentationTheme: presentationData.theme, strings: presentationData.strings, fieldStyle: fieldStyle, forceSeparator: hasSeparator, displayBackground: hasBackground)
+        }
         self.backgroundNode = BackgroundNode()
         self.backgroundNode.allowsGroupOpacity = true
         
         self.mode = mode
         self.contentNode = contentNode
         self.hasSeparator = hasSeparator
+
+        if let searchBar = self.searchBar {
+            self.setSearchBar(searchBar)
+        }
         
-        self.searchBar.textUpdated = { [weak contentNode] text, _ in
-            contentNode?.searchTextUpdated(text: text)
-        }
-        self.searchBar.tokensUpdated = { [weak contentNode] tokens in
-            contentNode?.searchTokensUpdated(tokens: tokens)
-        }
-        self.searchBar.cancel = { [weak self] in
-            self?.isDeactivating = true
-            cancel()
-        }
-        self.searchBar.clearPrefix = { [weak contentNode] in
-            contentNode?.searchTextClearPrefix()
-        }
-        self.searchBar.clearTokens = { [weak contentNode] in
-            contentNode?.searchTextClearTokens()
-        }
         self.contentNode.cancel = { [weak self] in
             self?.isDeactivating = true
             cancel()
         }
         self.contentNode.dismissInput = { [weak self] in
-            self?.searchBar.deactivate(clear: false)
+            self?.searchBar?.deactivate(clear: false)
         }
         
         var isFirstTime = true
         self.contentNode.setQuery = { [weak self] prefix, tokens, query in
-            if let strongSelf = self {
-                strongSelf.searchBar.prefixString = prefix
-                let previousTokens = strongSelf.searchBar.tokens
-                strongSelf.searchBar.tokens = tokens
-                strongSelf.searchBar.text = query
+            if let strongSelf = self, let searchBar = strongSelf.searchBar {
+                searchBar.prefixString = prefix
+                let previousTokens = searchBar.tokens
+                searchBar.tokens = tokens
+                searchBar.text = query
                 if previousTokens.count < tokens.count && !isFirstTime {
                     if let lastToken = tokens.last, !lastToken.permanent {
-                        strongSelf.searchBar.selectLastToken()
+                        searchBar.selectLastToken()
                     }
                 }
                 isFirstTime = false
             }
         }
         if let placeholder = placeholder {
-            self.searchBar.placeholderString = NSAttributedString(string: placeholder, font: Font.regular(17.0), textColor: presentationData.theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
+            self.searchBar?.placeholderString = NSAttributedString(string: placeholder, font: Font.regular(17.0), textColor: presentationData.theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
         }
         self.contentNode.setPlaceholder = { [weak self] string in
-            guard string != self?.searchBar.placeholderString?.string else {
+            guard string != self?.searchBar?.placeholderString?.string else {
                 return
             }
-            if let mutableAttributedString = self?.searchBar.placeholderString?.mutableCopy() as? NSMutableAttributedString {
+            if let mutableAttributedString = self?.searchBar?.placeholderString?.mutableCopy() as? NSMutableAttributedString {
                 mutableAttributedString.mutableString.setString(string)
-                self?.searchBar.placeholderString = mutableAttributedString
+                self?.searchBar?.placeholderString = mutableAttributedString
             }
         }
         
         self.isSearchingDisposable = (contentNode.isSearching
         |> deliverOnMainQueue).start(next: { [weak self] value in
-            self?.searchBar.activity = value
+            self?.searchBar?.activity = value
         })
         
         if self.contentNode.hasDim {
@@ -113,9 +119,32 @@ public final class SearchDisplayController {
             self.backgroundNode.isTransparent = false
         }
     }
+
+    public func setSearchBar(_ searchBar: SearchBarNode) {
+        self.searchBar = searchBar
+
+        searchBar.textUpdated = { [weak contentNode] text, _ in
+            contentNode?.searchTextUpdated(text: text)
+        }
+        searchBar.tokensUpdated = { [weak contentNode] tokens in
+            contentNode?.searchTokensUpdated(tokens: tokens)
+        }
+        searchBar.cancel = { [weak self] in
+            self?.isDeactivating = true
+            self?.cancel()
+        }
+        searchBar.clearPrefix = { [weak contentNode] in
+            contentNode?.searchTextClearPrefix()
+        }
+        searchBar.clearTokens = { [weak contentNode] in
+            contentNode?.searchTextClearTokens()
+        }
+    }
     
     public func updatePresentationData(_ presentationData: PresentationData) {
-        self.searchBar.updateThemeAndStrings(theme: SearchBarNodeTheme(theme: presentationData.theme, hasSeparator: self.hasSeparator, inline: self.inline), strings: presentationData.strings)
+        if !self.searchBarIsExternal {
+            self.searchBar?.updateThemeAndStrings(theme: SearchBarNodeTheme(theme: presentationData.theme, hasSeparator: self.hasSeparator, inline: self.inline), presentationTheme: presentationData.theme, strings: presentationData.strings)
+        }
         self.contentNode.updatePresentationData(presentationData)
         
         if self.contentNode.hasDim {
@@ -128,6 +157,8 @@ public final class SearchDisplayController {
     }
     
     public func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        let defaultNavigationBarHeight = navigationBarHeight
+        
         let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0
         let searchBarHeight: CGFloat = max(20.0, statusBarHeight) + 44.0
         let navigationBarOffset: CGFloat
@@ -137,32 +168,44 @@ public final class SearchDisplayController {
             navigationBarOffset = 0.0
         }
         var navigationBarFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationBarOffset), size: CGSize(width: layout.size.width, height: searchBarHeight))
+        if self.searchBarIsExternal {
+            navigationBarFrame.size.height -= 50.0
+        }
         if layout.statusBarHeight == nil {
             navigationBarFrame.size.height = 64.0
         }
         navigationBarFrame.size.height += 10.0
+        var navigationBarHeight = navigationBarFrame.maxY
         
-        let searchBarFrame: CGRect
-        if case .navigation = self.mode {
-            searchBarFrame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: 54.0)
-        } else {
-            searchBarFrame = navigationBarFrame
+        if !self.searchBarIsExternal, let searchBar = self.searchBar {
+            let searchBarFrame: CGRect
+            if case .navigation = self.mode {
+                if case .glass = searchBar.fieldStyle {
+                    navigationBarHeight = defaultNavigationBarHeight
+                    searchBarFrame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: 44.0)
+                } else {
+                    searchBarFrame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: 54.0)
+                }
+            } else {
+                searchBarFrame = navigationBarFrame
+                navigationBarHeight = navigationBarFrame.maxY + 8.0
+            }
+            transition.updateFrame(node: searchBar, frame: searchBarFrame)
+            searchBar.updateLayout(boundingSize: searchBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
         }
-        transition.updateFrame(node: self.searchBar, frame: searchBarFrame)
-        self.searchBar.updateLayout(boundingSize: searchBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
         
-        self.containerLayout = (layout, navigationBarFrame.maxY)
+        self.containerLayout = (layout, navigationBarHeight)
         
         let bounds = CGRect(origin: CGPoint(), size: layout.size)
-        transition.updateFrame(node: self.backgroundNode, frame: bounds.insetBy(dx: -20.0, dy: -20.0))
+        transition.updateFrame(node: self.backgroundNode, frame: bounds)//.insetBy(dx: -20.0, dy: -20.0))
         
-        var size = layout.size
-        size.width += 20.0 * 2.0
-        transition.updateFrame(node: self.contentNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 20.0), size: size))
+        let size = layout.size
+        //size.width += 20.0 * 2.0
+        transition.updateFrame(node: self.contentNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: size))
                                
-        var safeInsets = layout.safeInsets
-        safeInsets.left += 20.0
-        safeInsets.right += 20.0
+        let safeInsets = layout.safeInsets
+        //safeInsets.left += 20.0
+        //safeInsets.right += 20.0
         
         self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: size, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: safeInsets, additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), navigationBarHeight: navigationBarHeight, transition: transition)
     }
@@ -183,14 +226,14 @@ public final class SearchDisplayController {
             self.backgroundNode.isTransparent = false
         }
         
-        var size = layout.size
-        size.width += 20.0 * 2.0
+        let size = layout.size
+        //size.width += 20.0 * 2.0
         
-        self.contentNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 20.0), size: size)
+        self.contentNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: size)
         
-        var safeInsets = layout.safeInsets
-        safeInsets.left += 20.0
-        safeInsets.right += 20.0
+        let safeInsets = layout.safeInsets
+        //safeInsets.left += 20.0
+        //safeInsets.right += 20.0
         self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: size, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: safeInsets, additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), navigationBarHeight: navigationBarHeight, transition: .immediate)
         
         var contentNavigationBarHeight = navigationBarHeight
@@ -201,22 +244,22 @@ public final class SearchDisplayController {
         if !self.contentNode.hasDim {
             self.backgroundNode.alpha = 1.0
             self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, timingFunction: CAMediaTimingFunctionName.linear.rawValue)
-            
-            self.backgroundNode.layer.animateScale(from: 0.85, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
         }
         
-        if !self.contentNode.hasDim {
-            if let placeholder = placeholder {
-                self.searchBar.placeholderString = placeholder.placeholderString
-            }
-        } else {
-            if let placeholder = placeholder {
-                let initialTextBackgroundFrame = placeholder.convert(placeholder.backgroundNode.frame, to: nil)
-                let contentNodePosition = self.backgroundNode.layer.position
-                if contentNode.animateBackgroundAppearance {
-                    self.backgroundNode.layer.animatePosition(from: CGPoint(x: contentNodePosition.x, y: contentNodePosition.y + (initialTextBackgroundFrame.maxY + 8.0 - contentNavigationBarHeight)), to: contentNodePosition, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+        if !self.searchBarIsExternal {
+            if !self.contentNode.hasDim {
+                if let placeholder = placeholder {
+                    self.searchBar?.placeholderString = placeholder.placeholderString
                 }
-                self.searchBar.placeholderString = placeholder.placeholderString
+            } else {
+                if let placeholder = placeholder {
+                    let initialTextBackgroundFrame = placeholder.convert(placeholder.backgroundView.frame, to: nil)
+                    let contentNodePosition = self.backgroundNode.layer.position
+                    if contentNode.animateBackgroundAppearance {
+                        self.backgroundNode.layer.animatePosition(from: CGPoint(x: contentNodePosition.x, y: contentNodePosition.y + (initialTextBackgroundFrame.maxY + 8.0 - contentNavigationBarHeight)), to: contentNodePosition, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+                    }
+                    self.searchBar?.placeholderString = placeholder.placeholderString
+                }
             }
         }
         
@@ -240,39 +283,49 @@ public final class SearchDisplayController {
                 navigationBarFrame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: 54.0)
         }
         
-        self.searchBar.frame = navigationBarFrame
-        insertSubnode(self.searchBar, true)
-        self.searchBar.layout()
-        
-        if focus {
-            self.searchBar.activate()
+        if !self.searchBarIsExternal, let searchBar = self.searchBar {
+            searchBar.frame = navigationBarFrame
+            insertSubnode(searchBar, true)
+            searchBar.layout()
+            
+            if focus {
+                searchBar.activate()
+            }
         }
+
         if let placeholder = placeholder {
-            self.searchBar.animateIn(from: placeholder, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+            if !self.searchBarIsExternal, let searchBar = self.searchBar {
+                searchBar.animateIn(from: placeholder, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+            }
             if self.contentNode.hasDim {
                 self.contentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
             }
         } else {
-            self.searchBar.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
+            if !self.searchBarIsExternal, let searchBar = self.searchBar {
+                searchBar.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
+            }
             self.contentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
         }
     }
     
-    public func deactivate(placeholder: SearchBarPlaceholderNode?, animated: Bool = true) {
-        self.searchBar.deactivate(clear: false)
+    public func deactivate(placeholder: SearchBarPlaceholderNode?, animated: Bool = true, completion: (() -> Void)? = nil) {
+        if let searchBar = self.searchBar {
+            searchBar.deactivate(clear: false)
+        }
         
-        let searchBar = self.searchBar
-        if let placeholder = placeholder {
-            searchBar.transitionOut(to: placeholder, transition: animated ? .animated(duration: 0.5, curve: .spring) : .immediate, completion: {
-                [weak searchBar] in
-                searchBar?.removeFromSupernode()
-            })
-        } else {
-            searchBar.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak searchBar] finished in
-                if finished {
+        if !self.searchBarIsExternal, let searchBar = self.searchBar {
+            if let placeholder = placeholder {
+                searchBar.transitionOut(to: placeholder, transition: animated ? .animated(duration: 0.5, curve: .spring) : .immediate, completion: {
+                    [weak searchBar] in
                     searchBar?.removeFromSupernode()
-                }
-            })
+                })
+            } else {
+                searchBar.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak searchBar] finished in
+                    if finished {
+                        searchBar?.removeFromSupernode()
+                    }
+                })
+            }
         }
         
         let backgroundNode = self.backgroundNode
@@ -282,10 +335,12 @@ public final class SearchDisplayController {
                 if finished {
                     backgroundNode?.removeFromSupernode()
                 }
+                completion?()
             })
         } else {
             backgroundNode.removeFromSupernode()
             contentNode.removeFromSupernode()
+            completion?()
         }
     }
     

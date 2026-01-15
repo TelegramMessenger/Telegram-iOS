@@ -18,6 +18,10 @@ import SearchBarNode
 import ChatHistorySearchContainerNode
 import ContextUI
 import UndoUI
+import ComponentFlow
+import EdgeEffect
+import ButtonComponent
+import BundleIconComponent
 
 public final class BrowserBookmarksScreen: ViewController {
     final class Node: ViewControllerTracingNode, ASScrollViewDelegate {
@@ -196,7 +200,6 @@ public final class BrowserBookmarksScreen: ViewController {
                 controllerInteraction: self.controllerInteraction,
                 selectedMessages: .single(nil),
                 mode: .list(
-                    search: false,
                     reversed: false,
                     reverseGroups: false,
                     displayHeaders: .none,
@@ -287,9 +290,9 @@ public final class BrowserBookmarksScreen: ViewController {
             }
             let tagMask: MessageTags = .webPage
             
-            self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, mode: .list, placeholder: self.presentationData.strings.Common_Search, hasBackground: true, contentNode: ChatHistorySearchContainerNode(context: self.context, peerId: self.context.account.peerId, threadId: nil, tagMask: tagMask, interfaceInteraction: self.controllerInteraction), cancel: { [weak self] in
+            self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, mode: .navigation, placeholder: self.presentationData.strings.Common_Search, hasBackground: true, contentNode: ChatHistorySearchContainerNode(context: self.context, peerId: self.context.account.peerId, threadId: nil, tagMask: tagMask, interfaceInteraction: self.controllerInteraction), cancel: { [weak self] in
                 self?.controller?.deactivateSearch()
-            })
+            }, fieldStyle: placeholderNode.fieldStyle)
             
             self.searchDisplayController?.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
             self.searchDisplayController?.activate(insertSubnode: { [weak self, weak placeholderNode] subnode, isSearchBar in
@@ -372,7 +375,9 @@ public final class BrowserBookmarksScreen: ViewController {
         self.openUrl = openUrl
         self.addBookmark = addBookmark
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData, style: .glass))
+        
+        self._hasGlassStyle = true
                 
         self.navigationPresentation = .modal
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
@@ -429,19 +434,13 @@ public final class BrowserBookmarksScreen: ViewController {
                 searchContentNode.updateListVisibleContentOffset(offset)
             }
         }
-//        
-//        self.node.historyNode.didEndScrolling = { [weak self] _ in
-//            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
-//                let _ = fixNavigationSearchableListNodeScrolling(strongSelf.node.historyNode, searchNode: searchContentNode)
-//            }
-//        }
         
         self.displayNodeDidLoad()
     }
     
     private func updateThemeAndStrings() {
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
-        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
+        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData, style: .glass), transition: .immediate)
         self.searchContentNode?.updateThemeAndPlaceholder(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Common_Search)
     }
     
@@ -484,10 +483,8 @@ private class BottomPanelNode: ASDisplayNode {
     private let strings: PresentationStrings
     private let action: () -> Void
     
-    private let separatorNode: ASDisplayNode
-    private let button: HighlightTrackingButtonNode
-    private let iconNode: ASImageNode
-    private let textNode: ImmediateTextNode
+    private let edgeEffectView = EdgeEffectView()
+    private let button = ComponentView<Empty>()
     
     private var validLayout: (CGFloat, CGFloat, CGFloat)?
     
@@ -496,49 +493,13 @@ private class BottomPanelNode: ASDisplayNode {
         self.strings = strings
         self.action = action
 
-        self.separatorNode = ASDisplayNode()
-        self.separatorNode.backgroundColor = theme.rootController.navigationBar.separatorColor
-        
-        self.iconNode = ASImageNode()
-        self.iconNode.displaysAsynchronously = false
-        self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat List/AddIcon"), color: theme.rootController.navigationBar.accentTextColor)
-        self.iconNode.isUserInteractionEnabled = false
-        
-        self.textNode = ImmediateTextNode()
-        self.textNode.displaysAsynchronously = false
-        self.textNode.attributedText = NSAttributedString(string: strings.WebBrowser_Bookmarks_BookmarkCurrent, font: Font.regular(17.0), textColor: theme.rootController.navigationBar.accentTextColor)
-        self.textNode.isUserInteractionEnabled = false
-        
-        self.button = HighlightTrackingButtonNode()
-        
         super.init()
+    }
+    
+    override func didLoad() {
+        super.didLoad()
         
-        self.backgroundColor = theme.rootController.navigationBar.opaqueBackgroundColor
-        
-        self.addSubnode(self.button)
-        self.addSubnode(self.separatorNode)
-        self.addSubnode(self.iconNode)
-        self.addSubnode(self.textNode)
-        self.addSubnode(self.button)
-        
-        self.button.highligthedChanged = { [weak self] highlighted in
-            if let self {
-                if highlighted {
-                    self.iconNode.layer.removeAnimation(forKey: "opacity")
-                    self.iconNode.alpha = 0.4
-                    
-                    self.textNode.layer.removeAnimation(forKey: "opacity")
-                    self.textNode.alpha = 0.4
-                } else {
-                    self.iconNode.alpha = 1.0
-                    self.iconNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
-                    
-                    self.textNode.alpha = 1.0
-                    self.textNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
-                }
-            }
-        }
-        self.button.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
+        self.view.addSubview(self.edgeEffectView)
     }
     
     @objc private func buttonPressed() {
@@ -551,26 +512,76 @@ private class BottomPanelNode: ASDisplayNode {
         var bottomInset = bottomInset
         bottomInset += topInset - (bottomInset.isZero ? 0.0 : 4.0)
                 
-        let buttonHeight: CGFloat = 40.0
-        let textSize = self.textNode.updateLayout(CGSize(width: width, height: 44.0))
+//        let buttonHeight: CGFloat = 40.0
+//        let textSize = self.textNode.updateLayout(CGSize(width: width, height: 44.0))
+//        
+//        let spacing: CGFloat = 8.0
+//        var contentWidth = textSize.width
+//        var contentOriginX = floorToScreenPixels((width - contentWidth) / 2.0)
+//        if let icon = self.iconNode.image {
+//            contentWidth += icon.size.width + spacing
+//            contentOriginX = floorToScreenPixels((width - contentWidth) / 2.0)
+//            transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: contentOriginX, y: 12.0 + UIScreenPixel), size: icon.size))
+//            contentOriginX += icon.size.width + spacing
+//        }
+//        let textFrame = CGRect(origin: CGPoint(x: contentOriginX, y: 17.0), size: textSize)
+//        transition.updateFrame(node: self.textNode, frame: textFrame)
+//        
+//        transition.updateFrame(node: self.button, frame: textFrame.insetBy(dx: -10.0, dy: -10.0))
+//        
+//        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: UIScreenPixel)))
+//        
+
+        let buttonInsets = ContainerViewLayout.concentricInsets(bottomInset: bottomInset, innerDiameter: 52.0, sideInset: 30.0)
+        let height: CGFloat = 52.0 + buttonInsets.bottom
         
-        let spacing: CGFloat = 8.0
-        var contentWidth = textSize.width
-        var contentOriginX = floorToScreenPixels((width - contentWidth) / 2.0)
-        if let icon = self.iconNode.image {
-            contentWidth += icon.size.width + spacing
-            contentOriginX = floorToScreenPixels((width - contentWidth) / 2.0)
-            transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: contentOriginX, y: 12.0 + UIScreenPixel), size: icon.size))
-            contentOriginX += icon.size.width + spacing
+        let edgeEffectHeight: CGFloat = height
+        let edgeEffectFrame = CGRect(origin: CGPoint(x: 0.0, y: height - edgeEffectHeight), size: CGSize(width: width, height: edgeEffectHeight))
+        transition.updateFrame(view: self.edgeEffectView, frame: edgeEffectFrame)
+        self.edgeEffectView.update(
+            content: self.theme.list.plainBackgroundColor,
+            blur: true,
+            rect: edgeEffectFrame,
+            edge: .bottom,
+            edgeSize: edgeEffectFrame.height,
+            transition: ComponentTransition(transition)
+        )
+
+        var buttonItems: [AnyComponentWithIdentity<Empty>] = []
+        buttonItems.append(AnyComponentWithIdentity(id: "icon", component: AnyComponent(BundleIconComponent(name: "Chat/Context Menu/Fave", tintColor: self.theme.list.itemCheckColors.foregroundColor))))
+        buttonItems.append(AnyComponentWithIdentity(id: "label", component: AnyComponent(Text(text: self.strings.WebBrowser_Bookmarks_BookmarkCurrent, font: Font.semibold(17.0), color: self.theme.list.itemCheckColors.foregroundColor))))
+        
+        let buttonSize = self.button.update(
+            transition: .immediate,
+            component: AnyComponent(
+                ButtonComponent(
+                    background: ButtonComponent.Background(
+                        style: .glass,
+                        color: self.theme.list.itemCheckColors.fillColor,
+                        foreground: self.theme.list.itemCheckColors.foregroundColor,
+                        pressedColor: self.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9)
+                    ),
+                    content: AnyComponentWithIdentity(
+                        id: AnyHashable(0),
+                        component: AnyComponent(HStack(buttonItems, spacing: 7.0))
+                    ),
+                    action: { [weak self] in
+                        self?.action()
+                    }
+                )
+            ),
+            environment: {},
+            containerSize: CGSize(width: width - sideInset * 2.0 - buttonInsets.left - buttonInsets.right, height: 52.0)
+        )
+        let buttonFrame = CGRect(origin: CGPoint(x: sideInset + buttonInsets.left, y: height - buttonInsets.bottom - buttonSize.height), size: buttonSize)
+        if let buttonView = self.button.view {
+            if buttonView.superview == nil {
+                self.view.addSubview(buttonView)
+            }
+            transition.updateFrame(view: buttonView, frame: buttonFrame)
         }
-        let textFrame = CGRect(origin: CGPoint(x: contentOriginX, y: 17.0), size: textSize)
-        transition.updateFrame(node: self.textNode, frame: textFrame)
         
-        transition.updateFrame(node: self.button, frame: textFrame.insetBy(dx: -10.0, dy: -10.0))
-        
-        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: UIScreenPixel)))
-        
-        return topInset + buttonHeight + bottomInset
+        return height
     }
 }
 

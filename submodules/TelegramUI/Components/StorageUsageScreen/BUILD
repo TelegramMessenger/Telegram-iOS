@@ -45,6 +45,7 @@ swift_library(
         "//submodules/GalleryData",
         "//submodules/SegmentedControlNode",
         "//submodules/TelegramUIPreferences",
+        "//submodules/TelegramUI/Components/GlassBackgroundComponent",
     ],
     visibility = [
         "//visibility:public",

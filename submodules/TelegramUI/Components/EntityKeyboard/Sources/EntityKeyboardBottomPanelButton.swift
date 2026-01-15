@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import ComponentFlow
+import TelegramPresentationData
 import PagerComponent
 import ComponentDisplayAdapters
 import BundleIconComponent
@@ -10,18 +11,18 @@ import AppBundle
 
 final class EntityKeyboardBottomPanelButton: Component {
     let icon: String
-    let color: UIColor
+    let theme: PresentationTheme
     let action: () -> Void
     let holdAction: (() -> Void)?
     
     init(
         icon: String,
-        color: UIColor,
+        theme: PresentationTheme,
         action: @escaping () -> Void,
         holdAction: (() -> Void)? = nil
     ) {
         self.icon = icon
-        self.color = color
+        self.theme = theme
         self.action = action
         self.holdAction = holdAction
     }
@@ -30,7 +31,7 @@ final class EntityKeyboardBottomPanelButton: Component {
         if lhs.icon != rhs.icon {
             return false
         }
-        if lhs.color != rhs.color {
+        if lhs.theme !== rhs.theme {
             return false
         }
         if (lhs.holdAction == nil) != (rhs.holdAction == nil) {
@@ -39,7 +40,9 @@ final class EntityKeyboardBottomPanelButton: Component {
         return true
     }
     
-    final class View: HighlightTrackingButton {
+    final class View: UIView {
+        private let backgroundView: GlassBackgroundView
+        let buttonView: HighlightTrackingButton
         let iconView: GlassBackgroundView.ContentImageView
         let tintMaskContainer: UIView
 
@@ -48,15 +51,19 @@ final class EntityKeyboardBottomPanelButton: Component {
         
         var component: EntityKeyboardBottomPanelButton?
 
-        private var currentIsHighlighted: Bool = false {
-            didSet {
-                if self.currentIsHighlighted != oldValue {
-                    self.updateAlpha(transition: .immediate)
-                }
-            }
-        }
+//        private var currentIsHighlighted: Bool = false {
+//            didSet {
+//                if self.currentIsHighlighted != oldValue {
+//                    self.updateAlpha(transition: .immediate)
+//                }
+//            }
+//        }
         
         override init(frame: CGRect) {
+            self.backgroundView = GlassBackgroundView()
+            
+            self.buttonView = HighlightTrackingButton()
+            
             self.iconView = GlassBackgroundView.ContentImageView()
             self.iconView.isUserInteractionEnabled = false
             
@@ -65,9 +72,11 @@ final class EntityKeyboardBottomPanelButton: Component {
             
             super.init(frame: frame)
 
-            self.addSubview(self.iconView)
+            self.addSubview(self.backgroundView)
+            self.backgroundView.contentView.addSubview(self.iconView)
+            self.backgroundView.contentView.addSubview(self.buttonView)
             
-            self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
+            self.buttonView.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
         }
         
         required init?(coder: NSCoder) {
@@ -86,65 +95,65 @@ final class EntityKeyboardBottomPanelButton: Component {
             }
         }
 
-        override public func beginTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
-            self.currentIsHighlighted = true
-            
-            self.holdActionTriggerred = false
-            
-            if self.component?.holdAction != nil {
-                self.holdActionTriggerred = true
-                self.component?.action()
-                
-                self.holdActionTimer?.invalidate()
-                let holdActionTimer = Timer(timeInterval: 0.5, repeats: false, block: { [weak self] _ in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    strongSelf.holdActionTimer?.invalidate()
-                    strongSelf.component?.holdAction?()
-                    strongSelf.beginExecuteHoldActionTimer()
-                })
-                self.holdActionTimer = holdActionTimer
-                RunLoop.main.add(holdActionTimer, forMode: .common)
-            }
-            
-            return super.beginTracking(touch, with: event)
-        }
+//        override public func beginTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
+//            self.currentIsHighlighted = true
+//            
+//            self.holdActionTriggerred = false
+//            
+//            if self.component?.holdAction != nil {
+//                self.holdActionTriggerred = true
+//                self.component?.action()
+//                
+//                self.holdActionTimer?.invalidate()
+//                let holdActionTimer = Timer(timeInterval: 0.5, repeats: false, block: { [weak self] _ in
+//                    guard let strongSelf = self else {
+//                        return
+//                    }
+//                    strongSelf.holdActionTimer?.invalidate()
+//                    strongSelf.component?.holdAction?()
+//                    strongSelf.beginExecuteHoldActionTimer()
+//                })
+//                self.holdActionTimer = holdActionTimer
+//                RunLoop.main.add(holdActionTimer, forMode: .common)
+//            }
+//            
+//            return super.beginTracking(touch, with: event)
+//        }
         
-        private func beginExecuteHoldActionTimer() {
-            self.holdActionTimer?.invalidate()
-            let holdActionTimer = Timer(timeInterval: 0.1, repeats: true, block: { [weak self] _ in
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.component?.holdAction?()
-            })
-            self.holdActionTimer = holdActionTimer
-            RunLoop.main.add(holdActionTimer, forMode: .common)
-        }
+//        private func beginExecuteHoldActionTimer() {
+//            self.holdActionTimer?.invalidate()
+//            let holdActionTimer = Timer(timeInterval: 0.1, repeats: true, block: { [weak self] _ in
+//                guard let strongSelf = self else {
+//                    return
+//                }
+//                strongSelf.component?.holdAction?()
+//            })
+//            self.holdActionTimer = holdActionTimer
+//            RunLoop.main.add(holdActionTimer, forMode: .common)
+//        }
         
-        override public func endTracking(_ touch: UITouch?, with event: UIEvent?) {
-            self.currentIsHighlighted = false
-            
-            self.holdActionTimer?.invalidate()
-            self.holdActionTimer = nil
-            
-            super.endTracking(touch, with: event)
-        }
-        
-        override public func cancelTracking(with event: UIEvent?) {
-            self.currentIsHighlighted = false
-            
-            self.holdActionTimer?.invalidate()
-            self.holdActionTimer = nil
-            
-            super.cancelTracking(with: event)
-        }
+//        override public func endTracking(_ touch: UITouch?, with event: UIEvent?) {
+//            self.currentIsHighlighted = false
+//            
+//            self.holdActionTimer?.invalidate()
+//            self.holdActionTimer = nil
+//            
+//            super.endTracking(touch, with: event)
+//        }
+//        
+//        override public func cancelTracking(with event: UIEvent?) {
+//            self.currentIsHighlighted = false
+//            
+//            self.holdActionTimer?.invalidate()
+//            self.holdActionTimer = nil
+//            
+//            super.cancelTracking(with: event)
+//        }
 
-        private func updateAlpha(transition: ComponentTransition) {
-            let alpha: CGFloat = self.currentIsHighlighted ? 0.6 : 1.0
-            transition.setAlpha(view: self.iconView, alpha: alpha)
-        }
+//        private func updateAlpha(transition: ComponentTransition) {
+//            let alpha: CGFloat = self.currentIsHighlighted ? 0.6 : 1.0
+//            transition.setAlpha(view: self.iconView, alpha: alpha)
+//        }
         
         func update(component: EntityKeyboardBottomPanelButton, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             if self.component?.icon != component.icon {
@@ -153,14 +162,20 @@ final class EntityKeyboardBottomPanelButton: Component {
 
             self.component = component
 
-            self.iconView.tintColor = component.color
+            self.iconView.tintColor = component.theme.chat.inputPanel.panelControlColor
             
-            let size = CGSize(width: 38.0, height: 38.0)
+            let size = CGSize(width: 40.0, height: 40.0)
             
             if let image = self.iconView.image {
                 let iconFrame = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) * 0.5), y: floor((size.height - image.size.height) * 0.5)), size: image.size)
                 self.iconView.frame = iconFrame
             }
+            
+            let tintColor: GlassBackgroundView.TintColor = .init(kind: .panel, color: component.theme.chat.inputPanel.inputBackgroundColor.withMultipliedAlpha(0.7))
+            transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(), size: size))
+            self.backgroundView.update(size: size, cornerRadius: size.height * 0.5, isDark: component.theme.overallDarkAppearance, tintColor: tintColor, isInteractive: true, transition: transition)
+            
+            self.buttonView.frame = CGRect(origin: .zero, size: size)
             
             return size
         }

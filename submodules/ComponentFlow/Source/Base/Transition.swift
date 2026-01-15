@@ -489,7 +489,25 @@ public struct ComponentTransition {
     }
     
     public func setAlpha(view: UIView, alpha: CGFloat, delay: Double = 0.0, completion: ((Bool) -> Void)? = nil) {
-        self.setAlpha(layer: view.layer, alpha: alpha, delay: delay, completion: completion)
+        if view.alpha == alpha {
+            completion?(true)
+            return
+        }
+        switch self.animation {
+        case .none:
+            view.alpha = alpha
+            view.layer.removeAnimation(forKey: "opacity")
+            completion?(true)
+        case .curve:
+            let previousAlpha: Float
+            if view.layer.animation(forKey: "opacity") != nil {
+                previousAlpha = view.layer.presentation()?.opacity ?? Float(view.alpha)
+            } else {
+                previousAlpha = Float(view.alpha)
+            }
+            view.alpha = alpha
+            self.animateAlpha(layer: view.layer, from: CGFloat(previousAlpha), to: alpha, delay: delay, completion: completion)
+        }
     }
     
     public func setAlpha(layer: CALayer, alpha: CGFloat, delay: Double = 0.0, completion: ((Bool) -> Void)? = nil) {
@@ -1335,6 +1353,41 @@ public struct ComponentTransition {
             completion: completion
         )
     }
+
+    public func setBlur(layer: CALayer, radius: CGFloat, completion: ((Bool) -> Void)? = nil) {
+        var currentRadius: CGFloat = 0.0
+        if let currentFilters = layer.filters {
+            for filter in currentFilters {
+                if let filter = filter as? NSObject, filter.description.contains("gaussianBlur") {
+                    currentRadius = filter.value(forKey: "inputRadius") as? CGFloat ?? 0.0
+                }
+            }
+        }
+
+        if currentRadius == radius {
+            completion?(true)
+            return
+        }
+
+        if let blurFilter = CALayer.blur() {
+            blurFilter.setValue(radius as NSNumber, forKey: "inputRadius")
+            layer.filters = [blurFilter]
+            switch self.animation {
+            case .none:
+                completion?(true)
+            case let .curve(duration, curve):
+                layer.animate(from: currentRadius as NSNumber, to: radius as NSNumber, keyPath: "filters.gaussianBlur.inputRadius", duration: duration, delay: 0.0, curve: curve, removeOnCompletion: true, additive: false,completion: { [weak layer] flag in
+                    if let layer {
+                        if radius <= 0.0 {
+                            layer.filters = nil
+                        }
+                    }
+                    
+                    completion?(flag)
+                })
+            }
+        }
+    }
     
     public func animateBlur(layer: CALayer, fromRadius: CGFloat, toRadius: CGFloat, delay: Double = 0.0, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
         let duration: Double
@@ -1357,6 +1410,25 @@ public struct ComponentTransition {
                 
                 completion?(flag)
             })
+        }
+    }
+    
+    public func animateMeshTransform(layer: CALayer, from fromValue: NSObject, to toValue: NSObject, delay: Double = 0.0, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
+        switch self.animation {
+        case .none:
+            completion?(true)
+        case let .curve(duration, curve):
+            layer.animate(
+                from: fromValue,
+                to: toValue,
+                keyPath: "meshTransform",
+                duration: duration,
+                delay: delay,
+                curve: curve,
+                removeOnCompletion: removeOnCompletion,
+                additive: false,
+                completion: completion
+            )
         }
     }
 }

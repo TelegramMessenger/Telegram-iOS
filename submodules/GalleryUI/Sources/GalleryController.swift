@@ -576,8 +576,8 @@ private func galleryEntriesForMessageHistoryEntries(_ entries: [MessageHistoryEn
 }
 
 public class GalleryController: ViewController, StandalonePresentableController, KeyShortcutResponder, GalleryControllerProtocol {
-    public static let darkNavigationTheme = NavigationBarTheme(buttonColor: .white, disabledButtonColor: UIColor(rgb: 0x525252), primaryTextColor: .white, backgroundColor: UIColor(white: 0.0, alpha: 0.6), enableBackgroundBlur: false, separatorColor: UIColor(white: 0.0, alpha: 0.8), badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear)
-    public static let lightNavigationTheme = NavigationBarTheme(buttonColor: UIColor(rgb: 0x0088ff), disabledButtonColor: UIColor(rgb: 0xd0d0d0), primaryTextColor: .black, backgroundColor: UIColor(red: 0.968626451, green: 0.968626451, blue: 0.968626451, alpha: 1.0), enableBackgroundBlur: false, separatorColor: UIColor(red: 0.6953125, green: 0.6953125, blue: 0.6953125, alpha: 1.0), badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear)
+    public static let darkNavigationTheme = NavigationBarTheme(overallDarkAppearance: true, buttonColor: .white, disabledButtonColor: UIColor(rgb: 0x525252), primaryTextColor: .white, backgroundColor: UIColor(white: 0.0, alpha: 0.6), enableBackgroundBlur: false, separatorColor: UIColor(white: 0.0, alpha: 0.8), badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear)
+    public static let lightNavigationTheme = NavigationBarTheme(overallDarkAppearance: false, buttonColor: UIColor(rgb: 0x0088ff), disabledButtonColor: UIColor(rgb: 0xd0d0d0), primaryTextColor: .black, backgroundColor: UIColor(red: 0.968626451, green: 0.968626451, blue: 0.968626451, alpha: 1.0), enableBackgroundBlur: false, separatorColor: UIColor(red: 0.6953125, green: 0.6953125, blue: 0.6953125, alpha: 1.0), badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear)
     
     private var galleryNode: GalleryControllerNode {
         return self.displayNode as! GalleryControllerNode
@@ -942,12 +942,12 @@ public class GalleryController: ViewController, StandalonePresentableController,
                 switch style {
                     case .dark:
                         strongSelf.statusBar.statusBarStyle = .White
-                        strongSelf.navigationBar?.updatePresentationData(NavigationBarPresentationData(theme: GalleryController.darkNavigationTheme, strings: NavigationBarStrings(presentationStrings: strongSelf.presentationData.strings)))
+                        strongSelf.navigationBar?.updatePresentationData(NavigationBarPresentationData(theme: GalleryController.darkNavigationTheme, strings: NavigationBarStrings(presentationStrings: strongSelf.presentationData.strings)), transition: .immediate)
                         strongSelf.galleryNode.backgroundNode.backgroundColor = UIColor.black
                         strongSelf.galleryNode.isBackgroundExtendedOverNavigationBar = true
                     case .light:
                         strongSelf.statusBar.statusBarStyle = .Black
-                        strongSelf.navigationBar?.updatePresentationData(NavigationBarPresentationData(theme: GalleryController.darkNavigationTheme, strings: NavigationBarStrings(presentationStrings: strongSelf.presentationData.strings)))
+                        strongSelf.navigationBar?.updatePresentationData(NavigationBarPresentationData(theme: GalleryController.darkNavigationTheme, strings: NavigationBarStrings(presentationStrings: strongSelf.presentationData.strings)), transition: .immediate)
                         strongSelf.galleryNode.backgroundNode.backgroundColor = UIColor(rgb: 0xbdbdc2)
                         strongSelf.galleryNode.isBackgroundExtendedOverNavigationBar = false
                 }

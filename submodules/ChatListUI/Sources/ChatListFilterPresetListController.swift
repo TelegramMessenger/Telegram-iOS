@@ -5,6 +5,7 @@ import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import PresentationDataUtils
 import ItemListUI
 import AccountContext
 import ItemListPeerActionItem
@@ -516,13 +517,13 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
                     }
                     
                     if hasLinks {
-                        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.ChatList_AlertDeleteFolderTitle, text: presentationData.strings.ChatList_AlertDeleteFolderText, actions: [
+                        presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.ChatList_AlertDeleteFolderTitle, text: presentationData.strings.ChatList_AlertDeleteFolderText, actions: [
                             TextAlertAction(type: .destructiveAction, title: presentationData.strings.Common_Delete, action: {
                                 confirmDeleteFolder()
                             }),
-                            TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {
+                            TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
                             })
-                        ]))
+                        ], actionLayout: .vertical))
                     } else {
                         confirmDeleteFolder()
                     }

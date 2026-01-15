@@ -3,6 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import ChatPresentationInterfaceState
+import LegacyChatHeaderPanelComponent
 
 final class ChatToastAlertPanelNode: ChatTitleAccessoryPanelNode {
     private let separatorNode: ASDisplayNode

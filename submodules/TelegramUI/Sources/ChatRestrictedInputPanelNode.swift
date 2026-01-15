@@ -157,7 +157,7 @@ final class ChatRestrictedInputPanelNode: ChatInputPanelNode {
         self.tintSubtitleNode.attributedText = NSAttributedString(string: self.subtitleNode.attributedText?.string ?? "", font: Font.regular(13.0), textColor: .black)
         
         let panelHeight = defaultHeight(metrics: metrics)
-        let textSize = self.textNode.updateLayout(CGSize(width: width - leftInset - rightInset - 8.0 * 2.0, height: panelHeight))
+        let textSize = self.textNode.updateLayout(CGSize(width: width - leftInset - rightInset - 16.0 * 2.0, height: panelHeight))
         let subtitleSize = self.subtitleNode.updateLayout(CGSize(width: width - leftInset - rightInset - 8.0 * 2.0, height: panelHeight))
         
         var originX: CGFloat = leftInset + floor((width - leftInset - rightInset - textSize.width) / 2.0)
@@ -196,7 +196,8 @@ final class ChatRestrictedInputPanelNode: ChatInputPanelNode {
             combinedFrame = combinedFrame.union(iconView.frame)
         }
         combinedFrame = combinedFrame.insetBy(dx: -12.0, dy: -6.0)
-        combinedFrame.origin.y += 1.0
+        combinedFrame.size.height = 40.0
+        combinedFrame.origin.y = floorToScreenPixels((panelHeight - 40.0) * 0.5)
         
         self.textNode.frame = textFrame.offsetBy(dx: -combinedFrame.minX, dy: -combinedFrame.minY)
         self.tintTextNode.frame = self.textNode.frame

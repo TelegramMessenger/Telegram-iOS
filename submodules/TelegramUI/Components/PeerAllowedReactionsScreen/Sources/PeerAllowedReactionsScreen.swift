@@ -24,6 +24,7 @@ import PremiumLockButtonSubtitleComponent
 import ListSectionComponent
 import ListItemSliderSelectorComponent
 import ListSwitchItemComponent
+import PresentationDataUtils
 
 final class PeerAllowedReactionsScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -202,7 +203,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                     self.applySettings(standalone: true)
                 } else {
                     let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                    self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.ChannelReactions_UnsavedChangesAlertTitle, text: presentationData.strings.ChannelReactions_UnsavedChangesAlertText, actions: [
+                    self.environment?.controller()?.present(textAlertController(context: component.context, title: presentationData.strings.ChannelReactions_UnsavedChangesAlertTitle, text: presentationData.strings.ChannelReactions_UnsavedChangesAlertText, actions: [
                         TextAlertAction(type: .genericAction, title: presentationData.strings.ChannelReactions_UnsavedChangesAlertDiscard, action: { [weak self] in
                             guard let self else {
                                 return
@@ -306,7 +307,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                         self.displayPremiumScreen(reactionCount: customReactions.count)
                     case .generic:
                         let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                        self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                        self.environment?.controller()?.present(textAlertController(context: component.context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     }
                 }
             }, completed: { [weak self] in

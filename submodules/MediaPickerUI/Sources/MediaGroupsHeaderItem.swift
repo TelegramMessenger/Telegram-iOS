@@ -59,7 +59,7 @@ private class MediaGroupsHeaderItemNode: ListViewItemNode {
     init() {
         self.titleNode = TextNode()
         
-        super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
+        super.init(layerBacked: false, rotated: false, seeThrough: false)
         
         self.addSubnode(self.titleNode)
     }

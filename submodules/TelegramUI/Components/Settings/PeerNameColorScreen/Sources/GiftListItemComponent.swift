@@ -218,7 +218,7 @@ final class GiftListItemComponent: Component {
             ))
             
             for gift in component.starGifts {
-                guard case let .generic(gift) = gift, let title = gift.title else {
+                guard case let .generic(gift) = gift, let title = gift.title, let resale = gift.availability?.resale, resale > 0 else {
                     continue
                 }
                 tabSelectorItems.append(TabSelectorComponent.Item(

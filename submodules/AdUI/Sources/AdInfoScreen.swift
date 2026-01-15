@@ -73,7 +73,7 @@ public final class AdInfoScreen: ViewController {
 
             self.titleNode = ImmediateTextNode()
             self.titleNode.maximumNumberOfLines = 1
-            self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.SponsoredMessageInfoScreen_Title, font: NavigationBar.titleFont, textColor: self.presentationData.theme.rootController.navigationBar.primaryTextColor)
+            self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.SponsoredMessageInfoScreen_Title, font: Font.with(size: 17.0, design: .regular, weight: .semibold, traits: [.monospacedNumbers]), textColor: self.presentationData.theme.rootController.navigationBar.primaryTextColor)
 
             self.scrollNode = ASScrollNode()
             self.scrollNode.view.showsVerticalScrollIndicator = true

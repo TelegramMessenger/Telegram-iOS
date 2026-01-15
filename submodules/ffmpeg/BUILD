@@ -314,6 +314,11 @@ objc_library(
         "libiconv",
         "z",
     ],
+    sdk_frameworks = [
+        "AudioToolbox",
+        "CoreAudio",
+        "VideoToolbox"
+    ],
     deps = [
         ":ffmpeg_lib",
         "//third-party/libvpx:vpx",

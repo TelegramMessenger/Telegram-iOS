@@ -215,7 +215,7 @@ final class AuthorizationSequencePaymentScreenComponent: Component {
             ).string
             
             let presentationData = component.presentationData
-            AuthorizationSequenceController.presentEmailComposeController(address: component.supportEmailAddress, subject: environment.strings.Login_PhonePaidEmailSubject, body: body, from: controller, presentationData: presentationData)
+            AuthorizationSequenceController.presentEmailComposeController(sharedContext: component.sharedContext, address: component.supportEmailAddress, subject: environment.strings.Login_PhonePaidEmailSubject, body: body, from: controller, presentationData: presentationData)
         }
         
         func update(component: AuthorizationSequencePaymentScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {

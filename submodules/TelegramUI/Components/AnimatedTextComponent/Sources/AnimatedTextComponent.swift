@@ -4,6 +4,7 @@ import Display
 import ComponentFlow
 import TelegramPresentationData
 import BundleIconComponent
+import MultilineTextComponent
 
 extension ComponentTransition {
     func animateBlur(layer: CALayer, from: CGFloat, to: CGFloat, delay: Double = 0.0, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
@@ -46,6 +47,7 @@ public final class AnimatedTextComponent: Component {
     public let items: [Item]
     public let noDelay: Bool
     public let animateScale: Bool
+    public let animateSlide: Bool
     public let preferredDirectionIsDown: Bool
     public let blur: Bool
     
@@ -55,6 +57,7 @@ public final class AnimatedTextComponent: Component {
         items: [Item],
         noDelay: Bool = false,
         animateScale: Bool = true,
+        animateSlide: Bool = true,
         preferredDirectionIsDown: Bool = false,
         blur: Bool = false
     ) {
@@ -63,6 +66,7 @@ public final class AnimatedTextComponent: Component {
         self.items = items
         self.noDelay = noDelay
         self.animateScale = animateScale
+        self.animateSlide = animateSlide
         self.preferredDirectionIsDown = preferredDirectionIsDown
         self.blur = blur
     }
@@ -83,6 +87,9 @@ public final class AnimatedTextComponent: Component {
         if lhs.animateScale != rhs.animateScale {
             return false
         }
+        if lhs.animateSlide != rhs.animateSlide {
+            return false
+        }
         if lhs.preferredDirectionIsDown != rhs.preferredDirectionIsDown {
             return false
         }
@@ -101,6 +108,8 @@ public final class AnimatedTextComponent: Component {
     public final class View: UIView {
         private var characters: [CharacterKey: ComponentView<Empty>] = [:]
         
+        private var spaceSize: CGSize?
+        
         private var component: AnimatedTextComponent?
         private weak var state: EmptyComponentState?
         
@@ -113,6 +122,15 @@ public final class AnimatedTextComponent: Component {
         }
 
         func update(component: AnimatedTextComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+            let spaceSize: CGSize
+            if let current = self.spaceSize, self.component?.font == component.font {
+                spaceSize = current
+            } else {
+                let spaceSizeValue = NSAttributedString(string: " ", font: component.font, textColor: .black).boundingRect(with: CGSize(width: 100.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil).size
+                spaceSize = CGSize(width: ceil(spaceSizeValue.width), height: ceil(spaceSizeValue.height))
+                self.spaceSize = spaceSize
+            }
+            
             self.component = component
             self.state = state
             
@@ -220,7 +238,7 @@ public final class AnimatedTextComponent: Component {
                     itemText = [.icon(iconName, tint, offset)]
                 }
                 var index = 0
-                for character in itemText {
+                characterLoop: for character in itemText {
                     let characterKey = CharacterKey(itemId: item.id, index: index, value: character.value)
                     index += 1
                     
@@ -236,13 +254,23 @@ public final class AnimatedTextComponent: Component {
                     
                     let characterComponent: AnyComponent<Empty>
                     var characterOffset: CGPoint = .zero
+                    var addTrailingSpace = false
                     switch character {
                     case let .text(text):
-                        characterComponent = AnyComponent(Text(
-                            text: String(text),
-                            font: component.font,
-                            color: component.color
-                        ))
+                        if text == " " {
+                            size.height = max(size.height, ceil(spaceSize.height))
+                            size.width += max(0.0, ceil(spaceSize.width))
+                            
+                            continue characterLoop
+                        } else {
+                            if text.hasSuffix(" ") {
+                                addTrailingSpace = true
+                            }
+                            
+                            characterComponent = AnyComponent(MultilineTextComponent(
+                                text: .plain(NSAttributedString(string: text, font: component.font, textColor: component.color))
+                            ))
+                        }
                     case let .icon(iconName, tint, offset):
                         characterComponent = AnyComponent(BundleIconComponent(
                             name: iconName,
@@ -263,6 +291,7 @@ public final class AnimatedTextComponent: Component {
                         if characterComponentView.superview == nil {
                             characterComponentView.layer.rasterizationScale = UIScreenScale
                             self.addSubview(characterComponentView)
+                            characterComponentView.layer.anchorPoint = CGPoint()
                             animateIn = true
                         }
                         
@@ -282,8 +311,9 @@ public final class AnimatedTextComponent: Component {
                                 }
                                 
                                 characterComponentView.bounds = CGRect(origin: CGPoint(), size: characterFrame.size)
-                                let deltaPosition = CGPoint(x: characterFrame.midX - characterComponentView.frame.midX, y: characterFrame.midY - characterComponentView.frame.midY)
-                                characterComponentView.center = characterFrame.center
+                                
+                                let deltaPosition = CGPoint(x: characterFrame.minX - characterComponentView.frame.minX, y: characterFrame.minY - characterComponentView.frame.minY)
+                                characterComponentView.center = characterFrame.origin
                                 characterComponentView.layer.animatePosition(from: CGPoint(x: -deltaPosition.x, y: -deltaPosition.y), to: CGPoint(), duration: 0.4, delay: delayNorm * delayWidth, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
                             }
                         }
@@ -305,13 +335,20 @@ public final class AnimatedTextComponent: Component {
                             if component.blur {
                                 ComponentTransition.easeInOut(duration: 0.2).animateBlur(layer: characterComponentView.layer, from: transitionBlurRadius, to: 0.0, delay: delayNorm * delayWidth)
                             }
-                            characterComponentView.layer.animatePosition(from: CGPoint(x: 0.0, y: characterSize.height * offsetNorm), to: CGPoint(), duration: 0.4, delay: delayNorm * delayWidth, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                            if component.animateSlide {
+                                characterComponentView.layer.animatePosition(from: CGPoint(x: 0.0, y: characterSize.height * offsetNorm), to: CGPoint(), duration: 0.4, delay: delayNorm * delayWidth, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                            }
                             characterComponentView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.18, delay: delayNorm * delayWidth)
                         }
                     }
                     
                     size.height = max(size.height, characterSize.height)
-                    size.width += max(0.0, characterSize.width - UIScreenPixel * 2.0)
+                    size.width += max(0.0, characterSize.width - UIScreenPixel)
+                    
+                    if addTrailingSpace {
+                        size.height = max(size.height, ceil(spaceSize.height))
+                        size.width += max(0.0, ceil(spaceSize.width))
+                    }
                 }
             }
             
@@ -342,7 +379,9 @@ public final class AnimatedTextComponent: Component {
                             } else {
                                 targetY = characterComponentView.center.y - characterComponentView.bounds.height * offsetNorm
                             }
-                            outScaleTransition.setPosition(view: characterComponentView, position: CGPoint(x: characterComponentView.center.x, y: targetY), delay: delayNorm * delayWidth)
+                            if component.animateSlide {
+                                outScaleTransition.setPosition(view: characterComponentView, position: CGPoint(x: characterComponentView.center.x, y: targetY), delay: delayNorm * delayWidth)
+                            }
                             outAlphaTransition.setAlpha(view: characterComponentView, alpha: 0.0, delay: delayNorm * delayWidth, completion: { [weak characterComponentView] _ in
                                 characterComponentView?.removeFromSuperview()
                             })

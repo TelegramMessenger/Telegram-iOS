@@ -52,7 +52,12 @@ public enum DeviceModel: CaseIterable, Equatable {
             .iPhone16,
             .iPhone16Plus,
             .iPhone16Pro,
-            .iPhone16ProMax
+            .iPhone16ProMax,
+            .iPhone16e,
+            .iPhone17,
+            .iPhone17Pro,
+            .iPhone17ProMax,
+            .iPhoneAir
         ]
     }
     

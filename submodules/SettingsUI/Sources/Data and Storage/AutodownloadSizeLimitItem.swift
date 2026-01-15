@@ -143,7 +143,7 @@ private final class AutodownloadSizeLimitItemNode: ListViewItemNode {
         self.maxTextNode.isUserInteractionEnabled = false
         self.maxTextNode.displaysAsynchronously = false
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.textNode)
         self.addSubnode(self.minTextNode)

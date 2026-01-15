@@ -123,6 +123,9 @@ swift_library(
         "//submodules/TelegramUI/Components/Premium/PremiumCoinComponent",
         "//submodules/TelegramUI/Components/GlassBarButtonComponent",
         "//submodules/TelegramUI/Components/EdgeEffect",
+        "//submodules/TelegramUI/Components/Gifts/TableComponent",
+        "//submodules/TelegramUI/Components/Gifts/PeerTableCellComponent",
+        "//submodules/TelegramUI/Components/AlertComponent",
     ],
     visibility = [
         "//visibility:public",

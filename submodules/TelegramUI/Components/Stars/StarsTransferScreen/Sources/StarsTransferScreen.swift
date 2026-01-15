@@ -348,7 +348,7 @@ private final class SheetContent: CombinedComponent {
                     component: AnyComponentWithIdentity(id: "close", component: AnyComponent(
                         BundleIconComponent(
                             name: "Navigation/Close",
-                            tintColor: theme.rootController.navigationBar.glassBarButtonForegroundColor
+                            tintColor: theme.chat.inputPanel.panelControlColor
                         )
                     )),
                     action: { _ in
@@ -655,7 +655,9 @@ private final class SheetContent: CombinedComponent {
                             controller?.complete(paid: success)
                             controller?.dismissAnimated()
                             
-                            starsContext.load(force: true)
+                            Queue.mainQueue().after(2.5) {
+                                starsContext.load(force: true)
+                            }
                         })
                     }
                 ),

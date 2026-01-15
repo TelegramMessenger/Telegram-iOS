@@ -32,12 +32,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.PageCaption.pageCaption(text: _1!, credit: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.PageCaption.pageCaption(text: _1!, credit: _2!)
         }
     
     }
@@ -83,12 +80,8 @@ public extension Api {
                 _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PageBlock.self)
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.PageListItem.pageListItemBlocks(blocks: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.PageListItem.pageListItemBlocks(blocks: _1!)
         }
         public static func parse_pageListItemText(_ reader: BufferReader) -> PageListItem? {
             var _1: Api.RichText?
@@ -96,12 +89,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.RichText
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.PageListItem.pageListItemText(text: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.PageListItem.pageListItemText(text: _1!)
         }
     
     }
@@ -152,12 +141,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.PageListOrderedItem.pageListOrderedItemBlocks(num: _1!, blocks: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.PageListOrderedItem.pageListOrderedItemBlocks(num: _1!, blocks: _2!)
         }
         public static func parse_pageListOrderedItemText(_ reader: BufferReader) -> PageListOrderedItem? {
             var _1: String?
@@ -168,12 +154,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.PageListOrderedItem.pageListOrderedItemText(num: _1!, text: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.PageListOrderedItem.pageListOrderedItemText(num: _1!, text: _2!)
         }
     
     }
@@ -232,12 +215,15 @@ public extension Api {
             let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
             let _c7 = (Int(_1!) & Int(1 << 3) == 0) || _7 != nil
             let _c8 = (Int(_1!) & Int(1 << 4) == 0) || _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.PageRelatedArticle.pageRelatedArticle(flags: _1!, url: _2!, webpageId: _3!, title: _4, description: _5, photoId: _6, author: _7, publishedDate: _8)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            return Api.PageRelatedArticle.pageRelatedArticle(flags: _1!, url: _2!, webpageId: _3!, title: _4, description: _5, photoId: _6, author: _7, publishedDate: _8)
         }
     
     }
@@ -282,12 +268,11 @@ public extension Api {
             let _c2 = (Int(_1!) & Int(1 << 7) == 0) || _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.PageTableCell.pageTableCell(flags: _1!, text: _2, colspan: _3, rowspan: _4)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.PageTableCell.pageTableCell(flags: _1!, text: _2, colspan: _3, rowspan: _4)
         }
     
     }
@@ -324,12 +309,8 @@ public extension Api {
                 _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PageTableCell.self)
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.PageTableRow.pageTableRow(cells: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.PageTableRow.pageTableRow(cells: _1!)
         }
     
     }
@@ -386,12 +367,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.InputPeer
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.PaidReactionPrivacy.paidReactionPrivacyPeer(peer: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.PaidReactionPrivacy.paidReactionPrivacyPeer(peer: _1!)
         }
     
     }
@@ -442,12 +419,13 @@ public extension Api {
             let _c4 = _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.Passkey.passkey(flags: _1!, id: _2!, name: _3!, date: _4!, softwareEmojiId: _5, lastUsageDate: _6)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            return Api.Passkey.passkey(flags: _1!, id: _2!, name: _3!, date: _4!, softwareEmojiId: _5, lastUsageDate: _6)
         }
     
     }
@@ -499,12 +477,11 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.PasswordKdfAlgo.passwordKdfAlgoSHA256SHA256PBKDF2HMACSHA512iter100000SHA256ModPow(salt1: _1!, salt2: _2!, g: _3!, p: _4!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.PasswordKdfAlgo.passwordKdfAlgoSHA256SHA256PBKDF2HMACSHA512iter100000SHA256ModPow(salt1: _1!, salt2: _2!, g: _3!, p: _4!)
         }
         public static func parse_passwordKdfAlgoUnknown(_ reader: BufferReader) -> PasswordKdfAlgo? {
             return Api.PasswordKdfAlgo.passwordKdfAlgoUnknown
@@ -542,12 +519,9 @@ public extension Api {
             _2 = parseString(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.PaymentCharge.paymentCharge(id: _1!, providerChargeId: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.PaymentCharge.paymentCharge(id: _1!, providerChargeId: _2!)
         }
     
     }
@@ -582,12 +556,9 @@ public extension Api {
             _2 = parseString(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.PaymentFormMethod.paymentFormMethod(url: _1!, title: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.PaymentFormMethod.paymentFormMethod(url: _1!, title: _2!)
         }
     
     }
@@ -636,12 +607,12 @@ public extension Api {
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 3) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.PaymentRequestedInfo.paymentRequestedInfo(flags: _1!, name: _2, phone: _3, email: _4, shippingAddress: _5)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.PaymentRequestedInfo.paymentRequestedInfo(flags: _1!, name: _2, phone: _3, email: _4, shippingAddress: _5)
         }
     
     }
@@ -676,12 +647,9 @@ public extension Api {
             _2 = parseString(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.PaymentSavedCredentials.paymentSavedCredentialsCard(id: _1!, title: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.PaymentSavedCredentials.paymentSavedCredentialsCard(id: _1!, title: _2!)
         }
     
     }
@@ -730,34 +698,22 @@ public extension Api {
             var _1: Int64?
             _1 = reader.readInt64()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.Peer.peerChannel(channelId: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.Peer.peerChannel(channelId: _1!)
         }
         public static func parse_peerChat(_ reader: BufferReader) -> Peer? {
             var _1: Int64?
             _1 = reader.readInt64()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.Peer.peerChat(chatId: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.Peer.peerChat(chatId: _1!)
         }
         public static func parse_peerUser(_ reader: BufferReader) -> Peer? {
             var _1: Int64?
             _1 = reader.readInt64()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.Peer.peerUser(userId: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.Peer.peerUser(userId: _1!)
         }
     
     }
@@ -794,12 +750,9 @@ public extension Api {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.PeerBlocked.peerBlocked(peerId: _1!, date: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.PeerBlocked.peerBlocked(peerId: _1!, date: _2!)
         }
     
     }
@@ -865,12 +818,8 @@ public extension Api {
             var _1: Int64?
             _1 = reader.readInt64()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.PeerColor.inputPeerColorCollectible(collectibleId: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.PeerColor.inputPeerColorCollectible(collectibleId: _1!)
         }
         public static func parse_peerColor(_ reader: BufferReader) -> PeerColor? {
             var _1: Int32?
@@ -882,12 +831,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.PeerColor.peerColor(flags: _1!, color: _2, backgroundEmojiId: _3)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.PeerColor.peerColor(flags: _1!, color: _2, backgroundEmojiId: _3)
         }
         public static func parse_peerColorCollectible(_ reader: BufferReader) -> PeerColor? {
             var _1: Int32?
@@ -918,12 +865,15 @@ public extension Api {
             let _c6 = _6 != nil
             let _c7 = (Int(_1!) & Int(1 << 0) == 0) || _7 != nil
             let _c8 = (Int(_1!) & Int(1 << 1) == 0) || _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.PeerColor.peerColorCollectible(flags: _1!, collectibleId: _2!, giftEmojiId: _3!, backgroundEmojiId: _4!, accentColor: _5!, colors: _6!, darkAccentColor: _7, darkColors: _8)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            return Api.PeerColor.peerColorCollectible(flags: _1!, collectibleId: _2!, giftEmojiId: _3!, backgroundEmojiId: _4!, accentColor: _5!, colors: _6!, darkAccentColor: _7, darkColors: _8)
         }
     
     }
@@ -973,23 +923,17 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.PeerLocated.peerLocated(peer: _1!, expires: _2!, distance: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.PeerLocated.peerLocated(peer: _1!, expires: _2!, distance: _3!)
         }
         public static func parse_peerSelfLocated(_ reader: BufferReader) -> PeerLocated? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.PeerLocated.peerSelfLocated(expires: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.PeerLocated.peerSelfLocated(expires: _1!)
         }
     
     }
@@ -1084,12 +1028,19 @@ public extension Api {
             let _c10 = (Int(_1!) & Int(1 << 8) == 0) || _10 != nil
             let _c11 = (Int(_1!) & Int(1 << 9) == 0) || _11 != nil
             let _c12 = (Int(_1!) & Int(1 << 10) == 0) || _12 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 {
-                return Api.PeerNotifySettings.peerNotifySettings(flags: _1!, showPreviews: _2, silent: _3, muteUntil: _4, iosSound: _5, androidSound: _6, otherSound: _7, storiesMuted: _8, storiesHideSender: _9, storiesIosSound: _10, storiesAndroidSound: _11, storiesOtherSound: _12)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            if !_c9 { return nil }
+            if !_c10 { return nil }
+            if !_c11 { return nil }
+            if !_c12 { return nil }
+            return Api.PeerNotifySettings.peerNotifySettings(flags: _1!, showPreviews: _2, silent: _3, muteUntil: _4, iosSound: _5, androidSound: _6, otherSound: _7, storiesMuted: _8, storiesHideSender: _9, storiesIosSound: _10, storiesAndroidSound: _11, storiesOtherSound: _12)
         }
     
     }
@@ -1160,12 +1111,18 @@ public extension Api {
             let _c9 = (Int(_1!) & Int(1 << 16) == 0) || _9 != nil
             let _c10 = (Int(_1!) & Int(1 << 17) == 0) || _10 != nil
             let _c11 = (Int(_1!) & Int(1 << 18) == 0) || _11 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
-                return Api.PeerSettings.peerSettings(flags: _1!, geoDistance: _2, requestChatTitle: _3, requestChatDate: _4, businessBotId: _5, businessBotManageUrl: _6, chargePaidMessageStars: _7, registrationMonth: _8, phoneCountry: _9, nameChangeDate: _10, photoChangeDate: _11)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            if !_c9 { return nil }
+            if !_c10 { return nil }
+            if !_c11 { return nil }
+            return Api.PeerSettings.peerSettings(flags: _1!, geoDistance: _2, requestChatTitle: _3, requestChatDate: _4, businessBotId: _5, businessBotManageUrl: _6, chargePaidMessageStars: _7, registrationMonth: _8, phoneCountry: _9, nameChangeDate: _10, photoChangeDate: _11)
         }
     
     }
@@ -1216,12 +1173,11 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.PeerStories.peerStories(flags: _1!, peer: _2!, maxReadId: _3, stories: _4!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.PeerStories.peerStories(flags: _1!, peer: _2!, maxReadId: _3, stories: _4!)
         }
     
     }
@@ -1268,12 +1224,11 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.PendingSuggestion.pendingSuggestion(suggestion: _1!, title: _2!, description: _3!, url: _4!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.PendingSuggestion.pendingSuggestion(suggestion: _1!, title: _2!, description: _3!, url: _4!)
         }
     
     }
@@ -1427,12 +1382,19 @@ public extension Api {
             let _c10 = _10 != nil
             let _c11 = _11 != nil
             let _c12 = (Int(_1!) & Int(1 << 7) == 0) || _12 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 {
-                return Api.PhoneCall.phoneCall(flags: _1!, id: _2!, accessHash: _3!, date: _4!, adminId: _5!, participantId: _6!, gAOrB: _7!, keyFingerprint: _8!, protocol: _9!, connections: _10!, startDate: _11!, customParameters: _12)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            if !_c9 { return nil }
+            if !_c10 { return nil }
+            if !_c11 { return nil }
+            if !_c12 { return nil }
+            return Api.PhoneCall.phoneCall(flags: _1!, id: _2!, accessHash: _3!, date: _4!, adminId: _5!, participantId: _6!, gAOrB: _7!, keyFingerprint: _8!, protocol: _9!, connections: _10!, startDate: _11!, customParameters: _12)
         }
         public static func parse_phoneCallAccepted(_ reader: BufferReader) -> PhoneCall? {
             var _1: Int32?
@@ -1461,12 +1423,15 @@ public extension Api {
             let _c6 = _6 != nil
             let _c7 = _7 != nil
             let _c8 = _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.PhoneCall.phoneCallAccepted(flags: _1!, id: _2!, accessHash: _3!, date: _4!, adminId: _5!, participantId: _6!, gB: _7!, protocol: _8!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            return Api.PhoneCall.phoneCallAccepted(flags: _1!, id: _2!, accessHash: _3!, date: _4!, adminId: _5!, participantId: _6!, gB: _7!, protocol: _8!)
         }
         public static func parse_phoneCallDiscarded(_ reader: BufferReader) -> PhoneCall? {
             var _1: Int32?
@@ -1483,23 +1448,18 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.PhoneCall.phoneCallDiscarded(flags: _1!, id: _2!, reason: _3, duration: _4)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.PhoneCall.phoneCallDiscarded(flags: _1!, id: _2!, reason: _3, duration: _4)
         }
         public static func parse_phoneCallEmpty(_ reader: BufferReader) -> PhoneCall? {
             var _1: Int64?
             _1 = reader.readInt64()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.PhoneCall.phoneCallEmpty(id: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.PhoneCall.phoneCallEmpty(id: _1!)
         }
         public static func parse_phoneCallRequested(_ reader: BufferReader) -> PhoneCall? {
             var _1: Int32?
@@ -1528,12 +1488,15 @@ public extension Api {
             let _c6 = _6 != nil
             let _c7 = _7 != nil
             let _c8 = _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.PhoneCall.phoneCallRequested(flags: _1!, id: _2!, accessHash: _3!, date: _4!, adminId: _5!, participantId: _6!, gAHash: _7!, protocol: _8!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            return Api.PhoneCall.phoneCallRequested(flags: _1!, id: _2!, accessHash: _3!, date: _4!, adminId: _5!, participantId: _6!, gAHash: _7!, protocol: _8!)
         }
         public static func parse_phoneCallWaiting(_ reader: BufferReader) -> PhoneCall? {
             var _1: Int32?
@@ -1562,12 +1525,15 @@ public extension Api {
             let _c6 = _6 != nil
             let _c7 = _7 != nil
             let _c8 = (Int(_1!) & Int(1 << 0) == 0) || _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.PhoneCall.phoneCallWaiting(flags: _1!, id: _2!, accessHash: _3!, date: _4!, adminId: _5!, participantId: _6!, protocol: _7!, receiveDate: _8)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            return Api.PhoneCall.phoneCallWaiting(flags: _1!, id: _2!, accessHash: _3!, date: _4!, adminId: _5!, participantId: _6!, protocol: _7!, receiveDate: _8)
         }
     
     }

@@ -243,7 +243,6 @@ private final class NotificationExceptionArguments {
 }
 
 private enum NotificationExceptionEntryId: Hashable {
-    case search
     case peerId(Int64)
     case addException
     case removeAll
@@ -254,13 +253,6 @@ private enum NotificationExceptionEntryId: Hashable {
     
     static func ==(lhs: NotificationExceptionEntryId, rhs: NotificationExceptionEntryId) -> Bool {
         switch lhs {
-            case .search:
-                switch rhs {
-                    case .search:
-                        return true
-                    default:
-                        return false
-                }
             case .addException:
                 switch rhs {
                     case .addException:
@@ -302,7 +294,6 @@ private enum NotificationExceptionEntry : ItemListNodeEntry {
     
     typealias ItemGenerationArguments = NotificationExceptionArguments
     
-    case search(PresentationTheme, PresentationStrings)
     case peer(index: Int, peer: EnginePeer, theme: PresentationTheme, strings: PresentationStrings, dateFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, description: String, notificationSettings: TelegramPeerNotificationSettings, revealed: Bool, editing: Bool, isSearching: Bool)
     case addPeer(index: Int, peer: EnginePeer, theme: PresentationTheme, strings: PresentationStrings, dateFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder)
     case addException(PresentationTheme, PresentationStrings, NotificationExceptionMode.Mode, Bool)
@@ -311,10 +302,6 @@ private enum NotificationExceptionEntry : ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! NotificationExceptionArguments
         switch self {
-            case let .search(theme, strings):
-                return NotificationSearchItem(theme: theme, placeholder: strings.Common_Search, activate: {
-                    arguments.activateSearch()
-                })
             case let .addException(theme, strings, mode, editing):
                 let icon: UIImage?
                 switch mode {
@@ -352,8 +339,6 @@ private enum NotificationExceptionEntry : ItemListNodeEntry {
     
     var stableId: NotificationExceptionEntryId {
         switch self {
-            case .search:
-                return .search
             case .addException:
                 return .addException
             case let .peer(_, peer, _, _, _, _, _, _, _, _, _):
@@ -367,13 +352,6 @@ private enum NotificationExceptionEntry : ItemListNodeEntry {
     
     static func == (lhs: NotificationExceptionEntry, rhs: NotificationExceptionEntry) -> Bool {
         switch lhs {
-            case let .search(lhsTheme, lhsStrings):
-                switch rhs {
-                    case let .search(rhsTheme, rhsStrings):
-                        return lhsTheme === rhsTheme && lhsStrings === rhsStrings
-                    default:
-                        return false
-                }
             case let .addException(lhsTheme, lhsStrings, lhsMode, lhsEditing):
                 switch rhs {
                     case let .addException(rhsTheme, rhsStrings, rhsMode, rhsEditing):
@@ -406,18 +384,16 @@ private enum NotificationExceptionEntry : ItemListNodeEntry {
     
     static func <(lhs: NotificationExceptionEntry, rhs: NotificationExceptionEntry) -> Bool {
         switch lhs {
-            case .search:
-                return true
             case .addException:
                 switch rhs {
-                    case .search, .addException:
+                    case .addException:
                         return false
                     default:
                         return true
                 }
             case let .peer(lhsIndex, _, _, _, _, _, _, _, _, _, _):
                 switch rhs {
-                    case .search, .addException:
+                    case .addException:
                         return false
                     case let .peer(rhsIndex, _, _, _, _, _, _, _, _, _, _):
                         return lhsIndex < rhsIndex
@@ -428,7 +404,7 @@ private enum NotificationExceptionEntry : ItemListNodeEntry {
                 }
             case let .addPeer(lhsIndex, _, _, _, _, _):
                 switch rhs {
-                    case .search, .addException:
+                    case .addException:
                         return false
                     case let .peer(rhsIndex, _, _, _, _, _, _, _, _, _, _):
                         return lhsIndex < rhsIndex
@@ -936,7 +912,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
         
         self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: NotificationExceptionsSearchContainerNode(context: self.context, mode: self.stateValue.modify {$0}.mode, arguments: self.arguments!), cancel: { [weak self] in
             self?.requestDeactivateSearch(true)
-        })
+        }, fieldStyle: placeholderNode.fieldStyle)
         
         self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: navigationBarHeight, transition: .immediate)
         self.searchDisplayController?.activate(insertSubnode: { [weak self, weak placeholderNode] subnode, isSearchBar in
@@ -1007,7 +983,7 @@ private final class NotificationExceptionsSearchContainerNode: SearchDisplayCont
         self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings))
         
         self.dimNode = ASDisplayNode()
-        self.dimNode.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        self.dimNode.backgroundColor = .clear
         
         self.listNode = ListView()
         self.listNode.accessibilityPageScrolledString = { row, count in

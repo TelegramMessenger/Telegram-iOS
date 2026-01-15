@@ -74,13 +74,15 @@ private final class PeerInfoScreenCallListItemNode: PeerInfoScreenItemNode {
         
         let params = ListViewItemLayoutParams(width: width, leftInset: safeInsets.left, rightInset: safeInsets.right, availableHeight: 1000.0)
         
+        let verticalInset: CGFloat = 8.0
+        
         let itemNode: ItemListCallListItemNode
         if let current = self.itemNode {
             itemNode = current
             addressItem.updateNode(async: { $0() }, node: {
                 return itemNode
             }, params: params, previousItem: nil, nextItem: nil, animation: .None, completion: { (layout, apply) in
-                let nodeFrame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: layout.size.height))
+                let nodeFrame = CGRect(origin: CGPoint(x: 0.0, y: verticalInset), size: CGSize(width: width, height: layout.size.height))
                 
                 itemNode.contentSize = layout.contentSize
                 itemNode.insets = layout.insets
@@ -100,9 +102,8 @@ private final class PeerInfoScreenCallListItemNode: PeerInfoScreenItemNode {
             self.addSubnode(itemNode)
         }
         
-        let verticalInset: CGFloat = 8.0
-        let height = itemNode.contentSize.height + verticalInset * 2.0
         
+        let height = itemNode.contentSize.height + verticalInset * 2.0
         transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: verticalInset), size: itemNode.bounds.size))
         
         let highlightNodeOffset: CGFloat = topItem == nil ? 0.0 : UIScreenPixel

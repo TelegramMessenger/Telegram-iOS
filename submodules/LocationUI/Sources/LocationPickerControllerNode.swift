@@ -1382,7 +1382,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                 transition.updateFrame(view: titleView, frame: titleFrame)
             }
             
-            let barButtonSize = CGSize(width: 40.0, height: 40.0)
+            let barButtonSize = CGSize(width: 44.0, height: 44.0)
             let cancelButtonSize = self.cancelButton.update(
                 transition: ComponentTransition(transition),
                 component: AnyComponent(GlassBarButtonComponent(
@@ -1393,7 +1393,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                     component: AnyComponentWithIdentity(id: isPickingLocation ? "back" : "close", component: AnyComponent(
                         BundleIconComponent(
                             name: isPickingLocation ? "Navigation/Back" : "Navigation/Close",
-                            tintColor: self.presentationData.theme.rootController.navigationBar.glassBarButtonForegroundColor
+                            tintColor: self.presentationData.theme.chat.inputPanel.panelControlColor
                         )
                     )),
                     action: { [weak self] _ in
@@ -1428,7 +1428,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                     component: AnyComponentWithIdentity(id: "search", component: AnyComponent(
                         BundleIconComponent(
                             name: "Navigation/Search",
-                            tintColor: self.presentationData.theme.rootController.navigationBar.glassBarButtonForegroundColor
+                            tintColor: self.presentationData.theme.chat.inputPanel.panelControlColor
                         )
                     )),
                     action: { [weak self] _ in

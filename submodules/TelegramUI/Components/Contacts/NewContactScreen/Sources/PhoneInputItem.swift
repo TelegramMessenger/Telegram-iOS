@@ -175,7 +175,7 @@ final class PhoneInputItemNode: ListViewItemNode, ItemListItemNode {
         self.checkNode.displaysAsynchronously = false
         self.checkNode.isLayerBacked = true
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.phoneBackground)
         self.addSubnode(self.countryButton)

@@ -70,7 +70,7 @@ class CallListHoleItemNode: ListViewItemNode {
         
         self.labelNode = TextNode()
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.separatorNode)
         self.addSubnode(self.labelNode)

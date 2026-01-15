@@ -50,6 +50,13 @@ swift_library(
         "//submodules/TelegramUI/Components/ListActionItemComponent",
         "//submodules/Utils/DeviceModel",
         "//submodules/LegacyMediaPickerUI",
+        "//submodules/TelegramUI/Components/AlertComponent",
+        "//submodules/TelegramUI/Components/GlassBackgroundComponent",
+        "//submodules/TelegramUI/Components/EdgeEffect",
+        "//submodules/TelegramUI/Components/ButtonComponent",
+        "//submodules/TelegramUI/Components/GlassBarButtonComponent",
+        "//submodules/TelegramUI/Components/SearchInputPanelComponent",
+        "//submodules/TelegramUI/Components/GlassControls",
     ],
     visibility = [
         "//visibility:public",

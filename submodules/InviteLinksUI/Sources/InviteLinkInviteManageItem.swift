@@ -74,7 +74,7 @@ class InviteLinkInviteManageItemNode: ListViewItemNode {
         self.backgroundNode = ASDisplayNode()
         self.buttonNode = HighlightableButtonNode()
       
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.buttonNode)

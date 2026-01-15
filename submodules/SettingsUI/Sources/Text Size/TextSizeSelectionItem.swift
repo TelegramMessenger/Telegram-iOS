@@ -110,7 +110,7 @@ class BubbleSettingsRadiusItemNode: ListViewItemNode, ItemListItemNode {
         
         self.disabledOverlayNode = ASDisplayNode()
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.leftIconNode)
         self.addSubnode(self.rightIconNode)

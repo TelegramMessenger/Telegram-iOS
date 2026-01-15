@@ -8,347 +8,287 @@ import TelegramPresentationData
 import AccountContext
 import UrlEscaping
 import ComponentFlow
+import AlertComponent
 import StarsWithdrawalScreen
 
-private final class GiftAuctionCustomBidAlertContentNode: AlertContentNode {
-    private let theme: PresentationTheme
-    private let strings: PresentationStrings
-    private let dateTimeFormat: PresentationDateTimeFormat
-    private let title: String
-    private let text: String
-    private let placeholder: String
-    private let minValue: Int64
-    fileprivate var value: Int64
+func giftAuctionCustomBidController(
+    context: AccountContext,
+    title: String,
+    text: String,
+    placeholder: String,
+    action: String,
+    minValue: Int64,
+    value: Int64,
+    apply: @escaping (Int64) -> Void,
+    cancel: @escaping () -> Void
+) -> ViewController {
+    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+    let strings = presentationData.strings
     
-    private let titleNode: ASTextNode
-    private let textNode: ASTextNode
-    private let backgroundView = UIImageView()
-    let amountField = ComponentView<Empty>()
-    
-    private let actionNodesSeparator: ASDisplayNode
-    private let actionNodes: [TextAlertContentActionNode]
-    private let actionVerticalSeparators: [ASDisplayNode]
-    
-    private let disposable = MetaDisposable()
-    
-    private var validLayout: CGSize?
-    
-    private let hapticFeedback = HapticFeedback()
-    
-    var complete: (() -> Void)? {
-        didSet {
-            //self.inputFieldNode.complete = self.complete
-        }
-    }
-    
-    override var dismissOnOutsideTap: Bool {
-        return self.isUserInteractionEnabled
-    }
-    
-    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, actions: [TextAlertAction], title: String, text: String, placeholder: String, minValue: Int64, value: Int64) {
-        self.theme = ptheme
-        self.strings = strings
-        self.dateTimeFormat = dateTimeFormat
-        self.title = title
-        self.text = text
-        self.placeholder = placeholder
-        self.minValue = minValue
-        self.value = value
+    let inputState = AlertAmountFieldComponent.ExternalState()
         
-        self.titleNode = ASTextNode()
-        self.titleNode.maximumNumberOfLines = 2
-        self.textNode = ASTextNode()
-        self.textNode.maximumNumberOfLines = 8
-                
-//        self.inputFieldNode = GiftAuctionCustomBidInputFieldNode(theme: ptheme, placeholder: placeholder)
-//        self.inputFieldNode.text = "\(value)"
-        
-        self.actionNodesSeparator = ASDisplayNode()
-        self.actionNodesSeparator.isLayerBacked = true
-        
-        self.actionNodes = actions.map { action -> TextAlertContentActionNode in
-            return TextAlertContentActionNode(theme: theme, action: action)
-        }
-        
-        var actionVerticalSeparators: [ASDisplayNode] = []
-        if actions.count > 1 {
-            for _ in 0 ..< actions.count - 1 {
-                let separatorNode = ASDisplayNode()
-                separatorNode.isLayerBacked = true
-                actionVerticalSeparators.append(separatorNode)
-            }
-        }
-        self.actionVerticalSeparators = actionVerticalSeparators
-        
-        super.init()
-        
-        self.addSubnode(self.titleNode)
-        self.addSubnode(self.textNode)
-        
-//        self.addSubnode(self.inputFieldNode)
-
-        self.addSubnode(self.actionNodesSeparator)
-        
-        for actionNode in self.actionNodes {
-            self.addSubnode(actionNode)
-        }
-        
-        for separatorNode in self.actionVerticalSeparators {
-            self.addSubnode(separatorNode)
-        }
-        
-        self.updateTheme(theme)
-    }
-    
-    deinit {
-        self.disposable.dispose()
-    }
-    
-    override func updateTheme(_ theme: AlertControllerTheme) {
-        self.titleNode.attributedText = NSAttributedString(string: self.title, font: Font.bold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
-        self.textNode.attributedText = NSAttributedString(string: self.text, font: Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center)
-
-        self.actionNodesSeparator.backgroundColor = theme.separatorColor
-        for actionNode in self.actionNodes {
-            actionNode.updateTheme(theme)
-        }
-        for separatorNode in self.actionVerticalSeparators {
-            separatorNode.backgroundColor = theme.separatorColor
-        }
-        
-        if let size = self.validLayout {
-            _ = self.updateLayout(size: size, transition: .immediate)
-        }
-    }
-    
-    override func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
-        var size = size
-        size.width = min(size.width, 270.0)
-        let measureSize = CGSize(width: size.width - 16.0 * 2.0, height: CGFloat.greatestFiniteMagnitude)
-        
-        let hadValidLayout = self.validLayout != nil
-        
-        self.validLayout = size
-        
-        var origin: CGPoint = CGPoint(x: 0.0, y: 20.0)
-        let spacing: CGFloat = 5.0
-        
-        let titleSize = self.titleNode.measure(measureSize)
-        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - titleSize.width) / 2.0), y: origin.y), size: titleSize))
-        origin.y += titleSize.height + 4.0
-        
-        let textSize = self.textNode.measure(measureSize)
-        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: origin.y), size: textSize))
-        origin.y += textSize.height + 6.0 + spacing
-        
-        let actionButtonHeight: CGFloat = 44.0
-        var minActionsWidth: CGFloat = 0.0
-        let maxActionWidth: CGFloat = floor(size.width / CGFloat(self.actionNodes.count))
-        let actionTitleInsets: CGFloat = 8.0
-        
-        var effectiveActionLayout = TextAlertContentActionLayout.horizontal
-        for actionNode in self.actionNodes {
-            let actionTitleSize = actionNode.titleNode.updateLayout(CGSize(width: maxActionWidth, height: actionButtonHeight))
-            if case .horizontal = effectiveActionLayout, actionTitleSize.height > actionButtonHeight * 0.6667 {
-                effectiveActionLayout = .vertical
-            }
-            switch effectiveActionLayout {
-                case .horizontal:
-                    minActionsWidth += actionTitleSize.width + actionTitleInsets
-                case .vertical:
-                    minActionsWidth = max(minActionsWidth, actionTitleSize.width + actionTitleInsets)
-            }
-        }
-        
-        let insets = UIEdgeInsets(top: 18.0, left: 18.0, bottom: 9.0, right: 18.0)
-        
-        var contentWidth = max(titleSize.width, minActionsWidth)
-        contentWidth = max(contentWidth, 234.0)
-        
-        var actionsHeight: CGFloat = 0.0
-        switch effectiveActionLayout {
-            case .horizontal:
-                actionsHeight = actionButtonHeight
-            case .vertical:
-                actionsHeight = actionButtonHeight * CGFloat(self.actionNodes.count)
-        }
-        
-        let resultWidth = contentWidth + insets.left + insets.right
-        
-        let fieldWidth = resultWidth - 18.0
-        let amountFieldSize = self.amountField.update(
-            transition: .immediate,
-            component: AnyComponent(
-                AmountFieldComponent(
-                    textColor: self.theme.list.itemPrimaryTextColor,
-                    secondaryColor: self.theme.list.itemSecondaryTextColor,
-                    placeholderColor: self.theme.list.itemPlaceholderTextColor,
-                    accentColor: self.theme.list.itemAccentColor,
-                    value: self.value,
-                    minValue: self.minValue,
-                    forceMinValue: false,
-                    allowZero: false,
-                    maxValue: nil,
-                    placeholderText: self.placeholder,
-                    textFieldOffset: CGPoint(x: -4.0, y: -1.0),
-                    labelText: nil,
-                    currency: .stars,
-                    dateTimeFormat: self.dateTimeFormat,
-                    amountUpdated: { [weak self] value in
-                        guard let self else {
-                            return
-                        }
-                        if let value {
-                            self.value = value
-                        }
-                    },
-                    tag: nil
-                )
-            ),
-            environment: {},
-            containerSize: CGSize(width: fieldWidth, height: 44.0)
+    var content: [AnyComponentWithIdentity<AlertComponentEnvironment>] = []
+    content.append(AnyComponentWithIdentity(
+        id: "title",
+        component: AnyComponent(
+            AlertTitleComponent(title: title)
         )
-        var amountFieldFrame = CGRect(origin: CGPoint(x: floor((resultWidth - fieldWidth) / 2.0), y: origin.y - 2.0), size: amountFieldSize)
-        if let amountFieldView = self.amountField.view {
-            if amountFieldView.superview == nil {
-                amountFieldView.clipsToBounds = true
-                self.backgroundView.image = generateStretchableFilledCircleImage(diameter: 12.0, color: self.theme.actionSheet.inputHollowBackgroundColor, strokeColor: self.theme.actionSheet.inputBorderColor, strokeWidth: 1.0)
-                
-                self.view.addSubview(self.backgroundView)
-                self.view.addSubview(amountFieldView)
-            }
-            self.backgroundView.frame = amountFieldFrame.insetBy(dx: 7.0, dy: 9.0)
-            amountFieldFrame.size.width -= 14.0
-            amountFieldView.frame = amountFieldFrame
-        }
-        
-        let resultSize = CGSize(width: resultWidth, height: titleSize.height + textSize.height + spacing + amountFieldSize.height + actionsHeight + insets.top + insets.bottom + 3.0)
-        
-        transition.updateFrame(node: self.actionNodesSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight - UIScreenPixel), size: CGSize(width: resultSize.width, height: UIScreenPixel)))
-        
-        var actionOffset: CGFloat = 0.0
-        let actionWidth: CGFloat = floor(resultSize.width / CGFloat(self.actionNodes.count))
-        var separatorIndex = -1
-        var nodeIndex = 0
-        for actionNode in self.actionNodes {
-            if separatorIndex >= 0 {
-                let separatorNode = self.actionVerticalSeparators[separatorIndex]
-                switch effectiveActionLayout {
-                    case .horizontal:
-                        transition.updateFrame(node: separatorNode, frame: CGRect(origin: CGPoint(x: actionOffset - UIScreenPixel, y: resultSize.height - actionsHeight), size: CGSize(width: UIScreenPixel, height: actionsHeight - UIScreenPixel)))
-                    case .vertical:
-                        transition.updateFrame(node: separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight + actionOffset - UIScreenPixel), size: CGSize(width: resultSize.width, height: UIScreenPixel)))
-                }
-            }
-            separatorIndex += 1
-            
-            let currentActionWidth: CGFloat
-            switch effectiveActionLayout {
-                case .horizontal:
-                    if nodeIndex == self.actionNodes.count - 1 {
-                        currentActionWidth = resultSize.width - actionOffset
-                    } else {
-                        currentActionWidth = actionWidth
-                    }
-                case .vertical:
-                    currentActionWidth = resultSize.width
-            }
-            
-            let actionNodeFrame: CGRect
-            switch effectiveActionLayout {
-                case .horizontal:
-                    actionNodeFrame = CGRect(origin: CGPoint(x: actionOffset, y: resultSize.height - actionsHeight), size: CGSize(width: currentActionWidth, height: actionButtonHeight))
-                    actionOffset += currentActionWidth
-                case .vertical:
-                    actionNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight + actionOffset), size: CGSize(width: currentActionWidth, height: actionButtonHeight))
-                    actionOffset += actionButtonHeight
-            }
-            
-            transition.updateFrame(node: actionNode, frame: actionNodeFrame)
-            
-            nodeIndex += 1
-        }
-        
-        if !hadValidLayout {
-            if let amountFieldView = self.amountField.view as? AmountFieldComponent.View {
-                amountFieldView.activateInput()
-                Queue.mainQueue().justDispatch {
-                    amountFieldView.selectAll()
-                }
-            }
-        }
-        
-        return resultSize
-    }
+    ))
+    content.append(AnyComponentWithIdentity(
+        id: "text",
+        component: AnyComponent(
+            AlertTextComponent(content: .plain(text))
+        )
+    ))
     
-    func animateError() {
-        if let amountFieldView = self.amountField.view as? AmountFieldComponent.View {
-            self.value = self.minValue
-            if let size = self.validLayout {
-                _ = self.updateLayout(size: size, transition: .immediate)
-            }
-            amountFieldView.resetValue()
-            
-            amountFieldView.animateError()
-            amountFieldView.selectAll()
-        }
-    }
+    var applyImpl: (() -> Void)?
+    content.append(AnyComponentWithIdentity(
+        id: "input",
+        component: AnyComponent(
+            AlertAmountFieldComponent(
+                context: context,
+                initialValue: value,
+                minValue: minValue,
+                maxValue: nil,
+                placeholder: placeholder,
+                isInitiallyFocused: true,
+                externalState: inputState,
+                returnKeyAction: {
+                    applyImpl?()
+                }
+            )
+        )
+    ))
     
-    func deactivateInput() {
-        if let amountFieldView = self.amountField.view as? AmountFieldComponent.View {
-            amountFieldView.deactivateInput()
+    let alertController = AlertScreen(
+        context: context,
+        configuration: AlertScreen.Configuration(allowInputInset: true),
+        content: content,
+        actions: [
+            .init(title: strings.Common_Cancel, action: {
+                cancel()
+            }),
+            .init(title: action, type: .default, action: {
+                applyImpl?()
+            }, autoDismiss: false)
+        ]
+    )
+    applyImpl = {
+        if let value = inputState.value, value >= minValue {
+            apply(value)
+        } else {
+            inputState.resetToMinValue()
+            inputState.animateError()
         }
     }
+    return alertController
 }
 
-func giftAuctionCustomBidController(context: AccountContext, title: String, text: String, placeholder: String, action: String, minValue: Int64, value: Int64, apply: @escaping (Int64) -> Void, cancel: @escaping () -> Void) -> AlertController {
-    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+private final class AlertAmountFieldComponent: Component {
+    public typealias EnvironmentType = AlertComponentEnvironment
     
-    var dismissImpl: ((Bool) -> Void)?
-    var applyImpl: (() -> Void)?
-    
-    let actions: [TextAlertAction] = [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
-        dismissImpl?(true)
-        cancel()
-    }), TextAlertAction(type: .defaultAction, title: action, action: {
-        applyImpl?()
-    })]
-    
-    let contentNode = GiftAuctionCustomBidAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, actions: actions, title: title, text: text, placeholder: placeholder, minValue: minValue, value: value)
-    contentNode.complete = {
-        applyImpl?()
-    }
-    applyImpl = { [weak contentNode] in
-        guard let contentNode = contentNode else {
-            return
+    public class ExternalState {
+        public fileprivate(set) var value: Int64?
+        public fileprivate(set) var animateError: () -> Void = {}
+        public fileprivate(set) var activateInput: () -> Void = {}
+        public fileprivate(set) var resetToMinValue: () -> Void = {}
+        fileprivate let valuePromise = ValuePromise<Int64?>(nil)
+        public var valueSignal: Signal<Int64?, NoError> {
+            return self.valuePromise.get()
         }
-        let value = contentNode.value
-        if value < minValue {
-            contentNode.animateError()
-        } else {
-            dismissImpl?(true)
-            apply(contentNode.value)
+        
+        public init() {
         }
     }
     
-    let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode)
-    let presentationDataDisposable = context.sharedContext.presentationData.start(next: { [weak controller] presentationData in
-        controller?.theme = AlertControllerTheme(presentationData: presentationData)
-    })
-    controller.dismissed = { byTapOutside in
-        presentationDataDisposable.dispose()
-        if byTapOutside {
-            cancel()
+    let context: AccountContext
+    let initialValue: Int64?
+    let minValue: Int64?
+    let maxValue: Int64?
+    let placeholder: String
+    let isInitiallyFocused: Bool
+    let externalState: ExternalState
+    let returnKeyAction: (() -> Void)?
+    
+    public init(
+        context: AccountContext,
+        initialValue: Int64? = nil,
+        minValue: Int64? = nil,
+        maxValue: Int64? = nil,
+        placeholder: String,
+        isInitiallyFocused: Bool = false,
+        externalState: ExternalState,
+        returnKeyAction: (() -> Void)? = nil
+    ) {
+        self.context = context
+        self.initialValue = initialValue
+        self.minValue = minValue
+        self.maxValue = maxValue
+        self.placeholder = placeholder
+        self.isInitiallyFocused = isInitiallyFocused
+        self.externalState = externalState
+        self.returnKeyAction = returnKeyAction
+    }
+    
+    public static func ==(lhs: AlertAmountFieldComponent, rhs: AlertAmountFieldComponent) -> Bool {
+        if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.initialValue != rhs.initialValue {
+            return false
+        }
+        if lhs.minValue != rhs.minValue {
+            return false
+        }
+        if lhs.maxValue != rhs.maxValue {
+            return false
+        }
+        if lhs.placeholder != rhs.placeholder {
+            return false
+        }
+        if lhs.isInitiallyFocused != rhs.isInitiallyFocused {
+            return false
+        }
+        return true
+    }
+        
+    public final class View: UIView, UITextFieldDelegate {
+        private let background = ComponentView<Empty>()
+        private let amountField = ComponentView<Empty>()
+        
+        private var currentValue: Int64?
+        
+        private var component: AlertAmountFieldComponent?
+        private weak var state: EmptyComponentState?
+        
+        private var isUpdating = false
+        
+        func activateInput() {
+            if let amountFieldView = self.amountField.view as? AmountFieldComponent.View {
+                amountFieldView.activateInput()
+            }
+        }
+        
+        func resetToMinValue() {
+            self.currentValue = self.component?.minValue
+            self.state?.updated()
+            
+            if let amountFieldView = self.amountField.view as? AmountFieldComponent.View {
+                amountFieldView.resetValue()
+                amountFieldView.selectAll()
+            }
+        }
+        
+        func animateError() {
+            if let amountFieldView = self.amountField.view as? AmountFieldComponent.View {
+                amountFieldView.animateError()
+            }
+        }
+        
+        func update(component: AlertAmountFieldComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<AlertComponentEnvironment>, transition: ComponentTransition) -> CGSize {
+            self.isUpdating = true
+            defer {
+                self.isUpdating = false
+            }
+            
+            if self.component == nil {
+                self.currentValue = component.initialValue
+                
+                component.externalState.animateError = { [weak self] in
+                    self?.animateError()
+                }
+                component.externalState.activateInput = { [weak self] in
+                    self?.activateInput()
+                }
+                component.externalState.resetToMinValue = { [weak self] in
+                    self?.resetToMinValue()
+                }
+            }
+            
+            let isFirstTime = self.component == nil
+            
+            self.component = component
+            self.state = state
+            
+            let environment = environment[AlertComponentEnvironment.self]
+            
+            let topInset: CGFloat = 15.0
+            
+            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+            let amountFieldSize = self.amountField.update(
+                transition: .immediate,
+                component: AnyComponent(
+                    AmountFieldComponent(
+                        textColor: environment.theme.actionSheet.primaryTextColor,
+                        secondaryColor: environment.theme.actionSheet.secondaryTextColor,
+                        placeholderColor: environment.theme.actionSheet.inputPlaceholderColor,
+                        accentColor: environment.theme.actionSheet.controlAccentColor,
+                        value: self.currentValue,
+                        minValue: component.minValue,
+                        forceMinValue: false,
+                        allowZero: false,
+                        maxValue: nil,
+                        placeholderText: component.placeholder,
+                        textFieldOffset: CGPoint(x: -4.0, y: -1.0),
+                        labelText: nil,
+                        currency: .stars,
+                        dateTimeFormat: presentationData.dateTimeFormat,
+                        amountUpdated: { [weak self] value in
+                            guard let self else {
+                                return
+                            }
+                            self.currentValue = value
+                            component.externalState.value = value
+                            component.externalState.valuePromise.set(value)
+                        },
+                        tag: nil
+                    )
+                ),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width, height: 44.0)
+            )
+            var amountFieldFrame = CGRect(origin: CGPoint(x: -16.0, y: topInset - 1.0 + UIScreenPixel), size: amountFieldSize)
+            if let amountFieldView = self.amountField.view {
+                if amountFieldView.superview == nil {
+                    amountFieldView.clipsToBounds = true
+                    self.addSubview(amountFieldView)
+                }
+                amountFieldFrame.size.width -= 14.0
+                amountFieldView.frame = amountFieldFrame
+            }
+            
+            let backgroundPadding: CGFloat = 14.0
+            let size = CGSize(width: availableSize.width, height: 50.0)
+            
+            let backgroundSize = self.background.update(
+                transition: transition,
+                component: AnyComponent(
+                    FilledRoundedRectangleComponent(color: environment.theme.actionSheet.primaryTextColor.withMultipliedAlpha(0.1), cornerRadius: .value(25.0), smoothCorners: false)
+                ),
+                environment: {},
+                containerSize: CGSize(width: size.width + backgroundPadding * 2.0, height: size.height)
+            )
+            let backgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - backgroundSize.width) / 2.0), y: topInset ), size: backgroundSize)
+            if let backgroundView = self.background.view {
+                if backgroundView.superview == nil {
+                    self.addSubview(backgroundView)
+                }
+                transition.setFrame(view: backgroundView, frame: backgroundFrame)
+            }
+            
+            if isFirstTime && component.isInitiallyFocused {
+                self.activateInput()
+            }
+                        
+            return CGSize(width: availableSize.width, height: size.height + topInset)
         }
     }
-    dismissImpl = { [weak controller, weak contentNode] animated in
-        contentNode?.deactivateInput()
-        let _ = contentNode
-        if animated {
-            controller?.dismissAnimated()
-        } else {
-            controller?.dismiss()
-        }
+    
+    public func makeView() -> View {
+        return View(frame: CGRect())
     }
-    return controller
+    
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<AlertComponentEnvironment>, transition: ComponentTransition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
 }

@@ -277,12 +277,12 @@ public final class StorySearchGridScreen: ViewControllerComponentContainer {
         switch self.scope {
         case let .query(peer, query):
             if let peer, let addressName = peer.addressName {
-                self.titleView?.titleContent = .custom("\(query)@\(addressName)", title, false)
+                self.titleView?.titleContent = .custom(title: [ChatTitleContent.TitleTextItem(id: AnyHashable(0), content: .text("\(query)@\(addressName)"))], subtitle: title, isEnabled: false)
             } else {
-                self.titleView?.titleContent = .custom("\(query)", title, false)
+                self.titleView?.titleContent = .custom(title: [ChatTitleContent.TitleTextItem(id: AnyHashable(0), content: .text("\(query)"))], subtitle: title, isEnabled: false)
             }
         case .location:
-            self.titleView?.titleContent = .custom(presentationData.strings.StoryGridScreen_TitleLocationSearch, nil, false)
+            self.titleView?.titleContent = .custom(title: [ChatTitleContent.TitleTextItem(id: AnyHashable(0), content: .text(presentationData.strings.StoryGridScreen_TitleLocationSearch))], subtitle: nil, isEnabled: false)
         }
     }
     

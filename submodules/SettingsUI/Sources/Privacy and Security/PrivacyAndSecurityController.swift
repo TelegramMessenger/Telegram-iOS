@@ -1406,10 +1406,10 @@ public func privacyAndSecurityController(
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let controller = textAlertController(
                 context: context, title: emailPattern, text: presentationData.strings.PrivacySettings_LoginEmailAlertText, actions: [
-                    TextAlertAction(type: .genericAction, title: presentationData.strings.PrivacySettings_LoginEmailAlertChange, action: {
+                    TextAlertAction(type: .defaultAction, title: presentationData.strings.PrivacySettings_LoginEmailAlertChange, action: {
                         setupEmailImpl?(emailPattern)
                     }),
-                    TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {
+                    TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
                                         
                     })
                 ], actionLayout: .vertical

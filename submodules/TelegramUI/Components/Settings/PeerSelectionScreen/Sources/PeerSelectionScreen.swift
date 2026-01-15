@@ -218,7 +218,7 @@ final class PeerSelectionScreenComponent: Component {
         private var channels: [PeerSelectionScreen.ChannelInfo]?
         private var channelsDisposable: Disposable?
         
-        private var isSearchDisplayControllerActive: Bool = false
+        private var isSearchDisplayControllerActive: ChatListNavigationBar.ActiveSearch?
         private var searchQuery: String = ""
         private let searchQueryComponentSeparationCharacterSet: CharacterSet
         
@@ -298,8 +298,7 @@ final class PeerSelectionScreenComponent: Component {
                     }
                 ))) : nil,
                 rightButtons: rightButtons,
-                backTitle: isModal ? nil : strings.Common_Back,
-                backPressed: { [weak self] in
+                backPressed: isModal ? nil : { [weak self] in
                     guard let self else {
                         return
                     }
@@ -318,14 +317,15 @@ final class PeerSelectionScreenComponent: Component {
                     strings: strings,
                     statusBarHeight: statusBarHeight,
                     sideInset: insets.left,
-                    isSearchActive: self.isSearchDisplayControllerActive,
-                    isSearchEnabled: true,
+                    search: ChatListNavigationBar.Search(isEnabled: true),
+                    activeSearch: self.isSearchDisplayControllerActive,
                     primaryContent: headerContent,
                     secondaryContent: nil,
                     secondaryTransition: 0.0,
                     storySubscriptions: nil,
                     storiesIncludeHidden: false,
                     uploadProgress: [:],
+                    headerPanels: nil,
                     tabsNode: nil,
                     tabsNodeIsSearch: false,
                     accessoryPanelContainer: nil,
@@ -335,7 +335,7 @@ final class PeerSelectionScreenComponent: Component {
                             return
                         }
                         
-                        self.isSearchDisplayControllerActive = true
+                        self.isSearchDisplayControllerActive = ChatListNavigationBar.ActiveSearch(isExternal: false)
                         self.state?.updated(transition: .spring(duration: 0.4))
                     },
                     openStatusSetup: { _ in
@@ -385,7 +385,7 @@ final class PeerSelectionScreenComponent: Component {
             let resultingOffset = mainOffset
             
             var offset = resultingOffset
-            if self.isSearchDisplayControllerActive {
+            if self.isSearchDisplayControllerActive != nil {
                 offset = 0.0
             }
             
@@ -468,7 +468,7 @@ final class PeerSelectionScreenComponent: Component {
             self.navigationHeight = navigationHeight
             
             var removedSearchBar: SearchBarNode?
-            if self.isSearchDisplayControllerActive {
+            if self.isSearchDisplayControllerActive != nil {
                 let searchBarNode: SearchBarNode
                 var searchBarTransition = transition
                 if let current = self.searchBarNode {
@@ -478,8 +478,9 @@ final class PeerSelectionScreenComponent: Component {
                     let searchBarTheme = SearchBarNodeTheme(theme: environment.theme, hasSeparator: false)
                     searchBarNode = SearchBarNode(
                         theme: searchBarTheme,
+                        presentationTheme: environment.theme,
                         strings: environment.strings,
-                        fieldStyle: .modern,
+                        fieldStyle: .glass,
                         displayBackground: false
                     )
                     searchBarNode.placeholderString = NSAttributedString(string: environment.strings.Common_Search, font: Font.regular(17.0), textColor: searchBarTheme.placeholder)
@@ -488,7 +489,7 @@ final class PeerSelectionScreenComponent: Component {
                         guard let self else {
                             return
                         }
-                        self.isSearchDisplayControllerActive = false
+                        self.isSearchDisplayControllerActive = nil
                         self.state?.updated(transition: .spring(duration: 0.4))
                     }
                     searchBarNode.textUpdated = { [weak self] query, _ in

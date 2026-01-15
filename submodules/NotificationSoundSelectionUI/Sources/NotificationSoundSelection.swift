@@ -455,7 +455,7 @@ public func notificationSoundSelectionController(context: AccountContext, update
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.PeerInfo_DeleteToneTitle, text: presentationData.strings.PeerInfo_DeleteToneText(title).string, actions: [
+        controller.present(textAlertController(context: context, title: presentationData.strings.PeerInfo_DeleteToneTitle, text: presentationData.strings.PeerInfo_DeleteToneText(title).string, actions: [
             TextAlertAction(type: .destructiveAction, title: presentationData.strings.Common_Delete, action: {
                 updateState { state in
                     var state = state

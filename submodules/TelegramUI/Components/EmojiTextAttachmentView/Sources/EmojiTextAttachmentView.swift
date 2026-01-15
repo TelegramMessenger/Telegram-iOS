@@ -19,6 +19,8 @@ import TelegramUIPreferences
 import GenerateStickerPlaceholderImage
 import UIKitRuntimeUtils
 import ComponentFlow
+import RLottieBinding
+import GZip
 
 public func generateTopicIcon(title: String, backgroundColors: [UIColor], strokeColors: [UIColor], size: CGSize) -> UIImage? {
     let realSize = size
@@ -497,6 +499,10 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
             case .verification:
                 self.updateVerification()
                 self.updateTintColor()
+            case .dice:
+                if let file {
+                    self.updateDice(file: file, attemptSynchronousLoad: attemptSynchronousLoad)
+                }
             }
         } else if let file = file {
             self.updateFile(file: file, attemptSynchronousLoad: attemptSynchronousLoad)
@@ -718,6 +724,44 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
                 strongSelf.loadAnimation()
             })
         }
+    }
+    
+    private func updateDice(file: TelegramMediaFile, attemptSynchronousLoad: Bool) {
+        guard let arguments = self.arguments else {
+            return
+        }
+        let _ = (arguments.context.postbox.mediaBox.resourceData(file.resource)
+        |> filter { resource in
+            return resource.complete
+        }
+        |> map { resource -> UIImage? in
+            guard var data = try? Data(contentsOf: URL(fileURLWithPath: resource.path)) else {
+                return nil
+            }
+            if let unpackedData = TGGUnzipData(data, 5 * 1024 * 1024) {
+                data = unpackedData
+            }
+            guard let instance = LottieInstance(data: data, fitzModifier: .none, colorReplacements: nil, cacheKey: "") else {
+                return nil
+            }
+            let size = CGSize(width: 128.0, height: 128.0)
+            if let diceContext = DrawingContext(size: size, scale: 1.0, opaque: false, clear: true) {
+                instance.renderFrame(with: instance.frameCount - 1, into: diceContext.bytes.assumingMemoryBound(to: UInt8.self), width: Int32(diceContext.scaledSize.width), height: Int32(diceContext.scaledSize.height), bytesPerRow: Int32(diceContext.bytesPerRow))
+                if let diceImage = diceContext.generateImage() {
+                    let drawingContext = DrawingContext(size: size, scale: 1.0, opaque: false, clear: true)
+                    drawingContext?.withFlippedContext { context in
+                        if let cgImage = diceImage.cgImage {
+                            context.draw(cgImage, in: CGRect(origin: CGPoint(x: -30.0, y: 5.0), size: CGSize(width: 180.0, height: 180.0)))
+                        }
+                    }
+                    return drawingContext?.generateImage()
+                }
+            }
+            return nil
+        }
+        |> deliverOnMainQueue).start(next: { image in
+            self.contents = image?.cgImage
+        })
     }
     
     private func loadLocalAnimation() {

@@ -24,12 +24,8 @@ public extension Api {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.EmojiURL.emojiURL(url: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.EmojiURL.emojiURL(url: _1!)
         }
     
     }
@@ -132,12 +128,14 @@ public extension Api {
             let _c5 = _5 != nil
             let _c6 = _6 != nil
             let _c7 = _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.EncryptedChat.encryptedChat(id: _1!, accessHash: _2!, date: _3!, adminId: _4!, participantId: _5!, gAOrB: _6!, keyFingerprint: _7!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            return Api.EncryptedChat.encryptedChat(id: _1!, accessHash: _2!, date: _3!, adminId: _4!, participantId: _5!, gAOrB: _6!, keyFingerprint: _7!)
         }
         public static func parse_encryptedChatDiscarded(_ reader: BufferReader) -> EncryptedChat? {
             var _1: Int32?
@@ -146,23 +144,16 @@ public extension Api {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.EncryptedChat.encryptedChatDiscarded(flags: _1!, id: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.EncryptedChat.encryptedChatDiscarded(flags: _1!, id: _2!)
         }
         public static func parse_encryptedChatEmpty(_ reader: BufferReader) -> EncryptedChat? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.EncryptedChat.encryptedChatEmpty(id: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.EncryptedChat.encryptedChatEmpty(id: _1!)
         }
         public static func parse_encryptedChatRequested(_ reader: BufferReader) -> EncryptedChat? {
             var _1: Int32?
@@ -189,12 +180,15 @@ public extension Api {
             let _c6 = _6 != nil
             let _c7 = _7 != nil
             let _c8 = _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.EncryptedChat.encryptedChatRequested(flags: _1!, folderId: _2, id: _3!, accessHash: _4!, date: _5!, adminId: _6!, participantId: _7!, gA: _8!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            return Api.EncryptedChat.encryptedChatRequested(flags: _1!, folderId: _2, id: _3!, accessHash: _4!, date: _5!, adminId: _6!, participantId: _7!, gA: _8!)
         }
         public static func parse_encryptedChatWaiting(_ reader: BufferReader) -> EncryptedChat? {
             var _1: Int32?
@@ -212,12 +206,12 @@ public extension Api {
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.EncryptedChat.encryptedChatWaiting(id: _1!, accessHash: _2!, date: _3!, adminId: _4!, participantId: _5!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.EncryptedChat.encryptedChatWaiting(id: _1!, accessHash: _2!, date: _3!, adminId: _4!, participantId: _5!)
         }
     
     }
@@ -273,12 +267,12 @@ public extension Api {
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.EncryptedFile.encryptedFile(id: _1!, accessHash: _2!, size: _3!, dcId: _4!, keyFingerprint: _5!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.EncryptedFile.encryptedFile(id: _1!, accessHash: _2!, size: _3!, dcId: _4!, keyFingerprint: _5!)
         }
         public static func parse_encryptedFileEmpty(_ reader: BufferReader) -> EncryptedFile? {
             return Api.EncryptedFile.encryptedFileEmpty
@@ -342,12 +336,12 @@ public extension Api {
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.EncryptedMessage.encryptedMessage(randomId: _1!, chatId: _2!, date: _3!, bytes: _4!, file: _5!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.EncryptedMessage.encryptedMessage(randomId: _1!, chatId: _2!, date: _3!, bytes: _4!, file: _5!)
         }
         public static func parse_encryptedMessageService(_ reader: BufferReader) -> EncryptedMessage? {
             var _1: Int64?
@@ -362,12 +356,11 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.EncryptedMessage.encryptedMessageService(randomId: _1!, chatId: _2!, date: _3!, bytes: _4!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.EncryptedMessage.encryptedMessageService(randomId: _1!, chatId: _2!, date: _3!, bytes: _4!)
         }
     
     }
@@ -453,12 +446,19 @@ public extension Api {
             let _c10 = (Int(_1!) & Int(1 << 10) == 0) || _10 != nil
             let _c11 = (Int(_1!) & Int(1 << 8) == 0) || _11 != nil
             let _c12 = (Int(_1!) & Int(1 << 9) == 0) || _12 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 {
-                return Api.ExportedChatInvite.chatInviteExported(flags: _1!, link: _2!, adminId: _3!, date: _4!, startDate: _5, expireDate: _6, usageLimit: _7, usage: _8, requested: _9, subscriptionExpired: _10, title: _11, subscriptionPricing: _12)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            if !_c9 { return nil }
+            if !_c10 { return nil }
+            if !_c11 { return nil }
+            if !_c12 { return nil }
+            return Api.ExportedChatInvite.chatInviteExported(flags: _1!, link: _2!, adminId: _3!, date: _4!, startDate: _5, expireDate: _6, usageLimit: _7, usage: _8, requested: _9, subscriptionExpired: _10, title: _11, subscriptionPricing: _12)
         }
         public static func parse_chatInvitePublicJoinRequests(_ reader: BufferReader) -> ExportedChatInvite? {
             return Api.ExportedChatInvite.chatInvitePublicJoinRequests
@@ -510,12 +510,11 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.ExportedChatlistInvite.exportedChatlistInvite(flags: _1!, title: _2!, url: _3!, peers: _4!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.ExportedChatlistInvite.exportedChatlistInvite(flags: _1!, title: _2!, url: _3!, peers: _4!)
         }
     
     }
@@ -550,12 +549,9 @@ public extension Api {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ExportedContactToken.exportedContactToken(url: _1!, expires: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.ExportedContactToken.exportedContactToken(url: _1!, expires: _2!)
         }
     
     }
@@ -590,12 +586,9 @@ public extension Api {
             _2 = parseString(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ExportedMessageLink.exportedMessageLink(link: _1!, html: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.ExportedMessageLink.exportedMessageLink(link: _1!, html: _2!)
         }
     
     }
@@ -626,12 +619,8 @@ public extension Api {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ExportedStoryLink.exportedStoryLink(link: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.ExportedStoryLink.exportedStoryLink(link: _1!)
         }
     
     }
@@ -676,12 +665,11 @@ public extension Api {
             let _c2 = (Int(_1!) & Int(1 << 1) == 0) || _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.FactCheck.factCheck(flags: _1!, country: _2, text: _3, hash: _4!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.FactCheck.factCheck(flags: _1!, country: _2, text: _3, hash: _4!)
         }
     
     }
@@ -720,12 +708,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.FileHash.fileHash(offset: _1!, limit: _2!, hash: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.FileHash.fileHash(offset: _1!, limit: _2!, hash: _3!)
         }
     
     }
@@ -770,12 +756,11 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 3) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.Folder.folder(flags: _1!, id: _2!, title: _3!, photo: _4)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.Folder.folder(flags: _1!, id: _2!, title: _3!, photo: _4)
         }
     
     }
@@ -812,12 +797,9 @@ public extension Api {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.FolderPeer.folderPeer(peer: _1!, folderId: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.FolderPeer.folderPeer(peer: _1!, folderId: _2!)
         }
     
     }
@@ -925,23 +907,30 @@ public extension Api {
             let _c14 = _14 != nil
             let _c15 = _15 != nil
             let _c16 = (Int(_1!) & Int(1 << 4) == 0) || _16 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 {
-                return Api.ForumTopic.forumTopic(flags: _1!, id: _2!, date: _3!, peer: _4!, title: _5!, iconColor: _6!, iconEmojiId: _7, topMessage: _8!, readInboxMaxId: _9!, readOutboxMaxId: _10!, unreadCount: _11!, unreadMentionsCount: _12!, unreadReactionsCount: _13!, fromId: _14!, notifySettings: _15!, draft: _16)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            if !_c9 { return nil }
+            if !_c10 { return nil }
+            if !_c11 { return nil }
+            if !_c12 { return nil }
+            if !_c13 { return nil }
+            if !_c14 { return nil }
+            if !_c15 { return nil }
+            if !_c16 { return nil }
+            return Api.ForumTopic.forumTopic(flags: _1!, id: _2!, date: _3!, peer: _4!, title: _5!, iconColor: _6!, iconEmojiId: _7, topMessage: _8!, readInboxMaxId: _9!, readOutboxMaxId: _10!, unreadCount: _11!, unreadMentionsCount: _12!, unreadReactionsCount: _13!, fromId: _14!, notifySettings: _15!, draft: _16)
         }
         public static func parse_forumTopicDeleted(_ reader: BufferReader) -> ForumTopic? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ForumTopic.forumTopicDeleted(id: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.ForumTopic.forumTopicDeleted(id: _1!)
         }
     
     }
@@ -980,12 +969,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.FoundStory.foundStory(peer: _1!, story: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.FoundStory.foundStory(peer: _1!, story: _2!)
         }
     
     }
@@ -1048,12 +1034,15 @@ public extension Api {
             let _c6 = _6 != nil
             let _c7 = _7 != nil
             let _c8 = (Int(_1!) & Int(1 << 0) == 0) || _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.Game.game(flags: _1!, id: _2!, accessHash: _3!, shortName: _4!, title: _5!, description: _6!, photo: _7!, document: _8)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            return Api.Game.game(flags: _1!, id: _2!, accessHash: _3!, shortName: _4!, title: _5!, description: _6!, photo: _7!, document: _8)
         }
     
     }
@@ -1109,12 +1098,12 @@ public extension Api {
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.GeoPoint.geoPoint(flags: _1!, long: _2!, lat: _3!, accessHash: _4!, accuracyRadius: _5)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.GeoPoint.geoPoint(flags: _1!, long: _2!, lat: _3!, accessHash: _4!, accuracyRadius: _5)
         }
         public static func parse_geoPointEmpty(_ reader: BufferReader) -> GeoPoint? {
             return Api.GeoPoint.geoPointEmpty
@@ -1164,12 +1153,12 @@ public extension Api {
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.GeoPointAddress.geoPointAddress(flags: _1!, countryIso2: _2!, state: _3, city: _4, street: _5)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.GeoPointAddress.geoPointAddress(flags: _1!, countryIso2: _2!, state: _3, city: _4, street: _5)
         }
     
     }
@@ -1210,12 +1199,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 5) == 0) || _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 6) == 0) || _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.GlobalPrivacySettings.globalPrivacySettings(flags: _1!, noncontactPeersPaidStars: _2, disallowedGifts: _3)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.GlobalPrivacySettings.globalPrivacySettings(flags: _1!, noncontactPeersPaidStars: _2, disallowedGifts: _3)
         }
     
     }
@@ -1311,12 +1298,21 @@ public extension Api {
             let _c12 = (Int(_1!) & Int(1 << 16) == 0) || _12 != nil
             let _c13 = (Int(_1!) & Int(1 << 20) == 0) || _13 != nil
             let _c14 = (Int(_1!) & Int(1 << 21) == 0) || _14 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 {
-                return Api.GroupCall.groupCall(flags: _1!, id: _2!, accessHash: _3!, participantsCount: _4!, title: _5, streamDcId: _6, recordStartDate: _7, scheduleDate: _8, unmutedVideoCount: _9, unmutedVideoLimit: _10!, version: _11!, inviteLink: _12, sendPaidMessagesStars: _13, defaultSendAs: _14)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            if !_c9 { return nil }
+            if !_c10 { return nil }
+            if !_c11 { return nil }
+            if !_c12 { return nil }
+            if !_c13 { return nil }
+            if !_c14 { return nil }
+            return Api.GroupCall.groupCall(flags: _1!, id: _2!, accessHash: _3!, participantsCount: _4!, title: _5, streamDcId: _6, recordStartDate: _7, scheduleDate: _8, unmutedVideoCount: _9, unmutedVideoLimit: _10!, version: _11!, inviteLink: _12, sendPaidMessagesStars: _13, defaultSendAs: _14)
         }
         public static func parse_groupCallDiscarded(_ reader: BufferReader) -> GroupCall? {
             var _1: Int64?
@@ -1328,12 +1324,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.GroupCall.groupCallDiscarded(id: _1!, accessHash: _2!, duration: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.GroupCall.groupCallDiscarded(id: _1!, accessHash: _2!, duration: _3!)
         }
     
     }
@@ -1374,12 +1368,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 3) == 0) || _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.GroupCallDonor.groupCallDonor(flags: _1!, peerId: _2, stars: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.GroupCallDonor.groupCallDonor(flags: _1!, peerId: _2, stars: _3!)
         }
     
     }
@@ -1434,12 +1426,13 @@ public extension Api {
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.GroupCallMessage.groupCallMessage(flags: _1!, id: _2!, fromId: _3!, date: _4!, message: _5!, paidMessageStars: _6)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            return Api.GroupCallMessage.groupCallMessage(flags: _1!, id: _2!, fromId: _3!, date: _4!, message: _5!, paidMessageStars: _6)
         }
     
     }

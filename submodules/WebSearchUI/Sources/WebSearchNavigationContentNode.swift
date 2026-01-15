@@ -22,7 +22,7 @@ final class WebSearchNavigationContentNode: NavigationBarContentNode {
         self.theme = theme
         self.strings = strings
         
-        self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: theme, hasSeparator: false), strings: strings, fieldStyle: .modern, displayBackground: !attachment)
+        self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: theme, hasSeparator: false), presentationTheme: theme, strings: strings, fieldStyle: .modern, displayBackground: !attachment)
         self.searchBar.hasCancelButton = attachment
         self.searchBar.placeholderString = NSAttributedString(string: attachment ? strings.Attachment_SearchWeb : strings.Common_Search, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
         
@@ -54,10 +54,12 @@ final class WebSearchNavigationContentNode: NavigationBarContentNode {
         return 56.0
     }
     
-    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
+    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
         let searchBarFrame = CGRect(origin: CGPoint(x: 0.0, y: size.height - self.nominalHeight), size: CGSize(width: size.width, height: 56.0))
         self.searchBar.frame = searchBarFrame
         self.searchBar.updateLayout(boundingSize: searchBarFrame.size, leftInset: leftInset, rightInset: rightInset, transition: transition)
+        
+        return size
     }
     
     func activate(select: Bool = false) {

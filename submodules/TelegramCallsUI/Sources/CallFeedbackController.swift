@@ -188,11 +188,11 @@ private enum CallFeedbackControllerEntry: ItemListNodeEntry {
         case let .reasonsHeader(_, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .reason(_, reason, title, value):
-            return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, maximumNumberOfLines: 2, sectionId: self.section, style: .blocks, updated: { value in
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, value: value, maximumNumberOfLines: 2, sectionId: self.section, style: .blocks, updated: { value in
                 arguments.toggleReason(reason, value)
             })
         case let .comment(_, text, placeholder):
-            return ItemListMultilineInputItem(presentationData: presentationData, text: text, placeholder: placeholder, maxLength: nil, sectionId: self.section, style: .blocks, textUpdated: { updatedText in
+            return ItemListMultilineInputItem(presentationData: presentationData, systemStyle: .glass, text: text, placeholder: placeholder, maxLength: nil, sectionId: self.section, style: .blocks, textUpdated: { updatedText in
                 arguments.updateComment(updatedText)
             }, updatedFocus: { focused in
                 if focused {
@@ -200,7 +200,7 @@ private enum CallFeedbackControllerEntry: ItemListNodeEntry {
                 }
             }, tag: CallFeedbackControllerEntryTag.comment)
         case let .includeLogs(_, title, value):
-            return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
                 arguments.toggleIncludeLogs(value)
             })
         case let .includeLogsInfo(_, text):

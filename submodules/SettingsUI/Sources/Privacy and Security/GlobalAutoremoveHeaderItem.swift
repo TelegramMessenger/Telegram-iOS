@@ -68,7 +68,7 @@ class GlobalAutoremoveHeaderItemNode: ListViewItemNode {
     init() {
         self.animationNode = DefaultAnimatedStickerNodeImpl()
                 
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.animationNode)
     }

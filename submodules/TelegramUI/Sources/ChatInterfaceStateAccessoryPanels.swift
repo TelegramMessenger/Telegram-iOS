@@ -18,6 +18,7 @@ import Display
 import Markdown
 import TextFormat
 import TelegramPresentationData
+import AlertComponent
 
 func textInputAccessoryPanel(
     context: AccountContext,
@@ -112,7 +113,6 @@ func textInputAccessoryPanel(
             let theme = chatPresentationInterfaceState.theme
             let strings = chatPresentationInterfaceState.strings
             let nameDisplayOrder = chatPresentationInterfaceState.nameDisplayOrder
-            let fontSize = chatPresentationInterfaceState.fontSize
             
             return AnyComponentWithIdentity(id: "forward", component: AnyComponent(ChatInputMessageAccessoryPanel(
                 context: context,
@@ -158,23 +158,45 @@ func textInputAccessoryPanel(
                             string = strings.Conversation_ForwardOptions_Text(messages, peerDisplayTitle)
                         }
 
-                        let font = Font.regular(floor(fontSize.baseDisplaySize * 15.0 / 17.0))
-                        let boldFont = Font.semibold(floor(fontSize.baseDisplaySize * 15.0 / 17.0))
-                        let body = MarkdownAttributeSet(font: font, textColor: theme.actionSheet.secondaryTextColor)
-                        let bold = MarkdownAttributeSet(font: boldFont, textColor: theme.actionSheet.secondaryTextColor)
+                        let font = Font.regular(15.0)
+                        let boldFont = Font.semibold(15.0)
+                        let body = MarkdownAttributeSet(font: font, textColor: theme.actionSheet.primaryTextColor)
+                        let bold = MarkdownAttributeSet(font: boldFont, textColor: theme.actionSheet.primaryTextColor)
+                        let text = addAttributesToStringWithRanges(string._tuple, body: body, argumentAttributes: [0: bold, 1: bold], textAlignment: .natural)
                         
-                        let title = NSAttributedString(string: strings.Conversation_ForwardOptions_Title(messageCount), font: Font.semibold(floor(fontSize.baseDisplaySize)), textColor: theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
-                        let text = addAttributesToStringWithRanges(string._tuple, body: body, argumentAttributes: [0: bold, 1: bold], textAlignment: .center)
+                        var content: [AnyComponentWithIdentity<AlertComponentEnvironment>] = []
+                        content.append(AnyComponentWithIdentity(
+                            id: "title",
+                            component: AnyComponent(
+                                AlertTitleComponent(
+                                    title: strings.Conversation_ForwardOptions_Title(messageCount)
+                                )
+                            )
+                        ))
+                        content.append(AnyComponentWithIdentity(
+                            id: "text",
+                            component: AnyComponent(
+                                AlertTextComponent(content: .attributed(text))
+                            )
+                        ))
                         
-                        let alertController = richTextAlertController(context: context, title: title, text: text, actions: [TextAlertAction(type: .genericAction, title: strings.Conversation_ForwardOptions_ShowOptions, action: {
-                            guard let sourceView else {
-                                return
-                            }
-                            interfaceInteraction?.presentForwardOptions(sourceView)
-                            let _ = ApplicationSpecificNotice.incrementChatForwardOptionsTip(accountManager: context.sharedContext.accountManager, count: 3).start()
-                        }), TextAlertAction(type: .destructiveAction, title: strings.Conversation_ForwardOptions_CancelForwarding, action: {
-                            interfaceInteraction?.dismissForwardMessages()
-                        })], actionLayout: .vertical)
+                        let alertController = AlertScreen(
+                            context: context,
+                            configuration: AlertScreen.Configuration(actionAlignment: .vertical),
+                            content: content,
+                            actions: [
+                                .init(title: strings.Conversation_ForwardOptions_ShowOptions, action: {
+                                    guard let sourceView else {
+                                        return
+                                    }
+                                    interfaceInteraction?.presentForwardOptions(sourceView)
+                                    let _ = ApplicationSpecificNotice.incrementChatForwardOptionsTip(accountManager: context.sharedContext.accountManager, count: 3).start()
+                                }),
+                                .init(title: strings.Conversation_ForwardOptions_CancelForwarding, type: .destructive, action: {
+                                    interfaceInteraction?.dismissForwardMessages()
+                                })
+                            ]
+                        )
                         interfaceInteraction?.presentController(alertController, nil)
                     }
                 }

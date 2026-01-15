@@ -118,7 +118,7 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
         self.iconImageNode.isLayerBacked = !smartInvertColorsEnabled()
         self.iconImageNode.displaysAsynchronously = false
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.separatorNode)
         

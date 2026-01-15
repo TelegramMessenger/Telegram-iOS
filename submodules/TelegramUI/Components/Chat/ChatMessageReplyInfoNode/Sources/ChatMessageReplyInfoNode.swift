@@ -85,6 +85,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
         public let quote: (quote: EngineMessageReplyQuote, isQuote: Bool)?
         public let todoItemId: Int32?
         public let story: StoryId?
+        public let isSummarized: Bool
         public let parentMessage: Message
         public let constrainedSize: CGSize
         public let animationCache: AnimationCache?
@@ -101,6 +102,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             quote: (quote: EngineMessageReplyQuote, isQuote: Bool)?,
             todoItemId: Int32?,
             story: StoryId?,
+            isSummarized: Bool,
             parentMessage: Message,
             constrainedSize: CGSize,
             animationCache: AnimationCache?,
@@ -116,6 +118,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             self.quote = quote
             self.todoItemId = todoItemId
             self.story = story
+            self.isSummarized = isSummarized
             self.parentMessage = parentMessage
             self.constrainedSize = constrainedSize
             self.animationCache = animationCache
@@ -133,6 +136,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
     }
     
     private let backgroundView: MessageInlineBlockBackgroundView
+    private var starsView: StarsView?
     private var quoteIconView: UIImageView?
     private let contentNode: ASDisplayNode
     private var titleNode: TextNode?
@@ -206,7 +210,6 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             var secondaryColor: UIColor?
             var tertiaryColor: UIColor?
             
-            
             var authorNameColor: UIColor?
             var dashSecondaryColor: UIColor?
             var dashTertiaryColor: UIColor?
@@ -237,6 +240,10 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 giftEmojiFileId = collectibleColor.giftEmojiFileId
             default:
                 break
+            }
+            
+            if arguments.isSummarized {
+                authorNameColor = nil
             }
             
             switch arguments.type {
@@ -437,7 +444,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             }
             
             var textLeftInset: CGFloat = 0.0
-            let messageText: NSAttributedString
+            var messageText: NSAttributedString
             var todoItemCompleted: Bool?
             if let todoItemId = arguments.todoItemId, let todo = arguments.message?.media.first(where: { $0 is TelegramMediaTodo }) as? TelegramMediaTodo, let todoItem = todo.items.first(where: { $0.id == todoItemId }) {
                 messageText = stringWithAppliedEntities(todoItem.text, entities: todoItem.entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: nil)
@@ -607,6 +614,11 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             }
             adjustedConstrainedTextSize.width -= textLeftInset
             
+            if arguments.isSummarized {
+                titleString = NSAttributedString(string: arguments.presentationData.strings.Conversation_Summary_Title, font: titleFont, textColor: titleColor)
+                messageText = NSAttributedString(string: arguments.presentationData.strings.Conversation_Summary_Text, font: textFont, textColor: titleColor)
+            }
+            
             let (titleLayout, titleApply) = titleNodeLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: maxTitleNumberOfLines, truncationType: .end, constrainedSize: CGSize(width: contrainedTextSize.width - additionalTitleWidth, height: contrainedTextSize.height), alignment: .natural, cutout: nil, insets: textInsets))
             if isExpiredStory || isStory {
                 contrainedTextSize.width -= 26.0
@@ -685,6 +697,11 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                     node = maybeNode
                 } else {
                     node = ChatMessageReplyInfoNode()
+                }
+                
+                var animation = animation
+                if node.titleNode == nil {
+                    animation = .None
                 }
                 
                 node.previousMediaReference = updatedMediaReference
@@ -925,6 +942,22 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                     giftEmojiLayer.removeFromSuperlayer()
                 }
                 
+                if arguments.isSummarized {
+                    let starsView: StarsView
+                    if let current = node.starsView {
+                        starsView = current
+                    } else {
+                        starsView = StarsView()
+                        node.starsView = starsView
+                        node.contentNode.view.insertSubview(starsView, at: 1)
+                    }
+                    starsView.frame = CGRect(origin: CGPoint(), size: backgroundFrame.size)
+                    starsView.update(size: backgroundFrame.size, color: mainColor)
+                } else if let starsView = node.starsView {
+                    node.starsView = nil
+                    starsView.removeFromSuperview()
+                }
+                
                 node.contentNode.frame = CGRect(origin: CGPoint(), size: size)
                 
                 return node
@@ -1063,5 +1096,98 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             return imageNode.view
         }
         return nil
+    }
+}
+
+private final class StarsView: UIView {
+    private let staticEmitterLayer = CAEmitterLayer()
+    
+    private var currentColor: UIColor?
+    
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        
+        self.clipsToBounds = true
+    
+        self.layer.addSublayer(self.staticEmitterLayer)
+    }
+    
+    required init(coder: NSCoder) {
+        preconditionFailure()
+    }
+        
+    private func setupEmitter(size: CGSize) {
+        guard let currentColor = self.currentColor else {
+            return
+        }
+        let color = currentColor
+        
+        self.staticEmitterLayer.emitterShape = .rectangle
+        self.staticEmitterLayer.emitterSize = size
+        self.staticEmitterLayer.emitterMode = .surface
+        self.layer.addSublayer(self.staticEmitterLayer)
+        
+        let staticEmitter = CAEmitterCell()
+        staticEmitter.name = "emitter"
+        staticEmitter.contents = UIImage(bundleImageName: "Premium/Stars/Particle")?.cgImage
+        staticEmitter.birthRate = 20.0
+        staticEmitter.lifetime = 3.2
+        staticEmitter.velocity = 18.0
+        staticEmitter.velocityRange = 3
+        staticEmitter.scale = 0.1
+        staticEmitter.scaleRange = 0.08
+        staticEmitter.emissionRange = .pi * 2.0
+        staticEmitter.setValue(3.0, forKey: "mass")
+        staticEmitter.setValue(2.0, forKey: "massRange")
+        
+        let staticColors: [Any] = [
+            color.withAlphaComponent(0.0).cgColor,
+            color.cgColor,
+            color.withAlphaComponent(0.0).cgColor,
+            color.withAlphaComponent(0.0).cgColor,
+            color.cgColor,
+            color.withAlphaComponent(0.0).cgColor
+        ]
+        let staticColorBehavior = CAEmitterCell.createEmitterBehavior(type: "colorOverLife")
+        staticColorBehavior.setValue(staticColors, forKey: "colors")
+        staticEmitter.setValue([staticColorBehavior], forKey: "emitterBehaviors")
+        
+        let attractor = CAEmitterCell.createEmitterBehavior(type: "simpleAttractor")
+        attractor.setValue("attractor", forKey: "name")
+        attractor.setValue(20, forKey: "falloff")
+        attractor.setValue(35, forKey: "radius")
+        self.staticEmitterLayer.setValue([attractor], forKey: "emitterBehaviors")
+        self.staticEmitterLayer.setValue(4.0, forKeyPath: "emitterBehaviors.attractor.stiffness")
+        self.staticEmitterLayer.setValue(false, forKeyPath: "emitterBehaviors.attractor.enabled")
+        
+        self.staticEmitterLayer.emitterCells = [staticEmitter]
+    }
+    
+    func update(size: CGSize, color: UIColor) {
+        if self.staticEmitterLayer.emitterCells == nil {
+            self.currentColor = color
+            self.setupEmitter(size: size)
+        } else if self.currentColor != color {
+            self.currentColor = color
+            
+            let staticColors: [Any] = [
+                UIColor.white.withAlphaComponent(0.0).cgColor,
+                UIColor.white.withAlphaComponent(0.35).cgColor,
+                color.cgColor,
+                color.cgColor,
+                color.withAlphaComponent(0.0).cgColor
+            ]
+            let staticColorBehavior = CAEmitterCell.createEmitterBehavior(type: "colorOverLife")
+            staticColorBehavior.setValue(staticColors, forKey: "colors")
+            
+            for cell in self.staticEmitterLayer.emitterCells ?? [] {
+                cell.setValue([staticColorBehavior], forKey: "emitterBehaviors")
+            }
+        }
+        
+        let emitterPosition = CGPoint(x: size.width * 0.5, y: size.height * 0.5)
+        self.staticEmitterLayer.frame = CGRect(origin: .zero, size: size)
+        self.staticEmitterLayer.emitterPosition = emitterPosition
+        self.staticEmitterLayer.setValue(emitterPosition, forKeyPath: "emitterBehaviors.attractor.position")
     }
 }

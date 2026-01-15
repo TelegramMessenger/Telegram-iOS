@@ -23,7 +23,6 @@ public final class GiftCompositionComponent: Component {
         public fileprivate(set) var previewSymbol: StarGift.UniqueGift.Attribute?
         
         public init() {
-            self.previewPatternColor = nil
         }
     }
     

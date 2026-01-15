@@ -22,6 +22,22 @@ private let pink = UIColor(rgb: 0xef436c)
 private let latePurple = UIColor(rgb: 0xaa56a6)
 private let latePink = UIColor(rgb: 0xef476f)
 
+private func textForTimeout(value: Int32) -> String {
+    if value < 3600 {
+        let minutes = value / 60
+        let seconds = value % 60
+        let secondsPadding = seconds < 10 ? "0" : ""
+        return "\(minutes):\(secondsPadding)\(seconds)"
+    } else {
+        let hours = value / 3600
+        let minutes = (value % 3600) / 60
+        let minutesPadding = minutes < 10 ? "0" : ""
+        let seconds = value % 60
+        let secondsPadding = seconds < 10 ? "0" : ""
+        return "\(hours):\(minutesPadding)\(minutes):\(secondsPadding)\(seconds)"
+    }
+}
+
 private class CallStatusBarBackgroundNode: ASDisplayNode {
     enum State {
         case connecting

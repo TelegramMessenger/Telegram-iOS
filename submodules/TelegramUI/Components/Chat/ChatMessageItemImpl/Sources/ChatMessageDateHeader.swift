@@ -645,7 +645,7 @@ public final class ChatMessageDateHeaderNodeImpl: ListViewItemHeaderNode, ChatMe
         
         let isRotated = controllerInteraction?.chatIsRotated ?? true
         
-        super.init(layerBacked: false, dynamicBounce: true, isRotated: isRotated, seeThrough: false)
+        super.init(layerBacked: false, isRotated: isRotated, seeThrough: false)
         
         if isRotated {
             self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
@@ -1012,7 +1012,7 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
 
         let isRotated = controllerInteraction?.chatIsRotated ?? true
         
-        super.init(layerBacked: false, dynamicBounce: true, isRotated: isRotated, seeThrough: false)
+        super.init(layerBacked: false, isRotated: isRotated, seeThrough: false)
 
         if isRotated {
             self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)

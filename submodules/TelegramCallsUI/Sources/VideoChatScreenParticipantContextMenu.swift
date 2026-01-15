@@ -117,7 +117,7 @@ extension VideoChatScreenComponent.View {
                         } else {
                             maxBioLength = 100
                         }
-                        let controller = voiceChatTitleEditController(sharedContext: currentCall.accountContext.sharedContext, account: currentCall.accountContext.account, forceTheme: environment.theme, title: environment.strings.VoiceChat_EditBioTitle, text: environment.strings.VoiceChat_EditBioText, placeholder: environment.strings.VoiceChat_EditBioPlaceholder, doneButtonTitle: environment.strings.VoiceChat_EditBioSave, value: participant.about, maxLength: maxBioLength, apply: { [weak self] bio in
+                        let controller = voiceChatTitleEditController(context: currentCall.accountContext, forceTheme: environment.theme, title: environment.strings.VoiceChat_EditBioTitle, text: environment.strings.VoiceChat_EditBioText, placeholder: environment.strings.VoiceChat_EditBioPlaceholder, doneButtonTitle: environment.strings.VoiceChat_EditBioSave, value: participant.about, maxLength: maxBioLength, apply: { [weak self] bio in
                             guard let self, let environment = self.environment, let currentCall = self.currentCall, let bio else {
                                 return
                             }
@@ -149,7 +149,7 @@ extension VideoChatScreenComponent.View {
                             guard let self, let environment = self.environment, let currentCall = self.currentCall else {
                                 return
                             }
-                            let controller = voiceChatUserNameController(sharedContext: currentCall.accountContext.sharedContext, account: currentCall.accountContext.account, forceTheme: environment.theme, title: environment.strings.VoiceChat_ChangeNameTitle, firstNamePlaceholder: environment.strings.UserInfo_FirstNamePlaceholder, lastNamePlaceholder: environment.strings.UserInfo_LastNamePlaceholder, doneButtonTitle: environment.strings.VoiceChat_EditBioSave, firstName: peer.firstName, lastName: peer.lastName, maxLength: 128, apply: { [weak self] firstAndLastName in
+                            let controller = voiceChatUserNameController(context: currentCall.accountContext, forceTheme: environment.theme, title: environment.strings.VoiceChat_ChangeNameTitle, firstNamePlaceholder: environment.strings.UserInfo_FirstNamePlaceholder, lastNamePlaceholder: environment.strings.UserInfo_LastNamePlaceholder, doneButtonTitle: environment.strings.VoiceChat_EditBioSave, firstName: peer.firstName, lastName: peer.lastName, maxLength: 128, apply: { [weak self] firstAndLastName in
                                 guard let self, let environment = self.environment, let currentCall = self.currentCall, let (firstName, lastName) = firstAndLastName else {
                                     return
                                 }

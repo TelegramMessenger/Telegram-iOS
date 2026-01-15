@@ -419,7 +419,7 @@ public func webBrowserSettingsController(context: AccountContext) -> ViewControl
         })
         dismissImpl = { [weak linkController] in
             linkController?.view.endEditing(true)
-            linkController?.dismissAnimated()
+            linkController?.dismiss(completion: nil)
         }
         controller?.present(linkController, in: .window(.root))
     }

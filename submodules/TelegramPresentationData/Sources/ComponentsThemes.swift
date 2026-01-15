@@ -46,9 +46,30 @@ public extension ToolbarTheme {
 }
 
 public extension NavigationBarTheme {
-    convenience init(rootControllerTheme: PresentationTheme, enableBackgroundBlur: Bool = true, hideBackground: Bool = false, hideBadge: Bool = false, hideSeparator: Bool = false) {
+    convenience init(rootControllerTheme: PresentationTheme, enableBackgroundBlur: Bool = true, hideBackground: Bool = false, hideBadge: Bool = false, hideSeparator: Bool = false, edgeEffectColor: UIColor? = nil, style: NavigationBar.Style = .legacy) {
         let theme = rootControllerTheme.rootController.navigationBar
-        self.init(buttonColor: theme.buttonColor, disabledButtonColor: theme.disabledButtonColor, primaryTextColor: theme.primaryTextColor, backgroundColor: hideBackground ? .clear : theme.blurredBackgroundColor, opaqueBackgroundColor: hideBackground ? .clear : theme.opaqueBackgroundColor, enableBackgroundBlur: enableBackgroundBlur, separatorColor: hideBackground || hideSeparator ? .clear : theme.separatorColor, badgeBackgroundColor: hideBadge ? .clear : theme.badgeBackgroundColor, badgeStrokeColor: hideBadge ? .clear : theme.badgeStrokeColor, badgeTextColor: hideBadge ? .clear : theme.badgeTextColor)
+        
+        let buttonColor: UIColor
+        let disabledButtonColor: UIColor
+        let badgeBackgroundColor: UIColor
+        let badgeTextColor: UIColor
+        var edgeEffectColor = edgeEffectColor
+        if case .glass = style {
+            buttonColor = rootControllerTheme.chat.inputPanel.panelControlColor
+            disabledButtonColor = buttonColor.withMultipliedAlpha(0.5)
+            badgeBackgroundColor = rootControllerTheme.chat.inputPanel.panelControlColor
+            badgeTextColor = rootControllerTheme.overallDarkAppearance ? .black : rootControllerTheme.list.itemCheckColors.foregroundColor
+            if edgeEffectColor == nil {
+                edgeEffectColor = rootControllerTheme.list.plainBackgroundColor
+            }
+        } else {
+            buttonColor = theme.buttonColor
+            disabledButtonColor = theme.disabledButtonColor
+            badgeBackgroundColor = theme.badgeBackgroundColor
+            badgeTextColor = theme.badgeTextColor
+        }
+        
+        self.init(overallDarkAppearance: rootControllerTheme.overallDarkAppearance, buttonColor: buttonColor, disabledButtonColor: disabledButtonColor, primaryTextColor: theme.primaryTextColor, backgroundColor: hideBackground ? .clear : theme.blurredBackgroundColor, opaqueBackgroundColor: hideBackground ? .clear : theme.opaqueBackgroundColor, enableBackgroundBlur: enableBackgroundBlur, separatorColor: hideBackground || hideSeparator ? .clear : theme.separatorColor, badgeBackgroundColor: hideBadge ? .clear : badgeBackgroundColor, badgeStrokeColor: .clear, badgeTextColor: hideBadge ? .clear : badgeTextColor, edgeEffectColor: edgeEffectColor, style: style)
     }
 }
 
@@ -59,16 +80,16 @@ public extension NavigationBarStrings {
 }
 
 public extension NavigationBarPresentationData {
-    convenience init(presentationData: PresentationData) {
-        self.init(theme: NavigationBarTheme(rootControllerTheme: presentationData.theme), strings: NavigationBarStrings(presentationStrings: presentationData.strings))
+    convenience init(presentationData: PresentationData, style: NavigationBar.Style = .legacy) {
+        self.init(theme: NavigationBarTheme(rootControllerTheme: presentationData.theme, style: style), strings: NavigationBarStrings(presentationStrings: presentationData.strings))
     }
     
-    convenience init(presentationData: PresentationData, hideBackground: Bool, hideBadge: Bool, hideSeparator: Bool = false) {
-        self.init(theme: NavigationBarTheme(rootControllerTheme: presentationData.theme, hideBackground: hideBackground, hideBadge: hideBadge, hideSeparator: hideSeparator), strings: NavigationBarStrings(presentationStrings: presentationData.strings))
+    convenience init(presentationData: PresentationData, hideBackground: Bool, hideBadge: Bool, hideSeparator: Bool = false, style: NavigationBar.Style = .legacy) {
+        self.init(theme: NavigationBarTheme(rootControllerTheme: presentationData.theme, hideBackground: hideBackground, hideBadge: hideBadge, hideSeparator: hideSeparator, edgeEffectColor: hideBackground ? .clear : nil, style: style), strings: NavigationBarStrings(presentationStrings: presentationData.strings))
     }
     
-    convenience init(presentationTheme: PresentationTheme, presentationStrings: PresentationStrings) {
-        self.init(theme: NavigationBarTheme(rootControllerTheme: presentationTheme), strings: NavigationBarStrings(presentationStrings: presentationStrings))
+    convenience init(presentationTheme: PresentationTheme, presentationStrings: PresentationStrings, style: NavigationBar.Style = .legacy) {
+        self.init(theme: NavigationBarTheme(rootControllerTheme: presentationTheme, style: style), strings: NavigationBarStrings(presentationStrings: presentationStrings))
     }
 }
 

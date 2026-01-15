@@ -44,13 +44,13 @@ public final class ChatTitleProxyNode: ASDisplayNode {
             if self.theme !== oldValue {
                 switch self.status {
                     case .connecting:
-                        self.iconNode.image = generateIcon(color: theme.rootController.navigationBar.accentTextColor, connected: false, off: false)
+                        self.iconNode.image = generateIcon(color: theme.chat.inputPanel.panelControlColor, connected: false, off: false)
                     case .connected:
-                        self.iconNode.image = generateIcon(color: theme.rootController.navigationBar.accentTextColor, connected: true, off: false)
+                        self.iconNode.image = generateIcon(color: theme.chat.inputPanel.panelControlColor, connected: true, off: false)
                     case .available:
-                        self.iconNode.image = generateIcon(color: theme.rootController.navigationBar.accentTextColor, connected: false, off: true)
+                        self.iconNode.image = generateIcon(color: theme.chat.inputPanel.panelControlColor, connected: false, off: true)
                 }
-                self.activityIndicator.type = .custom(theme.rootController.navigationBar.accentTextColor, 10.0, 1.3333, true)
+                self.activityIndicator.type = .custom(theme.chat.inputPanel.panelControlColor, 10.0, 1.3333, true)
             }
         }
     }
@@ -61,13 +61,13 @@ public final class ChatTitleProxyNode: ASDisplayNode {
                 switch self.status {
                     case .connecting:
                         self.activityIndicator.isHidden = false
-                        self.iconNode.image = generateIcon(color: theme.rootController.navigationBar.accentTextColor, connected: false, off: false)
+                        self.iconNode.image = generateIcon(color: theme.chat.inputPanel.panelControlColor, connected: false, off: false)
                     case .connected:
                         self.activityIndicator.isHidden = true
-                        self.iconNode.image = generateIcon(color: theme.rootController.navigationBar.accentTextColor, connected: true, off: false)
+                        self.iconNode.image = generateIcon(color: theme.chat.inputPanel.panelControlColor, connected: true, off: false)
                     case .available:
                         self.activityIndicator.isHidden = true
-                        self.iconNode.image = generateIcon(color: theme.rootController.navigationBar.accentTextColor, connected: false, off: true)
+                        self.iconNode.image = generateIcon(color: theme.chat.inputPanel.panelControlColor, connected: false, off: true)
                 }
             }
         }
@@ -80,9 +80,9 @@ public final class ChatTitleProxyNode: ASDisplayNode {
         self.iconNode.isLayerBacked = true
         self.iconNode.displayWithoutProcessing = true
         self.iconNode.displaysAsynchronously = false
-        self.iconNode.image = generateIcon(color: theme.rootController.navigationBar.accentTextColor, connected: false, off: true)
+        self.iconNode.image = generateIcon(color: theme.chat.inputPanel.panelControlColor, connected: false, off: true)
         
-        self.activityIndicator = ActivityIndicator(type: .custom(theme.rootController.navigationBar.accentTextColor, 10.0, 1.3333, true), speed: .slow)
+        self.activityIndicator = ActivityIndicator(type: .custom(theme.chat.inputPanel.panelControlColor, 10.0, 1.3333, true), speed: .slow)
         
         super.init()
         

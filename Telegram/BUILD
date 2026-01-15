@@ -8,8 +8,6 @@ load("@build_bazel_rules_apple//apple:ios.bzl",
     "ios_application",
     "ios_extension",
     "ios_framework",
-    "ios_unit_test",
-    "ios_ui_test",
 )
 
 load("@build_bazel_rules_apple//apple:resources.bzl",
@@ -22,7 +20,6 @@ load("@build_bazel_rules_swift//swift:swift.bzl",
 
 load(
     "@rules_xcodeproj//xcodeproj:defs.bzl",
-    "top_level_target",
     "top_level_targets",
     "xcodeproj",
     "xcode_provisioning_profile",
@@ -338,6 +335,7 @@ filegroup(
 
 objc_library(
     name = "Main",
+    module_name = "Main",
     srcs = [
         "Telegram-iOS/main.m"
     ],
@@ -345,6 +343,7 @@ objc_library(
 
 swift_library(
     name = "Lib",
+    module_name = "Lib",
     srcs = glob([
         "Telegram-iOS/Application.swift",
     ]),
@@ -1810,7 +1809,7 @@ ios_application(
         #"//third-party/boringssl:ssl",
         #"//third-party/boringssl:crypto",
         #"//submodules/TelegramVoip",
-        #"//third-party/recaptcha:RecaptchaEnterprise",
+        #"//third-party/recaptcha:RecaptchaEnterpriseSDK",
         "//submodules/TelegramUI",
     ],
 )

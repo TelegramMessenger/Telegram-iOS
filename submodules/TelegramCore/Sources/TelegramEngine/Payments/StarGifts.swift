@@ -1578,7 +1578,8 @@ func _internal_upgradeStarGift(account: Account, formId: Int64?, reference: Star
                                         prepaidUpgradeHash: nil,
                                         upgradeSeparate: false,
                                         dropOriginalDetailsStars: dropOriginalDetailsStars,
-                                        number: nil
+                                        number: nil,
+                                        isRefunded: false
                                     ))
                                 }
                             }
@@ -2533,6 +2534,7 @@ public final class ProfileGiftsContext {
                 case upgradeSeparate
                 case dropOriginalDetailsStars
                 case number
+                case isRefunded
             }
             
             public let gift: TelegramCore.StarGift
@@ -2556,7 +2558,8 @@ public final class ProfileGiftsContext {
             public let upgradeSeparate: Bool
             public let dropOriginalDetailsStars: Int64?
             public let number: Int32?
-
+            public let isRefunded: Bool
+            
             fileprivate let _fromPeerId: EnginePeer.Id?
             
             public enum DecodingError: Error {
@@ -2584,7 +2587,8 @@ public final class ProfileGiftsContext {
                 prepaidUpgradeHash: String?,
                 upgradeSeparate: Bool,
                 dropOriginalDetailsStars: Int64?,
-                number: Int32?
+                number: Int32?,
+                isRefunded: Bool
             ) {
                 self.gift = gift
                 self.reference = reference
@@ -2608,6 +2612,7 @@ public final class ProfileGiftsContext {
                 self.upgradeSeparate = upgradeSeparate
                 self.dropOriginalDetailsStars = dropOriginalDetailsStars
                 self.number = number
+                self.isRefunded = isRefunded
             }
             
             public init(from decoder: Decoder) throws {
@@ -2641,6 +2646,7 @@ public final class ProfileGiftsContext {
                 self.upgradeSeparate = try container.decodeIfPresent(Bool.self, forKey: .upgradeSeparate) ?? false
                 self.dropOriginalDetailsStars = try container.decodeIfPresent(Int64.self, forKey: .dropOriginalDetailsStars)
                 self.number = try container.decodeIfPresent(Int32.self, forKey: .number)
+                self.isRefunded = try container.decodeIfPresent(Bool.self, forKey: .isRefunded) ?? false
             }
             
             public func encode(to encoder: Encoder) throws {
@@ -2667,6 +2673,8 @@ public final class ProfileGiftsContext {
                 try container.encode(self.upgradeSeparate, forKey: .upgradeSeparate)
                 try container.encodeIfPresent(self.dropOriginalDetailsStars, forKey: .dropOriginalDetailsStars)
                 try container.encodeIfPresent(self.number, forKey: .number)
+                try container.encode(self.isRefunded, forKey: .isRefunded)
+
             }
             
             public func withGift(_ gift: TelegramCore.StarGift) -> StarGift {
@@ -2691,7 +2699,8 @@ public final class ProfileGiftsContext {
                     prepaidUpgradeHash: self.prepaidUpgradeHash,
                     upgradeSeparate: self.upgradeSeparate,
                     dropOriginalDetailsStars: self.dropOriginalDetailsStars,
-                    number: self.number
+                    number: self.number,
+                    isRefunded: self.isRefunded
                 )
             }
             
@@ -2717,7 +2726,8 @@ public final class ProfileGiftsContext {
                     prepaidUpgradeHash: self.prepaidUpgradeHash,
                     upgradeSeparate: self.upgradeSeparate,
                     dropOriginalDetailsStars: self.dropOriginalDetailsStars,
-                    number: self.number
+                    number: self.number,
+                    isRefunded: self.isRefunded
                 )
             }
             
@@ -2743,7 +2753,8 @@ public final class ProfileGiftsContext {
                     prepaidUpgradeHash: self.prepaidUpgradeHash,
                     upgradeSeparate: self.upgradeSeparate,
                     dropOriginalDetailsStars: self.dropOriginalDetailsStars,
-                    number: self.number
+                    number: self.number,
+                    isRefunded: self.isRefunded
                 )
             }
             fileprivate func withFromPeer(_ fromPeer: EnginePeer?) -> StarGift {
@@ -2768,7 +2779,8 @@ public final class ProfileGiftsContext {
                     prepaidUpgradeHash: self.prepaidUpgradeHash,
                     upgradeSeparate: self.upgradeSeparate,
                     dropOriginalDetailsStars: self.dropOriginalDetailsStars,
-                    number: self.number
+                    number: self.number,
+                    isRefunded: self.isRefunded
                 )
             }
             
@@ -2794,7 +2806,8 @@ public final class ProfileGiftsContext {
                     prepaidUpgradeHash: self.prepaidUpgradeHash,
                     upgradeSeparate: self.upgradeSeparate,
                     dropOriginalDetailsStars: self.dropOriginalDetailsStars,
-                    number: self.number
+                    number: self.number,
+                    isRefunded: self.isRefunded
                 )
             }
         }
@@ -3063,6 +3076,7 @@ extension ProfileGiftsContext.State.StarGift {
             self.upgradeSeparate = (flags & (1 << 17)) != 0
             self.dropOriginalDetailsStars = dropOriginalDetailsStars
             self.number = number
+            self.isRefunded = (flags & (1 << 9)) != 0
         }
     }
 }

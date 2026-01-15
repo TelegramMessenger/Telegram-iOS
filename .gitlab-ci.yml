@@ -50,6 +50,11 @@ internal_testflight:
     - python3 -u build-system/Make/Make.py remote-deploy-testflight --darwinContainers="$DARWIN_CONTAINERS" --darwinContainersHost="$DARWIN_CONTAINERS_HOST" --ipa="build/artifacts/Telegram.ipa" --dsyms="build/artifacts/Telegram.DSYMs.zip"
   environment:
     name: testflight_llc
+  artifacts:
+    when: always
+    paths:
+      - build/artifacts
+    expire_in: 1 week
 
 appstore_development:
   tags:
@@ -80,7 +85,7 @@ experimental_i:
     - export PATH=/opt/homebrew/opt/ruby/bin:$PATH                                  
     - export PATH=`gem environment gemdir`/bin:$PATH
     - python3 -u build-system/Make/Make.py remote-build --darwinContainers="$DARWIN_CONTAINERS" --darwinContainersHost="$DARWIN_CONTAINERS_HOST" --cacheHost="$TELEGRAM_BAZEL_CACHE_HOST" --configurationPath="build-system/appcenter-configuration.json" --gitCodesigningRepository="$TELEGRAM_GIT_CODESIGNING_REPOSITORY" --gitCodesigningType=adhoc --configuration=release_arm64
-    - python3 -u build-system/Make/DeployToFirebase.py --configuration="$TELEGRAM_PRIVATE_DATA_PATH/firebase-configurations/firebase-internal.json" --ipa="build/artifacts/Telegram.ipa" --dsyms="build/artifacts/Telegram.DSYMs.zip"
+    - python3 -u build-system/Make/Make.py remote-deploy-testflight --darwinContainers="$DARWIN_CONTAINERS" --darwinContainersHost="$DARWIN_CONTAINERS_HOST" --ipa="build/artifacts/Telegram.ipa" --dsyms="build/artifacts/Telegram.DSYMs.zip"
   environment:
     name: experimental
   artifacts:

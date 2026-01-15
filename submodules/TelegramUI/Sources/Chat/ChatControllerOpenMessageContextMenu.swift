@@ -17,6 +17,7 @@ import PremiumUI
 import TooltipUI
 import TopMessageReactions
 import TelegramNotices
+import PresentationDataUtils
 
 extension ChatControllerImpl {
     func openMessageContextMenu(message: Message, selectAll: Bool, node: ASDisplayNode, frame: CGRect, anyRecognizer: UIGestureRecognizer?, location: CGPoint?) -> Void {
@@ -433,9 +434,15 @@ extension ChatControllerImpl {
                             
                             if case let .known(reactionSettings) = reactionSettings, let starsAllowed = reactionSettings.starsAllowed, !starsAllowed {
                                 if let peer = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer {
-                                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.presentationData.strings.Chat_ToastStarsReactionsDisabled(peer.debugDisplayTitle).string, actions: [
-                                        TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_OK, action: {})
-                                    ]), in: .window(.root))
+                                    let alertController = textAlertController(
+                                        context: strongSelf.context,
+                                        title: nil,
+                                        text: strongSelf.presentationData.strings.Chat_ToastStarsReactionsDisabled(peer.debugDisplayTitle).string,
+                                        actions: [
+                                            TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_OK, action: {})
+                                        ]
+                                    )
+                                    strongSelf.present(alertController, in: .window(.root))
                                 }
                                 return
                             }

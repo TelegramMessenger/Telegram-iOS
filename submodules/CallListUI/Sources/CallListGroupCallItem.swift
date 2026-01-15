@@ -208,7 +208,7 @@ class CallListGroupCallItemNode: ItemListRevealOptionsItemNode {
         
         self.accessibilityArea = AccessibilityAreaNode()
         
-        super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
+        super.init(layerBacked: false, rotated: false, seeThrough: false)
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.indicatorNode)
@@ -434,7 +434,8 @@ class CallListGroupCallItemNode: ItemListRevealOptionsItemNode {
                             let _ = joinTitleApply()
                             transition.updateFrameAdditive(node: strongSelf.joinTitleNode, frame: CGRect(origin: CGPoint(x: floor((joinButtonSize.width - joinTitleLayout.size.width) / 2.0), y: floor((joinButtonSize.height - joinTitleLayout.size.height) / 2.0) + 1.0), size: joinTitleLayout.size))
                             
-                            let topHighlightInset: CGFloat = (first || !nodeLayout.insets.top.isZero) ? 0.0 : separatorHeight
+                            var topHighlightInset: CGFloat = (first || !nodeLayout.insets.top.isZero) ? 0.0 : separatorHeight
+                            topHighlightInset -= nodeLayout.insets.top
                             strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: nodeLayout.contentSize.width, height: nodeLayout.contentSize.height))
                             strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -nodeLayout.insets.top - topHighlightInset), size: CGSize(width: nodeLayout.size.width, height: nodeLayout.size.height + topHighlightInset))
                             

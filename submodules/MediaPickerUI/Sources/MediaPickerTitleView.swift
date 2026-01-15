@@ -18,7 +18,7 @@ final class MediaPickerTitleView: UIView {
     
     public var theme: PresentationTheme {
         didSet {
-            self.titleNode.attributedText = NSAttributedString(string: self.title, font: NavigationBar.titleFont, textColor: self.isDark ? .white : self.theme.rootController.navigationBar.primaryTextColor)
+            self.titleNode.attributedText = NSAttributedString(string: self.title, font: Font.with(size: 17.0, design: .regular, weight: .semibold, traits: [.monospacedNumbers]), textColor: self.isDark ? .white : self.theme.rootController.navigationBar.primaryTextColor)
             self.subtitleNode.attributedText = NSAttributedString(string: self.subtitle, font: Font.regular(12.0), textColor: self.isDark ? .white.withAlphaComponent(0.5) : self.theme.rootController.navigationBar.secondaryTextColor)
             self.segmentedControlNode.updateTheme(SegmentedControlTheme(theme: self.theme))
             if self.glass {
@@ -31,7 +31,7 @@ final class MediaPickerTitleView: UIView {
     public var isDark: Bool = false {
         didSet {
             if self.isDark != oldValue {
-                self.titleNode.attributedText = NSAttributedString(string: self.title, font: NavigationBar.titleFont, textColor: self.isDark ? .white : self.theme.rootController.navigationBar.primaryTextColor)
+                self.titleNode.attributedText = NSAttributedString(string: self.title, font: Font.with(size: 17.0, design: .regular, weight: .semibold, traits: [.monospacedNumbers]), textColor: self.isDark ? .white : self.theme.rootController.navigationBar.primaryTextColor)
                 self.subtitleNode.attributedText = NSAttributedString(string: self.subtitle, font: Font.regular(12.0), textColor: self.isDark ? .white.withAlphaComponent(0.5) : self.theme.rootController.navigationBar.secondaryTextColor)
                 if self.glass {
                     self.arrowNode.image = generateTintedImage(image: UIImage(bundleImageName: "Navigation/TitleExpand"), color: self.isDark ? UIColor.white.withAlphaComponent(0.5) : self.theme.rootController.navigationBar.primaryTextColor.withAlphaComponent(0.4))
@@ -44,7 +44,7 @@ final class MediaPickerTitleView: UIView {
     public var title: String = "" {
         didSet {
             if self.title != oldValue {
-                self.titleNode.attributedText = NSAttributedString(string: self.title, font: NavigationBar.titleFont, textColor: self.isDark ? .white : self.theme.rootController.navigationBar.primaryTextColor)
+                self.titleNode.attributedText = NSAttributedString(string: self.title, font: Font.with(size: 17.0, design: .regular, weight: .semibold, traits: [.monospacedNumbers]), textColor: self.isDark ? .white : self.theme.rootController.navigationBar.primaryTextColor)
                 self.setNeedsLayout()
             }
         }
@@ -260,7 +260,7 @@ final class MediaPickerTitleView: UIView {
             totalHeight += subtitleSize.height
         }
         
-        let verticalOffset: CGFloat = self.glass ? 3.0 : 0.0
+        let verticalOffset: CGFloat = self.glass ? -1.0 : 0.0
         let arrowOffset: CGFloat = self.glass ? 1.0 : 5.0
         
         var totalWidth = titleSize.width

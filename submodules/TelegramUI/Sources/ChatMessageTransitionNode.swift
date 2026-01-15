@@ -933,7 +933,7 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
             }
             if itemNode == nil || itemNode === currentItemNode {
                 if let contextController = self.contextController {
-                    contextController.addRelativeContentOffset(CGPoint(x: 0.0, y: offset), transition: transition)
+                    contextController.addRelativeContentOffset(CGPoint(x: 0.0, y: -offset), transition: transition)
                 }
                 if let standaloneReactionAnimation = self.standaloneReactionAnimation {
                     standaloneReactionAnimation.addRelativeContentOffset(CGPoint(x: 0.0, y: -offset), transition: transition)

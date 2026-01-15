@@ -33,23 +33,15 @@ public extension Api {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputQuickReplyShortcut.inputQuickReplyShortcut(shortcut: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.InputQuickReplyShortcut.inputQuickReplyShortcut(shortcut: _1!)
         }
         public static func parse_inputQuickReplyShortcutId(_ reader: BufferReader) -> InputQuickReplyShortcut? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputQuickReplyShortcut.inputQuickReplyShortcutId(shortcutId: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.InputQuickReplyShortcut.inputQuickReplyShortcutId(shortcutId: _1!)
         }
     
     }
@@ -141,12 +133,16 @@ public extension Api {
             let _c7 = (Int(_1!) & Int(1 << 4) == 0) || _7 != nil
             let _c8 = (Int(_1!) & Int(1 << 5) == 0) || _8 != nil
             let _c9 = (Int(_1!) & Int(1 << 6) == 0) || _9 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
-                return Api.InputReplyTo.inputReplyToMessage(flags: _1!, replyToMsgId: _2!, topMsgId: _3, replyToPeerId: _4, quoteText: _5, quoteEntities: _6, quoteOffset: _7, monoforumPeerId: _8, todoItemId: _9)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            if !_c9 { return nil }
+            return Api.InputReplyTo.inputReplyToMessage(flags: _1!, replyToMsgId: _2!, topMsgId: _3, replyToPeerId: _4, quoteText: _5, quoteEntities: _6, quoteOffset: _7, monoforumPeerId: _8, todoItemId: _9)
         }
         public static func parse_inputReplyToMonoForum(_ reader: BufferReader) -> InputReplyTo? {
             var _1: Api.InputPeer?
@@ -154,12 +150,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.InputPeer
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputReplyTo.inputReplyToMonoForum(monoforumPeerId: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.InputReplyTo.inputReplyToMonoForum(monoforumPeerId: _1!)
         }
         public static func parse_inputReplyToStory(_ reader: BufferReader) -> InputReplyTo? {
             var _1: Api.InputPeer?
@@ -170,12 +162,9 @@ public extension Api {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputReplyTo.inputReplyToStory(peer: _1!, storyId: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.InputReplyTo.inputReplyToStory(peer: _1!, storyId: _2!)
         }
     
     }
@@ -230,34 +219,23 @@ public extension Api {
             _2 = reader.readInt64()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputSavedStarGift.inputSavedStarGiftChat(peer: _1!, savedId: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.InputSavedStarGift.inputSavedStarGiftChat(peer: _1!, savedId: _2!)
         }
         public static func parse_inputSavedStarGiftSlug(_ reader: BufferReader) -> InputSavedStarGift? {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputSavedStarGift.inputSavedStarGiftSlug(slug: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.InputSavedStarGift.inputSavedStarGiftSlug(slug: _1!)
         }
         public static func parse_inputSavedStarGiftUser(_ reader: BufferReader) -> InputSavedStarGift? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputSavedStarGift.inputSavedStarGiftUser(msgId: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.InputSavedStarGift.inputSavedStarGiftUser(msgId: _1!)
         }
     
     }
@@ -305,12 +283,9 @@ public extension Api {
             _2 = reader.readInt64()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputSecureFile.inputSecureFile(id: _1!, accessHash: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.InputSecureFile.inputSecureFile(id: _1!, accessHash: _2!)
         }
         public static func parse_inputSecureFileUploaded(_ reader: BufferReader) -> InputSecureFile? {
             var _1: Int64?
@@ -328,12 +303,12 @@ public extension Api {
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.InputSecureFile.inputSecureFileUploaded(id: _1!, parts: _2!, md5Checksum: _3!, fileHash: _4!, secret: _5!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.InputSecureFile.inputSecureFileUploaded(id: _1!, parts: _2!, md5Checksum: _3!, fileHash: _4!, secret: _5!)
         }
     
     }
@@ -420,12 +395,16 @@ public extension Api {
             let _c7 = (Int(_1!) & Int(1 << 6) == 0) || _7 != nil
             let _c8 = (Int(_1!) & Int(1 << 4) == 0) || _8 != nil
             let _c9 = (Int(_1!) & Int(1 << 5) == 0) || _9 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
-                return Api.InputSecureValue.inputSecureValue(flags: _1!, type: _2!, data: _3, frontSide: _4, reverseSide: _5, selfie: _6, translation: _7, files: _8, plainData: _9)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            if !_c9 { return nil }
+            return Api.InputSecureValue.inputSecureValue(flags: _1!, type: _2!, data: _3, frontSide: _4, reverseSide: _5, selfie: _6, translation: _7, files: _8, plainData: _9)
         }
     
     }
@@ -480,12 +459,12 @@ public extension Api {
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.InputSingleMedia.inputSingleMedia(flags: _1!, media: _2!, randomId: _3!, message: _4!, entities: _5)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.InputSingleMedia.inputSingleMedia(flags: _1!, media: _2!, randomId: _3!, message: _4!, entities: _5)
         }
     
     }
@@ -525,23 +504,15 @@ public extension Api {
             var _1: Int64?
             _1 = reader.readInt64()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputStarGiftAuction.inputStarGiftAuction(giftId: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.InputStarGiftAuction.inputStarGiftAuction(giftId: _1!)
         }
         public static func parse_inputStarGiftAuctionSlug(_ reader: BufferReader) -> InputStarGiftAuction? {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputStarGiftAuction.inputStarGiftAuctionSlug(slug: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.InputStarGiftAuction.inputStarGiftAuctionSlug(slug: _1!)
         }
     
     }
@@ -576,12 +547,9 @@ public extension Api {
             _2 = parseString(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputStarsTransaction.inputStarsTransaction(flags: _1!, id: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.InputStarsTransaction.inputStarsTransaction(flags: _1!, id: _2!)
         }
     
     }
@@ -718,12 +686,8 @@ public extension Api {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputStickerSet.inputStickerSetDice(emoticon: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.InputStickerSet.inputStickerSetDice(emoticon: _1!)
         }
         public static func parse_inputStickerSetEmojiChannelDefaultStatuses(_ reader: BufferReader) -> InputStickerSet? {
             return Api.InputStickerSet.inputStickerSetEmojiChannelDefaultStatuses
@@ -747,12 +711,9 @@ public extension Api {
             _2 = reader.readInt64()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputStickerSet.inputStickerSetID(id: _1!, accessHash: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.InputStickerSet.inputStickerSetID(id: _1!, accessHash: _2!)
         }
         public static func parse_inputStickerSetPremiumGifts(_ reader: BufferReader) -> InputStickerSet? {
             return Api.InputStickerSet.inputStickerSetPremiumGifts
@@ -761,12 +722,8 @@ public extension Api {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputStickerSet.inputStickerSetShortName(shortName: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.InputStickerSet.inputStickerSetShortName(shortName: _1!)
         }
         public static func parse_inputStickerSetTonGifts(_ reader: BufferReader) -> InputStickerSet? {
             return Api.InputStickerSet.inputStickerSetTonGifts
@@ -820,12 +777,12 @@ public extension Api {
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.InputStickerSetItem.inputStickerSetItem(flags: _1!, document: _2!, emoji: _3!, maskCoords: _4, keywords: _5)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.InputStickerSetItem.inputStickerSetItem(flags: _1!, document: _2!, emoji: _3!, maskCoords: _4, keywords: _5)
         }
     
     }
@@ -867,12 +824,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.InputDocument
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputStickeredMedia.inputStickeredMediaDocument(id: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.InputStickeredMedia.inputStickeredMediaDocument(id: _1!)
         }
         public static func parse_inputStickeredMediaPhoto(_ reader: BufferReader) -> InputStickeredMedia? {
             var _1: Api.InputPhoto?
@@ -880,12 +833,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.InputPhoto
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputStickeredMedia.inputStickeredMediaPhoto(id: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.InputStickeredMedia.inputStickeredMediaPhoto(id: _1!)
         }
     
     }
@@ -1047,12 +996,12 @@ public extension Api {
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.InputStorePaymentPurpose.inputStorePaymentAuthCode(flags: _1!, phoneNumber: _2!, phoneCodeHash: _3!, currency: _4!, amount: _5!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.InputStorePaymentPurpose.inputStorePaymentAuthCode(flags: _1!, phoneNumber: _2!, phoneCodeHash: _3!, currency: _4!, amount: _5!)
         }
         public static func parse_inputStorePaymentGiftPremium(_ reader: BufferReader) -> InputStorePaymentPurpose? {
             var _1: Api.InputUser?
@@ -1066,12 +1015,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.InputStorePaymentPurpose.inputStorePaymentGiftPremium(userId: _1!, currency: _2!, amount: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.InputStorePaymentPurpose.inputStorePaymentGiftPremium(userId: _1!, currency: _2!, amount: _3!)
         }
         public static func parse_inputStorePaymentPremiumGiftCode(_ reader: BufferReader) -> InputStorePaymentPurpose? {
             var _1: Int32?
@@ -1098,12 +1045,13 @@ public extension Api {
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.InputStorePaymentPurpose.inputStorePaymentPremiumGiftCode(flags: _1!, users: _2!, boostPeer: _3, currency: _4!, amount: _5!, message: _6)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            return Api.InputStorePaymentPurpose.inputStorePaymentPremiumGiftCode(flags: _1!, users: _2!, boostPeer: _3, currency: _4!, amount: _5!, message: _6)
         }
         public static func parse_inputStorePaymentPremiumGiveaway(_ reader: BufferReader) -> InputStorePaymentPurpose? {
             var _1: Int32?
@@ -1139,23 +1087,23 @@ public extension Api {
             let _c7 = _7 != nil
             let _c8 = _8 != nil
             let _c9 = _9 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
-                return Api.InputStorePaymentPurpose.inputStorePaymentPremiumGiveaway(flags: _1!, boostPeer: _2!, additionalPeers: _3, countriesIso2: _4, prizeDescription: _5, randomId: _6!, untilDate: _7!, currency: _8!, amount: _9!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            if !_c9 { return nil }
+            return Api.InputStorePaymentPurpose.inputStorePaymentPremiumGiveaway(flags: _1!, boostPeer: _2!, additionalPeers: _3, countriesIso2: _4, prizeDescription: _5, randomId: _6!, untilDate: _7!, currency: _8!, amount: _9!)
         }
         public static func parse_inputStorePaymentPremiumSubscription(_ reader: BufferReader) -> InputStorePaymentPurpose? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputStorePaymentPurpose.inputStorePaymentPremiumSubscription(flags: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.InputStorePaymentPurpose.inputStorePaymentPremiumSubscription(flags: _1!)
         }
         public static func parse_inputStorePaymentStarsGift(_ reader: BufferReader) -> InputStorePaymentPurpose? {
             var _1: Api.InputUser?
@@ -1172,12 +1120,11 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.InputStorePaymentPurpose.inputStorePaymentStarsGift(userId: _1!, stars: _2!, currency: _3!, amount: _4!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.InputStorePaymentPurpose.inputStorePaymentStarsGift(userId: _1!, stars: _2!, currency: _3!, amount: _4!)
         }
         public static func parse_inputStorePaymentStarsGiveaway(_ reader: BufferReader) -> InputStorePaymentPurpose? {
             var _1: Int32?
@@ -1219,12 +1166,18 @@ public extension Api {
             let _c9 = _9 != nil
             let _c10 = _10 != nil
             let _c11 = _11 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
-                return Api.InputStorePaymentPurpose.inputStorePaymentStarsGiveaway(flags: _1!, stars: _2!, boostPeer: _3!, additionalPeers: _4, countriesIso2: _5, prizeDescription: _6, randomId: _7!, untilDate: _8!, currency: _9!, amount: _10!, users: _11!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            if !_c9 { return nil }
+            if !_c10 { return nil }
+            if !_c11 { return nil }
+            return Api.InputStorePaymentPurpose.inputStorePaymentStarsGiveaway(flags: _1!, stars: _2!, boostPeer: _3!, additionalPeers: _4, countriesIso2: _5, prizeDescription: _6, randomId: _7!, untilDate: _8!, currency: _9!, amount: _10!, users: _11!)
         }
         public static func parse_inputStorePaymentStarsTopup(_ reader: BufferReader) -> InputStorePaymentPurpose? {
             var _1: Int32?
@@ -1244,12 +1197,12 @@ public extension Api {
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.InputStorePaymentPurpose.inputStorePaymentStarsTopup(flags: _1!, stars: _2!, currency: _3!, amount: _4!, spendPurposePeer: _5)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.InputStorePaymentPurpose.inputStorePaymentStarsTopup(flags: _1!, stars: _2!, currency: _3!, amount: _4!, spendPurposePeer: _5)
         }
     
     }

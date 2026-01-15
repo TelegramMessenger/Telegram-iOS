@@ -118,7 +118,7 @@ public final class ChatBotInfoItemNode: ListViewItemNode {
         self.textNode = TextNode()
         self.titleNode = TextNode()
         
-        super.init(layerBacked: false, dynamicBounce: true, rotated: true)
+        super.init(layerBacked: false, rotated: true)
         
         self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
         

@@ -339,8 +339,6 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         self.scrollNode.addSubnode(self.placeholderNode)
         self.scrollNode.addSubnode(self.textFieldScrollNode)
         self.textFieldScrollNode.addSubnode(self.textFieldNode)
-        //self.scrollNode.addSubnode(self.caretIndicatorNode)
-        self.clipsToBounds = true
         
         self.textFieldNode.textField.delegate = self
         self.textFieldNode.textField.addTarget(self, action: #selector(self.textFieldChanged(_:)), for: .editingChanged)
@@ -382,7 +380,6 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         
         let sideInset: CGFloat = 12.0 + leftInset
         let verticalInset: CGFloat = 6.0
-        
         
         var animationDelay = 0.0
         var currentOffset = CGPoint(x: sideInset, y: verticalInset)

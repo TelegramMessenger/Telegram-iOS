@@ -1269,7 +1269,10 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
             
             if let controller = environment.controller() {
                 let subLayout = ContainerViewLayout(
-                    size: availableSize, metrics: environment.metrics, deviceMetrics: environment.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: 0.0, left: sideInset - 12.0, bottom: bottomPanelHeight, right: sideInset),
+                    size: availableSize,
+                    metrics: environment.metrics,
+                    deviceMetrics: environment.deviceMetrics,
+                    intrinsicInsets: UIEdgeInsets(top: 0.0, left: sideInset - 12.0, bottom: bottomPanelHeight, right: sideInset),
                     safeInsets: UIEdgeInsets(),
                     additionalInsets: UIEdgeInsets(),
                     statusBarHeight: nil,
@@ -1513,7 +1516,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                             case .someUserTooManyChannels:
                                 text = presentationData.strings.ChatListFilter_CreateLinkErrorSomeoneHasChannelLimit
                             }
-                            controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                            controller.present(textAlertController(context: component.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                         })
                     }
                 })

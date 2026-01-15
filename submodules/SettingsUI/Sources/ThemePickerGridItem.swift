@@ -406,7 +406,7 @@ class ThemeGridThemeItemNode: ListViewItemNode, ItemListItemNode {
 
         self.scrollNode = ASScrollNode()
 
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
 
         self.addSubnode(self.containerNode)
         self.addSubnode(self.scrollNode)

@@ -177,7 +177,7 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
         self.labelNode = TextNode()
         self.labelNode.isUserInteractionEnabled = false
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.titleNode.textNode)
         self.addSubnode(self.textNode)

@@ -85,6 +85,7 @@ public enum ParsedInternalPeerUrlParameter {
     case boost
     case text(String)
     case profile
+    case direct
     case referrer(String)
     case storyFolder(Int64)
     case giftCollection(Int64)
@@ -393,6 +394,8 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, context: Accou
                                 return .peer(.name(peerName), .boost)
                             } else if queryItem.name == "profile" {
                                 return .peer(.name(peerName), .profile)
+                            } else if queryItem.name == "direct" {
+                                return .peer(.name(peerName), .direct)
                             } else if queryItem.name == "startapp" {
                                 var mode: ResolvedStartAppMode = .generic
                                 if let queryItems = components.queryItems {
@@ -836,6 +839,26 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                         switch parameter {
                             case .profile:
                                 return .single(.result(.peer(peer._asPeer(), .info(nil))))
+                            case .direct:
+                                if case let .channel(channel) = peer, let monoforumId = channel.linkedMonoforumId {
+                                    return context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: monoforumId))
+                                    |> mapToSignal { peer -> Signal<EnginePeer?, NoError> in
+                                        if let peer {
+                                            return .single(peer)
+                                        } else {
+                                            return context.engine.peers.findChannelById(channelId: monoforumId.id._internalGetInt64Value())
+                                        }
+                                    }
+                                    |> map { peer -> ResolveInternalUrlResult in
+                                        if let peer {
+                                            return .result(.peer(peer._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil)))
+                                        } else {
+                                            return .result(.peer(nil, .info(nil)))
+                                        }
+                                    }
+                                } else {
+                                    return .single(.result(.peer(nil, .info(nil))))
+                                }
                             case let .text(text):
                                 var textInputState: ChatTextInputState?
                                 if !text.isEmpty {
@@ -1238,9 +1261,9 @@ public func isTelegramMeLink(_ url: String) -> Bool {
 
 public func isTelegraPhLink(_ url: String) -> Bool {
     let schemes = ["http://", "https://", ""]
-    for basePath in baseTelegramMePaths {
+    for basePath in baseTelegraPhPaths {
         for scheme in schemes {
-            let basePrefix = scheme + basePath + "/"
+            let basePrefix = scheme + basePath
             if url.lowercased().hasPrefix(basePrefix) {
                 return true
             }

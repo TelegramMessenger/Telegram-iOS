@@ -16,7 +16,6 @@ import AccountContext
 import TelegramPermissions
 import TelegramNotices
 import ContactsPeerItem
-import ChatListSearchItemNode
 import ChatListSearchItemHeader
 import SearchUI
 import TelegramPermissionsUI
@@ -96,7 +95,6 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
         var hasUnseenCloseFriends: Bool
     }
     
-    case search(PresentationTheme, PresentationStrings)
     case sort(PresentationTheme, PresentationStrings, ContactsSortOrder)
     case permissionInfo(PresentationTheme, String, String, Bool)
     case permissionEnable(PresentationTheme, String)
@@ -107,8 +105,6 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
     
     var stableId: ContactListNodeEntryId {
         switch self {
-            case .search:
-                return .search
             case .sort:
                 return .sort
             case .permissionInfo:
@@ -133,10 +129,6 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
     
     func item(context: AccountContext, presentationData: PresentationData, interaction: ContactListNodeInteraction, isSearch: Bool, listStyle: ItemListStyle) -> ListViewItem {
         switch self {
-            case let .search(theme, strings):
-                return ChatListSearchItem(theme: theme, placeholder: strings.Contacts_SearchLabel, activate: {
-                    interaction.activateSearch()
-                })
             case let .sort(_, strings, sortOrder):
                 var text = strings.Contacts_SortedByName
                 if case .presence = sortOrder {
@@ -270,12 +262,6 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
 
     static func ==(lhs: ContactListNodeEntry, rhs: ContactListNodeEntry) -> Bool {
         switch lhs {
-            case let .search(lhsTheme, lhsStrings):
-                if case let .search(rhsTheme, rhsStrings) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings {
-                    return true
-                } else {
-                    return false
-                }
             case let .sort(lhsTheme, lhsStrings, lhsSortOrder):
                 if case let .sort(rhsTheme, rhsStrings, rhsSortOrder) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsSortOrder == rhsSortOrder {
                     return true
@@ -376,39 +362,35 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
 
     static func <(lhs: ContactListNodeEntry, rhs: ContactListNodeEntry) -> Bool {
         switch lhs {
-            case .search:
-                return true
             case .sort:
                 switch rhs {
-                    case .search:
-                        return false
                     default:
                         return true
                 }
             case .permissionInfo:
                 switch rhs {
-                    case .search, .sort:
+                    case .sort:
                         return false
                     default:
                         return true
                 }
             case .permissionEnable:
                 switch rhs {
-                    case .search, .sort, .permissionInfo:
+                    case .sort, .permissionInfo:
                         return false
                     default:
                         return true
                 }
             case .permissionLimited:
                 switch rhs {
-                    case .search, .sort, .permissionInfo, .permissionEnable:
+                    case .sort, .permissionInfo, .permissionEnable:
                         return false
                     default:
                         return true
                 }
             case let .option(lhsIndex, _, _, _, _):
                 switch rhs {
-                    case .search, .sort, .permissionInfo, .permissionEnable, .permissionLimited:
+                    case .sort, .permissionInfo, .permissionEnable, .permissionLimited:
                         return false
                     case let .option(rhsIndex, _, _, _, _):
                         return lhsIndex < rhsIndex
@@ -417,14 +399,14 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 }
             case let .header(lhsIndex, _):
             switch rhs {
-                case .search, .sort, .permissionInfo, .permissionEnable, .permissionLimited, .option:
+                case .sort, .permissionInfo, .permissionEnable, .permissionLimited, .option:
                     return false
                 case let .header(rhsIndex, _), let .peer(rhsIndex, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
                     return lhsIndex < rhsIndex
             }
             case let .peer(lhsIndex, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
                 switch rhs {
-                    case .search, .sort, .permissionInfo, .permissionEnable, .permissionLimited, .option:
+                    case .sort, .permissionInfo, .permissionEnable, .permissionLimited, .option:
                         return false
                     case let .peer(rhsIndex, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _), let .header(rhsIndex, _):
 //                        if (lhsStoryData == nil) != (rhsStoryData == nil) {
@@ -901,9 +883,6 @@ private func preparedContactListNodeTransition(context: AccountContext, presenta
             switch entry {
                 case .sort:
                     shouldFixScroll = true
-                case .search:
-                    //indexSections.apend(CollectionIndexNode.searchIndex)
-                    break
                 case let .peer(_, _, _, header, _, _, _, _, _, _, _, _, _, _, _, _):
                     if let header = header as? ContactListNameIndexHeader {
                         if !existingSections.contains(header.letter) {
@@ -1255,7 +1234,6 @@ public final class ContactListNode: ASDisplayNode {
         self.presentationData = presentationData
         
         self.listNode = ListView()
-        self.listNode.dynamicBounceEnabled = false
         self.listNode.accessibilityPageScrolledString = { row, count in
             return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
@@ -1419,11 +1397,6 @@ public final class ContactListNode: ASDisplayNode {
             var peerIndex = 0
             loop: for entry in entries {
                 switch entry {
-                    case .search:
-                        if section == CollectionIndexNode.searchIndex {
-                            strongSelf.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.PreferSynchronousDrawing, .PreferSynchronousResourceLoading], scrollToItem: ListViewScrollToItem(index: index, position: .top(-navigationBarSearchContentHeight), animated: false, curve: .Default(duration: nil), directionHint: .Down), additionalScrollDistance: 0.0, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
-                            break loop
-                        }
                     case let .peer(_, _, _, header, _, _, _, _, _, _, _, _, _, _, _, _):
                         if let header = header as? ContactListNameIndexHeader {
                             if let scalar = UnicodeScalar(header.letter) {
@@ -2123,8 +2096,6 @@ public final class ContactListNode: ASDisplayNode {
                     }, filterHitTest: true)
                     strongSelf.authorizationNode.isHidden = authorizationPreviousHidden
                     strongSelf.addSubnode(strongSelf.authorizationNode)
-                    
-                    strongSelf.listNode.dynamicBounceEnabled = false
                     
                     strongSelf.listNode.forEachAccessoryItemNode({ accessoryItemNode in
                         if let accessoryItemNode = accessoryItemNode as? ContactsSectionHeaderAccessoryItemNode {

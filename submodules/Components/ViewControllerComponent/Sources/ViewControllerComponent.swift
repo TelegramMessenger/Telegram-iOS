@@ -280,11 +280,13 @@ open class ViewControllerComponentContainer: ViewController {
         case .none:
             navigationBarPresentationData = nil
         case .transparent:
-            navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData, hideBackground: true, hideBadge: false, hideSeparator: true)
+            navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData, hideBackground: true, hideBadge: false, hideSeparator: true, style: .glass)
         case .default:
-            navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData)
+            navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData, style: .glass)
         }
         super.init(navigationBarPresentationData: navigationBarPresentationData)
+        
+        self._hasGlassStyle = true
         
         self.setupPresentationData(effectiveUpdatedPresentationData, navigationBarAppearance: navigationBarAppearance, statusBarStyle: statusBarStyle, presentationMode: presentationMode)
     }
@@ -308,9 +310,9 @@ open class ViewControllerComponentContainer: ViewController {
         case .none:
             navigationBarPresentationData = nil
         case .transparent:
-            navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData, hideBackground: true, hideBadge: false, hideSeparator: true)
+            navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData, hideBackground: true, hideBadge: false, hideSeparator: true, style: .glass)
         case .default:
-            navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData)
+            navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData, style: .glass)
         }
         super.init(navigationBarPresentationData: navigationBarPresentationData)
         
@@ -356,12 +358,12 @@ open class ViewControllerComponentContainer: ViewController {
                 case .none:
                     navigationBarPresentationData = nil
                 case .transparent:
-                    navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData, hideBackground: true, hideBadge: false, hideSeparator: true)
+                    navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData, hideBackground: true, hideBadge: false, hideSeparator: true, style: .glass)
                 case .default:
-                    navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData)
+                    navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData, style: .glass)
                 }
                 if let navigationBarPresentationData {
-                    strongSelf.navigationBar?.updatePresentationData(navigationBarPresentationData)
+                    strongSelf.navigationBar?.updatePresentationData(navigationBarPresentationData, transition: .immediate)
                 }
                 
                 if let layout = strongSelf.validLayout {
